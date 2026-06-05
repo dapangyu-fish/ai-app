@@ -568,6 +568,41 @@ Ayuda de un comando:
 }
 
 
+class _CtlHelpFormatter(argparse.RawTextHelpFormatter):
+    def __init__(self, prog: str, *args, **kwargs):
+        width = shutil.get_terminal_size((100, 24)).columns
+        super().__init__(prog, *args, max_help_position=30, width=min(max(width, 88), 120), **kwargs)
+
+
+class _CtlArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        self.print_usage(sys.stderr)
+        self.exit(
+            2,
+            _tx(
+                "%(prog)s: error: %(message)s\n",
+                zh="%(prog)s: 错误: %(message)s\n",
+                de="%(prog)s: Fehler: %(message)s\n",
+                es="%(prog)s: error: %(message)s\n",
+            ) % {"prog": self.prog, "message": message},
+        )
+
+
+def _new_parser(*args, **kwargs) -> argparse.ArgumentParser:
+    _install_argparse_i18n()
+    kwargs.setdefault("formatter_class", _CtlHelpFormatter)
+    return _CtlArgumentParser(*args, **kwargs)
+
+
+def _add_subcommands(parser: argparse.ArgumentParser, dest: str, *, required: bool = True):
+    return parser.add_subparsers(
+        dest=dest,
+        required=required,
+        title=_tx("commands", zh="命令", de="Befehle", es="comandos"),
+        metavar=_tx("<command>", zh="<命令>", de="<Befehl>", es="<comando>"),
+    )
+
+
 def _load_json(path: Path, default: dict) -> dict:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -726,6 +761,96 @@ def _t(key: str, **kwargs) -> str:
     row = _MESSAGES.get(key, {})
     text = row.get(_LANG) or row.get("en") or key
     return text.format(**kwargs) if kwargs else text
+
+
+def _tx(en: str, *, zh: str | None = None, de: str | None = None, es: str | None = None) -> str:
+    row = {"en": en, "zh": zh, "de": de, "es": es}
+    return row.get(_LANG) or row["en"]
+
+
+_ARGPARSE_I18N = {
+    "usage: ": {
+        "zh": "用法: ",
+        "en": "usage: ",
+        "de": "Verwendung: ",
+        "es": "uso: ",
+    },
+    "options": {
+        "zh": "选项",
+        "en": "options",
+        "de": "Optionen",
+        "es": "opciones",
+    },
+    "positional arguments": {
+        "zh": "位置参数",
+        "en": "positional arguments",
+        "de": "Positionsargumente",
+        "es": "argumentos posicionales",
+    },
+    "show this help message and exit": {
+        "zh": "显示此帮助信息并退出",
+        "en": "show this help message and exit",
+        "de": "diese Hilfe anzeigen und beenden",
+        "es": "muestra esta ayuda y termina",
+    },
+    "error: ": {
+        "zh": "错误: ",
+        "en": "error: ",
+        "de": "Fehler: ",
+        "es": "error: ",
+    },
+    "the following arguments are required: %s": {
+        "zh": "缺少必填参数: %s",
+        "en": "the following arguments are required: %s",
+        "de": "folgende Argumente sind erforderlich: %s",
+        "es": "faltan los argumentos obligatorios: %s",
+    },
+    "invalid choice: %(value)r (choose from %(choices)s)": {
+        "zh": "无效选项: %(value)r (可选: %(choices)s)",
+        "en": "invalid choice: %(value)r (choose from %(choices)s)",
+        "de": "ungueltige Auswahl: %(value)r (waehle aus %(choices)s)",
+        "es": "opcion invalida: %(value)r (elige entre %(choices)s)",
+    },
+    "unrecognized arguments: %s": {
+        "zh": "无法识别的参数: %s",
+        "en": "unrecognized arguments: %s",
+        "de": "unbekannte Argumente: %s",
+        "es": "argumentos no reconocidos: %s",
+    },
+    "argument %(argument_name)s: %(message)s": {
+        "zh": "参数 %(argument_name)s: %(message)s",
+        "en": "argument %(argument_name)s: %(message)s",
+        "de": "Argument %(argument_name)s: %(message)s",
+        "es": "argumento %(argument_name)s: %(message)s",
+    },
+}
+
+
+def _argparse_gettext(text: str) -> str:
+    row = _ARGPARSE_I18N.get(text)
+    if not row:
+        return text
+    return row.get(_LANG) or row.get("en") or text
+
+
+def _install_argparse_i18n() -> None:
+    argparse._ = _argparse_gettext
+
+
+def _preinitialize_language(raw_args: list[str]) -> None:
+    cli_lang = None
+    for index, item in enumerate(raw_args):
+        if item == "--lang" and index + 1 < len(raw_args):
+            cli_lang = _normalize_lang(raw_args[index + 1])
+            break
+        if item.startswith("--lang="):
+            cli_lang = _normalize_lang(item.split("=", 1)[1])
+            break
+    env_lang = _normalize_lang(os.environ.get("MYAPP_CTL_LANG") or os.environ.get("MYAPP_LANG"))
+    cfg = _cfg()
+    file_lang = _read_language_preference_file()
+    saved_lang = _normalize_lang(str(cfg.get("language") or cfg.get("lang") or ""))
+    _set_runtime_language(cli_lang or env_lang or file_lang or saved_lang or "zh")
 
 
 def _normalize_lang(value: str | None) -> str | None:
@@ -1539,6 +1664,9 @@ def cmd_deploy(args) -> int:
     if not args.dry_run:
         _init_stack_secrets(quiet=True)
     rc = _prepare_deploy(names, dry_run=args.dry_run)
+    if rc != 0:
+        return rc
+    rc = _guard_active_ai_runs_for_deploy(args, names)
     if rc != 0:
         return rc
     rc = _deploy_compose_services(names, dry_run=args.dry_run)
@@ -3991,6 +4119,73 @@ def _print_agent_node_status(data: dict, *, as_json: bool = False) -> int:
     return 0
 
 
+def _redis_cli(args: list[str]) -> subprocess.CompletedProcess:
+    return _run(["docker", "exec", "myapp-ai-session-redis", "redis-cli", "--raw", *args])
+
+
+def _redis_int(args: list[str]) -> int:
+    proc = _redis_cli(args)
+    if proc.returncode != 0:
+        return 0
+    try:
+        return int((proc.stdout or "0").strip() or "0")
+    except ValueError:
+        return 0
+
+
+def _redis_lines(args: list[str]) -> list[str]:
+    proc = _redis_cli(args)
+    if proc.returncode != 0:
+        return []
+    return [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+
+
+def _active_ai_run_summary() -> dict:
+    now_ms = str(int(time.time() * 1000))
+    worker_leases = _redis_int(["ZCOUNT", "ai:queue:running:leases", now_ms, "+inf"])
+    pull_pending = _redis_int(["LLEN", "ai:agent_pull:pending"])
+    pull_running = 0
+    for key in _redis_lines(["KEYS", "ai:agent_pull:node_running:*"]):
+        pull_running += _redis_int(["SCARD", key])
+    local_agent_containers = len(_active_local_agent_container_names())
+    active_total = max(worker_leases, pull_running, local_agent_containers)
+    return {
+        "active_total": active_total,
+        "worker_leases": worker_leases,
+        "pull_running": pull_running,
+        "pull_pending": pull_pending,
+        "local_agent_containers": local_agent_containers,
+    }
+
+
+def _deploy_may_interrupt_ai_runs(names: list[str]) -> bool:
+    return any(name in {"ai-worker", "agent-node"} for name in names)
+
+
+def _guard_active_ai_runs_for_deploy(args, names: list[str]) -> int:
+    if getattr(args, "dry_run", False) or getattr(args, "force", False):
+        return 0
+    if not _deploy_may_interrupt_ai_runs(names):
+        return 0
+    summary = _active_ai_run_summary()
+    if int(summary.get("active_total") or 0) <= 0:
+        return 0
+    print(
+        "refusing to deploy services that can interrupt active AI generation; "
+        "wait for runs to finish or pass --force",
+        file=sys.stderr,
+    )
+    print(
+        "active summary: "
+        f"worker_leases={summary['worker_leases']} "
+        f"pull_running={summary['pull_running']} "
+        f"local_agent_containers={summary['local_agent_containers']} "
+        f"pull_pending={summary['pull_pending']}",
+        file=sys.stderr,
+    )
+    return 1
+
+
 def _active_local_agent_container_names() -> list[str]:
     proc = _run(["docker", "ps", "--filter", "name=myapp-agent-", "--format", "{{.Names}}"])
     if proc.returncode != 0:
@@ -4203,153 +4398,228 @@ def cmd_agent(args) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="myapp-ctl")
-    parser.add_argument("--lang", choices=["zh", "en", "de", "es"], help="override CLI language for this command")
-    sub = parser.add_subparsers(dest="cmd")
-    status = sub.add_parser("status")
-    status.add_argument("services", nargs="*", help="optional service names; omitted means all services")
+    parser = _new_parser(
+        prog="myapp-ctl",
+        usage=_tx(
+            "myapp-ctl [--lang LANG] <command> [args]",
+            zh="myapp-ctl [--lang LANG] <命令> [参数]",
+            de="myapp-ctl [--lang LANG] <Befehl> [Argumente]",
+            es="myapp-ctl [--lang LANG] <comando> [args]",
+        ),
+        description=_tx(
+            "MyApp backend control CLI. Run `myapp-ctl <command> --help` for command details.",
+            zh="MyApp 后端控制 CLI。运行 `myapp-ctl <命令> --help` 查看命令详情。",
+            de="MyApp Backend-Kontroll-CLI. Details mit `myapp-ctl <Befehl> --help`.",
+            es="CLI de control backend de MyApp. Usa `myapp-ctl <comando> --help` para detalles.",
+        ),
+    )
+    parser.add_argument(
+        "--lang",
+        choices=["zh", "en", "de", "es"],
+        metavar="LANG",
+        help=_tx(
+            "override CLI language for this command: zh, en, de, es",
+            zh="覆盖本次命令语言: zh, en, de, es",
+            de="CLI-Sprache fuer diesen Befehl setzen: zh, en, de, es",
+            es="cambiar el idioma de este comando: zh, en, de, es",
+        ),
+    )
+    sub = _add_subcommands(parser, "cmd", required=False)
+    status = sub.add_parser(
+        "status",
+        help=_tx("show service status", zh="查看服务状态", de="Dienststatus anzeigen", es="mostrar estado de servicios"),
+        usage=_tx("myapp-ctl status [service ...] [--json]", zh="myapp-ctl status [服务 ...] [--json]", de="myapp-ctl status [Dienst ...] [--json]", es="myapp-ctl status [servicio ...] [--json]"),
+    )
+    status.add_argument(
+        "services",
+        nargs="*",
+        help=_tx("optional service names; omitted means all services", zh="可选服务名；省略表示所有服务", de="optionale Dienstnamen; ohne Angabe alle Dienste", es="nombres de servicio opcionales; omitido significa todos"),
+    )
     status.add_argument("--json", action="store_true")
     status.set_defaults(func=cmd_status)
-    log = sub.add_parser("log")
+    log = sub.add_parser(
+        "log",
+        help=_tx("show service logs", zh="查看服务日志", de="Dienstlogs anzeigen", es="mostrar logs de servicio"),
+        usage=_tx("myapp-ctl log <service> [options]", zh="myapp-ctl log <服务> [选项]", de="myapp-ctl log <Dienst> [Optionen]", es="myapp-ctl log <servicio> [opciones]"),
+    )
     log.add_argument("service")
     log.add_argument("-n", "--lines", type=int, default=80)
     log.add_argument("-f", "--follow", action="store_true")
     log.set_defaults(func=cmd_log)
-    image = sub.add_parser("image")
-    image_sub = image.add_subparsers(dest="image_cmd", required=True)
-    image_sub.add_parser("ls").set_defaults(func=cmd_image)
+    image = sub.add_parser(
+        "image",
+        help=_tx("manage Docker images", zh="管理 Docker 镜像", de="Docker-Images verwalten", es="gestionar imagenes Docker"),
+        usage=_tx("myapp-ctl image <command> [args]", zh="myapp-ctl image <命令> [参数]", de="myapp-ctl image <Befehl> [Argumente]", es="myapp-ctl image <comando> [args]"),
+    )
+    image_sub = _add_subcommands(image, "image_cmd")
+    image_sub.add_parser(
+        "ls",
+        help=_tx("list configured images", zh="列出已配置镜像", de="konfigurierte Images auflisten", es="listar imagenes configuradas"),
+    ).set_defaults(func=cmd_image)
     for action in ("build", "pull", "push"):
-        image_action = image_sub.add_parser(action)
-        image_action.add_argument("target", nargs="?", default="all", choices=["all", *IMAGE_TARGETS.keys()])
+        image_action = image_sub.add_parser(
+            action,
+            help=_tx(f"{action} one image target or all targets", zh=f"{action} 单个镜像目标或全部目标", de=f"{action} ein Image-Ziel oder alle Ziele", es=f"{action} un destino de imagen o todos"),
+            usage=_tx(f"myapp-ctl image {action} [target] [--dry-run]", zh=f"myapp-ctl image {action} [目标] [--dry-run]", de=f"myapp-ctl image {action} [Ziel] [--dry-run]", es=f"myapp-ctl image {action} [destino] [--dry-run]"),
+        )
+        image_action.add_argument(
+            "target",
+            nargs="?",
+            default="all",
+            choices=["all", *IMAGE_TARGETS.keys()],
+            metavar="TARGET",
+            help=_tx("image target: all, agent-runtime, agent-node, backend", zh="镜像目标: all, agent-runtime, agent-node, backend", de="Image-Ziel: all, agent-runtime, agent-node, backend", es="destino de imagen: all, agent-runtime, agent-node, backend"),
+        )
         image_action.add_argument("--dry-run", action="store_true")
         image_action.set_defaults(func=cmd_image)
-    deploy = sub.add_parser("deploy")
-    deploy.add_argument("targets", nargs="*", help="service/group names; omitted means all")
-    deploy.add_argument("--group", choices=["infra", "agent", "core", "openim", "supabase"])
-    deploy.add_argument("--build", action="store_true", help="build required images from the local source tree before deploy")
-    deploy.add_argument("--pull", action="store_true", help="pull required images before deploy")
-    deploy.add_argument("--plan", action="store_true", help="print deployment plan only")
+    deploy = sub.add_parser(
+        "deploy",
+        help=_tx("deploy services", zh="部署服务", de="Dienste deployen", es="desplegar servicios"),
+        usage=_tx("myapp-ctl deploy [options] [targets ...]", zh="myapp-ctl deploy [选项] [目标 ...]", de="myapp-ctl deploy [Optionen] [Ziele ...]", es="myapp-ctl deploy [opciones] [destinos ...]"),
+    )
+    deploy.add_argument("targets", nargs="*", help=_tx("service/group names; omitted means all", zh="服务或分组名；省略表示全部", de="Dienst- oder Gruppennamen; ohne Angabe alle", es="nombres de servicio o grupo; omitido significa todos"))
+    deploy.add_argument(
+        "--group",
+        choices=["infra", "agent", "core", "openim", "supabase"],
+        metavar="GROUP",
+        help=_tx("service group: infra, agent, core, openim, supabase", zh="服务分组: infra, agent, core, openim, supabase", de="Dienstgruppe: infra, agent, core, openim, supabase", es="grupo de servicios: infra, agent, core, openim, supabase"),
+    )
+    deploy.add_argument("--build", action="store_true", help=_tx("build required images from the local source tree before deploy", zh="部署前从本地源码构建所需镜像", de="benoetigte Images vor dem Deploy aus lokalem Quellcode bauen", es="construir imagenes necesarias desde el codigo local antes de desplegar"))
+    deploy.add_argument("--pull", action="store_true", help=_tx("pull required images before deploy", zh="部署前拉取所需镜像", de="benoetigte Images vor dem Deploy laden", es="descargar imagenes necesarias antes de desplegar"))
+    deploy.add_argument("--plan", action="store_true", help=_tx("print deployment plan only", zh="仅打印部署计划", de="nur den Deployment-Plan ausgeben", es="solo imprimir el plan de despliegue"))
     deploy.add_argument("--dry-run", action="store_true")
-    deploy.add_argument("--host", help="public host/IP used when first-run stack secrets must be generated")
-    deploy.add_argument("--data-root", help="local persistent data root, for example /mnt/myapp")
-    deploy.add_argument("--no-setup", action="store_true", help="fail instead of launching first-run interactive setup")
-    deploy.add_argument("--no-client-env", action="store_true", help="do not print client environment JSON/QR after a full deploy")
-    deploy.add_argument("--client-env-host", help="host/IP to use in the post-deploy client environment JSON")
-    deploy.add_argument("--client-env-name", help="name shown in the post-deploy client environment JSON")
-    deploy.add_argument("--no-terminal-qr", action="store_true", help="do not print an ANSI QR code after a full deploy")
-    deploy.add_argument("--no-test-user", action="store_true", help="skip the interactive test@example.com user prompt")
-    deploy.add_argument("--test-user-email", default="test@example.com", help="email for the optional deploy-time test user")
-    deploy.add_argument("--test-user-username", default="test", help="username for the optional deploy-time test user")
-    deploy.add_argument("--test-user-password-env", default="MYAPP_TEST_USER_PASSWORD", help="environment variable used for non-interactive test user password")
-    deploy.add_argument("--test-user-password-file", help="file containing the non-interactive test user password")
+    deploy.add_argument("--force", action="store_true", help=_tx("deploy even when active AI runs may be interrupted", zh="即使可能打断活跃 AI 任务也继续部署", de="auch deployen, wenn aktive KI-Laeufe unterbrochen werden koennen", es="desplegar aunque pueda interrumpir tareas activas de IA"))
+    deploy.add_argument("--host", help=_tx("public host/IP used when first-run stack secrets must be generated", zh="首次生成栈密钥时使用的公网域名或 IP", de="oeffentlicher Host/IP fuer erstmalige Stack-Secrets", es="host/IP publico usado al generar secretos iniciales"))
+    deploy.add_argument("--data-root", help=_tx("local persistent data root, for example /mnt/myapp", zh="本地持久化数据根目录，例如 /mnt/myapp", de="lokales persistentes Datenverzeichnis, z.B. /mnt/myapp", es="raiz de datos persistentes local, por ejemplo /mnt/myapp"))
+    deploy.add_argument("--no-setup", action="store_true", help=_tx("fail instead of launching first-run interactive setup", zh="缺少配置时直接失败，不启动首次交互配置", de="bei fehlender Konfiguration fehlschlagen statt Setup zu starten", es="fallar si falta configuracion, sin iniciar setup interactivo"))
+    deploy.add_argument("--no-client-env", action="store_true", help=_tx("do not print client environment JSON/QR after a full deploy", zh="完整部署后不打印客户端环境 JSON/二维码", de="nach vollem Deploy kein Client-Environment JSON/QR ausgeben", es="no imprimir JSON/QR de entorno de cliente tras despliegue completo"))
+    deploy.add_argument("--client-env-host", help=_tx("host/IP to use in the post-deploy client environment JSON", zh="部署后客户端环境 JSON 使用的域名或 IP", de="Host/IP fuer das Client-Environment JSON nach dem Deploy", es="host/IP para el JSON de entorno de cliente tras desplegar"))
+    deploy.add_argument("--client-env-name", help=_tx("name shown in the post-deploy client environment JSON", zh="部署后客户端环境 JSON 展示的名称", de="Name im Client-Environment JSON nach dem Deploy", es="nombre mostrado en el JSON de entorno tras desplegar"))
+    deploy.add_argument("--no-terminal-qr", action="store_true", help=_tx("do not print an ANSI QR code after a full deploy", zh="完整部署后不在终端打印 ANSI 二维码", de="nach vollem Deploy keinen ANSI-QR im Terminal ausgeben", es="no imprimir QR ANSI en terminal tras despliegue completo"))
+    deploy.add_argument("--no-test-user", action="store_true", help=_tx("skip the interactive test@example.com user prompt", zh="跳过交互式 test@example.com 测试用户创建", de="interaktive Abfrage fuer test@example.com ueberspringen", es="omitir pregunta interactiva para usuario test@example.com"))
+    deploy.add_argument("--test-user-email", default="test@example.com", help=_tx("email for the optional deploy-time test user", zh="部署时可选测试用户邮箱", de="E-Mail fuer optionalen Testbenutzer beim Deploy", es="email del usuario de prueba opcional"))
+    deploy.add_argument("--test-user-username", default="test", help=_tx("username for the optional deploy-time test user", zh="部署时可选测试用户用户名", de="Benutzername fuer optionalen Testbenutzer beim Deploy", es="nombre del usuario de prueba opcional"))
+    deploy.add_argument("--test-user-password-env", default="MYAPP_TEST_USER_PASSWORD", help=_tx("environment variable used for non-interactive test user password", zh="非交互测试用户密码的环境变量名", de="Umgebungsvariable fuer nichtinteraktives Testbenutzer-Passwort", es="variable de entorno para la contrasena no interactiva del usuario de prueba"))
+    deploy.add_argument("--test-user-password-file", help=_tx("file containing the non-interactive test user password", zh="包含非交互测试用户密码的文件", de="Datei mit nichtinteraktivem Testbenutzer-Passwort", es="archivo con la contrasena no interactiva del usuario de prueba"))
     deploy.set_defaults(func=cmd_deploy)
-    setup = sub.add_parser("setup", help="interactive first-run setup for AI providers and optional channels")
-    setup.add_argument("--host", help="public host/IP used in generated local service URLs")
-    setup.add_argument("--data-root", help="local persistent data root, for example /mnt/myapp")
-    setup.add_argument("--force", action="store_true", help="replace existing setup config instead of offering to keep it")
-    setup.add_argument("--no-ai", action="store_true", help="skip AI provider setup")
-    setup.add_argument("--no-asr", action="store_true", help="skip optional ByteDance ASR setup")
-    setup.add_argument("--no-email", action="store_true", help="skip optional Supabase SMTP email setup")
-    setup.add_argument("--no-push", action="store_true", help="skip optional APNs/FCM/GeTui setup")
+    setup = sub.add_parser("setup", help=_tx("interactive first-run setup for AI providers and optional channels", zh="首次交互配置 AI 供应商和可选通道", de="interaktives Erst-Setup fuer KI-Anbieter und optionale Kanaele", es="setup inicial interactivo para proveedores de IA y canales opcionales"), usage=_tx("myapp-ctl setup [options]", zh="myapp-ctl setup [选项]", de="myapp-ctl setup [Optionen]", es="myapp-ctl setup [opciones]"))
+    setup.add_argument("--host", help=_tx("public host/IP used in generated local service URLs", zh="生成本地服务 URL 时使用的公网域名或 IP", de="oeffentlicher Host/IP fuer generierte lokale Dienst-URLs", es="host/IP publico usado en URLs locales generadas"))
+    setup.add_argument("--data-root", help=_tx("local persistent data root, for example /mnt/myapp", zh="本地持久化数据根目录，例如 /mnt/myapp", de="lokales persistentes Datenverzeichnis, z.B. /mnt/myapp", es="raiz local persistente, por ejemplo /mnt/myapp"))
+    setup.add_argument("--force", action="store_true", help=_tx("replace existing setup config instead of offering to keep it", zh="替换现有配置，不再询问是否保留", de="bestehende Setup-Konfiguration ersetzen", es="reemplazar configuracion existente sin preguntar"))
+    setup.add_argument("--no-ai", action="store_true", help=_tx("skip AI provider setup", zh="跳过 AI 供应商配置", de="KI-Anbieter-Setup ueberspringen", es="omitir setup de proveedor de IA"))
+    setup.add_argument("--no-asr", action="store_true", help=_tx("skip optional ByteDance ASR setup", zh="跳过可选 ByteDance ASR 配置", de="optionales ByteDance-ASR-Setup ueberspringen", es="omitir setup opcional de ByteDance ASR"))
+    setup.add_argument("--no-email", action="store_true", help=_tx("skip optional Supabase SMTP email setup", zh="跳过可选 Supabase SMTP 邮件配置", de="optionales Supabase-SMTP-Mail-Setup ueberspringen", es="omitir setup opcional de correo SMTP Supabase"))
+    setup.add_argument("--no-push", action="store_true", help=_tx("skip optional APNs/FCM/GeTui setup", zh="跳过可选 APNs/FCM/个推配置", de="optionales APNs/FCM/GeTui-Setup ueberspringen", es="omitir setup opcional de APNs/FCM/GeTui"))
     setup.set_defaults(func=cmd_setup)
-    update = sub.add_parser("update", help="pull the source repository and refresh myapp-ctl")
-    update.add_argument("--source", help="source checkout path; default reads ctl config or /opt/myapp/current-agent-control-plane")
-    update.add_argument("--no-pull", action="store_true", help="skip git pull and only reinstall from the local checkout")
+    update = sub.add_parser("update", help=_tx("pull the source repository and refresh myapp-ctl", zh="拉取源码仓库并刷新 myapp-ctl", de="Quellrepository aktualisieren und myapp-ctl erneuern", es="actualizar repositorio fuente y refrescar myapp-ctl"), usage=_tx("myapp-ctl update [options]", zh="myapp-ctl update [选项]", de="myapp-ctl update [Optionen]", es="myapp-ctl update [opciones]"))
+    update.add_argument("--source", help=_tx("source checkout path; default reads ctl config or /opt/myapp/current-agent-control-plane", zh="源码检出路径；默认读取 ctl 配置或 /opt/myapp/current-agent-control-plane", de="Pfad zum Source-Checkout; Standard aus ctl-Konfiguration oder /opt/myapp/current-agent-control-plane", es="ruta del checkout fuente; por defecto lee config ctl o /opt/myapp/current-agent-control-plane"))
+    update.add_argument("--no-pull", action="store_true", help=_tx("skip git pull and only reinstall from the local checkout", zh="跳过 git pull，仅从本地检出重新安装", de="git pull ueberspringen und nur lokal neu installieren", es="omitir git pull y reinstalar solo desde checkout local"))
     update.set_defaults(func=cmd_update)
-    uninstall = sub.add_parser("uninstall")
-    uninstall.add_argument("--yes", action="store_true", help="required confirmation for destructive cleanup")
-    uninstall.add_argument("--purge", action="store_true", help="remove containers, legacy compose volumes, secrets, install config, and app images; preserve data root")
-    uninstall.add_argument("--volumes", action="store_true", help="remove legacy compose named volumes while stopping services; bind-path data is preserved")
-    uninstall.add_argument("--state", action="store_true", help="deprecated; data-root state is always preserved")
-    uninstall.add_argument("--logs", action="store_true", help="deprecated; data-root logs are always preserved")
-    uninstall.add_argument("--secrets", action="store_true", help="remove /etc/myapp/secrets.d")
-    uninstall.add_argument("--install-files", action="store_true", help="remove installed compose/config files")
-    uninstall.add_argument("--images", action="store_true", help="remove configured MyApp Docker images")
-    uninstall.add_argument("--remove-ctl", action="store_true", help="remove the myapp-ctl executable after cleanup")
+    uninstall = sub.add_parser("uninstall", help=_tx("stop and remove deployed services", zh="停止并移除已部署服务", de="deployte Dienste stoppen und entfernen", es="detener y eliminar servicios desplegados"), usage=_tx("myapp-ctl uninstall --yes [options]", zh="myapp-ctl uninstall --yes [选项]", de="myapp-ctl uninstall --yes [Optionen]", es="myapp-ctl uninstall --yes [opciones]"))
+    uninstall.add_argument("--yes", action="store_true", help=_tx("required confirmation for destructive cleanup", zh="破坏性清理所需确认", de="erforderliche Bestaetigung fuer destruktive Bereinigung", es="confirmacion requerida para limpieza destructiva"))
+    uninstall.add_argument("--purge", action="store_true", help=_tx("remove containers, legacy compose volumes, secrets, install config, and app images; preserve data root", zh="移除容器、旧 compose volume、密钥、安装配置和应用镜像；保留 data root", de="Container, alte Compose-Volumes, Secrets, Install-Konfiguration und Images entfernen; data root behalten", es="eliminar contenedores, volumenes compose legados, secretos, config e imagenes; conservar data root"))
+    uninstall.add_argument("--volumes", action="store_true", help=_tx("remove legacy compose named volumes while stopping services; bind-path data is preserved", zh="停止服务时移除旧 compose 命名 volume；保留 bind-path 数据", de="alte benannte Compose-Volumes beim Stoppen entfernen; Bind-Pfad-Daten bleiben", es="eliminar volumenes compose legados al detener; datos bind-path se conservan"))
+    uninstall.add_argument("--state", action="store_true", help=_tx("deprecated; data-root state is always preserved", zh="已废弃；data-root state 始终保留", de="veraltet; data-root state bleibt immer erhalten", es="obsoleto; data-root state siempre se conserva"))
+    uninstall.add_argument("--logs", action="store_true", help=_tx("deprecated; data-root logs are always preserved", zh="已废弃；data-root logs 始终保留", de="veraltet; data-root logs bleiben immer erhalten", es="obsoleto; data-root logs siempre se conservan"))
+    uninstall.add_argument("--secrets", action="store_true", help=_tx("remove /etc/myapp/secrets.d", zh="移除 /etc/myapp/secrets.d", de="/etc/myapp/secrets.d entfernen", es="eliminar /etc/myapp/secrets.d"))
+    uninstall.add_argument("--install-files", action="store_true", help=_tx("remove installed compose/config files", zh="移除已安装的 compose/config 文件", de="installierte Compose-/Config-Dateien entfernen", es="eliminar archivos compose/config instalados"))
+    uninstall.add_argument("--images", action="store_true", help=_tx("remove configured MyApp Docker images", zh="移除已配置 MyApp Docker 镜像", de="konfigurierte MyApp Docker-Images entfernen", es="eliminar imagenes Docker MyApp configuradas"))
+    uninstall.add_argument("--remove-ctl", action="store_true", help=_tx("remove the myapp-ctl executable after cleanup", zh="清理后移除 myapp-ctl 可执行文件", de="myapp-ctl nach der Bereinigung entfernen", es="eliminar ejecutable myapp-ctl tras la limpieza"))
     uninstall.add_argument("--dry-run", action="store_true")
     uninstall.set_defaults(func=cmd_uninstall)
-    restart = sub.add_parser("restart")
-    restart.add_argument("targets", nargs="*", help="service/group names; omitted means all")
-    restart.add_argument("--group", choices=["infra", "agent", "core", "openim", "supabase"])
+    restart = sub.add_parser("restart", help=_tx("restart services", zh="重启服务", de="Dienste neu starten", es="reiniciar servicios"), usage=_tx("myapp-ctl restart [options] [targets ...]", zh="myapp-ctl restart [选项] [目标 ...]", de="myapp-ctl restart [Optionen] [Ziele ...]", es="myapp-ctl restart [opciones] [destinos ...]"))
+    restart.add_argument("targets", nargs="*", help=_tx("service/group names; omitted means all", zh="服务或分组名；省略表示全部", de="Dienst- oder Gruppennamen; ohne Angabe alle", es="nombres de servicio o grupo; omitido significa todos"))
+    restart.add_argument(
+        "--group",
+        choices=["infra", "agent", "core", "openim", "supabase"],
+        metavar="GROUP",
+        help=_tx("service group: infra, agent, core, openim, supabase", zh="服务分组: infra, agent, core, openim, supabase", de="Dienstgruppe: infra, agent, core, openim, supabase", es="grupo de servicios: infra, agent, core, openim, supabase"),
+    )
     restart.set_defaults(func=cmd_restart)
-    secret = sub.add_parser("secret")
-    secret_sub = secret.add_subparsers(dest="secret_cmd", required=True)
-    secret_sub.add_parser("ls").set_defaults(func=cmd_secret)
-    secret_init = secret_sub.add_parser("init-stack")
-    secret_init.add_argument("--host", help="public host/IP used in generated local service URLs")
-    secret_init.add_argument("--data-root", help="local persistent data root, for example /mnt/myapp")
-    secret_init.add_argument("--force", action="store_true", help="regenerate stack secrets managed by myapp-ctl")
+    secret = sub.add_parser("secret", help=_tx("manage host-local secrets", zh="管理本机密钥", de="host-lokale Secrets verwalten", es="gestionar secretos locales del host"), usage=_tx("myapp-ctl secret <command> [args]", zh="myapp-ctl secret <命令> [参数]", de="myapp-ctl secret <Befehl> [Argumente]", es="myapp-ctl secret <comando> [args]"))
+    secret_sub = _add_subcommands(secret, "secret_cmd")
+    secret_sub.add_parser("ls", help=_tx("list secret groups", zh="列出密钥分组", de="Secret-Gruppen auflisten", es="listar grupos de secretos"), usage="myapp-ctl secret ls").set_defaults(func=cmd_secret)
+    secret_init = secret_sub.add_parser("init-stack", help=_tx("initialize stack secrets", zh="初始化栈密钥", de="Stack-Secrets initialisieren", es="inicializar secretos del stack"), usage=_tx("myapp-ctl secret init-stack [options]", zh="myapp-ctl secret init-stack [选项]", de="myapp-ctl secret init-stack [Optionen]", es="myapp-ctl secret init-stack [opciones]"))
+    secret_init.add_argument("--host", help=_tx("public host/IP used in generated local service URLs", zh="生成本地服务 URL 时使用的公网域名或 IP", de="oeffentlicher Host/IP fuer generierte lokale Dienst-URLs", es="host/IP publico usado en URLs locales generadas"))
+    secret_init.add_argument("--data-root", help=_tx("local persistent data root, for example /mnt/myapp", zh="本地持久化数据根目录，例如 /mnt/myapp", de="lokales persistentes Datenverzeichnis, z.B. /mnt/myapp", es="raiz local persistente, por ejemplo /mnt/myapp"))
+    secret_init.add_argument("--force", action="store_true", help=_tx("regenerate stack secrets managed by myapp-ctl", zh="重新生成 myapp-ctl 管理的栈密钥", de="von myapp-ctl verwaltete Stack-Secrets neu erzeugen", es="regenerar secretos del stack gestionados por myapp-ctl"))
     secret_init.set_defaults(func=cmd_secret)
-    secret_set = secret_sub.add_parser("set")
+    secret_set = secret_sub.add_parser("set", help=_tx("set one or more secret values", zh="设置一个或多个密钥值", de="einen oder mehrere Secret-Werte setzen", es="definir uno o mas valores secretos"), usage=_tx("myapp-ctl secret set <group> <KEY=VALUE ...>", zh="myapp-ctl secret set <分组> <KEY=VALUE ...>", de="myapp-ctl secret set <Gruppe> <KEY=VALUE ...>", es="myapp-ctl secret set <grupo> <KEY=VALUE ...>"))
     secret_set.add_argument("group")
     secret_set.add_argument("items", nargs="+")
     secret_set.set_defaults(func=cmd_secret)
-    secret_generate = secret_sub.add_parser("generate")
+    secret_generate = secret_sub.add_parser("generate", help=_tx("generate random secret values", zh="生成随机密钥值", de="zufaellige Secret-Werte erzeugen", es="generar valores secretos aleatorios"), usage=_tx("myapp-ctl secret generate <group> <key ...> [options]", zh="myapp-ctl secret generate <分组> <key ...> [选项]", de="myapp-ctl secret generate <Gruppe> <Key ...> [Optionen]", es="myapp-ctl secret generate <grupo> <key ...> [opciones]"))
     secret_generate.add_argument("group")
     secret_generate.add_argument("keys", nargs="+")
     secret_generate.add_argument("--bytes", type=int, default=32)
     secret_generate.set_defaults(func=cmd_secret)
-    secret_get = secret_sub.add_parser("get")
+    secret_get = secret_sub.add_parser("get", help=_tx("read one secret value", zh="读取一个密钥值", de="einen Secret-Wert lesen", es="leer un valor secreto"), usage=_tx("myapp-ctl secret get <group> <key> [--show]", zh="myapp-ctl secret get <分组> <key> [--show]", de="myapp-ctl secret get <Gruppe> <Key> [--show]", es="myapp-ctl secret get <grupo> <key> [--show]"))
     secret_get.add_argument("group")
     secret_get.add_argument("key")
     secret_get.add_argument("--show", action="store_true")
     secret_get.set_defaults(func=cmd_secret)
-    secret_rm = secret_sub.add_parser("rm")
+    secret_rm = secret_sub.add_parser("rm", help=_tx("remove one or more secret values", zh="移除一个或多个密钥值", de="einen oder mehrere Secret-Werte entfernen", es="eliminar uno o mas valores secretos"), usage=_tx("myapp-ctl secret rm <group> <key ...>", zh="myapp-ctl secret rm <分组> <key ...>", de="myapp-ctl secret rm <Gruppe> <Key ...>", es="myapp-ctl secret rm <grupo> <key ...>"))
     secret_rm.add_argument("group")
     secret_rm.add_argument("keys", nargs="+")
     secret_rm.set_defaults(func=cmd_secret)
-    config = sub.add_parser("config", help="view, export, import, or set myapp-ctl host configuration")
-    config_sub = config.add_subparsers(dest="config_cmd", required=True)
-    config_view = config_sub.add_parser("view")
-    config_view.add_argument("--show-secrets", action="store_true", help="print real secret values instead of redacted values")
+    config = sub.add_parser("config", help=_tx("view, export, import, or set myapp-ctl host configuration", zh="查看、导出、导入或设置 myapp-ctl 主机配置", de="myapp-ctl Host-Konfiguration anzeigen, exportieren, importieren oder setzen", es="ver, exportar, importar o configurar el host myapp-ctl"), usage=_tx("myapp-ctl config <command> [args]", zh="myapp-ctl config <命令> [参数]", de="myapp-ctl config <Befehl> [Argumente]", es="myapp-ctl config <comando> [args]"))
+    config_sub = _add_subcommands(config, "config_cmd")
+    config_view = config_sub.add_parser("view", help=_tx("print current ctl configuration", zh="打印当前 ctl 配置", de="aktuelle ctl-Konfiguration ausgeben", es="imprimir configuracion ctl actual"), usage=_tx("myapp-ctl config view [--show-secrets]", zh="myapp-ctl config view [--show-secrets]", de="myapp-ctl config view [--show-secrets]", es="myapp-ctl config view [--show-secrets]"))
+    config_view.add_argument("--show-secrets", action="store_true", help=_tx("print real secret values instead of redacted values", zh="打印真实密钥值而不是脱敏值", de="echte Secret-Werte statt redigierter Werte ausgeben", es="imprimir secretos reales en lugar de valores ocultos"))
     config_view.set_defaults(func=cmd_config)
-    config_export = config_sub.add_parser("export")
-    config_export.add_argument("--out", required=True, help="output file path; use .json or .yaml extension as preferred")
-    config_export.add_argument("--format", choices=["auto", "json", "yaml"], default="auto", help="serialization format; default infers from .json/.yaml output extension")
-    config_export.add_argument("--redacted", action="store_true", help="export a non-restorable redacted bundle")
+    config_export = config_sub.add_parser("export", help=_tx("export ctl config and secrets", zh="导出 ctl 配置和密钥", de="ctl-Konfiguration und Secrets exportieren", es="exportar config ctl y secretos"), usage=_tx("myapp-ctl config export --out <path> [options]", zh="myapp-ctl config export --out <路径> [选项]", de="myapp-ctl config export --out <Pfad> [Optionen]", es="myapp-ctl config export --out <ruta> [opciones]"))
+    config_export.add_argument("--out", required=True, help=_tx("output file path; use .json or .yaml extension as preferred", zh="输出文件路径；可使用 .json 或 .yaml 扩展名", de="Ausgabepfad; .json- oder .yaml-Endung moeglich", es="ruta de salida; usa extension .json o .yaml"))
+    config_export.add_argument(
+        "--format",
+        choices=["auto", "json", "yaml"],
+        default="auto",
+        metavar="FORMAT",
+        help=_tx("serialization format: auto, json, yaml", zh="序列化格式: auto, json, yaml", de="Serialisierungsformat: auto, json, yaml", es="formato de serializacion: auto, json, yaml"),
+    )
+    config_export.add_argument("--redacted", action="store_true", help=_tx("export a non-restorable redacted bundle", zh="导出不可恢复的脱敏包", de="nicht wiederherstellbares redigiertes Bundle exportieren", es="exportar paquete oculto no restaurable"))
     config_export.set_defaults(func=cmd_config)
-    config_import = config_sub.add_parser("import")
-    config_import.add_argument("path", help="bundle created by myapp-ctl config export")
-    config_import.add_argument("--yes", action="store_true", help="confirm overwriting local config and secrets")
+    config_import = config_sub.add_parser("import", help=_tx("import a ctl config bundle", zh="导入 ctl 配置包", de="ctl-Konfigurationsbundle importieren", es="importar paquete de configuracion ctl"), usage=_tx("myapp-ctl config import <path> --yes", zh="myapp-ctl config import <路径> --yes", de="myapp-ctl config import <Pfad> --yes", es="myapp-ctl config import <ruta> --yes"))
+    config_import.add_argument("path", help=_tx("bundle created by myapp-ctl config export", zh="由 myapp-ctl config export 创建的配置包", de="Bundle von myapp-ctl config export", es="paquete creado por myapp-ctl config export"))
+    config_import.add_argument("--yes", action="store_true", help=_tx("confirm overwriting local config and secrets", zh="确认覆盖本地配置和密钥", de="Ueberschreiben lokaler Konfiguration und Secrets bestaetigen", es="confirmar sobrescritura de config y secretos locales"))
     config_import.set_defaults(func=cmd_config)
-    config_lang = config_sub.add_parser("lang")
-    config_lang.add_argument("language", nargs="?", help="zh, en, de, or es")
+    config_lang = config_sub.add_parser("lang", help=_tx("view or set CLI language", zh="查看或设置 CLI 语言", de="CLI-Sprache anzeigen oder setzen", es="ver o establecer idioma del CLI"), usage=_tx("myapp-ctl config lang [zh|en|de|es]", zh="myapp-ctl config lang [zh|en|de|es]", de="myapp-ctl config lang [zh|en|de|es]", es="myapp-ctl config lang [zh|en|de|es]"))
+    config_lang.add_argument("language", nargs="?", help=_tx("zh, en, de, or es", zh="zh、en、de 或 es", de="zh, en, de oder es", es="zh, en, de o es"))
     config_lang.set_defaults(func=cmd_config)
-    domain = sub.add_parser("domain")
-    domain_sub = domain.add_subparsers(dest="domain_cmd", required=True)
-    domain_sub.add_parser("ls").set_defaults(func=cmd_domain)
-    domain_set = domain_sub.add_parser("set")
+    domain = sub.add_parser("domain", help=_tx("manage service domain overrides", zh="管理服务域名覆盖", de="Dienst-Domain-Overrides verwalten", es="gestionar overrides de dominio de servicios"), usage=_tx("myapp-ctl domain <command> [args]", zh="myapp-ctl domain <命令> [参数]", de="myapp-ctl domain <Befehl> [Argumente]", es="myapp-ctl domain <comando> [args]"))
+    domain_sub = _add_subcommands(domain, "domain_cmd")
+    domain_sub.add_parser("ls", help=_tx("list domain overrides", zh="列出域名覆盖", de="Domain-Overrides auflisten", es="listar overrides de dominio"), usage="myapp-ctl domain ls").set_defaults(func=cmd_domain)
+    domain_set = domain_sub.add_parser("set", help=_tx("set a domain override", zh="设置域名覆盖", de="Domain-Override setzen", es="definir override de dominio"), usage=_tx("myapp-ctl domain set <name> <value>", zh="myapp-ctl domain set <名称> <值>", de="myapp-ctl domain set <Name> <Wert>", es="myapp-ctl domain set <nombre> <valor>"))
     domain_set.add_argument("name")
     domain_set.add_argument("value")
     domain_set.set_defaults(func=cmd_domain)
-    domain_rm = domain_sub.add_parser("rm")
+    domain_rm = domain_sub.add_parser("rm", help=_tx("remove a domain override", zh="移除域名覆盖", de="Domain-Override entfernen", es="eliminar override de dominio"), usage=_tx("myapp-ctl domain rm <name>", zh="myapp-ctl domain rm <名称>", de="myapp-ctl domain rm <Name>", es="myapp-ctl domain rm <nombre>"))
     domain_rm.add_argument("name")
     domain_rm.set_defaults(func=cmd_domain)
-    client_env = sub.add_parser("client-env", help="generate client Service Environment import JSON and QR")
-    client_env.add_argument("--host", help="public host/IP to use in generated URLs")
-    client_env.add_argument("--name", help="environment name shown in the client")
-    client_env.add_argument("--out", help="JSON output path; default is <data-root>/state/client-environment.json")
-    client_env.add_argument("--qr", help="QR PNG output path; default follows --out with .png")
-    client_env.add_argument("--no-qr", action="store_true", help="do not generate QR PNG")
-    client_env.add_argument("--terminal-qr", action="store_true", help="also print an ANSI QR code in the terminal")
-    client_env.add_argument("--json", action="store_true", help="print raw JSON only")
+    client_env = sub.add_parser("client-env", help=_tx("generate client Service Environment import JSON and QR", zh="生成客户端服务环境导入 JSON 和二维码", de="Client-Service-Environment JSON und QR erzeugen", es="generar JSON y QR de entorno de servicio del cliente"), usage=_tx("myapp-ctl client-env [options]", zh="myapp-ctl client-env [选项]", de="myapp-ctl client-env [Optionen]", es="myapp-ctl client-env [opciones]"))
+    client_env.add_argument("--host", help=_tx("public host/IP to use in generated URLs", zh="生成 URL 使用的公网域名或 IP", de="oeffentlicher Host/IP fuer generierte URLs", es="host/IP publico para URLs generadas"))
+    client_env.add_argument("--name", help=_tx("environment name shown in the client", zh="客户端显示的环境名称", de="im Client angezeigter Umgebungsname", es="nombre de entorno mostrado en el cliente"))
+    client_env.add_argument("--out", help=_tx("JSON output path; default is <data-root>/state/client-environment.json", zh="JSON 输出路径；默认 <data-root>/state/client-environment.json", de="JSON-Ausgabepfad; Standard <data-root>/state/client-environment.json", es="ruta JSON de salida; por defecto <data-root>/state/client-environment.json"))
+    client_env.add_argument("--qr", help=_tx("QR PNG output path; default follows --out with .png", zh="QR PNG 输出路径；默认跟随 --out 并使用 .png", de="QR-PNG-Ausgabepfad; Standard folgt --out mit .png", es="ruta PNG del QR; por defecto sigue --out con .png"))
+    client_env.add_argument("--no-qr", action="store_true", help=_tx("do not generate QR PNG", zh="不生成 QR PNG", de="kein QR-PNG erzeugen", es="no generar QR PNG"))
+    client_env.add_argument("--terminal-qr", action="store_true", help=_tx("also print an ANSI QR code in the terminal", zh="同时在终端打印 ANSI 二维码", de="zusaetzlich ANSI-QR im Terminal ausgeben", es="tambien imprimir QR ANSI en terminal"))
+    client_env.add_argument("--json", action="store_true", help=_tx("print raw JSON only", zh="仅打印原始 JSON", de="nur rohes JSON ausgeben", es="imprimir solo JSON bruto"))
     client_env.set_defaults(func=cmd_client_env)
-    agent_node = sub.add_parser("agent-node")
-    agent_node_sub = agent_node.add_subparsers(dest="agent_node_cmd", required=True)
-    agent_node_ls = agent_node_sub.add_parser("ls", help="list registered cluster agent hosts")
+    agent_node = sub.add_parser("agent-node", help=_tx("manage cluster agent hosts", zh="管理集群 Agent 物理节点", de="Cluster-Agent-Hosts verwalten", es="gestionar hosts agent del cluster"), usage=_tx("myapp-ctl agent-node <command> [args]", zh="myapp-ctl agent-node <命令> [参数]", de="myapp-ctl agent-node <Befehl> [Argumente]", es="myapp-ctl agent-node <comando> [args]"))
+    agent_node_sub = _add_subcommands(agent_node, "agent_node_cmd")
+    agent_node_ls = agent_node_sub.add_parser("ls", help=_tx("list registered cluster agent hosts", zh="列出已注册集群 Agent 节点", de="registrierte Cluster-Agent-Hosts auflisten", es="listar hosts agent registrados"), usage=_tx("myapp-ctl agent-node ls [options]", zh="myapp-ctl agent-node ls [选项]", de="myapp-ctl agent-node ls [Optionen]", es="myapp-ctl agent-node ls [opciones]"))
     agent_node_ls.add_argument("--backend")
     agent_node_ls.add_argument("--token")
-    agent_node_ls.add_argument("--no-probe", action="store_true", help="do not call each agent-node /health")
+    agent_node_ls.add_argument("--no-probe", action="store_true", help=_tx("do not call each agent-node /health", zh="不调用每个 agent-node 的 /health", de="/health der einzelnen agent-nodes nicht abfragen", es="no llamar /health de cada agent-node"))
     agent_node_ls.add_argument("--json", action="store_true")
     agent_node_ls.set_defaults(func=cmd_agent_node)
-    agent_node_status = agent_node_sub.add_parser("status", help="show cluster agent host status")
+    agent_node_status = agent_node_sub.add_parser("status", help=_tx("show cluster agent host status", zh="查看集群 Agent 节点状态", de="Status eines Cluster-Agent-Hosts anzeigen", es="mostrar estado del host agent"), usage=_tx("myapp-ctl agent-node status [node-id] [options]", zh="myapp-ctl agent-node status [节点ID] [选项]", de="myapp-ctl agent-node status [Node-ID] [Optionen]", es="myapp-ctl agent-node status [node-id] [opciones]"))
     agent_node_status.add_argument("node_id", nargs="?")
     agent_node_status.add_argument("--backend")
     agent_node_status.add_argument("--token")
-    agent_node_status.add_argument("--no-probe", action="store_true", help="only used when node_id is omitted")
+    agent_node_status.add_argument("--no-probe", action="store_true", help=_tx("only used when node_id is omitted", zh="仅在省略 node_id 时使用", de="nur verwendet, wenn node_id fehlt", es="solo se usa cuando se omite node_id"))
     agent_node_status.add_argument("--json", action="store_true")
     agent_node_status.set_defaults(func=cmd_agent_node)
-    agent_node_register = agent_node_sub.add_parser("register", help="register this agent host to the master backend")
+    agent_node_register = agent_node_sub.add_parser("register", help=_tx("register this agent host to the master backend", zh="将本 Agent 节点注册到主后端", de="diesen Agent-Host beim Master-Backend registrieren", es="registrar este host agent en el backend maestro"), usage=_tx("myapp-ctl agent-node register [options]", zh="myapp-ctl agent-node register [选项]", de="myapp-ctl agent-node register [Optionen]", es="myapp-ctl agent-node register [opciones]"))
     agent_node_register.add_argument("--backend")
     agent_node_register.add_argument("--url")
     agent_node_register.add_argument("--node-id")
@@ -4359,46 +4629,46 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_register.add_argument("--token")
     agent_node_register.add_argument("--label", action="append")
     agent_node_register.set_defaults(func=cmd_agent_node)
-    agent_node_rm = agent_node_sub.add_parser("rm", help="remove a registered agent host from the master registry")
+    agent_node_rm = agent_node_sub.add_parser("rm", help=_tx("remove a registered agent host from the master registry", zh="从主注册表移除已注册 Agent 节点", de="registrierten Agent-Host aus Master-Registry entfernen", es="eliminar host agent registrado del registro maestro"), usage=_tx("myapp-ctl agent-node rm <node-id> [options]", zh="myapp-ctl agent-node rm <节点ID> [选项]", de="myapp-ctl agent-node rm <Node-ID> [Optionen]", es="myapp-ctl agent-node rm <node-id> [opciones]"))
     agent_node_rm.add_argument("node_id")
     agent_node_rm.add_argument("--backend")
     agent_node_rm.add_argument("--token")
     agent_node_rm.set_defaults(func=cmd_agent_node)
-    agent_node_pause = agent_node_sub.add_parser("pause", help="pause scheduling for an agent host without stopping current runs")
-    agent_node_pause.add_argument("node_id", nargs="?", help="defaults to local AGENT_NODE_ID")
+    agent_node_pause = agent_node_sub.add_parser("pause", help=_tx("pause scheduling for an agent host without stopping current runs", zh="暂停 Agent 节点调度，不停止当前任务", de="Scheduling fuer Agent-Host pausieren, laufende Jobs nicht stoppen", es="pausar planificacion del host agent sin detener tareas actuales"), usage=_tx("myapp-ctl agent-node pause [node-id] [options]", zh="myapp-ctl agent-node pause [节点ID] [选项]", de="myapp-ctl agent-node pause [Node-ID] [Optionen]", es="myapp-ctl agent-node pause [node-id] [opciones]"))
+    agent_node_pause.add_argument("node_id", nargs="?", help=_tx("defaults to local AGENT_NODE_ID", zh="默认使用本机 AGENT_NODE_ID", de="Standard ist lokale AGENT_NODE_ID", es="por defecto usa AGENT_NODE_ID local"))
     agent_node_pause.add_argument("--backend")
     agent_node_pause.add_argument("--token")
     agent_node_pause.add_argument("--reason", default="")
     agent_node_pause.add_argument("--json", action="store_true")
     agent_node_pause.set_defaults(func=cmd_agent_node)
-    agent_node_resume = agent_node_sub.add_parser("resume", help="resume scheduling for an agent host")
-    agent_node_resume.add_argument("node_id", nargs="?", help="defaults to local AGENT_NODE_ID")
+    agent_node_resume = agent_node_sub.add_parser("resume", help=_tx("resume scheduling for an agent host", zh="恢复 Agent 节点调度", de="Scheduling fuer Agent-Host fortsetzen", es="reanudar planificacion del host agent"), usage=_tx("myapp-ctl agent-node resume [node-id] [options]", zh="myapp-ctl agent-node resume [节点ID] [选项]", de="myapp-ctl agent-node resume [Node-ID] [Optionen]", es="myapp-ctl agent-node resume [node-id] [opciones]"))
+    agent_node_resume.add_argument("node_id", nargs="?", help=_tx("defaults to local AGENT_NODE_ID", zh="默认使用本机 AGENT_NODE_ID", de="Standard ist lokale AGENT_NODE_ID", es="por defecto usa AGENT_NODE_ID local"))
     agent_node_resume.add_argument("--backend")
     agent_node_resume.add_argument("--token")
     agent_node_resume.add_argument("--json", action="store_true")
     agent_node_resume.set_defaults(func=cmd_agent_node)
-    agent_node_capacity = agent_node_sub.add_parser("capacity", help="set local pull agent capacity and restart agent-node")
+    agent_node_capacity = agent_node_sub.add_parser("capacity", help=_tx("set local pull agent capacity and restart agent-node", zh="设置本机 pull Agent 并发并重启 agent-node", de="lokale Pull-Agent-Kapazitaet setzen und agent-node neu starten", es="definir capacidad local del agent pull y reiniciar agent-node"), usage=_tx("myapp-ctl agent-node capacity <n> [options]", zh="myapp-ctl agent-node capacity <n> [选项]", de="myapp-ctl agent-node capacity <n> [Optionen]", es="myapp-ctl agent-node capacity <n> [opciones]"))
     agent_node_capacity.add_argument("capacity", type=int)
-    agent_node_capacity.add_argument("--queue-max", type=int, help="local pull queue max reported by this agent node")
-    agent_node_capacity.add_argument("--backend", help="master backend URL; defaults to AGENT_NODE_BACKEND_URL")
+    agent_node_capacity.add_argument("--queue-max", type=int, help=_tx("local pull queue max reported by this agent node", zh="本 Agent 节点上报的本地 pull 队列上限", de="lokales Pull-Queue-Maximum, das dieser Agent meldet", es="maximo de cola pull local reportado por este agent"))
+    agent_node_capacity.add_argument("--backend", help=_tx("master backend URL; defaults to AGENT_NODE_BACKEND_URL", zh="主后端 URL；默认 AGENT_NODE_BACKEND_URL", de="Master-Backend-URL; Standard AGENT_NODE_BACKEND_URL", es="URL del backend maestro; por defecto AGENT_NODE_BACKEND_URL"))
     agent_node_capacity.add_argument("--token")
-    agent_node_capacity.add_argument("--no-restart", action="store_true", help="only write local limits")
-    agent_node_capacity.add_argument("--force", action="store_true", help="restart even if local agent runs are active")
+    agent_node_capacity.add_argument("--no-restart", action="store_true", help=_tx("only write local limits", zh="仅写入本地限制，不重启", de="nur lokale Limits schreiben", es="solo escribir limites locales"))
+    agent_node_capacity.add_argument("--force", action="store_true", help=_tx("restart even if local agent runs are active", zh="即使本机有活跃 Agent 任务也重启", de="auch bei aktiven lokalen Agent-Laeufen neu starten", es="reiniciar aunque haya tareas agent locales activas"))
     agent_node_capacity.add_argument("--json", action="store_true")
     agent_node_capacity.set_defaults(func=cmd_agent_node)
-    agent_node_limits = agent_node_sub.add_parser("limits", help="set local pull agent capacity/queue limits and restart agent-node")
+    agent_node_limits = agent_node_sub.add_parser("limits", help=_tx("set local pull agent capacity/queue limits and restart agent-node", zh="设置本机 pull Agent 并发/队列限制并重启 agent-node", de="lokale Pull-Agent-Kapazitaet/Queue-Limits setzen und agent-node neu starten", es="definir capacidad/cola local del agent pull y reiniciar agent-node"), usage=_tx("myapp-ctl agent-node limits [options]", zh="myapp-ctl agent-node limits [选项]", de="myapp-ctl agent-node limits [Optionen]", es="myapp-ctl agent-node limits [opciones]"))
     agent_node_limits.add_argument("--capacity", type=int)
     agent_node_limits.add_argument("--queue-max", type=int)
-    agent_node_limits.add_argument("--backend", help="master backend URL; defaults to AGENT_NODE_BACKEND_URL")
+    agent_node_limits.add_argument("--backend", help=_tx("master backend URL; defaults to AGENT_NODE_BACKEND_URL", zh="主后端 URL；默认 AGENT_NODE_BACKEND_URL", de="Master-Backend-URL; Standard AGENT_NODE_BACKEND_URL", es="URL del backend maestro; por defecto AGENT_NODE_BACKEND_URL"))
     agent_node_limits.add_argument("--token")
-    agent_node_limits.add_argument("--no-restart", action="store_true", help="only write local limits")
-    agent_node_limits.add_argument("--force", action="store_true", help="restart even if local agent runs are active")
+    agent_node_limits.add_argument("--no-restart", action="store_true", help=_tx("only write local limits", zh="仅写入本地限制，不重启", de="nur lokale Limits schreiben", es="solo escribir limites locales"))
+    agent_node_limits.add_argument("--force", action="store_true", help=_tx("restart even if local agent runs are active", zh="即使本机有活跃 Agent 任务也重启", de="auch bei aktiven lokalen Agent-Laeufen neu starten", es="reiniciar aunque haya tareas agent locales activas"))
     agent_node_limits.add_argument("--json", action="store_true")
     agent_node_limits.set_defaults(func=cmd_agent_node)
-    agent_node_add = agent_node_sub.add_parser("add", help="print a join command for a new agent host")
-    agent_node_add.add_argument("--backend", help="master backend URL, for example http://77.237.233.229:5566")
-    agent_node_add.add_argument("--host", help="new agent host public IP or domain")
-    agent_node_add.add_argument("--url", help="full public agent-node URL; defaults to http://<host>:<public-port>")
+    agent_node_add = agent_node_sub.add_parser("add", help=_tx("print a join command for a new agent host", zh="打印新 Agent 节点的一键加入命令", de="Join-Befehl fuer neuen Agent-Host ausgeben", es="imprimir comando join para nuevo host agent"), usage=_tx("myapp-ctl agent-node add [options]", zh="myapp-ctl agent-node add [选项]", de="myapp-ctl agent-node add [Optionen]", es="myapp-ctl agent-node add [opciones]"))
+    agent_node_add.add_argument("--backend", help=_tx("master backend URL, for example http://77.237.233.229:5566", zh="主后端 URL，例如 http://77.237.233.229:5566", de="Master-Backend-URL, z.B. http://77.237.233.229:5566", es="URL del backend maestro, por ejemplo http://77.237.233.229:5566"))
+    agent_node_add.add_argument("--host", help=_tx("new agent host public IP or domain", zh="新 Agent 节点公网 IP 或域名", de="oeffentliche IP oder Domain des neuen Agent-Hosts", es="IP publica o dominio del nuevo host agent"))
+    agent_node_add.add_argument("--url", help=_tx("full public agent-node URL; defaults to http://<host>:<public-port>", zh="完整公网 agent-node URL；默认 http://<host>:<public-port>", de="vollstaendige oeffentliche agent-node URL; Standard http://<host>:<public-port>", es="URL publica completa de agent-node; por defecto http://<host>:<public-port>"))
     agent_node_add.add_argument("--node-id")
     agent_node_add.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
     agent_node_add.add_argument("--local-port", type=int, default=5590)
@@ -4407,18 +4677,18 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_add.add_argument("--queue-max", type=int)
     agent_node_add.add_argument("--ttl", type=int, default=180)
     agent_node_add.add_argument("--label", action="append")
-    agent_node_add.add_argument("--mode", choices=["pull", "direct"], default="pull")
-    agent_node_add.add_argument("--provider-mode", choices=["master", "local"], default="master")
-    agent_node_add.add_argument("--pull", action="store_true", help="make the join command pull required images")
-    agent_node_add.add_argument("--build", action="store_true", help="make the join command build required images locally")
+    agent_node_add.add_argument("--mode", choices=["pull", "direct"], default="pull", metavar="MODE", help=_tx("agent connection mode: pull, direct", zh="Agent 连接模式: pull, direct", de="Agent-Verbindungsmodus: pull, direct", es="modo de conexion agent: pull, direct"))
+    agent_node_add.add_argument("--provider-mode", choices=["master", "local"], default="master", metavar="MODE", help=_tx("provider key source: master, local", zh="供应商密钥来源: master, local", de="Provider-Key-Quelle: master, local", es="origen de claves del proveedor: master, local"))
+    agent_node_add.add_argument("--pull", action="store_true", help=_tx("make the join command pull required images", zh="生成的加入命令会拉取所需镜像", de="Join-Befehl laedt benoetigte Images", es="el comando join descargara imagenes necesarias"))
+    agent_node_add.add_argument("--build", action="store_true", help=_tx("make the join command build required images locally", zh="生成的加入命令会在本地构建所需镜像", de="Join-Befehl baut benoetigte Images lokal", es="el comando join construira imagenes localmente"))
     agent_node_add.add_argument("--no-nginx", action="store_true")
-    agent_node_add.add_argument("--allow-from", help="optional source IP allowed through ufw for the public agent port")
+    agent_node_add.add_argument("--allow-from", help=_tx("optional source IP allowed through ufw for the public agent port", zh="可选：允许通过 ufw 访问公网 Agent 端口的来源 IP", de="optionale Quell-IP, die ufw fuer den oeffentlichen Agent-Port erlaubt", es="IP origen opcional permitida por ufw para el puerto agent publico"))
     agent_node_add.add_argument("--no-timer", action="store_true")
     agent_node_add.set_defaults(func=cmd_agent_node)
-    agent_node_join = agent_node_sub.add_parser("join", help="join this host to a master backend as an agent node")
-    agent_node_join.add_argument("--backend", required=True, help="master backend URL")
-    agent_node_join.add_argument("--host", help="this agent host display IP or domain")
-    agent_node_join.add_argument("--url", help="agent-node URL; pull mode defaults to pull://<node-id>")
+    agent_node_join = agent_node_sub.add_parser("join", help=_tx("join this host to a master backend as an agent node", zh="将本机作为 Agent 节点加入主后端", de="diesen Host als Agent-Node an Master-Backend anbinden", es="unir este host al backend maestro como agent node"), usage=_tx("myapp-ctl agent-node join --backend <url> --node-id <id> [options]", zh="myapp-ctl agent-node join --backend <url> --node-id <id> [选项]", de="myapp-ctl agent-node join --backend <url> --node-id <id> [Optionen]", es="myapp-ctl agent-node join --backend <url> --node-id <id> [opciones]"))
+    agent_node_join.add_argument("--backend", required=True, help=_tx("master backend URL", zh="主后端 URL", de="Master-Backend-URL", es="URL del backend maestro"))
+    agent_node_join.add_argument("--host", help=_tx("this agent host display IP or domain", zh="本 Agent 节点展示 IP 或域名", de="Anzeige-IP oder Domain dieses Agent-Hosts", es="IP o dominio mostrado de este host agent"))
+    agent_node_join.add_argument("--url", help=_tx("agent-node URL; pull mode defaults to pull://<node-id>", zh="agent-node URL；pull 模式默认 pull://<node-id>", de="agent-node URL; Pull-Modus nutzt standardmaessig pull://<node-id>", es="URL de agent-node; modo pull usa por defecto pull://<node-id>"))
     agent_node_join.add_argument("--node-id", required=True)
     agent_node_join.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
     agent_node_join.add_argument("--local-port", type=int, default=5590)
@@ -4427,22 +4697,22 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_join.add_argument("--queue-max", type=int)
     agent_node_join.add_argument("--ttl", type=int, default=180)
     agent_node_join.add_argument("--label", action="append")
-    agent_node_join.add_argument("--mode", choices=["pull", "direct"], default="pull")
-    agent_node_join.add_argument("--provider-mode", choices=["master", "local"], default="master")
+    agent_node_join.add_argument("--mode", choices=["pull", "direct"], default="pull", metavar="MODE", help=_tx("agent connection mode: pull, direct", zh="Agent 连接模式: pull, direct", de="Agent-Verbindungsmodus: pull, direct", es="modo de conexion agent: pull, direct"))
+    agent_node_join.add_argument("--provider-mode", choices=["master", "local"], default="master", metavar="MODE", help=_tx("provider key source: master, local", zh="供应商密钥来源: master, local", de="Provider-Key-Quelle: master, local", es="origen de claves del proveedor: master, local"))
     agent_node_join.add_argument("--agent-token", required=True)
     agent_node_join.add_argument("--registration-token", required=True)
-    agent_node_join.add_argument("--pull", action="store_true", help="pull required images before deploy")
-    agent_node_join.add_argument("--build", action="store_true", help="build required images locally before deploy")
+    agent_node_join.add_argument("--pull", action="store_true", help=_tx("pull required images before deploy", zh="部署前拉取所需镜像", de="benoetigte Images vor dem Deploy laden", es="descargar imagenes necesarias antes de desplegar"))
+    agent_node_join.add_argument("--build", action="store_true", help=_tx("build required images locally before deploy", zh="部署前在本地构建所需镜像", de="benoetigte Images lokal vor dem Deploy bauen", es="construir imagenes localmente antes de desplegar"))
     agent_node_join.add_argument("--no-nginx", action="store_true")
-    agent_node_join.add_argument("--allow-from", help="optional source IP allowed through ufw for the public agent port")
+    agent_node_join.add_argument("--allow-from", help=_tx("optional source IP allowed through ufw for the public agent port", zh="可选：允许通过 ufw 访问公网 Agent 端口的来源 IP", de="optionale Quell-IP, die ufw fuer den oeffentlichen Agent-Port erlaubt", es="IP origen opcional permitida por ufw para el puerto agent publico"))
     agent_node_join.add_argument("--no-timer", action="store_true")
     agent_node_join.set_defaults(func=cmd_agent_node)
-    agent = sub.add_parser("agent")
-    agent_sub = agent.add_subparsers(dest="agent_cmd", required=True)
-    agent_add = agent_sub.add_parser("add")
-    agent_add.add_argument("--backend", help="master backend URL, for example http://77.237.233.229:5566")
-    agent_add.add_argument("--host", help="new agent host public IP or domain")
-    agent_add.add_argument("--url", help="full public agent-node URL; defaults to http://<host>:<public-port>")
+    agent = sub.add_parser("agent", help=_tx("inspect local agent runs", zh="查看本机 Agent 运行任务", de="lokale Agent-Laeufe anzeigen", es="inspeccionar tareas agent locales"), usage=_tx("myapp-ctl agent <command> [args]", zh="myapp-ctl agent <命令> [参数]", de="myapp-ctl agent <Befehl> [Argumente]", es="myapp-ctl agent <comando> [args]"))
+    agent_sub = _add_subcommands(agent, "agent_cmd")
+    agent_add = agent_sub.add_parser("add", help=_tx("deprecated alias for agent-node add", zh="已废弃：agent-node add 的别名", de="veraltet: Alias fuer agent-node add", es="obsoleto: alias de agent-node add"), usage=_tx("myapp-ctl agent add [options]", zh="myapp-ctl agent add [选项]", de="myapp-ctl agent add [Optionen]", es="myapp-ctl agent add [opciones]"))
+    agent_add.add_argument("--backend", help=_tx("master backend URL, for example http://77.237.233.229:5566", zh="主后端 URL，例如 http://77.237.233.229:5566", de="Master-Backend-URL, z.B. http://77.237.233.229:5566", es="URL del backend maestro, por ejemplo http://77.237.233.229:5566"))
+    agent_add.add_argument("--host", help=_tx("new agent host public IP or domain", zh="新 Agent 节点公网 IP 或域名", de="oeffentliche IP oder Domain des neuen Agent-Hosts", es="IP publica o dominio del nuevo host agent"))
+    agent_add.add_argument("--url", help=_tx("full public agent-node URL; defaults to http://<host>:<public-port>", zh="完整公网 agent-node URL；默认 http://<host>:<public-port>", de="vollstaendige oeffentliche agent-node URL; Standard http://<host>:<public-port>", es="URL publica completa de agent-node; por defecto http://<host>:<public-port>"))
     agent_add.add_argument("--node-id")
     agent_add.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
     agent_add.add_argument("--local-port", type=int, default=5590)
@@ -4450,21 +4720,21 @@ def build_parser() -> argparse.ArgumentParser:
     agent_add.add_argument("--capacity", type=int, default=1)
     agent_add.add_argument("--ttl", type=int, default=180)
     agent_add.add_argument("--label", action="append")
-    agent_add.add_argument("--mode", choices=["pull", "direct"], default="pull")
-    agent_add.add_argument("--provider-mode", choices=["master", "local"], default="master")
-    agent_add.add_argument("--pull", action="store_true", help="generate a pull-based deploy command instead of build")
+    agent_add.add_argument("--mode", choices=["pull", "direct"], default="pull", metavar="MODE", help=_tx("agent connection mode: pull, direct", zh="Agent 连接模式: pull, direct", de="Agent-Verbindungsmodus: pull, direct", es="modo de conexion agent: pull, direct"))
+    agent_add.add_argument("--provider-mode", choices=["master", "local"], default="master", metavar="MODE", help=_tx("provider key source: master, local", zh="供应商密钥来源: master, local", de="Provider-Key-Quelle: master, local", es="origen de claves del proveedor: master, local"))
+    agent_add.add_argument("--pull", action="store_true", help=_tx("generate a pull-based deploy command instead of build", zh="生成基于 pull 的部署命令，而不是 build", de="Pull-basierten Deploy-Befehl statt Build erzeugen", es="generar comando de despliegue pull en lugar de build"))
     agent_add.add_argument("--no-nginx", action="store_true")
-    agent_add.add_argument("--allow-from", help="optional source IP allowed through ufw for the public agent port")
+    agent_add.add_argument("--allow-from", help=_tx("optional source IP allowed through ufw for the public agent port", zh="可选：允许通过 ufw 访问公网 Agent 端口的来源 IP", de="optionale Quell-IP, die ufw fuer den oeffentlichen Agent-Port erlaubt", es="IP origen opcional permitida por ufw para el puerto agent publico"))
     agent_add.add_argument("--no-timer", action="store_true")
     agent_add.set_defaults(func=cmd_agent)
-    agent_ls = agent_sub.add_parser("ls")
+    agent_ls = agent_sub.add_parser("ls", help=_tx("list current local agent runs", zh="列出本机当前 Agent 任务", de="aktuelle lokale Agent-Laeufe auflisten", es="listar tareas agent locales actuales"), usage=_tx("myapp-ctl agent ls [options]", zh="myapp-ctl agent ls [选项]", de="myapp-ctl agent ls [Optionen]", es="myapp-ctl agent ls [opciones]"))
     agent_ls.add_argument("--url")
     # Deprecated no-op flags kept so older shell snippets do not fail, but
     # agent ls is intentionally current-local-runs only.
     agent_ls.add_argument("--history", action="store_true", help=argparse.SUPPRESS)
     agent_ls.add_argument("--limit", type=int, default=20, help=argparse.SUPPRESS)
     agent_ls.set_defaults(func=cmd_agent)
-    agent_register = agent_sub.add_parser("register")
+    agent_register = agent_sub.add_parser("register", help=_tx("deprecated alias for agent-node register", zh="已废弃：agent-node register 的别名", de="veraltet: Alias fuer agent-node register", es="obsoleto: alias de agent-node register"), usage=_tx("myapp-ctl agent register [options]", zh="myapp-ctl agent register [选项]", de="myapp-ctl agent register [Optionen]", es="myapp-ctl agent register [opciones]"))
     agent_register.add_argument("--backend")
     agent_register.add_argument("--url")
     agent_register.add_argument("--node-id")
@@ -4482,6 +4752,7 @@ def _print_main_help() -> None:
 
 def main(argv: list[str] | None = None) -> int:
     raw_args = list(sys.argv[1:] if argv is None else argv)
+    _preinitialize_language(raw_args)
     if not raw_args:
         class _HelpArgs:
             lang = None

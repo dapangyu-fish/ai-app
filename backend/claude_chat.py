@@ -826,6 +826,11 @@ def chat_start():
         existing = ai_session.SessionStore().get_meta(session_id)
         status = existing.get("status") if existing else ""
         logger.info("[CHAT_START] sid=%s start already in progress; return current status=%s", session_id, status)
+        if force_restart:
+            return jsonify({
+                "error": "上一轮 AI 启动请求仍在处理中，请稍后再试",
+                "code": "AI_TASK_STARTING",
+            }), 409
         if status in (ai_session.STATUS_RUNNING, ai_session.STATUS_QUEUED):
             return jsonify({
                 "session_id": session_id,
@@ -1050,6 +1055,7 @@ def _build_sse_stream(session_id: str, last_id: str):
                     "error": "服务器进程异常，任务已中断",
                     "needs_retry": True,
                 }
+                ai_session.abort_session(session_id)
                 store.append_event(session_id, err_evt)
                 store.set_status(
                     session_id,
@@ -1186,10 +1192,17 @@ def chat_abort(session_id):
         return jsonify({"error": "session 不存在或已过期"}), 404
     if meta.get("user_id") != request.supabase_user.get("id"):
         return jsonify({"error": "无权访问此 session"}), 403
-    if meta.get("status") in ai_session.TERMINAL_STATUSES:
-        return jsonify({"ok": True, "already_terminal": True})
-
     intent = _chat_abort_intent()
+    if meta.get("status") in ai_session.TERMINAL_STATUSES:
+        remote_abort_requested = False
+        if intent in _CHAT_ABORT_INTENTS:
+            remote_abort_requested = ai_session.abort_session(session_id)
+        return jsonify({
+            "ok": True,
+            "already_terminal": True,
+            "remote_abort_requested": remote_abort_requested,
+        })
+
     if intent not in _CHAT_ABORT_INTENTS:
         logger.warning(
             "[CHAT_ABORT] reject abort without explicit intent sid=%s status=%s active_job=%s user=%s ua=%s",
@@ -1211,5 +1224,5 @@ def chat_abort(session_id):
         meta.get("status"),
         meta.get("active_job_id"),
     )
-    ai_session.abort_session(session_id)
-    return jsonify({"ok": True})
+    remote_abort_requested = ai_session.abort_session(session_id)
+    return jsonify({"ok": True, "remote_abort_requested": remote_abort_requested})

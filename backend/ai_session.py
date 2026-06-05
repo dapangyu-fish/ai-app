@@ -1855,6 +1855,38 @@ def _agent_pull_job_spec(run_id: str) -> Optional[dict]:
     return spec if isinstance(spec, dict) else None
 
 
+def _agent_pull_job_meta(run_id: str) -> dict:
+    try:
+        raw = get_redis().hgetall(_agent_pull_job_key(run_id))
+    except redis.exceptions.RedisError:
+        return {}
+    out = {}
+    for key, value in (raw or {}).items():
+        k = key.decode("utf-8", errors="replace") if isinstance(key, bytes) else str(key)
+        v = value.decode("utf-8", errors="replace") if isinstance(value, bytes) else str(value)
+        out[k] = v
+    return out
+
+
+def _agent_pull_meta_int(meta: dict, key: str) -> int:
+    try:
+        return int(meta.get(key) or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _agent_pull_release_node_running(run_id: str, node_id: str = "") -> None:
+    node = node_id.strip()
+    if not node:
+        node = str(_agent_pull_job_meta(run_id).get("node_id") or "").strip()
+    if not node:
+        return
+    try:
+        get_redis().srem(_agent_pull_node_running_key(node), run_id)
+    except redis.exceptions.RedisError:
+        pass
+
+
 def _agent_pull_append_job_event(run_id: str, item: dict) -> None:
     r = get_redis()
     pipe = r.pipeline()
@@ -2057,6 +2089,7 @@ def agent_pull_acquire():
             "status": "assigned",
             "node_id": node_id,
             "assigned_at": str(now_ms),
+            "last_seen_at": str(now_ms),
             "provider_mode": provider_mode,
         },
     )
@@ -2078,6 +2111,15 @@ def agent_pull_job_events(run_id: str):
     if spec:
         session_id = str(spec.get("session_id") or "")
     node_id = str(body.get("node_id") or "")
+    now_ms = int(time.time() * 1000)
+    try:
+        mapping = {"last_seen_at": str(now_ms)}
+        if node_id:
+            mapping["node_id"] = node_id
+        get_redis().hset(_agent_pull_job_key(run_id), mapping=mapping)
+        get_redis().expire(_agent_pull_job_key(run_id), AI_SESSION_REDIS_TTL_SECONDS)
+    except redis.exceptions.RedisError:
+        pass
     for item in events[:500]:
         if not isinstance(item, dict):
             continue
@@ -2090,7 +2132,7 @@ def agent_pull_job_events(run_id: str):
                 "returncode": str(item.get("returncode")),
             }
             if node_id:
-                get_redis().srem(_agent_pull_node_running_key(node_id), run_id)
+                _agent_pull_release_node_running(run_id, node_id)
             get_redis().hset(_agent_pull_job_key(run_id), mapping=mapping)
     abort = _agent_pull_job_abort_requested(run_id, session_id)
     return jsonify({"ok": True, "abort": abort})
@@ -2178,6 +2220,13 @@ def _run_agent_pull_worker(
         returncode: Optional[int] = None
         status = "failed"
         last_id = "0"
+        try:
+            idle_timeout_seconds = max(
+                30.0,
+                float(os.environ.get("AGENT_PULL_EVENT_IDLE_TIMEOUT_SECONDS", "180")),
+            )
+        except (TypeError, ValueError):
+            idle_timeout_seconds = 180.0
         while True:
             if store.is_aborted(session_id):
                 _agent_pull_mark_abort(current_run_id)
@@ -2185,6 +2234,22 @@ def _run_agent_pull_worker(
                 return None
             entries = _agent_pull_read_job_events(current_run_id, last_id=last_id, block_ms=5000)
             if not entries:
+                job_meta = _agent_pull_job_meta(current_run_id)
+                if str(job_meta.get("status") or "") == "assigned":
+                    last_seen_ms = max(
+                        _agent_pull_meta_int(job_meta, "last_seen_at"),
+                        _agent_pull_meta_int(job_meta, "assigned_at"),
+                    )
+                    if last_seen_ms and int(time.time() * 1000) - last_seen_ms > int(idle_timeout_seconds * 1000):
+                        _agent_pull_mark_abort(current_run_id)
+                        _agent_pull_release_node_running(current_run_id, str(job_meta.get("node_id") or ""))
+                        err_msg = (
+                            "agent-node 运行失联，已停止等待；"
+                            f"{int(idle_timeout_seconds)} 秒内未收到事件或心跳"
+                        )
+                        append_event({"error": err_msg, "needs_retry": True})
+                        set_status(STATUS_FAILED, error=err_msg)
+                        return None
                 continue
             for entry_id, item in entries:
                 last_id = entry_id
@@ -3134,15 +3199,16 @@ def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
     return True, position
 
 
-def abort_session(session_id: str) -> None:
+def abort_session(session_id: str) -> bool:
     """请求 abort：写 abort 标记 + 尝试从 Redis pending 移除 + 本进程主动 kill。
     运行中的 worker 主循环会检测 abort 标记；跨 gunicorn worker 时不依赖本地进程表。
     """
     store = SessionStore()
     store.request_abort(session_id)
     meta = store.get_meta(session_id)
-    _abort_agent_node_run(session_id, meta)
-    _abort_agent_pull_run(session_id, meta)
+    remote_abort_requested = False
+    remote_abort_requested = _abort_agent_node_run(session_id, meta) or remote_abort_requested
+    remote_abort_requested = _abort_agent_pull_run(session_id, meta) or remote_abort_requested
     queued_job = meta.get("queued_job")
     if queued_job:
         provider_id = _job_provider_from_json(queued_job, meta.get("provider"))
@@ -3159,6 +3225,7 @@ def abort_session(session_id: str) -> None:
         if removed or not is_session_proc_alive(session_id):
             store.set_status(session_id, STATUS_ABORTED, error="aborted before start")
     _kill_proc(session_id)
+    return remote_abort_requested
 
 
 def _abort_agent_pull_run(session_id: str, meta: dict) -> bool:
