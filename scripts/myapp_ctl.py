@@ -3640,7 +3640,13 @@ def _join_agent_node(args) -> int:
     return 0
 
 def _agent_node_backend_url(args) -> str:
-    return (getattr(args, "backend", None) or _cfg().get("domains", {}).get("backend") or "").rstrip("/")
+    return (
+        getattr(args, "backend", None)
+        or _cfg().get("domains", {}).get("backend")
+        or _parse_env(_secret_path("agent")).get("AGENT_NODE_BACKEND_URL", "")
+        or _parse_env(_secret_path("backend")).get("BACKEND_PUBLIC_URL", "")
+        or ""
+    ).rstrip("/")
 
 
 def _agent_node_registry_token(args) -> str:
