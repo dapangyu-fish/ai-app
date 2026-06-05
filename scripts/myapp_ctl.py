@@ -3526,6 +3526,18 @@ def _join_agent_node(args) -> int:
     if rc != 0:
         return rc
 
+    labels = list(args.label or [])
+    if not any(str(label).startswith("host=") for label in labels):
+        labels.append(f"host={host or node_id}")
+    if not any(str(label).replace("_", "-").startswith("provider-mode=") for label in labels):
+        labels.append(f"provider_mode={provider_mode}")
+    if not any(str(label).replace("_", "-").startswith("mode=") for label in labels):
+        labels.append(f"mode={mode}")
+
+    backend_env = _parse_env(_secret_path("backend"))
+    backend_env["PUBLIC_HOST"] = host or node_id
+    _write_env(_secret_path("backend"), backend_env)
+
     agent_env = _parse_env(_secret_path("agent"))
     agent_env.update(
         {
@@ -3537,6 +3549,7 @@ def _join_agent_node(args) -> int:
             "AGENT_NODE_SELF_REGISTER_URL": node_url,
             "AGENT_NODE_CAPACITY": str(args.capacity),
             "AGENT_NODE_REGISTRATION_TTL_SECONDS": str(args.ttl),
+            "AGENT_NODE_LABELS": ",".join(labels),
             "AGENT_NODE_TOKEN": args.agent_token,
             "AGENT_NODE_REGISTRATION_TOKEN": args.registration_token,
         }
@@ -3622,7 +3635,7 @@ def _join_agent_node(args) -> int:
             capacity=args.capacity,
             ttl=args.ttl,
             token=args.registration_token,
-            label=args.label or [],
+            label=labels,
         )
         return _register_agent_node(register_args)
 

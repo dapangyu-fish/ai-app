@@ -1071,7 +1071,8 @@ def _pull_labels() -> list[str]:
         labels.append(f"provider_mode={PROVIDER_MODE or 'master'}")
     if not any(label.startswith("host=") for label in labels):
         labels.append(f"host={os.environ.get('PUBLIC_HOST') or os.uname().nodename}")
-    labels.append("mode=pull")
+    if not any(label.replace("_", "-").startswith("mode=") for label in labels):
+        labels.append("mode=pull")
     return labels
 
 
