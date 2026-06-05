@@ -2321,7 +2321,18 @@ def _run_setup_wizard(
 
 
 def _deploy_requires_ai_config(names: list[str]) -> bool:
-    return any(name in {"backend", "ai-worker", "agent-node"} for name in names)
+    if any(name in {"backend", "ai-worker"} for name in names):
+        return True
+    if "agent-node" not in names:
+        return False
+    mode = (
+        _parse_env(_secret_path("agent"))
+        .get("AGENT_NODE_PROVIDER_MODE", "master")
+        .strip()
+        .lower()
+        .replace("_", "-")
+    )
+    return mode in {"local", "node", "self", "agent-local"}
 
 
 def _deploy_can_seed_test_user(names: list[str]) -> bool:
@@ -2806,6 +2817,7 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "AGENT_NODE_TOKEN": _rand_hex(24),
         "AGENT_NODE_REGISTRATION_TOKEN": _rand_hex(24),
         "AGENT_NODE_ID": _cfg().get("node", {}).get("id", os.uname().nodename),
+        "AGENT_NODE_PROVIDER_MODE": "master",
     }
     config_center_defaults = {
         "CONFIG_CENTER_ADMIN_USERNAME": "admin",
@@ -3352,7 +3364,156 @@ def _duration_ms(started, finished=None) -> str:
         return "-"
 
 
+def _agent_add_node_id(host: str) -> str:
+    text = re.sub(r"[^A-Za-z0-9_.-]+", "-", str(host or "").strip()).strip("-._")
+    return f"myapp-agent-{text or os.uname().nodename}"
+
+
+def _print_agent_add_script(args) -> int:
+    cfg = _cfg()
+    backend_url = (args.backend or cfg.get("domains", {}).get("backend") or "").rstrip("/")
+    host = (args.host or "").strip()
+    node_url = (args.url or "").rstrip("/")
+    if not backend_url:
+        print("backend url is required; pass --backend or set domains.backend", file=sys.stderr)
+        return 2
+    if not node_url and not host:
+        print("agent host is required; pass --host or --url", file=sys.stderr)
+        return 2
+    if not node_url:
+        node_url = f"http://{host}:{args.public_port}".rstrip("/")
+    if not host:
+        parsed = urlparse(node_url)
+        host = parsed.hostname or node_url.split(":", 1)[0]
+    node_id = args.node_id or _agent_add_node_id(host)
+    provider_mode = args.provider_mode.strip().lower().replace("_", "-")
+    if provider_mode not in {"master", "local"}:
+        print("--provider-mode must be master or local", file=sys.stderr)
+        return 2
+
+    agent_env = _parse_env(_secret_path("agent"))
+    agent_token = agent_env.get("AGENT_NODE_TOKEN", "")
+    registration_token = agent_env.get("AGENT_NODE_REGISTRATION_TOKEN", "")
+    if not agent_token or not registration_token:
+        print("missing agent tokens on master; run myapp-ctl secret init-stack first", file=sys.stderr)
+        return 1
+
+    deploy_mode = "--pull" if args.pull else "--build"
+    labels = list(args.label or [])
+    if not any(label.startswith("host=") for label in labels):
+        labels.append(f"host={host}")
+    if not any(str(label).replace("_", "-").startswith("provider-mode=") for label in labels):
+        labels.append(f"provider_mode={provider_mode}")
+    register_cmd = [
+        "/usr/local/bin/myapp-ctl",
+        "agent",
+        "register",
+        "--backend",
+        backend_url,
+        "--url",
+        node_url,
+        "--node-id",
+        node_id,
+        "--capacity",
+        str(args.capacity),
+        "--ttl",
+        str(args.ttl),
+    ]
+    for label in labels:
+        register_cmd.extend(["--label", label])
+    register_line = " ".join(shlex.quote(part) for part in register_cmd)
+
+    print("# Run this on the new agent host after installing myapp-ctl.")
+    print("# It contains agent registration tokens. Treat it as a secret.")
+    print("cat <<'MYAPP_AGENT_BOOTSTRAP' >/root/myapp-agent-bootstrap.sh")
+    print("#!/usr/bin/env bash")
+    print("set -euo pipefail")
+    print("myapp-ctl config lang zh || true")
+    if provider_mode == "local":
+        print(
+            "myapp-ctl setup "
+            f"--host {shlex.quote(host)} "
+            f"--data-root {shlex.quote(args.data_root)} "
+            "--no-asr --no-email --no-push"
+        )
+    else:
+        print(
+            "myapp-ctl secret init-stack "
+            f"--host {shlex.quote(host)} "
+            f"--data-root {shlex.quote(args.data_root)}"
+        )
+    print(
+        "myapp-ctl secret set agent "
+        f"AGENT_NODE_ID={shlex.quote(node_id)} "
+        f"AGENT_NODE_PORT={int(args.local_port)} "
+        f"AGENT_NODE_PROVIDER_MODE={shlex.quote(provider_mode)} "
+        f"AGENT_NODE_TOKEN={shlex.quote(agent_token)} "
+        f"AGENT_NODE_REGISTRATION_TOKEN={shlex.quote(registration_token)}"
+    )
+    if not args.no_nginx:
+        print("if command -v apt-get >/dev/null 2>&1; then")
+        print("  apt-get update")
+        print("  DEBIAN_FRONTEND=noninteractive apt-get install -y nginx")
+        print("fi")
+        print("mkdir -p /etc/nginx/conf.d")
+        print("cat >/etc/nginx/conf.d/myapp-agent-node.conf <<'NGINX'")
+        print("server {")
+        print(f"  listen {int(args.public_port)};")
+        print("  server_name _;")
+        print("  location / {")
+        print(f"    proxy_pass http://127.0.0.1:{int(args.local_port)};")
+        print("    proxy_http_version 1.1;")
+        print("    proxy_read_timeout 7200s;")
+        print("    proxy_send_timeout 7200s;")
+        print("  }")
+        print("}")
+        print("NGINX")
+        print("systemctl reload nginx || service nginx reload || true")
+        if args.allow_from:
+            print("if command -v ufw >/dev/null 2>&1; then")
+            print(f"  ufw allow from {shlex.quote(args.allow_from)} to any port {int(args.public_port)} proto tcp || true")
+            print("fi")
+    print(
+        "myapp-ctl deploy agent-node agent-runtime "
+        f"{deploy_mode} --no-setup --no-test-user"
+    )
+    if not args.no_timer:
+        print("cat >/etc/systemd/system/myapp-agent-register.service <<'SERVICE'")
+        print("[Unit]")
+        print("Description=Register MyApp agent node")
+        print("")
+        print("[Service]")
+        print("Type=oneshot")
+        print(f"ExecStart={register_line}")
+        print("SERVICE")
+        print("cat >/etc/systemd/system/myapp-agent-register.timer <<'TIMER'")
+        print("[Unit]")
+        print("Description=Register MyApp agent node periodically")
+        print("")
+        print("[Timer]")
+        print("OnBootSec=30s")
+        print("OnUnitActiveSec=60s")
+        print("Unit=myapp-agent-register.service")
+        print("")
+        print("[Install]")
+        print("WantedBy=timers.target")
+        print("TIMER")
+        print("systemctl daemon-reload")
+        print("systemctl enable --now myapp-agent-register.timer")
+        print("systemctl start myapp-agent-register.service")
+    else:
+        print(register_line)
+    print("myapp-ctl status agent-node")
+    print("myapp-ctl agent ls")
+    print("MYAPP_AGENT_BOOTSTRAP")
+    print("chmod 700 /root/myapp-agent-bootstrap.sh")
+    print("/root/myapp-agent-bootstrap.sh")
+    return 0
+
+
 def cmd_agent(args) -> int:
+    if args.agent_cmd == "add":
+        return _print_agent_add_script(args)
     if args.agent_cmd == "register":
         cfg = _cfg()
         backend_url = (args.backend or cfg.get("domains", {}).get("backend") or "").rstrip("/")
@@ -3583,6 +3744,23 @@ def build_parser() -> argparse.ArgumentParser:
     client_env.set_defaults(func=cmd_client_env)
     agent = sub.add_parser("agent")
     agent_sub = agent.add_subparsers(dest="agent_cmd", required=True)
+    agent_add = agent_sub.add_parser("add")
+    agent_add.add_argument("--backend", help="master backend URL, for example http://77.237.233.229:5566")
+    agent_add.add_argument("--host", help="new agent host public IP or domain")
+    agent_add.add_argument("--url", help="full public agent-node URL; defaults to http://<host>:<public-port>")
+    agent_add.add_argument("--node-id")
+    agent_add.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
+    agent_add.add_argument("--local-port", type=int, default=5590)
+    agent_add.add_argument("--public-port", type=int, default=5591)
+    agent_add.add_argument("--capacity", type=int, default=1)
+    agent_add.add_argument("--ttl", type=int, default=180)
+    agent_add.add_argument("--label", action="append")
+    agent_add.add_argument("--provider-mode", choices=["master", "local"], default="master")
+    agent_add.add_argument("--pull", action="store_true", help="generate a pull-based deploy command instead of build")
+    agent_add.add_argument("--no-nginx", action="store_true")
+    agent_add.add_argument("--allow-from", help="optional source IP allowed through ufw for the public agent port")
+    agent_add.add_argument("--no-timer", action="store_true")
+    agent_add.set_defaults(func=cmd_agent)
     agent_ls = agent_sub.add_parser("ls")
     agent_ls.add_argument("--url")
     # Deprecated no-op flags kept so older shell snippets do not fail, but

@@ -1500,33 +1500,97 @@ def _agent_node_headers() -> dict:
     return headers
 
 
-def _registered_agent_node_urls() -> List[str]:
+def _agent_node_label_mode(labels: Any) -> str:
+    if not isinstance(labels, list):
+        return "master"
+    for item in labels:
+        text = str(item or "").strip().lower().replace("_", "-")
+        if text in {"provider-mode=local", "mode=local", "local-provider=true"}:
+            return "local"
+    return "master"
+
+
+def _decode_redis_text(value: Any, default: str = "") -> str:
+    if value is None:
+        return default
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    return str(value)
+
+
+def _registered_agent_node_records() -> List[dict]:
     try:
         r = get_redis()
-        urls: List[str] = []
+        records: List[dict] = []
         for key in r.scan_iter("ai:agent_node:*", count=100):
             data = r.hgetall(key)
             raw_url = data.get(b"url") or data.get("url")
             if not raw_url:
                 continue
-            url = raw_url.decode("utf-8", errors="replace") if isinstance(raw_url, bytes) else str(raw_url)
-            url = url.rstrip("/")
-            if url:
-                urls.append(url)
-        return sorted(set(urls))
+            url = _decode_redis_text(raw_url).rstrip("/")
+            if not url:
+                continue
+            raw_capacity = data.get(b"capacity") or data.get("capacity") or b"1"
+            try:
+                capacity = max(1, min(100, int(_decode_redis_text(raw_capacity, "1"))))
+            except (TypeError, ValueError):
+                capacity = 1
+            raw_labels = data.get(b"labels") or data.get("labels") or b"[]"
+            try:
+                labels = json.loads(_decode_redis_text(raw_labels, "[]") or "[]")
+            except json.JSONDecodeError:
+                labels = []
+            records.append(
+                {
+                    "url": url,
+                    "capacity": capacity,
+                    "provider_mode": _agent_node_label_mode(labels),
+                }
+            )
+        return sorted(records, key=lambda item: item["url"])
     except Exception as exc:
         logger.warning("[AGENT_NODE] 读取注册节点失败: %s", exc)
         return []
 
 
+def _configured_agent_node_records() -> List[dict]:
+    records = [
+        {"url": url.rstrip("/"), "capacity": 1, "provider_mode": "master"}
+        for url in AGENT_NODE_URLS
+        if url.rstrip("/")
+    ]
+    if not records and AGENT_NODE_URL:
+        records = [{"url": AGENT_NODE_URL.rstrip("/"), "capacity": 1, "provider_mode": "master"}]
+    records.extend(_registered_agent_node_records())
+    return records
+
+
 def _configured_agent_node_urls() -> List[str]:
-    urls = [url.rstrip("/") for url in AGENT_NODE_URLS if url.rstrip()]
-    if not urls and AGENT_NODE_URL:
-        urls = [AGENT_NODE_URL.rstrip("/")]
-    for url in _registered_agent_node_urls():
-        if url not in urls:
-            urls.append(url)
+    urls: List[str] = []
+    for record in _configured_agent_node_records():
+        url = str(record.get("url") or "").rstrip("/")
+        if not url:
+            continue
+        try:
+            capacity = max(1, min(100, int(record.get("capacity") or 1)))
+        except (TypeError, ValueError):
+            capacity = 1
+        urls.extend([url] * capacity)
     return urls
+
+
+def _agent_node_provider_mode_for_url(agent_node_url: str) -> str:
+    needle = agent_node_url.rstrip("/")
+    mode = "master"
+    for record in _configured_agent_node_records():
+        url = str(record.get("url") or "").rstrip("/")
+        if url != needle:
+            continue
+        record_mode = str(record.get("provider_mode") or "master").strip().lower().replace("_", "-")
+        if record_mode in {"local", "node", "self", "agent-local"}:
+            return "local"
+        mode = "master"
+    return mode
 
 
 def _select_agent_node_url(session_id: str) -> str:
@@ -1547,9 +1611,14 @@ def _select_agent_node_url(session_id: str) -> str:
     return selected
 
 
-def _agent_node_provider_env(provider: dict) -> dict:
+def _agent_node_provider_env(provider: dict, *, include_provider_secrets: bool = True) -> dict:
     """Only send the agent CLI env, never the backend process env."""
     env = dict(provider.get("cli_env") or {})
+    if not include_provider_secrets:
+        for key in list(env.keys()):
+            normalized = str(key).upper()
+            if normalized.endswith("_AUTH_TOKEN") or normalized.endswith("_API_KEY") or normalized.endswith("_SECRET"):
+                env.pop(key, None)
     env["IS_SANDBOX"] = "1"
     env["AI_APP_PROJECT_ROOT"] = PROJECT_ROOT
     env["REGISTRY_BASE_URL"] = os.environ.get("REGISTRY_BASE_URL", "")
@@ -1557,14 +1626,14 @@ def _agent_node_provider_env(provider: dict) -> dict:
     return {k: v for k, v in env.items() if v is not None}
 
 
-def _agent_node_codex_config(provider: dict) -> dict:
+def _agent_node_codex_config(provider: dict, *, include_provider_secrets: bool = True) -> dict:
     codex = dict(provider.get("codex") or {})
     if not codex:
         return {}
     # The real token is placed in the submit payload under a runtime-only env key;
     # agent-node rewrites it to a per-run proxy token before starting the container.
     env_key = str(codex.get("env_key") or "").strip()
-    token = os.environ.get(env_key, "") if env_key else ""
+    token = os.environ.get(env_key, "") if include_provider_secrets and env_key else ""
     runtime_env_key = "MYAPP_CODEX_AUTH_TOKEN"
     codex["env_key"] = runtime_env_key
     codex["provider_id"] = str(provider.get("id") or "custom").replace("-", "_")
@@ -1592,6 +1661,8 @@ def _run_agent_node_worker(
     all_events: List[dict],
 ) -> None:
     agent_node_url = _select_agent_node_url(session_id)
+    agent_node_provider_mode = _agent_node_provider_mode_for_url(agent_node_url)
+    include_provider_secrets = agent_node_provider_mode != "local"
     try:
         store.r.hset(_meta_key(session_id), "agent_node_url", agent_node_url)
         store.r.expire(_meta_key(session_id), AI_SESSION_REDIS_TTL_SECONDS)
@@ -1602,8 +1673,8 @@ def _run_agent_node_worker(
     runtime_workspace = "/workspace"
     current_resume_id = agent_resume_id or ""
     if runner == "codex":
-        codex = _agent_node_codex_config(provider)
-        env = _agent_node_provider_env(provider)
+        codex = _agent_node_codex_config(provider, include_provider_secrets=include_provider_secrets)
+        env = _agent_node_provider_env(provider, include_provider_secrets=include_provider_secrets)
         for key in list(env.keys()):
             if key.startswith("ANTHROPIC_") or key.startswith("CLAUDE_CODE_") or key == "API_TIMEOUT_MS":
                 env.pop(key, None)
@@ -1613,7 +1684,7 @@ def _run_agent_node_worker(
             env[runtime_token_env_key] = runtime_token
     else:
         codex = {}
-        env = _agent_node_provider_env(provider)
+        env = _agent_node_provider_env(provider, include_provider_secrets=include_provider_secrets)
 
     def build_prompt(turn_msg: str) -> str:
         if runner == "codex":
@@ -1657,6 +1728,7 @@ def _run_agent_node_worker(
             "provider": provider.get("id"),
             "agent": runner,
             "resume": bool(current_resume_id),
+            "provider_mode": agent_node_provider_mode,
         }, ensure_ascii=False))
         response = requests.post(
             f"{agent_node_url}/v1/runs",

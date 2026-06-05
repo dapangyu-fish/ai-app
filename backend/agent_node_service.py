@@ -53,6 +53,7 @@ NODE_TOKEN = os.environ.get("AGENT_NODE_TOKEN", "")
 RUN_RETENTION_SECONDS = int(os.environ.get("AGENT_NODE_RUN_RETENTION_SECONDS", "604800"))
 RUN_SNAPSHOT_MAX_FILE_BYTES = int(os.environ.get("AGENT_NODE_RUN_SNAPSHOT_MAX_FILE_BYTES", "52428800"))
 RUN_SNAPSHOT_MAX_FILES = int(os.environ.get("AGENT_NODE_RUN_SNAPSHOT_MAX_FILES", "5000"))
+PROVIDER_MODE = os.environ.get("AGENT_NODE_PROVIDER_MODE", "master").strip().lower().replace("_", "-")
 
 _RUNS: dict[str, dict] = {}
 _RUNS_LOCK = threading.Lock()
@@ -227,6 +228,82 @@ def _issue_proxy_token(run_id: str, upstream_base_url: str, upstream_token: str,
             "expires_at": time.time() + PROVIDER_PROXY_TOKEN_TTL_SECONDS,
         }
     return token
+
+
+def _provider_prefix(provider_id: str) -> str:
+    return re.sub(r"[^A-Z0-9]+", "_", str(provider_id or "").upper()).strip("_")
+
+
+def _local_provider_value(prefix: str, key: str, default: str = "") -> str:
+    return str(os.environ.get(f"{prefix}_{key}") or default or "").strip()
+
+
+def _apply_local_provider(payload: dict) -> None:
+    """Optionally replace backend-provided provider credentials with node-local ones.
+
+    master mode keeps today's central-key behavior: backend sends provider config
+    to this agent-node, then the node mints a per-run proxy token for the runtime
+    container. local mode lets an agent host use its own ai-providers.env so large
+    hosts can carry separate provider quotas/keys without exposing them to the
+    backend process.
+    """
+    mode = PROVIDER_MODE or "master"
+    if mode in {"master", "backend", "remote"}:
+        return
+    if mode not in {"local", "node", "self", "agent-local"}:
+        raise ValueError(f"unsupported AGENT_NODE_PROVIDER_MODE: {mode}")
+
+    provider_id = str(payload.get("provider_id") or "").strip().lower().replace("_", "-")
+    agent_id = str(payload.get("agent_id") or "claude").strip().lower().replace("_", "-")
+    prefix = _provider_prefix(provider_id)
+    if not prefix:
+        raise ValueError("local provider mode requires provider_id")
+
+    env = dict(payload.get("env") or {})
+    codex = dict(payload.get("codex") or {})
+
+    anthropic_base_url = _local_provider_value(prefix, "ANTHROPIC_BASE_URL")
+    anthropic_token = _local_provider_value(prefix, "ANTHROPIC_AUTH_TOKEN")
+    anthropic_model = _local_provider_value(prefix, "ANTHROPIC_MODEL")
+
+    if agent_id == "claude":
+        if not anthropic_base_url or not anthropic_token or not anthropic_model:
+            raise ValueError(f"local provider {provider_id} is missing Anthropic-compatible config")
+        env.update(
+            {
+                "ANTHROPIC_BASE_URL": anthropic_base_url,
+                "ANTHROPIC_AUTH_TOKEN": anthropic_token,
+                "ANTHROPIC_MODEL": anthropic_model,
+                "ANTHROPIC_DEFAULT_OPUS_MODEL": _local_provider_value(prefix, "ANTHROPIC_DEFAULT_OPUS_MODEL", anthropic_model),
+                "ANTHROPIC_DEFAULT_SONNET_MODEL": _local_provider_value(prefix, "ANTHROPIC_DEFAULT_SONNET_MODEL", anthropic_model),
+                "ANTHROPIC_DEFAULT_HAIKU_MODEL": _local_provider_value(prefix, "ANTHROPIC_DEFAULT_HAIKU_MODEL", anthropic_model),
+                "CLAUDE_CODE_SUBAGENT_MODEL": _local_provider_value(prefix, "CLAUDE_CODE_SUBAGENT_MODEL", anthropic_model),
+                "CLAUDE_CODE_EFFORT_LEVEL": _local_provider_value(prefix, "CLAUDE_CODE_EFFORT_LEVEL", "max"),
+            }
+        )
+    elif agent_id == "codex":
+        codex_base_url = _local_provider_value(prefix, "CODEX_BASE_URL")
+        codex_model = _local_provider_value(prefix, "CODEX_MODEL")
+        codex_env_key = _local_provider_value(prefix, "CODEX_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN")
+        codex_token = str(os.environ.get(codex_env_key) or anthropic_token or "").strip()
+        if not codex_base_url or not codex_model or not codex_token:
+            raise ValueError(f"local provider {provider_id} is missing Codex config")
+        codex.update(
+            {
+                "provider_name": _local_provider_value(prefix, "CODEX_PROVIDER_NAME", provider_id),
+                "base_url": codex_base_url,
+                "model": codex_model,
+                "wire_api": _local_provider_value(prefix, "CODEX_WIRE_API", "responses"),
+                "env_key": "MYAPP_CODEX_AUTH_TOKEN",
+                "context_window": _local_provider_value(prefix, "CODEX_CONTEXT_WINDOW", str(codex.get("context_window") or "")),
+            }
+        )
+        env["MYAPP_CODEX_AUTH_TOKEN"] = codex_token
+    else:
+        raise ValueError(f"local provider mode does not support agent_id: {agent_id}")
+
+    payload["env"] = env
+    payload["codex"] = codex
 
 
 def _revoke_proxy_tokens(tokens: list[str]) -> None:
@@ -774,7 +851,11 @@ def create_run():
     }
     paths = _session_paths(user_id, session_id, job_id)
     payload_path = _run_payload_path(run_id)
-    proxy_tokens = _prepare_provider_proxy(payload)
+    try:
+        _apply_local_provider(payload)
+        proxy_tokens = _prepare_provider_proxy(payload)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     cmd, docker_env = _docker_cmd(run_id, payload, payload_path, paths)
     log_path = _run_log_path(run_id)
     _json_line(log_path, _redacted_start_payload(payload, cmd))

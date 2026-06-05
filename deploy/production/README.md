@@ -367,3 +367,29 @@ Register an agent node:
 ```bash
 myapp-ctl agent register --url http://agent-node:5590 --capacity 4 --label gpu=false
 ```
+
+Generate a bootstrap script for a new agent host from the master backend host:
+
+```bash
+myapp-ctl agent add \
+  --backend http://<master-host>:5566 \
+  --host <new-agent-host> \
+  --node-id myapp-agent-2 \
+  --capacity 2 \
+  --provider-mode master
+```
+
+Provider modes:
+
+- `master`: the master backend sends provider config to agent-node for each run;
+  agent-node mints a short-lived local proxy token before starting the runtime.
+  This is the simplest mode and does not require provider keys on the new agent
+  host.
+- `local`: the agent host loads `/etc/myapp/secrets.d/ai-providers.env` and
+  uses its own provider keys before minting the runtime proxy token. Nodes
+  registered with this mode do not receive the master provider token. Use this
+  to split provider quota/keys by host.
+
+`capacity` is a scheduler weight. Existing sessions keep their node assignment
+for later turns; new sessions are distributed across registered URLs according
+to weight.

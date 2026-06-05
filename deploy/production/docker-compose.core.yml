@@ -250,9 +250,12 @@ services:
     env_file:
       - path: /etc/myapp/secrets.d/agent.env
         required: false
+      - path: /etc/myapp/secrets.d/ai-providers.env
+        required: false
     environment:
       AGENT_NODE_ID: "${AGENT_NODE_ID:-myapp-agent-local}"
       AGENT_NODE_TOKEN: "${AGENT_NODE_TOKEN:-}"
+      AGENT_NODE_PROVIDER_MODE: "${AGENT_NODE_PROVIDER_MODE:-master}"
       AGENT_NODE_RUNTIME_IMAGE: "${MYAPP_AGENT_RUNTIME_IMAGE:-dapangyufish/myapp-agent-runtime:agent-control-plane}"
       AGENT_NODE_DOCKER_NETWORK: "${AGENT_NODE_DOCKER_NETWORK:-myapp_agent_runtime}"
       AGENT_NODE_ALLOW_HOST_GATEWAY: "${AGENT_NODE_ALLOW_HOST_GATEWAY:-0}"
