@@ -80,6 +80,8 @@ def create_app():
     app.add_url_rule("/api/ai/agents", methods=["GET"], view_func=claude_chat.list_agents)
     app.add_url_rule("/api/ai/agent_nodes", methods=["GET"], view_func=agent_nodes.list_agent_nodes)
     app.add_url_rule("/api/ai/agent_nodes/<node_id>", methods=["GET"], view_func=agent_nodes.get_agent_node)
+    app.add_url_rule("/api/ai/agent_nodes/<node_id>/pause", methods=["POST"], view_func=agent_nodes.pause_agent_node)
+    app.add_url_rule("/api/ai/agent_nodes/<node_id>/resume", methods=["POST"], view_func=agent_nodes.resume_agent_node)
     app.add_url_rule("/api/ai/agent_nodes/<node_id>", methods=["DELETE"], view_func=agent_nodes.delete_agent_node)
     app.add_url_rule("/api/ai/agent_nodes/register", methods=["POST"], view_func=agent_nodes.register_agent_node)
     app.add_url_rule("/api/ai/agent_pull/acquire", methods=["POST"], view_func=ai_session.agent_pull_acquire)

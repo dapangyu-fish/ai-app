@@ -30,11 +30,17 @@ def ensure_agent_nodes_table() -> None:
                 labels JSONB NOT NULL DEFAULT '[]'::jsonb,
                 last_seen_ms BIGINT NOT NULL DEFAULT 0,
                 ttl_seconds INTEGER NOT NULL DEFAULT 120,
+                paused BOOLEAN NOT NULL DEFAULT FALSE,
+                pause_reason TEXT NOT NULL DEFAULT '',
+                paused_at_ms BIGINT NOT NULL DEFAULT 0,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
             """
         )
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS paused BOOLEAN NOT NULL DEFAULT FALSE")
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS pause_reason TEXT NOT NULL DEFAULT ''")
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS paused_at_ms BIGINT NOT NULL DEFAULT 0")
         _SCHEMA_READY = True
 
 
@@ -56,6 +62,9 @@ def _normalize_row(row: dict | None) -> dict | None:
         "labels": labels,
         "last_seen": int(row.get("last_seen") or row.get("last_seen_ms") or 0),
         "ttl_seconds": int(row.get("ttl_seconds") or 120),
+        "paused": bool(row.get("paused") or False),
+        "pause_reason": row.get("pause_reason") or "",
+        "paused_at": int(row.get("paused_at") or row.get("paused_at_ms") or 0),
     }
 
 
@@ -91,7 +100,8 @@ def list_nodes() -> list[dict]:
     ensure_agent_nodes_table()
     rows = db_query(
         """
-        SELECT node_id, url, capacity, labels::text AS labels, last_seen_ms AS last_seen, ttl_seconds
+        SELECT node_id, url, capacity, labels::text AS labels, last_seen_ms AS last_seen, ttl_seconds,
+               paused, pause_reason, paused_at_ms AS paused_at
         FROM agent_nodes
         ORDER BY node_id
         """,
@@ -109,7 +119,8 @@ def get_node(node_id: str) -> dict | None:
     ensure_agent_nodes_table()
     row = db_query(
         """
-        SELECT node_id, url, capacity, labels::text AS labels, last_seen_ms AS last_seen, ttl_seconds
+        SELECT node_id, url, capacity, labels::text AS labels, last_seen_ms AS last_seen, ttl_seconds,
+               paused, pause_reason, paused_at_ms AS paused_at
         FROM agent_nodes
         WHERE node_id = %s
         """,
@@ -124,3 +135,24 @@ def delete_node(node_id: str) -> bool:
     existed = get_node(node_id) is not None
     db_execute("DELETE FROM agent_nodes WHERE node_id = %s", [node_id])
     return existed
+
+
+def set_node_paused(node_id: str, *, paused: bool, reason: str = "") -> dict | None:
+    ensure_agent_nodes_table()
+    existing = get_node(node_id)
+    if not existing:
+        return None
+    pause_reason = str(reason or "").strip()[:500] if paused else ""
+    paused_at_ms = int(time.time() * 1000) if paused else 0
+    db_execute(
+        """
+        UPDATE agent_nodes
+        SET paused = %s,
+            pause_reason = %s,
+            paused_at_ms = %s,
+            updated_at = NOW()
+        WHERE node_id = %s
+        """,
+        [paused, pause_reason, paused_at_ms, node_id],
+    )
+    return get_node(node_id)

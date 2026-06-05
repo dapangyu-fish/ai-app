@@ -1570,6 +1570,8 @@ def _registered_agent_node_records() -> List[dict]:
         records: List[dict] = []
         now_ms = int(time.time() * 1000)
         for item in list_nodes():
+            if bool(item.get("paused") or False):
+                continue
             url = str(item.get("url") or "").rstrip("/")
             if not url:
                 continue
@@ -1619,6 +1621,9 @@ def _registered_agent_node_records() -> List[dict]:
                 labels = json.loads(_decode_redis_text(raw_labels, "[]") or "[]")
             except json.JSONDecodeError:
                 labels = []
+            raw_paused = data.get(b"paused") or data.get("paused") or b"0"
+            if _decode_redis_text(raw_paused, "0").strip().lower() in {"1", "true", "yes", "on"}:
+                continue
             records.append(
                 {
                     "url": url,
@@ -1942,6 +1947,9 @@ def agent_pull_acquire():
             labels=labels,
             ttl_seconds=max(30, int(body.get("ttl_seconds") or 120)),
         )
+        current_node = agent_node_registry.get_node(node_id)
+        if current_node and current_node.get("paused"):
+            return ("", 204)
     except Exception as exc:
         logger.warning("[AGENT_PULL] registry heartbeat failed node=%s: %s", node_id, exc)
 

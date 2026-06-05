@@ -57,6 +57,16 @@ def _node_row(key, data: dict[Any, Any]) -> dict:
         except (TypeError, ValueError):
             return default
 
+    def get_bool(name: str, default: bool = False) -> bool:
+        value = raw(name)
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, bytes):
+            value = value.decode("utf-8", errors="replace")
+        return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
     raw_labels = raw("labels")
     if isinstance(raw_labels, list):
         labels = raw_labels
@@ -86,6 +96,9 @@ def _node_row(key, data: dict[Any, Any]) -> dict:
         "provider_mode": provider_mode,
         "last_seen": get_int("last_seen", 0),
         "ttl_seconds": get_int("ttl_seconds", 120),
+        "paused": get_bool("paused", False),
+        "pause_reason": get("pause_reason", ""),
+        "paused_at": get_int("paused_at", 0),
     }
 
 
@@ -175,6 +188,8 @@ def _decorate_node(row: dict, *, probe: bool, include_runs: bool = False) -> dic
         row.setdefault("detail", "")
     if not row["registry_active"]:
         row["status"] = "stale"
+    elif row.get("paused"):
+        row["status"] = "paused"
     elif row.get("reachable") is None:
         row["status"] = "registered"
     elif row.get("reachable") is False:
@@ -273,11 +288,17 @@ def list_agent_nodes():
     summary = {
         "total": len(rows),
         "online": sum(1 for row in rows if row.get("status") == "online"),
+        "paused": sum(1 for row in rows if row.get("status") == "paused"),
         "registered": sum(1 for row in rows if row.get("status") == "registered"),
         "down": sum(1 for row in rows if row.get("status") == "down"),
         "stale": sum(1 for row in rows if row.get("status") == "stale"),
         "active_runs": sum(int(row.get("active_runs") or 0) for row in rows),
         "capacity": sum(int(row.get("capacity") or 0) for row in rows),
+        "available_capacity": sum(
+            int(row.get("capacity") or 0)
+            for row in rows
+            if row.get("status") == "online"
+        ),
     }
     return jsonify({"summary": summary, "nodes": rows})
 
@@ -304,3 +325,33 @@ def delete_agent_node(node_id: str):
     except Exception:
         pass
     return jsonify({"ok": True, "node_id": safe_node_id, "deleted": deleted})
+
+
+def pause_agent_node(node_id: str):
+    if not _auth_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    safe_node_id = _safe_node_id(node_id)
+    body = request.get_json(silent=True) or {}
+    reason = str(body.get("reason") or "").strip()
+    data = agent_node_registry.set_node_paused(safe_node_id, paused=True, reason=reason)
+    if not data:
+        return jsonify({"error": "agent node not found", "node_id": safe_node_id}), 404
+    try:
+        get_redis().hset(_registry_key(safe_node_id), mapping={"paused": "1", "pause_reason": reason})
+    except Exception:
+        pass
+    return jsonify({"ok": True, "node": _decorate_node(_node_row(safe_node_id, data), probe=True)})
+
+
+def resume_agent_node(node_id: str):
+    if not _auth_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    safe_node_id = _safe_node_id(node_id)
+    data = agent_node_registry.set_node_paused(safe_node_id, paused=False)
+    if not data:
+        return jsonify({"error": "agent node not found", "node_id": safe_node_id}), 404
+    try:
+        get_redis().hset(_registry_key(safe_node_id), mapping={"paused": "0", "pause_reason": ""})
+    except Exception:
+        pass
+    return jsonify({"ok": True, "node": _decorate_node(_node_row(safe_node_id, data), probe=True)})

@@ -3852,11 +3852,13 @@ def _print_agent_node_rows(data: dict, *, as_json: bool = False) -> int:
         "agent nodes: "
         f"total={summary.get('total', 0)} "
         f"online={summary.get('online', 0)} "
+        f"paused={summary.get('paused', 0)} "
         f"pending={summary.get('registered', 0)} "
         f"down={summary.get('down', 0)} "
         f"stale={summary.get('stale', 0)} "
         f"active_runs={summary.get('active_runs', 0)} "
-        f"capacity={summary.get('capacity', 0)}"
+        f"capacity={summary.get('capacity', 0)} "
+        f"available={summary.get('available_capacity', summary.get('capacity', 0))}"
     )
     rows = []
     for item in data.get("nodes") or []:
@@ -3925,6 +3927,9 @@ def _print_agent_node_status(data: dict, *, as_json: bool = False) -> int:
     detail = node.get("detail")
     if detail:
         print(f"detail: {detail}")
+    pause_reason = node.get("pause_reason")
+    if pause_reason:
+        print(f"pause_reason: {pause_reason}")
     runs = node.get("runs") if isinstance(node.get("runs"), list) else []
     if runs:
         run_rows = []
@@ -4017,6 +4022,26 @@ def cmd_agent_node(args) -> int:
             return 1
         print(json.dumps(data, ensure_ascii=False))
         return 0
+
+    if args.agent_node_cmd in {"pause", "resume"}:
+        node_id = args.node_id or _parse_env(_secret_path("agent")).get("AGENT_NODE_ID") or ""
+        if not node_id:
+            print("node_id is required, or configure AGENT_NODE_ID in agent.env", file=sys.stderr)
+            return 2
+        body = {}
+        if args.agent_node_cmd == "pause" and args.reason:
+            body["reason"] = args.reason
+        data, status, error = _agent_node_request_json(
+            backend_url,
+            f"/api/ai/agent_nodes/{quote(node_id, safe='')}/{args.agent_node_cmd}",
+            method="POST",
+            payload=body,
+            token=token,
+        )
+        if not data:
+            print(f"agent-node {args.agent_node_cmd} failed: {status or '-'} {error}", file=sys.stderr)
+            return 1
+        return _print_agent_node_status(data, as_json=args.json)
 
     return 2
 
@@ -4240,6 +4265,19 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_rm.add_argument("--backend")
     agent_node_rm.add_argument("--token")
     agent_node_rm.set_defaults(func=cmd_agent_node)
+    agent_node_pause = agent_node_sub.add_parser("pause", help="pause scheduling for an agent host without stopping current runs")
+    agent_node_pause.add_argument("node_id", nargs="?", help="defaults to local AGENT_NODE_ID")
+    agent_node_pause.add_argument("--backend")
+    agent_node_pause.add_argument("--token")
+    agent_node_pause.add_argument("--reason", default="")
+    agent_node_pause.add_argument("--json", action="store_true")
+    agent_node_pause.set_defaults(func=cmd_agent_node)
+    agent_node_resume = agent_node_sub.add_parser("resume", help="resume scheduling for an agent host")
+    agent_node_resume.add_argument("node_id", nargs="?", help="defaults to local AGENT_NODE_ID")
+    agent_node_resume.add_argument("--backend")
+    agent_node_resume.add_argument("--token")
+    agent_node_resume.add_argument("--json", action="store_true")
+    agent_node_resume.set_defaults(func=cmd_agent_node)
     agent_node_add = agent_node_sub.add_parser("add", help="print a join command for a new agent host")
     agent_node_add.add_argument("--backend", help="master backend URL, for example http://77.237.233.229:5566")
     agent_node_add.add_argument("--host", help="new agent host public IP or domain")
