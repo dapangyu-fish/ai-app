@@ -713,6 +713,56 @@ def chat():
 import time as _time
 import ai_session
 
+_CHAT_START_LOCK_TTL_SECONDS = int(os.environ.get("AI_CHAT_START_LOCK_TTL_SECONDS", "45"))
+_CHAT_START_LOCK_WAIT_SECONDS = float(os.environ.get("AI_CHAT_START_LOCK_WAIT_SECONDS", "3"))
+_CHAT_ABORT_INTENTS = {"manual_stop", "delete_session", "clear_session"}
+
+
+def _chat_start_lock_key(session_id: str) -> str:
+    return f"ai:session:{session_id}:start_lock"
+
+
+def _acquire_chat_start_lock(session_id: str) -> str | None:
+    token = os.urandom(12).hex()
+    deadline = _time.time() + max(0.0, _CHAT_START_LOCK_WAIT_SECONDS)
+    redis_client = ai_session.get_redis()
+    while True:
+        try:
+            ok = redis_client.set(
+                _chat_start_lock_key(session_id),
+                token,
+                nx=True,
+                ex=max(5, _CHAT_START_LOCK_TTL_SECONDS),
+            )
+        except Exception as exc:
+            logger.warning("[CHAT_START] sid=%s start lock unavailable: %s", session_id, exc)
+            return token
+        if ok:
+            return token
+        if _time.time() >= deadline:
+            return None
+        _time.sleep(0.1)
+
+
+def _release_chat_start_lock(session_id: str, token: str | None) -> None:
+    if not token:
+        return
+    script = """
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+  return redis.call('DEL', KEYS[1])
+end
+return 0
+"""
+    try:
+        ai_session.get_redis().eval(script, 1, _chat_start_lock_key(session_id), token)
+    except Exception as exc:
+        logger.warning("[CHAT_START] sid=%s release start lock failed: %s", session_id, exc)
+
+
+def _chat_abort_intent() -> str:
+    body = request.get_json(silent=True) or {}
+    return str(body.get("intent") or request.args.get("intent") or "").strip()
+
 
 @require_auth
 def chat_start():
@@ -771,142 +821,162 @@ def chat_start():
             "code": "AI_AGENT_PROVIDER_UNAVAILABLE",
         }), 400
 
-    store = ai_session.SessionStore()
-    existing = store.get_meta(session_id)
-    if existing.get("status") == ai_session.STATUS_QUEUED:
-        existing = ai_session.reconcile_stale_queued(session_id)
-    existing_user_id = existing.get("user_id") if existing else None
-    same_session_owner = bool(existing and (not existing_user_id or existing_user_id == user_id))
-    interrupted_previous = False
-
-    if existing and not same_session_owner and existing.get("status") not in ai_session.TERMINAL_STATUSES:
-        logger.warning(
-            f"[CHAT_START] sid={session_id} belongs to another user and is still active; "
-            "refuse to overwrite"
-        )
-        return jsonify({
-            "error": "该会话正在其他登录状态下运行，请新建会话后重试",
-            "code": "AI_SESSION_OWNER_MISMATCH",
-        }), 409
-
-    if same_session_owner and existing and existing.get("status") in (ai_session.STATUS_RUNNING, ai_session.STATUS_QUEUED):
-        if force_restart:
-            # 用户发了新消息：杀掉旧 worker，等它真的结束再起新的
-            # 关键不变量：必须确认旧 worker 已经写完 STATUS_ABORTED 才能 create_meta，
-            # 否则旧 worker 后写的 set_status 会覆盖新 worker 的 fresh meta，
-            # 导致客户端 /status 看到 status=aborted → 又触发重试 → 死循环
-            logger.info(f"[CHAT_START] sid={session_id} force_restart：先 abort 旧 worker/queued job")
-            interrupted_previous = True
-            ai_session.abort_session(session_id)
-            # agent-node 模式下 abort_session 会直接通知远端 run 停容器。
-            # 这里仍然等旧 worker 完成清理：running lease 以 session_id 为 key，
-            # 不能让旧 worker 的 finally 把新 worker 的 lease 删掉。
-            terminal_observed = False
-            for _ in range(200):  # 最长 20s，客户端 POST 超时是 30s
-                _time.sleep(0.1)
-                m = store.get_meta(session_id)
-                if not m or m.get("status") in ai_session.TERMINAL_STATUSES:
-                    terminal_observed = True
-                    break
-            if not terminal_observed:
-                # 旧 worker 还没把 status 写成 terminal，但 proc 已死的话风险有限
-                if not ai_session.is_session_proc_alive(session_id):
-                    logger.warning(
-                        f"[CHAT_START] sid={session_id} 20s 没等到 STATUS_ABORTED 但 running lease 已释放，"
-                        f"继续 create_meta；旧 worker 后续 set_status 可能造成短暂状态错乱"
-                    )
-                else:
-                    logger.error(
-                        f"[CHAT_START] sid={session_id} force_restart 20s 后 running lease 仍存活，拒绝覆盖旧 session"
-                    )
-                    return jsonify({
-                        "error": "上一轮 AI 任务正在停止，请稍后再试",
-                        "code": "AI_TASK_STOPPING",
-                    }), 409
-            ai_session.clear_abort(session_id)
-        else:
-            # 同一 session 双连接（前后台切换、重连）：幂等返回，让 client 去 /stream 续读
-            status = existing.get("status")
-            logger.info(f"[CHAT_START] sid={session_id} 已存在 status={status}，复用")
+    start_lock = _acquire_chat_start_lock(session_id)
+    if not start_lock:
+        existing = ai_session.SessionStore().get_meta(session_id)
+        status = existing.get("status") if existing else ""
+        logger.info("[CHAT_START] sid=%s start already in progress; return current status=%s", session_id, status)
+        if status in (ai_session.STATUS_RUNNING, ai_session.STATUS_QUEUED):
             return jsonify({
                 "session_id": session_id,
                 "status": status,
                 "queue_position": ai_session.get_queue_position(session_id) if status == ai_session.STATUS_QUEUED else None,
                 "resumed": True,
             })
-
-    new_remaining = remaining - 1
-    agent_resume_id = None
-    can_resume_existing = bool(
-        same_session_owner
-        and existing
-        and existing.get("provider") == provider_id
-    )
-    if (
-        agent_id == "codex"
-        and can_resume_existing
-        and existing.get("agent") == "codex"
-        and existing.get("status") == ai_session.STATUS_DONE
-    ):
-        agent_resume_id = existing.get("agent_thread_id") or None
-    elif (
-        agent_id == "claude"
-        and can_resume_existing
-        and existing.get("agent") == "claude"
-    ):
-        # Claude Code uses the app session id as its conversation id. Once a
-        # backend session exists, prefer resume. If the previous attempt failed
-        # before Claude created the conversation, the worker has a fallback that
-        # creates a fresh session on "No conversation found".
-        agent_resume_id = session_id
-
-    # 新一轮 job 必须清掉上一次 /abort 留下的短 TTL 标记。
-    # 否则 ai-worker acquire 后会把新 job 当成旧 job 的 abort，留下 queued 幽灵状态。
-    ai_session.clear_abort(session_id)
-
-    # 写 meta + 提交到显式队列。只有接受入队后才扣配额。
-    store.create_meta(
-        session_id,
-        user_id=user_id,
-        provider=provider_id,
-        agent=agent_id,
-        quota_used=used + 1,
-        quota_limit=limit,
-        quota_remaining=new_remaining,
-        status=ai_session.STATUS_QUEUED,
-    )
-    if interrupted_previous:
-        store.append_event(session_id, {
-            "status": "interrupted",
-            "message": "已打断上一轮生成，开始处理新消息...",
-        })
-    accepted, queue_position = ai_session.submit_worker(
-        session_id, last_msg, provider_id,
-        agent_id=agent_id,
-        agent_resume_id=agent_resume_id,
-        user_id=user_id,
-        quota_used=used + 1,
-        quota_limit=limit,
-        quota_remaining=new_remaining,
-    )
-    if not accepted:
-        store.set_status(session_id, ai_session.STATUS_FAILED, error="AI worker queue full")
         return jsonify({
-            "error": "当前 AI 任务过多，请稍后再试",
-            "code": "AI_QUEUE_FULL",
-        }), 429
+            "error": "上一轮 AI 启动请求仍在处理中，请稍后再试",
+            "code": "AI_TASK_STARTING",
+        }), 409
 
-    # 扣配额（沿用老逻辑：worker 失败损 1 容忍；但队列拒绝不扣）
-    increment_quota(user_id)
+    try:
+        store = ai_session.SessionStore()
+        existing = store.get_meta(session_id)
+        if existing.get("status") == ai_session.STATUS_QUEUED:
+            existing = ai_session.reconcile_stale_queued(session_id)
+        existing_user_id = existing.get("user_id") if existing else None
+        same_session_owner = bool(existing and (not existing_user_id or existing_user_id == user_id))
+        interrupted_previous = False
 
-    logger.info(f"[CHAT_START] sid={session_id} worker 已入队 position={queue_position}")
-    return jsonify({
-        "session_id": session_id,
-        "status": "queued",
-        "queue_position": queue_position,
-        "agent": agent_id,
-        "resumed": False,
-    })
+        if existing and not same_session_owner and existing.get("status") not in ai_session.TERMINAL_STATUSES:
+            logger.warning(
+                f"[CHAT_START] sid={session_id} belongs to another user and is still active; "
+                "refuse to overwrite"
+            )
+            return jsonify({
+                "error": "该会话正在其他登录状态下运行，请新建会话后重试",
+                "code": "AI_SESSION_OWNER_MISMATCH",
+            }), 409
+
+        if same_session_owner and existing and existing.get("status") in (ai_session.STATUS_RUNNING, ai_session.STATUS_QUEUED):
+            if force_restart:
+                # 用户发了新消息：杀掉旧 worker，等它真的结束再起新的
+                # 关键不变量：必须确认旧 worker 已经写完 STATUS_ABORTED 才能 create_meta，
+                # 否则旧 worker 后写的 set_status 会覆盖新 worker 的 fresh meta，
+                # 导致客户端 /status 看到 status=aborted → 又触发重试 → 死循环
+                logger.info(f"[CHAT_START] sid={session_id} force_restart：先 abort 旧 worker/queued job")
+                interrupted_previous = True
+                ai_session.abort_session(session_id)
+                # agent-node 模式下 abort_session 会直接通知远端 run 停容器。
+                # 这里仍然等旧 worker 完成清理：running lease 以 session_id 为 key，
+                # 不能让旧 worker 的 finally 把新 worker 的 lease 删掉。
+                terminal_observed = False
+                for _ in range(200):  # 最长 20s，客户端 POST 超时是 30s
+                    _time.sleep(0.1)
+                    m = store.get_meta(session_id)
+                    if not m or m.get("status") in ai_session.TERMINAL_STATUSES:
+                        terminal_observed = True
+                        break
+                if not terminal_observed:
+                    # 旧 worker 还没把 status 写成 terminal，但 proc 已死的话风险有限
+                    if not ai_session.is_session_proc_alive(session_id):
+                        logger.warning(
+                            f"[CHAT_START] sid={session_id} 20s 没等到 STATUS_ABORTED 但 running lease 已释放，"
+                            f"继续 create_meta；旧 worker 后续 set_status 可能造成短暂状态错乱"
+                        )
+                    else:
+                        logger.error(
+                            f"[CHAT_START] sid={session_id} force_restart 20s 后 running lease 仍存活，拒绝覆盖旧 session"
+                        )
+                        return jsonify({
+                            "error": "上一轮 AI 任务正在停止，请稍后再试",
+                            "code": "AI_TASK_STOPPING",
+                        }), 409
+                ai_session.clear_abort(session_id)
+            else:
+                # 同一 session 双连接（前后台切换、重连）：幂等返回，让 client 去 /stream 续读
+                status = existing.get("status")
+                logger.info(f"[CHAT_START] sid={session_id} 已存在 status={status}，复用")
+                return jsonify({
+                    "session_id": session_id,
+                    "status": status,
+                    "queue_position": ai_session.get_queue_position(session_id) if status == ai_session.STATUS_QUEUED else None,
+                    "resumed": True,
+                })
+
+        new_remaining = remaining - 1
+        agent_resume_id = None
+        can_resume_existing = bool(
+            same_session_owner
+            and existing
+            and existing.get("provider") == provider_id
+        )
+        if (
+            agent_id == "codex"
+            and can_resume_existing
+            and existing.get("agent") == "codex"
+            and existing.get("status") == ai_session.STATUS_DONE
+        ):
+            agent_resume_id = existing.get("agent_thread_id") or None
+        elif (
+            agent_id == "claude"
+            and can_resume_existing
+            and existing.get("agent") == "claude"
+        ):
+            # Claude Code uses the app session id as its conversation id. Once a
+            # backend session exists, prefer resume. If the previous attempt failed
+            # before Claude created the conversation, the worker has a fallback that
+            # creates a fresh session on "No conversation found".
+            agent_resume_id = session_id
+
+        # 新一轮 job 必须清掉上一次 /abort 留下的短 TTL 标记。
+        # 否则 ai-worker acquire 后会把新 job 当成旧 job 的 abort，留下 queued 幽灵状态。
+        ai_session.clear_abort(session_id)
+
+        # 写 meta + 提交到显式队列。只有接受入队后才扣配额。
+        store.create_meta(
+            session_id,
+            user_id=user_id,
+            provider=provider_id,
+            agent=agent_id,
+            quota_used=used + 1,
+            quota_limit=limit,
+            quota_remaining=new_remaining,
+            status=ai_session.STATUS_QUEUED,
+        )
+        if interrupted_previous:
+            store.append_event(session_id, {
+                "status": "interrupted",
+                "message": "已打断上一轮生成，开始处理新消息...",
+            })
+        accepted, queue_position = ai_session.submit_worker(
+            session_id, last_msg, provider_id,
+            agent_id=agent_id,
+            agent_resume_id=agent_resume_id,
+            user_id=user_id,
+            quota_used=used + 1,
+            quota_limit=limit,
+            quota_remaining=new_remaining,
+        )
+        if not accepted:
+            store.set_status(session_id, ai_session.STATUS_FAILED, error="AI worker queue full")
+            return jsonify({
+                "error": "当前 AI 任务过多，请稍后再试",
+                "code": "AI_QUEUE_FULL",
+            }), 429
+
+        # 扣配额（沿用老逻辑：worker 失败损 1 容忍；但队列拒绝不扣）
+        increment_quota(user_id)
+
+        logger.info(f"[CHAT_START] sid={session_id} worker 已入队 position={queue_position}")
+        return jsonify({
+            "session_id": session_id,
+            "status": "queued",
+            "queue_position": queue_position,
+            "agent": agent_id,
+            "resumed": False,
+        })
+    finally:
+        _release_chat_start_lock(session_id, start_lock)
 
 
 def _build_sse_stream(session_id: str, last_id: str):
@@ -1119,5 +1189,27 @@ def chat_abort(session_id):
     if meta.get("status") in ai_session.TERMINAL_STATUSES:
         return jsonify({"ok": True, "already_terminal": True})
 
+    intent = _chat_abort_intent()
+    if intent not in _CHAT_ABORT_INTENTS:
+        logger.warning(
+            "[CHAT_ABORT] reject abort without explicit intent sid=%s status=%s active_job=%s user=%s ua=%s",
+            session_id,
+            meta.get("status"),
+            meta.get("active_job_id"),
+            request.supabase_user.get("id"),
+            request.headers.get("User-Agent", "")[:160],
+        )
+        return jsonify({
+            "error": "abort intent required",
+            "code": "AI_ABORT_INTENT_REQUIRED",
+        }), 400
+
+    logger.info(
+        "[CHAT_ABORT] sid=%s intent=%s status=%s active_job=%s",
+        session_id,
+        intent,
+        meta.get("status"),
+        meta.get("active_job_id"),
+    )
     ai_session.abort_session(session_id)
     return jsonify({"ok": True})

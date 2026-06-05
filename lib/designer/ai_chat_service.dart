@@ -457,7 +457,7 @@ class AiChatService {
 
     // 只对 committed 的发 /abort，未提交的占位 backend 上根本没记录
     if (wasCommitted) {
-      _abortBackend(sid);
+      _abortBackend(sid, intent: 'delete_session');
     }
 
     if (wasActive) {
@@ -533,10 +533,12 @@ class AiChatService {
   /// 用户主动"清空对话"/手动"停止"才用。app 后台 / 关浮层 / 发新消息都不该用。
   void abort() {
     abortLocal();
-    if (_activeSessionId.isNotEmpty) _abortBackend(_activeSessionId);
+    if (_activeSessionId.isNotEmpty) {
+      _abortBackend(_activeSessionId, intent: 'manual_stop');
+    }
   }
 
-  void _abortBackend(String sid) {
+  void _abortBackend(String sid, {required String intent}) {
     if (sid.isEmpty) return;
     final token = AuthService.token;
     if (token == null) return;
@@ -544,7 +546,11 @@ class AiChatService {
     http
         .post(
           Uri.parse('$_baseUrl/api/ai/chat/$sid/abort'),
-          headers: {'Authorization': 'Bearer $token'},
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: json.encode({'intent': intent}),
         )
         .timeout(const Duration(seconds: 3))
         .catchError((e) {
@@ -718,7 +724,9 @@ class AiChatService {
       }
       final completed = await _fetchCompletedResult(sessionId);
       if (completed is ResumeCompleted) {
-        debugPrint('[AI_CHAT] stream interrupted after completion; replay /result');
+        debugPrint(
+          '[AI_CHAT] stream interrupted after completion; replay /result',
+        );
         yield* _eventsFromCompleted(completed);
         return;
       }
@@ -995,7 +1003,9 @@ class AiChatService {
       }
       final completed = await _fetchCompletedResult(sessionId);
       if (completed is ResumeCompleted) {
-        debugPrint('[AI_CHAT] Web EventSource interrupted after completion; replay /result');
+        debugPrint(
+          '[AI_CHAT] Web EventSource interrupted after completion; replay /result',
+        );
         yield* _eventsFromCompleted(completed);
         return;
       }
@@ -1840,7 +1850,6 @@ class AiChatService {
   }
 
   Future<void> clear() async {
-    abort();
     await resetSession();
   }
 }
