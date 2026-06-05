@@ -360,18 +360,26 @@ files, installed compose/config files, and MyApp images. It does not delete the
 persistent data root. The command prints the explicit `rm -rf -- <data-root>`
 line to run manually if you intentionally want to destroy all local data.
 
-## Multi-Host Direction
+## Multi-Host Agent Nodes
 
-The current stack is single-host first. Worker scheduling supports a multi-node
-shape through static `AGENT_NODE_URLS`, registered Postgres `agent_nodes`
-records, and session-to-node assignment so later turns keep using the same node.
-Redis is not the source of truth for node registration; it is only a short-lived
-compatibility heartbeat cache.
+The default AI execution mode is pull-based: the backend writes queued jobs to
+Redis, each agent-node polls the backend from its own host, then streams JSONL
+events and generated artifacts back to the backend. The client SSE path stays
+`client -> backend`; the agent host never needs an inbound public port.
+
+Node registration lives in Postgres `agent_nodes`. Redis is used for short-lived
+job queues, heartbeats, stream fan-out, and active-run display only. Existing
+sessions keep their assigned node for later turns when possible; new sessions
+are scheduled across online registered nodes according to capacity.
 
 Register an agent node:
 
 ```bash
-myapp-ctl agent-node register --url http://agent-node:5590 --capacity 4 --label gpu=false
+myapp-ctl agent-node register \
+  --url pull://myapp-agent-2 \
+  --node-id myapp-agent-2 \
+  --capacity 4 \
+  --label host=<agent-hostname-or-ip>
 ```
 
 Generate a bootstrap script for a new agent host from the master backend host:
@@ -379,11 +387,29 @@ Generate a bootstrap script for a new agent host from the master backend host:
 ```bash
 myapp-ctl agent-node add \
   --backend http://<master-host>:5566 \
-  --host <new-agent-host> \
   --node-id myapp-agent-2 \
   --capacity 2 \
+  --mode pull \
   --provider-mode master
 ```
+
+This prints a one-shot script for the new host. It installs only the agent-node
+and agent-runtime services, writes the shared registration token, enables pull
+mode, registers `pull://myapp-agent-2`, and starts polling the backend. The new
+host only needs outbound HTTP access to `<master-host>:5566`.
+
+If you intentionally want the old backend-to-agent direct path, opt in:
+
+```bash
+myapp-ctl agent-node add \
+  --backend http://<master-host>:5566 \
+  --host <new-agent-host> \
+  --mode direct \
+  --provider-mode master
+```
+
+Direct mode exposes nginx on the agent host and registers an HTTP URL that the
+backend can call. It is useful for controlled networks but is not the default.
 
 Provider modes:
 
@@ -396,9 +422,9 @@ Provider modes:
   registered with this mode do not receive the master provider token. Use this
   to split provider quota/keys by host.
 
-`capacity` is a scheduler weight. Existing sessions keep their node assignment
-for later turns; new sessions are distributed across registered URLs according
-to weight.
+`capacity` is both a scheduler weight and the pull-node local limit. The
+agent-node counts Docker runtime containers plus jobs it has just acquired but
+not fully started yet, so it does not over-pull during container startup.
 
 Cluster node operations:
 
@@ -413,6 +439,6 @@ containers on the machine where the command is executed.
 
 All-in-one hosts also self-register through the same registry path. Deploying
 `agent-node` installs `myapp-agent-register.timer`, which runs
-`myapp-ctl agent-node register` every 60 seconds. The registered URL is the
-backend-reachable service URL, for example `http://agent-node:5590`; the physical
-machine IP is stored as the `host=<ip>` label for display.
+`myapp-ctl agent-node register` every 60 seconds. In the default pull mode the
+registered URL is `pull://<node-id>`; the physical machine IP is stored as the
+`host=<ip>` label for display.

@@ -185,7 +185,7 @@ Planned:
 | Web Runtime Assets | `web/`, `web_openim_bridge/` | OpenIM Web WASM bridge and build assets used by Flutter Web |
 | Backend API | `backend/app.py`, `backend/claude_chat.py` | Flask API for auth-gated AI chat, SSE streaming, media upload, push, provider config, and client-facing backend endpoints |
 | AI Queue / Sessions | `backend/ai_session.py` + Redis | Durable-ish AI task metadata, bounded worker queue, resumable SSE event stream, abort/retry status |
-| AI Worker Pool | `backend/ai_worker_daemon.py`, `backend/agent_node_service.py` | Runs Claude/Codex-style coding agents inside isolated Docker runtime containers through agent-node |
+| AI Worker Pool | `backend/ai_worker_daemon.py`, `backend/agent_node_service.py` | Runs Claude/Codex-style coding agents inside isolated Docker runtime containers; agent-node can pull work from the backend so extra hosts need only outbound access |
 | Registry | `backend/registry_server.py` | Package registry for JSON-APPs/components: semver, namespaces, search, pagination, publish API, mirror, catalog enrichment |
 | Object Storage | MinIO / OSS | Public JSON packages, component files, asset packs, app media, and temporary AI-generated JSON URLs |
 | OpenIM | `backend/openim/` | IM backend bridge. Native clients use OpenIM Flutter/native SDK; Web uses the WASM SDK bridge |
@@ -199,7 +199,7 @@ Planned:
 
 Core flows:
 
-1. **AI app generation**: client sends a chat task -> Backend writes queue/meta to Redis -> worker submits to agent-node -> isolated runtime runs the configured AI coding agent -> backend uploads generated JSON to OSS -> client receives a structured `json_app_ready` event through resumable SSE.
+1. **AI app generation**: client sends a chat task -> Backend writes queue/meta to Redis -> an agent-node pulls the job and starts an isolated runtime -> the runtime runs the configured AI coding agent -> agent-node streams events/artifacts back to the backend -> backend uploads generated JSON to OSS -> client receives a structured `json_app_ready` event through resumable SSE.
 2. **Package install**: client queries Registry with pagination/search -> Registry returns package metadata and download URLs -> client downloads JSON from OSS -> dependency loader resolves libraries and caches them locally.
 3. **IM**: mobile uses the native OpenIM SDK path; Web uses `openim/wasm-client-sdk` through `web_openim_bridge`, with framework-level compatibility so JSON IM apps call one API shape.
 4. **Self-host backend**: `myapp-ctl secret` manages host-local credentials; `myapp-ctl deploy --pull` or `myapp-ctl deploy --build` starts the backend stack and agent runtime.
@@ -262,7 +262,7 @@ Drop this through the AI generation flow, or `flutter run` and pick the JSON fil
 ### Deploy
 - `myapp-ctl deploy` for full-stack or component-level backend deployment
 - `myapp-ctl secret` for host-local provider, push, OSS, and backend secrets
-- Isolated agent-node + Docker runtime for AI workers
+- Isolated pull-based agent-node + Docker runtime for AI workers
 - Built-in MinIO for media uploads
 - Healthchecks, logs, restart, status, and agent inspection commands
 

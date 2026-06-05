@@ -444,8 +444,9 @@ AI_WORKER_PROVIDER_DEFAULT_QUEUE_MAX = max(
 
 # AI 执行后端：
 # - local：保持旧行为，在 ai-worker 容器/进程内直接启动 Claude/Codex CLI。
-# - agent-node：ai-worker 只提交结构化 run 到 agent-node，由 agent-node 拉起隔离容器。
-# 默认 local 是为了向前兼容；生产容器化后由 compose/env 显式切到 agent-node。
+# - agent-node：旧 direct 模式，ai-worker 主动连接 agent-node。
+# - agent-pull：runner 模式，agent-node 主动拉任务并回传事件，适合内网节点。
+# 默认 local 是为了向前兼容；生产容器化后由 compose/env 显式切到 agent-pull。
 AI_WORKER_EXECUTION_BACKEND = (
     os.environ.get("AI_WORKER_EXECUTION_BACKEND", "local").strip().lower().replace("_", "-")
     or "local"

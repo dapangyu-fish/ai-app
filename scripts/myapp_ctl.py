@@ -2826,6 +2826,7 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "AGENT_NODE_REGISTRATION_TOKEN": _rand_hex(24),
         "AGENT_NODE_ID": _cfg().get("node", {}).get("id", os.uname().nodename),
         "AGENT_NODE_PROVIDER_MODE": "master",
+        "AGENT_NODE_PULL_ENABLED": "1",
     }
     config_center_defaults = {
         "CONFIG_CENTER_ADMIN_USERNAME": "admin",
@@ -3380,20 +3381,30 @@ def _agent_add_node_id(host: str) -> str:
 def _print_agent_add_script(args) -> int:
     cfg = _cfg()
     backend_url = (args.backend or cfg.get("domains", {}).get("backend") or "").rstrip("/")
+    mode = (getattr(args, "mode", "pull") or "pull").strip().lower().replace("_", "-")
     host = (args.host or "").strip()
     node_url = (args.url or "").rstrip("/")
     if not backend_url:
         print("backend url is required; pass --backend or set domains.backend", file=sys.stderr)
         return 2
-    if not node_url and not host:
-        print("agent host is required; pass --host or --url", file=sys.stderr)
+    if mode not in {"pull", "direct"}:
+        print("--mode must be pull or direct", file=sys.stderr)
         return 2
-    if not node_url:
+    if mode == "direct" and not node_url and not host:
+        print("agent host is required in direct mode; pass --host or --url", file=sys.stderr)
+        return 2
+    if mode == "direct" and not node_url:
         node_url = f"http://{host}:{args.public_port}".rstrip("/")
     if not host:
-        parsed = urlparse(node_url)
-        host = parsed.hostname or node_url.split(":", 1)[0]
+        parsed = urlparse(node_url) if node_url else None
+        host = (parsed.hostname if parsed else "") or (node_url.split(":", 1)[0] if node_url else "")
+    if not host and not args.node_id:
+        print("--node-id is required when --host/--url is omitted", file=sys.stderr)
+        return 2
     node_id = args.node_id or _agent_add_node_id(host)
+    if mode == "pull" and not node_url:
+        node_url = f"pull://{node_id}"
+    display_host = host or node_id
     provider_mode = args.provider_mode.strip().lower().replace("_", "-")
     if provider_mode not in {"master", "local"}:
         print("--provider-mode must be master or local", file=sys.stderr)
@@ -3409,9 +3420,11 @@ def _print_agent_add_script(args) -> int:
     deploy_mode = "--pull" if args.pull else "--build"
     labels = list(args.label or [])
     if not any(label.startswith("host=") for label in labels):
-        labels.append(f"host={host}")
+        labels.append(f"host={display_host}")
     if not any(str(label).replace("_", "-").startswith("provider-mode=") for label in labels):
         labels.append(f"provider_mode={provider_mode}")
+    if not any(str(label).replace("_", "-").startswith("mode=") for label in labels):
+        labels.append(f"mode={mode}")
     register_cmd = [
         "/usr/local/bin/myapp-ctl",
         "agent-node",
@@ -3440,14 +3453,14 @@ def _print_agent_add_script(args) -> int:
     if provider_mode == "local":
         print(
             "myapp-ctl setup "
-            f"--host {shlex.quote(host)} "
+            f"--host {shlex.quote(display_host)} "
             f"--data-root {shlex.quote(args.data_root)} "
             "--no-asr --no-email --no-push"
         )
     else:
         print(
             "myapp-ctl secret init-stack "
-            f"--host {shlex.quote(host)} "
+            f"--host {shlex.quote(display_host)} "
             f"--data-root {shlex.quote(args.data_root)}"
         )
     print(
@@ -3455,13 +3468,15 @@ def _print_agent_add_script(args) -> int:
         f"AGENT_NODE_ID={shlex.quote(node_id)} "
         f"AGENT_NODE_PORT={int(args.local_port)} "
         f"AGENT_NODE_PROVIDER_MODE={shlex.quote(provider_mode)} "
+        f"AGENT_NODE_PULL_ENABLED={'1' if mode == 'pull' else '0'} "
+        f"AGENT_NODE_BACKEND_URL={shlex.quote(backend_url)} "
         f"AGENT_NODE_SELF_REGISTER_URL={shlex.quote(node_url)} "
         f"AGENT_NODE_CAPACITY={int(args.capacity)} "
         f"AGENT_NODE_REGISTRATION_TTL_SECONDS={int(args.ttl)} "
         f"AGENT_NODE_TOKEN={shlex.quote(agent_token)} "
         f"AGENT_NODE_REGISTRATION_TOKEN={shlex.quote(registration_token)}"
     )
-    if not args.no_nginx:
+    if mode == "direct" and not args.no_nginx:
         print("if command -v apt-get >/dev/null 2>&1; then")
         print("  apt-get update")
         print("  DEBIAN_FRONTEND=noninteractive apt-get install -y nginx")
@@ -3604,17 +3619,19 @@ def _local_agent_node_register_command() -> list[str]:
     agent_env = _parse_env(_secret_path("agent"))
     backend_env = _parse_env(_secret_path("backend"))
     backend_port = backend_env.get("BACKEND_PORT") or "5566"
-    backend_url = f"http://127.0.0.1:{backend_port}"
-    node_url = (
-        agent_env.get("AGENT_NODE_SELF_REGISTER_URL")
-        or cfg.get("domains", {}).get("agent_node")
-        or "http://agent-node:5590"
-    ).rstrip("/")
+    backend_url = (agent_env.get("AGENT_NODE_BACKEND_URL") or f"http://127.0.0.1:{backend_port}").rstrip("/")
     node_id = (
         agent_env.get("AGENT_NODE_ID")
         or cfg.get("node", {}).get("id")
         or os.uname().nodename
     )
+    pull_enabled = str(agent_env.get("AGENT_NODE_PULL_ENABLED", "1")).strip().lower() in {"1", "true", "yes", "on"}
+    default_node_url = (
+        f"pull://{node_id}"
+        if pull_enabled
+        else (cfg.get("domains", {}).get("agent_node") or "http://agent-node:5590")
+    )
+    node_url = (agent_env.get("AGENT_NODE_SELF_REGISTER_URL") or default_node_url).rstrip("/")
     public_host = _public_host()
     provider_mode = (
         agent_env.get("AGENT_NODE_PROVIDER_MODE", "master")
@@ -4108,6 +4125,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_add.add_argument("--capacity", type=int, default=1)
     agent_node_add.add_argument("--ttl", type=int, default=180)
     agent_node_add.add_argument("--label", action="append")
+    agent_node_add.add_argument("--mode", choices=["pull", "direct"], default="pull")
     agent_node_add.add_argument("--provider-mode", choices=["master", "local"], default="master")
     agent_node_add.add_argument("--pull", action="store_true", help="generate a pull-based deploy command instead of build")
     agent_node_add.add_argument("--no-nginx", action="store_true")
@@ -4127,6 +4145,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_add.add_argument("--capacity", type=int, default=1)
     agent_add.add_argument("--ttl", type=int, default=180)
     agent_add.add_argument("--label", action="append")
+    agent_add.add_argument("--mode", choices=["pull", "direct"], default="pull")
     agent_add.add_argument("--provider-mode", choices=["master", "local"], default="master")
     agent_add.add_argument("--pull", action="store_true", help="generate a pull-based deploy command instead of build")
     agent_add.add_argument("--no-nginx", action="store_true")

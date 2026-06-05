@@ -50,6 +50,19 @@ PROVIDER_PROXY_TOKEN_TTL_SECONDS = int(os.environ.get("AGENT_NODE_PROVIDER_PROXY
 PROVIDER_PROXY_CONNECT_TIMEOUT_SECONDS = float(os.environ.get("AGENT_NODE_PROVIDER_PROXY_CONNECT_TIMEOUT_SECONDS", "30"))
 PROVIDER_PROXY_READ_TIMEOUT_SECONDS = float(os.environ.get("AGENT_NODE_PROVIDER_PROXY_READ_TIMEOUT_SECONDS", "900"))
 NODE_TOKEN = os.environ.get("AGENT_NODE_TOKEN", "")
+REGISTRATION_TOKEN = os.environ.get("AGENT_NODE_REGISTRATION_TOKEN", NODE_TOKEN)
+PULL_ENABLED = os.environ.get("AGENT_NODE_PULL_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
+PULL_BACKEND_URL = os.environ.get("AGENT_NODE_BACKEND_URL", "").rstrip("/")
+PULL_INTERVAL_SECONDS = float(os.environ.get("AGENT_NODE_POLL_INTERVAL_IDLE_SECONDS", "1"))
+PULL_TIMEOUT_SECONDS = float(os.environ.get("AGENT_NODE_POLL_TIMEOUT_SECONDS", "5"))
+PULL_ERROR_BACKOFF_MAX_SECONDS = float(os.environ.get("AGENT_NODE_POLL_ERROR_BACKOFF_MAX_SECONDS", "30"))
+PULL_EVENT_FLUSH_LIVE_SECONDS = float(os.environ.get("AGENT_NODE_EVENT_FLUSH_LIVE_MS", "200")) / 1000.0
+PULL_EVENT_FLUSH_BACKGROUND_SECONDS = float(os.environ.get("AGENT_NODE_EVENT_FLUSH_BACKGROUND_SECONDS", "5"))
+PULL_EVENT_BATCH_MAX = int(os.environ.get("AGENT_NODE_EVENT_BATCH_MAX", "64"))
+try:
+    NODE_CAPACITY = max(1, int(os.environ.get("AGENT_NODE_CAPACITY", "1")))
+except ValueError:
+    NODE_CAPACITY = 1
 RUN_RETENTION_SECONDS = int(os.environ.get("AGENT_NODE_RUN_RETENTION_SECONDS", "604800"))
 RUN_SNAPSHOT_MAX_FILE_BYTES = int(os.environ.get("AGENT_NODE_RUN_SNAPSHOT_MAX_FILE_BYTES", "52428800"))
 RUN_SNAPSHOT_MAX_FILES = int(os.environ.get("AGENT_NODE_RUN_SNAPSHOT_MAX_FILES", "5000"))
@@ -57,6 +70,8 @@ PROVIDER_MODE = os.environ.get("AGENT_NODE_PROVIDER_MODE", "master").strip().low
 
 _RUNS: dict[str, dict] = {}
 _RUNS_LOCK = threading.Lock()
+_PULL_RUNS_LOCK = threading.Lock()
+_PULL_STARTING_RUNS: set[str] = set()
 _ABORT_MARKERS: dict[str, int] = {}
 _PROXY_TOKENS: dict[str, dict] = {}
 _PROXY_LOCK = threading.Lock()
@@ -829,10 +844,18 @@ def provider_proxy(token: str, subpath: str):
 @APP.post("/v1/runs")
 def create_run():
     data = request.get_json(silent=True) or {}
+    try:
+        run_id = _create_local_run(data)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify({"run_id": run_id, "status": "starting", "events_url": f"/v1/runs/{run_id}/events"}), 202
+
+
+def _create_local_run(data: dict) -> str:
     session_id = str(data.get("session_id") or "").strip()
     prompt = str(data.get("prompt") or "")
     if not session_id or not prompt:
-        return jsonify({"error": "session_id and prompt are required"}), 400
+        raise ValueError("session_id and prompt are required")
     run_id = _safe_part(data.get("run_id") or uuid.uuid4().hex, "run")
     job_id = _safe_part(data.get("job_id") or run_id, "job")
     user_id = _safe_part(data.get("user_id") or "user", "user")
@@ -855,7 +878,7 @@ def create_run():
         _apply_local_provider(payload)
         proxy_tokens = _prepare_provider_proxy(payload)
     except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+        raise ValueError(str(exc))
     cmd, docker_env = _docker_cmd(run_id, payload, payload_path, paths)
     log_path = _run_log_path(run_id)
     _json_line(log_path, _redacted_start_payload(payload, cmd))
@@ -881,7 +904,7 @@ def create_run():
     if abort_requested:
         _json_line(log_path, {"type": "abort_requested", "reason": "pre_start", "ts": _now_ms()})
     _start_run_thread(run_id, payload, cmd, docker_env, log_path, paths, proxy_tokens)
-    return jsonify({"run_id": run_id, "status": "starting", "events_url": f"/v1/runs/{run_id}/events"}), 202
+    return run_id
 
 
 @APP.get("/v1/runs")
@@ -966,8 +989,7 @@ def get_run_artifact(run_id: str):
     return jsonify({"error": "artifact not found"}), 404
 
 
-@APP.post("/v1/runs/<run_id>/abort")
-def abort_run(run_id: str):
+def _abort_local_run(run_id: str) -> bool:
     run_id = _safe_part(run_id, "run")
     with _RUNS_LOCK:
         run = _RUNS.get(run_id) or {}
@@ -985,12 +1007,19 @@ def abort_run(run_id: str):
         ).returncode == 0
         if removed:
             _json_line(_run_log_path(run_id), {"type": "abort", "container": fallback_container, "ts": _now_ms()})
-            return jsonify({"run_id": run_id, "aborted": True, "fallback_container": True})
-        _json_line(_run_log_path(run_id), {"type": "abort_requested", "reason": "container not found", "ts": _now_ms()})
-        return jsonify({"run_id": run_id, "aborted": False, "abort_requested": True}), 202
+        else:
+            _json_line(_run_log_path(run_id), {"type": "abort_requested", "reason": "container not found", "ts": _now_ms()})
+        return removed
     subprocess.run(["docker", "rm", "-f", container], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     _json_line(_run_log_path(run_id), {"type": "abort", "container": container, "ts": _now_ms()})
-    return jsonify({"run_id": run_id, "aborted": True})
+    return True
+
+
+@APP.post("/v1/runs/<run_id>/abort")
+def abort_run(run_id: str):
+    run_id = _safe_part(run_id, "run")
+    aborted = _abort_local_run(run_id)
+    return jsonify({"run_id": run_id, "aborted": aborted, "abort_requested": True}), 200 if aborted else 202
 
 
 @APP.get("/v1/runs/<run_id>/events")
@@ -1020,6 +1049,252 @@ def run_events(run_id: str):
             time.sleep(0.25)
 
     return Response(stream_with_context(generate()), mimetype="application/x-ndjson")
+
+
+def _pull_headers(content_type: str = "application/json") -> dict:
+    headers = {"User-Agent": "myapp-agent-node/1"}
+    if content_type:
+        headers["Content-Type"] = content_type
+    if REGISTRATION_TOKEN:
+        headers["Authorization"] = f"Bearer {REGISTRATION_TOKEN}"
+    return headers
+
+
+def _pull_labels() -> list[str]:
+    labels = []
+    raw = os.environ.get("AGENT_NODE_LABELS", "")
+    for item in raw.split(","):
+        item = item.strip()
+        if item:
+            labels.append(item)
+    if not any(label.replace("_", "-").startswith("provider-mode=") for label in labels):
+        labels.append(f"provider_mode={PROVIDER_MODE or 'master'}")
+    if not any(label.startswith("host=") for label in labels):
+        labels.append(f"host={os.environ.get('PUBLIC_HOST') or os.uname().nodename}")
+    labels.append("mode=pull")
+    return labels
+
+
+def _pull_active_count() -> int:
+    with _PULL_RUNS_LOCK:
+        starting_runs = set(_PULL_STARTING_RUNS)
+    with _RUNS_LOCK:
+        active_run_ids = {
+            run_id
+            for run_id, run in _RUNS.items()
+            if str(run.get("status") or "") in _ACTIVE_RUN_STATUSES
+        }
+    return max(len(active_run_ids | starting_runs), len(_docker_active_agent_containers()))
+
+
+def _pull_mark_starting(run_id: str) -> None:
+    if not run_id:
+        return
+    with _PULL_RUNS_LOCK:
+        _PULL_STARTING_RUNS.add(run_id)
+
+
+def _pull_unmark_starting(run_id: str) -> None:
+    if not run_id:
+        return
+    with _PULL_RUNS_LOCK:
+        _PULL_STARTING_RUNS.discard(run_id)
+
+
+def _pull_post_events(run_id: str, events: list[dict], *, heartbeat: bool = False) -> bool:
+    if not PULL_BACKEND_URL:
+        return False
+    payload = {"node_id": NODE_ID, "events": events}
+    backoff = 1.0
+    while True:
+        try:
+            response = requests.post(
+                f"{PULL_BACKEND_URL}/api/ai/agent_pull/jobs/{run_id}/events",
+                headers=_pull_headers(),
+                json=payload,
+                timeout=(5, 30),
+            )
+            if 200 <= response.status_code < 300:
+                try:
+                    data = response.json()
+                except ValueError:
+                    data = {}
+                return bool(data.get("abort"))
+            _json_line(
+                _run_log_path(run_id),
+                {
+                    "type": "pull_event_upload_error",
+                    "status_code": response.status_code,
+                    "body": response.text[:300],
+                    "ts": _now_ms(),
+                },
+            )
+        except requests.RequestException as exc:
+            _json_line(_run_log_path(run_id), {"type": "pull_event_upload_error", "message": str(exc), "ts": _now_ms()})
+        if heartbeat and not events:
+            return False
+        time.sleep(backoff)
+        backoff = min(PULL_ERROR_BACKOFF_MAX_SECONDS, backoff * 2)
+
+
+def _pull_upload_artifact(run_id: str, relative_path: str = "app.json") -> None:
+    workspaces = _run_artifact_workspaces(run_id)
+    for workspace in workspaces:
+        path = _safe_artifact_path(workspace, relative_path)
+        if not path:
+            continue
+        data = path.read_bytes()
+        backoff = 1.0
+        while True:
+            try:
+                response = requests.post(
+                    f"{PULL_BACKEND_URL}/api/ai/agent_pull/jobs/{run_id}/artifact",
+                    headers=_pull_headers("application/octet-stream"),
+                    params={"path": relative_path},
+                    data=data,
+                    timeout=(5, 60),
+                )
+                if 200 <= response.status_code < 300:
+                    _json_line(
+                        _run_log_path(run_id),
+                        {"type": "pull_artifact_uploaded", "path": relative_path, "bytes": len(data), "ts": _now_ms()},
+                    )
+                    return
+                message = f"http {response.status_code}: {response.text[:300]}"
+            except requests.RequestException as exc:
+                message = str(exc)
+            _json_line(_run_log_path(run_id), {"type": "pull_artifact_upload_error", "message": message, "ts": _now_ms()})
+            time.sleep(backoff)
+            backoff = min(PULL_ERROR_BACKOFF_MAX_SECONDS, backoff * 2)
+    _json_line(_run_log_path(run_id), {"type": "pull_artifact_missing", "path": relative_path, "ts": _now_ms()})
+
+
+def _pull_stream_run_events(run_id: str) -> None:
+    log_path = _run_log_path(run_id)
+    pos = 0
+    carry = ""
+    batch: list[dict] = []
+    last_flush = time.time()
+    last_heartbeat = time.time()
+    stop_seen = False
+    flush_interval = max(0.05, PULL_EVENT_FLUSH_LIVE_SECONDS)
+    while True:
+        if log_path.exists():
+            with log_path.open("r", encoding="utf-8", errors="replace") as handle:
+                handle.seek(pos)
+                chunk = handle.read()
+                pos = handle.tell()
+            if chunk:
+                text = carry + chunk
+                if text.endswith("\n"):
+                    lines = text.splitlines()
+                    carry = ""
+                else:
+                    parts = text.splitlines()
+                    lines = parts[:-1]
+                    carry = parts[-1] if parts else text
+                for line in lines:
+                    try:
+                        item = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if item.get("type") == "stop":
+                        _pull_upload_artifact(run_id, "app.json")
+                        stop_seen = True
+                    batch.append(item)
+        now = time.time()
+        if batch and (stop_seen or len(batch) >= PULL_EVENT_BATCH_MAX or now - last_flush >= flush_interval):
+            abort = _pull_post_events(run_id, batch)
+            batch = []
+            last_flush = now
+            last_heartbeat = now
+            if abort and not stop_seen:
+                _abort_local_run(run_id)
+        if stop_seen:
+            return
+        if now - last_heartbeat >= max(1.0, min(PULL_EVENT_FLUSH_BACKGROUND_SECONDS, 5.0)):
+            if _pull_post_events(run_id, [], heartbeat=True):
+                _abort_local_run(run_id)
+            last_heartbeat = now
+        time.sleep(0.2)
+
+
+def _pull_run_job(job: dict) -> None:
+    run_id = str(job.get("run_id") or "")
+    if not run_id:
+        return
+    try:
+        actual_run_id = _create_local_run(job)
+        _pull_stream_run_events(actual_run_id)
+    except Exception as exc:
+        _json_line(_run_log_path(run_id), {"type": "error", "message": str(exc), "ts": _now_ms()})
+        _pull_post_events(run_id, [{"type": "error", "message": str(exc), "ts": _now_ms()}])
+        _pull_post_events(run_id, [{"type": "stop", "status": "failed", "returncode": 1, "ts": _now_ms()}])
+    finally:
+        _pull_unmark_starting(run_id)
+
+
+def _pull_loop() -> None:
+    if not PULL_ENABLED:
+        return
+    if not PULL_BACKEND_URL:
+        _json_line(_run_log_path("agent-node-pull"), {"type": "pull_disabled", "reason": "missing backend url", "ts": _now_ms()})
+        return
+    backoff = 1.0
+    while True:
+        try:
+            active_runs = _pull_active_count()
+            capacity = max(1, NODE_CAPACITY)
+            accept_jobs = active_runs < capacity
+            poll_timeout = PULL_TIMEOUT_SECONDS if accept_jobs else 0
+            response = requests.post(
+                f"{PULL_BACKEND_URL}/api/ai/agent_pull/acquire",
+                headers=_pull_headers(),
+                json={
+                    "node_id": NODE_ID,
+                    "capacity": capacity,
+                    "provider_mode": PROVIDER_MODE or "master",
+                    "labels": _pull_labels(),
+                    "url": os.environ.get("AGENT_NODE_SELF_REGISTER_URL") or f"pull://{NODE_ID}",
+                    "timeout_seconds": poll_timeout,
+                    "ttl_seconds": int(os.environ.get("AGENT_NODE_REGISTRATION_TTL_SECONDS", "120")),
+                    "active_runs": active_runs,
+                    "accept_jobs": accept_jobs,
+                },
+                timeout=(5, max(10, poll_timeout + 5)),
+            )
+            if response.status_code == 204:
+                backoff = 1.0
+                time.sleep(max(0.0, PULL_INTERVAL_SECONDS))
+                continue
+            if response.status_code == 401 or response.status_code == 403:
+                _json_line(
+                    _run_log_path("agent-node-pull"),
+                    {"type": "pull_auth_error", "status_code": response.status_code, "ts": _now_ms()},
+                )
+                time.sleep(PULL_ERROR_BACKOFF_MAX_SECONDS)
+                continue
+            response.raise_for_status()
+            data = response.json()
+            job = data.get("job") if isinstance(data, dict) else None
+            if not isinstance(job, dict):
+                time.sleep(max(0.0, PULL_INTERVAL_SECONDS))
+                continue
+            backoff = 1.0
+            run_id = str(job.get("run_id") or "")
+            _pull_mark_starting(run_id)
+            threading.Thread(target=_pull_run_job, args=(job,), name=f"agent-pull-{job.get('run_id', '')[:12]}", daemon=True).start()
+        except Exception as exc:
+            _json_line(_run_log_path("agent-node-pull"), {"type": "pull_loop_error", "message": str(exc), "ts": _now_ms()})
+            time.sleep(backoff)
+            backoff = min(PULL_ERROR_BACKOFF_MAX_SECONDS, backoff * 2)
+
+
+def _start_pull_thread_once() -> None:
+    if not PULL_ENABLED:
+        return
+    thread = threading.Thread(target=_pull_loop, name="agent-node-pull", daemon=True)
+    thread.start()
 
 
 def _cleanup_old_runs() -> None:
@@ -1111,6 +1386,7 @@ def _start_cleanup_thread_once() -> None:
 
 
 _start_cleanup_thread_once()
+_start_pull_thread_once()
 
 
 if __name__ == "__main__":

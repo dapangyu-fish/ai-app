@@ -106,6 +106,18 @@ def _node_expires_in(row: dict, now_ms: int) -> int:
 
 def _probe_agent_node(row: dict) -> dict:
     url = str(row.get("url") or "").rstrip("/")
+    node_id = str(row.get("node_id") or "")
+    if url.startswith("pull://"):
+        try:
+            active_runs = int(get_redis().scard(f"ai:agent_pull:node_running:{node_id}") or 0)
+        except Exception:
+            active_runs = 0
+        return {
+            "reachable": True,
+            "health": "pull",
+            "active_runs": active_runs,
+            "detail": "",
+        }
     if not url:
         return {
             "reachable": False,
@@ -167,7 +179,7 @@ def _decorate_node(row: dict, *, probe: bool, include_runs: bool = False) -> dic
         row["status"] = "registered"
     elif row.get("reachable") is False:
         row["status"] = "down"
-    elif row.get("health") == "ok":
+    elif row.get("health") in {"ok", "pull"}:
         row["status"] = "online"
     else:
         row["status"] = "unknown"

@@ -39,6 +39,7 @@ from datetime import timedelta
 from typing import Any, List, Optional, Tuple
 from urllib.parse import urlparse
 
+from flask import jsonify, request
 from minio import Minio
 import redis
 
@@ -56,6 +57,7 @@ from config import (
     AGENT_NODE_ASSIGNMENT_TTL_SECONDS,
     AGENT_NODE_CONNECT_TIMEOUT_SECONDS,
     AGENT_NODE_EVENT_TIMEOUT_SECONDS,
+    AGENT_NODE_REGISTRATION_TOKEN,
     AGENT_NODE_TOKEN,
     AGENT_NODE_URL,
     AGENT_NODE_URLS,
@@ -262,6 +264,29 @@ def _provider_running_hash_key(provider_id: Optional[str]) -> str:
 
 def _provider_running_lease_key(provider_id: Optional[str]) -> str:
     return f"ai:queue:running:leases:{_provider_queue_suffix(provider_id)}"
+
+
+def _agent_pull_pending_key() -> str:
+    return "ai:agent_pull:pending"
+
+
+def _agent_pull_job_key(run_id: str) -> str:
+    return f"ai:agent_pull:job:{run_id}"
+
+
+def _agent_pull_events_key(run_id: str) -> str:
+    return f"ai:agent_pull:events:{run_id}"
+
+
+def _agent_pull_artifact_key(run_id: str, relative_path: str) -> str:
+    safe = os.path.normpath(relative_path or "app.json").replace("\\", "/")
+    safe = safe.strip("/").replace("/", "__") or "app.json"
+    return f"ai:agent_pull:artifact:{run_id}:{safe}"
+
+
+def _agent_pull_node_running_key(node_id: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(node_id or "agent-node")).strip("._") or "agent-node"
+    return f"ai:agent_pull:node_running:{safe}"
 
 
 # ────────────────────────────── 状态枚举 ──────────────────────────────
@@ -594,6 +619,16 @@ def _artifact_from_agent_node(agent_node_url: str, run_id: str, relative_path: s
     return response.content
 
 
+def _artifact_from_agent_pull(run_id: str, relative_path: str) -> bytes:
+    normalized = os.path.normpath(str(relative_path or "app.json").strip() or "app.json").replace("\\", "/")
+    if normalized.startswith("../") or normalized == ".." or os.path.isabs(normalized):
+        raise RuntimeError(f"invalid agent pull artifact path: {relative_path or 'app.json'}")
+    raw = get_redis().get(_agent_pull_artifact_key(run_id, normalized))
+    if not raw:
+        raise RuntimeError(f"agent pull artifact not found: {normalized}")
+    return raw if isinstance(raw, bytes) else str(raw).encode("utf-8")
+
+
 def _repair_validate_json_bytes(data: bytes, session_id: str) -> bytes:
     with tempfile.NamedTemporaryFile("wb", suffix=".json", delete=False) as tmp:
         tmp.write(data)
@@ -664,6 +699,7 @@ def _resolve_server_upload_actions(
     workspace: Optional[str],
     agent_node_url: str = "",
     run_id: str = "",
+    agent_pull_run_id: str = "",
 ) -> List[dict]:
     resolved: List[dict] = []
     last_json_app_ready: Optional[dict] = None
@@ -679,6 +715,8 @@ def _resolve_server_upload_actions(
         raw = (
             _artifact_from_agent_node(agent_node_url, run_id, relative_path)
             if agent_node_url and run_id
+            else _artifact_from_agent_pull(agent_pull_run_id, relative_path)
+            if agent_pull_run_id
             else _artifact_from_local_workspace(workspace, relative_path, session_id)
         )
         repaired = _repair_validate_json_bytes(raw, session_id)
@@ -1500,6 +1538,13 @@ def _agent_node_headers() -> dict:
     return headers
 
 
+def _agent_pull_auth_ok() -> bool:
+    expected = AGENT_NODE_REGISTRATION_TOKEN or AGENT_NODE_TOKEN
+    if not expected:
+        return True
+    return request.headers.get("Authorization", "") == f"Bearer {expected}"
+
+
 def _agent_node_label_mode(labels: Any) -> str:
     if not isinstance(labels, list):
         return "master"
@@ -1682,6 +1727,607 @@ def _agent_node_codex_config(provider: dict, *, include_provider_secrets: bool =
     return codex
 
 
+def _agent_node_runtime_config(provider: dict, runner: str, *, include_provider_secrets: bool) -> tuple[dict, dict]:
+    if runner == "codex":
+        codex = _agent_node_codex_config(provider, include_provider_secrets=include_provider_secrets)
+        env = _agent_node_provider_env(provider, include_provider_secrets=include_provider_secrets)
+        for key in list(env.keys()):
+            if key.startswith("ANTHROPIC_") or key.startswith("CLAUDE_CODE_") or key == "API_TIMEOUT_MS":
+                env.pop(key, None)
+        runtime_token_env_key = codex.pop("_runtime_token_env_key", "")
+        runtime_token = codex.pop("_runtime_token", "")
+        if runtime_token_env_key and runtime_token:
+            env[runtime_token_env_key] = runtime_token
+        return codex, env
+    return {}, _agent_node_provider_env(provider, include_provider_secrets=include_provider_secrets)
+
+
+def _build_agent_node_payload(
+    *,
+    run_id: str,
+    session_id: str,
+    user_id: str,
+    provider: dict,
+    runner: str,
+    resume_id: str,
+    turn_msg: str,
+    sys_prompt: str,
+    include_provider_secrets: bool,
+) -> dict:
+    runtime_workspace = "/workspace"
+    codex, env = _agent_node_runtime_config(
+        provider,
+        runner,
+        include_provider_secrets=include_provider_secrets,
+    )
+    if runner == "codex":
+        prompt = _build_codex_prompt(turn_msg, sys_prompt, workspace=runtime_workspace)
+    else:
+        prompt = _build_user_turn_prompt(turn_msg, workspace=runtime_workspace)
+    return {
+        "run_id": run_id,
+        "session_id": session_id,
+        "job_id": run_id,
+        "user_id": user_id or "user",
+        "provider_id": provider.get("id"),
+        "agent_id": runner,
+        "resume_id": resume_id or "",
+        "prompt": prompt,
+        "system_prompt": sys_prompt if runner == "claude" and not resume_id else "",
+        "env": dict(env),
+        "codex": dict(codex),
+    }
+
+
+def _agent_pull_enqueue_run(
+    *,
+    run_id: str,
+    session_id: str,
+    user_id: str,
+    provider_id: str,
+    runner: str,
+    resume_id: str,
+    turn_msg: str,
+    sys_prompt: str,
+) -> None:
+    now_ms = int(time.time() * 1000)
+    spec = {
+        "run_id": run_id,
+        "session_id": session_id,
+        "user_id": user_id or "user",
+        "provider_id": provider_id,
+        "agent_id": runner,
+        "resume_id": resume_id or "",
+        "turn_msg": turn_msg,
+        "sys_prompt": sys_prompt,
+        "created_at": now_ms,
+    }
+    r = get_redis()
+    pipe = r.pipeline()
+    pipe.hset(
+        _agent_pull_job_key(run_id),
+        mapping={
+            "spec": json.dumps(spec, ensure_ascii=False),
+            "status": "queued",
+            "session_id": session_id,
+            "provider_id": provider_id,
+            "agent_id": runner,
+            "created_at": str(now_ms),
+        },
+    )
+    pipe.expire(_agent_pull_job_key(run_id), AI_SESSION_REDIS_TTL_SECONDS)
+    pipe.delete(_agent_pull_events_key(run_id))
+    pipe.rpush(_agent_pull_pending_key(), run_id)
+    pipe.expire(_agent_pull_pending_key(), AI_SESSION_REDIS_TTL_SECONDS)
+    pipe.execute()
+
+
+def _agent_pull_job_spec(run_id: str) -> Optional[dict]:
+    raw = get_redis().hget(_agent_pull_job_key(run_id), "spec")
+    if not raw:
+        return None
+    if isinstance(raw, bytes):
+        raw = raw.decode("utf-8", errors="replace")
+    try:
+        spec = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    return spec if isinstance(spec, dict) else None
+
+
+def _agent_pull_append_job_event(run_id: str, item: dict) -> None:
+    r = get_redis()
+    pipe = r.pipeline()
+    pipe.xadd(
+        _agent_pull_events_key(run_id),
+        {"data": json.dumps(item, ensure_ascii=False).encode()},
+        maxlen=20000,
+        approximate=True,
+    )
+    pipe.expire(_agent_pull_events_key(run_id), AI_SESSION_REDIS_TTL_SECONDS)
+    pipe.expire(_agent_pull_job_key(run_id), AI_SESSION_REDIS_TTL_SECONDS)
+    pipe.execute()
+
+
+def _agent_pull_read_job_events(run_id: str, last_id: str = "0", block_ms: int = 5000) -> List[Tuple[str, dict]]:
+    try:
+        result = get_redis().xread(
+            {_agent_pull_events_key(run_id): last_id},
+            count=100,
+            block=block_ms if block_ms > 0 else None,
+        )
+    except redis.exceptions.RedisError as exc:
+        logger.warning("[AGENT_PULL] xread failed run=%s: %s", run_id, exc)
+        return []
+    out: List[Tuple[str, dict]] = []
+    for _, entries in result or []:
+        for entry_id, fields in entries:
+            eid = entry_id.decode() if isinstance(entry_id, bytes) else entry_id
+            raw = fields.get(b"data") if b"data" in fields else fields.get("data")
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8", errors="replace")
+            try:
+                item = json.loads(raw)
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if isinstance(item, dict):
+                out.append((eid, item))
+    return out
+
+
+def _agent_pull_mark_abort(run_id: str) -> None:
+    try:
+        get_redis().hset(_agent_pull_job_key(run_id), "abort_requested", "1")
+        get_redis().expire(_agent_pull_job_key(run_id), AI_SESSION_REDIS_TTL_SECONDS)
+    except redis.exceptions.RedisError:
+        pass
+
+
+def _agent_pull_job_abort_requested(run_id: str, session_id: str = "") -> bool:
+    if session_id and SessionStore().is_aborted(session_id):
+        return True
+    try:
+        return get_redis().hget(_agent_pull_job_key(run_id), "abort_requested") in {b"1", "1"}
+    except redis.exceptions.RedisError:
+        return False
+
+
+def _has_registered_agent_pull_node() -> bool:
+    for record in _registered_agent_node_records():
+        if str(record.get("url") or "").rstrip("/").startswith("pull://"):
+            return True
+    return False
+
+
+def _wait_for_agent_pull_node(timeout_seconds: float = 5.0) -> bool:
+    deadline = time.time() + max(0.0, timeout_seconds)
+    while True:
+        if _has_registered_agent_pull_node():
+            return True
+        if time.time() >= deadline:
+            return False
+        time.sleep(0.5)
+
+
+def agent_pull_acquire():
+    if not _agent_pull_auth_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    body = request.get_json(silent=True) or {}
+    node_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(body.get("node_id") or "agent-node")).strip("._") or "agent-node"
+    labels = body.get("labels") if isinstance(body.get("labels"), list) else []
+    provider_mode = str(body.get("provider_mode") or "master").strip().lower().replace("_", "-") or "master"
+    if not any(str(label).replace("_", "-").startswith("provider-mode=") for label in labels):
+        labels.append(f"provider_mode={provider_mode}")
+    try:
+        capacity = max(1, min(100, int(body.get("capacity") or 1)))
+    except (TypeError, ValueError):
+        capacity = 1
+    try:
+        timeout_seconds = max(0.0, min(10.0, float(body.get("timeout_seconds") or 5)))
+    except (TypeError, ValueError):
+        timeout_seconds = 5.0
+    try:
+        active_runs = max(0, int(body.get("active_runs") or 0))
+    except (TypeError, ValueError):
+        active_runs = 0
+    accept_jobs = bool(body.get("accept_jobs", True))
+
+    try:
+        import agent_node_registry
+
+        agent_node_registry.upsert_node(
+            node_id=node_id,
+            url=str(body.get("url") or f"pull://{node_id}").strip() or f"pull://{node_id}",
+            capacity=capacity,
+            labels=labels,
+            ttl_seconds=max(30, int(body.get("ttl_seconds") or 120)),
+        )
+    except Exception as exc:
+        logger.warning("[AGENT_PULL] registry heartbeat failed node=%s: %s", node_id, exc)
+
+    if not accept_jobs or active_runs >= capacity:
+        return ("", 204)
+
+    r = get_redis()
+    deadline = time.time() + timeout_seconds
+    run_id = ""
+    spec: Optional[dict] = None
+    while True:
+        raw = r.lpop(_agent_pull_pending_key())
+        if raw:
+            run_id = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
+            spec = _agent_pull_job_spec(run_id)
+            if not spec:
+                continue
+            session_id = str(spec.get("session_id") or "")
+            if session_id and SessionStore().is_aborted(session_id):
+                _agent_pull_mark_abort(run_id)
+                continue
+            break
+        if time.time() >= deadline:
+            return ("", 204)
+        time.sleep(0.2)
+
+    assert spec is not None
+    provider_id = _normalize_provider_id(spec.get("provider_id"))
+    provider = AI_PROVIDERS.get(provider_id)
+    if not provider:
+        _agent_pull_append_job_event(
+            run_id,
+            {"type": "error", "message": f"unknown provider: {provider_id}", "ts": int(time.time() * 1000)},
+        )
+        _agent_pull_append_job_event(
+            run_id,
+            {"type": "stop", "status": "failed", "returncode": 1, "ts": int(time.time() * 1000)},
+        )
+        return ("", 204)
+    include_provider_secrets = provider_mode not in {"local", "node", "self", "agent-local"}
+    payload = _build_agent_node_payload(
+        run_id=run_id,
+        session_id=str(spec.get("session_id") or ""),
+        user_id=str(spec.get("user_id") or "user"),
+        provider=provider,
+        runner=str(spec.get("agent_id") or "claude"),
+        resume_id=str(spec.get("resume_id") or ""),
+        turn_msg=str(spec.get("turn_msg") or ""),
+        sys_prompt=str(spec.get("sys_prompt") or ""),
+        include_provider_secrets=include_provider_secrets,
+    )
+    now_ms = int(time.time() * 1000)
+    pipe = r.pipeline()
+    pipe.hset(
+        _agent_pull_job_key(run_id),
+        mapping={
+            "status": "assigned",
+            "node_id": node_id,
+            "assigned_at": str(now_ms),
+            "provider_mode": provider_mode,
+        },
+    )
+    pipe.sadd(_agent_pull_node_running_key(node_id), run_id)
+    pipe.expire(_agent_pull_node_running_key(node_id), AI_SESSION_REDIS_TTL_SECONDS)
+    pipe.expire(_agent_pull_job_key(run_id), AI_SESSION_REDIS_TTL_SECONDS)
+    pipe.execute()
+    return jsonify({"job": payload, "run_id": run_id, "abort": _agent_pull_job_abort_requested(run_id, payload["session_id"])})
+
+
+def agent_pull_job_events(run_id: str):
+    if not _agent_pull_auth_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    run_id = _safe_path_part(run_id, "run")
+    body = request.get_json(silent=True) or {}
+    events = body.get("events") if isinstance(body.get("events"), list) else []
+    session_id = ""
+    spec = _agent_pull_job_spec(run_id)
+    if spec:
+        session_id = str(spec.get("session_id") or "")
+    node_id = str(body.get("node_id") or "")
+    for item in events[:500]:
+        if not isinstance(item, dict):
+            continue
+        _agent_pull_append_job_event(run_id, item)
+        if item.get("type") == "stop":
+            status = str(item.get("status") or "failed")
+            mapping = {
+                "status": status,
+                "finished_at": str(int(time.time() * 1000)),
+                "returncode": str(item.get("returncode")),
+            }
+            if node_id:
+                get_redis().srem(_agent_pull_node_running_key(node_id), run_id)
+            get_redis().hset(_agent_pull_job_key(run_id), mapping=mapping)
+    abort = _agent_pull_job_abort_requested(run_id, session_id)
+    return jsonify({"ok": True, "abort": abort})
+
+
+def agent_pull_job_artifact(run_id: str):
+    if not _agent_pull_auth_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    run_id = _safe_path_part(run_id, "run")
+    relative_path = str(request.args.get("path") or "app.json").strip() or "app.json"
+    normalized = os.path.normpath(relative_path).replace("\\", "/")
+    if normalized.startswith("../") or normalized == ".." or os.path.isabs(normalized):
+        return jsonify({"error": "invalid artifact path"}), 400
+    data = request.get_data() or b""
+    max_bytes = int(os.environ.get("AGENT_PULL_ARTIFACT_MAX_BYTES", "52428800"))
+    if len(data) > max_bytes:
+        return jsonify({"error": "artifact too large"}), 413
+    r = get_redis()
+    r.set(_agent_pull_artifact_key(run_id, normalized), data, ex=AI_SESSION_REDIS_TTL_SECONDS)
+    return jsonify({"ok": True, "run_id": run_id, "path": normalized, "bytes": len(data)})
+
+
+def _run_agent_pull_worker(
+    *,
+    store: SessionStore,
+    session_id: str,
+    job_id: Optional[str],
+    last_msg: str,
+    provider: dict,
+    runner: str,
+    agent_resume_id: Optional[str],
+    sys_prompt: str,
+    quota_used: int,
+    quota_limit: int,
+    quota_remaining: int,
+    append_event,
+    set_status,
+    all_events: List[dict],
+) -> None:
+    parse_line = parse_codex_line if runner == "codex" else parse_cli_line
+    current_resume_id = agent_resume_id or ""
+
+    def run_once(current_run_id: str, turn_msg: str) -> Optional[_AgentNodeRunResult]:
+        if store.is_aborted(session_id):
+            set_status(STATUS_ABORTED)
+            return None
+        if not _wait_for_agent_pull_node(float(os.environ.get("AGENT_PULL_NODE_WAIT_SECONDS", "5"))):
+            err_msg = "没有在线 agent-node pull 节点，无法启动 AI 生成任务"
+            append_event({"error": err_msg, "needs_retry": True})
+            set_status(STATUS_FAILED, error=err_msg)
+            return None
+        user_id = store.get_meta(session_id).get("user_id") or "user"
+        _agent_pull_enqueue_run(
+            run_id=current_run_id,
+            session_id=session_id,
+            user_id=user_id,
+            provider_id=str(provider.get("id") or DEFAULT_PROVIDER),
+            runner=runner,
+            resume_id=current_resume_id,
+            turn_msg=turn_msg,
+            sys_prompt=sys_prompt,
+        )
+        try:
+            store.r.hset(
+                _meta_key(session_id),
+                mapping={
+                    "agent_pull_run_id": current_run_id,
+                    "agent_node_run_id": current_run_id,
+                },
+            )
+            store.r.expire(_meta_key(session_id), AI_SESSION_REDIS_TTL_SECONDS)
+        except Exception:
+            pass
+        _append_cli_log(session_id, "meta", json.dumps({
+            "event": "agent_pull_enqueue",
+            "run_id": current_run_id,
+            "provider": provider.get("id"),
+            "agent": runner,
+            "resume": bool(current_resume_id),
+        }, ensure_ascii=False))
+
+        line_count = 0
+        stderr_tail: List[str] = []
+        remote_client_actions: List[dict] = []
+        returncode: Optional[int] = None
+        status = "failed"
+        last_id = "0"
+        while True:
+            if store.is_aborted(session_id):
+                _agent_pull_mark_abort(current_run_id)
+                set_status(STATUS_ABORTED)
+                return None
+            entries = _agent_pull_read_job_events(current_run_id, last_id=last_id, block_ms=5000)
+            if not entries:
+                continue
+            for entry_id, item in entries:
+                last_id = entry_id
+                item_type = item.get("type")
+                if item_type == "stdout":
+                    line = str(item.get("line") or "")
+                    _append_cli_log(session_id, "stdout", line)
+                    if runner == "codex":
+                        thread_id = _extract_codex_thread_id(line)
+                        if thread_id:
+                            store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
+                    for ev in parse_line(line):
+                        if not append_event(ev):
+                            _agent_pull_mark_abort(current_run_id)
+                            return None
+                        all_events.append(ev)
+                        line_count += 1
+                elif item_type == "stderr":
+                    line = str(item.get("line") or "")
+                    stderr_tail.append(line)
+                    stderr_tail = stderr_tail[-20:]
+                    _append_cli_log(session_id, "stderr", line)
+                elif item_type == "error":
+                    message = str(item.get("message") or item.get("error") or "")
+                    if message:
+                        stderr_tail.append(message)
+                        stderr_tail = stderr_tail[-20:]
+                    _append_cli_log(session_id, "meta", json.dumps(item, ensure_ascii=False))
+                elif item_type == "client_actions":
+                    payload = item.get("payload")
+                    if isinstance(payload, dict):
+                        raw_actions = payload.get("client_actions")
+                    elif isinstance(payload, list):
+                        raw_actions = payload
+                    else:
+                        raw_actions = []
+                    if isinstance(raw_actions, list):
+                        wants_upload_current_app = False
+                        last_json_app_ready: Optional[dict] = None
+                        server_uploads: List[dict] = []
+                        for raw_action in raw_actions[:20]:
+                            action = _normalize_client_action(raw_action, session_id)
+                            if not action:
+                                continue
+                            if action["type"] == "request_upload_current_app":
+                                wants_upload_current_app = True
+                            elif action["type"] == "json_app_ready":
+                                last_json_app_ready = action
+                            elif action["type"] == _SERVER_UPLOAD_ACTION:
+                                server_uploads.append(action)
+                        remote_client_actions = []
+                        if wants_upload_current_app:
+                            remote_client_actions.append({"type": "request_upload_current_app"})
+                        if last_json_app_ready:
+                            remote_client_actions.append(last_json_app_ready)
+                        remote_client_actions.extend(server_uploads[-1:])
+                elif item_type == "stop":
+                    returncode = item.get("returncode")
+                    status = str(item.get("status") or "failed")
+                    if store.is_aborted(session_id):
+                        set_status(STATUS_ABORTED)
+                        return None
+                    return _AgentNodeRunResult(
+                        run_id=current_run_id,
+                        status=status,
+                        returncode=returncode,
+                        remote_client_actions=remote_client_actions,
+                        stderr_tail=stderr_tail,
+                        line_count=line_count,
+                    )
+                else:
+                    _append_cli_log(session_id, "meta", json.dumps(item, ensure_ascii=False))
+
+    base_run_id = _safe_path_part(job_id or uuid.uuid4().hex, "job")
+    repair_run_prefix = base_run_id[:80].rstrip("-_.") or "job"
+    current_run_id = base_run_id
+    current_msg = last_msg
+    repair_attempts = 0
+    total_line_count = 0
+    last_validation_hash = ""
+    client_actions: List[dict] = []
+    while True:
+        run_result = run_once(current_run_id, current_msg)
+        if run_result is None:
+            return
+        total_line_count += run_result.line_count
+
+        if run_result.status != "done" or run_result.returncode not in (0, None):
+            err_text = "".join(run_result.stderr_tail)[-2000:]
+            err_msg = f"agent-pull run failed status={run_result.status} returncode={run_result.returncode}: {err_text}"
+            append_event({"error": err_msg, "needs_retry": True})
+            set_status(STATUS_FAILED, error=err_msg)
+            return
+
+        candidate_actions = run_result.remote_client_actions
+        if repair_attempts > 0 and not candidate_actions:
+            err_msg = "生成结果自动修复结束，但 Agent 没有重新请求上传 app.json"
+            append_event({
+                "error": err_msg,
+                "stage": "server_upload_app_json",
+                "repair_attempts": repair_attempts,
+                "max_repair_attempts": AI_SERVER_REPAIR_MAX_ATTEMPTS,
+                "needs_retry": True,
+            })
+            set_status(STATUS_FAILED, error=err_msg)
+            return
+        try:
+            client_actions = _resolve_server_upload_actions(
+                candidate_actions,
+                session_id,
+                workspace=None,
+                agent_pull_run_id=run_result.run_id,
+            )
+            break
+        except ServerUploadValidationError as exc:
+            detail = exc.detail[-4000:]
+            detail_hash = hashlib.sha256(detail.encode("utf-8", errors="replace")).hexdigest()
+            repeated_error = bool(last_validation_hash and detail_hash == last_validation_hash)
+            if repair_attempts >= AI_SERVER_REPAIR_MAX_ATTEMPTS:
+                reason = f"自动修复 {repair_attempts} 次后仍未通过"
+                err_msg = f"生成结果校验失败，{reason}"
+                append_event({
+                    "error": err_msg,
+                    "stage": exc.script,
+                    "validator_error": detail[-2000:],
+                    "repair_attempts": repair_attempts,
+                    "max_repair_attempts": AI_SERVER_REPAIR_MAX_ATTEMPTS,
+                    "repeated_validator_error": repeated_error,
+                    "needs_retry": True,
+                })
+                set_status(STATUS_FAILED, error=f"{err_msg}: {detail[-1000:]}")
+                return
+
+            repair_attempts += 1
+            last_validation_hash = detail_hash
+            if not append_event({
+                "status": "repairing",
+                "message": (
+                    f"生成结果校验失败，正在自动修复 "
+                    f"({repair_attempts}/{AI_SERVER_REPAIR_MAX_ATTEMPTS})..."
+                ),
+                "repair_attempt": repair_attempts,
+                "max_repair_attempts": AI_SERVER_REPAIR_MAX_ATTEMPTS,
+                "repeated_validator_error": repeated_error,
+                "stage": exc.script,
+            }):
+                return
+            if runner == "claude" and not current_resume_id:
+                current_resume_id = session_id
+            elif runner == "codex" and not current_resume_id:
+                current_resume_id = store.get_meta(session_id).get("agent_thread_id") or ""
+            _append_cli_log(session_id, "meta", json.dumps({
+                "event": "server_validation_repair_start",
+                "run_id": run_result.run_id,
+                "next_run_id": f"{repair_run_prefix}-repair-{repair_attempts}",
+                "attempt": repair_attempts,
+                "max_attempts": AI_SERVER_REPAIR_MAX_ATTEMPTS,
+                "script": exc.script,
+                "resume": bool(current_resume_id),
+                "repeated_validator_error": repeated_error,
+            }, ensure_ascii=False))
+            current_run_id = _safe_path_part(f"{repair_run_prefix}-repair-{repair_attempts}", "repair")
+            current_msg = _build_server_repair_request(
+                script=exc.script,
+                detail=exc.detail,
+                relative_path="app.json",
+                attempt=repair_attempts,
+                max_attempts=AI_SERVER_REPAIR_MAX_ATTEMPTS,
+            )
+
+    final_text, final_thinking = extract_final_texts(all_events)
+    protocol_warnings = _final_protocol_warnings(final_text)
+    if protocol_warnings:
+        _append_cli_log(session_id, "meta", json.dumps({
+            "event": "final_protocol_warning",
+            "warnings": protocol_warnings,
+            "tail": (final_text or "")[-500:],
+        }, ensure_ascii=False))
+    for action in client_actions:
+        if append_event({"client_action": action}):
+            all_events.append({"client_action": action})
+    append_event({"quota": {"used": quota_used, "limit": quota_limit, "remaining": quota_remaining}})
+    set_status(
+        STATUS_DONE,
+        final_text=final_text or "",
+        final_thinking=final_thinking or "",
+        client_actions=client_actions,
+    )
+    _append_cli_log(session_id, "meta", json.dumps({
+        "event": "agent_pull_worker_done",
+        "run_id": current_run_id,
+        "lines": total_line_count,
+        "repair_attempts": repair_attempts,
+        "final_text_len": len(final_text or ""),
+        "final_thinking_len": len(final_thinking or ""),
+        "client_actions": client_actions,
+    }, ensure_ascii=False))
+
+
 def _run_agent_node_worker(
     *,
     store: SessionStore,
@@ -1710,45 +2356,23 @@ def _run_agent_node_worker(
         pass
 
     parse_line = parse_codex_line if runner == "codex" else parse_cli_line
-    runtime_workspace = "/workspace"
     current_resume_id = agent_resume_id or ""
-    if runner == "codex":
-        codex = _agent_node_codex_config(provider, include_provider_secrets=include_provider_secrets)
-        env = _agent_node_provider_env(provider, include_provider_secrets=include_provider_secrets)
-        for key in list(env.keys()):
-            if key.startswith("ANTHROPIC_") or key.startswith("CLAUDE_CODE_") or key == "API_TIMEOUT_MS":
-                env.pop(key, None)
-        runtime_token_env_key = codex.pop("_runtime_token_env_key", "")
-        runtime_token = codex.pop("_runtime_token", "")
-        if runtime_token_env_key and runtime_token:
-            env[runtime_token_env_key] = runtime_token
-    else:
-        codex = {}
-        env = _agent_node_provider_env(provider, include_provider_secrets=include_provider_secrets)
-
-    def build_prompt(turn_msg: str) -> str:
-        if runner == "codex":
-            return _build_codex_prompt(turn_msg, sys_prompt, workspace=runtime_workspace)
-        return _build_user_turn_prompt(turn_msg, workspace=runtime_workspace)
 
     def run_once(current_run_id: str, turn_msg: str) -> Optional[_AgentNodeRunResult]:
         if store.is_aborted(session_id):
             set_status(STATUS_ABORTED)
             return None
-        prompt = build_prompt(turn_msg)
-        payload = {
-            "run_id": current_run_id,
-            "session_id": session_id,
-            "job_id": current_run_id,
-            "user_id": store.get_meta(session_id).get("user_id") or "user",
-            "provider_id": provider.get("id"),
-            "agent_id": runner,
-            "resume_id": current_resume_id,
-            "prompt": prompt,
-            "system_prompt": sys_prompt if runner == "claude" and not current_resume_id else "",
-            "env": dict(env),
-            "codex": dict(codex),
-        }
+        payload = _build_agent_node_payload(
+            run_id=current_run_id,
+            session_id=session_id,
+            user_id=store.get_meta(session_id).get("user_id") or "user",
+            provider=provider,
+            runner=runner,
+            resume_id=current_resume_id,
+            turn_msg=turn_msg,
+            sys_prompt=sys_prompt,
+            include_provider_secrets=include_provider_secrets,
+        )
         try:
             store.r.hset(
                 _meta_key(session_id),
@@ -2077,6 +2701,24 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             "ts": int(time.time() * 1000),
         }, ensure_ascii=False))
 
+        if AI_WORKER_EXECUTION_BACKEND in {"agent-pull", "agent-node-pull", "pull"}:
+            _run_agent_pull_worker(
+                store=store,
+                session_id=session_id,
+                job_id=job_id,
+                last_msg=last_msg,
+                provider=provider,
+                runner=runner,
+                agent_resume_id=agent_resume_id,
+                sys_prompt=sys_prompt,
+                quota_used=quota_used,
+                quota_limit=quota_limit,
+                quota_remaining=quota_remaining,
+                append_event=append_event,
+                set_status=set_status,
+                all_events=all_events,
+            )
+            return
         if AI_WORKER_EXECUTION_BACKEND == "agent-node":
             _run_agent_node_worker(
                 store=store,
@@ -2444,6 +3086,7 @@ def abort_session(session_id: str) -> None:
     store.request_abort(session_id)
     meta = store.get_meta(session_id)
     _abort_agent_node_run(session_id, meta)
+    _abort_agent_pull_run(session_id, meta)
     queued_job = meta.get("queued_job")
     if queued_job:
         provider_id = _job_provider_from_json(queued_job, meta.get("provider"))
@@ -2460,6 +3103,15 @@ def abort_session(session_id: str) -> None:
         if removed or not is_session_proc_alive(session_id):
             store.set_status(session_id, STATUS_ABORTED, error="aborted before start")
     _kill_proc(session_id)
+
+
+def _abort_agent_pull_run(session_id: str, meta: dict) -> bool:
+    run_id = (meta.get("agent_pull_run_id") or meta.get("agent_node_run_id") or "").strip()
+    if not run_id:
+        return False
+    _agent_pull_mark_abort(run_id)
+    logger.info("[AGENT_PULL] abort requested sid=%s run=%s", session_id, run_id)
+    return True
 
 
 def _abort_agent_node_run(session_id: str, meta: dict) -> bool:

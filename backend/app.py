@@ -21,6 +21,7 @@ from config import PORT, FLASK_SECRET_KEY
 import auth
 # import ai_code_generator as chat  # DEPRECATED: 已废弃，使用 claude_chat 替代
 import claude_chat
+import ai_session
 import agent_nodes
 import store
 import im
@@ -81,6 +82,9 @@ def create_app():
     app.add_url_rule("/api/ai/agent_nodes/<node_id>", methods=["GET"], view_func=agent_nodes.get_agent_node)
     app.add_url_rule("/api/ai/agent_nodes/<node_id>", methods=["DELETE"], view_func=agent_nodes.delete_agent_node)
     app.add_url_rule("/api/ai/agent_nodes/register", methods=["POST"], view_func=agent_nodes.register_agent_node)
+    app.add_url_rule("/api/ai/agent_pull/acquire", methods=["POST"], view_func=ai_session.agent_pull_acquire)
+    app.add_url_rule("/api/ai/agent_pull/jobs/<run_id>/events", methods=["POST"], view_func=ai_session.agent_pull_job_events)
+    app.add_url_rule("/api/ai/agent_pull/jobs/<run_id>/artifact", methods=["POST"], view_func=ai_session.agent_pull_job_artifact)
     app.add_url_rule("/api/ai/upload_url", methods=["GET"], view_func=store.get_ai_upload_url)
     # Registry 富化用的单次结构化摘要（内部接口，registry enrich worker 调，REGISTRY_ADMIN_TOKEN 鉴权）
     app.add_url_rule("/api/ai/summarize", methods=["POST"], view_func=ai_summary.summarize_endpoint)
