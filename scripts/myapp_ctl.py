@@ -1646,20 +1646,6 @@ def cmd_deploy(args) -> int:
         print("--build and --pull cannot be used together", file=sys.stderr)
         return 2
     try:
-        data_root = _ensure_data_root_config(
-            getattr(args, "data_root", None),
-            interactive=not getattr(args, "no_setup", False),
-        )
-    except ValueError as exc:
-        print(str(exc), file=sys.stderr)
-        return 2
-    try:
-        _restore_data_root_config_if_needed(data_root)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
-        print(f"data root config restore failed: {exc}", file=sys.stderr)
-        return 1
-    _ensure_data_root_layout(data_root)
-    try:
         names = _service_names_for_targets(args.targets, args.group)
     except KeyError as exc:
         print(str(exc), file=sys.stderr)
@@ -1677,6 +1663,20 @@ def cmd_deploy(args) -> int:
         if docker_names:
             print("  docker containers: " + ", ".join(docker_names))
         return 0
+    try:
+        data_root = _ensure_data_root_config(
+            getattr(args, "data_root", None),
+            interactive=not getattr(args, "no_setup", False),
+        )
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    try:
+        _restore_data_root_config_if_needed(data_root)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        print(f"data root config restore failed: {exc}", file=sys.stderr)
+        return 1
+    _ensure_data_root_layout(data_root)
     rc = _ensure_human_config_for_deploy(args, names)
     if rc != 0:
         return rc
@@ -4164,7 +4164,11 @@ def _print_agent_node_status(data: dict, *, as_json: bool = False) -> int:
 
 
 def _redis_cli(args: list[str]) -> subprocess.CompletedProcess:
-    return _run(["docker", "exec", "myapp-ai-session-redis", "redis-cli", "--raw", *args])
+    redis_cmd = ["redis-cli", "--no-auth-warning", "--raw", *args]
+    password = _parse_env(_secret_path("backend")).get("BACKEND_REDIS_PASSWORD", "")
+    if password:
+        return _run(["docker", "exec", "-e", f"REDISCLI_AUTH={password}", "myapp-ai-session-redis", *redis_cmd])
+    return _run(["docker", "exec", "myapp-ai-session-redis", *redis_cmd])
 
 
 def _redis_int(args: list[str]) -> int:
@@ -4710,7 +4714,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_limits.add_argument("--json", action="store_true")
     agent_node_limits.set_defaults(func=cmd_agent_node)
     agent_node_add = agent_node_sub.add_parser("add", help=_tx("print a join command for a new agent host", zh="打印新 Agent 节点的一键加入命令", de="Join-Befehl fuer neuen Agent-Host ausgeben", es="imprimir comando join para nuevo host agent"), usage=_tx("myapp-ctl agent-node add [options]", zh="myapp-ctl agent-node add [选项]", de="myapp-ctl agent-node add [Optionen]", es="myapp-ctl agent-node add [opciones]"))
-    agent_node_add.add_argument("--backend", help=_tx("master backend URL, for example http://77.237.233.229:5566", zh="主后端 URL，例如 http://77.237.233.229:5566", de="Master-Backend-URL, z.B. http://77.237.233.229:5566", es="URL del backend maestro, por ejemplo http://77.237.233.229:5566"))
+    agent_node_add.add_argument("--backend", help=_tx("master backend URL, for example http://<master-host>:5566", zh="主后端 URL，例如 http://<master-host>:5566", de="Master-Backend-URL, z.B. http://<master-host>:5566", es="URL del backend maestro, por ejemplo http://<master-host>:5566"))
     agent_node_add.add_argument("--host", help=_tx("new agent host public IP or domain", zh="新 Agent 节点公网 IP 或域名", de="oeffentliche IP oder Domain des neuen Agent-Hosts", es="IP publica o dominio del nuevo host agent"))
     agent_node_add.add_argument("--url", help=_tx("full public agent-node URL; defaults to http://<host>:<public-port>", zh="完整公网 agent-node URL；默认 http://<host>:<public-port>", de="vollstaendige oeffentliche agent-node URL; Standard http://<host>:<public-port>", es="URL publica completa de agent-node; por defecto http://<host>:<public-port>"))
     agent_node_add.add_argument("--node-id")
@@ -4754,7 +4758,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent = sub.add_parser("agent", help=_tx("inspect local agent runs", zh="查看本机 Agent 运行任务", de="lokale Agent-Laeufe anzeigen", es="inspeccionar tareas agent locales"), usage=_tx("myapp-ctl agent <command> [args]", zh="myapp-ctl agent <命令> [参数]", de="myapp-ctl agent <Befehl> [Argumente]", es="myapp-ctl agent <comando> [args]"))
     agent_sub = _add_subcommands(agent, "agent_cmd")
     agent_add = agent_sub.add_parser("add", help=_tx("deprecated alias for agent-node add", zh="已废弃：agent-node add 的别名", de="veraltet: Alias fuer agent-node add", es="obsoleto: alias de agent-node add"), usage=_tx("myapp-ctl agent add [options]", zh="myapp-ctl agent add [选项]", de="myapp-ctl agent add [Optionen]", es="myapp-ctl agent add [opciones]"))
-    agent_add.add_argument("--backend", help=_tx("master backend URL, for example http://77.237.233.229:5566", zh="主后端 URL，例如 http://77.237.233.229:5566", de="Master-Backend-URL, z.B. http://77.237.233.229:5566", es="URL del backend maestro, por ejemplo http://77.237.233.229:5566"))
+    agent_add.add_argument("--backend", help=_tx("master backend URL, for example http://<master-host>:5566", zh="主后端 URL，例如 http://<master-host>:5566", de="Master-Backend-URL, z.B. http://<master-host>:5566", es="URL del backend maestro, por ejemplo http://<master-host>:5566"))
     agent_add.add_argument("--host", help=_tx("new agent host public IP or domain", zh="新 Agent 节点公网 IP 或域名", de="oeffentliche IP oder Domain des neuen Agent-Hosts", es="IP publica o dominio del nuevo host agent"))
     agent_add.add_argument("--url", help=_tx("full public agent-node URL; defaults to http://<host>:<public-port>", zh="完整公网 agent-node URL；默认 http://<host>:<public-port>", de="vollstaendige oeffentliche agent-node URL; Standard http://<host>:<public-port>", es="URL publica completa de agent-node; por defecto http://<host>:<public-port>"))
     agent_add.add_argument("--node-id")

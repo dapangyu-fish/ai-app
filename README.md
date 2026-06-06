@@ -84,6 +84,10 @@ myapp-ctl setup --host <public-ip-or-domain>
 myapp-ctl deploy --pull
 ```
 
+Run these commands as root, or with equivalent Docker and `/etc/myapp` write
+permissions. The full deployment and `myapp-ctl` command reference is
+[`deploy/production/README.md`](deploy/production/README.md).
+
 The first interactive `myapp-ctl` run asks for a CLI language once (`zh`, `en`,
 `de`, `es`); later changes use `myapp-ctl config lang <lang>`. The setup wizard
 asks for AI provider credentials and optional

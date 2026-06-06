@@ -270,6 +270,15 @@ def _agent_pull_pending_key() -> str:
     return "ai:agent_pull:pending"
 
 
+def _agent_pull_acquire_lock_key() -> str:
+    return "ai:agent_pull:acquire_lock"
+
+
+def _agent_pull_session_node_key(session_id: str) -> str:
+    safe = _safe_path_part(session_id, "session")
+    return f"ai:agent_pull:session_node:{safe}"
+
+
 def _agent_pull_job_key(run_id: str) -> str:
     return f"ai:agent_pull:job:{run_id}"
 
@@ -1944,6 +1953,102 @@ def _agent_pull_job_abort_requested(run_id: str, session_id: str = "") -> bool:
         return False
 
 
+def _agent_pull_session_node(session_id: str) -> str:
+    if not session_id:
+        return ""
+    try:
+        raw = get_redis().get(_agent_pull_session_node_key(session_id))
+    except redis.exceptions.RedisError:
+        return ""
+    if isinstance(raw, bytes):
+        return raw.decode("utf-8", errors="replace").strip()
+    return str(raw or "").strip()
+
+
+def _agent_pull_sticky_node_available(node_id: str) -> bool:
+    if not node_id:
+        return False
+    try:
+        import agent_node_registry
+
+        record = agent_node_registry.get_node(node_id)
+    except Exception as exc:
+        logger.warning("[AGENT_PULL] sticky node lookup failed node=%s: %s", node_id, exc)
+        return False
+    if not record or record.get("paused"):
+        return False
+    url = str(record.get("url") or "").rstrip("/")
+    if not url.startswith("pull://"):
+        return False
+    try:
+        last_seen = int(record.get("last_seen") or 0)
+        ttl_ms = max(1, int(record.get("ttl_seconds") or 120)) * 1000
+    except (TypeError, ValueError):
+        return False
+    return bool(last_seen and last_seen + ttl_ms > int(time.time() * 1000))
+
+
+def _agent_pull_job_assignable_to_node(spec: dict, node_id: str) -> bool:
+    session_id = str(spec.get("session_id") or "")
+    sticky_node = _agent_pull_session_node(session_id)
+    if not sticky_node or sticky_node == node_id:
+        return True
+    # Keep follow-up turns on the same agent host while it is alive. If it is
+    # paused or stale, allow another node to steal the session and refresh the
+    # binding during assignment.
+    return not _agent_pull_sticky_node_available(sticky_node)
+
+
+def _agent_pull_claim_pending_job_for_node(r: redis.Redis, node_id: str) -> Tuple[str, Optional[dict]]:
+    lock = r.lock(_agent_pull_acquire_lock_key(), timeout=15, blocking_timeout=1)
+    have_lock = False
+    try:
+        have_lock = lock.acquire(blocking=True)
+        if not have_lock:
+            return "", None
+        try:
+            queue_len = int(r.llen(_agent_pull_pending_key()) or 0)
+        except redis.exceptions.RedisError:
+            return "", None
+        scan_limit = max(1, int(os.environ.get("AGENT_PULL_ASSIGNMENT_SCAN_LIMIT", "200")))
+        for index in range(min(queue_len, scan_limit)):
+            raw = r.lindex(_agent_pull_pending_key(), index)
+            if not raw:
+                continue
+            run_id = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
+            spec = _agent_pull_job_spec(run_id)
+            if not spec:
+                r.lrem(_agent_pull_pending_key(), 1, run_id)
+                continue
+            session_id = str(spec.get("session_id") or "")
+            if session_id and SessionStore().is_aborted(session_id):
+                _agent_pull_mark_abort(run_id)
+                r.lrem(_agent_pull_pending_key(), 1, run_id)
+                continue
+            if not _agent_pull_job_assignable_to_node(spec, node_id):
+                continue
+            marker = f"__claimed__:{run_id}:{uuid.uuid4().hex}"
+            try:
+                pipe = r.pipeline()
+                pipe.lset(_agent_pull_pending_key(), index, marker)
+                pipe.lrem(_agent_pull_pending_key(), 1, marker)
+                pipe.execute()
+            except redis.exceptions.RedisError as exc:
+                logger.warning("[AGENT_PULL] pending claim failed node=%s run=%s: %s", node_id, run_id, exc)
+                return "", None
+            return run_id, spec
+        return "", None
+    except redis.exceptions.RedisError as exc:
+        logger.warning("[AGENT_PULL] pending acquire failed node=%s: %s", node_id, exc)
+        return "", None
+    finally:
+        if have_lock:
+            try:
+                lock.release()
+            except Exception:
+                pass
+
+
 def _has_registered_agent_pull_node() -> bool:
     for record in _registered_agent_node_records():
         if str(record.get("url") or "").rstrip("/").startswith("pull://"):
@@ -2045,16 +2150,8 @@ def agent_pull_acquire():
     run_id = ""
     spec: Optional[dict] = None
     while True:
-        raw = r.lpop(_agent_pull_pending_key())
-        if raw:
-            run_id = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
-            spec = _agent_pull_job_spec(run_id)
-            if not spec:
-                continue
-            session_id = str(spec.get("session_id") or "")
-            if session_id and SessionStore().is_aborted(session_id):
-                _agent_pull_mark_abort(run_id)
-                continue
+        run_id, spec = _agent_pull_claim_pending_job_for_node(r, node_id)
+        if run_id and spec:
             break
         if time.time() >= deadline:
             return ("", 204)
@@ -2086,6 +2183,7 @@ def agent_pull_acquire():
         include_provider_secrets=include_provider_secrets,
     )
     now_ms = int(time.time() * 1000)
+    session_id = str(payload.get("session_id") or "")
     pipe = r.pipeline()
     pipe.hset(
         _agent_pull_job_key(run_id),
@@ -2098,6 +2196,10 @@ def agent_pull_acquire():
         },
     )
     pipe.sadd(_agent_pull_node_running_key(node_id), run_id)
+    if session_id:
+        pipe.set(_agent_pull_session_node_key(session_id), node_id, ex=AI_SESSION_REDIS_TTL_SECONDS)
+        pipe.hset(_meta_key(session_id), "agent_pull_node_id", node_id)
+        pipe.expire(_meta_key(session_id), AI_SESSION_REDIS_TTL_SECONDS)
     pipe.expire(_agent_pull_node_running_key(node_id), AI_SESSION_REDIS_TTL_SECONDS)
     pipe.expire(_agent_pull_job_key(run_id), AI_SESSION_REDIS_TTL_SECONDS)
     pipe.execute()

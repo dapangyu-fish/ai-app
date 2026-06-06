@@ -30,7 +30,7 @@ Host and service secrets live outside Git:
 - `/etc/myapp/services.json`: service inventory installed by `install_ctl.sh`
 - `/etc/myapp/secrets.d/*.env`: service secrets, mode `600`
 - `/etc/myapp/secrets.d/files/**`: APNs/FCM file secrets copied by setup
-- `<data-root>/myapp-config.json`: restorable encrypted-by-permission bundle,
+- `<data-root>/myapp-config.json`: restorable permission-protected bundle,
   mode `600`
 
 The default data root is `/mnt/myapp`.
@@ -250,11 +250,77 @@ Agent runs:
 
 ```bash
 myapp-ctl agent ls
-myapp-ctl agent ls --history --limit 20
 ```
 
-`agent ls` hides historical runs by default so a busy host does not print a
-large table for every completed chat turn.
+`agent ls` is intentionally local-only and current-only. It shows active
+runtime containers on the machine where the command runs. Historical per-run
+JSONL logs remain under `<data-root>/agent-node/logs/`; use `myapp-ctl log
+agent-node` for the service log.
+
+## Command Reference
+
+`myapp-ctl` writes host config under `/etc/myapp`, manages Docker, and creates
+bind-mounted data paths under the configured data root. Run it as root or with
+equivalent privileges on deployment hosts.
+
+Core service operations:
+
+```bash
+myapp-ctl status [service ...] [--json]
+myapp-ctl deploy [service|group ...] [--build|--pull|--plan|--dry-run]
+myapp-ctl deploy --group infra|supabase|openim|agent|core [--build|--pull]
+myapp-ctl restart [service|group ...]
+myapp-ctl log <service> [-n 120] [-f]
+myapp-ctl update [--source <checkout>] [--no-pull]
+myapp-ctl uninstall --yes [--purge] [--volumes] [--images] [--remove-ctl]
+```
+
+Configuration and secrets:
+
+```bash
+myapp-ctl setup [--host <host>] [--data-root /mnt/myapp] [--force]
+myapp-ctl setup [--no-ai] [--no-asr] [--no-email] [--no-push]
+myapp-ctl secret init-stack [--host <host>] [--data-root /mnt/myapp] [--force]
+myapp-ctl secret ls
+myapp-ctl secret get <group> <key> [--show]
+myapp-ctl secret set <group> KEY=value [KEY2=value2 ...]
+myapp-ctl secret generate <group> KEY [KEY2 ...] [--bytes 32]
+myapp-ctl secret rm <group> KEY [KEY2 ...]
+myapp-ctl config view [--show-secrets]
+myapp-ctl config export --out <path.json|path.yaml> [--redacted]
+myapp-ctl config import <path.json|path.yaml> --yes
+myapp-ctl config lang [zh|en|de|es]
+myapp-ctl domain ls
+myapp-ctl domain set <name> <url>
+myapp-ctl domain rm <name>
+myapp-ctl client-env [--host <host>] [--name <name>] [--json] [--terminal-qr]
+```
+
+Image operations:
+
+```bash
+myapp-ctl image ls
+myapp-ctl image build [all|backend|agent-node|agent-runtime]
+myapp-ctl image pull [all|backend|agent-node|agent-runtime]
+myapp-ctl image push [all|backend|agent-node|agent-runtime]
+```
+
+Agent operations:
+
+```bash
+myapp-ctl agent ls
+myapp-ctl agent-node ls [--json] [--no-probe]
+myapp-ctl agent-node status [node-id] [--json] [--no-probe]
+myapp-ctl agent-node add --backend <url> --host <host> --node-id <id> [--pull|--build]
+myapp-ctl agent-node join --backend <url> --node-id <id> --agent-token <token> --registration-token <token>
+myapp-ctl agent-node pause [node-id] [--reason <text>]
+myapp-ctl agent-node resume [node-id]
+myapp-ctl agent-node limits --capacity <n> --queue-max <n> [--force]
+myapp-ctl agent-node rm <node-id>
+```
+
+`myapp-ctl agent add` and `myapp-ctl agent register` are deprecated aliases for
+`agent-node add` and `agent-node register`.
 
 ## Configuration Backup And Restore
 
@@ -368,9 +434,24 @@ events and generated artifacts back to the backend. The client SSE path stays
 `client -> backend`; the agent host never needs an inbound public port.
 
 Node registration lives in Postgres `agent_nodes`. Redis is used for short-lived
-job queues, heartbeats, stream fan-out, and active-run display only. Existing
-sessions keep their assigned node for later turns when possible; new sessions
-are scheduled across online registered nodes according to capacity.
+job queues, heartbeats, stream fan-out, and active-run display only.
+
+Current scheduling is a global pull queue with best-effort session affinity:
+
+1. The backend appends a job id to `ai:agent_pull:pending`.
+2. Every online pull node calls `/api/ai/agent_pull/acquire` with its
+   `active_runs`, `capacity`, `queue_max`, version, labels, and provider mode.
+3. If the node is not paused and `active_runs < capacity`, the backend scans the
+   pending queue for a job that this node can take.
+4. After a node takes a session, later turns of the same session wait for that
+   node while it is online and not paused. If the node is stale, removed, or
+   paused, another node can take the job and refresh the binding.
+5. If the node is full, it keeps heartbeating but receives `204 No Content`.
+
+This means a full node naturally stops taking jobs and another available node
+can pull the next queued job. It is not strict least-loaded scheduling, but
+same-session app iteration stays on one agent host under normal conditions so
+the local workspace and CLI session state remain continuous.
 
 Register an agent node:
 
@@ -487,8 +568,9 @@ myapp-ctl agent-node rm myapp-agent-2
 `myapp-ctl agent ls` remains local-only: it shows the currently running agent
 containers on the machine where the command is executed.
 
-All-in-one hosts also self-register through the same registry path. Deploying
-`agent-node` installs `myapp-agent-register.timer`, which runs
-`myapp-ctl agent-node register` every 60 seconds. In the default pull mode the
-registered URL is `pull://<node-id>`; the physical machine IP is stored as the
-`host=<ip>` label for display.
+All-in-one hosts use the same registry path. In the default pull mode,
+deploying `agent-node` disables the old host-level `myapp-agent-register.timer`;
+the agent-node container self-registers through its regular acquire heartbeat.
+The registered URL is `pull://<node-id>`, and the physical machine IP is stored
+as the `host=<ip>` label for display. Direct mode is the legacy inbound HTTP
+path and can still use explicit registration when needed.
