@@ -41,6 +41,7 @@ from urllib.parse import urlparse
 
 from flask import jsonify, request
 from minio import Minio
+import jwt
 import redis
 
 from config import (
@@ -270,6 +271,15 @@ def _agent_pull_pending_key() -> str:
     return "ai:agent_pull:pending"
 
 
+def _agent_pull_private_pending_key(user_id: str) -> str:
+    safe_user = _safe_path_part(user_id, "user")
+    return f"ai:agent_pull:pending:user:{safe_user}"
+
+
+def _agent_pull_pending_key_for_scope(agent_scope: str = "public", user_id: str = "") -> str:
+    return _agent_pull_private_pending_key(user_id) if agent_scope == "private" else _agent_pull_pending_key()
+
+
 def _agent_pull_acquire_lock_key() -> str:
     return "ai:agent_pull:acquire_lock"
 
@@ -277,6 +287,12 @@ def _agent_pull_acquire_lock_key() -> str:
 def _agent_pull_session_node_key(session_id: str) -> str:
     safe = _safe_path_part(session_id, "session")
     return f"ai:agent_pull:session_node:{safe}"
+
+
+def _agent_pull_private_session_node_key(user_id: str, session_id: str) -> str:
+    safe_user = _safe_path_part(user_id, "user")
+    safe_session = _safe_path_part(session_id, "session")
+    return f"ai:agent_pull:session_node:user:{safe_user}:{safe_session}"
 
 
 def _agent_pull_job_key(run_id: str) -> str:
@@ -321,7 +337,8 @@ class SessionStore:
     def create_meta(self, session_id: str, *, user_id: str, provider: str,
                     agent: str = DEFAULT_AGENT,
                     quota_used: int, quota_limit: int, quota_remaining: int,
-                    status: str = STATUS_RUNNING) -> None:
+                    status: str = STATUS_RUNNING,
+                    agent_scope: str = "public") -> None:
         """新一轮 worker 起前调。会清掉旧 stream + 旧 meta（避免上一轮的 final_text /
         error / 老事件被新一轮的 client 当成本轮内容读到）。"""
         # 1. 旧 stream 整个删（如果存在）—— 上一轮的事件不能让本轮 client 重放
@@ -337,6 +354,7 @@ class SessionStore:
             "user_id": user_id,
             "provider": provider,
             "agent": agent,
+            "agent_scope": agent_scope or "public",
             "status": status,
             "started_at": str(int(time.time() * 1000)),
             "event_count": "0",
@@ -997,6 +1015,7 @@ class _WorkerJob:
     agent_id: str
     agent_resume_id: Optional[str]
     user_id: str
+    agent_scope: str
     quota_used: int
     quota_limit: int
     quota_remaining: int
@@ -1136,6 +1155,7 @@ def _job_from_json(raw) -> _WorkerJob:
         agent_id=data.get("agent_id") or DEFAULT_AGENT,
         agent_resume_id=data.get("agent_resume_id"),
         user_id=data["user_id"],
+        agent_scope=str(data.get("agent_scope") or "public").strip().lower(),
         quota_used=int(data["quota_used"]),
         quota_limit=int(data["quota_limit"]),
         quota_remaining=int(data["quota_remaining"]),
@@ -1547,11 +1567,73 @@ def _agent_node_headers() -> dict:
     return headers
 
 
-def _agent_pull_auth_ok() -> bool:
+def _agent_pull_auth_context() -> dict:
     expected = AGENT_NODE_REGISTRATION_TOKEN or AGENT_NODE_TOKEN
+    auth_header = request.headers.get("Authorization", "")
+    if expected and auth_header == f"Bearer {expected}":
+        return {"ok": True, "kind": "public", "visibility": "public", "owner_user_id": "", "node_id": ""}
     if not expected:
-        return True
-    return request.headers.get("Authorization", "") == f"Bearer {expected}"
+        return {"ok": True, "kind": "public", "visibility": "public", "owner_user_id": "", "node_id": ""}
+    private_token = request.headers.get("X-MyApp-Agent-JWT", "")
+    if not private_token and auth_header.startswith("MyApp-Agent "):
+        private_token = auth_header[len("MyApp-Agent "):].strip()
+    if not private_token:
+        return {"ok": False, "error": "unauthorized"}
+    try:
+        unverified = jwt.decode(private_token, options={"verify_signature": False})
+        node_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(unverified.get("sub") or unverified.get("node_id") or "")).strip("._")
+        if not node_id:
+            return {"ok": False, "error": "missing node id"}
+        import agent_node_registry
+
+        record = agent_node_registry.get_node(node_id)
+        if not record or record.get("visibility") != "private" or not record.get("auth_public_key"):
+            return {"ok": False, "error": "unknown private agent node"}
+        claims = jwt.decode(
+            private_token,
+            record["auth_public_key"],
+            algorithms=["RS256"],
+            audience="myapp-agent-pull",
+        )
+        if claims.get("sub") != node_id:
+            return {"ok": False, "error": "node id mismatch"}
+        owner_user_id = str(record.get("owner_user_id") or "")
+        if claims.get("owner_user_id") and claims.get("owner_user_id") != owner_user_id:
+            return {"ok": False, "error": "owner mismatch"}
+        return {
+            "ok": True,
+            "kind": "private",
+            "visibility": "private",
+            "node_id": node_id,
+            "owner_user_id": owner_user_id,
+            "record": record,
+        }
+    except Exception as exc:
+        logger.warning("[AGENT_PULL] private auth failed: %s", exc)
+        return {"ok": False, "error": "unauthorized"}
+
+
+def _agent_pull_auth_ok() -> bool:
+    return bool(_agent_pull_auth_context().get("ok"))
+
+
+def _agent_pull_authorized_for_job(run_id: str, auth_ctx: dict, *, node_id: str = "") -> tuple[bool, str]:
+    if auth_ctx.get("kind") != "private":
+        return True, ""
+    spec = _agent_pull_job_spec(run_id) or {}
+    meta = _agent_pull_job_meta(run_id)
+    expected_node = str(auth_ctx.get("node_id") or "")
+    actual_node = node_id or str(meta.get("node_id") or "")
+    if actual_node and actual_node != expected_node:
+        return False, "node mismatch"
+    if str(spec.get("agent_scope") or "") != "private":
+        return False, "not a private job"
+    if str(spec.get("user_id") or "") != str(auth_ctx.get("owner_user_id") or ""):
+        return False, "owner mismatch"
+    assigned_node = str(meta.get("node_id") or "")
+    if assigned_node and assigned_node != expected_node:
+        return False, "assigned node mismatch"
+    return True, ""
 
 
 def _agent_node_label_mode(labels: Any) -> str:
@@ -1572,13 +1654,45 @@ def _decode_redis_text(value: Any, default: str = "") -> str:
     return str(value)
 
 
-def _registered_agent_node_records() -> List[dict]:
+def _node_supports(value: str, allowed: Any) -> bool:
+    if not value:
+        return True
+    if isinstance(allowed, str):
+        try:
+            allowed = json.loads(allowed or "[]")
+        except json.JSONDecodeError:
+            allowed = [item.strip() for item in allowed.split(",")]
+    if not isinstance(allowed, list) or not allowed:
+        return True
+    normalized = str(value or "").strip().lower().replace("_", "-")
+    return normalized in {str(item or "").strip().lower().replace("_", "-") for item in allowed}
+
+
+def _registered_agent_node_records(
+    *,
+    agent_scope: str = "public",
+    owner_user_id: str = "",
+    provider_id: str = "",
+    agent_id: str = "",
+) -> List[dict]:
+    wanted_scope = "private" if agent_scope == "private" else "public"
     try:
         from agent_node_registry import list_nodes
 
         records: List[dict] = []
         now_ms = int(time.time() * 1000)
         for item in list_nodes():
+            visibility = str(item.get("visibility") or "public").strip().lower()
+            item_owner = str(item.get("owner_user_id") or "")
+            if wanted_scope == "private":
+                if visibility != "private" or item_owner != owner_user_id:
+                    continue
+            elif visibility == "private":
+                continue
+            if not _node_supports(provider_id, item.get("provider_ids")):
+                continue
+            if not _node_supports(agent_id, item.get("agent_ids")):
+                continue
             if bool(item.get("paused") or False):
                 continue
             url = str(item.get("url") or "").rstrip("/")
@@ -1603,10 +1717,15 @@ def _registered_agent_node_records() -> List[dict]:
             labels = item.get("labels") if isinstance(item.get("labels"), list) else []
             records.append(
                 {
+                    "node_id": str(item.get("node_id") or ""),
                     "url": url,
                     "capacity": capacity,
                     "queue_max": queue_max,
-                    "provider_mode": _agent_node_label_mode(labels),
+                    "provider_mode": str(item.get("provider_mode") or "").strip().lower().replace("_", "-") or _agent_node_label_mode(labels),
+                    "visibility": visibility,
+                    "owner_user_id": item_owner,
+                    "provider_ids": item.get("provider_ids") if isinstance(item.get("provider_ids"), list) else [],
+                    "agent_ids": item.get("agent_ids") if isinstance(item.get("agent_ids"), list) else [],
                 }
             )
         if records:
@@ -1617,6 +1736,8 @@ def _registered_agent_node_records() -> List[dict]:
     try:
         r = get_redis()
         records: List[dict] = []
+        if wanted_scope == "private":
+            return []
         for key in r.scan_iter("ai:agent_node:*", count=100):
             data = r.hgetall(key)
             raw_url = data.get(b"url") or data.get("url")
@@ -1649,6 +1770,8 @@ def _registered_agent_node_records() -> List[dict]:
                     "capacity": capacity,
                     "queue_max": queue_max,
                     "provider_mode": _agent_node_label_mode(labels),
+                    "visibility": "public",
+                    "owner_user_id": "",
                 }
             )
         return sorted(records, key=lambda item: item["url"])
@@ -1814,14 +1937,17 @@ def _agent_pull_enqueue_run(
     resume_id: str,
     turn_msg: str,
     sys_prompt: str,
+    agent_scope: str = "public",
 ) -> None:
     now_ms = int(time.time() * 1000)
+    agent_scope = "private" if str(agent_scope or "").strip().lower() == "private" else "public"
     spec = {
         "run_id": run_id,
         "session_id": session_id,
         "user_id": user_id or "user",
         "provider_id": provider_id,
         "agent_id": runner,
+        "agent_scope": agent_scope,
         "resume_id": resume_id or "",
         "turn_msg": turn_msg,
         "sys_prompt": sys_prompt,
@@ -1831,7 +1957,12 @@ def _agent_pull_enqueue_run(
     _wait_for_agent_pull_queue_slot(
         r,
         timeout_seconds=float(os.environ.get("AGENT_PULL_QUEUE_WAIT_SECONDS", "30")),
+        agent_scope=agent_scope,
+        owner_user_id=user_id or "user",
+        provider_id=provider_id,
+        agent_id=runner,
     )
+    queue_key = _agent_pull_pending_key_for_scope(agent_scope, user_id or "user")
     pipe = r.pipeline()
     pipe.hset(
         _agent_pull_job_key(run_id),
@@ -1841,13 +1972,14 @@ def _agent_pull_enqueue_run(
             "session_id": session_id,
             "provider_id": provider_id,
             "agent_id": runner,
+            "agent_scope": agent_scope,
             "created_at": str(now_ms),
         },
     )
     pipe.expire(_agent_pull_job_key(run_id), AI_SESSION_REDIS_TTL_SECONDS)
     pipe.delete(_agent_pull_events_key(run_id))
-    pipe.rpush(_agent_pull_pending_key(), run_id)
-    pipe.expire(_agent_pull_pending_key(), AI_SESSION_REDIS_TTL_SECONDS)
+    pipe.rpush(queue_key, run_id)
+    pipe.expire(queue_key, AI_SESSION_REDIS_TTL_SECONDS)
     pipe.execute()
 
 
@@ -1953,11 +2085,16 @@ def _agent_pull_job_abort_requested(run_id: str, session_id: str = "") -> bool:
         return False
 
 
-def _agent_pull_session_node(session_id: str) -> str:
+def _agent_pull_session_node(session_id: str, *, agent_scope: str = "public", owner_user_id: str = "") -> str:
     if not session_id:
         return ""
+    key = (
+        _agent_pull_private_session_node_key(owner_user_id, session_id)
+        if agent_scope == "private"
+        else _agent_pull_session_node_key(session_id)
+    )
     try:
-        raw = get_redis().get(_agent_pull_session_node_key(session_id))
+        raw = get_redis().get(key)
     except redis.exceptions.RedisError:
         return ""
     if isinstance(raw, bytes):
@@ -1965,7 +2102,7 @@ def _agent_pull_session_node(session_id: str) -> str:
     return str(raw or "").strip()
 
 
-def _agent_pull_sticky_node_available(node_id: str) -> bool:
+def _agent_pull_sticky_node_available(node_id: str, *, agent_scope: str = "public", owner_user_id: str = "") -> bool:
     if not node_id:
         return False
     try:
@@ -1976,6 +2113,11 @@ def _agent_pull_sticky_node_available(node_id: str) -> bool:
         logger.warning("[AGENT_PULL] sticky node lookup failed node=%s: %s", node_id, exc)
         return False
     if not record or record.get("paused"):
+        return False
+    if agent_scope == "private":
+        if record.get("visibility") != "private" or record.get("owner_user_id") != owner_user_id:
+            return False
+    elif record.get("visibility") == "private":
         return False
     url = str(record.get("url") or "").rstrip("/")
     if not url.startswith("pull://"):
@@ -1990,16 +2132,38 @@ def _agent_pull_sticky_node_available(node_id: str) -> bool:
 
 def _agent_pull_job_assignable_to_node(spec: dict, node_id: str) -> bool:
     session_id = str(spec.get("session_id") or "")
-    sticky_node = _agent_pull_session_node(session_id)
+    agent_scope = str(spec.get("agent_scope") or "public").strip().lower()
+    owner_user_id = str(spec.get("user_id") or "")
+    provider_id = _normalize_provider_id(spec.get("provider_id"))
+    agent_id = str(spec.get("agent_id") or "claude").strip().lower().replace("_", "-")
+    try:
+        import agent_node_registry
+
+        record = agent_node_registry.get_node(node_id)
+    except Exception as exc:
+        logger.warning("[AGENT_PULL] node capability lookup failed node=%s: %s", node_id, exc)
+        return False
+    if not record or bool(record.get("paused") or False):
+        return False
+    if agent_scope == "private":
+        if record.get("visibility") != "private" or str(record.get("owner_user_id") or "") != owner_user_id:
+            return False
+    elif record.get("visibility") == "private":
+        return False
+    if not _node_supports(provider_id, record.get("provider_ids")):
+        return False
+    if not _node_supports(agent_id, record.get("agent_ids")):
+        return False
+    sticky_node = _agent_pull_session_node(session_id, agent_scope=agent_scope, owner_user_id=owner_user_id)
     if not sticky_node or sticky_node == node_id:
         return True
     # Keep follow-up turns on the same agent host while it is alive. If it is
     # paused or stale, allow another node to steal the session and refresh the
     # binding during assignment.
-    return not _agent_pull_sticky_node_available(sticky_node)
+    return not _agent_pull_sticky_node_available(sticky_node, agent_scope=agent_scope, owner_user_id=owner_user_id)
 
 
-def _agent_pull_claim_pending_job_for_node(r: redis.Redis, node_id: str) -> Tuple[str, Optional[dict]]:
+def _agent_pull_claim_pending_job_for_node(r: redis.Redis, node_id: str, *, queue_key: str) -> Tuple[str, Optional[dict]]:
     lock = r.lock(_agent_pull_acquire_lock_key(), timeout=15, blocking_timeout=1)
     have_lock = False
     try:
@@ -2007,31 +2171,31 @@ def _agent_pull_claim_pending_job_for_node(r: redis.Redis, node_id: str) -> Tupl
         if not have_lock:
             return "", None
         try:
-            queue_len = int(r.llen(_agent_pull_pending_key()) or 0)
+            queue_len = int(r.llen(queue_key) or 0)
         except redis.exceptions.RedisError:
             return "", None
         scan_limit = max(1, int(os.environ.get("AGENT_PULL_ASSIGNMENT_SCAN_LIMIT", "200")))
         for index in range(min(queue_len, scan_limit)):
-            raw = r.lindex(_agent_pull_pending_key(), index)
+            raw = r.lindex(queue_key, index)
             if not raw:
                 continue
             run_id = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
             spec = _agent_pull_job_spec(run_id)
             if not spec:
-                r.lrem(_agent_pull_pending_key(), 1, run_id)
+                r.lrem(queue_key, 1, run_id)
                 continue
             session_id = str(spec.get("session_id") or "")
             if session_id and SessionStore().is_aborted(session_id):
                 _agent_pull_mark_abort(run_id)
-                r.lrem(_agent_pull_pending_key(), 1, run_id)
+                r.lrem(queue_key, 1, run_id)
                 continue
             if not _agent_pull_job_assignable_to_node(spec, node_id):
                 continue
             marker = f"__claimed__:{run_id}:{uuid.uuid4().hex}"
             try:
                 pipe = r.pipeline()
-                pipe.lset(_agent_pull_pending_key(), index, marker)
-                pipe.lrem(_agent_pull_pending_key(), 1, marker)
+                pipe.lset(queue_key, index, marker)
+                pipe.lrem(queue_key, 1, marker)
                 pipe.execute()
             except redis.exceptions.RedisError as exc:
                 logger.warning("[AGENT_PULL] pending claim failed node=%s run=%s: %s", node_id, run_id, exc)
@@ -2049,26 +2213,69 @@ def _agent_pull_claim_pending_job_for_node(r: redis.Redis, node_id: str) -> Tupl
                 pass
 
 
-def _has_registered_agent_pull_node() -> bool:
-    for record in _registered_agent_node_records():
+def _has_registered_agent_pull_node(
+    *,
+    agent_scope: str = "public",
+    owner_user_id: str = "",
+    provider_id: str = "",
+    agent_id: str = "",
+) -> bool:
+    for record in _registered_agent_node_records(
+        agent_scope=agent_scope,
+        owner_user_id=owner_user_id,
+        provider_id=provider_id,
+        agent_id=agent_id,
+    ):
         if str(record.get("url") or "").rstrip("/").startswith("pull://"):
             return True
     return False
 
 
-def _wait_for_agent_pull_node(timeout_seconds: float = 5.0) -> bool:
+def has_available_private_agent_node(user_id: str, provider_id: str = "", agent_id: str = "") -> bool:
+    return _has_registered_agent_pull_node(
+        agent_scope="private",
+        owner_user_id=user_id,
+        provider_id=provider_id,
+        agent_id=agent_id,
+    )
+
+
+def _wait_for_agent_pull_node(
+    timeout_seconds: float = 5.0,
+    *,
+    agent_scope: str = "public",
+    owner_user_id: str = "",
+    provider_id: str = "",
+    agent_id: str = "",
+) -> bool:
     deadline = time.time() + max(0.0, timeout_seconds)
     while True:
-        if _has_registered_agent_pull_node():
+        if _has_registered_agent_pull_node(
+            agent_scope=agent_scope,
+            owner_user_id=owner_user_id,
+            provider_id=provider_id,
+            agent_id=agent_id,
+        ):
             return True
         if time.time() >= deadline:
             return False
         time.sleep(0.5)
 
 
-def _agent_pull_total_queue_max() -> int:
+def _agent_pull_total_queue_max(
+    *,
+    agent_scope: str = "public",
+    owner_user_id: str = "",
+    provider_id: str = "",
+    agent_id: str = "",
+) -> int:
     total = 0
-    for record in _registered_agent_node_records():
+    for record in _registered_agent_node_records(
+        agent_scope=agent_scope,
+        owner_user_id=owner_user_id,
+        provider_id=provider_id,
+        agent_id=agent_id,
+    ):
         try:
             total += max(0, int(record.get("queue_max") or 0))
         except (TypeError, ValueError):
@@ -2076,14 +2283,28 @@ def _agent_pull_total_queue_max() -> int:
     return total
 
 
-def _wait_for_agent_pull_queue_slot(r: redis.Redis, *, timeout_seconds: float = 30.0) -> None:
-    limit = _agent_pull_total_queue_max()
+def _wait_for_agent_pull_queue_slot(
+    r: redis.Redis,
+    *,
+    timeout_seconds: float = 30.0,
+    agent_scope: str = "public",
+    owner_user_id: str = "",
+    provider_id: str = "",
+    agent_id: str = "",
+) -> None:
+    limit = _agent_pull_total_queue_max(
+        agent_scope=agent_scope,
+        owner_user_id=owner_user_id,
+        provider_id=provider_id,
+        agent_id=agent_id,
+    )
     if limit <= 0:
         return
+    queue_key = _agent_pull_pending_key_for_scope(agent_scope, owner_user_id)
     deadline = time.time() + max(0.0, timeout_seconds)
     while True:
         try:
-            queued = int(r.llen(_agent_pull_pending_key()) or 0)
+            queued = int(r.llen(queue_key) or 0)
         except redis.exceptions.RedisError as exc:
             logger.warning("[AGENT_PULL] queue length check failed: %s", exc)
             return
@@ -2095,14 +2316,22 @@ def _wait_for_agent_pull_queue_slot(r: redis.Redis, *, timeout_seconds: float = 
 
 
 def agent_pull_acquire():
-    if not _agent_pull_auth_ok():
+    auth_ctx = _agent_pull_auth_context()
+    if not auth_ctx.get("ok"):
         return jsonify({"error": "unauthorized"}), 401
     body = request.get_json(silent=True) or {}
     node_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(body.get("node_id") or "agent-node")).strip("._") or "agent-node"
+    if auth_ctx.get("kind") == "private":
+        if node_id != auth_ctx.get("node_id"):
+            return jsonify({"error": "private agent node id mismatch"}), 403
     labels = body.get("labels") if isinstance(body.get("labels"), list) else []
     build_commit = str(body.get("build_commit") or body.get("commit") or "").strip()[:128]
     build_version = str(body.get("build_version") or body.get("version") or build_commit or "").strip()[:128]
     provider_mode = str(body.get("provider_mode") or "master").strip().lower().replace("_", "-") or "master"
+    if auth_ctx.get("kind") == "private":
+        provider_mode = "local"
+        if not any(str(label).replace("_", "-").startswith("visibility=") for label in labels):
+            labels.append("visibility=private")
     if not any(str(label).replace("_", "-").startswith("provider-mode=") for label in labels):
         labels.append(f"provider_mode={provider_mode}")
     try:
@@ -2126,6 +2355,9 @@ def agent_pull_acquire():
     try:
         import agent_node_registry
 
+        existing_node = agent_node_registry.get_node(node_id)
+        if auth_ctx.get("kind") != "private" and existing_node and existing_node.get("visibility") == "private":
+            return jsonify({"error": "node_id belongs to a private agent node"}), 403
         agent_node_registry.upsert_node(
             node_id=node_id,
             url=str(body.get("url") or f"pull://{node_id}").strip() or f"pull://{node_id}",
@@ -2135,6 +2367,12 @@ def agent_pull_acquire():
             build_version=build_version,
             labels=labels,
             ttl_seconds=max(30, int(body.get("ttl_seconds") or 120)),
+            owner_user_id=str(auth_ctx.get("owner_user_id") or ""),
+            visibility="private" if auth_ctx.get("kind") == "private" else "public",
+            auth_key_id=str((auth_ctx.get("record") or {}).get("auth_key_id") or ""),
+            provider_mode=provider_mode,
+            provider_ids=body.get("provider_ids") if isinstance(body.get("provider_ids"), list) else [],
+            agent_ids=body.get("agent_ids") if isinstance(body.get("agent_ids"), list) else [],
         )
         current_node = agent_node_registry.get_node(node_id)
         if current_node and current_node.get("paused"):
@@ -2149,8 +2387,12 @@ def agent_pull_acquire():
     deadline = time.time() + timeout_seconds
     run_id = ""
     spec: Optional[dict] = None
+    queue_key = _agent_pull_pending_key_for_scope(
+        "private" if auth_ctx.get("kind") == "private" else "public",
+        str(auth_ctx.get("owner_user_id") or ""),
+    )
     while True:
-        run_id, spec = _agent_pull_claim_pending_job_for_node(r, node_id)
+        run_id, spec = _agent_pull_claim_pending_job_for_node(r, node_id, queue_key=queue_key)
         if run_id and spec:
             break
         if time.time() >= deadline:
@@ -2184,6 +2426,8 @@ def agent_pull_acquire():
     )
     now_ms = int(time.time() * 1000)
     session_id = str(payload.get("session_id") or "")
+    agent_scope = str(spec.get("agent_scope") or "public").strip().lower()
+    owner_user_id = str(spec.get("user_id") or "")
     pipe = r.pipeline()
     pipe.hset(
         _agent_pull_job_key(run_id),
@@ -2193,11 +2437,18 @@ def agent_pull_acquire():
             "assigned_at": str(now_ms),
             "last_seen_at": str(now_ms),
             "provider_mode": provider_mode,
+            "visibility": "private" if auth_ctx.get("kind") == "private" else "public",
+            "owner_user_id": owner_user_id if auth_ctx.get("kind") == "private" else "",
         },
     )
     pipe.sadd(_agent_pull_node_running_key(node_id), run_id)
     if session_id:
-        pipe.set(_agent_pull_session_node_key(session_id), node_id, ex=AI_SESSION_REDIS_TTL_SECONDS)
+        sticky_key = (
+            _agent_pull_private_session_node_key(owner_user_id, session_id)
+            if agent_scope == "private"
+            else _agent_pull_session_node_key(session_id)
+        )
+        pipe.set(sticky_key, node_id, ex=AI_SESSION_REDIS_TTL_SECONDS)
         pipe.hset(_meta_key(session_id), "agent_pull_node_id", node_id)
         pipe.expire(_meta_key(session_id), AI_SESSION_REDIS_TTL_SECONDS)
     pipe.expire(_agent_pull_node_running_key(node_id), AI_SESSION_REDIS_TTL_SECONDS)
@@ -2207,7 +2458,8 @@ def agent_pull_acquire():
 
 
 def agent_pull_job_events(run_id: str):
-    if not _agent_pull_auth_ok():
+    auth_ctx = _agent_pull_auth_context()
+    if not auth_ctx.get("ok"):
         return jsonify({"error": "unauthorized"}), 401
     run_id = _safe_path_part(run_id, "run")
     body = request.get_json(silent=True) or {}
@@ -2217,6 +2469,9 @@ def agent_pull_job_events(run_id: str):
     if spec:
         session_id = str(spec.get("session_id") or "")
     node_id = str(body.get("node_id") or "")
+    authorized, reason = _agent_pull_authorized_for_job(run_id, auth_ctx, node_id=node_id)
+    if not authorized:
+        return jsonify({"error": "forbidden", "reason": reason}), 403
     now_ms = int(time.time() * 1000)
     try:
         mapping = {"last_seen_at": str(now_ms)}
@@ -2245,9 +2500,13 @@ def agent_pull_job_events(run_id: str):
 
 
 def agent_pull_job_artifact(run_id: str):
-    if not _agent_pull_auth_ok():
+    auth_ctx = _agent_pull_auth_context()
+    if not auth_ctx.get("ok"):
         return jsonify({"error": "unauthorized"}), 401
     run_id = _safe_path_part(run_id, "run")
+    authorized, reason = _agent_pull_authorized_for_job(run_id, auth_ctx)
+    if not authorized:
+        return jsonify({"error": "forbidden", "reason": reason}), 403
     relative_path = str(request.args.get("path") or "app.json").strip() or "app.json"
     normalized = os.path.normpath(relative_path).replace("\\", "/")
     if normalized.startswith("../") or normalized == ".." or os.path.isabs(normalized):
@@ -2274,6 +2533,7 @@ def _run_agent_pull_worker(
     quota_used: int,
     quota_limit: int,
     quota_remaining: int,
+    agent_scope: str,
     append_event,
     set_status,
     all_events: List[dict],
@@ -2285,21 +2545,34 @@ def _run_agent_pull_worker(
         if store.is_aborted(session_id):
             set_status(STATUS_ABORTED)
             return None
-        if not _wait_for_agent_pull_node(float(os.environ.get("AGENT_PULL_NODE_WAIT_SECONDS", "5"))):
-            err_msg = "没有在线 agent-node pull 节点，无法启动 AI 生成任务"
+        user_id = store.get_meta(session_id).get("user_id") or "user"
+        scope = "private" if agent_scope == "private" else "public"
+        provider_id = str(provider.get("id") or DEFAULT_PROVIDER)
+        if not _wait_for_agent_pull_node(
+            float(os.environ.get("AGENT_PULL_NODE_WAIT_SECONDS", "5")),
+            agent_scope=scope,
+            owner_user_id=user_id,
+            provider_id=provider_id,
+            agent_id=runner,
+        ):
+            err_msg = (
+                "没有在线私有 agent-node，无法启动 AI 生成任务"
+                if scope == "private"
+                else "没有在线 agent-node pull 节点，无法启动 AI 生成任务"
+            )
             append_event({"error": err_msg, "needs_retry": True})
             set_status(STATUS_FAILED, error=err_msg)
             return None
-        user_id = store.get_meta(session_id).get("user_id") or "user"
         _agent_pull_enqueue_run(
             run_id=current_run_id,
             session_id=session_id,
             user_id=user_id,
-            provider_id=str(provider.get("id") or DEFAULT_PROVIDER),
+            provider_id=provider_id,
             runner=runner,
             resume_id=current_resume_id,
             turn_msg=turn_msg,
             sys_prompt=sys_prompt,
+            agent_scope=scope,
         )
         try:
             store.r.hset(
@@ -2317,6 +2590,7 @@ def _run_agent_pull_worker(
             "run_id": current_run_id,
             "provider": provider.get("id"),
             "agent": runner,
+            "agent_scope": scope,
             "resume": bool(current_resume_id),
         }, ensure_ascii=False))
 
@@ -2941,6 +3215,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 quota_used=quota_used,
                 quota_limit=quota_limit,
                 quota_remaining=quota_remaining,
+                agent_scope=store.get_meta(session_id).get("agent_scope") or "public",
                 append_event=append_event,
                 set_status=set_status,
                 all_events=all_events,
@@ -3247,7 +3522,8 @@ def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
                   *, agent_id: str = DEFAULT_AGENT,
                   agent_resume_id: Optional[str] = None,
                   user_id: str, quota_used: int, quota_limit: int,
-                  quota_remaining: int) -> Tuple[bool, Optional[int]]:
+                  quota_remaining: int,
+                  agent_scope: str = "public") -> Tuple[bool, Optional[int]]:
     """提交 worker 到 Redis 显式等待队列。立刻返回，不等任务完成。
 
     调用前应先 SessionStore.create_meta(status=queued)；这里只负责排队。
@@ -3271,6 +3547,7 @@ def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
         agent_id=agent_id,
         agent_resume_id=agent_resume_id,
         user_id=user_id,
+        agent_scope="private" if str(agent_scope or "").strip().lower() == "private" else "public",
         quota_used=quota_used,
         quota_limit=quota_limit,
         quota_remaining=quota_remaining,

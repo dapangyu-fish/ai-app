@@ -22,6 +22,7 @@ from typing import Optional
 from urllib.parse import urljoin
 
 import requests
+import jwt
 from flask import Flask, Response, jsonify, request, send_file, stream_with_context
 
 
@@ -51,6 +52,9 @@ PROVIDER_PROXY_CONNECT_TIMEOUT_SECONDS = float(os.environ.get("AGENT_NODE_PROVID
 PROVIDER_PROXY_READ_TIMEOUT_SECONDS = float(os.environ.get("AGENT_NODE_PROVIDER_PROXY_READ_TIMEOUT_SECONDS", "900"))
 NODE_TOKEN = os.environ.get("AGENT_NODE_TOKEN", "")
 REGISTRATION_TOKEN = os.environ.get("AGENT_NODE_REGISTRATION_TOKEN", NODE_TOKEN)
+AUTH_MODE = os.environ.get("AGENT_NODE_AUTH_MODE", "shared").strip().lower().replace("_", "-")
+OWNER_USER_ID = os.environ.get("AGENT_NODE_OWNER_USER_ID", "").strip()
+PRIVATE_KEY_PATH = os.environ.get("AGENT_NODE_PRIVATE_KEY_PATH", "").strip()
 BUILD_COMMIT = (
     os.environ.get("MYAPP_BUILD_COMMIT")
     or os.environ.get("AGENT_NODE_BUILD_COMMIT")
@@ -81,6 +85,18 @@ RUN_RETENTION_SECONDS = int(os.environ.get("AGENT_NODE_RUN_RETENTION_SECONDS", "
 RUN_SNAPSHOT_MAX_FILE_BYTES = int(os.environ.get("AGENT_NODE_RUN_SNAPSHOT_MAX_FILE_BYTES", "52428800"))
 RUN_SNAPSHOT_MAX_FILES = int(os.environ.get("AGENT_NODE_RUN_SNAPSHOT_MAX_FILES", "5000"))
 PROVIDER_MODE = os.environ.get("AGENT_NODE_PROVIDER_MODE", "master").strip().lower().replace("_", "-")
+if AUTH_MODE in {"private", "user-private"}:
+    PROVIDER_MODE = "local"
+PROVIDER_IDS = [
+    item.strip().lower().replace("_", "-")
+    for item in os.environ.get("AGENT_NODE_PROVIDER_IDS", "").split(",")
+    if item.strip()
+]
+AGENT_IDS = [
+    item.strip().lower().replace("_", "-")
+    for item in os.environ.get("AGENT_NODE_AGENT_IDS", "claude").split(",")
+    if item.strip()
+]
 
 _RUNS: dict[str, dict] = {}
 _RUNS_LOCK = threading.Lock()
@@ -739,6 +755,26 @@ def health():
     })
 
 
+@APP.get("/private_auth")
+def private_auth():
+    if NODE_TOKEN:
+        expected = f"Bearer {NODE_TOKEN}"
+        if request.headers.get("Authorization", "") != expected:
+            return jsonify({"error": "unauthorized"}), 401
+    else:
+        return jsonify({"error": "private auth token is not configured"}), 400
+    token = _private_pull_jwt()
+    if not token:
+        return jsonify({"error": "private auth is not configured"}), 400
+    return jsonify({
+        "ok": True,
+        "header": "X-MyApp-Agent-JWT",
+        "token": token,
+        "node_id": NODE_ID,
+        "expires_in_seconds": 120,
+    })
+
+
 def _proxy_lookup(token: str) -> Optional[dict]:
     _cleanup_proxy_tokens()
     with _PROXY_LOCK:
@@ -1080,9 +1116,40 @@ def _pull_headers(content_type: str = "application/json") -> dict:
     headers = {"User-Agent": "myapp-agent-node/1"}
     if content_type:
         headers["Content-Type"] = content_type
+    private_jwt = _private_pull_jwt()
+    if private_jwt:
+        headers["X-MyApp-Agent-JWT"] = private_jwt
+        return headers
     if REGISTRATION_TOKEN:
         headers["Authorization"] = f"Bearer {REGISTRATION_TOKEN}"
     return headers
+
+
+def _private_pull_jwt() -> str:
+    if AUTH_MODE not in {"private", "user-private"}:
+        return ""
+    if not PRIVATE_KEY_PATH:
+        return ""
+    try:
+        private_key = Path(PRIVATE_KEY_PATH).read_text(encoding="utf-8")
+    except OSError as exc:
+        _json_line(_run_log_path("agent-node-pull"), {"type": "private_key_read_error", "message": str(exc), "ts": _now_ms()})
+        return ""
+    now = int(time.time())
+    claims = {
+        "iss": "myapp-agent-node",
+        "sub": NODE_ID,
+        "owner_user_id": OWNER_USER_ID,
+        "aud": "myapp-agent-pull",
+        "iat": now,
+        "exp": now + 120,
+        "jti": uuid.uuid4().hex,
+    }
+    try:
+        return jwt.encode(claims, private_key, algorithm="RS256")
+    except Exception as exc:
+        _json_line(_run_log_path("agent-node-pull"), {"type": "private_jwt_sign_error", "message": str(exc), "ts": _now_ms()})
+        return ""
 
 
 def _pull_labels() -> list[str]:
@@ -1094,6 +1161,8 @@ def _pull_labels() -> list[str]:
             labels.append(item)
     if not any(label.replace("_", "-").startswith("provider-mode=") for label in labels):
         labels.append(f"provider_mode={PROVIDER_MODE or 'master'}")
+    if AUTH_MODE in {"private", "user-private"} and not any(label.replace("_", "-").startswith("visibility=") for label in labels):
+        labels.append("visibility=private")
     if not any(label.startswith("host=") for label in labels):
         labels.append(f"host={os.environ.get('PUBLIC_HOST') or os.uname().nodename}")
     if not any(label.replace("_", "-").startswith("mode=") for label in labels):
@@ -1283,6 +1352,8 @@ def _pull_loop() -> None:
                     "build_commit": BUILD_COMMIT,
                     "build_version": BUILD_VERSION,
                     "provider_mode": PROVIDER_MODE or "master",
+                    "provider_ids": PROVIDER_IDS,
+                    "agent_ids": AGENT_IDS,
                     "labels": _pull_labels(),
                     "url": os.environ.get("AGENT_NODE_SELF_REGISTER_URL") or f"pull://{NODE_ID}",
                     "timeout_seconds": poll_timeout,

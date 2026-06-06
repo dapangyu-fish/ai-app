@@ -48,12 +48,26 @@ CREATE TABLE IF NOT EXISTS agent_nodes (
     node_id TEXT PRIMARY KEY,
     url TEXT NOT NULL,
     capacity INTEGER NOT NULL DEFAULT 1,
+    queue_max INTEGER NOT NULL DEFAULT 0,
+    build_commit TEXT NOT NULL DEFAULT '',
+    build_version TEXT NOT NULL DEFAULT '',
     labels JSONB NOT NULL DEFAULT '[]'::jsonb,
+    owner_user_id TEXT NOT NULL DEFAULT '',
+    visibility TEXT NOT NULL DEFAULT 'public',
+    auth_public_key TEXT NOT NULL DEFAULT '',
+    auth_key_id TEXT NOT NULL DEFAULT '',
+    provider_mode TEXT NOT NULL DEFAULT '',
+    provider_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+    agent_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
     last_seen_ms BIGINT NOT NULL DEFAULT 0,
     ttl_seconds INTEGER NOT NULL DEFAULT 120,
+    paused BOOLEAN NOT NULL DEFAULT FALSE,
+    pause_reason TEXT NOT NULL DEFAULT '',
+    paused_at_ms BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE INDEX IF NOT EXISTS idx_agent_nodes_owner_visibility ON agent_nodes (owner_user_id, visibility);
 
 -- Registry 包富化目录（AI summary / tech_stack / 检索元数据）。
 -- 附加表，不替代 MinIO _index.json；详见 migrations/003_registry_packages.sql + LAUNCH_NOTES Part 8

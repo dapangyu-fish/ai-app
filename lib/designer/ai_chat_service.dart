@@ -162,6 +162,7 @@ class AiChatService {
   static const String _providerKey = 'ai_provider';
   static const String _agentKey = 'ai_agent';
   static const String _agentByProviderKey = 'ai_agent_by_provider';
+  static const String _agentScopeKey = 'ai_agent_scope';
   // 多会话存储：列表 + 当前 active sid
   static const String _sessionsListKey = 'ai_sessions_list';
   static const String _activeSessionKey = 'ai_active_session_id';
@@ -171,6 +172,7 @@ class AiChatService {
   static const String _legacyLastUserMessageKey = 'ai_last_user_message';
 
   static String _selectedProvider = 'deepseek';
+  static String _selectedAgentScope = 'public';
   static final Map<String, String> _selectedAgentsByProvider = {};
   static List<AiProvider> _providers = [];
   static List<AiAgent> _agents = [
@@ -183,6 +185,7 @@ class AiChatService {
   ];
 
   static String get selectedProvider => _selectedProvider;
+  static String get selectedAgentScope => _selectedAgentScope;
   static String get selectedAgent =>
       selectedAgentForProvider(_selectedProvider);
   static List<AiProvider> get providers => _providers;
@@ -218,6 +221,9 @@ class AiChatService {
   static Future<void> loadProvider() async {
     final prefs = await SharedPreferences.getInstance();
     _selectedProvider = prefs.getString(_providerKey) ?? 'deepseek';
+    _selectedAgentScope = _normalizeAgentScope(
+      prefs.getString(_agentScopeKey) ?? 'public',
+    );
     _selectedAgentsByProvider.clear();
     final byProviderJson = prefs.getString(_agentByProviderKey);
     if (byProviderJson != null && byProviderJson.isNotEmpty) {
@@ -243,6 +249,20 @@ class AiChatService {
     _selectedProvider = providerId;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_providerKey, providerId);
+  }
+
+  static String _normalizeAgentScope(String value) {
+    final normalized = value.trim().toLowerCase().replaceAll('_', '-');
+    if (normalized == 'private' || normalized == 'auto') {
+      return normalized;
+    }
+    return 'public';
+  }
+
+  static Future<void> setAgentScope(String scope) async {
+    _selectedAgentScope = _normalizeAgentScope(scope);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_agentScopeKey, _selectedAgentScope);
   }
 
   static Future<void> setAgent(String agentId) async {
@@ -1530,6 +1550,7 @@ class AiChatService {
           'session_id': _activeSessionId,
           'provider': _selectedProvider,
           'agent': selectedAgent,
+          'agent_scope': _selectedAgentScope,
           'force_restart': forceRestart,
         });
         var resp = await http
@@ -1725,6 +1746,7 @@ class AiChatService {
         if (crashLog != null) 'crash_log': crashLog,
         'provider': _selectedProvider,
         'agent': selectedAgent,
+        'agent_scope': _selectedAgentScope,
       });
 
       final response = await client

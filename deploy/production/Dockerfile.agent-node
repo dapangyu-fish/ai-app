@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app/backend
 
 COPY backend/requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir flask gunicorn requests
+RUN pip install --no-cache-dir flask gunicorn requests "PyJWT[crypto]>=2.8.0"
 
 COPY backend/agent_node_service.py /app/backend/agent_node_service.py
 

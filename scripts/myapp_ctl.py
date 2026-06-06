@@ -3801,6 +3801,243 @@ def _join_agent_node(args) -> int:
     _run(["myapp-ctl", "agent", "ls"], capture=False)
     return 0
 
+
+def _private_agent_key_paths(data_root: Path, node_id: str) -> tuple[Path, Path]:
+    key_dir = data_root / "agent-node" / "private"
+    safe_node = re.sub(r"[^A-Za-z0-9_.-]+", "_", node_id).strip("._") or "private-agent"
+    return key_dir / f"{safe_node}.key.pem", key_dir / f"{safe_node}.public.pem"
+
+
+def _ensure_private_agent_keypair(private_key: Path, public_key: Path) -> int:
+    if private_key.exists() and public_key.exists():
+        return 0
+    if not shutil.which("openssl"):
+        print("openssl is required to generate a private agent keypair", file=sys.stderr)
+        return 1
+    private_key.parent.mkdir(parents=True, exist_ok=True)
+    rc = _run(
+        [
+            "openssl",
+            "genpkey",
+            "-algorithm",
+            "RSA",
+            "-pkeyopt",
+            "rsa_keygen_bits:3072",
+            "-out",
+            str(private_key),
+        ]
+    ).returncode
+    if rc != 0:
+        return rc
+    os.chmod(private_key, 0o600)
+    rc = _run(["openssl", "rsa", "-pubout", "-in", str(private_key), "-out", str(public_key)]).returncode
+    if rc != 0:
+        return rc
+    os.chmod(public_key, 0o644)
+    return 0
+
+
+def _private_agent_auth_token(args, *, prompt: bool = True) -> str:
+    token = (
+        getattr(args, "auth_token", None)
+        or os.environ.get("MYAPP_AUTH_TOKEN")
+        or os.environ.get("SUPABASE_ACCESS_TOKEN")
+        or ""
+    ).strip()
+    if token:
+        return token
+    if prompt and sys.stdin.isatty():
+        return _prompt_secret("user access token for private agent registration")
+    return ""
+
+
+def _private_agent_join_token(args) -> str:
+    return (
+        getattr(args, "join_token", None)
+        or os.environ.get("MYAPP_PRIVATE_AGENT_JOIN_TOKEN")
+        or ""
+    ).strip()
+
+
+def _local_agent_node_is_private() -> bool:
+    value = (_parse_env(_secret_path("agent")).get("AGENT_NODE_AUTH_MODE", "") or "").strip().lower()
+    return value in {"private", "user-private"}
+
+
+def _local_private_agent_jwt() -> str:
+    agent_env = _parse_env(_secret_path("agent"))
+    if (agent_env.get("AGENT_NODE_AUTH_MODE", "") or "").strip().lower() not in {"private", "user-private"}:
+        return ""
+    token = os.environ.get("AGENT_NODE_TOKEN") or agent_env.get("AGENT_NODE_TOKEN", "")
+    if not token:
+        return ""
+    try:
+        port = int(agent_env.get("AGENT_NODE_PORT") or 5590)
+    except (TypeError, ValueError):
+        port = 5590
+    data, _status, _error = _agent_node_request_json(
+        f"http://127.0.0.1:{port}",
+        "/private_auth",
+        token=token,
+        timeout=3,
+    )
+    if not data:
+        return ""
+    return str(data.get("token") or "").strip()
+
+
+def _private_agent_nodes_payload(args, *, probe: bool = True) -> tuple[dict | None, int, str]:
+    backend_url = _agent_node_backend_url(args)
+    if not backend_url:
+        return None, 2, "backend url is required; pass --backend or set AGENT_NODE_BACKEND_URL"
+    auth_token = _private_agent_auth_token(args, prompt=False)
+    probe_value = "1" if probe else "0"
+    if auth_token:
+        return _agent_node_request_json(
+            backend_url,
+            f"/api/ai/private_agent/nodes?probe={probe_value}",
+            token=auth_token,
+        )
+    private_jwt = _local_private_agent_jwt()
+    if private_jwt:
+        return _agent_node_request_json(
+            backend_url,
+            f"/api/ai/private_agent/nodes/self?probe={probe_value}",
+            extra_headers={"X-MyApp-Agent-JWT": private_jwt},
+        )
+    return None, 2, "--auth-token/MYAPP_AUTH_TOKEN is required, or start the local private agent-node"
+
+
+def _list_private_agent_nodes(args) -> int:
+    data, status, error = _private_agent_nodes_payload(args, probe=not getattr(args, "no_probe", False))
+    if not data:
+        print(f"private agent-node ls failed: {status or '-'} {error}", file=sys.stderr)
+        return 1 if status != 2 else 2
+    return _print_agent_node_rows(data, as_json=getattr(args, "json", False))
+
+
+def _status_private_agent_node(args) -> int:
+    data, status, error = _private_agent_nodes_payload(args, probe=not getattr(args, "no_probe", False))
+    if not data:
+        print(f"private agent-node status failed: {status or '-'} {error}", file=sys.stderr)
+        return 1 if status != 2 else 2
+    node_id = getattr(args, "node_id", None)
+    if not node_id:
+        return _print_agent_node_rows(data, as_json=getattr(args, "json", False))
+    for node in data.get("nodes") or []:
+        if node.get("node_id") == node_id:
+            return _print_agent_node_status({"node": node}, as_json=getattr(args, "json", False))
+    print(f"private agent-node not found: {node_id}", file=sys.stderr)
+    return 1
+
+
+def _join_private_agent_node(args) -> int:
+    if args.build and args.pull:
+        print("--build and --pull cannot be used together", file=sys.stderr)
+        return 2
+    backend_url = (args.backend or "").rstrip("/")
+    if not backend_url:
+        print("--backend is required", file=sys.stderr)
+        return 2
+    join_token = _private_agent_join_token(args)
+    auth_token = "" if join_token else _private_agent_auth_token(args)
+    if not join_token and not auth_token:
+        print("--join-token, MYAPP_PRIVATE_AGENT_JOIN_TOKEN, --auth-token, or MYAPP_AUTH_TOKEN is required for private agent registration", file=sys.stderr)
+        return 2
+    node_id = str(args.node_id or f"private-{socket.gethostname()}").strip()
+    node_id = re.sub(r"[^A-Za-z0-9_.-]+", "_", node_id).strip("._") or "private-agent"
+    try:
+        data_root = _ensure_data_root_config(args.data_root, interactive=False)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    _ensure_data_root_layout(data_root)
+    private_key, public_key = _private_agent_key_paths(data_root, node_id)
+    private_key_container = f"/var/lib/myapp/agent-node/private/{private_key.name}"
+    rc = _ensure_private_agent_keypair(private_key, public_key)
+    if rc != 0:
+        return rc
+    public_key_text = public_key.read_text(encoding="utf-8")
+    provider_ids = [item.strip().lower().replace("_", "-") for item in (args.provider or []) if item.strip()]
+    agent_ids = [item.strip().lower().replace("_", "-") for item in (args.agent or ["claude"]) if item.strip()]
+    payload = {
+        "node_id": node_id,
+        "name": args.name or node_id,
+        "public_key": public_key_text,
+        "provider_ids": provider_ids,
+        "agent_ids": agent_ids,
+        "capacity": args.capacity,
+        "queue_max": args.queue_max if args.queue_max is not None else args.capacity,
+        "ttl_seconds": args.ttl,
+    }
+    data, status, error = _agent_node_request_json(
+        backend_url,
+        "/api/ai/private_agent/nodes",
+        method="POST",
+        token=join_token or auth_token,
+        payload=payload,
+        timeout=15,
+    )
+    if not data:
+        print(f"private agent registration failed: {status or '-'} {error}", file=sys.stderr)
+        return 1
+    owner_user_id = str(data.get("owner_user_id") or "").strip()
+    if not _ai_providers_configured():
+        if getattr(args, "no_provider_setup", False):
+            print("AI provider config is missing; run myapp-ctl setup --no-push --no-email --no-asr", file=sys.stderr)
+            return 1
+        if not sys.stdin.isatty():
+            print("AI provider config is missing and stdin is not interactive", file=sys.stderr)
+            return 1
+        rc = _setup_ai_providers(force=False)
+        if rc != 0:
+            return rc
+    rc = _init_stack_secrets(host=args.host or socket.gethostname(), quiet=True)
+    if rc != 0:
+        return rc
+    agent_env = _parse_env(_secret_path("agent"))
+    labels = list(args.label or [])
+    if not any(str(label).startswith("host=") for label in labels):
+        labels.append(f"host={args.host or socket.gethostname()}")
+    for required_label in ("visibility=private", "provider_mode=local", "mode=pull"):
+        key = required_label.split("=", 1)[0].replace("_", "-")
+        if not any(str(label).replace("_", "-").startswith(f"{key}=") for label in labels):
+            labels.append(required_label)
+    agent_env.update(
+        {
+            "AGENT_NODE_ID": node_id,
+            "AGENT_NODE_PORT": str(args.local_port),
+            "AGENT_NODE_AUTH_MODE": "private",
+            "AGENT_NODE_OWNER_USER_ID": owner_user_id,
+            "AGENT_NODE_PRIVATE_KEY_PATH": private_key_container,
+            "AGENT_NODE_PROVIDER_MODE": "local",
+            "AGENT_NODE_PULL_ENABLED": "1",
+            "AGENT_NODE_BACKEND_URL": backend_url,
+            "AGENT_NODE_SELF_REGISTER_URL": f"pull://{node_id}",
+            "AGENT_NODE_CAPACITY": str(args.capacity),
+            "AGENT_NODE_QUEUE_MAX": str(args.queue_max if args.queue_max is not None else args.capacity),
+            "AGENT_NODE_REGISTRATION_TTL_SECONDS": str(args.ttl),
+            "AGENT_NODE_PROVIDER_IDS": ",".join(provider_ids),
+            "AGENT_NODE_AGENT_IDS": ",".join(agent_ids),
+            "AGENT_NODE_LABELS": ",".join(labels),
+            "AGENT_NODE_TOKEN": agent_env.get("AGENT_NODE_TOKEN") or _rand_hex(24),
+            "AGENT_NODE_REGISTRATION_TOKEN": "",
+        }
+    )
+    _write_env(_secret_path("agent"), agent_env)
+    _safe_write_default_config_snapshot()
+    deploy_cmd = ["myapp-ctl", "deploy", "agent-node", "agent-runtime", "--no-setup", "--no-test-user"]
+    if args.build:
+        deploy_cmd.append("--build")
+    elif args.pull:
+        deploy_cmd.append("--pull")
+    rc = _run(deploy_cmd, capture=False).returncode
+    if rc != 0:
+        return rc
+    print(json.dumps(data, ensure_ascii=False))
+    _run(["myapp-ctl", "status", "agent-node"], capture=False)
+    return 0
+
 def _agent_node_backend_url(args) -> str:
     explicit = getattr(args, "backend", None)
     if explicit:
@@ -3832,10 +4069,13 @@ def _agent_node_request_json(
     *,
     method: str = "GET",
     token: str = "",
+    extra_headers: dict[str, str] | None = None,
     payload: dict | None = None,
     timeout: float = 8.0,
 ) -> tuple[dict | None, int, str]:
     headers = {"User-Agent": "myapp-ctl/1"}
+    if extra_headers:
+        headers.update({str(k): str(v) for k, v in extra_headers.items() if str(k) and str(v)})
     data = None
     if payload is not None:
         data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -4306,6 +4546,15 @@ def cmd_agent_node(args) -> int:
         return _print_agent_add_script(args)
     if args.agent_node_cmd == "join":
         return _join_agent_node(args)
+    if args.agent_node_cmd == "private":
+        if getattr(args, "private_cmd", "") == "ls":
+            return _list_private_agent_nodes(args)
+        if getattr(args, "private_cmd", "") == "status":
+            return _status_private_agent_node(args)
+        if getattr(args, "private_cmd", "") == "join":
+            return _join_private_agent_node(args)
+        print("private command is required", file=sys.stderr)
+        return 2
     if args.agent_node_cmd == "register":
         return _register_agent_node(args)
     if args.agent_node_cmd in {"capacity", "limits"}:
@@ -4315,6 +4564,10 @@ def cmd_agent_node(args) -> int:
     if not backend_url:
         print("backend url is required; pass --backend or set domains.backend", file=sys.stderr)
         return 2
+    if _local_agent_node_is_private() and args.agent_node_cmd in {"ls", "status"} and not getattr(args, "token", None):
+        if args.agent_node_cmd == "ls":
+            return _list_private_agent_nodes(args)
+        return _status_private_agent_node(args)
     token = _agent_node_registry_token(args)
 
     if args.agent_node_cmd == "ls":
@@ -4657,6 +4910,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_ls = agent_node_sub.add_parser("ls", help=_tx("list registered cluster agent hosts", zh="列出已注册集群 Agent 节点", de="registrierte Cluster-Agent-Hosts auflisten", es="listar hosts agent registrados"), usage=_tx("myapp-ctl agent-node ls [options]", zh="myapp-ctl agent-node ls [选项]", de="myapp-ctl agent-node ls [Optionen]", es="myapp-ctl agent-node ls [opciones]"))
     agent_node_ls.add_argument("--backend")
     agent_node_ls.add_argument("--token")
+    agent_node_ls.add_argument("--auth-token", help=_tx("logged-in user access token for private-node view; alternatively MYAPP_AUTH_TOKEN", zh="私有节点视角使用的已登录用户 access token；也可用 MYAPP_AUTH_TOKEN", de="Access-Token des angemeldeten Benutzers fuer Private-Node-Ansicht; alternativ MYAPP_AUTH_TOKEN", es="access token del usuario para vista privada; alternativamente MYAPP_AUTH_TOKEN"))
     agent_node_ls.add_argument("--no-probe", action="store_true", help=_tx("do not call each agent-node /health", zh="不调用每个 agent-node 的 /health", de="/health der einzelnen agent-nodes nicht abfragen", es="no llamar /health de cada agent-node"))
     agent_node_ls.add_argument("--json", action="store_true")
     agent_node_ls.set_defaults(func=cmd_agent_node)
@@ -4664,6 +4918,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_status.add_argument("node_id", nargs="?")
     agent_node_status.add_argument("--backend")
     agent_node_status.add_argument("--token")
+    agent_node_status.add_argument("--auth-token", help=_tx("logged-in user access token for private-node view; alternatively MYAPP_AUTH_TOKEN", zh="私有节点视角使用的已登录用户 access token；也可用 MYAPP_AUTH_TOKEN", de="Access-Token des angemeldeten Benutzers fuer Private-Node-Ansicht; alternativ MYAPP_AUTH_TOKEN", es="access token del usuario para vista privada; alternativamente MYAPP_AUTH_TOKEN"))
     agent_node_status.add_argument("--no-probe", action="store_true", help=_tx("only used when node_id is omitted", zh="仅在省略 node_id 时使用", de="nur verwendet, wenn node_id fehlt", es="solo se usa cuando se omite node_id"))
     agent_node_status.add_argument("--json", action="store_true")
     agent_node_status.set_defaults(func=cmd_agent_node)
@@ -4713,6 +4968,40 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_limits.add_argument("--force", action="store_true", help=_tx("restart even if local agent runs are active", zh="即使本机有活跃 Agent 任务也重启", de="auch bei aktiven lokalen Agent-Laeufen neu starten", es="reiniciar aunque haya tareas agent locales activas"))
     agent_node_limits.add_argument("--json", action="store_true")
     agent_node_limits.set_defaults(func=cmd_agent_node)
+    agent_node_private = agent_node_sub.add_parser("private", help=_tx("manage a user-private agent node", zh="管理用户私有 Agent 节点", de="privaten Benutzer-Agent-Node verwalten", es="gestionar agent node privado de usuario"), usage=_tx("myapp-ctl agent-node private <command> [args]", zh="myapp-ctl agent-node private <命令> [参数]", de="myapp-ctl agent-node private <Befehl> [Argumente]", es="myapp-ctl agent-node private <comando> [args]"))
+    agent_node_private_sub = _add_subcommands(agent_node_private, "private_cmd")
+    private_ls = agent_node_private_sub.add_parser("ls", help=_tx("list only the current user's private agent nodes", zh="仅列出当前用户自己的私有 Agent 节点", de="nur private Agent-Nodes des aktuellen Benutzers auflisten", es="listar solo los agent nodes privados del usuario actual"), usage=_tx("myapp-ctl agent-node private ls [options]", zh="myapp-ctl agent-node private ls [选项]", de="myapp-ctl agent-node private ls [Optionen]", es="myapp-ctl agent-node private ls [opciones]"))
+    private_ls.add_argument("--backend")
+    private_ls.add_argument("--auth-token", help=_tx("logged-in user access token; alternatively MYAPP_AUTH_TOKEN", zh="已登录用户 access token；也可用 MYAPP_AUTH_TOKEN", de="Access-Token des angemeldeten Benutzers; alternativ MYAPP_AUTH_TOKEN", es="access token del usuario autenticado; alternativamente MYAPP_AUTH_TOKEN"))
+    private_ls.add_argument("--no-probe", action="store_true", help=_tx("do not call each private agent-node /health", zh="不调用每个私有 agent-node 的 /health", de="/health der privaten agent-nodes nicht abfragen", es="no llamar /health de cada agent-node privado"))
+    private_ls.add_argument("--json", action="store_true")
+    private_ls.set_defaults(func=cmd_agent_node)
+    private_status = agent_node_private_sub.add_parser("status", help=_tx("show only the current user's private agent-node status", zh="仅查看当前用户自己的私有 Agent 节点状态", de="Status eines privaten Agent-Nodes des aktuellen Benutzers anzeigen", es="mostrar estado del agent node privado del usuario actual"), usage=_tx("myapp-ctl agent-node private status [node-id] [options]", zh="myapp-ctl agent-node private status [节点ID] [选项]", de="myapp-ctl agent-node private status [Node-ID] [Optionen]", es="myapp-ctl agent-node private status [node-id] [opciones]"))
+    private_status.add_argument("node_id", nargs="?")
+    private_status.add_argument("--backend")
+    private_status.add_argument("--auth-token", help=_tx("logged-in user access token; alternatively MYAPP_AUTH_TOKEN", zh="已登录用户 access token；也可用 MYAPP_AUTH_TOKEN", de="Access-Token des angemeldeten Benutzers; alternativ MYAPP_AUTH_TOKEN", es="access token del usuario autenticado; alternativamente MYAPP_AUTH_TOKEN"))
+    private_status.add_argument("--no-probe", action="store_true", help=_tx("do not call each private agent-node /health", zh="不调用每个私有 agent-node 的 /health", de="/health der privaten agent-nodes nicht abfragen", es="no llamar /health de cada agent-node privado"))
+    private_status.add_argument("--json", action="store_true")
+    private_status.set_defaults(func=cmd_agent_node)
+    private_join = agent_node_private_sub.add_parser("join", help=_tx("register and deploy a private pull agent node", zh="注册并部署私有 pull Agent 节点", de="privaten Pull-Agent-Node registrieren und deployen", es="registrar y desplegar agent node pull privado"), usage=_tx("myapp-ctl agent-node private join [options]", zh="myapp-ctl agent-node private join [选项]", de="myapp-ctl agent-node private join [Optionen]", es="myapp-ctl agent-node private join [opciones]"))
+    private_join.add_argument("--backend", required=True, help=_tx("backend URL, for example https://myapp-backend.example.com", zh="后端 URL，例如 https://myapp-backend.example.com", de="Backend-URL, z.B. https://myapp-backend.example.com", es="URL del backend, por ejemplo https://myapp-backend.example.com"))
+    private_join.add_argument("--join-token", help=_tx("short-lived private agent join token from app settings; alternatively MYAPP_PRIVATE_AGENT_JOIN_TOKEN", zh="从 App 设置页获取的短期私有 Agent 加入令牌；也可用 MYAPP_PRIVATE_AGENT_JOIN_TOKEN", de="kurzlebiges Private-Agent-Join-Token aus App-Einstellungen; alternativ MYAPP_PRIVATE_AGENT_JOIN_TOKEN", es="token corto de union de agent privado desde ajustes; alternativamente MYAPP_PRIVATE_AGENT_JOIN_TOKEN"))
+    private_join.add_argument("--auth-token", help=_tx("logged-in user access token; alternatively MYAPP_AUTH_TOKEN", zh="已登录用户 access token；也可用 MYAPP_AUTH_TOKEN", de="Access-Token des angemeldeten Benutzers; alternativ MYAPP_AUTH_TOKEN", es="access token del usuario autenticado; alternativamente MYAPP_AUTH_TOKEN"))
+    private_join.add_argument("--node-id")
+    private_join.add_argument("--name")
+    private_join.add_argument("--host")
+    private_join.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
+    private_join.add_argument("--local-port", type=int, default=5590)
+    private_join.add_argument("--capacity", type=int, default=1)
+    private_join.add_argument("--queue-max", type=int)
+    private_join.add_argument("--ttl", type=int, default=120)
+    private_join.add_argument("--provider", action="append", default=[], help=_tx("local provider id supported by this node; repeatable", zh="本节点支持的本地供应商 ID；可重复", de="lokale Provider-ID dieses Nodes; wiederholbar", es="id de proveedor local soportado; repetible"))
+    private_join.add_argument("--agent", action="append", default=[], help=_tx("agent id supported by this node; repeatable; defaults to claude", zh="本节点支持的 Agent ID；可重复；默认 claude", de="Agent-ID dieses Nodes; wiederholbar; Standard claude", es="id de agent soportado; repetible; por defecto claude"))
+    private_join.add_argument("--label", action="append")
+    private_join.add_argument("--pull", action="store_true", help=_tx("pull configured images before deploy", zh="部署前拉取已配置镜像", de="konfigurierte Images vor Deploy laden", es="descargar imagenes configuradas antes de desplegar"))
+    private_join.add_argument("--build", action="store_true", help=_tx("build images from local source before deploy", zh="部署前从本地源码构建镜像", de="Images vor Deploy aus lokalem Quellcode bauen", es="construir imagenes desde codigo local antes de desplegar"))
+    private_join.add_argument("--no-provider-setup", action="store_true", help=_tx("do not prompt for local AI provider config", zh="不交互配置本地 AI 供应商", de="nicht nach lokaler KI-Provider-Konfiguration fragen", es="no pedir configuracion local de proveedor IA"))
+    private_join.set_defaults(func=cmd_agent_node)
     agent_node_add = agent_node_sub.add_parser("add", help=_tx("print a join command for a new agent host", zh="打印新 Agent 节点的一键加入命令", de="Join-Befehl fuer neuen Agent-Host ausgeben", es="imprimir comando join para nuevo host agent"), usage=_tx("myapp-ctl agent-node add [options]", zh="myapp-ctl agent-node add [选项]", de="myapp-ctl agent-node add [Optionen]", es="myapp-ctl agent-node add [opciones]"))
     agent_node_add.add_argument("--backend", help=_tx("master backend URL, for example http://<master-host>:5566", zh="主后端 URL，例如 http://<master-host>:5566", de="Master-Backend-URL, z.B. http://<master-host>:5566", es="URL del backend maestro, por ejemplo http://<master-host>:5566"))
     agent_node_add.add_argument("--host", help=_tx("new agent host public IP or domain", zh="新 Agent 节点公网 IP 或域名", de="oeffentliche IP oder Domain des neuen Agent-Hosts", es="IP publica o dominio del nuevo host agent"))

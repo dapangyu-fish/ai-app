@@ -787,6 +787,9 @@ def chat_start():
     session_id = body.get("session_id")
     provider_id = body.get("provider")
     agent_id = body.get("agent")
+    agent_scope = str(body.get("agent_scope") or body.get("agentNodeScope") or "public").strip().lower().replace("_", "-")
+    if agent_scope not in {"public", "private", "auto"}:
+        return jsonify({"error": "agent_scope must be public, private, or auto", "code": "AI_AGENT_SCOPE_INVALID"}), 400
     # force_restart=true：用户输入新消息时用，先杀掉同 session 还在跑的 worker 再起新的
     # 默认 false：双击 send / 重连等场景幂等返回 resumed:true
     force_restart = bool(body.get("force_restart", False))
@@ -820,6 +823,13 @@ def chat_start():
             "error": f"供应商 {provider_id} 不支持 Agent {agent_id}",
             "code": "AI_AGENT_PROVIDER_UNAVAILABLE",
         }), 400
+    if agent_scope == "auto":
+        agent_scope = "private" if ai_session.has_available_private_agent_node(user_id, provider_id, agent_id) else "public"
+    if agent_scope == "private" and not ai_session.has_available_private_agent_node(user_id, provider_id, agent_id):
+        return jsonify({
+            "error": "没有在线的私有 Agent Node，请先启动你的私有节点或切换到平台 Agent",
+            "code": "AI_PRIVATE_AGENT_OFFLINE",
+        }), 409
 
     start_lock = _acquire_chat_start_lock(session_id)
     if not start_lock:
@@ -947,6 +957,7 @@ def chat_start():
             quota_limit=limit,
             quota_remaining=new_remaining,
             status=ai_session.STATUS_QUEUED,
+            agent_scope=agent_scope,
         )
         if interrupted_previous:
             store.append_event(session_id, {
@@ -961,6 +972,7 @@ def chat_start():
             quota_used=used + 1,
             quota_limit=limit,
             quota_remaining=new_remaining,
+            agent_scope=agent_scope,
         )
         if not accepted:
             store.set_status(session_id, ai_session.STATUS_FAILED, error="AI worker queue full")
@@ -978,6 +990,7 @@ def chat_start():
             "status": "queued",
             "queue_position": queue_position,
             "agent": agent_id,
+            "agent_scope": agent_scope,
             "resumed": False,
         })
     finally:

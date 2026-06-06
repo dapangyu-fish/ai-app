@@ -313,6 +313,7 @@ myapp-ctl agent-node ls [--json] [--no-probe]
 myapp-ctl agent-node status [node-id] [--json] [--no-probe]
 myapp-ctl agent-node add --backend <url> --host <host> --node-id <id> [--pull|--build]
 myapp-ctl agent-node join --backend <url> --node-id <id> --agent-token <token> --registration-token <token>
+myapp-ctl agent-node private join --backend <url> --auth-token <user-token> --node-id <id>
 myapp-ctl agent-node pause [node-id] [--reason <text>]
 myapp-ctl agent-node resume [node-id]
 myapp-ctl agent-node limits --capacity <n> --queue-max <n> [--force]
@@ -574,3 +575,74 @@ the agent-node container self-registers through its regular acquire heartbeat.
 The registered URL is `pull://<node-id>`, and the physical machine IP is stored
 as the `host=<ip>` label for display. Direct mode is the legacy inbound HTTP
 path and can still use explicit registration when needed.
+
+## User-Private Agent Nodes
+
+Private agent nodes are for ordinary users who want their own AI provider keys,
+capacity, and workspace state on their own machine. They are always pull-mode
+nodes, so the private host only needs outbound access to the backend.
+
+Security invariants:
+
+- The provider key stays in the user's local `/etc/myapp/secrets.d/ai-providers.env`.
+- The private node signing key stays under the user's local data root, for
+  example `/mnt/myapp/agent-node/private/<node>.key.pem`.
+- The backend stores only the public key, node metadata, heartbeat, and capacity.
+- A private node can only pull jobs for its owning user.
+- A private job does not fall back to public nodes unless the client explicitly
+  sends another request with public scope.
+
+Join a private node:
+
+```bash
+export MYAPP_PRIVATE_AGENT_JOIN_TOKEN='<short-lived token copied from app settings>'
+
+myapp-ctl agent-node private join \
+  --backend https://<backend-host> \
+  --node-id my-private-agent \
+  --provider deepseek \
+  --agent claude \
+  --capacity 2 \
+  --queue-max 10 \
+  --pull
+```
+
+The command generates an RSA keypair locally, registers the public key through
+`/api/ai/private_agent/nodes`, consumes the one-time join token, writes
+`agent.env`, prompts for local AI provider configuration if it is missing, and
+deploys only `agent-node` plus `agent-runtime`.
+
+The app settings page has a Private Agent Nodes management view. It lists only
+the logged-in user's private nodes, can create a new join token by calling
+`POST /api/ai/private_agent/join_token`, and can pause, resume, delete, or tune
+capacity for nodes owned by that same user. The join-token response includes
+both `join_token` and a ready-to-copy `join_command`; the command includes the
+currently selected provider and agent. The token is short-lived and one-time.
+The long-lived private provider keys remain only on the user's agent-node host.
+The join-token API accepts `image_mode` as `pull`, `build`, or `none`; app
+settings use the default `pull` command for released images, while branch or
+source-based validation can request `build` so the private host builds the
+current checkout before starting the node.
+
+On a private agent host, `myapp-ctl agent-node ls` and `status` use the local
+agent-node signing key to query `/api/ai/private_agent/nodes/self`, so they show
+only that private node. Passing a logged-in user `--auth-token` is required only
+when the user wants to list all private nodes owned by the same account.
+The local helper endpoint that signs this short JWT is protected by the host's
+`AGENT_NODE_TOKEN`.
+
+The client settings page exposes `Agent routing` / `Agent 调度` with `public`,
+`private`, and `auto`; chat start requests send the selected value as:
+
+```json
+{
+  "agent_scope": "private"
+}
+```
+
+Supported scopes are:
+
+- `public`: use the platform agent pool.
+- `private`: use only the logged-in user's private nodes; fail with
+  `AI_PRIVATE_AGENT_OFFLINE` if none is online.
+- `auto`: use a compatible private node when available, otherwise use public.

@@ -10,17 +10,26 @@ treat the database as the source of truth.
 from __future__ import annotations
 
 import json
+import hashlib
 import re
+import secrets
+import shlex
 import time
 from typing import Any
 from urllib.parse import urlparse
 
 import requests
-from flask import jsonify, request
+from flask import current_app, jsonify, request
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from config import AGENT_NODE_REGISTRATION_TOKEN, AGENT_NODE_TOKEN
+import auth
 import agent_node_registry
 from ai_session import get_redis
+
+
+_PRIVATE_JOIN_TOKEN_SALT = "myapp-private-agent-join"
+_PRIVATE_JOIN_TOKEN_MAX_AGE_SECONDS = 3600
 
 
 def _safe_node_id(value: object) -> str:
@@ -31,6 +40,120 @@ def _safe_node_id(value: object) -> str:
 
 def _safe_build_text(value: object) -> str:
     return str(value or "").strip()[:128]
+
+
+def _safe_list(value: object, *, limit: int = 32) -> list[str]:
+    if isinstance(value, str):
+        text = value.strip()
+        if text.startswith("["):
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                parsed = []
+            items = [str(item or "").strip() for item in parsed] if isinstance(parsed, list) else []
+        else:
+            items = [item.strip() for item in text.split(",")]
+    elif isinstance(value, list):
+        items = [str(item or "").strip() for item in value]
+    else:
+        items = []
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in items:
+        normalized = item.lower().replace("_", "-")
+        if not normalized or normalized in seen:
+            continue
+        out.append(normalized[:64])
+        seen.add(normalized)
+        if len(out) >= limit:
+            break
+    return out
+
+
+def _public_key_id(public_key: str) -> str:
+    digest = hashlib.sha256(public_key.encode("utf-8")).hexdigest()
+    return digest[:24]
+
+
+def _private_join_token_serializer() -> URLSafeTimedSerializer:
+    return URLSafeTimedSerializer(current_app.config["SECRET_KEY"])
+
+
+def _private_join_token_key(jti: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(jti or "")).strip("._")
+    return f"ai:private_agent_join_token:{safe}"
+
+
+def _consume_private_join_token(jti: str, expected_user_id: str = "") -> bool:
+    if not jti:
+        return False
+    key = _private_join_token_key(jti)
+    try:
+        raw = get_redis().execute_command("GETDEL", key)
+    except Exception:
+        try:
+            raw = get_redis().get(key)
+            get_redis().delete(key)
+        except Exception:
+            return False
+    if isinstance(raw, bytes):
+        value = raw.decode("utf-8", errors="replace")
+    else:
+        value = str(raw or "")
+    return bool(value and (not expected_user_id or value == expected_user_id))
+
+
+def _verify_private_join_token(token: str) -> tuple[str, str, str]:
+    text = str(token or "").strip()
+    if not text:
+        return "", "", "missing join token"
+    try:
+        data = _private_join_token_serializer().loads(
+            text,
+            salt=_PRIVATE_JOIN_TOKEN_SALT,
+            max_age=_PRIVATE_JOIN_TOKEN_MAX_AGE_SECONDS,
+        )
+    except SignatureExpired:
+        return "", "", "join token expired"
+    except BadSignature:
+        return "", "", "invalid join token"
+    if not isinstance(data, dict):
+        return "", "", "invalid join token"
+    user_id = str(data.get("uid") or "").strip()
+    jti = str(data.get("jti") or "").strip()
+    if not user_id or not jti:
+        return "", "", "invalid join token"
+    if not _consume_private_join_token(jti, user_id):
+        return "", "", "join token expired or already used"
+    return user_id, jti, ""
+
+
+def _private_registration_identity() -> tuple[str, str, tuple[dict, int] | None]:
+    body = request.get_json(silent=True) or {}
+    join_token = (
+        request.headers.get("X-MyApp-Private-Agent-Join-Token", "")
+        or str(body.get("join_token") or "")
+    ).strip()
+    auth_header = request.headers.get("Authorization", "")
+    if not join_token and auth_header.startswith("Private-Agent-Join "):
+        join_token = auth_header[len("Private-Agent-Join "):].strip()
+    if not join_token and auth_header.startswith("Bearer "):
+        bearer = auth_header[7:].strip()
+        user_id, jti, error = _verify_private_join_token(bearer)
+        if user_id:
+            return user_id, jti, None
+        user = auth.verify_access_token(bearer)
+        if user is not None:
+            request.supabase_user = user
+            request.supabase_token = bearer
+            return str(user.get("id") or ""), "", None
+        return "", "", ({"error": error or "token 无效或已过期"}, 401)
+    if join_token:
+        user_id, jti, error = _verify_private_join_token(join_token)
+        if not user_id:
+            return "", "", ({"error": error}, 401)
+        return user_id, jti, None
+    return "", "", ({"error": "未提供认证 token 或私有节点加入令牌"}, 401)
 
 
 def _registry_key(node_id: str) -> str:
@@ -82,6 +205,8 @@ def _node_row(key, data: dict[Any, Any]) -> dict:
     if not isinstance(labels, list):
         labels = []
     provider_mode = "master"
+    if data.get("provider_mode"):
+        provider_mode = str(data.get("provider_mode")).strip().lower().replace("_", "-") or provider_mode
     label_host = ""
     label_build_commit = ""
     label_build_version = ""
@@ -110,6 +235,12 @@ def _node_row(key, data: dict[Any, Any]) -> dict:
         "version": build_version or build_commit,
         "labels": labels,
         "provider_mode": provider_mode,
+        "visibility": get("visibility", "public") or "public",
+        "owner_user_id": get("owner_user_id", ""),
+        "auth_key_id": get("auth_key_id", ""),
+        "provider_ids": _safe_list(raw("provider_ids")),
+        "agent_ids": _safe_list(raw("agent_ids")),
+        "has_auth_public_key": bool(get("auth_public_key", "")),
         "last_seen": get_int("last_seen", 0),
         "ttl_seconds": get_int("ttl_seconds", 120),
         "paused": get_bool("paused", False),
@@ -216,10 +347,22 @@ def _agent_pull_queue_depth() -> int:
         return 0
 
 
+def _agent_pull_private_queue_depth(owner_user_id: str) -> int:
+    safe_user = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(owner_user_id or "user")).strip("._") or "user"
+    try:
+        return int(get_redis().llen(f"ai:agent_pull:pending:user:{safe_user}") or 0)
+    except Exception:
+        return 0
+
+
 def _with_queue_depth(row: dict, queued: int | None = None) -> dict:
     row = dict(row)
     if queued is None:
-        queued = _agent_pull_queue_depth()
+        queued = (
+            _agent_pull_private_queue_depth(str(row.get("owner_user_id") or ""))
+            if row.get("visibility") == "private"
+            else _agent_pull_queue_depth()
+        )
     row["queue_depth"] = queued if str(row.get("url") or "").startswith("pull://") and row.get("status") == "online" else 0
     return row
 
@@ -303,6 +446,9 @@ def register_agent_node():
     labels = body.get("labels") if isinstance(body.get("labels"), list) else []
     build_commit = _safe_build_text(body.get("build_commit") or body.get("commit"))
     build_version = _safe_build_text(body.get("build_version") or body.get("version") or build_commit)
+    existing = agent_node_registry.get_node(node_id)
+    if existing and existing.get("visibility") == "private":
+        return jsonify({"error": "node_id belongs to a private agent node"}), 403
     now_ms = int(time.time() * 1000)
     data = {
         "node_id": node_id,
@@ -312,6 +458,11 @@ def register_agent_node():
         "build_commit": build_commit,
         "build_version": build_version,
         "labels": labels,
+        "visibility": "public",
+        "owner_user_id": "",
+        "provider_mode": "",
+        "provider_ids": [],
+        "agent_ids": [],
         "last_seen": now_ms,
         "ttl_seconds": ttl_seconds,
     }
@@ -324,6 +475,7 @@ def register_agent_node():
         build_version=build_version,
         labels=labels,
         ttl_seconds=ttl_seconds,
+        visibility="public",
     )
     redis_data = {
         "node_id": node_id,
@@ -333,6 +485,8 @@ def register_agent_node():
         "build_commit": build_commit,
         "build_version": build_version,
         "labels": json.dumps(labels, ensure_ascii=False),
+        "visibility": "public",
+        "owner_user_id": "",
         "last_seen": str(now_ms),
         "ttl_seconds": str(ttl_seconds),
     }
@@ -348,6 +502,254 @@ def register_agent_node():
     return jsonify({"ok": True, "node": _node_row(key, data)})
 
 
+def _private_node_response(row: dict, *, probe: bool = True) -> dict:
+    decorated = _with_queue_depth(_decorate_node(_node_row(row.get("node_id"), row), probe=probe))
+    decorated.pop("owner_user_id", None)
+    decorated.pop("auth_public_key", None)
+    return decorated
+
+
+@auth.require_auth
+def list_private_agent_nodes():
+    user_id = str(request.supabase_user.get("id") or "")
+    probe = request.args.get("probe", "1").lower() not in {"0", "false", "no"}
+    rows = [
+        _private_node_response(row, probe=probe)
+        for row in agent_node_registry.list_nodes()
+        if row.get("visibility") == "private" and row.get("owner_user_id") == user_id
+    ]
+    rows.sort(key=lambda item: item.get("node_id", ""))
+    queued = _agent_pull_private_queue_depth(user_id)
+    return jsonify({"nodes": rows, "summary": _private_nodes_summary(rows, queued)})
+
+
+def _private_nodes_summary(rows: list[dict], queued: int) -> dict:
+    return {
+        "total": len(rows),
+        "online": sum(1 for row in rows if row.get("status") == "online"),
+        "paused": sum(1 for row in rows if row.get("status") == "paused"),
+        "registered": sum(1 for row in rows if row.get("status") == "registered"),
+        "down": sum(1 for row in rows if row.get("status") == "down"),
+        "stale": sum(1 for row in rows if row.get("status") == "stale"),
+        "queued": queued,
+        "active_runs": sum(int(row.get("active_runs") or 0) for row in rows),
+        "capacity": sum(int(row.get("capacity") or 0) for row in rows),
+        "queue_max": sum(int(row.get("queue_max") or 0) for row in rows),
+        "available_capacity": sum(
+            int(row.get("capacity") or 0)
+            for row in rows
+            if row.get("status") == "online"
+        ),
+        "available_queue_max": sum(
+            int(row.get("queue_max") or 0)
+            for row in rows
+            if row.get("status") == "online"
+        ),
+    }
+
+
+def get_private_agent_node_self():
+    from ai_session import _agent_pull_auth_context
+
+    auth_ctx = _agent_pull_auth_context()
+    if not auth_ctx.get("ok") or auth_ctx.get("kind") != "private":
+        return jsonify({"error": "unauthorized"}), 401
+    node_id = str(auth_ctx.get("node_id") or "")
+    owner_user_id = str(auth_ctx.get("owner_user_id") or "")
+    row = agent_node_registry.get_node(node_id)
+    if not row or row.get("visibility") != "private" or row.get("owner_user_id") != owner_user_id:
+        return jsonify({"error": "agent node not found"}), 404
+    probe = request.args.get("probe", "1").lower() not in {"0", "false", "no"}
+    rows = [_private_node_response(row, probe=probe)]
+    queued = _agent_pull_private_queue_depth(owner_user_id)
+    return jsonify({"nodes": rows, "summary": _private_nodes_summary(rows, queued)})
+
+
+@auth.require_auth
+def create_private_agent_join_token():
+    user_id = str(request.supabase_user.get("id") or "")
+    body = request.get_json(silent=True) or {}
+    try:
+        ttl_seconds = int(body.get("ttl_seconds") or body.get("expires_in_seconds") or 900)
+    except (TypeError, ValueError):
+        ttl_seconds = 900
+    ttl_seconds = max(60, min(_PRIVATE_JOIN_TOKEN_MAX_AGE_SECONDS, ttl_seconds))
+    jti = secrets.token_urlsafe(18)
+    token = _private_join_token_serializer().dumps(
+        {
+            "uid": user_id,
+            "jti": jti,
+            "iat": int(time.time()),
+            "scope": "private-agent-node-join",
+        },
+        salt=_PRIVATE_JOIN_TOKEN_SALT,
+    )
+    try:
+        get_redis().setex(_private_join_token_key(jti), ttl_seconds, user_id)
+    except Exception:
+        return jsonify({"error": "无法创建私有节点加入令牌"}), 500
+    backend_url = str(body.get("backend_url") or request.host_url.rstrip("/") or "").strip().rstrip("/")
+    node_id = _safe_node_id(
+        body.get("node_id") or f"private-agent-{int(time.time())}-{jti[:6]}"
+    )
+    providers = _safe_list(body.get("provider_ids") or body.get("providers") or "deepseek", limit=8) or ["deepseek"]
+    agents = _safe_list(body.get("agent_ids") or body.get("agents") or "claude", limit=8) or ["claude"]
+    image_mode = str(
+        body.get("image_mode")
+        or body.get("deploy_image_mode")
+        or body.get("deploy_mode")
+        or "pull"
+    ).strip().lower().replace("_", "-")
+    if image_mode not in {"pull", "build", "none", "local"}:
+        image_mode = "pull"
+    provider_args = " ".join(f"--provider {shlex.quote(item)}" for item in providers)
+    agent_args = " ".join(f"--agent {shlex.quote(item)}" for item in agents)
+    image_args = ""
+    if image_mode == "pull":
+        image_args = " --pull"
+    elif image_mode in {"build", "local"}:
+        image_args = " --build"
+    join_command = (
+        f"MYAPP_PRIVATE_AGENT_JOIN_TOKEN={shlex.quote(token)} "
+        f"myapp-ctl agent-node private join "
+        f"--backend {shlex.quote(backend_url)} "
+        f"--node-id {shlex.quote(node_id)} "
+        f"{provider_args} {agent_args}{image_args}"
+    )
+    return jsonify({
+        "ok": True,
+        "join_token": token,
+        "token_type": "private-agent-join",
+        "expires_in_seconds": ttl_seconds,
+        "image_mode": "build" if image_mode == "local" else image_mode,
+        "join_command": join_command,
+    })
+
+
+def create_private_agent_node():
+    user_id, _join_jti, error = _private_registration_identity()
+    if error:
+        body, status = error
+        return jsonify(body), status
+    if not user_id:
+        return jsonify({"error": "无法确认私有节点归属用户"}), 401
+    body = request.get_json(silent=True) or {}
+    public_key = str(body.get("public_key") or body.get("auth_public_key") or "").strip()
+    if "BEGIN PUBLIC KEY" not in public_key:
+        return jsonify({"error": "public_key is required"}), 400
+    node_id = _safe_node_id(body.get("node_id") or f"private-{user_id[:8]}-{int(time.time())}")
+    name = str(body.get("name") or node_id).strip()[:80]
+    try:
+        capacity = max(1, min(20, int(body.get("capacity") or 1)))
+    except (TypeError, ValueError):
+        capacity = 1
+    try:
+        queue_max = max(0, min(200, int(body.get("queue_max") if body.get("queue_max") is not None else capacity)))
+    except (TypeError, ValueError):
+        queue_max = capacity
+    provider_ids = _safe_list(body.get("provider_ids") or body.get("providers"))
+    agent_ids = _safe_list(body.get("agent_ids") or body.get("agents")) or ["claude"]
+    labels = _safe_list(body.get("labels"), limit=64)
+    if not any(label.startswith("name=") for label in labels):
+        labels.append(f"name={name}")
+    labels.extend(["visibility=private", "provider_mode=local", "mode=pull"])
+    auth_key_id = str(body.get("auth_key_id") or _public_key_id(public_key)).strip()[:128]
+    existing = agent_node_registry.get_node(node_id)
+    if existing and (existing.get("visibility") != "private" or existing.get("owner_user_id") != user_id):
+        return jsonify({"error": "node_id is already used"}), 409
+    row = agent_node_registry.upsert_node(
+        node_id=node_id,
+        url=f"pull://{node_id}",
+        capacity=capacity,
+        queue_max=queue_max,
+        labels=labels,
+        ttl_seconds=max(30, int(body.get("ttl_seconds") or 120)),
+        owner_user_id=user_id,
+        visibility="private",
+        auth_public_key=public_key,
+        auth_key_id=auth_key_id,
+        provider_mode="local",
+        provider_ids=provider_ids,
+        agent_ids=agent_ids,
+        touch_seen=False,
+    )
+    return jsonify({
+        "ok": True,
+        "owner_user_id": user_id,
+        "node": _private_node_response(row, probe=False),
+    })
+
+
+def _private_node_for_user(node_id: str, user_id: str) -> dict | None:
+    row = agent_node_registry.get_node(_safe_node_id(node_id))
+    if not row or row.get("visibility") != "private" or row.get("owner_user_id") != user_id:
+        return None
+    return row
+
+
+@auth.require_auth
+def delete_private_agent_node(node_id: str):
+    user_id = str(request.supabase_user.get("id") or "")
+    row = _private_node_for_user(node_id, user_id)
+    if not row:
+        return jsonify({"error": "agent node not found"}), 404
+    deleted = agent_node_registry.delete_node(_safe_node_id(node_id))
+    try:
+        get_redis().delete(_registry_key(node_id))
+    except Exception:
+        pass
+    return jsonify({"ok": True, "node_id": _safe_node_id(node_id), "deleted": deleted})
+
+
+@auth.require_auth
+def pause_private_agent_node(node_id: str):
+    user_id = str(request.supabase_user.get("id") or "")
+    row = _private_node_for_user(node_id, user_id)
+    if not row:
+        return jsonify({"error": "agent node not found"}), 404
+    body = request.get_json(silent=True) or {}
+    data = agent_node_registry.set_node_paused(_safe_node_id(node_id), paused=True, reason=str(body.get("reason") or "").strip())
+    return jsonify({"ok": True, "node": _private_node_response(data, probe=True)})
+
+
+@auth.require_auth
+def resume_private_agent_node(node_id: str):
+    user_id = str(request.supabase_user.get("id") or "")
+    row = _private_node_for_user(node_id, user_id)
+    if not row:
+        return jsonify({"error": "agent node not found"}), 404
+    data = agent_node_registry.set_node_paused(_safe_node_id(node_id), paused=False)
+    return jsonify({"ok": True, "node": _private_node_response(data, probe=True)})
+
+
+@auth.require_auth
+def set_private_agent_node_limits(node_id: str):
+    user_id = str(request.supabase_user.get("id") or "")
+    row = _private_node_for_user(node_id, user_id)
+    if not row:
+        return jsonify({"error": "agent node not found"}), 404
+    body = request.get_json(silent=True) or {}
+    try:
+        capacity = max(1, min(20, int(body.get("capacity") or row.get("capacity") or 1)))
+        queue_max = max(0, min(200, int(body.get("queue_max") if body.get("queue_max") is not None else row.get("queue_max") or capacity)))
+    except (TypeError, ValueError):
+        return jsonify({"error": "invalid capacity or queue_max"}), 400
+    agent_node_registry.upsert_node(
+        node_id=row["node_id"],
+        url=row["url"],
+        capacity=capacity,
+        queue_max=queue_max,
+        labels=row.get("labels") or [],
+        ttl_seconds=int(row.get("ttl_seconds") or 120),
+        owner_user_id=user_id,
+        visibility="private",
+        provider_mode="local",
+        touch_seen=False,
+    )
+    data = agent_node_registry.get_node(row["node_id"]) or row
+    return jsonify({"ok": True, "node": _private_node_response(data, probe=True)})
+
+
 def list_agent_nodes():
     if not _auth_ok():
         return jsonify({"error": "unauthorized"}), 401
@@ -358,7 +760,7 @@ def list_agent_nodes():
     rows.sort(key=lambda item: item.get("node_id", ""))
     queued = _agent_pull_queue_depth()
     for row in rows:
-        row.update(_with_queue_depth(row, queued))
+        row.update(_with_queue_depth(row, None if row.get("visibility") == "private" else queued))
     summary = {
         "total": len(rows),
         "online": sum(1 for row in rows if row.get("status") == "online"),

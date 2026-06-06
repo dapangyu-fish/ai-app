@@ -7,6 +7,7 @@ import 'designer_ball.dart' show AsrMode, AsrModePrefs;
 import 'default_startup_page.dart';
 import 'default_startup_prefs.dart';
 import 'hidden_env_entry.dart';
+import 'private_agent_nodes_page.dart';
 import '../i18n/framework_strings.dart';
 import '../i18n/language_switcher.dart';
 import '../im/im_cache_manage_entry.dart';
@@ -23,6 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
   AsrMode _asrMode = AsrMode.online;
   ThemeMode _themeMode = appThemeMode.value;
   String _selectedProvider = AiChatService.selectedProvider;
+  String _agentScope = AiChatService.selectedAgentScope;
   List<AiProvider> _providers = AiChatService.providers;
   List<AiAgent> _agents = AiChatService.agents;
   bool _loadingProviders = false;
@@ -50,6 +52,7 @@ class _SettingsPageState extends State<SettingsPage> {
       _asrMode = AsrModePrefs.notifier.value;
       _themeMode = appThemeMode.value;
       _selectedProvider = AiChatService.selectedProvider;
+      _agentScope = AiChatService.selectedAgentScope;
     });
   }
 
@@ -105,6 +108,29 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
+  Future<void> _selectAgentScope(String scope) async {
+    await AiChatService.setAgentScope(scope);
+    setState(() => _agentScope = AiChatService.selectedAgentScope);
+  }
+
+  String _privateAgentText({
+    required String zh,
+    required String en,
+    required String de,
+    required String es,
+  }) {
+    switch (Localizations.localeOf(context).languageCode) {
+      case 'en':
+        return en;
+      case 'de':
+        return de;
+      case 'es':
+        return es;
+      default:
+        return zh;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('settings');
@@ -132,6 +158,10 @@ class _SettingsPageState extends State<SettingsPage> {
             _buildSectionTitle(t.settingsAiProvider, cs),
             const SizedBox(height: 8.0),
             _buildProviderSelector(cs),
+            const SizedBox(height: 8.0),
+            _buildAgentScopeSelector(cs),
+            const SizedBox(height: 8.0),
+            _buildPrivateAgentNodeTile(cs),
             const SizedBox(height: 24.0),
             _buildSectionTitle(t.settingsSectionAsr, cs),
             const SizedBox(height: 8.0),
@@ -404,6 +434,115 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildAgentScopeSelector(ColorScheme cs) {
+    final labels = {
+      'public': _privateAgentText(
+        zh: '平台',
+        en: 'Platform',
+        de: 'Plattform',
+        es: 'Plataforma',
+      ),
+      'private': _privateAgentText(
+        zh: '私有',
+        en: 'Private',
+        de: 'Privat',
+        es: 'Privado',
+      ),
+      'auto': _privateAgentText(zh: '自动', en: 'Auto', de: 'Auto', es: 'Auto'),
+    };
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.hub_outlined, color: cs.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _privateAgentText(
+                      zh: 'Agent 调度',
+                      en: 'Agent routing',
+                      de: 'Agent-Routing',
+                      es: 'Enrutamiento de agent',
+                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<String>(
+                showSelectedIcon: false,
+                segments: labels.entries
+                    .map(
+                      (entry) => ButtonSegment<String>(
+                        value: entry.key,
+                        label: Text(
+                          entry.value,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+                selected: {_agentScope},
+                onSelectionChanged: (selected) {
+                  if (selected.isNotEmpty) {
+                    _selectAgentScope(selected.first);
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _privateAgentText(
+                zh: '平台使用官方 Agent；私有仅使用你的私有节点；自动优先私有，无可用节点时回落平台。',
+                en: 'Platform uses official agents. Private uses only your nodes. Auto prefers private and falls back to platform.',
+                de: 'Plattform nutzt offizielle Agents. Privat nutzt nur deine Nodes. Auto bevorzugt privat und faellt auf Plattform zurueck.',
+                es: 'Plataforma usa agents oficiales. Privado usa solo tus nodos. Auto prefiere privado y vuelve a plataforma.',
+              ),
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrivateAgentNodeTile(ColorScheme cs) {
+    return Card(
+      child: ListTile(
+        leading: Icon(Icons.private_connectivity_outlined, color: cs.primary),
+        title: Text(
+          _privateAgentText(
+            zh: '私有 Agent Node',
+            en: 'Private Agent Node',
+            de: 'Private Agent Node',
+            es: 'Agent Node privado',
+          ),
+        ),
+        subtitle: Text(
+          _privateAgentText(
+            zh: '查看你的私有节点，生成加入命令，暂停调度或调整容量',
+            en: 'View your private nodes, create join commands, pause routing, or adjust limits',
+            de: 'Private Nodes anzeigen, Join-Befehle erstellen, Routing pausieren oder Limits anpassen',
+            es: 'Ver tus nodos privados, crear comandos de union, pausar o ajustar limites',
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PrivateAgentNodesPage()),
+        ),
       ),
     );
   }

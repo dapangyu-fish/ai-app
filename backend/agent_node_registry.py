@@ -31,6 +31,13 @@ def ensure_agent_nodes_table() -> None:
                 build_commit TEXT NOT NULL DEFAULT '',
                 build_version TEXT NOT NULL DEFAULT '',
                 labels JSONB NOT NULL DEFAULT '[]'::jsonb,
+                owner_user_id TEXT NOT NULL DEFAULT '',
+                visibility TEXT NOT NULL DEFAULT 'public',
+                auth_public_key TEXT NOT NULL DEFAULT '',
+                auth_key_id TEXT NOT NULL DEFAULT '',
+                provider_mode TEXT NOT NULL DEFAULT '',
+                provider_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+                agent_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
                 last_seen_ms BIGINT NOT NULL DEFAULT 0,
                 ttl_seconds INTEGER NOT NULL DEFAULT 120,
                 paused BOOLEAN NOT NULL DEFAULT FALSE,
@@ -44,23 +51,35 @@ def ensure_agent_nodes_table() -> None:
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS queue_max INTEGER NOT NULL DEFAULT 0")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS build_commit TEXT NOT NULL DEFAULT ''")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS build_version TEXT NOT NULL DEFAULT ''")
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS owner_user_id TEXT NOT NULL DEFAULT ''")
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'public'")
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS auth_public_key TEXT NOT NULL DEFAULT ''")
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS auth_key_id TEXT NOT NULL DEFAULT ''")
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS provider_mode TEXT NOT NULL DEFAULT ''")
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS provider_ids JSONB NOT NULL DEFAULT '[]'::jsonb")
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS agent_ids JSONB NOT NULL DEFAULT '[]'::jsonb")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS paused BOOLEAN NOT NULL DEFAULT FALSE")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS pause_reason TEXT NOT NULL DEFAULT ''")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS paused_at_ms BIGINT NOT NULL DEFAULT 0")
+        db_execute("CREATE INDEX IF NOT EXISTS idx_agent_nodes_owner_visibility ON agent_nodes (owner_user_id, visibility)")
         _SCHEMA_READY = True
+
+
+def _json_list(value) -> list:
+    if isinstance(value, str):
+        try:
+            value = json.loads(value or "[]")
+        except json.JSONDecodeError:
+            value = []
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item or "").strip()]
 
 
 def _normalize_row(row: dict | None) -> dict | None:
     if not row:
         return None
-    labels = row.get("labels")
-    if isinstance(labels, str):
-        try:
-            labels = json.loads(labels or "[]")
-        except json.JSONDecodeError:
-            labels = []
-    if not isinstance(labels, list):
-        labels = []
+    labels = _json_list(row.get("labels"))
     label_map = {}
     for label in labels:
         if not isinstance(label, str) or "=" not in label:
@@ -75,6 +94,13 @@ def _normalize_row(row: dict | None) -> dict | None:
         "build_commit": row.get("build_commit") or label_map.get("build-commit", ""),
         "build_version": row.get("build_version") or label_map.get("build-version", ""),
         "labels": labels,
+        "owner_user_id": row.get("owner_user_id") or label_map.get("owner-user-id", ""),
+        "visibility": (row.get("visibility") or label_map.get("visibility", "public") or "public"),
+        "auth_public_key": row.get("auth_public_key") or "",
+        "auth_key_id": row.get("auth_key_id") or "",
+        "provider_mode": row.get("provider_mode") or label_map.get("provider-mode", ""),
+        "provider_ids": _json_list(row.get("provider_ids")),
+        "agent_ids": _json_list(row.get("agent_ids")),
         "last_seen": int(row.get("last_seen") or row.get("last_seen_ms") or 0),
         "ttl_seconds": int(row.get("ttl_seconds") or 120),
         "paused": bool(row.get("paused") or False),
@@ -93,17 +119,38 @@ def upsert_node(
     queue_max: int = 0,
     build_commit: str = "",
     build_version: str = "",
+    owner_user_id: str = "",
+    visibility: str = "public",
+    auth_public_key: str = "",
+    auth_key_id: str = "",
+    provider_mode: str = "",
+    provider_ids: list | None = None,
+    agent_ids: list | None = None,
+    touch_seen: bool = True,
 ) -> dict:
     ensure_agent_nodes_table()
-    now_ms = int(time.time() * 1000)
+    now_ms = int(time.time() * 1000) if touch_seen else 0
     labels_json = json.dumps(labels if isinstance(labels, list) else [], ensure_ascii=False)
     queue_max = max(0, int(queue_max or 0))
     build_commit = str(build_commit or "").strip()[:128]
     build_version = str(build_version or build_commit or "").strip()[:128]
+    owner_user_id = str(owner_user_id or "").strip()
+    visibility = str(visibility or "public").strip().lower()
+    if visibility not in {"public", "private"}:
+        visibility = "public"
+    auth_public_key = str(auth_public_key or "").strip()
+    auth_key_id = str(auth_key_id or "").strip()[:128]
+    provider_mode = str(provider_mode or "").strip().lower().replace("_", "-")
+    provider_ids = _json_list(provider_ids)
+    agent_ids = _json_list(agent_ids)
     db_execute(
         """
-        INSERT INTO agent_nodes (node_id, url, capacity, queue_max, build_commit, build_version, labels, last_seen_ms, ttl_seconds)
-        VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s)
+        INSERT INTO agent_nodes (
+            node_id, url, capacity, queue_max, build_commit, build_version, labels,
+            owner_user_id, visibility, auth_public_key, auth_key_id, provider_mode,
+            provider_ids, agent_ids, last_seen_ms, ttl_seconds
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s)
         ON CONFLICT (node_id) DO UPDATE SET
             url = EXCLUDED.url,
             capacity = EXCLUDED.capacity,
@@ -111,11 +158,35 @@ def upsert_node(
             build_commit = COALESCE(NULLIF(EXCLUDED.build_commit, ''), agent_nodes.build_commit),
             build_version = COALESCE(NULLIF(EXCLUDED.build_version, ''), agent_nodes.build_version),
             labels = EXCLUDED.labels,
-            last_seen_ms = EXCLUDED.last_seen_ms,
+            owner_user_id = COALESCE(NULLIF(EXCLUDED.owner_user_id, ''), agent_nodes.owner_user_id),
+            visibility = COALESCE(NULLIF(EXCLUDED.visibility, ''), agent_nodes.visibility),
+            auth_public_key = COALESCE(NULLIF(EXCLUDED.auth_public_key, ''), agent_nodes.auth_public_key),
+            auth_key_id = COALESCE(NULLIF(EXCLUDED.auth_key_id, ''), agent_nodes.auth_key_id),
+            provider_mode = COALESCE(NULLIF(EXCLUDED.provider_mode, ''), agent_nodes.provider_mode),
+            provider_ids = CASE WHEN EXCLUDED.provider_ids = '[]'::jsonb THEN agent_nodes.provider_ids ELSE EXCLUDED.provider_ids END,
+            agent_ids = CASE WHEN EXCLUDED.agent_ids = '[]'::jsonb THEN agent_nodes.agent_ids ELSE EXCLUDED.agent_ids END,
+            last_seen_ms = CASE WHEN EXCLUDED.last_seen_ms > 0 THEN EXCLUDED.last_seen_ms ELSE agent_nodes.last_seen_ms END,
             ttl_seconds = EXCLUDED.ttl_seconds,
             updated_at = NOW()
         """,
-        [node_id, url, capacity, queue_max, build_commit, build_version, labels_json, now_ms, ttl_seconds],
+        [
+            node_id,
+            url,
+            capacity,
+            queue_max,
+            build_commit,
+            build_version,
+            labels_json,
+            owner_user_id,
+            visibility,
+            auth_public_key,
+            auth_key_id,
+            provider_mode,
+            json.dumps(provider_ids, ensure_ascii=False),
+            json.dumps(agent_ids, ensure_ascii=False),
+            now_ms,
+            ttl_seconds,
+        ],
     )
     return {
         "node_id": node_id,
@@ -125,6 +196,13 @@ def upsert_node(
         "build_commit": build_commit,
         "build_version": build_version,
         "labels": labels if isinstance(labels, list) else [],
+        "owner_user_id": owner_user_id,
+        "visibility": visibility,
+        "auth_public_key": auth_public_key,
+        "auth_key_id": auth_key_id,
+        "provider_mode": provider_mode,
+        "provider_ids": provider_ids,
+        "agent_ids": agent_ids,
         "last_seen": now_ms,
         "ttl_seconds": ttl_seconds,
     }
@@ -135,6 +213,8 @@ def list_nodes() -> list[dict]:
     rows = db_query(
         """
         SELECT node_id, url, capacity, queue_max, build_commit, build_version, labels::text AS labels,
+               owner_user_id, visibility, auth_public_key, auth_key_id, provider_mode,
+               provider_ids::text AS provider_ids, agent_ids::text AS agent_ids,
                last_seen_ms AS last_seen, ttl_seconds,
                paused, pause_reason, paused_at_ms AS paused_at
         FROM agent_nodes
@@ -155,6 +235,8 @@ def get_node(node_id: str) -> dict | None:
     row = db_query(
         """
         SELECT node_id, url, capacity, queue_max, build_commit, build_version, labels::text AS labels,
+               owner_user_id, visibility, auth_public_key, auth_key_id, provider_mode,
+               provider_ids::text AS provider_ids, agent_ids::text AS agent_ids,
                last_seen_ms AS last_seen, ttl_seconds,
                paused, pause_reason, paused_at_ms AS paused_at
         FROM agent_nodes
