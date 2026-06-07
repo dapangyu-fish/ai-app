@@ -9,12 +9,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 术语 | 含义 | 代码范围 |
 |------|------|----------|
 | **客户端需求** | 原生 Flutter 客户端，即 JSON-DSL 框架本身的需求（登录、悬浮球、UI 框架等） | `lib/main.dart`, `lib/auth/`, `lib/designer/`, `lib/json_ui/` |
-| **后端需求** | Python Flask 服务的需求（鉴权代理、AI 对话、市场接口等） | `tools/ai_server.py` |
+| **后端需求** | Python Flask 服务、AI 队列、agent-node、Registry、部署控制面等需求 | `backend/`, `deploy/production/`, `scripts/myapp_ctl.py` |
 | **JSON-APP 需求** | 基于 JSON-DSL 框架开发的、通过 JSON 配置下发的应用 | `templates/*.json`, `JSON-DSL.md` |
 
 ## Project Overview
 
-A Flutter **Server-Driven UI** low-code engine that renders UI and executes business logic from JSON configuration files (DSL v3.2). Users pick a JSON file at runtime; the app interprets it to build screens, handle interactions, and manage state — no recompilation needed. Targets iOS, Android, Web, macOS, Linux, and Windows.
+A Flutter **Server-Driven UI** platform that renders UI and executes business logic from JSON configuration files (DSL v3.3). Users can run published JSON Apps, load local JSON for debugging, or ask AI to generate JSON Apps that run inside the precompiled client capability boundary. The backend stack provides auth, IM, Registry, object storage, AI generation, resumable SSE, and isolated agent-node execution. Targets iOS, Android, Web, macOS, Linux, and Windows.
 
 ## Framework Stability Principle
 
@@ -39,8 +39,11 @@ flutter run -d chrome        # Run on web
 flutter analyze              # Lint (uses flutter_lints via analysis_options.yaml)
 flutter test                 # Run all tests
 flutter test test/widget_test.dart   # Run a single test file
-python3 tools/ai_server.py   # 启动 Flask 后端（鉴权/AI对话/市场，端口 5566）
-python3 tools/video_server.py --dir ~/Movies  # 启动本地视频流媒体服务器
+python3 backend/validate_json_app.py templates/<app>.json
+python3 -m py_compile backend/app.py backend/claude_chat.py backend/ai_session.py
+./deploy/production/install_ctl.sh
+myapp-ctl setup --host <public-host> --data-root /mnt/myapp
+myapp-ctl deploy --build
 ```
 
 ## Architecture
@@ -101,56 +104,48 @@ Riverpod `ChangeNotifierProvider<JsonInterpreter>`. The interpreter calls `notif
 3. The interpreter's `buildWidget` → `applyPosition` pipeline handles positioning automatically
 4. Update `JSON-DSL.md` widget type table
 
-## MinIO 对象存储操作
+## Object Storage
 
-服务器上的 MinIO 用于存储模型文件、JSON-APP 等静态资源。
+MyApp uses object storage for JSON Apps, components, generated temporary JSON,
+media, APK releases, model files, and asset packs. The self-hosted stack starts
+App MinIO; production deployments may front it with an OSS/domain layer.
 
-### 连接信息
+Rules:
 
-- 服务器内网地址: `127.0.0.1:19000`（仅服务器本地访问）
-- 公网地址: `https://myapp-oss-endpoint.dapangyu.work`
-- Access Key / Secret Key: 见宿主机 `/etc/myapp/secrets.d/backend.env`
-  中的 `APP_MINIO_ACCESS_KEY` / `APP_MINIO_SECRET_KEY`，或用
-  `myapp-ctl secret get backend <KEY> --show` 查看
-- Bucket 列表: `json-app`、`json-component`、`models`、`ai-chat-temp`
+1. Do not commit bucket credentials, signed URLs, or host-local env files.
+2. Read credentials only on the deployment host through `myapp-ctl secret`.
+3. JSON Apps should reference asset manifest URLs or public object URLs, never
+   host-local filesystem paths.
+4. Large model/media uploads should store individual runtime files, not
+   compressed archives that clients cannot consume directly.
 
-> ⚠️ git 历史里曾出现过的老 key（`m3wZkIA5...` / `m9M7M70F...`）只对老机 `app-backend.dapangyu.work` 有效，老机下线后即作废。新机使用全新轮换 key。
-
-### 上传文件到 MinIO
-
-通过 SSH 登录服务器，使用 Python minio SDK 上传：
+Host-local inspection:
 
 ```bash
-ssh root@myapp-backend.dapangyu.work
+myapp-ctl secret get backend APP_MINIO_ACCESS_KEY --show
+myapp-ctl secret get backend APP_MINIO_SECRET_KEY --show
+myapp-ctl status app-minio
+myapp-ctl log app-minio -n 120
+```
 
-# 从 myapp-ctl 管理的 env 读取 key（避免明文写在脚本里）
+Generic upload pattern from a deployment host:
+
+```bash
 set -a && source /etc/myapp/secrets.d/backend.env && set +a
-python3 << EOF
+python3 <<'PY'
 from minio import Minio
 import os
 
-c = Minio('127.0.0.1:9000',
-          access_key=os.environ['APP_MINIO_ACCESS_KEY'],
-          secret_key=os.environ['APP_MINIO_SECRET_KEY'],
-          secure=False)
+client = Minio(
+    os.environ.get("APP_MINIO_ENDPOINT", "app-minio:9000"),
+    access_key=os.environ["APP_MINIO_ACCESS_KEY"],
+    secret_key=os.environ["APP_MINIO_SECRET_KEY"],
+    secure=os.environ.get("APP_MINIO_SECURE", "0") == "1",
+)
 
-# 上传单个文件
-c.fput_object('models', 'sherpa-onnx/xxx/model.onnx', '/本地路径/model.onnx')
-
-# 列出 bucket 内容
-for obj in c.list_objects('models', recursive=True):
-    print(f'{obj.object_name}  {obj.size/1048576:.1f}MB')
-EOF
+client.fput_object("models", "path/in/bucket/file.onnx", "/local/path/file.onnx")
+PY
 ```
-
-### 上传大文件（如 ASR 模型）的标准流程
-
-1. 先将文件下载到服务器 `/mnt/storage00/`（服务器带宽大，比本地快）
-2. 如果是压缩包，在服务器上解压（`tar xjf xxx.tar.bz2 --exclude='test_wavs'`）
-3. SSH 到服务器，用 minio SDK 将解压后的**单个文件**逐个上传到对应 bucket 和路径
-4. 客户端代码按单个文件从 `https://myapp-oss-endpoint.dapangyu.work/<bucket>/<path>` 下载
-
-**注意**: 不要上传压缩包本身，客户端是按单个文件下载的。上传前先看客户端代码确认需要哪些文件和目录结构。
 
 ## 发布 JSON-APP / 组件到市场
 

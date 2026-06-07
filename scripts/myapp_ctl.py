@@ -626,7 +626,7 @@ def _default_cfg() -> dict:
     return {
         "paths": {
             "root": "/opt/myapp",
-            "source": "/opt/myapp/current-agent-control-plane",
+            "source": "/opt/myapp/current",
             "data_root": DEFAULT_DATA_ROOT,
             "state": f"{DEFAULT_DATA_ROOT}/state",
             "logs": f"{DEFAULT_DATA_ROOT}/logs",
@@ -660,7 +660,7 @@ def _apply_data_root_to_cfg(cfg: dict, data_root: Path) -> dict:
     paths = cfg.setdefault("paths", {})
     paths["data_root"] = root
     paths.setdefault("root", "/opt/myapp")
-    paths.setdefault("source", "/opt/myapp/current-agent-control-plane")
+    paths.setdefault("source", "/opt/myapp/current")
     paths["state"] = str(data_root / "state")
     paths["logs"] = str(data_root / "logs")
     paths.setdefault("secrets_dir", "/etc/myapp/secrets.d")
@@ -1210,7 +1210,7 @@ def _source_dir() -> Path:
         os.environ.get("MYAPP_SOURCE_DIR"),
         cfg.get("paths", {}).get("source"),
         str(Path(cfg.get("paths", {}).get("root", "/opt/myapp")) / "current"),
-        "/opt/myapp/current-agent-control-plane",
+        "/opt/myapp/current",
         os.getcwd(),
     ]
     for raw in candidates:
@@ -5160,7 +5160,7 @@ def build_parser() -> argparse.ArgumentParser:
     setup.add_argument("--no-push", action="store_true", help=_tx("skip optional APNs/FCM/GeTui setup", zh="跳过可选 APNs/FCM/个推配置", de="optionales APNs/FCM/GeTui-Setup ueberspringen", es="omitir setup opcional de APNs/FCM/GeTui"))
     setup.set_defaults(func=cmd_setup)
     update = sub.add_parser("update", help=_tx("pull the source repository and refresh myapp-ctl", zh="拉取源码仓库并刷新 myapp-ctl", de="Quellrepository aktualisieren und myapp-ctl erneuern", es="actualizar repositorio fuente y refrescar myapp-ctl"), usage=_tx("myapp-ctl update [options]", zh="myapp-ctl update [选项]", de="myapp-ctl update [Optionen]", es="myapp-ctl update [opciones]"))
-    update.add_argument("--source", help=_tx("source checkout path; default reads ctl config or /opt/myapp/current-agent-control-plane", zh="源码检出路径；默认读取 ctl 配置或 /opt/myapp/current-agent-control-plane", de="Pfad zum Source-Checkout; Standard aus ctl-Konfiguration oder /opt/myapp/current-agent-control-plane", es="ruta del checkout fuente; por defecto lee config ctl o /opt/myapp/current-agent-control-plane"))
+    update.add_argument("--source", help=_tx("source checkout path; default reads ctl config or /opt/myapp/current", zh="源码检出路径；默认读取 ctl 配置或 /opt/myapp/current", de="Pfad zum Source-Checkout; Standard aus ctl-Konfiguration oder /opt/myapp/current", es="ruta del checkout fuente; por defecto lee config ctl o /opt/myapp/current"))
     update.add_argument("--no-pull", action="store_true", help=_tx("skip git pull and only reinstall from the local checkout", zh="跳过 git pull，仅从本地检出重新安装", de="git pull ueberspringen und nur lokal neu installieren", es="omitir git pull y reinstalar solo desde checkout local"))
     update.set_defaults(func=cmd_update)
     uninstall = sub.add_parser("uninstall", help=_tx("stop and remove deployed services", zh="停止并移除已部署服务", de="deployte Dienste stoppen und entfernen", es="detener y eliminar servicios desplegados"), usage=_tx("myapp-ctl uninstall --yes [options]", zh="myapp-ctl uninstall --yes [选项]", de="myapp-ctl uninstall --yes [Optionen]", es="myapp-ctl uninstall --yes [opciones]"))

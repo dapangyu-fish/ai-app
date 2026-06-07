@@ -36,25 +36,30 @@ The flagship use case: **a user opens the app → chats with AI → AI returns a
 
 ## Quickstart
 
-### Just run the client against the hosted stack (60 seconds)
+### Use the hosted clients
 
-If you only want to *use* the app and play with AI-generated mini-apps:
+If you only want to try MyApp and run AI-generated JSON Apps:
 
-1. Install MyApp from [App Store](#) / [Google Play](#) *(coming soon)*
-2. Sign up with email
-3. Tap the floating ball → speak / type what you want
-4. Wait for AI to generate, then it auto-runs
+1. Open the hosted Web client: <https://myapp-web.dapangyu.work/>
+2. Or install iOS TestFlight Public Group 1: <https://testflight.apple.com/join/3Fk5Exnn>
+3. Or download the Android APK:
+   <https://myapp-oss-endpoint.dapangyu.work/myapp-releases/android/apk/latest.apk>
+4. Continue as guest to browse/run public apps, or sign in to generate apps,
+   use IM/profile features, publish packages, and manage private Agent Nodes.
+
+The full product usage guide is [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 
 ### Build the client from source (5 minutes)
 
 ```bash
-git clone https://github.com/<your-org>/myapp.git
-cd myapp
+git clone <this-repository-url> ai-app
+cd ai-app
 flutter pub get
 flutter run -d <ios|android|chrome>
 ```
 
-The default config points at the public hosted backend, so you can sign up and use it immediately.
+The default config points at the hosted backend. To connect a private backend,
+import the environment JSON printed by `myapp-ctl client-env`.
 
 For Flutter Web IM support, the checked-in `web/openIM.wasm`, `web/sql-wasm.wasm`,
 workers, and bridge bundle are runtime assets copied from the pinned
@@ -78,10 +83,10 @@ assets are checked first and regenerated when needed:
 ### Self-host the full backend stack (20 minutes)
 
 ```bash
-cd deploy/production
-./install_ctl.sh
-myapp-ctl setup --host <public-ip-or-domain>
+./deploy/production/install_ctl.sh
+myapp-ctl setup --host <public-ip-or-domain> --data-root /mnt/myapp
 myapp-ctl deploy --pull
+myapp-ctl client-env --terminal-qr
 ```
 
 Run these commands as root, or with equivalent Docker and `/etc/myapp` write
@@ -90,10 +95,9 @@ permissions. The full deployment and `myapp-ctl` command reference is
 
 The first interactive `myapp-ctl` run asks for a CLI language once (`zh`, `en`,
 `de`, `es`); later changes use `myapp-ctl config lang <lang>`. The setup wizard
-asks for AI provider credentials and optional
-ASR, SMTP email, APNs, FCM, and GeTui config. A full deploy prints the client
-environment JSON and QR, and can create/update an interactive
-`test@example.com` test account; rerun
+asks for AI provider credentials and optional ASR, SMTP email, APNs, FCM, and
+GeTui config. A full deploy prints the client environment JSON and QR, and can
+create/update an interactive `test@example.com` test account; rerun
 `myapp-ctl client-env --terminal-qr` to show it again.
 
 Update the installed control CLI and production deploy files from the Git
@@ -119,6 +123,15 @@ After deploy, the client's built-in **Environment Switcher** (tap brand 7 times 
 
 See [`deploy/production/README.md`](deploy/production/README.md) for the
 authoritative deployment guide.
+
+### Documentation map
+
+| Need | Document |
+|---|---|
+| Use MyApp, generate apps, connect a private backend, debug Web appid/local JSON | [docs/USER_GUIDE.md](docs/USER_GUIDE.md) |
+| Install, update, operate, back up, restore, or uninstall the backend stack | [deploy/production/README.md](deploy/production/README.md) |
+| Understand the current backend/agent-node architecture | [backend/ARCHITECTURE.md](backend/ARCHITECTURE.md) |
+| Understand App Store review/runtime boundaries | [docs/APP_STORE_COMPLIANCE.md](docs/APP_STORE_COMPLIANCE.md) |
 
 ---
 

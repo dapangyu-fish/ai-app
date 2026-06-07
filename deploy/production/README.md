@@ -6,6 +6,49 @@ from the documentation.
 
 The supported entrypoint is `myapp-ctl`, installed from this directory.
 
+## Read This First
+
+Use this document for backend hosts only. Client usage is documented in
+[../../docs/USER_GUIDE.md](../../docs/USER_GUIDE.md), and runtime architecture
+is documented in [../../backend/ARCHITECTURE.md](../../backend/ARCHITECTURE.md).
+
+Recommended paths:
+
+| Goal | Path |
+|---|---|
+| Bring up a new all-in-one test or production host | `install_ctl.sh` -> `myapp-ctl setup` -> `myapp-ctl deploy --build|--pull` |
+| Update backend code only | `myapp-ctl update` -> `myapp-ctl deploy backend ai-worker --build --no-setup --no-test-user` |
+| Update agent execution code | `myapp-ctl update` -> `myapp-ctl deploy agent-node agent-runtime --build --no-setup --no-test-user` |
+| Add a second public agent host | Master runs `agent-node add`; new host runs the printed `agent-node join` command |
+| Add a user-private agent host | App creates a one-time join token; private host runs `agent-node private join` |
+| Move/recover a host with existing data | Restore `/etc/myapp` or import `<data-root>/myapp-config.json`, then redeploy |
+
+## Prerequisites
+
+Host requirements:
+
+- Ubuntu 24.04 or a compatible Linux host.
+- Root access, or equivalent Docker and `/etc/myapp` write privileges.
+- Docker Engine with the Compose plugin.
+- Git if deploying from source with `--build`.
+- Outbound HTTPS access for image pulls, Git pulls, and AI provider calls.
+- Enough disk under the selected data root. `/mnt/myapp` is the default and is
+  intentionally outside `/etc/myapp`.
+
+Network expectations for an all-in-one backend:
+
+| Port | Service | External use |
+|---|---|---|
+| `5566` | Backend API | Required by clients and pull-mode agent hosts |
+| `5000` | Registry | Required by clients unless fronted/proxied |
+| `3254` | Config Center | Required by clients |
+| OpenIM HTTP/WS ports | OpenIM | Required for IM on mobile/Web |
+| `5590` | Agent Node | Local/internal in pull mode; do not expose unless using direct mode |
+
+If a reverse proxy or domain layer is used, point clients at the public HTTPS
+URLs through `myapp-ctl domain set ...` or by generating the correct
+`client-env` payload.
+
 ## What It Deploys
 
 `myapp-ctl` manages one single-host stack:
@@ -45,7 +88,7 @@ The runtime image includes the source needed for JSON-DSL inspection:
 `JSON-DSL.md`, and Flutter metadata. It does not include `.git`, build outputs,
 website sources, or host-local secrets.
 
-## First Install
+## First Install From Source
 
 Start from a source checkout on the host:
 
@@ -71,7 +114,8 @@ Run setup:
 myapp-ctl setup --host <public-ip-or-domain> --data-root /mnt/myapp
 ```
 
-Setup generates local stack secrets, then asks for human-provided values:
+Setup is safe to rerun. It generates local stack secrets when missing, preserves
+existing values by default, and asks for human-provided values:
 
 - AI providers: DeepSeek, MiniMax, or custom Anthropic-compatible providers
 - Optional ASR: ByteDance/Doubao speech recognition
@@ -81,6 +125,16 @@ Setup generates local stack secrets, then asks for human-provided values:
 AI provider config is required for app generation. ASR, email, and push are
 optional; skipping them only disables those channels.
 
+Provider setup behavior:
+
+- Built-in DeepSeek and MiniMax prompts ask for the Anthropic-compatible values
+  needed by Claude Code.
+- Custom providers ask for each `ANTHROPIC_*` and `CLAUDE_CODE_*` value.
+- The provider can also advertise supported agents, for example `claude` only
+  or `claude,codex`.
+- Provider keys are written only to host-local env files; they must never be
+  committed to Git.
+
 For APNs and FCM, either paste the secret content or enter a server-local file
 path such as `/etc/apns/AuthKey_8NM9U7CJCJ.p8`. `myapp-ctl` copies files into
 `/etc/myapp/secrets.d/files/` and writes container-visible paths into `push.env`.
@@ -89,6 +143,13 @@ Inspect configured keys without revealing values:
 
 ```bash
 myapp-ctl secret ls
+```
+
+Reveal one value only when operating on the host:
+
+```bash
+myapp-ctl secret get user-center USER_CENTER_ADMIN_USERNAME --show
+myapp-ctl secret get user-center USER_CENTER_ADMIN_PASSWORD --show
 ```
 
 ## Full Deploy
@@ -145,6 +206,31 @@ myapp-ctl client-env --host <public-ip-or-domain> --name "MyApp Test"
 myapp-ctl client-env --host <public-ip-or-domain> --terminal-qr
 cat /mnt/myapp/state/client-environment.json
 ```
+
+The client import JSON is the supported way to connect Web/iOS/Android clients
+to this backend. Do not hand-edit client constants for normal environment
+switching.
+
+## Source Build vs Image Pull
+
+`--build` and `--pull` are deliberately explicit:
+
+| Mode | Use when | Behavior |
+|---|---|---|
+| `--build` | Development/test host or source-controlled production host | Builds images from the checkout recorded in `/etc/myapp/ctl.json` |
+| `--pull` | Image-based production host | Pulls configured images and starts containers |
+| no flag | Component already has an image locally | Starts/restarts without building or pulling |
+
+Refresh the installed control CLI and compose definitions before routine
+updates:
+
+```bash
+myapp-ctl update
+```
+
+`myapp-ctl update` can pull the recorded source checkout unless `--no-pull` is
+passed, then reruns `install_ctl.sh` so the installed CLI and service inventory
+match the branch.
 
 ## Routine Updates
 
@@ -313,7 +399,7 @@ myapp-ctl agent-node ls [--namespace public|all|<user-id>] [--json] [--no-probe]
 myapp-ctl agent-node status [node-id] [--namespace public|all|<user-id>] [--json] [--no-probe]
 myapp-ctl agent-node add --backend <url> --host <host> --node-id <id> --name <name> [--pull|--build]
 myapp-ctl agent-node join --backend <url> --node-id <id> --name <name> --agent-token <token> --registration-token <token>
-myapp-ctl agent-node private join --backend <url> --auth-token <user-token> --node-id <id> --name <name>
+MYAPP_PRIVATE_AGENT_JOIN_TOKEN=<token> myapp-ctl agent-node private join --backend <url> --node-id <id> --name <name>
 myapp-ctl agent-node pause [node-id] [--reason <text>]
 myapp-ctl agent-node resume [node-id]
 myapp-ctl agent-node limits --capacity <n> --queue-max <n> [--force]
@@ -358,6 +444,14 @@ from the same local state.
 
 Persistent service data is bind-mounted from the data root. Docker named volumes
 are not used for MyApp databases or object stores.
+
+Operational rule:
+
+- `myapp-ctl uninstall --yes --purge` removes containers and `/etc/myapp`
+  runtime/config files, but does not remove the data root.
+- If `<data-root>/myapp-config.json` and service data directories still exist,
+  a host can be reconstructed from the same data root.
+- Destroying data is always a separate explicit manual `rm -rf <data-root>`.
 
 Important paths:
 

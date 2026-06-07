@@ -35,7 +35,9 @@ type Page = 'home' | 'docs';
 const WEB_APP_URL = 'https://myapp-web.dapangyu.work/';
 const TESTFLIGHT_URL = 'https://testflight.apple.com/join/3Fk5Exnn';
 const APK_URL = 'https://myapp-oss-endpoint.dapangyu.work/myapp-releases/android/apk/latest.apk';
-const GITHUB_URL = 'https://github.com/dapangyu-fish/ai-app';
+const GITHUB_URL = '';
+const GITHUB_PUBLIC = GITHUB_URL.length > 0;
+const REVIEW_BOUNDARY_URL = '/docs#runtime-boundary';
 
 const languageOptions: Array<{ key: Lang; label: string; flag: string }> = [
   { key: 'zh', label: '中文', flag: '🇨🇳' },
@@ -77,7 +79,7 @@ const copy = {
     docsLinks: [
       ['部署文档', '从 myapp-ctl 部署到客户端切换环境'],
       ['架构图', '理解运行时、AI Worker 与 Registry'],
-      ['GitHub', '查看仓库、部署脚本和合规边界'],
+      ['源码开放计划', '当前先看站内部署和合规边界，GitHub 公开后补链接'],
     ],
     videosTitle: '真实生成案例',
     videosSubtitle: '展示 AI 可以生成的不同应用形态：工具、小游戏和社区页面，而不是同一套界面的换壳。',
@@ -156,7 +158,7 @@ const copy = {
     docsLinks: [
       ['Deployment docs', 'Deploy backend with myapp-ctl, then switch client environment'],
       ['Architecture diagram', 'Runtime, AI Worker and Registry in one view'],
-      ['GitHub', 'Inspect repo, scripts and review boundary'],
+      ['Source availability', 'Use the docs now; GitHub link will be enabled when the repo is public'],
     ],
     videosTitle: 'Generated app examples',
     videosSubtitle: 'Three different app shapes show tools, mini-games and community screens instead of one repeated shell.',
@@ -427,10 +429,17 @@ function ArchitectureDiagram({ lang }: { lang: Lang }) {
           <p className="eyebrow">{zh ? '系统架构' : 'System architecture'}</p>
           <h3>{zh ? '客户端解释 JSON，后端负责生成、分发和恢复任务' : 'Clients interpret JSON; backend generates, distributes and resumes work'}</h3>
         </div>
-        <a className="inlineLink" href={GITHUB_URL} target="_blank" rel="noreferrer">
-          <Github size={16} />
-          GitHub
-        </a>
+        {GITHUB_PUBLIC ? (
+          <a className="inlineLink" href={GITHUB_URL} target="_blank" rel="noreferrer">
+            <Github size={16} />
+            GitHub
+          </a>
+        ) : (
+          <span className="inlineLink disabledLink">
+            <Github size={16} />
+            {zh ? 'GitHub 即将公开' : 'GitHub coming soon'}
+          </span>
+        )}
       </div>
       <div className="archDiagram" aria-label={zh ? 'MyApp 系统架构图' : 'MyApp system architecture diagram'}>
         {groups.map((group, index) => {
@@ -660,10 +669,17 @@ function DocsPage({ lang }: { lang: Lang }) {
             <h1>{docs.title}</h1>
             <p className="lead">{docs.subtitle}</p>
             <div className="actions">
-              <a className="button primary" href={GITHUB_URL} target="_blank" rel="noreferrer">
-                <Github size={17} />
-                GitHub
-              </a>
+              {GITHUB_PUBLIC ? (
+                <a className="button primary" href={GITHUB_URL} target="_blank" rel="noreferrer">
+                  <Github size={17} />
+                  GitHub
+                </a>
+              ) : (
+                <span className="button secondary unavailable">
+                  <Github size={17} />
+                  {zh ? 'GitHub 即将公开' : 'GitHub coming soon'}
+                </span>
+              )}
               <a className="button secondary" href={WEB_APP_URL} target="_blank" rel="noreferrer">
                 <Play size={17} />
                 {zh ? '打开 Web 版' : 'Open Web app'}
@@ -672,7 +688,7 @@ function DocsPage({ lang }: { lang: Lang }) {
           </div>
           <TerminalBox
             lines={[
-              '$ git clone https://github.com/dapangyu-fish/ai-app.git',
+              '$ git clone <repository-url> ai-app',
               '$ cd ai-app',
               '$ ./deploy/production/install_ctl.sh',
               '$ myapp-ctl setup --host <public-host> --data-root /mnt/myapp',
@@ -732,7 +748,7 @@ function DocsPage({ lang }: { lang: Lang }) {
                   <h3>{zh ? '全新安装' : 'Fresh install'}</h3>
                   <TerminalBox
                     lines={[
-                      '$ git clone https://github.com/dapangyu-fish/ai-app.git',
+                      '$ git clone <repository-url> ai-app',
                       '$ cd ai-app',
                       '$ ./deploy/production/install_ctl.sh',
                       `$ myapp-ctl config lang ${cliLang}`,
@@ -871,14 +887,16 @@ function DocsPage({ lang }: { lang: Lang }) {
                     {(zh
                       ? [
                           '登录 App，打开设置里的 Private Agent Node 页面。',
-                          '选择节点名称、provider、agent 和镜像模式，复制 join command。',
+                          '在设置里确认当前 provider / agent 和调度模式，然后创建加入命令。',
+                          '输入节点名称并复制 join command。',
                           '在自己的机器上安装 myapp-ctl，执行 join command。',
                           '按提示输入本节点自己的 DeepSeek / MiniMax / 自定义 provider 配置。',
                           '回到 App，把 Agent 调度切到 private，只使用自己的节点。',
                         ]
                       : [
                           'Sign in to the app and open Private Agent Node in settings.',
-                          'Choose node name, provider, agent and image mode, then copy the join command.',
+                          'Confirm the current provider / agent and routing mode in settings, then create a join command.',
+                          'Enter a node name and copy the join command.',
                           'Install myapp-ctl on your own host and run the join command.',
                           'Enter this node’s own DeepSeek / MiniMax / custom provider configuration.',
                           'Switch Agent routing to private in the app; only your nodes are used.',
@@ -958,7 +976,7 @@ function DocsPage({ lang }: { lang: Lang }) {
                     ]}
                   />
                 </div>
-                <div>
+                <div id="runtime-boundary">
                   <h2>{docs.configTitle}</h2>
                   <p>{docs.configBody}</p>
                   <TerminalBox
@@ -1003,7 +1021,7 @@ function App() {
       : [
           [docsLabel, lang === 'de' ? 'Backend starten und Client verbinden' : 'Desplegar backend y conectar cliente'],
           [lang === 'de' ? 'Architekturdiagramm' : 'Diagrama de arquitectura', lang === 'de' ? 'Runtime, Worker und Registry' : 'Runtime, Worker y Registry'],
-          ['GitHub', lang === 'de' ? 'Repository und Skripte ansehen' : 'Ver repositorio y scripts'],
+          [lang === 'de' ? 'Quellcode' : 'Código fuente', lang === 'de' ? 'Docs jetzt, GitHub nach Veröffentlichung' : 'Docs ahora, GitHub cuando sea público'],
         ];
   const showcaseCards = zh
     ? [
@@ -1096,11 +1114,17 @@ function App() {
     requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' }));
   }
 
-  function goDocs(event: ReactMouseEvent<HTMLAnchorElement>) {
+  function goDocs(event: ReactMouseEvent<HTMLAnchorElement>, hash = '#docs') {
     event.preventDefault();
     setPage('docs');
-    window.history.pushState(null, '', '/docs');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.history.pushState(null, '', hash === '#docs' ? '/docs' : `/docs${hash}`);
+    requestAnimationFrame(() => {
+      if (hash === '#docs') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
   }
 
   return (
@@ -1135,10 +1159,17 @@ function App() {
               <BookOpen size={17} />
               <span>{docsLabel}</span>
             </a>
-            <a className="navIconLink" href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="GitHub">
-              <Github size={17} />
-              <span>GitHub</span>
-            </a>
+            {GITHUB_PUBLIC ? (
+              <a className="navIconLink" href={GITHUB_URL} target="_blank" rel="noreferrer" aria-label="GitHub">
+                <Github size={17} />
+                <span>GitHub</span>
+              </a>
+            ) : (
+              <span className="navIconLink disabledLink" aria-label={zh ? 'GitHub 即将公开' : 'GitHub coming soon'}>
+                <Github size={17} />
+                <span>{zh ? 'GitHub 即将公开' : 'GitHub soon'}</span>
+              </span>
+            )}
             <label className="languageSelect" aria-label="Language">
               <Globe2 size={16} />
               <span>{activeLanguage.flag}</span>
@@ -1190,11 +1221,18 @@ function App() {
                 <BookOpen size={15} />
                 {docsLabel}
               </a>
-              <a href={GITHUB_URL} target="_blank" rel="noreferrer">
-                <Github size={15} />
-                GitHub
-              </a>
-              <a href="https://github.com/dapangyu-fish/ai-app/blob/alpha/v1000/docs/APP_STORE_COMPLIANCE.md" target="_blank" rel="noreferrer">
+              {GITHUB_PUBLIC ? (
+                <a href={GITHUB_URL} target="_blank" rel="noreferrer">
+                  <Github size={15} />
+                  GitHub
+                </a>
+              ) : (
+                <span>
+                  <Github size={15} />
+                  {zh ? 'GitHub 即将公开' : 'GitHub soon'}
+                </span>
+              )}
+              <a href={REVIEW_BOUNDARY_URL} onClick={(event) => goDocs(event, '#runtime-boundary')}>
                 <ShieldCheck size={15} />
                 {zh ? '合规边界' : 'Review boundary'}
               </a>
@@ -1253,10 +1291,15 @@ function App() {
             <h2 id="docs-entry-title">{docsTitle}</h2>
             <div className="docsEntryLinks">
               {docsLinks.map(([title, body], index) => {
-                const href = index === 2 ? GITHUB_URL : index === 1 ? '/#stack' : '/docs';
-                const Icon = index === 2 ? Github : index === 1 ? Network : BookOpen;
-                const external = index === 2;
-                const onClick = index === 0 ? goDocs : index === 1 ? (event: ReactMouseEvent<HTMLAnchorElement>) => goHome(event, '#stack') : undefined;
+                const href = index === 2 ? REVIEW_BOUNDARY_URL : index === 1 ? '/#stack' : '/docs';
+                const Icon = index === 2 ? ShieldCheck : index === 1 ? Network : BookOpen;
+                const external = false;
+                const onClick =
+                  index === 0
+                    ? goDocs
+                    : index === 1
+                      ? (event: ReactMouseEvent<HTMLAnchorElement>) => goHome(event, '#stack')
+                      : (event: ReactMouseEvent<HTMLAnchorElement>) => goDocs(event, '#runtime-boundary');
                 return (
                   <a href={href} key={title} onClick={onClick} target={external ? '_blank' : undefined} rel={external ? 'noreferrer' : undefined}>
                     <Icon size={18} />
@@ -1355,9 +1398,8 @@ function App() {
             </div>
             <a
               className="button secondary"
-              href="https://github.com/dapangyu-fish/ai-app/blob/alpha/v1000/docs/APP_STORE_COMPLIANCE.md"
-              target="_blank"
-              rel="noreferrer"
+              href={REVIEW_BOUNDARY_URL}
+              onClick={(event) => goDocs(event, '#runtime-boundary')}
             >
               <ShieldCheck size={17} />
               Runtime boundary
@@ -1522,9 +1564,13 @@ function App() {
         <div className="shell">
           <span>MyApp</span>
           <div className="footerLinks">
-            <a href={GITHUB_URL} target="_blank" rel="noreferrer">
-              GitHub
-            </a>
+            {GITHUB_PUBLIC ? (
+              <a href={GITHUB_URL} target="_blank" rel="noreferrer">
+                GitHub
+              </a>
+            ) : (
+              <span>{zh ? 'GitHub 即将公开' : 'GitHub soon'}</span>
+            )}
             <a href="mailto:2501808198@qq.com">fish</a>
           </div>
         </div>

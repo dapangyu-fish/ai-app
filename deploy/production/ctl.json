@@ -7,7 +7,7 @@
   },
   "paths": {
     "root": "/opt/myapp",
-    "source": "/opt/myapp/current-agent-control-plane",
+    "source": "/opt/myapp/current",
     "data_root": "/mnt/myapp",
     "data_root_prompted": false,
     "state": "/mnt/myapp/state",
