@@ -1002,6 +1002,12 @@ def _docker_inspect(name: str) -> dict | None:
     return rows[0] if rows else None
 
 
+def _docker_container_running(name: str) -> bool:
+    data = _docker_inspect(name)
+    state = data.get("State") if isinstance(data, dict) else None
+    return bool(isinstance(state, dict) and state.get("Running"))
+
+
 def _docker_ps_all() -> list[dict]:
     proc = _run(["docker", "ps", "-a", "--format", "{{json .}}"])
     if proc.returncode != 0:
@@ -3952,6 +3958,25 @@ def _join_private_agent_node(args) -> int:
         print(str(exc), file=sys.stderr)
         return 2
     _ensure_data_root_layout(data_root)
+    agent_env = _parse_env(_secret_path("agent"))
+    current_auth_mode = str(agent_env.get("AGENT_NODE_AUTH_MODE", "shared")).strip().lower().replace("_", "-")
+    current_provider_mode = str(agent_env.get("AGENT_NODE_PROVIDER_MODE", "master")).strip().lower().replace("_", "-")
+    current_node_id = str(agent_env.get("AGENT_NODE_ID") or "").strip()
+    has_running_agent_node = _docker_container_running("myapp-agent-node")
+    is_existing_public_node = bool(
+        current_node_id
+        and current_auth_mode not in {"private", "user-private"}
+        and current_provider_mode != "local"
+        and has_running_agent_node
+    )
+    if is_existing_public_node and not getattr(args, "replace_existing_agent_node", False):
+        print(
+            "refusing to replace the running public agent-node on this host; "
+            "run this join command on a separate private agent host, or pass "
+            "--replace-existing-agent-node if you intentionally want to convert this host",
+            file=sys.stderr,
+        )
+        return 2
     private_key, public_key = _private_agent_key_paths(data_root, node_id)
     private_key_container = f"/var/lib/myapp/agent-node/private/{private_key.name}"
     rc = _ensure_private_agent_keypair(private_key, public_key)
@@ -5001,6 +5026,7 @@ def build_parser() -> argparse.ArgumentParser:
     private_join.add_argument("--pull", action="store_true", help=_tx("pull configured images before deploy", zh="部署前拉取已配置镜像", de="konfigurierte Images vor Deploy laden", es="descargar imagenes configuradas antes de desplegar"))
     private_join.add_argument("--build", action="store_true", help=_tx("build images from local source before deploy", zh="部署前从本地源码构建镜像", de="Images vor Deploy aus lokalem Quellcode bauen", es="construir imagenes desde codigo local antes de desplegar"))
     private_join.add_argument("--no-provider-setup", action="store_true", help=_tx("do not prompt for local AI provider config", zh="不交互配置本地 AI 供应商", de="nicht nach lokaler KI-Provider-Konfiguration fragen", es="no pedir configuracion local de proveedor IA"))
+    private_join.add_argument("--replace-existing-agent-node", action="store_true", help=_tx("allow converting a running public agent-node on this host into a private node", zh="允许把本机正在运行的公共 agent-node 转换为私有节点", de="laufenden oeffentlichen agent-node auf diesem Host in privaten Node umwandeln", es="permitir convertir el agent-node publico en ejecucion de este host en privado"))
     private_join.set_defaults(func=cmd_agent_node)
     agent_node_add = agent_node_sub.add_parser("add", help=_tx("print a join command for a new agent host", zh="打印新 Agent 节点的一键加入命令", de="Join-Befehl fuer neuen Agent-Host ausgeben", es="imprimir comando join para nuevo host agent"), usage=_tx("myapp-ctl agent-node add [options]", zh="myapp-ctl agent-node add [选项]", de="myapp-ctl agent-node add [Optionen]", es="myapp-ctl agent-node add [opciones]"))
     agent_node_add.add_argument("--backend", help=_tx("master backend URL, for example http://<master-host>:5566", zh="主后端 URL，例如 http://<master-host>:5566", de="Master-Backend-URL, z.B. http://<master-host>:5566", es="URL del backend maestro, por ejemplo http://<master-host>:5566"))

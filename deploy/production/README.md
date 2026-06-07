@@ -611,6 +611,11 @@ The command generates an RSA keypair locally, registers the public key through
 `/api/ai/private_agent/nodes`, consumes the one-time join token, writes
 `agent.env`, prompts for local AI provider configuration if it is missing, and
 deploys only `agent-node` plus `agent-runtime`.
+Run the private join command on a separate private agent host. If the host is
+already running a public `myapp-agent-node`, `myapp-ctl` refuses to overwrite it
+by default so the public queue does not lose capacity. Use
+`--replace-existing-agent-node` only when intentionally converting that host from
+public to private.
 
 The app settings page has a Private Agent Nodes management view. It lists only
 the logged-in user's private nodes, can create a new join token by calling
