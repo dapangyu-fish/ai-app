@@ -1162,12 +1162,15 @@ def _pull_labels() -> list[str]:
         item = item.strip()
         if item:
             labels.append(item)
+    public_host = (os.environ.get("PUBLIC_HOST") or "").strip()
+    if public_host:
+        labels = [label for label in labels if not label.startswith("host=")]
     if not any(label.replace("_", "-").startswith("provider-mode=") for label in labels):
         labels.append(f"provider_mode={PROVIDER_MODE or 'master'}")
     if AUTH_MODE in {"private", "user-private"} and not any(label.replace("_", "-").startswith("visibility=") for label in labels):
         labels.append("visibility=private")
     if not any(label.startswith("host=") for label in labels):
-        labels.append(f"host={os.environ.get('PUBLIC_HOST') or os.uname().nodename}")
+        labels.append(f"host={public_host or os.uname().nodename}")
     if not any(label.replace("_", "-").startswith("name=") for label in labels):
         labels.append(f"name={NODE_NAME}")
     if not any(label.replace("_", "-").startswith("mode=") for label in labels):

@@ -4211,14 +4211,15 @@ def _join_private_agent_node(args) -> int:
         rc = _setup_ai_providers(force=False)
         if rc != 0:
             return rc
-    rc = _init_stack_secrets(host=args.host or socket.gethostname(), quiet=True)
+    display_host = args.host or _public_host(None)
+    rc = _init_stack_secrets(host=display_host, quiet=True)
     if rc != 0:
         return rc
     agent_env = _parse_env(_secret_path("agent"))
     node_name = (args.name or node_id).strip()[:128] or node_id
     labels = list(args.label or [])
     if not any(str(label).startswith("host=") for label in labels):
-        labels.append(f"host={args.host or socket.gethostname()}")
+        labels.append(f"host={display_host}")
     if not any(str(label).replace("_", "-").startswith("name=") for label in labels):
         labels.append(f"name={node_name}")
     for required_label in ("visibility=private", "provider_mode=local", "mode=pull"):
@@ -4273,7 +4274,7 @@ def _join_private_agent_node(args) -> int:
             ],
         )
         instance_env["AGENT_NODE_BACKEND_URL"] = _agent_node_container_backend_url(backend_url)
-        instance_env["PUBLIC_HOST"] = args.host or socket.gethostname()
+        instance_env["PUBLIC_HOST"] = display_host
         _write_agent_node_instance_env(env_path, instance_env)
         _safe_write_default_config_snapshot()
         print(
