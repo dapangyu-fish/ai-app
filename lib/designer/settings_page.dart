@@ -58,10 +58,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _fetchProviders() async {
     setState(() => _loadingProviders = true);
-    final providers = await AiChatService.fetchProviders();
+    final providers = await AiChatService.fetchProviders(
+      agentScope: _agentScope,
+    );
     if (mounted) {
       setState(() {
         _providers = providers;
+        _selectedProvider = AiChatService.selectedProvider;
+        _agentScope = AiChatService.selectedAgentScope;
         _loadingProviders = false;
       });
     }
@@ -110,7 +114,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _selectAgentScope(String scope) async {
     await AiChatService.setAgentScope(scope);
+    if (!mounted) return;
     setState(() => _agentScope = AiChatService.selectedAgentScope);
+    await _fetchProviders();
   }
 
   String _privateAgentText({
@@ -286,18 +292,12 @@ class _SettingsPageState extends State<SettingsPage> {
     return Card(
       child: Column(
         children: [
-          RadioListTile<AsrMode>(
-            value: AsrMode.online,
-            groupValue: _asrMode,
-            onChanged: (value) {
-              if (value != null) _selectAsrMode(value);
-            },
-            title: Text(t.settingsAsrOnline),
-            subtitle: Text(t.settingsAsrOnlineSubtitle),
-            secondary: Icon(
-              Icons.cloud,
-              color: _asrMode == AsrMode.online ? cs.primary : cs.outline,
-            ),
+          _buildAsrModeTile(
+            mode: AsrMode.online,
+            title: t.settingsAsrOnline,
+            subtitle: t.settingsAsrOnlineSubtitle,
+            icon: Icons.cloud,
+            cs: cs,
           ),
           Divider(
             height: 1,
@@ -305,21 +305,35 @@ class _SettingsPageState extends State<SettingsPage> {
             endIndent: 16,
             color: cs.outline.withValues(alpha: 0.2),
           ),
-          RadioListTile<AsrMode>(
-            value: AsrMode.bytedance,
-            groupValue: _asrMode,
-            onChanged: (value) {
-              if (value != null) _selectAsrMode(value);
-            },
-            title: Text(t.settingsAsrBytedance),
-            subtitle: Text(t.settingsAsrBytedanceSubtitle),
-            secondary: Icon(
-              Icons.mic_external_on,
-              color: _asrMode == AsrMode.bytedance ? cs.primary : cs.outline,
-            ),
+          _buildAsrModeTile(
+            mode: AsrMode.bytedance,
+            title: t.settingsAsrBytedance,
+            subtitle: t.settingsAsrBytedanceSubtitle,
+            icon: Icons.mic_external_on,
+            cs: cs,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildAsrModeTile({
+    required AsrMode mode,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required ColorScheme cs,
+  }) {
+    final selected = _asrMode == mode;
+    return ListTile(
+      leading: Icon(icon, color: selected ? cs.primary : cs.outline),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: Icon(
+        selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+        color: selected ? cs.primary : cs.outline,
+      ),
+      onTap: () => _selectAsrMode(mode),
     );
   }
 
@@ -452,7 +466,6 @@ class _SettingsPageState extends State<SettingsPage> {
         de: 'Privat',
         es: 'Privado',
       ),
-      'auto': _privateAgentText(zh: '自动', en: 'Auto', de: 'Auto', es: 'Auto'),
     };
     return Card(
       child: Padding(
@@ -504,10 +517,10 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 8),
             Text(
               _privateAgentText(
-                zh: '平台使用官方 Agent；私有仅使用你的私有节点；自动优先私有，无可用节点时回落平台。',
-                en: 'Platform uses official agents. Private uses only your nodes. Auto prefers private and falls back to platform.',
-                de: 'Plattform nutzt offizielle Agents. Privat nutzt nur deine Nodes. Auto bevorzugt privat und faellt auf Plattform zurueck.',
-                es: 'Plataforma usa agents oficiales. Privado usa solo tus nodos. Auto prefiere privado y vuelve a plataforma.',
+                zh: '平台仅使用公开 Agent Node；私有仅使用你的私有节点。供应商列表会随调度模式切换。',
+                en: 'Platform uses only public Agent Nodes. Private uses only your nodes. Provider choices follow the selected mode.',
+                de: 'Plattform nutzt nur oeffentliche Agent Nodes. Privat nutzt nur deine Nodes. Anbieter folgen dem gewaehlten Modus.',
+                es: 'Plataforma usa solo Agent Nodes publicos. Privado usa solo tus nodos. Los proveedores siguen el modo elegido.',
               ),
               style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
             ),

@@ -126,6 +126,16 @@ def _authenticate_stream_reader(session_id: str):
     return str(user.get("id", ""))
 
 
+def _optional_auth_user_id() -> str:
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return ""
+    user = verify_access_token(auth[7:])
+    if user is None:
+        return ""
+    return str(user.get("id") or "")
+
+
 def _normalize_provider_id(provider_id=None):
     return (provider_id or DEFAULT_PROVIDER).strip().lower().replace("_", "-") or DEFAULT_PROVIDER
 
@@ -159,6 +169,9 @@ def _get_agent(agent_id=None):
 
 
 def _provider_supports_agent(provider: dict, agent_id: str) -> bool:
+    supported = provider.get("supported_agents")
+    if isinstance(supported, list) and supported:
+        return agent_id in {str(item) for item in supported}
     if agent_id == "claude":
         return True
     if agent_id == "codex":
@@ -166,28 +179,51 @@ def _provider_supports_agent(provider: dict, agent_id: str) -> bool:
     return False
 
 
+def _dynamic_node_provider(provider_id: str, *, supported_agents: list[str] | None = None) -> dict:
+    pid = _normalize_provider_id(provider_id)
+    return {
+        "id": pid,
+        "name": pid.replace("-", " ").strip().title() or pid,
+        "description": "Agent node local provider",
+        "configured": True,
+        "visible": True,
+        "models": {"default": ""},
+        "cli_env": {},
+        "codex": {},
+        "supported_agents": supported_agents or ["claude"],
+        "worker": {},
+    }
+
+
+def _get_request_provider(provider_id: str, *, agent_scope: str, user_id: str, agent_id: str) -> dict:
+    pid = _normalize_provider_id(provider_id)
+    cfg = AI_PROVIDERS.get(pid)
+    node_available = ai_session.has_available_agent_node(
+        agent_scope=agent_scope,
+        user_id=user_id,
+        provider_id=pid,
+        agent_id=agent_id,
+    )
+    if not node_available:
+        raise ValueError(f"当前 {agent_scope} Agent Node 没有可用供应商: {pid}")
+    if cfg and cfg.get("configured") and cfg.get("visible", True):
+        if _provider_supports_agent(cfg, agent_id) or node_available:
+            return cfg
+        raise ValueError(f"供应商 {pid} 不支持 Agent {agent_id}")
+    return _dynamic_node_provider(pid, supported_agents=[agent_id])
+
+
 def list_providers():
     """获取所有可用的 AI 供应商列表"""
-    providers = []
-    for pid, cfg in AI_PROVIDERS.items():
-        if not cfg.get("visible", True):
-            continue
-        supported_agents = [
-            aid for aid, agent in AI_AGENTS.items()
-            if agent.get("visible", True)
-            and agent.get("configured", False)
-            and _provider_supports_agent(cfg, aid)
-        ]
-        providers.append({
-            "id": cfg["id"],
-            "name": cfg["name"],
-            "description": cfg.get("description", ""),
-            "default_model": cfg["models"]["default"],
-            "configured": bool(cfg.get("configured", False)),
-            "supported_agents": supported_agents or ["claude"],
-            "worker": cfg.get("worker", {}),
-        })
-    return jsonify({"providers": providers})
+    scope = str(request.args.get("agent_scope") or request.args.get("agentNodeScope") or "public").strip().lower().replace("_", "-")
+    if scope not in {"public", "private"}:
+        scope = "public"
+    owner_user_id = _optional_auth_user_id() if scope == "private" else ""
+    providers = ai_session.agent_node_provider_catalog(
+        agent_scope=scope,
+        owner_user_id=owner_user_id,
+    )
+    return jsonify({"providers": providers, "agent_scope": scope})
 
 
 def list_agents():
@@ -788,8 +824,8 @@ def chat_start():
     provider_id = body.get("provider")
     agent_id = body.get("agent")
     agent_scope = str(body.get("agent_scope") or body.get("agentNodeScope") or "public").strip().lower().replace("_", "-")
-    if agent_scope not in {"public", "private", "auto"}:
-        return jsonify({"error": "agent_scope must be public, private, or auto", "code": "AI_AGENT_SCOPE_INVALID"}), 400
+    if agent_scope not in {"public", "private"}:
+        return jsonify({"error": "agent_scope must be public or private", "code": "AI_AGENT_SCOPE_INVALID"}), 400
     # force_restart=true：用户输入新消息时用，先杀掉同 session 还在跑的 worker 再起新的
     # 默认 false：双击 send / 重连等场景幂等返回 resumed:true
     force_restart = bool(body.get("force_restart", False))
@@ -806,30 +842,38 @@ def chat_start():
         return jsonify({"error": "未找到用户消息"}), 400
 
     try:
-        provider = _get_provider(provider_id)
-    except ValueError as e:
-        logger.warning(f"[CHAT_START] provider rejected: {e}")
-        return jsonify({"error": str(e), "code": "AI_PROVIDER_UNAVAILABLE"}), 400
-    provider_id = provider["id"]
-
-    try:
         agent = _get_agent(agent_id)
     except ValueError as e:
         logger.warning(f"[CHAT_START] agent rejected: {e}")
         return jsonify({"error": str(e), "code": "AI_AGENT_UNAVAILABLE"}), 400
     agent_id = agent["id"]
-    if not _provider_supports_agent(provider, agent_id):
-        return jsonify({
-            "error": f"供应商 {provider_id} 不支持 Agent {agent_id}",
-            "code": "AI_AGENT_PROVIDER_UNAVAILABLE",
-        }), 400
-    if agent_scope == "auto":
-        agent_scope = "private" if ai_session.has_available_private_agent_node(user_id, provider_id, agent_id) else "public"
+    provider_id = _normalize_provider_id(provider_id)
     if agent_scope == "private" and not ai_session.has_available_private_agent_node(user_id, provider_id, agent_id):
         return jsonify({
             "error": "没有在线的私有 Agent Node，请先启动你的私有节点或切换到平台 Agent",
             "code": "AI_PRIVATE_AGENT_OFFLINE",
         }), 409
+    try:
+        provider = _get_request_provider(
+            provider_id,
+            agent_scope=agent_scope,
+            user_id=user_id,
+            agent_id=agent_id,
+        )
+    except ValueError as e:
+        logger.warning(f"[CHAT_START] provider rejected: {e}")
+        return jsonify({"error": str(e), "code": "AI_PROVIDER_UNAVAILABLE"}), 400
+    provider_id = provider["id"]
+    if not _provider_supports_agent(provider, agent_id) and not ai_session.has_available_agent_node(
+        agent_scope=agent_scope,
+        user_id=user_id,
+        provider_id=provider_id,
+        agent_id=agent_id,
+    ):
+        return jsonify({
+            "error": f"供应商 {provider_id} 不支持 Agent {agent_id}",
+            "code": "AI_AGENT_PROVIDER_UNAVAILABLE",
+        }), 400
 
     start_lock = _acquire_chat_start_lock(session_id)
     if not start_lock:

@@ -229,7 +229,19 @@ def _agent_node_registry_key(node_id: str) -> str:
 
 def _normalize_provider_id(provider_id: Optional[str]) -> str:
     pid = (provider_id or DEFAULT_PROVIDER).strip().lower().replace("_", "-")
-    return pid if pid in AI_PROVIDERS else DEFAULT_PROVIDER
+    return pid or DEFAULT_PROVIDER
+
+
+def _uses_agent_pull_backend() -> bool:
+    return AI_WORKER_EXECUTION_BACKEND in {"agent-pull", "agent-node-pull", "pull"}
+
+
+def _provider_queue_id(provider_id: Optional[str]) -> Optional[str]:
+    # Pull-mode jobs are constrained by agent-node capacity/queue and may use
+    # node-local provider ids unknown to the backend. Keep the real provider_id
+    # in the job payload, but use the shared backend pending queue so the daemon
+    # can acquire every node-routed job without knowing all provider ids.
+    return None if _uses_agent_pull_backend() else _normalize_provider_id(provider_id)
 
 
 def _provider_queue_suffix(provider_id: Optional[str]) -> str:
@@ -1092,8 +1104,9 @@ def get_queue_position(session_id: str) -> Optional[int]:
     if not queued_job:
         return None
     provider_id = _job_provider_from_json(queued_job, meta.get("provider"))
+    queue_provider_id = _provider_queue_id(provider_id)
     try:
-        raw_jobs = r.lrange(_pending_queue_key(provider_id), 0, -1)
+        raw_jobs = r.lrange(_pending_queue_key(queue_provider_id), 0, -1)
     except redis.exceptions.RedisError as e:
         logger.warning(f"[WORKER_QUEUE] 读取 pending queue 失败 sid={session_id} provider={provider_id}: {e}")
         return None
@@ -1232,7 +1245,7 @@ return job_json
 """
 
 
-def _acquire_redis_job(provider_id: str, timeout_seconds: int = 0) -> Optional[_WorkerJob]:
+def _acquire_redis_job(provider_id: Optional[str], timeout_seconds: int = 0) -> Optional[_WorkerJob]:
     r = get_redis()
     deadline = time.time() + timeout_seconds
     limits = _provider_worker_limits(provider_id)
@@ -1252,7 +1265,7 @@ def _acquire_redis_job(provider_id: str, timeout_seconds: int = 0) -> Optional[_
                 AI_WORKER_MAX_CONCURRENCY,
                 limits["max_concurrency"],
                 _WORKER_ID,
-                provider_id,
+                provider_id or "",
             )
         except redis.exceptions.RedisError as e:
             logger.warning(f"[WORKER_QUEUE] acquire 失败 provider={provider_id}: {e}")
@@ -1456,6 +1469,25 @@ def _provider_env(provider_id: Optional[str]) -> Tuple[dict, dict]:
     env.pop("ANTHROPIC_API_KEY", None)
     env["IS_SANDBOX"] = "1"
     return provider, env
+
+
+def _dynamic_agent_node_provider(provider_id: Optional[str]) -> dict:
+    pid = _normalize_provider_id(provider_id)
+    static = AI_PROVIDERS.get(pid)
+    if static:
+        return static
+    label = pid.replace("-", " ").strip().title() or "Custom"
+    return {
+        "id": pid,
+        "name": label,
+        "description": "Agent node local provider",
+        "configured": True,
+        "visible": True,
+        "models": {"default": ""},
+        "cli_env": {},
+        "codex": {},
+        "worker": _provider_worker_limits(pid),
+    }
 
 
 def _agent_config(agent_id: Optional[str]) -> dict:
@@ -1778,6 +1810,100 @@ def _registered_agent_node_records(
     except Exception as exc:
         logger.warning("[AGENT_NODE] 读取注册节点失败: %s", exc)
         return []
+
+
+def _static_provider_supports_agent(provider: dict, agent_id: str) -> bool:
+    if agent_id == "claude":
+        return True
+    if agent_id == "codex":
+        return bool((provider.get("codex") or {}).get("configured"))
+    return False
+
+
+def _visible_configured_agent_ids_for_provider(provider: dict) -> list[str]:
+    out = [
+        aid for aid, agent in AI_AGENTS.items()
+        if agent.get("visible", True)
+        and agent.get("configured", False)
+        and _static_provider_supports_agent(provider, aid)
+    ]
+    return out or ["claude"]
+
+
+def _provider_catalog_entry(provider_id: str, supported_agents: set[str], *, scope: str) -> dict:
+    provider_id = _normalize_provider_id(provider_id)
+    static = AI_PROVIDERS.get(provider_id)
+    if static:
+        default_model = str(((static.get("models") or {}).get("default")) or "")
+        return {
+            "id": static["id"],
+            "name": static.get("name") or static["id"],
+            "description": static.get("description", ""),
+            "default_model": default_model,
+            "configured": bool(static.get("configured", True)),
+            "supported_agents": sorted(supported_agents) or _visible_configured_agent_ids_for_provider(static),
+            "worker": static.get("worker", {}),
+            "source": "agent-node",
+            "scope": scope,
+        }
+    label = provider_id.replace("-", " ").strip().title() or provider_id
+    return {
+        "id": provider_id,
+        "name": label,
+        "description": "Agent node local provider",
+        "default_model": "",
+        "configured": True,
+        "supported_agents": sorted(supported_agents) or ["claude"],
+        "worker": _provider_worker_limits(provider_id),
+        "source": "agent-node",
+        "scope": scope,
+    }
+
+
+def agent_node_provider_catalog(*, agent_scope: str = "public", owner_user_id: str = "") -> list[dict]:
+    requested_scope = str(agent_scope or "public").strip().lower().replace("_", "-")
+    scope = "private" if requested_scope == "private" else "public"
+    providers: dict[str, set[str]] = {}
+    provider_scope: dict[str, str] = {}
+    records = _registered_agent_node_records(
+        agent_scope=scope,
+        owner_user_id=owner_user_id if scope == "private" else "",
+    )
+    for record in records:
+        raw_agents = record.get("agent_ids") if isinstance(record.get("agent_ids"), list) else []
+        agent_ids = {
+            str(item or "").strip().lower().replace("_", "-")
+            for item in raw_agents
+            if str(item or "").strip()
+        } or {"claude"}
+        raw_provider_ids = record.get("provider_ids") if isinstance(record.get("provider_ids"), list) else []
+        provider_ids = [
+            _normalize_provider_id(str(item or ""))
+            for item in raw_provider_ids
+            if str(item or "").strip()
+        ]
+        # Legacy public master nodes may not report provider_ids. They use
+        # backend-managed providers, so expose the backend visible providers
+        # only as a compatibility fallback for those old nodes.
+        if not provider_ids and scope == "public" and str(record.get("provider_mode") or "master") != "local":
+            provider_ids = [
+                pid for pid, provider in AI_PROVIDERS.items()
+                if provider.get("visible", True) and provider.get("configured", False)
+            ]
+        for provider_id in provider_ids:
+            if not provider_id:
+                continue
+            current = providers.setdefault(provider_id, set())
+            static = AI_PROVIDERS.get(provider_id)
+            if static and not raw_agents and scope == "public" and str(record.get("provider_mode") or "master") != "local":
+                current.update(_visible_configured_agent_ids_for_provider(static))
+            else:
+                current.update(agent_ids)
+            provider_scope.setdefault(provider_id, scope)
+    return [
+        _provider_catalog_entry(provider_id, agents, scope=provider_scope.get(provider_id, scope))
+        for provider_id, agents in sorted(providers.items())
+    ]
 
 
 def _configured_agent_node_records() -> List[dict]:
@@ -2240,6 +2366,22 @@ def has_available_private_agent_node(user_id: str, provider_id: str = "", agent_
     )
 
 
+def has_available_agent_node(
+    *,
+    agent_scope: str = "public",
+    user_id: str = "",
+    provider_id: str = "",
+    agent_id: str = "",
+) -> bool:
+    scope = "private" if str(agent_scope or "").strip().lower() == "private" else "public"
+    return _has_registered_agent_pull_node(
+        agent_scope=scope,
+        owner_user_id=user_id if scope == "private" else "",
+        provider_id=provider_id,
+        agent_id=agent_id,
+    )
+
+
 def _wait_for_agent_pull_node(
     timeout_seconds: float = 5.0,
     *,
@@ -2402,17 +2544,7 @@ def agent_pull_acquire():
 
     assert spec is not None
     provider_id = _normalize_provider_id(spec.get("provider_id"))
-    provider = AI_PROVIDERS.get(provider_id)
-    if not provider:
-        _agent_pull_append_job_event(
-            run_id,
-            {"type": "error", "message": f"unknown provider: {provider_id}", "ts": int(time.time() * 1000)},
-        )
-        _agent_pull_append_job_event(
-            run_id,
-            {"type": "stop", "status": "failed", "returncode": 1, "ts": int(time.time() * 1000)},
-        )
-        return ("", 204)
+    provider = _dynamic_agent_node_provider(provider_id)
     include_provider_secrets = provider_mode not in {"local", "node", "self", "agent-local"}
     payload = _build_agent_node_payload(
         run_id=run_id,
@@ -3184,7 +3316,12 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
         except FileNotFoundError:
             logger.warning(f"[WORKER] 系统提示词文件未找到: {GENERATE_PROMPT_PATH}")
 
-        provider, env = _provider_env(provider_id)
+        if _uses_agent_pull_backend():
+            provider = _dynamic_agent_node_provider(provider_id)
+            env = os.environ.copy()
+            env["IS_SANDBOX"] = "1"
+        else:
+            provider, env = _provider_env(provider_id)
         agent = _agent_config(agent_id)
         runner = agent["id"]
         workspace = _prepare_worker_workspace(session_id, job_id)
@@ -3531,6 +3668,7 @@ def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
     返回 (accepted, queue_position)。
     """
     provider_id = _normalize_provider_id(provider_id)
+    queue_provider_id = _provider_queue_id(provider_id)
     limits = _provider_worker_limits(provider_id)
     if limits["max_concurrency"] <= 0 or limits["queue_max"] <= 0:
         logger.warning(
@@ -3558,7 +3696,7 @@ def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
         queued_len = get_redis().eval(
             _ENQUEUE_SCRIPT,
             2,
-            _pending_queue_key(provider_id),
+            _pending_queue_key(queue_provider_id),
             _meta_key(session_id),
             job_json,
             limits["queue_max"],
@@ -3658,7 +3796,9 @@ def clear_abort(session_id: str) -> None:
     SessionStore().clear_abort(session_id)
 
 
-def _provider_ids_for_scheduler() -> list[str]:
+def _provider_ids_for_scheduler() -> list[Optional[str]]:
+    if _uses_agent_pull_backend():
+        return [None]
     provider_ids = [
         pid for pid in AI_PROVIDERS
         if _provider_worker_limits(pid).get("max_concurrency", 0) > 0

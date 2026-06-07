@@ -173,6 +173,7 @@ class AiChatService {
 
   static String _selectedProvider = 'deepseek';
   static String _selectedAgentScope = 'public';
+  static String _providersScope = '';
   static final Map<String, String> _selectedAgentsByProvider = {};
   static List<AiProvider> _providers = [];
   static List<AiAgent> _agents = [
@@ -253,10 +254,7 @@ class AiChatService {
 
   static String _normalizeAgentScope(String value) {
     final normalized = value.trim().toLowerCase().replaceAll('_', '-');
-    if (normalized == 'private' || normalized == 'auto') {
-      return normalized;
-    }
-    return 'public';
+    return normalized == 'private' ? 'private' : 'public';
   }
 
   static Future<void> setAgentScope(String scope) async {
@@ -297,19 +295,54 @@ class AiChatService {
     return supported.isNotEmpty ? supported.first : 'claude';
   }
 
-  static Future<List<AiProvider>> fetchProviders() async {
+  static Future<void> _reconcileSelectedProvider() async {
+    if (_providers.isEmpty) return;
+    final providerIds = _providers.map((provider) => provider.id).toSet();
+    if (!providerIds.contains(_selectedProvider)) {
+      await setProvider(_providers.first.id);
+    }
+    final provider = _providers.firstWhere(
+      (candidate) => candidate.id == _selectedProvider,
+      orElse: () => _providers.first,
+    );
+    final agentId = selectedAgentForProvider(provider.id);
+    if (!_selectedAgentsByProvider.containsKey(provider.id) ||
+        !provider.supportedAgentIds.contains(
+          _selectedAgentsByProvider[provider.id],
+        )) {
+      await setAgentForProvider(provider.id, agentId);
+    }
+  }
+
+  static Future<List<AiProvider>> fetchProviders({String? agentScope}) async {
+    final scope = _normalizeAgentScope(agentScope ?? _selectedAgentScope);
     try {
+      final token = AuthService.token;
+      final headers = <String, String>{};
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
       final resp = await http
-          .get(Uri.parse('$_baseUrl/api/ai/providers'))
+          .get(
+            Uri.parse(
+              '$_baseUrl/api/ai/providers',
+            ).replace(queryParameters: {'agent_scope': scope}),
+            headers: headers,
+          )
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final data = json.decode(resp.body) as Map<String, dynamic>;
         _providers = (data['providers'] as List<dynamic>)
             .map((e) => AiProvider.fromJson(e as Map<String, dynamic>))
             .toList();
+        _providersScope = scope;
+        await _reconcileSelectedProvider();
         return _providers;
       }
     } catch (_) {}
+    if (_providersScope != scope) {
+      _providers = [];
+    }
     return _providers;
   }
 
