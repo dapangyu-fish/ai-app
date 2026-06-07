@@ -55,6 +55,7 @@ _BUILTIN_ANTHROPIC_PROVIDERS = {
         "model": "deepseek-v4-pro[1m]",
         "auth_env_fallbacks": (),
         "visible": "1",
+        "supported_agents": ("claude",),
     },
     "minimax": {
         "name": "MiniMax M3",
@@ -63,6 +64,10 @@ _BUILTIN_ANTHROPIC_PROVIDERS = {
         "model": "MiniMax-M3",
         "auth_env_fallbacks": (),
         "visible": "1",
+        # MiniMax-M3 is stable through the OpenAI Responses-compatible Codex
+        # path. Its Anthropic-compatible Claude Code stream can intermittently
+        # fail with "API Error: Failed to parse JSON" during tool-heavy runs.
+        "supported_agents": ("codex",),
         "codex": {
             "provider_name": "MiniMax",
             "base_url": "https://api.minimaxi.com/v1",
@@ -218,6 +223,11 @@ def _build_anthropic_provider(provider_id: str) -> dict:
         "agent_model": subagent_model,
         "cli_env": cli_env,
         "cli_model": model,
+        "supported_agents": _split_csv(_env_for_prefix(
+            prefix,
+            "SUPPORTED_AGENTS",
+            ",".join(builtin.get("supported_agents", ())),
+        )),
         "configured": bool(base_url and auth_token and model),
         "visible": _env_bool_for_prefix(
             prefix,

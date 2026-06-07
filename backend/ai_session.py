@@ -232,6 +232,57 @@ def _normalize_provider_id(provider_id: Optional[str]) -> str:
     return pid or DEFAULT_PROVIDER
 
 
+def _provider_env_prefix(provider_id: Optional[str]) -> str:
+    return "".join(ch.upper() if ch.isalnum() else "_" for ch in _normalize_provider_id(provider_id))
+
+
+def _env_bool_value(value: Optional[str]) -> Optional[bool]:
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if normalized in {"1", "true", "yes", "on", "enabled"}:
+        return True
+    if normalized in {"0", "false", "no", "off", "disabled"}:
+        return False
+    return None
+
+
+def claude_cli_resume_enabled(provider_id: Optional[str]) -> bool:
+    """Whether backend may ask Claude CLI to replay its own conversation state.
+
+    Third-party Anthropic-compatible providers have shown incompatible resume
+    behavior through Claude CLI (`API Error: Failed to parse JSON` or missing
+    local conversation files). Keep CLI resume opt-in and rely on explicit
+    prompt context plus persistent workspace by default.
+    """
+    prefix = _provider_env_prefix(provider_id)
+    explicit = _env_bool_value(os.environ.get(f"{prefix}_CLAUDE_CLI_RESUME"))
+    if explicit is not None:
+        return explicit
+
+    raw = os.environ.get("AI_CLAUDE_CLI_RESUME_PROVIDERS", "").strip()
+    if not raw:
+        return False
+    normalized = raw.lower()
+    if normalized in {"*", "all"}:
+        return True
+    allowed = {
+        item.strip().lower().replace("_", "-")
+        for item in raw.split(",")
+        if item.strip()
+    }
+    return _normalize_provider_id(provider_id) in allowed
+
+
+def _agent_cli_session_id(session_id: str, run_id: str) -> str:
+    try:
+        uuid.UUID(str(session_id))
+        base = str(session_id)
+    except (TypeError, ValueError):
+        base = _safe_path_part(str(session_id or "session"), "session")
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"myapp-ai-cli:{base}:{run_id}"))
+
+
 def _uses_agent_pull_backend() -> bool:
     return AI_WORKER_EXECUTION_BACKEND in {"agent-pull", "agent-node-pull", "pull"}
 
@@ -525,6 +576,28 @@ class _AgentNodeRunResult:
     remote_client_actions: List[dict]
     stderr_tail: List[str]
     line_count: int
+    transport_errors: List[str]
+
+
+_CLI_TRANSPORT_ERROR_MARKERS = (
+    "API Error: Failed to parse JSON",
+)
+
+
+def _is_cli_transport_error(text: object) -> bool:
+    value = str(text or "")
+    return any(marker in value for marker in _CLI_TRANSPORT_ERROR_MARKERS)
+
+
+def _is_internal_cli_event(event: dict) -> bool:
+    return bool(event.get("_internal_cli_event"))
+
+
+def _agent_cli_transport_retry_max() -> int:
+    try:
+        return max(0, min(5, int(os.environ.get("AI_AGENT_CLI_TRANSPORT_RETRY_MAX", "2"))))
+    except (TypeError, ValueError):
+        return 2
 
 
 def _final_protocol_warnings(final_text: Optional[str]) -> List[str]:
@@ -891,7 +964,13 @@ def parse_cli_line(line_str: str) -> List[dict]:
             elif btype == "text":
                 text_value = block.get("text", "")
                 if text_value:
-                    out.append({"assistant_content": text_value})
+                    if event.get("error") and _is_cli_transport_error(text_value):
+                        out.append({
+                            "_internal_cli_event": True,
+                            "cli_transport_error": text_value,
+                        })
+                    else:
+                        out.append({"assistant_content": text_value})
             elif btype == "thinking":
                 think_value = block.get("thinking", "")
                 if think_value:
@@ -904,7 +983,13 @@ def parse_cli_line(line_str: str) -> List[dict]:
         # meta.final_text 永远为空，恢复流程的 _fetchCompletedResult 因此返回 Nothing。
         if event.get("is_error"):
             res = event.get("result", "")
-            out.append({"error": f"生成中断: {res}"})
+            if _is_cli_transport_error(res):
+                out.append({
+                    "_internal_cli_event": True,
+                    "cli_transport_error": str(res or ""),
+                })
+            else:
+                out.append({"error": f"生成中断: {res}"})
         else:
             # 优先读 result 字段（CLI 实际行为）；message.content 兜底（防止 CLI 升级换 schema）
             result_text = event.get("result", "")
@@ -1434,6 +1519,7 @@ def _build_cli_cmd(
     is_resume: bool,
     *,
     workspace: Optional[str] = None,
+    cli_session_id: Optional[str] = None,
 ) -> list:
     cmd = [
         CLAUDE_BIN,
@@ -1446,7 +1532,7 @@ def _build_cli_cmd(
     if is_resume:
         cmd.extend(["-r", session_id])
     else:
-        cmd.extend(["--session-id", session_id])
+        cmd.extend(["--session-id", cli_session_id or session_id])
         if sys_prompt:
             cmd.extend(["--append-system-prompt", sys_prompt])
     return cmd
@@ -1813,6 +1899,9 @@ def _registered_agent_node_records(
 
 
 def _static_provider_supports_agent(provider: dict, agent_id: str) -> bool:
+    supported = provider.get("supported_agents")
+    if isinstance(supported, list) and supported and agent_id not in {str(item) for item in supported}:
+        return False
     if agent_id == "claude":
         return True
     if agent_id == "codex":
@@ -1835,13 +1924,19 @@ def _provider_catalog_entry(provider_id: str, supported_agents: set[str], *, sco
     static = AI_PROVIDERS.get(provider_id)
     if static:
         default_model = str(((static.get("models") or {}).get("default")) or "")
+        static_agents = set(_visible_configured_agent_ids_for_provider(static))
+        effective_agents = (
+            set(supported_agents) & static_agents
+            if supported_agents
+            else static_agents
+        )
         return {
             "id": static["id"],
             "name": static.get("name") or static["id"],
             "description": static.get("description", ""),
             "default_model": default_model,
             "configured": bool(static.get("configured", True)),
-            "supported_agents": sorted(supported_agents) or _visible_configured_agent_ids_for_provider(static),
+            "supported_agents": sorted(effective_agents),
             "worker": static.get("worker", {}),
             "source": "agent-node",
             "scope": scope,
@@ -1900,10 +1995,11 @@ def agent_node_provider_catalog(*, agent_scope: str = "public", owner_user_id: s
             else:
                 current.update(agent_ids)
             provider_scope.setdefault(provider_id, scope)
-    return [
+    entries = [
         _provider_catalog_entry(provider_id, agents, scope=provider_scope.get(provider_id, scope))
         for provider_id, agents in sorted(providers.items())
     ]
+    return [entry for entry in entries if entry.get("supported_agents")]
 
 
 def _configured_agent_node_records() -> List[dict]:
@@ -2041,6 +2137,7 @@ def _build_agent_node_payload(
     return {
         "run_id": run_id,
         "session_id": session_id,
+        "cli_session_id": "" if resume_id else _agent_cli_session_id(session_id, run_id),
         "job_id": run_id,
         "user_id": user_id or "user",
         "provider_id": provider.get("id"),
@@ -2729,6 +2826,7 @@ def _run_agent_pull_worker(
 
         line_count = 0
         stderr_tail: List[str] = []
+        transport_errors: List[str] = []
         remote_client_actions: List[dict] = []
         returncode: Optional[int] = None
         status = "failed"
@@ -2775,6 +2873,14 @@ def _run_agent_pull_worker(
                         if thread_id:
                             store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
                     for ev in parse_line(line):
+                        if _is_internal_cli_event(ev):
+                            error_text = str(ev.get("cli_transport_error") or "")
+                            if error_text:
+                                transport_errors.append(error_text)
+                                transport_errors = transport_errors[-5:]
+                            all_events.append(ev)
+                            line_count += 1
+                            continue
                         if not append_event(ev):
                             _agent_pull_mark_abort(current_run_id)
                             return None
@@ -2832,6 +2938,7 @@ def _run_agent_pull_worker(
                         remote_client_actions=remote_client_actions,
                         stderr_tail=stderr_tail,
                         line_count=line_count,
+                        transport_errors=transport_errors,
                     )
                 else:
                     _append_cli_log(session_id, "meta", json.dumps(item, ensure_ascii=False))
@@ -2841,6 +2948,8 @@ def _run_agent_pull_worker(
     current_run_id = base_run_id
     current_msg = last_msg
     repair_attempts = 0
+    transport_retry_attempts = 0
+    max_transport_retries = _agent_cli_transport_retry_max()
     total_line_count = 0
     last_validation_hash = ""
     client_actions: List[dict] = []
@@ -2852,7 +2961,43 @@ def _run_agent_pull_worker(
 
         if run_result.status != "done" or run_result.returncode not in (0, None):
             err_text = "".join(run_result.stderr_tail)[-2000:]
+            transport_error = next(
+                (item for item in reversed(run_result.transport_errors) if _is_cli_transport_error(item)),
+                "",
+            )
+            if not transport_error and _is_cli_transport_error(err_text):
+                transport_error = err_text
+            if transport_error and transport_retry_attempts < max_transport_retries:
+                transport_retry_attempts += 1
+                if not append_event({
+                    "status": "retrying",
+                    "message": (
+                        "AI 接口返回临时兼容错误，正在重试 "
+                        f"({transport_retry_attempts}/{max_transport_retries})..."
+                    ),
+                    "retry_attempt": transport_retry_attempts,
+                    "max_retry_attempts": max_transport_retries,
+                }):
+                    return
+                _append_cli_log(session_id, "meta", json.dumps({
+                    "event": "cli_transport_retry",
+                    "run_id": run_result.run_id,
+                    "next_run_id": f"{repair_run_prefix}-transport-retry-{transport_retry_attempts}",
+                    "attempt": transport_retry_attempts,
+                    "max_attempts": max_transport_retries,
+                    "error": transport_error[-500:],
+                }, ensure_ascii=False))
+                current_run_id = _safe_path_part(
+                    f"{repair_run_prefix}-transport-retry-{transport_retry_attempts}",
+                    "retry",
+                )
+                continue
             err_msg = f"agent-pull run failed status={run_result.status} returncode={run_result.returncode}: {err_text}"
+            if transport_error and not err_text:
+                err_msg = (
+                    f"agent-pull run failed status={run_result.status} "
+                    f"returncode={run_result.returncode}: {transport_error}"
+                )
             append_event({"error": err_msg, "needs_retry": True})
             set_status(STATUS_FAILED, error=err_msg)
             return
@@ -2910,7 +3055,11 @@ def _run_agent_pull_worker(
                 "stage": exc.script,
             }):
                 return
-            if runner == "claude" and not current_resume_id:
+            if (
+                runner == "claude"
+                and not current_resume_id
+                and claude_cli_resume_enabled(provider.get("id"))
+            ):
                 current_resume_id = session_id
             elif runner == "codex" and not current_resume_id:
                 current_resume_id = store.get_meta(session_id).get("agent_thread_id") or ""
@@ -3039,6 +3188,7 @@ def _run_agent_node_worker(
 
         line_count = 0
         stderr_tail: List[str] = []
+        transport_errors: List[str] = []
         remote_client_actions: List[dict] = []
         returncode: Optional[int] = None
         status = "failed"
@@ -3080,6 +3230,14 @@ def _run_agent_node_worker(
                         if thread_id:
                             store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
                     for ev in parse_line(line):
+                        if _is_internal_cli_event(ev):
+                            error_text = str(ev.get("cli_transport_error") or "")
+                            if error_text:
+                                transport_errors.append(error_text)
+                                transport_errors = transport_errors[-5:]
+                            all_events.append(ev)
+                            line_count += 1
+                            continue
                         if not append_event(ev):
                             try:
                                 requests.post(
@@ -3142,6 +3300,7 @@ def _run_agent_node_worker(
             remote_client_actions=remote_client_actions,
             stderr_tail=stderr_tail,
             line_count=line_count,
+            transport_errors=transport_errors,
         )
 
     base_run_id = _safe_path_part(job_id or uuid.uuid4().hex, "job")
@@ -3149,6 +3308,8 @@ def _run_agent_node_worker(
     current_run_id = base_run_id
     current_msg = last_msg
     repair_attempts = 0
+    transport_retry_attempts = 0
+    max_transport_retries = _agent_cli_transport_retry_max()
     total_line_count = 0
     last_validation_hash = ""
     client_actions: List[dict] = []
@@ -3160,7 +3321,43 @@ def _run_agent_node_worker(
 
         if run_result.status != "done" or run_result.returncode not in (0, None):
             err_text = "".join(run_result.stderr_tail)[-2000:]
+            transport_error = next(
+                (item for item in reversed(run_result.transport_errors) if _is_cli_transport_error(item)),
+                "",
+            )
+            if not transport_error and _is_cli_transport_error(err_text):
+                transport_error = err_text
+            if transport_error and transport_retry_attempts < max_transport_retries:
+                transport_retry_attempts += 1
+                if not append_event({
+                    "status": "retrying",
+                    "message": (
+                        "AI 接口返回临时兼容错误，正在重试 "
+                        f"({transport_retry_attempts}/{max_transport_retries})..."
+                    ),
+                    "retry_attempt": transport_retry_attempts,
+                    "max_retry_attempts": max_transport_retries,
+                }):
+                    return
+                _append_cli_log(session_id, "meta", json.dumps({
+                    "event": "cli_transport_retry",
+                    "run_id": run_result.run_id,
+                    "next_run_id": f"{repair_run_prefix}-transport-retry-{transport_retry_attempts}",
+                    "attempt": transport_retry_attempts,
+                    "max_attempts": max_transport_retries,
+                    "error": transport_error[-500:],
+                }, ensure_ascii=False))
+                current_run_id = _safe_path_part(
+                    f"{repair_run_prefix}-transport-retry-{transport_retry_attempts}",
+                    "retry",
+                )
+                continue
             err_msg = f"agent-node run failed status={run_result.status} returncode={run_result.returncode}: {err_text}"
+            if transport_error and not err_text:
+                err_msg = (
+                    f"agent-node run failed status={run_result.status} "
+                    f"returncode={run_result.returncode}: {transport_error}"
+                )
             append_event({"error": err_msg, "needs_retry": True})
             set_status(STATUS_FAILED, error=err_msg)
             return
@@ -3219,7 +3416,11 @@ def _run_agent_node_worker(
                 "stage": exc.script,
             }):
                 return
-            if runner == "claude" and not current_resume_id:
+            if (
+                runner == "claude"
+                and not current_resume_id
+                and claude_cli_resume_enabled(provider.get("id"))
+            ):
                 current_resume_id = session_id
             elif runner == "codex" and not current_resume_id:
                 current_resume_id = store.get_meta(session_id).get("agent_thread_id") or ""
@@ -3402,12 +3603,14 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
         else:
             # Claude 有历史时 resume；首次会话直接指定 session-id 创建，避免无意义 fallback。
             resume_first = bool(agent_resume_id)
+            cli_run_id = job_id or uuid.uuid4().hex
             cmd = _build_cli_cmd(
                 session_id,
                 last_msg,
                 sys_prompt,
                 is_resume=resume_first,
                 workspace=workspace,
+                cli_session_id=_agent_cli_session_id(session_id, cli_run_id),
             )
             logger.info(
                 f"[WORKER] sid={session_id} 起 Claude CLI "
@@ -3467,6 +3670,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                         sys_prompt,
                         is_resume=False,
                         workspace=workspace,
+                        cli_session_id=_agent_cli_session_id(session_id, cli_run_id),
                     )
                     proc = subprocess.Popen(
                         cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -3505,6 +3709,10 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 if thread_id:
                     store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
             for ev in parse_line(line_str):
+                if _is_internal_cli_event(ev):
+                    all_events.append(ev)
+                    line_count += 1
+                    continue
                 if not append_event(ev):
                     try:
                         proc.terminate()
@@ -3541,6 +3749,10 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 if thread_id:
                     store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
             for ev in parse_line(line_str):
+                if _is_internal_cli_event(ev):
+                    all_events.append(ev)
+                    line_count += 1
+                    continue
                 if not append_event(ev):
                     try:
                         proc.terminate()

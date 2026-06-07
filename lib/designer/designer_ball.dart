@@ -1272,7 +1272,25 @@ class _DesignerBallState extends State<DesignerBall>
       _scrollToBottom();
     }
 
-    _attachAiStream(_chatService.sendStream(text));
+    _attachAiStream(
+      _chatService.sendStream(text, contextMessages: _aiConversationPayload()),
+    );
+  }
+
+  List<Map<String, String>> _aiConversationPayload() {
+    final items = <Map<String, String>>[];
+    for (final message in _messages) {
+      if (message.role != 'user' && message.role != 'assistant') continue;
+      if (message.action != null ||
+          message.failedJsonUrl != null ||
+          message.jsonUrl != null) {
+        continue;
+      }
+      final content = message.content.trim();
+      if (content.isEmpty) continue;
+      items.add({'role': message.role, 'content': content});
+    }
+    return items;
   }
 
   /// 把一个 AI 事件流接到 UI。三处用：
@@ -1516,7 +1534,9 @@ class _DesignerBallState extends State<DesignerBall>
     _scrollToBottom();
 
     _cancelCurrentStream();
-    _attachAiStream(_chatService.retryLastTurn());
+    _attachAiStream(
+      _chatService.retryLastTurn(contextMessages: _aiConversationPayload()),
+    );
   }
 
   /// app 启动/重新打开字幕时：检查后端有没有上一轮未完成 / 已完成的任务，
@@ -2030,7 +2050,7 @@ class _DesignerBallState extends State<DesignerBall>
     // 直接发送给 AI
     _cancelCurrentStream();
     _streamSub = _chatService
-        .sendStream(crashReport)
+        .sendStream(crashReport, contextMessages: _aiConversationPayload())
         .listen(
           (event) {
             if (event.error != null && event.content == null) {

@@ -195,6 +195,40 @@ class AiChatService {
   /// Assistant 文本必须原样展示；客户端动作只来自后端结构化 client_action 事件。
   static String cleanAssistantDisplayText(String text) => text;
 
+  static const int _maxStartMessages = 16;
+  static const int _maxStartMessageChars = 5000;
+
+  static String _trimStartMessage(String text) {
+    final cleaned = text.replaceAll('\u0000', '').trim();
+    if (cleaned.length <= _maxStartMessageChars) return cleaned;
+    return '${cleaned.substring(0, _maxStartMessageChars)}\n...[truncated]';
+  }
+
+  static List<Map<String, String>> _buildStartMessages(
+    String userMessage,
+    List<Map<String, String>>? contextMessages,
+  ) {
+    final result = <Map<String, String>>[];
+    final source = contextMessages ?? const <Map<String, String>>[];
+    for (final item in source) {
+      final role = (item['role'] ?? '').trim().toLowerCase();
+      if (role != 'user' && role != 'assistant') continue;
+      final content = _trimStartMessage(item['content'] ?? '');
+      if (content.isEmpty) continue;
+      result.add({'role': role, 'content': content});
+    }
+    final latest = _trimStartMessage(userMessage);
+    final hasLatest =
+        result.isNotEmpty &&
+        result.last['role'] == 'user' &&
+        result.last['content'] == latest;
+    if (!hasLatest && latest.isNotEmpty) {
+      result.add({'role': 'user', 'content': latest});
+    }
+    if (result.length <= _maxStartMessages) return result;
+    return result.sublist(result.length - _maxStartMessages);
+  }
+
   static ChatEvent? _eventFromClientAction(Map<String, dynamic> action) {
     final type = action['type'] as String? ?? '';
     switch (type) {
@@ -680,7 +714,10 @@ class AiChatService {
   ///   3. 网络断 / 切后台 → SSE 自然断 → 客户端拿 _lastEntryId 续读，
   ///      worker 仍在跑，不丢事件
   ///   4. 收到 [DONE] → 任务真的完成，退出
-  Stream<ChatEvent> sendStream(String userMessage) async* {
+  Stream<ChatEvent> sendStream(
+    String userMessage, {
+    List<Map<String, String>>? contextMessages,
+  }) async* {
     // 远程熔断：admin 在 config-center 把 pause_request 打开就立刻拒服务
     if (RemoteConfigService.instance.pauseRequest) {
       yield ChatEvent(error: T.current.errPauseRequest);
@@ -706,7 +743,11 @@ class AiChatService {
     debugPrint('[AI_CHAT] ====================================');
 
     // ── 1. POST /start：起 worker ──
-    final startResult = await _postStart(userMessage, forceRestart: true);
+    final startResult = await _postStart(
+      userMessage,
+      forceRestart: true,
+      contextMessages: contextMessages,
+    );
     if (startResult.error != null) {
       yield ChatEvent(error: startResult.error, quota: startResult.quota);
       return;
@@ -735,14 +776,16 @@ class AiChatService {
   }
 
   /// 重试上一轮（worker 死了 / 用户主动重试）。复用 active session 的 sid，
-  /// CLI 通过 -r 参数继承对话上下文，所以不丢历史。
-  Stream<ChatEvent> retryLastTurn() async* {
+  /// 并把最近对话上下文显式交给后端，避免依赖第三方模型不稳定的 CLI resume。
+  Stream<ChatEvent> retryLastTurn({
+    List<Map<String, String>>? contextMessages,
+  }) async* {
     final msg = lastUserMessage;
     if (msg.isEmpty) {
       yield ChatEvent(error: T.current.chatErrNoRetryMessage);
       return;
     }
-    yield* sendStream(msg);
+    yield* sendStream(msg, contextMessages: contextMessages);
   }
 
   /// SSE 主循环：连 → 读 → 断了 → 探活 → 重连 / 报错。
@@ -1564,6 +1607,7 @@ class AiChatService {
   Future<_StartResult> _postStart(
     String userMessage, {
     required bool forceRestart,
+    List<Map<String, String>>? contextMessages,
   }) async {
     const maxAttempts = 3;
     Object? lastError;
@@ -1577,9 +1621,7 @@ class AiChatService {
         final headers = <String, String>{'Content-Type': 'application/json'};
         if (token != null) headers['Authorization'] = 'Bearer $token';
         final body = json.encode({
-          'messages': [
-            {'role': 'user', 'content': userMessage},
-          ],
+          'messages': _buildStartMessages(userMessage, contextMessages),
           'session_id': _activeSessionId,
           'provider': _selectedProvider,
           'agent': selectedAgent,

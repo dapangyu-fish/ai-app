@@ -83,7 +83,7 @@ def _claude_cmd(payload: dict) -> list[str]:
         _str(payload.get("prompt")),
     ]
     resume_id = _str(payload.get("resume_id")).strip()
-    session_id = _str(payload.get("session_id")).strip()
+    session_id = _str(payload.get("cli_session_id") or payload.get("session_id")).strip()
     system_prompt = _str(payload.get("system_prompt"))
     if resume_id:
         cmd.extend(["-r", resume_id])

@@ -170,8 +170,8 @@ def _get_agent(agent_id=None):
 
 def _provider_supports_agent(provider: dict, agent_id: str) -> bool:
     supported = provider.get("supported_agents")
-    if isinstance(supported, list) and supported:
-        return agent_id in {str(item) for item in supported}
+    if isinstance(supported, list) and supported and agent_id not in {str(item) for item in supported}:
+        return False
     if agent_id == "claude":
         return True
     if agent_id == "codex":
@@ -193,6 +193,109 @@ def _dynamic_node_provider(provider_id: str, *, supported_agents: list[str] | No
         "supported_agents": supported_agents or ["claude"],
         "worker": {},
     }
+
+
+def _env_int(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+
+
+_CHAT_CONTEXT_MAX_MESSAGES = _env_int("AI_CHAT_CONTEXT_MAX_MESSAGES", 16)
+_CHAT_CONTEXT_MAX_CHARS = _env_int("AI_CHAT_CONTEXT_MAX_CHARS", 24000)
+_CHAT_CONTEXT_MESSAGE_MAX_CHARS = _env_int("AI_CHAT_CONTEXT_MESSAGE_MAX_CHARS", 5000)
+
+
+def _clean_chat_message_content(value) -> str:
+    if isinstance(value, str):
+        text = value
+    elif value is None:
+        return ""
+    else:
+        text = str(value)
+    text = text.replace("\x00", "").strip()
+    if len(text) > _CHAT_CONTEXT_MESSAGE_MAX_CHARS:
+        keep = max(500, _CHAT_CONTEXT_MESSAGE_MAX_CHARS)
+        text = text[:keep] + "\n...[truncated]"
+    return text
+
+
+def _normalize_chat_messages(messages) -> list[dict]:
+    if not isinstance(messages, list):
+        return []
+    result = []
+    for raw in messages:
+        if not isinstance(raw, dict):
+            continue
+        role = str(raw.get("role") or "").strip().lower()
+        if role not in {"user", "assistant"}:
+            continue
+        content = _clean_chat_message_content(raw.get("content"))
+        if not content:
+            continue
+        # 失败提示和重试按钮是客户端 UI 状态，不应作为下一轮语义上下文污染 Agent。
+        if role == "assistant" and (
+            "API Error: Failed to parse JSON" in content
+            or "AI任务被中断" in content
+            or "AI task was interrupted" in content
+        ):
+            continue
+        result.append({"role": role, "content": content})
+    return result
+
+
+def _last_user_message(messages) -> str:
+    for m in reversed(_normalize_chat_messages(messages)):
+        if m.get("role") == "user":
+            return m.get("content", "")
+    return ""
+
+
+def _build_contextual_turn_message(messages, latest_user_message: str) -> str:
+    normalized = _normalize_chat_messages(messages)
+    if not normalized:
+        return latest_user_message
+
+    recent_reversed = []
+    total = 0
+    for item in reversed(normalized):
+        content = item["content"]
+        cost = len(content) + 32
+        if recent_reversed and (
+            len(recent_reversed) >= _CHAT_CONTEXT_MAX_MESSAGES
+            or total + cost > _CHAT_CONTEXT_MAX_CHARS
+        ):
+            break
+        recent_reversed.append(item)
+        total += cost
+    recent = list(reversed(recent_reversed))
+
+    if (
+        len(recent) == 1
+        and recent[0].get("role") == "user"
+        and recent[0].get("content") == latest_user_message
+    ):
+        return latest_user_message
+
+    lines = [
+        "以下是本会话最近对话上下文，只用于理解用户意图和连续打磨同一个 APP；"
+        "不要把 assistant 的历史描述当成必须照抄的最终事实，最终以本轮最新用户请求为准。",
+        "<conversation_context>",
+    ]
+    for item in recent:
+        role = "user" if item["role"] == "user" else "assistant"
+        lines.append(f"<message role=\"{role}\">")
+        lines.append(item["content"])
+        lines.append("</message>")
+    lines.extend([
+        "</conversation_context>",
+        "本轮最新用户请求:",
+        "<latest_user_request>",
+        latest_user_message,
+        "</latest_user_request>",
+    ])
+    return "\n".join(lines)
 
 
 def _get_request_provider(provider_id: str, *, agent_scope: str, user_id: str, agent_id: str) -> dict:
@@ -833,13 +936,10 @@ def chat_start():
     if not messages or not session_id:
         return jsonify({"error": "messages 和 session_id 是必需的"}), 400
 
-    last_msg = ""
-    for m in reversed(messages):
-        if m.get("role") == "user":
-            last_msg = m.get("content", "")
-            break
+    last_msg = _last_user_message(messages)
     if not last_msg:
         return jsonify({"error": "未找到用户消息"}), 400
+    turn_msg = _build_contextual_turn_message(messages, last_msg)
 
     try:
         agent = _get_agent(agent_id)
@@ -980,11 +1080,12 @@ def chat_start():
             agent_id == "claude"
             and can_resume_existing
             and existing.get("agent") == "claude"
+            and ai_session.claude_cli_resume_enabled(provider_id)
         ):
-            # Claude Code uses the app session id as its conversation id. Once a
-            # backend session exists, prefer resume. If the previous attempt failed
-            # before Claude created the conversation, the worker has a fallback that
-            # creates a fresh session on "No conversation found".
+            # Default is off for third-party Anthropic-compatible providers. They
+            # may emit history shapes that Claude CLI cannot replay through -r.
+            # When explicitly enabled, Claude Code uses the app session id as its
+            # conversation id.
             agent_resume_id = session_id
 
         # 新一轮 job 必须清掉上一次 /abort 留下的短 TTL 标记。
@@ -1009,7 +1110,7 @@ def chat_start():
                 "message": "已打断上一轮生成，开始处理新消息...",
             })
         accepted, queue_position = ai_session.submit_worker(
-            session_id, last_msg, provider_id,
+            session_id, turn_msg, provider_id,
             agent_id=agent_id,
             agent_resume_id=agent_resume_id,
             user_id=user_id,

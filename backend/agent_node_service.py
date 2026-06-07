@@ -95,7 +95,7 @@ PROVIDER_IDS = [
 ]
 AGENT_IDS = [
     item.strip().lower().replace("_", "-")
-    for item in os.environ.get("AGENT_NODE_AGENT_IDS", "claude").split(",")
+    for item in os.environ.get("AGENT_NODE_AGENT_IDS", "claude,codex").split(",")
     if item.strip()
 ]
 
@@ -931,6 +931,7 @@ def _create_local_run(data: dict) -> str:
         "provider_id": str(data.get("provider_id") or ""),
         "agent_id": str(data.get("agent_id") or "claude"),
         "resume_id": str(data.get("resume_id") or ""),
+        "cli_session_id": str(data.get("cli_session_id") or ""),
         "prompt": prompt,
         "system_prompt": str(data.get("system_prompt") or ""),
         "env": data.get("env") or {},
