@@ -50,6 +50,7 @@ DATA_ROOT_DIRS = [
     "agent-node/state",
     "agent-node/workspaces",
     "agent-node/logs",
+    "agent-nodes",
     "jsonapp-postgres/data",
     "ai-session-redis/data",
     "app-minio/data",
@@ -1006,6 +1007,138 @@ def _docker_container_running(name: str) -> bool:
     data = _docker_inspect(name)
     state = data.get("State") if isinstance(data, dict) else None
     return bool(isinstance(state, dict) and state.get("Running"))
+
+
+def _agent_node_instance_slug(node_id: str) -> str:
+    text = re.sub(r"[^a-zA-Z0-9_.-]+", "-", str(node_id or "agent-node")).strip(".-")
+    return (text.lower() or "agent-node")[:96]
+
+
+def _agent_node_instance_container_name(node_id: str) -> str:
+    return f"myapp-agent-node-{_agent_node_instance_slug(node_id)}"
+
+
+def _agent_node_instance_root(data_root: Path, node_id: str) -> Path:
+    return data_root / "agent-nodes" / _agent_node_instance_slug(node_id)
+
+
+def _agent_node_container_backend_url(backend_url: str) -> str:
+    """Return a backend URL reachable from an extra agent-node container."""
+    text = str(backend_url or "").strip().rstrip("/")
+    parsed = urlparse(text)
+    host = (parsed.hostname or "").lower()
+    if host in {"127.0.0.1", "localhost", "0.0.0.0", "::1"} and (parsed.port or 80) == 5566:
+        return "http://backend:5566"
+    return text
+
+
+def _write_agent_node_instance_env(path: Path, values: dict[str, str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lines = []
+    for key in sorted(values):
+        clean_key = str(key).strip()
+        if not clean_key or not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", clean_key):
+            continue
+        clean_value = str(values[key]).replace("\r", "").replace("\n", "\\n")
+        lines.append(f"{clean_key}={clean_value}")
+    path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+
+
+_AGENT_NODE_INSTANCE_OPTIONAL_PREFIXES = (
+    "AGENT_NODE_POLL_",
+    "AGENT_NODE_EVENT_",
+    "AGENT_NODE_RUN_",
+    "AGENT_NODE_CONTAINER_",
+)
+
+
+def _filtered_agent_node_instance_env(values: dict[str, str], keys: list[str]) -> dict[str, str]:
+    out: dict[str, str] = {}
+    for key in keys:
+        value = values.get(key)
+        if value is not None and str(value) != "":
+            out[key] = str(value)
+    for key, value in values.items():
+        if any(str(key).startswith(prefix) for prefix in _AGENT_NODE_INSTANCE_OPTIONAL_PREFIXES) and str(value) != "":
+            out.setdefault(str(key), str(value))
+    return out
+
+
+def _run_agent_node_instance(*, node_id: str, env_path: Path, data_root: Path, build: bool = False, pull: bool = False) -> int:
+    if build and pull:
+        print("--build and --pull cannot be used together", file=sys.stderr)
+        return 2
+    image_targets = ["agent-runtime", "agent-node"]
+    if build:
+        rc = _deploy_images(image_targets, action="build", dry_run=False)
+        if rc != 0:
+            return rc
+    elif pull:
+        rc = _deploy_images(image_targets, action="pull", dry_run=False)
+        if rc != 0:
+            return rc
+    for network in DEFAULT_NETWORKS:
+        if not _docker_network_exists(network):
+            rc = _run(["docker", "network", "create", network], capture=False).returncode
+            if rc != 0:
+                return rc
+    container = _agent_node_instance_container_name(node_id)
+    instance_root = _agent_node_instance_root(data_root, node_id)
+    instance_root.mkdir(parents=True, exist_ok=True)
+    _run(["docker", "rm", "-f", container], capture=True)
+    image = _configured_image("agent-node")
+    cmd = [
+        "docker",
+        "run",
+        "-d",
+        "--name",
+        container,
+        "--restart",
+        "unless-stopped",
+        "--network",
+        "myapp_default",
+    ]
+    providers_env = _secret_path("ai-providers")
+    if providers_env.exists():
+        cmd.extend(["--env-file", str(providers_env)])
+    cmd.extend(
+        [
+            "--env-file",
+            str(env_path),
+            "-e",
+            f"AGENT_NODE_PROVIDER_PROXY_BASE_URL=http://{container}:5590",
+        ]
+    )
+    cmd.extend([
+        "-e",
+        f"AGENT_NODE_RUNTIME_IMAGE={_configured_image('agent-runtime')}",
+        "-e",
+        "AGENT_NODE_DOCKER_NETWORK=myapp_agent_runtime",
+        "-e",
+        "AGENT_NODE_STATE_ROOT=/var/lib/myapp/agent-node/state",
+        "-e",
+        "AGENT_NODE_WORKSPACE_ROOT=/var/lib/myapp/agent-node/workspaces",
+        "-e",
+        f"AGENT_NODE_HOST_STATE_ROOT={instance_root}/state",
+        "-e",
+        f"AGENT_NODE_HOST_WORKSPACE_ROOT={instance_root}/workspaces",
+        "-e",
+        "AGENT_NODE_LOG_DIR=/var/lib/myapp/agent-node/logs",
+        "-v",
+        "/var/run/docker.sock:/var/run/docker.sock",
+        "-v",
+        f"{instance_root}:/var/lib/myapp/agent-node",
+        image,
+    ])
+    rc = _run(cmd, capture=False).returncode
+    if rc != 0:
+        return rc
+    rc = _run(["docker", "network", "connect", "myapp_agent_runtime", container], capture=True).returncode
+    if rc != 0:
+        _run(["docker", "rm", "-f", container], capture=True)
+        return rc
+    print(f"started agent-node instance: {container}")
+    return 0
 
 
 def _docker_ps_all() -> list[dict]:
@@ -3570,6 +3703,7 @@ def _print_agent_add_script(args) -> int:
         print("--node-id is required when --host/--url is omitted", file=sys.stderr)
         return 2
     node_id = args.node_id or _agent_add_node_id(host)
+    node_name = (getattr(args, "name", None) or node_id).strip()[:128] or node_id
     if mode == "pull" and not node_url:
         node_url = f"pull://{node_id}"
     display_host = host or node_id
@@ -3592,6 +3726,8 @@ def _print_agent_add_script(args) -> int:
         labels.append(f"provider_mode={provider_mode}")
     if not any(str(label).replace("_", "-").startswith("mode=") for label in labels):
         labels.append(f"mode={mode}")
+    if not any(str(label).replace("_", "-").startswith("name=") for label in labels):
+        labels.append(f"name={node_name}")
     join_cmd = [
         "myapp-ctl",
         "agent-node",
@@ -3600,6 +3736,8 @@ def _print_agent_add_script(args) -> int:
         backend_url,
         "--node-id",
         node_id,
+        "--name",
+        node_name,
         "--url",
         node_url,
         "--host",
@@ -3652,6 +3790,7 @@ def _join_agent_node(args) -> int:
     mode = (args.mode or "pull").strip().lower().replace("_", "-")
     provider_mode = (args.provider_mode or "master").strip().lower().replace("_", "-")
     node_id = str(args.node_id or "").strip()
+    node_name = (getattr(args, "name", None) or node_id).strip()[:128] or node_id
     node_url = (args.url or "").rstrip("/")
     host = (args.host or "").strip()
     if not backend_url:
@@ -3700,15 +3839,35 @@ def _join_agent_node(args) -> int:
         labels.append(f"provider_mode={provider_mode}")
     if not any(str(label).replace("_", "-").startswith("mode=") for label in labels):
         labels.append(f"mode={mode}")
-
-    backend_env = _parse_env(_secret_path("backend"))
-    backend_env["PUBLIC_HOST"] = host or node_id
-    _write_env(_secret_path("backend"), backend_env)
+    if not any(str(label).replace("_", "-").startswith("name=") for label in labels):
+        labels.append(f"name={node_name}")
 
     agent_env = _parse_env(_secret_path("agent"))
-    agent_env.update(
+    current_node_id = str(agent_env.get("AGENT_NODE_ID") or "").strip()
+    has_running_agent_node = _docker_container_running("myapp-agent-node")
+    use_instance = bool(
+        mode == "pull"
+        and has_running_agent_node
+        and current_node_id != node_id
+        and not getattr(args, "replace_existing_agent_node", False)
+    )
+    if mode == "direct" and has_running_agent_node and current_node_id != node_id and not getattr(args, "replace_existing_agent_node", False):
+        print(
+            "refusing to replace the running agent-node in direct mode; "
+            "use pull mode for an additional local instance, or pass --replace-existing-agent-node",
+            file=sys.stderr,
+        )
+        return 2
+    if not use_instance:
+        backend_env = _parse_env(_secret_path("backend"))
+        backend_env["PUBLIC_HOST"] = host or node_id
+        _write_env(_secret_path("backend"), backend_env)
+    new_agent_env = dict(agent_env)
+    new_agent_env.update(
         {
             "AGENT_NODE_ID": node_id,
+            "AGENT_NODE_NAME": node_name,
+            "AGENT_NODE_AUTH_MODE": "shared",
             "AGENT_NODE_PORT": str(args.local_port),
             "AGENT_NODE_PROVIDER_MODE": provider_mode,
             "AGENT_NODE_PULL_ENABLED": "1" if mode == "pull" else "0",
@@ -3722,9 +3881,52 @@ def _join_agent_node(args) -> int:
             "AGENT_NODE_REGISTRATION_TOKEN": args.registration_token,
         }
     )
-    _write_env(_secret_path("agent"), agent_env)
+    if use_instance:
+        instance_root = _agent_node_instance_root(data_root, node_id)
+        env_path = instance_root / "agent.env"
+        instance_env = _filtered_agent_node_instance_env(
+            new_agent_env,
+            [
+                "AGENT_NODE_ID",
+                "AGENT_NODE_NAME",
+                "AGENT_NODE_AUTH_MODE",
+                "AGENT_NODE_PORT",
+                "AGENT_NODE_PROVIDER_MODE",
+                "AGENT_NODE_PULL_ENABLED",
+                "AGENT_NODE_BACKEND_URL",
+                "AGENT_NODE_SELF_REGISTER_URL",
+                "AGENT_NODE_CAPACITY",
+                "AGENT_NODE_QUEUE_MAX",
+                "AGENT_NODE_REGISTRATION_TTL_SECONDS",
+                "AGENT_NODE_LABELS",
+                "AGENT_NODE_TOKEN",
+                "AGENT_NODE_REGISTRATION_TOKEN",
+            ],
+        )
+        instance_env["AGENT_NODE_BACKEND_URL"] = _agent_node_container_backend_url(backend_url)
+        instance_env["PUBLIC_HOST"] = host or node_id
+        _write_agent_node_instance_env(env_path, instance_env)
+        _safe_write_default_config_snapshot()
+        print(
+            f"starting additional agent-node instance without replacing myapp-agent-node: "
+            f"{node_name} ({node_id}) -> {node_url}",
+            flush=True,
+        )
+        rc = _run_agent_node_instance(
+            node_id=node_id,
+            env_path=env_path,
+            data_root=data_root,
+            build=bool(args.build),
+            pull=bool(args.pull),
+        )
+        if rc != 0:
+            return rc
+        _run(["myapp-ctl", "agent", "ls"], capture=False)
+        return 0
+
+    _write_env(_secret_path("agent"), new_agent_env)
     _safe_write_default_config_snapshot()
-    print(f"updated agent join config: {node_id} -> {node_url}", flush=True)
+    print(f"updated agent join config: {node_name} ({node_id}) -> {node_url}", flush=True)
 
     if mode == "direct" and not args.no_nginx:
         if shutil.which("apt-get"):
@@ -3796,7 +3998,9 @@ def _join_agent_node(args) -> int:
             backend=backend_url,
             url=node_url,
             node_id=node_id,
+            name=node_name,
             capacity=args.capacity,
+            queue_max=args.queue_max if args.queue_max is not None else args.capacity,
             ttl=args.ttl,
             token=args.registration_token,
             label=labels,
@@ -3808,8 +4012,8 @@ def _join_agent_node(args) -> int:
     return 0
 
 
-def _private_agent_key_paths(data_root: Path, node_id: str) -> tuple[Path, Path]:
-    key_dir = data_root / "agent-node" / "private"
+def _private_agent_key_paths(agent_root: Path, node_id: str) -> tuple[Path, Path]:
+    key_dir = agent_root / "private"
     safe_node = re.sub(r"[^A-Za-z0-9_.-]+", "_", node_id).strip("._") or "private-agent"
     return key_dir / f"{safe_node}.key.pem", key_dir / f"{safe_node}.public.pem"
 
@@ -3959,25 +4163,15 @@ def _join_private_agent_node(args) -> int:
         return 2
     _ensure_data_root_layout(data_root)
     agent_env = _parse_env(_secret_path("agent"))
-    current_auth_mode = str(agent_env.get("AGENT_NODE_AUTH_MODE", "shared")).strip().lower().replace("_", "-")
-    current_provider_mode = str(agent_env.get("AGENT_NODE_PROVIDER_MODE", "master")).strip().lower().replace("_", "-")
     current_node_id = str(agent_env.get("AGENT_NODE_ID") or "").strip()
     has_running_agent_node = _docker_container_running("myapp-agent-node")
-    is_existing_public_node = bool(
-        current_node_id
-        and current_auth_mode not in {"private", "user-private"}
-        and current_provider_mode != "local"
-        and has_running_agent_node
+    use_instance = bool(
+        has_running_agent_node
+        and current_node_id != node_id
+        and not getattr(args, "replace_existing_agent_node", False)
     )
-    if is_existing_public_node and not getattr(args, "replace_existing_agent_node", False):
-        print(
-            "refusing to replace the running public agent-node on this host; "
-            "run this join command on a separate private agent host, or pass "
-            "--replace-existing-agent-node if you intentionally want to convert this host",
-            file=sys.stderr,
-        )
-        return 2
-    private_key, public_key = _private_agent_key_paths(data_root, node_id)
+    agent_root = _agent_node_instance_root(data_root, node_id) if use_instance else data_root / "agent-node"
+    private_key, public_key = _private_agent_key_paths(agent_root, node_id)
     private_key_container = f"/var/lib/myapp/agent-node/private/{private_key.name}"
     rc = _ensure_private_agent_keypair(private_key, public_key)
     if rc != 0:
@@ -4021,16 +4215,21 @@ def _join_private_agent_node(args) -> int:
     if rc != 0:
         return rc
     agent_env = _parse_env(_secret_path("agent"))
+    node_name = (args.name or node_id).strip()[:128] or node_id
     labels = list(args.label or [])
     if not any(str(label).startswith("host=") for label in labels):
         labels.append(f"host={args.host or socket.gethostname()}")
+    if not any(str(label).replace("_", "-").startswith("name=") for label in labels):
+        labels.append(f"name={node_name}")
     for required_label in ("visibility=private", "provider_mode=local", "mode=pull"):
         key = required_label.split("=", 1)[0].replace("_", "-")
         if not any(str(label).replace("_", "-").startswith(f"{key}=") for label in labels):
             labels.append(required_label)
-    agent_env.update(
+    new_agent_env = dict(agent_env)
+    new_agent_env.update(
         {
             "AGENT_NODE_ID": node_id,
+            "AGENT_NODE_NAME": node_name,
             "AGENT_NODE_PORT": str(args.local_port),
             "AGENT_NODE_AUTH_MODE": "private",
             "AGENT_NODE_OWNER_USER_ID": owner_user_id,
@@ -4049,18 +4248,62 @@ def _join_private_agent_node(args) -> int:
             "AGENT_NODE_REGISTRATION_TOKEN": "",
         }
     )
-    _write_env(_secret_path("agent"), agent_env)
-    _safe_write_default_config_snapshot()
-    deploy_cmd = ["myapp-ctl", "deploy", "agent-node", "agent-runtime", "--no-setup", "--no-test-user"]
-    if args.build:
-        deploy_cmd.append("--build")
-    elif args.pull:
-        deploy_cmd.append("--pull")
-    rc = _run(deploy_cmd, capture=False).returncode
+    if use_instance:
+        env_path = agent_root / "agent.env"
+        instance_env = _filtered_agent_node_instance_env(
+            new_agent_env,
+            [
+                "AGENT_NODE_ID",
+                "AGENT_NODE_NAME",
+                "AGENT_NODE_PORT",
+                "AGENT_NODE_AUTH_MODE",
+                "AGENT_NODE_OWNER_USER_ID",
+                "AGENT_NODE_PRIVATE_KEY_PATH",
+                "AGENT_NODE_PROVIDER_MODE",
+                "AGENT_NODE_PULL_ENABLED",
+                "AGENT_NODE_BACKEND_URL",
+                "AGENT_NODE_SELF_REGISTER_URL",
+                "AGENT_NODE_CAPACITY",
+                "AGENT_NODE_QUEUE_MAX",
+                "AGENT_NODE_REGISTRATION_TTL_SECONDS",
+                "AGENT_NODE_PROVIDER_IDS",
+                "AGENT_NODE_AGENT_IDS",
+                "AGENT_NODE_LABELS",
+                "AGENT_NODE_TOKEN",
+            ],
+        )
+        instance_env["AGENT_NODE_BACKEND_URL"] = _agent_node_container_backend_url(backend_url)
+        instance_env["PUBLIC_HOST"] = args.host or socket.gethostname()
+        _write_agent_node_instance_env(env_path, instance_env)
+        _safe_write_default_config_snapshot()
+        print(
+            f"starting private agent-node instance without replacing myapp-agent-node: "
+            f"{node_name} ({node_id})",
+            flush=True,
+        )
+        rc = _run_agent_node_instance(
+            node_id=node_id,
+            env_path=env_path,
+            data_root=data_root,
+            build=bool(args.build),
+            pull=bool(args.pull),
+        )
+    else:
+        _write_env(_secret_path("agent"), new_agent_env)
+        _safe_write_default_config_snapshot()
+        deploy_cmd = ["myapp-ctl", "deploy", "agent-node", "agent-runtime", "--no-setup", "--no-test-user"]
+        if args.build:
+            deploy_cmd.append("--build")
+        elif args.pull:
+            deploy_cmd.append("--pull")
+        rc = _run(deploy_cmd, capture=False).returncode
     if rc != 0:
         return rc
     print(json.dumps(data, ensure_ascii=False))
-    _run(["myapp-ctl", "status", "agent-node"], capture=False)
+    if use_instance:
+        _run(["myapp-ctl", "agent", "ls"], capture=False)
+    else:
+        _run(["myapp-ctl", "status", "agent-node"], capture=False)
     return 0
 
 def _agent_node_backend_url(args) -> str:
@@ -4128,6 +4371,7 @@ def _register_agent_node(args) -> int:
     backend_url = _agent_node_backend_url(args)
     node_url = (args.url or _cfg().get("domains", {}).get("agent_node") or "").rstrip("/")
     node_id = args.node_id or _cfg().get("node", {}).get("id") or os.uname().nodename
+    node_name = (getattr(args, "name", None) or node_id).strip()[:128] or node_id
     if not backend_url:
         print("backend url is required; pass --backend or set domains.backend", file=sys.stderr)
         return 2
@@ -4136,6 +4380,7 @@ def _register_agent_node(args) -> int:
         return 2
     payload = {
         "node_id": node_id,
+        "name": node_name,
         "url": node_url,
         "capacity": args.capacity,
         "queue_max": getattr(args, "queue_max", None) if getattr(args, "queue_max", None) is not None else args.capacity,
@@ -4167,6 +4412,7 @@ def _local_agent_node_register_command() -> list[str]:
         or cfg.get("node", {}).get("id")
         or os.uname().nodename
     )
+    node_name = (agent_env.get("AGENT_NODE_NAME") or node_id).strip()[:128] or node_id
     pull_enabled = str(agent_env.get("AGENT_NODE_PULL_ENABLED", "1")).strip().lower() in {"1", "true", "yes", "on"}
     default_node_url = (
         f"pull://{node_id}"
@@ -4195,6 +4441,8 @@ def _local_agent_node_register_command() -> list[str]:
         node_url,
         "--node-id",
         node_id,
+        "--name",
+        node_name,
         "--capacity",
         str(capacity),
         "--queue-max",
@@ -4318,7 +4566,9 @@ def _print_agent_node_rows(data: dict, *, as_json: bool = False) -> int:
     for item in data.get("nodes") or []:
         rows.append(
             {
+                "name": item.get("name") or item.get("display_name") or item.get("node_id", "-"),
                 "node_id": item.get("node_id", "-"),
+                "namespace": item.get("namespace") or ("public" if item.get("visibility", "public") == "public" else item.get("owner_user_id") or "-"),
                 "host": item.get("host") or "-",
                 "status": item.get("status", "-"),
                 "version": _version_label(item),
@@ -4334,7 +4584,9 @@ def _print_agent_node_rows(data: dict, *, as_json: bool = False) -> int:
     _print_table(
         rows,
         [
+            ("name", "NAME"),
             ("node_id", "NODE"),
+            ("namespace", "NS"),
             ("host", "HOST"),
             ("status", "STATUS"),
             ("version", "VERSION"),
@@ -4361,7 +4613,9 @@ def _print_agent_node_status(data: dict, *, as_json: bool = False) -> int:
     _print_table(
         [
             {
+                "name": node.get("name") or node.get("display_name") or node.get("node_id", "-"),
                 "node_id": node.get("node_id", "-"),
+                "namespace": node.get("namespace") or ("public" if node.get("visibility", "public") == "public" else node.get("owner_user_id") or "-"),
                 "host": node.get("host") or "-",
                 "status": node.get("status", "-"),
                 "health": node.get("health", "-"),
@@ -4376,7 +4630,9 @@ def _print_agent_node_status(data: dict, *, as_json: bool = False) -> int:
             }
         ],
         [
+            ("name", "NAME"),
             ("node_id", "NODE"),
+            ("namespace", "NS"),
             ("host", "HOST"),
             ("status", "STATUS"),
             ("health", "HEALTH"),
@@ -4506,7 +4762,7 @@ def _active_local_agent_container_names() -> list[str]:
     return [
         line.strip()
         for line in proc.stdout.splitlines()
-        if line.strip() and line.strip() != "myapp-agent-node"
+        if line.strip() and not line.strip().startswith("myapp-agent-node")
     ]
 
 
@@ -4589,17 +4845,14 @@ def cmd_agent_node(args) -> int:
     if not backend_url:
         print("backend url is required; pass --backend or set domains.backend", file=sys.stderr)
         return 2
-    if _local_agent_node_is_private() and args.agent_node_cmd in {"ls", "status"} and not getattr(args, "token", None):
-        if args.agent_node_cmd == "ls":
-            return _list_private_agent_nodes(args)
-        return _status_private_agent_node(args)
     token = _agent_node_registry_token(args)
 
     if args.agent_node_cmd == "ls":
         probe = "0" if args.no_probe else "1"
+        namespace = quote(str(getattr(args, "namespace", None) or "public"), safe="")
         data, status, error = _agent_node_request_json(
             backend_url,
-            f"/api/ai/agent_nodes?probe={probe}",
+            f"/api/ai/agent_nodes?probe={probe}&namespace={namespace}",
             token=token,
         )
         if not data:
@@ -4610,9 +4863,10 @@ def cmd_agent_node(args) -> int:
     if args.agent_node_cmd == "status":
         if not args.node_id:
             probe = "0" if args.no_probe else "1"
+            namespace = quote(str(getattr(args, "namespace", None) or "public"), safe="")
             data, status, error = _agent_node_request_json(
                 backend_url,
-                f"/api/ai/agent_nodes?probe={probe}",
+                f"/api/ai/agent_nodes?probe={probe}&namespace={namespace}",
                 token=token,
             )
             if not data:
@@ -4714,7 +4968,7 @@ def cmd_agent(args) -> int:
             except json.JSONDecodeError:
                 continue
             name = item.get("Names", "-")
-            if name == "myapp-agent-node":
+            if str(name).startswith("myapp-agent-node"):
                 continue
             rows.append({"container": name, "status": item.get("Status", "-")})
     print(f"running agent containers: {sum('Up ' in row['status'] for row in rows)}")
@@ -4935,6 +5189,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_ls = agent_node_sub.add_parser("ls", help=_tx("list registered cluster agent hosts", zh="列出已注册集群 Agent 节点", de="registrierte Cluster-Agent-Hosts auflisten", es="listar hosts agent registrados"), usage=_tx("myapp-ctl agent-node ls [options]", zh="myapp-ctl agent-node ls [选项]", de="myapp-ctl agent-node ls [Optionen]", es="myapp-ctl agent-node ls [opciones]"))
     agent_node_ls.add_argument("--backend")
     agent_node_ls.add_argument("--token")
+    agent_node_ls.add_argument("--namespace", default="public", help=_tx("node namespace to list: public, all, or a user id", zh="要列出的节点 namespace：public、all 或用户 ID", de="Node-Namespace: public, all oder Benutzer-ID", es="namespace de nodos: public, all o id de usuario"))
     agent_node_ls.add_argument("--auth-token", help=_tx("logged-in user access token for private-node view; alternatively MYAPP_AUTH_TOKEN", zh="私有节点视角使用的已登录用户 access token；也可用 MYAPP_AUTH_TOKEN", de="Access-Token des angemeldeten Benutzers fuer Private-Node-Ansicht; alternativ MYAPP_AUTH_TOKEN", es="access token del usuario para vista privada; alternativamente MYAPP_AUTH_TOKEN"))
     agent_node_ls.add_argument("--no-probe", action="store_true", help=_tx("do not call each agent-node /health", zh="不调用每个 agent-node 的 /health", de="/health der einzelnen agent-nodes nicht abfragen", es="no llamar /health de cada agent-node"))
     agent_node_ls.add_argument("--json", action="store_true")
@@ -4943,6 +5198,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_status.add_argument("node_id", nargs="?")
     agent_node_status.add_argument("--backend")
     agent_node_status.add_argument("--token")
+    agent_node_status.add_argument("--namespace", default="public", help=_tx("node namespace to list when node-id is omitted: public, all, or a user id", zh="省略节点 ID 时列出的 namespace：public、all 或用户 ID", de="Namespace beim Auflisten ohne Node-ID: public, all oder Benutzer-ID", es="namespace al listar sin node-id: public, all o id de usuario"))
     agent_node_status.add_argument("--auth-token", help=_tx("logged-in user access token for private-node view; alternatively MYAPP_AUTH_TOKEN", zh="私有节点视角使用的已登录用户 access token；也可用 MYAPP_AUTH_TOKEN", de="Access-Token des angemeldeten Benutzers fuer Private-Node-Ansicht; alternativ MYAPP_AUTH_TOKEN", es="access token del usuario para vista privada; alternativamente MYAPP_AUTH_TOKEN"))
     agent_node_status.add_argument("--no-probe", action="store_true", help=_tx("only used when node_id is omitted", zh="仅在省略 node_id 时使用", de="nur verwendet, wenn node_id fehlt", es="solo se usa cuando se omite node_id"))
     agent_node_status.add_argument("--json", action="store_true")
@@ -4951,6 +5207,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_register.add_argument("--backend")
     agent_node_register.add_argument("--url")
     agent_node_register.add_argument("--node-id")
+    agent_node_register.add_argument("--name", help=_tx("human-readable node name shown in dashboards", zh="控制面板展示的人类可读节点名称", de="lesbarer Node-Name fuer Dashboards", es="nombre legible del nodo para paneles"))
     agent_node_register.add_argument("--capacity", type=int, default=1)
     agent_node_register.add_argument("--queue-max", type=int)
     agent_node_register.add_argument("--ttl", type=int, default=120)
@@ -5013,7 +5270,7 @@ def build_parser() -> argparse.ArgumentParser:
     private_join.add_argument("--join-token", help=_tx("short-lived private agent join token from app settings; alternatively MYAPP_PRIVATE_AGENT_JOIN_TOKEN", zh="从 App 设置页获取的短期私有 Agent 加入令牌；也可用 MYAPP_PRIVATE_AGENT_JOIN_TOKEN", de="kurzlebiges Private-Agent-Join-Token aus App-Einstellungen; alternativ MYAPP_PRIVATE_AGENT_JOIN_TOKEN", es="token corto de union de agent privado desde ajustes; alternativamente MYAPP_PRIVATE_AGENT_JOIN_TOKEN"))
     private_join.add_argument("--auth-token", help=_tx("logged-in user access token; alternatively MYAPP_AUTH_TOKEN", zh="已登录用户 access token；也可用 MYAPP_AUTH_TOKEN", de="Access-Token des angemeldeten Benutzers; alternativ MYAPP_AUTH_TOKEN", es="access token del usuario autenticado; alternativamente MYAPP_AUTH_TOKEN"))
     private_join.add_argument("--node-id")
-    private_join.add_argument("--name")
+    private_join.add_argument("--name", help=_tx("human-readable node name shown in dashboards", zh="控制面板展示的人类可读节点名称", de="lesbarer Node-Name fuer Dashboards", es="nombre legible del nodo para paneles"))
     private_join.add_argument("--host")
     private_join.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
     private_join.add_argument("--local-port", type=int, default=5590)
@@ -5026,13 +5283,14 @@ def build_parser() -> argparse.ArgumentParser:
     private_join.add_argument("--pull", action="store_true", help=_tx("pull configured images before deploy", zh="部署前拉取已配置镜像", de="konfigurierte Images vor Deploy laden", es="descargar imagenes configuradas antes de desplegar"))
     private_join.add_argument("--build", action="store_true", help=_tx("build images from local source before deploy", zh="部署前从本地源码构建镜像", de="Images vor Deploy aus lokalem Quellcode bauen", es="construir imagenes desde codigo local antes de desplegar"))
     private_join.add_argument("--no-provider-setup", action="store_true", help=_tx("do not prompt for local AI provider config", zh="不交互配置本地 AI 供应商", de="nicht nach lokaler KI-Provider-Konfiguration fragen", es="no pedir configuracion local de proveedor IA"))
-    private_join.add_argument("--replace-existing-agent-node", action="store_true", help=_tx("allow converting a running public agent-node on this host into a private node", zh="允许把本机正在运行的公共 agent-node 转换为私有节点", de="laufenden oeffentlichen agent-node auf diesem Host in privaten Node umwandeln", es="permitir convertir el agent-node publico en ejecucion de este host en privado"))
+    private_join.add_argument("--replace-existing-agent-node", action="store_true", help=_tx("allow replacing the singleton myapp-agent-node on this host", zh="允许替换本机 singleton myapp-agent-node", de="Singleton myapp-agent-node auf diesem Host ersetzen", es="permitir reemplazar el singleton myapp-agent-node de este host"))
     private_join.set_defaults(func=cmd_agent_node)
     agent_node_add = agent_node_sub.add_parser("add", help=_tx("print a join command for a new agent host", zh="打印新 Agent 节点的一键加入命令", de="Join-Befehl fuer neuen Agent-Host ausgeben", es="imprimir comando join para nuevo host agent"), usage=_tx("myapp-ctl agent-node add [options]", zh="myapp-ctl agent-node add [选项]", de="myapp-ctl agent-node add [Optionen]", es="myapp-ctl agent-node add [opciones]"))
     agent_node_add.add_argument("--backend", help=_tx("master backend URL, for example http://<master-host>:5566", zh="主后端 URL，例如 http://<master-host>:5566", de="Master-Backend-URL, z.B. http://<master-host>:5566", es="URL del backend maestro, por ejemplo http://<master-host>:5566"))
     agent_node_add.add_argument("--host", help=_tx("new agent host public IP or domain", zh="新 Agent 节点公网 IP 或域名", de="oeffentliche IP oder Domain des neuen Agent-Hosts", es="IP publica o dominio del nuevo host agent"))
     agent_node_add.add_argument("--url", help=_tx("full public agent-node URL; defaults to http://<host>:<public-port>", zh="完整公网 agent-node URL；默认 http://<host>:<public-port>", de="vollstaendige oeffentliche agent-node URL; Standard http://<host>:<public-port>", es="URL publica completa de agent-node; por defecto http://<host>:<public-port>"))
     agent_node_add.add_argument("--node-id")
+    agent_node_add.add_argument("--name", help=_tx("human-readable node name shown in dashboards", zh="控制面板展示的人类可读节点名称", de="lesbarer Node-Name fuer Dashboards", es="nombre legible del nodo para paneles"))
     agent_node_add.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
     agent_node_add.add_argument("--local-port", type=int, default=5590)
     agent_node_add.add_argument("--public-port", type=int, default=5591)
@@ -5053,6 +5311,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_join.add_argument("--host", help=_tx("this agent host display IP or domain", zh="本 Agent 节点展示 IP 或域名", de="Anzeige-IP oder Domain dieses Agent-Hosts", es="IP o dominio mostrado de este host agent"))
     agent_node_join.add_argument("--url", help=_tx("agent-node URL; pull mode defaults to pull://<node-id>", zh="agent-node URL；pull 模式默认 pull://<node-id>", de="agent-node URL; Pull-Modus nutzt standardmaessig pull://<node-id>", es="URL de agent-node; modo pull usa por defecto pull://<node-id>"))
     agent_node_join.add_argument("--node-id", required=True)
+    agent_node_join.add_argument("--name", help=_tx("human-readable node name shown in dashboards", zh="控制面板展示的人类可读节点名称", de="lesbarer Node-Name fuer Dashboards", es="nombre legible del nodo para paneles"))
     agent_node_join.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
     agent_node_join.add_argument("--local-port", type=int, default=5590)
     agent_node_join.add_argument("--public-port", type=int, default=5591)
@@ -5069,6 +5328,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_join.add_argument("--no-nginx", action="store_true")
     agent_node_join.add_argument("--allow-from", help=_tx("optional source IP allowed through ufw for the public agent port", zh="可选：允许通过 ufw 访问公网 Agent 端口的来源 IP", de="optionale Quell-IP, die ufw fuer den oeffentlichen Agent-Port erlaubt", es="IP origen opcional permitida por ufw para el puerto agent publico"))
     agent_node_join.add_argument("--no-timer", action="store_true")
+    agent_node_join.add_argument("--replace-existing-agent-node", action="store_true", help=_tx("allow replacing the singleton myapp-agent-node on this host", zh="允许替换本机 singleton myapp-agent-node", de="Singleton myapp-agent-node auf diesem Host ersetzen", es="permitir reemplazar el singleton myapp-agent-node de este host"))
     agent_node_join.set_defaults(func=cmd_agent_node)
     agent = sub.add_parser("agent", help=_tx("inspect local agent runs", zh="查看本机 Agent 运行任务", de="lokale Agent-Laeufe anzeigen", es="inspeccionar tareas agent locales"), usage=_tx("myapp-ctl agent <command> [args]", zh="myapp-ctl agent <命令> [参数]", de="myapp-ctl agent <Befehl> [Argumente]", es="myapp-ctl agent <comando> [args]"))
     agent_sub = _add_subcommands(agent, "agent_cmd")
@@ -5077,15 +5337,18 @@ def build_parser() -> argparse.ArgumentParser:
     agent_add.add_argument("--host", help=_tx("new agent host public IP or domain", zh="新 Agent 节点公网 IP 或域名", de="oeffentliche IP oder Domain des neuen Agent-Hosts", es="IP publica o dominio del nuevo host agent"))
     agent_add.add_argument("--url", help=_tx("full public agent-node URL; defaults to http://<host>:<public-port>", zh="完整公网 agent-node URL；默认 http://<host>:<public-port>", de="vollstaendige oeffentliche agent-node URL; Standard http://<host>:<public-port>", es="URL publica completa de agent-node; por defecto http://<host>:<public-port>"))
     agent_add.add_argument("--node-id")
+    agent_add.add_argument("--name", help=_tx("human-readable node name shown in dashboards", zh="控制面板展示的人类可读节点名称", de="lesbarer Node-Name fuer Dashboards", es="nombre legible del nodo para paneles"))
     agent_add.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
     agent_add.add_argument("--local-port", type=int, default=5590)
     agent_add.add_argument("--public-port", type=int, default=5591)
     agent_add.add_argument("--capacity", type=int, default=1)
+    agent_add.add_argument("--queue-max", type=int)
     agent_add.add_argument("--ttl", type=int, default=180)
     agent_add.add_argument("--label", action="append")
     agent_add.add_argument("--mode", choices=["pull", "direct"], default="pull", metavar="MODE", help=_tx("agent connection mode: pull, direct", zh="Agent 连接模式: pull, direct", de="Agent-Verbindungsmodus: pull, direct", es="modo de conexion agent: pull, direct"))
     agent_add.add_argument("--provider-mode", choices=["master", "local"], default="master", metavar="MODE", help=_tx("provider key source: master, local", zh="供应商密钥来源: master, local", de="Provider-Key-Quelle: master, local", es="origen de claves del proveedor: master, local"))
     agent_add.add_argument("--pull", action="store_true", help=_tx("generate a pull-based deploy command instead of build", zh="生成基于 pull 的部署命令，而不是 build", de="Pull-basierten Deploy-Befehl statt Build erzeugen", es="generar comando de despliegue pull en lugar de build"))
+    agent_add.add_argument("--build", action="store_true", help=_tx("make the join command build required images locally", zh="生成的加入命令会在本地构建所需镜像", de="Join-Befehl baut benoetigte Images lokal", es="el comando join construira imagenes localmente"))
     agent_add.add_argument("--no-nginx", action="store_true")
     agent_add.add_argument("--allow-from", help=_tx("optional source IP allowed through ufw for the public agent port", zh="可选：允许通过 ufw 访问公网 Agent 端口的来源 IP", de="optionale Quell-IP, die ufw fuer den oeffentlichen Agent-Port erlaubt", es="IP origen opcional permitida por ufw para el puerto agent publico"))
     agent_add.add_argument("--no-timer", action="store_true")
@@ -5101,7 +5364,9 @@ def build_parser() -> argparse.ArgumentParser:
     agent_register.add_argument("--backend")
     agent_register.add_argument("--url")
     agent_register.add_argument("--node-id")
+    agent_register.add_argument("--name", help=_tx("human-readable node name shown in dashboards", zh="控制面板展示的人类可读节点名称", de="lesbarer Node-Name fuer Dashboards", es="nombre legible del nodo para paneles"))
     agent_register.add_argument("--capacity", type=int, default=1)
+    agent_register.add_argument("--queue-max", type=int)
     agent_register.add_argument("--ttl", type=int, default=120)
     agent_register.add_argument("--token")
     agent_register.add_argument("--label", action="append")

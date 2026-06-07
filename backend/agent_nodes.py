@@ -224,8 +224,13 @@ def _node_row(key, data: dict[Any, Any]) -> dict:
     parsed = urlparse(url)
     build_commit = _safe_build_text(get("build_commit") or label_build_commit)
     build_version = _safe_build_text(get("build_version") or get("version") or label_build_version or build_commit)
+    node_id = get("node_id", str(key).split(":")[-1])
+    visibility = get("visibility", "public") or "public"
+    display_name = get("name") or get("display_name") or node_id
     return {
-        "node_id": get("node_id", str(key).split(":")[-1]),
+        "node_id": node_id,
+        "name": display_name,
+        "display_name": display_name,
         "url": url,
         "host": label_host or parsed.hostname or "",
         "capacity": get_int("capacity", 1),
@@ -235,8 +240,9 @@ def _node_row(key, data: dict[Any, Any]) -> dict:
         "version": build_version or build_commit,
         "labels": labels,
         "provider_mode": provider_mode,
-        "visibility": get("visibility", "public") or "public",
+        "visibility": visibility,
         "owner_user_id": get("owner_user_id", ""),
+        "namespace": "public" if visibility == "public" else get("owner_user_id", ""),
         "auth_key_id": get("auth_key_id", ""),
         "provider_ids": _safe_list(raw("provider_ids")),
         "agent_ids": _safe_list(raw("agent_ids")),
@@ -428,6 +434,7 @@ def register_agent_node():
         return jsonify({"error": "unauthorized"}), 401
     body = request.get_json(silent=True) or {}
     node_id = _safe_node_id(body.get("node_id"))
+    name = str(body.get("name") or body.get("display_name") or node_id).strip()[:128]
     url = str(body.get("url") or "").strip().rstrip("/")
     if not url:
         return jsonify({"error": "url is required"}), 400
@@ -452,6 +459,8 @@ def register_agent_node():
     now_ms = int(time.time() * 1000)
     data = {
         "node_id": node_id,
+        "name": name,
+        "display_name": name,
         "url": url,
         "capacity": capacity,
         "queue_max": queue_max,
@@ -468,6 +477,7 @@ def register_agent_node():
     }
     agent_node_registry.upsert_node(
         node_id=node_id,
+        name=name,
         url=url,
         capacity=capacity,
         queue_max=queue_max,
@@ -479,6 +489,8 @@ def register_agent_node():
     )
     redis_data = {
         "node_id": node_id,
+        "name": name,
+        "display_name": name,
         "url": url,
         "capacity": str(capacity),
         "queue_max": str(queue_max),
@@ -592,6 +604,7 @@ def create_private_agent_join_token():
     node_id = _safe_node_id(
         body.get("node_id") or f"private-agent-{int(time.time())}-{jti[:6]}"
     )
+    name = str(body.get("name") or node_id).strip()[:128] or node_id
     providers = _safe_list(body.get("provider_ids") or body.get("providers") or "deepseek", limit=8) or ["deepseek"]
     agents = _safe_list(body.get("agent_ids") or body.get("agents") or "claude", limit=8) or ["claude"]
     image_mode = str(
@@ -614,6 +627,7 @@ def create_private_agent_join_token():
         f"myapp-ctl agent-node private join "
         f"--backend {shlex.quote(backend_url)} "
         f"--node-id {shlex.quote(node_id)} "
+        f"--name {shlex.quote(name)} "
         f"{provider_args} {agent_args}{image_args}"
     )
     return jsonify({
@@ -622,6 +636,7 @@ def create_private_agent_join_token():
         "token_type": "private-agent-join",
         "expires_in_seconds": ttl_seconds,
         "image_mode": "build" if image_mode == "local" else image_mode,
+        "name": name,
         "join_command": join_command,
     })
 
@@ -659,6 +674,7 @@ def create_private_agent_node():
         return jsonify({"error": "node_id is already used"}), 409
     row = agent_node_registry.upsert_node(
         node_id=node_id,
+        name=name,
         url=f"pull://{node_id}",
         capacity=capacity,
         queue_max=queue_max,
@@ -736,6 +752,7 @@ def set_private_agent_node_limits(node_id: str):
         return jsonify({"error": "invalid capacity or queue_max"}), 400
     agent_node_registry.upsert_node(
         node_id=row["node_id"],
+        name=row.get("name") or row.get("display_name") or "",
         url=row["url"],
         capacity=capacity,
         queue_max=queue_max,
@@ -754,14 +771,42 @@ def list_agent_nodes():
     if not _auth_ok():
         return jsonify({"error": "unauthorized"}), 401
     probe = request.args.get("probe", "1").lower() not in {"0", "false", "no"}
+    namespace = str(request.args.get("namespace") or "public").strip()
+    namespace_norm = namespace.lower()
     rows = []
     for item in agent_node_registry.list_nodes():
+        visibility = str(item.get("visibility") or "public").strip().lower()
+        owner_user_id = str(item.get("owner_user_id") or "")
+        if namespace_norm in {"", "public", "global"}:
+            if visibility != "public":
+                continue
+        elif namespace_norm in {"all", "*"}:
+            pass
+        else:
+            if visibility != "private" or owner_user_id != namespace:
+                continue
         rows.append(_decorate_node(_node_row(item.get("node_id"), item), probe=probe))
     rows.sort(key=lambda item: item.get("node_id", ""))
-    queued = _agent_pull_queue_depth()
+    public_queued = _agent_pull_queue_depth()
+    private_queued_by_user: dict[str, int] = {}
     for row in rows:
-        row.update(_with_queue_depth(row, None if row.get("visibility") == "private" else queued))
+        if row.get("visibility") == "private":
+            owner = str(row.get("owner_user_id") or "")
+            if owner not in private_queued_by_user:
+                private_queued_by_user[owner] = _agent_pull_private_queue_depth(owner)
+    for row in rows:
+        if row.get("visibility") == "private":
+            row.update(_with_queue_depth(row, private_queued_by_user.get(str(row.get("owner_user_id") or ""), 0)))
+        else:
+            row.update(_with_queue_depth(row, public_queued))
+    if namespace_norm in {"", "public", "global"}:
+        queued = public_queued
+    elif namespace_norm in {"all", "*"}:
+        queued = public_queued + sum(private_queued_by_user.values())
+    else:
+        queued = private_queued_by_user.get(namespace, 0)
     summary = {
+        "namespace": namespace or "public",
         "total": len(rows),
         "online": sum(1 for row in rows if row.get("status") == "online"),
         "paused": sum(1 for row in rows if row.get("status") == "paused"),

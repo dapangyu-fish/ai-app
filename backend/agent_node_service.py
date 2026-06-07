@@ -29,6 +29,7 @@ from flask import Flask, Response, jsonify, request, send_file, stream_with_cont
 APP = Flask(__name__)
 
 NODE_ID = os.environ.get("AGENT_NODE_ID", os.uname().nodename)
+NODE_NAME = os.environ.get("AGENT_NODE_NAME", NODE_ID).strip()[:128] or NODE_ID
 RUNTIME_IMAGE = os.environ.get("AGENT_NODE_RUNTIME_IMAGE", "dapangyufish/myapp-agent-runtime:latest")
 STATE_ROOT = Path(os.environ.get("AGENT_NODE_STATE_ROOT", "/var/lib/myapp/agent-node/state"))
 WORKSPACE_ROOT = Path(os.environ.get("AGENT_NODE_WORKSPACE_ROOT", "/var/lib/myapp/agent-node/workspaces"))
@@ -695,7 +696,7 @@ def _docker_active_agent_containers() -> dict[str, dict]:
         except json.JSONDecodeError:
             continue
         name = str(item.get("Names") or item.get("Name") or "").strip()
-        if not name or name == "myapp-agent-node" or not name.startswith("myapp-agent-"):
+        if not name or name.startswith("myapp-agent-node") or not name.startswith("myapp-agent-"):
             continue
         run_id = _safe_part(name.removeprefix("myapp-agent-"), "run")
         rows[run_id] = {
@@ -744,6 +745,8 @@ def health():
     return jsonify({
         "ok": True,
         "node_id": NODE_ID,
+        "name": NODE_NAME,
+        "display_name": NODE_NAME,
         "image": RUNTIME_IMAGE,
         "build_commit": BUILD_COMMIT,
         "build_version": BUILD_VERSION,
@@ -1165,6 +1168,8 @@ def _pull_labels() -> list[str]:
         labels.append("visibility=private")
     if not any(label.startswith("host=") for label in labels):
         labels.append(f"host={os.environ.get('PUBLIC_HOST') or os.uname().nodename}")
+    if not any(label.replace("_", "-").startswith("name=") for label in labels):
+        labels.append(f"name={NODE_NAME}")
     if not any(label.replace("_", "-").startswith("mode=") for label in labels):
         labels.append("mode=pull")
     return labels
@@ -1347,6 +1352,7 @@ def _pull_loop() -> None:
                 headers=_pull_headers(),
                 json={
                     "node_id": NODE_ID,
+                    "name": NODE_NAME,
                     "capacity": capacity,
                     "queue_max": NODE_QUEUE_MAX,
                     "build_commit": BUILD_COMMIT,

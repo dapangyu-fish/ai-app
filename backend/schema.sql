@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS device_tokens (
 -- last_seen_ms + ttl_seconds 以及 agent-node /health 探测共同判断。
 CREATE TABLE IF NOT EXISTS agent_nodes (
     node_id TEXT PRIMARY KEY,
+    display_name TEXT NOT NULL DEFAULT '',
     url TEXT NOT NULL,
     capacity INTEGER NOT NULL DEFAULT 1,
     queue_max INTEGER NOT NULL DEFAULT 0,

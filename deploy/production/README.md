@@ -309,11 +309,11 @@ Agent operations:
 
 ```bash
 myapp-ctl agent ls
-myapp-ctl agent-node ls [--json] [--no-probe]
-myapp-ctl agent-node status [node-id] [--json] [--no-probe]
-myapp-ctl agent-node add --backend <url> --host <host> --node-id <id> [--pull|--build]
-myapp-ctl agent-node join --backend <url> --node-id <id> --agent-token <token> --registration-token <token>
-myapp-ctl agent-node private join --backend <url> --auth-token <user-token> --node-id <id>
+myapp-ctl agent-node ls [--namespace public|all|<user-id>] [--json] [--no-probe]
+myapp-ctl agent-node status [node-id] [--namespace public|all|<user-id>] [--json] [--no-probe]
+myapp-ctl agent-node add --backend <url> --host <host> --node-id <id> --name <name> [--pull|--build]
+myapp-ctl agent-node join --backend <url> --node-id <id> --name <name> --agent-token <token> --registration-token <token>
+myapp-ctl agent-node private join --backend <url> --auth-token <user-token> --node-id <id> --name <name>
 myapp-ctl agent-node pause [node-id] [--reason <text>]
 myapp-ctl agent-node resume [node-id]
 myapp-ctl agent-node limits --capacity <n> --queue-max <n> [--force]
@@ -460,6 +460,7 @@ Register an agent node:
 myapp-ctl agent-node register \
   --url pull://myapp-agent-2 \
   --node-id myapp-agent-2 \
+  --name "GPU agent 2" \
   --capacity 4 \
   --label host=<agent-hostname-or-ip>
 ```
@@ -471,6 +472,7 @@ myapp-ctl agent-node add \
   --backend http://<master-host>:5566 \
   --host <new-agent-host-ip-or-name> \
   --node-id myapp-agent-2 \
+  --name "GPU agent 2" \
   --capacity 2 \
   --mode pull \
   --provider-mode master
@@ -520,6 +522,9 @@ request.
 agent-node counts Docker runtime containers plus jobs it has just acquired but
 not fully started yet, so it does not over-pull during container startup.
 
+`--name` is the human-readable display name shown in dashboards and CLI tables.
+The stable scheduler identity is still `--node-id`.
+
 Pause or resume scheduling for a node without stopping existing runs:
 
 ```bash
@@ -562,9 +567,17 @@ Cluster node operations:
 
 ```bash
 myapp-ctl agent-node ls
+myapp-ctl agent-node ls --namespace all
+myapp-ctl agent-node ls --namespace <user-id>
 myapp-ctl agent-node status myapp-agent-2
 myapp-ctl agent-node rm myapp-agent-2
 ```
+
+`agent-node ls` defaults to the global/public namespace. Private user nodes are
+hidden unless an admin explicitly passes `--namespace <user-id>` or
+`--namespace all`. The table includes `NAME`, `NODE`, and `NS` so a single
+physical machine can run multiple public and private agent nodes without
+confusing their identities.
 
 `myapp-ctl agent ls` remains local-only: it shows the currently running agent
 containers on the machine where the command is executed.
@@ -576,6 +589,14 @@ The registered URL is `pull://<node-id>`, and the physical machine IP is stored
 as the `host=<ip>` label for display. Direct mode is the legacy inbound HTTP
 path and can still use explicit registration when needed.
 
+When a host already has the singleton compose service `myapp-agent-node`
+running and a join command is executed for a different `--node-id`, pull-mode
+join starts an additional Docker container instead of overwriting the singleton.
+The extra container name is `myapp-agent-node-<safe-node-id>` and its persistent
+state lives under `<data-root>/agent-nodes/<safe-node-id>/`. Use
+`--replace-existing-agent-node` only when intentionally replacing the singleton
+configuration on that host.
+
 ## User-Private Agent Nodes
 
 Private agent nodes are for ordinary users who want their own AI provider keys,
@@ -586,7 +607,9 @@ Security invariants:
 
 - The provider key stays in the user's local `/etc/myapp/secrets.d/ai-providers.env`.
 - The private node signing key stays under the user's local data root, for
-  example `/mnt/myapp/agent-node/private/<node>.key.pem`.
+  example `/mnt/myapp/agent-node/private/<node>.key.pem` for the singleton node
+  or `/mnt/myapp/agent-nodes/<node>/private/<node>.key.pem` for an additional
+  same-host instance.
 - The backend stores only the public key, node metadata, heartbeat, and capacity.
 - A private node can only pull jobs for its owning user.
 - A private job does not fall back to public nodes unless the client explicitly
@@ -600,6 +623,7 @@ export MYAPP_PRIVATE_AGENT_JOIN_TOKEN='<short-lived token copied from app settin
 myapp-ctl agent-node private join \
   --backend https://<backend-host> \
   --node-id my-private-agent \
+  --name "My private Mac Studio" \
   --provider deepseek \
   --agent claude \
   --capacity 2 \
@@ -611,11 +635,11 @@ The command generates an RSA keypair locally, registers the public key through
 `/api/ai/private_agent/nodes`, consumes the one-time join token, writes
 `agent.env`, prompts for local AI provider configuration if it is missing, and
 deploys only `agent-node` plus `agent-runtime`.
-Run the private join command on a separate private agent host. If the host is
-already running a public `myapp-agent-node`, `myapp-ctl` refuses to overwrite it
-by default so the public queue does not lose capacity. Use
-`--replace-existing-agent-node` only when intentionally converting that host from
-public to private.
+If the host is already running a different `myapp-agent-node`, `myapp-ctl`
+starts an additional private instance instead of overwriting it. This supports
+mixed public/private nodes on one machine, or multiple private nodes owned by
+different users. Use `--replace-existing-agent-node` only when intentionally
+converting the singleton node on that host.
 
 The app settings page has a Private Agent Nodes management view. It lists only
 the logged-in user's private nodes, can create a new join token by calling
@@ -629,12 +653,14 @@ settings use the default `pull` command for released images, while branch or
 source-based validation can request `build` so the private host builds the
 current checkout before starting the node.
 
-On a private agent host, `myapp-ctl agent-node ls` and `status` use the local
-agent-node signing key to query `/api/ai/private_agent/nodes/self`, so they show
-only that private node. Passing a logged-in user `--auth-token` is required only
-when the user wants to list all private nodes owned by the same account.
-The local helper endpoint that signs this short JWT is protected by the host's
-`AGENT_NODE_TOKEN`.
+On a private agent host, `myapp-ctl agent-node private ls` and
+`agent-node private status` use the local agent-node signing key to query
+`/api/ai/private_agent/nodes/self`, so they show only that private node. Generic
+`myapp-ctl agent-node ls` remains the admin cluster view and defaults to public
+nodes. Passing a logged-in user `--auth-token` to the private subcommand is
+required only when the user wants to list all private nodes owned by the same
+account. The local helper endpoint that signs this short JWT is protected by the
+host's `AGENT_NODE_TOKEN`.
 
 The client settings page exposes `Agent routing` / `Agent 调度` with `public`,
 `private`, and `auto`; chat start requests send the selected value as:

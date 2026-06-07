@@ -753,11 +753,23 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        node.nodeId,
+                        node.displayName,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
+                      if (node.displayName != node.nodeId) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          node.nodeId,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: cs.onSurfaceVariant,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 4),
                       Text(
                         '${node.activeRuns}/${node.capacity} ${_text(zh: '运行', en: 'running', de: 'aktiv', es: 'activos')} · ${node.queueDepth}/${node.queueMax} ${_text(zh: '队列', en: 'queued', de: 'Warteschlange', es: 'cola')}',
@@ -904,6 +916,7 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
 
 class _PrivateAgentNode {
   final String nodeId;
+  final String name;
   final String status;
   final List<String> providerIds;
   final List<String> agentIds;
@@ -915,6 +928,7 @@ class _PrivateAgentNode {
 
   const _PrivateAgentNode({
     required this.nodeId,
+    required this.name,
     required this.status,
     required this.providerIds,
     required this.agentIds,
@@ -928,6 +942,7 @@ class _PrivateAgentNode {
   factory _PrivateAgentNode.fromJson(Map<dynamic, dynamic> json) {
     return _PrivateAgentNode(
       nodeId: _str(json['node_id']),
+      name: _str(json['name'] ?? json['display_name']),
       status: _str(json['status']),
       providerIds: _list(json['provider_ids']),
       agentIds: _list(json['agent_ids']),
@@ -938,6 +953,8 @@ class _PrivateAgentNode {
       version: _str(json['version']),
     );
   }
+
+  String get displayName => name.isNotEmpty ? name : nodeId;
 
   static String _str(dynamic value) => value == null ? '' : '$value';
 

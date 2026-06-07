@@ -2360,6 +2360,7 @@ def agent_pull_acquire():
             return jsonify({"error": "node_id belongs to a private agent node"}), 403
         agent_node_registry.upsert_node(
             node_id=node_id,
+            name=str(body.get("name") or body.get("display_name") or "").strip()[:128],
             url=str(body.get("url") or f"pull://{node_id}").strip() or f"pull://{node_id}",
             capacity=capacity,
             queue_max=queue_max,

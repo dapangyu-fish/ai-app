@@ -25,6 +25,7 @@ def ensure_agent_nodes_table() -> None:
             """
             CREATE TABLE IF NOT EXISTS agent_nodes (
                 node_id TEXT PRIMARY KEY,
+                display_name TEXT NOT NULL DEFAULT '',
                 url TEXT NOT NULL,
                 capacity INTEGER NOT NULL DEFAULT 1,
                 queue_max INTEGER NOT NULL DEFAULT 0,
@@ -48,6 +49,7 @@ def ensure_agent_nodes_table() -> None:
             )
             """
         )
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS display_name TEXT NOT NULL DEFAULT ''")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS queue_max INTEGER NOT NULL DEFAULT 0")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS build_commit TEXT NOT NULL DEFAULT ''")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS build_version TEXT NOT NULL DEFAULT ''")
@@ -88,6 +90,8 @@ def _normalize_row(row: dict | None) -> dict | None:
         label_map[key.strip().lower().replace("_", "-")] = value.strip()
     return {
         "node_id": row.get("node_id") or "",
+        "name": row.get("display_name") or label_map.get("name", ""),
+        "display_name": row.get("display_name") or label_map.get("name", ""),
         "url": row.get("url") or "",
         "capacity": int(row.get("capacity") or 1),
         "queue_max": int(row.get("queue_max") or 0),
@@ -112,6 +116,7 @@ def _normalize_row(row: dict | None) -> dict | None:
 def upsert_node(
     *,
     node_id: str,
+    name: str = "",
     url: str,
     capacity: int,
     labels: list,
@@ -131,6 +136,7 @@ def upsert_node(
     ensure_agent_nodes_table()
     now_ms = int(time.time() * 1000) if touch_seen else 0
     labels_json = json.dumps(labels if isinstance(labels, list) else [], ensure_ascii=False)
+    name = str(name or "").strip()[:128]
     queue_max = max(0, int(queue_max or 0))
     build_commit = str(build_commit or "").strip()[:128]
     build_version = str(build_version or build_commit or "").strip()[:128]
@@ -146,12 +152,13 @@ def upsert_node(
     db_execute(
         """
         INSERT INTO agent_nodes (
-            node_id, url, capacity, queue_max, build_commit, build_version, labels,
+            node_id, display_name, url, capacity, queue_max, build_commit, build_version, labels,
             owner_user_id, visibility, auth_public_key, auth_key_id, provider_mode,
             provider_ids, agent_ids, last_seen_ms, ttl_seconds
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s)
         ON CONFLICT (node_id) DO UPDATE SET
+            display_name = COALESCE(NULLIF(EXCLUDED.display_name, ''), agent_nodes.display_name),
             url = EXCLUDED.url,
             capacity = EXCLUDED.capacity,
             queue_max = EXCLUDED.queue_max,
@@ -171,6 +178,7 @@ def upsert_node(
         """,
         [
             node_id,
+            name,
             url,
             capacity,
             queue_max,
@@ -190,6 +198,8 @@ def upsert_node(
     )
     return {
         "node_id": node_id,
+        "name": name,
+        "display_name": name,
         "url": url,
         "capacity": capacity,
         "queue_max": queue_max,
@@ -212,7 +222,7 @@ def list_nodes() -> list[dict]:
     ensure_agent_nodes_table()
     rows = db_query(
         """
-        SELECT node_id, url, capacity, queue_max, build_commit, build_version, labels::text AS labels,
+        SELECT node_id, display_name, url, capacity, queue_max, build_commit, build_version, labels::text AS labels,
                owner_user_id, visibility, auth_public_key, auth_key_id, provider_mode,
                provider_ids::text AS provider_ids, agent_ids::text AS agent_ids,
                last_seen_ms AS last_seen, ttl_seconds,
@@ -234,7 +244,7 @@ def get_node(node_id: str) -> dict | None:
     ensure_agent_nodes_table()
     row = db_query(
         """
-        SELECT node_id, url, capacity, queue_max, build_commit, build_version, labels::text AS labels,
+        SELECT node_id, display_name, url, capacity, queue_max, build_commit, build_version, labels::text AS labels,
                owner_user_id, visibility, auth_public_key, auth_key_id, provider_mode,
                provider_ids::text AS provider_ids, agent_ids::text AS agent_ids,
                last_seen_ms AS last_seen, ttl_seconds,
