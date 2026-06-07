@@ -1064,7 +1064,19 @@ def _filtered_agent_node_instance_env(values: dict[str, str], keys: list[str]) -
     return out
 
 
-def _run_agent_node_instance(*, node_id: str, env_path: Path, data_root: Path, build: bool = False, pull: bool = False) -> int:
+def _agent_node_provider_env_path(agent_root: Path) -> Path:
+    return agent_root / "ai-providers.env"
+
+
+def _run_agent_node_instance(
+    *,
+    node_id: str,
+    env_path: Path,
+    data_root: Path,
+    provider_env_path: Path | None = None,
+    build: bool = False,
+    pull: bool = False,
+) -> int:
     if build and pull:
         print("--build and --pull cannot be used together", file=sys.stderr)
         return 2
@@ -1098,9 +1110,8 @@ def _run_agent_node_instance(*, node_id: str, env_path: Path, data_root: Path, b
         "--network",
         "myapp_default",
     ]
-    providers_env = _secret_path("ai-providers")
-    if providers_env.exists():
-        cmd.extend(["--env-file", str(providers_env)])
+    if provider_env_path and provider_env_path.exists():
+        cmd.extend(["--env-file", str(provider_env_path)])
     cmd.extend(
         [
             "--env-file",
@@ -2182,8 +2193,8 @@ def _ai_provider_ids_from_env(env: dict[str, str]) -> list[str]:
     return out
 
 
-def _ai_providers_configured() -> bool:
-    env = _parse_env(_secret_path("ai-providers"))
+def _ai_providers_configured(path: Path | None = None) -> bool:
+    env = _parse_env(path or _secret_path("ai-providers"))
     for provider_id in _ai_provider_ids_from_env(env):
         prefix = _provider_prefix(provider_id)
         if env.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN"):
@@ -2366,16 +2377,18 @@ def _prompt_custom_provider(existing: dict[str, str]) -> tuple[str, dict[str, st
     return provider_id, data
 
 
-def _setup_ai_providers(*, force: bool = False) -> int:
-    path = _secret_path("ai-providers")
+def _setup_ai_providers(*, force: bool = False, path: Path | None = None, title: str = "AI provider setup") -> int:
+    path = path or _secret_path("ai-providers")
     existing = _parse_env(path)
-    if existing and not force and _ai_providers_configured():
-        if _prompt_bool("AI providers are already configured. Keep current provider config?", default=True):
+    if existing and not force and _ai_providers_configured(path):
+        if _prompt_bool(f"AI providers are already configured at {path}. Keep current provider config?", default=True):
             print("kept existing AI provider config")
             return 0
     data = dict(existing) if not force else {}
     provider_ids: list[str] = []
-    print("AI provider setup")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    print(title)
+    print(f"provider env: {path}")
     while True:
         print("  1) deepseek")
         print("  2) minimax")
@@ -2894,6 +2907,15 @@ def _public_host(explicit: str | None = None) -> str:
     if parsed.hostname:
         return parsed.hostname
     return "127.0.0.1"
+
+
+def _agent_node_default_display_host(explicit: str | None = None) -> str:
+    if explicit:
+        return explicit
+    backend_public_host = _parse_env(_secret_path("backend")).get("PUBLIC_HOST", "").strip()
+    if backend_public_host and backend_public_host not in {"127.0.0.1", "localhost"}:
+        return backend_public_host
+    return _public_host(None)
 
 
 def _is_replaceable_default_url(value: object, *, previous_host: str = "") -> bool:
@@ -3851,6 +3873,22 @@ def _join_agent_node(args) -> int:
         and current_node_id != node_id
         and not getattr(args, "replace_existing_agent_node", False)
     )
+    agent_root = _agent_node_instance_root(data_root, node_id) if use_instance else data_root / "agent-node"
+    provider_env_path = _agent_node_provider_env_path(agent_root) if provider_mode == "local" else None
+    if provider_env_path and not _ai_providers_configured(provider_env_path):
+        if not sys.stdin.isatty():
+            print(
+                f"local provider config is missing at {provider_env_path} and stdin is not interactive",
+                file=sys.stderr,
+            )
+            return 1
+        rc = _setup_ai_providers(
+            force=False,
+            path=provider_env_path,
+            title=f"Local provider setup for agent node {node_name}",
+        )
+        if rc != 0:
+            return rc
     if mode == "direct" and has_running_agent_node and current_node_id != node_id and not getattr(args, "replace_existing_agent_node", False):
         print(
             "refusing to replace the running agent-node in direct mode; "
@@ -3881,9 +3919,10 @@ def _join_agent_node(args) -> int:
             "AGENT_NODE_REGISTRATION_TOKEN": args.registration_token,
         }
     )
+    if provider_env_path:
+        new_agent_env["AGENT_NODE_AI_PROVIDERS_ENV_FILE"] = str(provider_env_path)
     if use_instance:
-        instance_root = _agent_node_instance_root(data_root, node_id)
-        env_path = instance_root / "agent.env"
+        env_path = agent_root / "agent.env"
         instance_env = _filtered_agent_node_instance_env(
             new_agent_env,
             [
@@ -3892,6 +3931,7 @@ def _join_agent_node(args) -> int:
                 "AGENT_NODE_AUTH_MODE",
                 "AGENT_NODE_PORT",
                 "AGENT_NODE_PROVIDER_MODE",
+                "AGENT_NODE_AI_PROVIDERS_ENV_FILE",
                 "AGENT_NODE_PULL_ENABLED",
                 "AGENT_NODE_BACKEND_URL",
                 "AGENT_NODE_SELF_REGISTER_URL",
@@ -3916,6 +3956,7 @@ def _join_agent_node(args) -> int:
             node_id=node_id,
             env_path=env_path,
             data_root=data_root,
+            provider_env_path=provider_env_path,
             build=bool(args.build),
             pull=bool(args.pull),
         )
@@ -4171,6 +4212,7 @@ def _join_private_agent_node(args) -> int:
         and not getattr(args, "replace_existing_agent_node", False)
     )
     agent_root = _agent_node_instance_root(data_root, node_id) if use_instance else data_root / "agent-node"
+    provider_env_path = _agent_node_provider_env_path(agent_root)
     private_key, public_key = _private_agent_key_paths(agent_root, node_id)
     private_key_container = f"/var/lib/myapp/agent-node/private/{private_key.name}"
     rc = _ensure_private_agent_keypair(private_key, public_key)
@@ -4179,9 +4221,42 @@ def _join_private_agent_node(args) -> int:
     public_key_text = public_key.read_text(encoding="utf-8")
     provider_ids = [item.strip().lower().replace("_", "-") for item in (args.provider or []) if item.strip()]
     agent_ids = [item.strip().lower().replace("_", "-") for item in (args.agent or ["claude"]) if item.strip()]
+    node_name = (args.name or node_id).strip()[:128] or node_id
+    if not _ai_providers_configured(provider_env_path):
+        if getattr(args, "no_provider_setup", False):
+            print(
+                f"private agent provider config is missing at {provider_env_path}; "
+                "rerun without --no-provider-setup and enter this node's provider keys",
+                file=sys.stderr,
+            )
+            return 1
+        if not sys.stdin.isatty():
+            print(
+                f"private agent provider config is missing at {provider_env_path} and stdin is not interactive",
+                file=sys.stderr,
+            )
+            return 1
+        rc = _setup_ai_providers(
+            force=False,
+            path=provider_env_path,
+            title=f"Private agent provider setup for {node_name}",
+        )
+        if rc != 0:
+            return rc
+    configured_provider_ids = _ai_provider_ids_from_env(_parse_env(provider_env_path))
+    if provider_ids:
+        missing = [provider_id for provider_id in provider_ids if provider_id not in configured_provider_ids]
+        if missing:
+            print(
+                f"private agent provider config at {provider_env_path} is missing: {', '.join(missing)}",
+                file=sys.stderr,
+            )
+            return 1
+    else:
+        provider_ids = configured_provider_ids
     payload = {
         "node_id": node_id,
-        "name": args.name or node_id,
+        "name": node_name,
         "public_key": public_key_text,
         "provider_ids": provider_ids,
         "agent_ids": agent_ids,
@@ -4201,22 +4276,11 @@ def _join_private_agent_node(args) -> int:
         print(f"private agent registration failed: {status or '-'} {error}", file=sys.stderr)
         return 1
     owner_user_id = str(data.get("owner_user_id") or "").strip()
-    if not _ai_providers_configured():
-        if getattr(args, "no_provider_setup", False):
-            print("AI provider config is missing; run myapp-ctl setup --no-push --no-email --no-asr", file=sys.stderr)
-            return 1
-        if not sys.stdin.isatty():
-            print("AI provider config is missing and stdin is not interactive", file=sys.stderr)
-            return 1
-        rc = _setup_ai_providers(force=False)
-        if rc != 0:
-            return rc
-    display_host = args.host or _public_host(None)
+    display_host = _agent_node_default_display_host(args.host)
     rc = _init_stack_secrets(host=display_host, quiet=True)
     if rc != 0:
         return rc
     agent_env = _parse_env(_secret_path("agent"))
-    node_name = (args.name or node_id).strip()[:128] or node_id
     labels = list(args.label or [])
     if not any(str(label).startswith("host=") for label in labels):
         labels.append(f"host={display_host}")
@@ -4235,6 +4299,7 @@ def _join_private_agent_node(args) -> int:
             "AGENT_NODE_AUTH_MODE": "private",
             "AGENT_NODE_OWNER_USER_ID": owner_user_id,
             "AGENT_NODE_PRIVATE_KEY_PATH": private_key_container,
+            "AGENT_NODE_AI_PROVIDERS_ENV_FILE": str(provider_env_path),
             "AGENT_NODE_PROVIDER_MODE": "local",
             "AGENT_NODE_PULL_ENABLED": "1",
             "AGENT_NODE_BACKEND_URL": backend_url,
@@ -4260,6 +4325,7 @@ def _join_private_agent_node(args) -> int:
                 "AGENT_NODE_AUTH_MODE",
                 "AGENT_NODE_OWNER_USER_ID",
                 "AGENT_NODE_PRIVATE_KEY_PATH",
+                "AGENT_NODE_AI_PROVIDERS_ENV_FILE",
                 "AGENT_NODE_PROVIDER_MODE",
                 "AGENT_NODE_PULL_ENABLED",
                 "AGENT_NODE_BACKEND_URL",
@@ -4286,6 +4352,7 @@ def _join_private_agent_node(args) -> int:
             node_id=node_id,
             env_path=env_path,
             data_root=data_root,
+            provider_env_path=provider_env_path,
             build=bool(args.build),
             pull=bool(args.pull),
         )

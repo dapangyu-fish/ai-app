@@ -509,10 +509,13 @@ Provider modes:
   agent-node mints a short-lived local proxy token before starting the runtime.
   This is the simplest mode and does not require provider keys on the new agent
   host.
-- `local`: the agent host loads `/etc/myapp/secrets.d/ai-providers.env` and
-  uses its own provider keys before minting the runtime proxy token. Nodes
-  registered with this mode do not receive the master provider token. Use this
-  to split provider quota/keys by host.
+- `local`: the agent node loads a node-local `ai-providers.env` from its own
+  data directory before minting the runtime proxy token. For the singleton node
+  the default path is `<data-root>/agent-node/ai-providers.env`; for additional
+  same-host instances it is `<data-root>/agent-nodes/<node-id>/ai-providers.env`.
+  Nodes registered with this mode do not receive the master provider token. Use
+  this to split provider quota/keys by node, even when multiple nodes run on one
+  physical machine.
 
 `myapp-ctl agent-node ls` displays this value as `KEY_SRC` because it is the
 source of provider keys, not the DeepSeek/MiniMax provider selected by a user
@@ -605,7 +608,10 @@ nodes, so the private host only needs outbound access to the backend.
 
 Security invariants:
 
-- The provider key stays in the user's local `/etc/myapp/secrets.d/ai-providers.env`.
+- The provider key stays in the private node's local data directory, for example
+  `/mnt/myapp/agent-node/ai-providers.env` for the singleton node or
+  `/mnt/myapp/agent-nodes/<node>/ai-providers.env` for an additional same-host
+  instance.
 - The private node signing key stays under the user's local data root, for
   example `/mnt/myapp/agent-node/private/<node>.key.pem` for the singleton node
   or `/mnt/myapp/agent-nodes/<node>/private/<node>.key.pem` for an additional

@@ -257,7 +257,7 @@ services:
     env_file:
       - path: /etc/myapp/secrets.d/agent.env
         required: false
-      - path: /etc/myapp/secrets.d/ai-providers.env
+      - path: ${AGENT_NODE_AI_PROVIDERS_ENV_FILE:-/mnt/myapp/agent-node/ai-providers.env}
         required: false
     environment:
       AGENT_NODE_ID: "${AGENT_NODE_ID:-myapp-agent-local}"
