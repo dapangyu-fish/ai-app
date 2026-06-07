@@ -157,6 +157,9 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
       );
       return;
     }
+    final nodeName = await _promptJoinNodeName();
+    if (nodeName == null) return;
+    if (!mounted) return;
     setState(() => _creatingJoin = true);
     try {
       final provider = AiChatService.selectedProvider;
@@ -165,6 +168,7 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
         'POST',
         '/api/ai/private_agent/join_token',
         body: {
+          'name': nodeName,
           'provider_ids': [provider],
           'agent_ids': [agent],
           'ttl_seconds': 900,
@@ -194,6 +198,63 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
     } finally {
       if (mounted) setState(() => _creatingJoin = false);
     }
+  }
+
+  Future<String?> _promptJoinNodeName() async {
+    final controller = TextEditingController(
+      text: _text(
+        zh: '我的私有节点',
+        en: 'My private node',
+        de: 'Mein privater Node',
+        es: 'Mi nodo privado',
+      ),
+    );
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          _text(
+            zh: '节点名称',
+            en: 'Node name',
+            de: 'Node-Name',
+            es: 'Nombre del nodo',
+          ),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: 48,
+          textInputAction: TextInputAction.done,
+          decoration: InputDecoration(
+            labelText: _text(
+              zh: '用于列表和控制面板展示',
+              en: 'Shown in lists and dashboards',
+              de: 'Anzeige in Listen und Dashboards',
+              es: 'Visible en listas y paneles',
+            ),
+            border: const OutlineInputBorder(),
+          ),
+          onSubmitted: (value) => Navigator.of(ctx).pop(value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              _text(zh: '取消', en: 'Cancel', de: 'Abbrechen', es: 'Cancelar'),
+            ),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            child: Text(
+              _text(zh: '生成', en: 'Create', de: 'Erstellen', es: 'Crear'),
+            ),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    final name = result?.trim();
+    return name == null || name.isEmpty ? null : name;
   }
 
   void _openAuthPage() {
