@@ -668,8 +668,9 @@ required only when the user wants to list all private nodes owned by the same
 account. The local helper endpoint that signs this short JWT is protected by the
 host's `AGENT_NODE_TOKEN`.
 
-The client settings page exposes `Agent routing` / `Agent 调度` with `public`,
-`private`, and `auto`; chat start requests send the selected value as:
+The client settings page exposes `Agent routing` / `Agent 调度` with two
+explicit modes: `public` and `private`. Chat start requests send the selected
+value as:
 
 ```json
 {
@@ -682,4 +683,9 @@ Supported scopes are:
 - `public`: use the platform agent pool.
 - `private`: use only the logged-in user's private nodes; fail with
   `AI_PRIVATE_AGENT_OFFLINE` if none is online.
-- `auto`: use a compatible private node when available, otherwise use public.
+
+Provider and agent selectors are scoped too. In public mode, the client shows
+providers reported by online public nodes. In private mode, it shows only
+providers reported by the signed-in user's private nodes. Private mode never
+falls back to public automatically; the user must switch routing back to
+`public` if they want to use the platform pool.

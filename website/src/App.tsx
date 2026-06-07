@@ -503,27 +503,28 @@ function ValueArchitecture({ lang }: { lang: Lang }) {
 
 function DocsPage({ lang }: { lang: Lang }) {
   const zh = lang === 'zh';
+  const cliLang = lang === 'zh' ? 'zh' : lang === 'de' ? 'de' : lang === 'es' ? 'es' : 'en';
   const docs = {
-    badge: zh ? '部署文档' : 'Deployment docs',
-    title: zh ? '部署、接入和发布 MyApp' : 'Deploy, connect and release MyApp',
+    badge: zh ? 'myapp-ctl 部署手册' : 'myapp-ctl deployment guide',
+    title: zh ? '用 myapp-ctl 安装、部署、更新和扩展 MyApp' : 'Install, deploy, update and extend MyApp with myapp-ctl',
     subtitle: zh
-      ? '这页记录官网推荐的部署路径。当前 GitHub 入口先固定挂出，仓库会作为未来开源和协作入口持续整理。'
-      : 'This page documents the recommended deployment path. The GitHub entry is already linked and will be the future open-source and collaboration entry.',
-    quickTitle: zh ? '最快路径' : 'Fast path',
+      ? '当前后端统一走 deploy/production 下的 myapp-ctl。旧 bootstrap、裸跑服务和手工迁移路径已经废弃。'
+      : 'The backend is now managed through myapp-ctl under deploy/production. Legacy bootstrap scripts, bare services and one-off migration paths are deprecated.',
+    quickTitle: zh ? '最快全新部署' : 'Fast fresh deploy',
     quickBody: zh
-      ? '本地或测试环境先启动后端，再用线上 Web、TestFlight 或 APK 客户端切换到这套后端。'
-      : 'Start the backend first, then point the hosted Web app, TestFlight build or APK client to that backend.',
-    backendTitle: zh ? '1. 启动后端测试环境' : '1. Start the backend test environment',
+      ? '准备一台 Ubuntu 主机、Docker 和仓库源码。先安装 myapp-ctl，再配置密钥，最后部署整套后端并把客户端环境 JSON 导入 App。'
+      : 'Prepare an Ubuntu host, Docker and a source checkout. Install myapp-ctl, configure secrets, deploy the stack, then import the client environment JSON into the app.',
+    backendTitle: zh ? '后端安装和首次配置' : 'Backend install and first setup',
     backendBody: zh
-      ? 'myapp-ctl 负责安装控制入口、管理密钥、部署服务并查看状态。生产密钥、供应商 token、OSS 凭证都放在服务器环境变量或专用 env 文件中，不进入 Git。'
-      : 'myapp-ctl installs the control entrypoint, manages secrets, deploys services and shows status. Production tokens, provider keys and OSS credentials stay in server env files, not Git.',
-    clientTitle: zh ? '2. 接入客户端' : '2. Connect clients',
+      ? 'myapp-ctl 负责安装控制入口、生成基础密钥、管理 AI/SMTP/推送配置、部署 Docker 服务并输出客户端导入二维码。生产密钥只写入 /etc/myapp 和 data root，不进入 Git。'
+      : 'myapp-ctl installs the control entrypoint, generates base secrets, manages AI/SMTP/push configuration, deploys Docker services and prints a client import QR code. Production secrets stay under /etc/myapp and the data root, never Git.',
+    clientTitle: zh ? '客户端接入' : 'Client connection',
     clientBody: zh
-      ? '打开客户端的 Service Environment 页面，扫码或粘贴后端环境 JSON，保存后重新登录。Web 版、iOS TestFlight 和 Android APK 都走同一套环境切换逻辑。'
-      : 'Open Service Environment in the client, scan or paste the backend environment JSON, save it and sign in again. Web, iOS TestFlight and Android APK use the same environment switch flow.',
-    buildTitle: zh ? '3. 构建客户端' : '3. Build clients',
+      ? 'Web、iOS TestFlight、Android APK 都可以连接私有后端。打开 Service Environment 页面，扫码或粘贴 myapp-ctl 输出的 JSON，保存后重新登录。'
+      : 'Web, iOS TestFlight and Android APK can all connect to a private backend. Open Service Environment, scan or paste the JSON printed by myapp-ctl, save and sign in again.',
+    buildTitle: zh ? '客户端和官网构建' : 'Client and website builds',
     websiteTitle: zh ? '官网发布' : 'Website deployment',
-    releaseTitle: zh ? '4. 发布和分发' : '4. Release and distribution',
+    releaseTitle: zh ? '发布和分发' : 'Release and distribution',
     releaseBody: zh
       ? 'JSON App 通过 Registry 发布并存到 OSS/MinIO；Android APK 走配置中心上传到固定对象路径；Flutter Web 客户端构建到 build/web；官网是 website 目录下的 Vite 站点。iOS 通过 TestFlight 分发。'
       : 'JSON Apps are published through Registry and stored in OSS/MinIO. Android APK uploads through config center to a fixed object path. Flutter Web client builds to build/web; this marketing website is the Vite app under website. iOS is distributed through TestFlight.',
@@ -532,6 +533,120 @@ function DocsPage({ lang }: { lang: Lang }) {
       ? 'AI 生成的是声明式 JSON，不下发 Dart、Swift、Kotlin、插件或二进制。运行时只解释客户端已经编译进包内的通用控件、动作和媒体能力。'
       : 'AI produces declarative JSON, not Dart, Swift, Kotlin, plugins or binaries. The runtime only interprets generic widgets, actions and media capabilities already compiled into the client.',
   };
+  const quickSteps = zh
+    ? [
+        ['安装控制器', '在源码根目录运行 install_ctl.sh，myapp-ctl 会记录当前 checkout 作为 build context。'],
+        ['交互配置', 'setup 会配置语言、data root、AI 供应商、SMTP、APNs、FCM、GeTui 等。'],
+        ['部署服务', 'deploy --build 从源码构建；deploy --pull 使用已发布镜像。'],
+        ['连接客户端', 'client-env 输出 JSON 和二维码，客户端导入后重新登录。'],
+      ]
+    : [
+        ['Install control CLI', 'Run install_ctl.sh from the source root; myapp-ctl records that checkout as the build context.'],
+        ['Configure secrets', 'setup configures language, data root, AI providers, SMTP, APNs, FCM and GeTui.'],
+        ['Deploy services', 'deploy --build builds from source; deploy --pull uses published images.'],
+        ['Connect clients', 'client-env prints JSON and a QR code; import it in the client and sign in again.'],
+      ];
+  const stackItems = zh
+    ? [
+        ['核心服务', 'backend、ai-worker、Registry、Config Center、User Center'],
+        ['基础设施', 'JSON App Postgres、AI Redis、App MinIO、Supabase、OpenIM'],
+        ['AI 执行', 'agent-node 调度 Docker runtime，Claude/Codex 在 Ubuntu 隔离容器中运行'],
+        ['持久数据', '默认 data root 是 /mnt/myapp，数据库和对象存储都走本地 path bind mount'],
+      ]
+    : [
+        ['Core services', 'backend, ai-worker, Registry, Config Center and User Center'],
+        ['Infrastructure', 'JSON App Postgres, AI Redis, App MinIO, Supabase and OpenIM'],
+        ['AI execution', 'agent-node schedules Docker runtimes; Claude/Codex run inside isolated Ubuntu containers'],
+        ['Persistent data', 'Default data root is /mnt/myapp; databases and object stores use local bind mounts'],
+      ];
+  const updateItems = zh
+    ? [
+        ['更新控制器', ['myapp-ctl update']],
+        ['只改后端路由', ['myapp-ctl deploy backend --build --no-setup --no-test-user']],
+        ['改 worker / prompt / validator', ['myapp-ctl deploy backend ai-worker --build --no-setup --no-test-user']],
+        ['改 agent-node', ['myapp-ctl agent ls', 'myapp-ctl deploy agent-node --build --no-setup --no-test-user']],
+        ['改 runtime 镜像', ['myapp-ctl deploy agent-runtime --build --no-setup --no-test-user']],
+        ['镜像部署主机', ['myapp-ctl update', 'myapp-ctl deploy backend ai-worker --pull --no-setup --no-test-user']],
+      ]
+    : [
+        ['Refresh control files', ['myapp-ctl update']],
+        ['Backend routes only', ['myapp-ctl deploy backend --build --no-setup --no-test-user']],
+        ['Worker / prompts / validators', ['myapp-ctl deploy backend ai-worker --build --no-setup --no-test-user']],
+        ['agent-node changes', ['myapp-ctl agent ls', 'myapp-ctl deploy agent-node --build --no-setup --no-test-user']],
+        ['Runtime image changes', ['myapp-ctl deploy agent-runtime --build --no-setup --no-test-user']],
+        ['Image-based host', ['myapp-ctl update', 'myapp-ctl deploy backend ai-worker --pull --no-setup --no-test-user']],
+      ];
+  const opsGroups = zh
+    ? [
+        {
+          title: '服务运维',
+          lines: [
+            'myapp-ctl status',
+            'myapp-ctl status backend ai-worker agent-node',
+            'myapp-ctl restart backend ai-worker',
+            'myapp-ctl log backend -f -n 120',
+          ],
+        },
+        {
+          title: '密钥和配置',
+          lines: [
+            'myapp-ctl secret ls',
+            'myapp-ctl secret get <group> <key> --show',
+            'myapp-ctl secret set <group> KEY=value',
+            'myapp-ctl config view',
+          ],
+        },
+        {
+          title: '备份和恢复',
+          lines: [
+            'myapp-ctl config export --out /mnt/myapp/myapp-config.json',
+            'myapp-ctl config export --redacted --out /root/myapp-config.redacted.json',
+            'myapp-ctl config import /root/myapp-config.json --yes',
+          ],
+        },
+        {
+          title: '清理环境',
+          lines: [
+            'myapp-ctl uninstall --yes --purge',
+            '# data root 不会自动删除；确认销毁时手动 rm -rf /mnt/myapp',
+          ],
+        },
+      ]
+    : [
+        {
+          title: 'Service operations',
+          lines: [
+            'myapp-ctl status',
+            'myapp-ctl status backend ai-worker agent-node',
+            'myapp-ctl restart backend ai-worker',
+            'myapp-ctl log backend -f -n 120',
+          ],
+        },
+        {
+          title: 'Secrets and config',
+          lines: [
+            'myapp-ctl secret ls',
+            'myapp-ctl secret get <group> <key> --show',
+            'myapp-ctl secret set <group> KEY=value',
+            'myapp-ctl config view',
+          ],
+        },
+        {
+          title: 'Backup and restore',
+          lines: [
+            'myapp-ctl config export --out /mnt/myapp/myapp-config.json',
+            'myapp-ctl config export --redacted --out /root/myapp-config.redacted.json',
+            'myapp-ctl config import /root/myapp-config.json --yes',
+          ],
+        },
+        {
+          title: 'Uninstall',
+          lines: [
+            'myapp-ctl uninstall --yes --purge',
+            '# data root is preserved; manually rm -rf /mnt/myapp only when destroying data',
+          ],
+        },
+      ];
 
   return (
     <>
@@ -558,10 +673,11 @@ function DocsPage({ lang }: { lang: Lang }) {
           <TerminalBox
             lines={[
               '$ git clone https://github.com/dapangyu-fish/ai-app.git',
-              '$ cd ai-app/deploy/production',
-              '$ ./install_ctl.sh',
-              '$ myapp-ctl deploy --pull',
-              '# scan Service Environment QR in the client',
+              '$ cd ai-app',
+              '$ ./deploy/production/install_ctl.sh',
+              '$ myapp-ctl setup --host <public-host> --data-root /mnt/myapp',
+              '$ myapp-ctl deploy --build',
+              '$ myapp-ctl client-env --terminal-qr',
             ]}
           />
         </div>
@@ -572,7 +688,11 @@ function DocsPage({ lang }: { lang: Lang }) {
           <aside className="docsToc">
             <a href="#quick-start">{docs.quickTitle}</a>
             <a href="#architecture-docs">{zh ? '架构图' : 'Architecture'}</a>
-            <a href="#commands">{zh ? '部署命令' : 'Commands'}</a>
+            <a href="#install">{zh ? '安装部署' : 'Install'}</a>
+            <a href="#operations">{zh ? '更新运维' : 'Operations'}</a>
+            <a href="#agent-nodes">{zh ? 'Agent Node' : 'Agent Node'}</a>
+            <a href="#private-agent">{zh ? '私有节点' : 'Private nodes'}</a>
+            <a href="#clients">{zh ? '客户端' : 'Clients'}</a>
             <a href="#release">{docs.releaseTitle}</a>
           </aside>
           <div className="docsContent">
@@ -581,10 +701,11 @@ function DocsPage({ lang }: { lang: Lang }) {
               <h2>{docs.quickTitle}</h2>
               <p>{docs.quickBody}</p>
               <div className="docsSteps">
-                {[docs.backendTitle, docs.clientTitle, docs.buildTitle, docs.releaseTitle].map((title, index) => (
+                {quickSteps.map(([title, body], index) => (
                   <div className="docsStep" key={title}>
                     <span>{String(index + 1).padStart(2, '0')}</span>
                     <strong>{title}</strong>
+                    <small>{body}</small>
                   </div>
                 ))}
               </div>
@@ -602,20 +723,198 @@ function DocsPage({ lang }: { lang: Lang }) {
               <ArchitectureDiagram lang={lang} />
             </article>
 
-            <article className="docsBlock" id="commands">
+            <article className="docsBlock" id="install">
+              <p className="eyebrow">{zh ? '后端控制面' : 'Backend control plane'}</p>
+              <h2>{docs.backendTitle}</h2>
+              <p>{docs.backendBody}</p>
               <div className="docsGrid">
                 <div>
-                  <h2>{docs.backendTitle}</h2>
-                  <p>{docs.backendBody}</p>
+                  <h3>{zh ? '全新安装' : 'Fresh install'}</h3>
                   <TerminalBox
                     lines={[
                       '$ git clone https://github.com/dapangyu-fish/ai-app.git',
-                      '$ cd ai-app/deploy/production',
-                      '$ ./install_ctl.sh',
-                      '$ myapp-ctl deploy --pull',
+                      '$ cd ai-app',
+                      '$ ./deploy/production/install_ctl.sh',
+                      `$ myapp-ctl config lang ${cliLang}`,
+                      '$ myapp-ctl setup --host <public-host> --data-root /mnt/myapp',
+                      '$ myapp-ctl deploy --build',
                     ]}
                   />
                 </div>
+                <div>
+                  <h3>{zh ? '镜像部署' : 'Image-based deploy'}</h3>
+                  <TerminalBox
+                    lines={[
+                      '$ ./deploy/production/install_ctl.sh',
+                      '$ myapp-ctl setup --host <public-host> --data-root /mnt/myapp',
+                      '$ myapp-ctl deploy --pull',
+                      '$ myapp-ctl status',
+                    ]}
+                  />
+                </div>
+              </div>
+              <div className="docsMiniGrid">
+                {stackItems.map(([title, body]) => (
+                  <div className="docsInfoTile" key={title}>
+                    <strong>{title}</strong>
+                    <span>{body}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="docsCallout">
+                <LockKeyhole size={18} />
+                <p>
+                  {zh
+                    ? 'setup 会要求填写 AI 供应商。DeepSeek、MiniMax 或自定义 Anthropic-compatible provider 都通过环境变量写入服务器专用 env 文件；APNs、FCM、GeTui、SMTP 可跳过，跳过只影响对应通道。'
+                    : 'setup asks for AI providers. DeepSeek, MiniMax or custom Anthropic-compatible providers are written into server-local env files. APNs, FCM, GeTui and SMTP are optional; skipping them only disables that channel.'}
+                </p>
+              </div>
+            </article>
+
+            <article className="docsBlock" id="operations">
+              <p className="eyebrow">{zh ? '日常更新' : 'Routine updates'}</p>
+              <h2>{zh ? '按改动面部署，不要每次全量重启' : 'Deploy only the changed surface'}</h2>
+              <p>
+                {zh
+                  ? '常规代码更新先运行 myapp-ctl update，再按改动范围重建或拉取对应组件。鉴权、Redis、Postgres、OpenIM、Supabase、MinIO 不需要因为普通后端或 agent 改动而重启。'
+                  : 'For routine code updates, run myapp-ctl update first, then rebuild or pull only the changed components. Auth, Redis, Postgres, OpenIM, Supabase and MinIO should stay up for ordinary backend or agent changes.'}
+              </p>
+              <div className="docsCommandList">
+                {updateItems.map(([title, lines]) => (
+                  <div className="docsCommandItem" key={title as string}>
+                    <strong>{title}</strong>
+                    <TerminalBox lines={lines as string[]} />
+                  </div>
+                ))}
+              </div>
+              <div className="docsGrid opsGrid">
+                {opsGroups.map((item) => (
+                  <div key={item.title}>
+                    <h3>{item.title}</h3>
+                    <TerminalBox lines={item.lines} />
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="docsBlock" id="agent-nodes">
+              <p className="eyebrow">{zh ? '公共 Agent Node' : 'Public Agent Nodes'}</p>
+              <h2>{zh ? '多机器 Agent 采用 pull 模式' : 'Multi-host agents use pull mode'}</h2>
+              <p>
+                {zh
+                  ? '默认架构是 agent-node 主动轮询后端获取任务，客户端 SSE 仍然是 client -> backend。第二台 agent 机器只需要能出站访问后端，不需要公网入站端口。节点注册信息在 Postgres，运行队列和心跳在 Redis。'
+                  : 'The default architecture is pull-based: agent-node polls the backend for work, while client SSE remains client -> backend. A secondary agent host only needs outbound access to the backend and no public inbound port. Node registration lives in Postgres; queues and heartbeats use Redis.'}
+              </p>
+              <div className="docsGrid">
+                <div>
+                  <h3>{zh ? '主节点生成加入命令' : 'Generate join command on master'}</h3>
+                  <TerminalBox
+                    lines={[
+                      '$ myapp-ctl agent-node add \\',
+                      '  --backend http://<master-host>:5566 \\',
+                      '  --host <agent-host> \\',
+                      '  --node-id myapp-agent-2 \\',
+                      '  --name "GPU agent 2" \\',
+                      '  --capacity 2 \\',
+                      '  --mode pull \\',
+                      '  --provider-mode master',
+                    ]}
+                  />
+                </div>
+                <div>
+                  <h3>{zh ? '节点运维' : 'Node operations'}</h3>
+                  <TerminalBox
+                    lines={[
+                      '$ myapp-ctl agent-node ls',
+                      '$ myapp-ctl agent-node pause myapp-agent-2 --reason maintenance',
+                      '$ myapp-ctl agent-node limits --capacity 3 --queue-max 20',
+                      '$ myapp-ctl agent-node resume myapp-agent-2',
+                      '$ myapp-ctl agent ls',
+                    ]}
+                  />
+                </div>
+              </div>
+              <div className="docsPillList">
+                {(zh
+                  ? [
+                      ['KEY_SRC=master', '后端发送 provider 配置，agent-node 只拿一次性代理 token。'],
+                      ['KEY_SRC=local', 'provider key 留在 agent 机器本地 ai-providers.env。'],
+                      ['RUNS / CAP / QUEUE / QMAX', '分别表示当前运行、最大并发、当前队列和最大队列。'],
+                      ['同会话亲和', '同一个 session 后续打磨优先回到同一个在线节点。'],
+                    ]
+                  : [
+                      ['KEY_SRC=master', 'Backend sends provider config; agent-node mints one-time proxy tokens.'],
+                      ['KEY_SRC=local', 'Provider keys stay in the agent host local ai-providers.env.'],
+                      ['RUNS / CAP / QUEUE / QMAX', 'Current runs, max concurrency, current queue and max queue.'],
+                      ['Session affinity', 'Later turns of one session prefer the same online node.'],
+                    ]).map(([title, body]) => (
+                  <div className="docsPill" key={title}>
+                    <strong>{title}</strong>
+                    <span>{body}</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="docsBlock" id="private-agent">
+              <p className="eyebrow">{zh ? '用户私有 Agent Node' : 'User-private Agent Nodes'}</p>
+              <h2>{zh ? '普通用户可以接入自己的 agent 机器和 provider key' : 'Users can attach their own agent host and provider keys'}</h2>
+              <p>
+                {zh
+                  ? '私有节点只服务所属用户。用户在 App 设置页生成一次性加入 token，节点本地交互填写 provider；长效 provider key 不上传到后端。客户端切换到私有调度时，只显示该用户私有节点上报的供应商。'
+                  : 'Private nodes serve only their owner. The user creates a one-time join token in app settings, then configures provider keys locally on the node. Long-lived provider keys are never uploaded to the backend. When the client switches to private routing, it shows only providers reported by that user’s private nodes.'}
+              </p>
+              <div className="docsGrid">
+                <div>
+                  <h3>{zh ? '用户侧流程' : 'User flow'}</h3>
+                  <ol className="docsOrdered">
+                    {(zh
+                      ? [
+                          '登录 App，打开设置里的 Private Agent Node 页面。',
+                          '选择节点名称、provider、agent 和镜像模式，复制 join command。',
+                          '在自己的机器上安装 myapp-ctl，执行 join command。',
+                          '按提示输入本节点自己的 DeepSeek / MiniMax / 自定义 provider 配置。',
+                          '回到 App，把 Agent 调度切到 private，只使用自己的节点。',
+                        ]
+                      : [
+                          'Sign in to the app and open Private Agent Node in settings.',
+                          'Choose node name, provider, agent and image mode, then copy the join command.',
+                          'Install myapp-ctl on your own host and run the join command.',
+                          'Enter this node’s own DeepSeek / MiniMax / custom provider configuration.',
+                          'Switch Agent routing to private in the app; only your nodes are used.',
+                        ]).map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ol>
+                </div>
+                <div>
+                  <h3>{zh ? '私有节点加入' : 'Private node join'}</h3>
+                  <TerminalBox
+                    lines={[
+                      "$ export MYAPP_PRIVATE_AGENT_JOIN_TOKEN='<copied from app>'",
+                      '$ myapp-ctl agent-node private join \\',
+                      '  --backend https://<backend-host> \\',
+                      '  --node-id my-private-agent \\',
+                      '  --name "My private agent" \\',
+                      '  --provider deepseek \\',
+                      '  --agent claude \\',
+                      '  --capacity 2 --queue-max 10 --pull',
+                    ]}
+                  />
+                </div>
+              </div>
+              <div className="docsBoundaryNote">
+                <ShieldCheck size={18} />
+                <p>
+                  {zh
+                    ? '当前客户端调度只有 public 和 private 两种。public 使用公开节点池；private 只使用当前登录用户的私有节点，私有节点离线时不会自动回落公开节点。'
+                    : 'Client routing currently has only public and private modes. public uses the platform pool; private uses only the signed-in user’s private nodes and does not automatically fall back to public when offline.'}
+                </p>
+              </div>
+            </article>
+
+            <article className="docsBlock" id="clients">
+              <div className="docsGrid">
                 <div>
                   <h2>{docs.clientTitle}</h2>
                   <p>{docs.clientBody}</p>
@@ -651,10 +950,24 @@ function DocsPage({ lang }: { lang: Lang }) {
                 <div>
                   <h2>{docs.releaseTitle}</h2>
                   <p>{docs.releaseBody}</p>
+                  <TerminalBox
+                    lines={[
+                      '$ myapp-ctl client-env --host <public-host> --terminal-qr',
+                      '$ cat /mnt/myapp/state/client-environment.json',
+                      '$ myapp-ctl status',
+                    ]}
+                  />
                 </div>
                 <div>
                   <h2>{docs.configTitle}</h2>
                   <p>{docs.configBody}</p>
+                  <TerminalBox
+                    lines={[
+                      '$ curl -fsS http://127.0.0.1:5566/api/ai/providers',
+                      '$ curl -fsS http://127.0.0.1:5590/health',
+                      '$ myapp-ctl agent-node ls',
+                    ]}
+                  />
                 </div>
               </div>
             </article>

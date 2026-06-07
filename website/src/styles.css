@@ -1592,7 +1592,8 @@ section {
 }
 
 .docsStep span,
-.docsStep strong {
+.docsStep strong,
+.docsStep small {
   display: block;
 }
 
@@ -1605,6 +1606,118 @@ section {
 .docsStep strong {
   margin-top: 12px;
   line-height: 1.45;
+}
+
+.docsStep small {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.docsBlock h3 {
+  margin: 8px 0 0;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.docsMiniGrid,
+.docsPillList,
+.docsCommandList {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.docsMiniGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.docsInfoTile,
+.docsPill,
+.docsCommandItem {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg2) 78%, transparent);
+}
+
+.docsInfoTile {
+  min-height: 118px;
+  padding: 14px;
+}
+
+.docsInfoTile strong,
+.docsInfoTile span,
+.docsPill strong,
+.docsPill span {
+  display: block;
+}
+
+.docsInfoTile span,
+.docsPill span {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.docsCallout {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  padding: 14px;
+}
+
+.docsCallout svg {
+  color: var(--primary);
+  margin-top: 2px;
+}
+
+.docsCallout p {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.7;
+}
+
+.docsCommandList {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.docsCommandItem {
+  padding: 14px;
+}
+
+.docsCommandItem strong {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.docsCommandItem .terminalBox,
+.opsGrid .terminalBox {
+  margin-top: 10px;
+}
+
+.docsPillList {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.docsPill {
+  padding: 14px;
+}
+
+.docsOrdered {
+  margin: 16px 0 0;
+  padding-left: 22px;
+  color: var(--muted);
+  line-height: 1.75;
+}
+
+.docsOrdered li + li {
+  margin-top: 8px;
 }
 
 .docsBoundaryNote {
@@ -1684,7 +1797,10 @@ section {
 
   .archDiagram,
   .docsSteps,
-  .docsGrid {
+  .docsGrid,
+  .docsMiniGrid,
+  .docsCommandList,
+  .docsPillList {
     grid-template-columns: 1fr;
   }
 
