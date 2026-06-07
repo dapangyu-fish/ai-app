@@ -2190,16 +2190,114 @@ def _ai_provider_ids_from_env(env: dict[str, str]) -> list[str]:
     for key, value in env.items():
         if key.endswith("_ANTHROPIC_AUTH_TOKEN") and value:
             out.append(_normalize_provider_id(key[: -len("_ANTHROPIC_AUTH_TOKEN")]))
+    for key, value in env.items():
+        if key.endswith("_CODEX_BASE_URL") and value:
+            provider_id = _normalize_provider_id(key[: -len("_CODEX_BASE_URL")])
+            prefix = _provider_prefix(provider_id)
+            env_key = env.get(f"{prefix}_CODEX_ENV_KEY") or f"{prefix}_CODEX_AUTH_TOKEN"
+            if env.get(f"{prefix}_CODEX_MODEL") and env_key and env.get(env_key) and provider_id not in out:
+                out.append(provider_id)
     return out
+
+
+def _provider_has_anthropic_adapter(env: dict[str, str], provider_id: str) -> bool:
+    prefix = _provider_prefix(provider_id)
+    return bool(
+        env.get(f"{prefix}_ANTHROPIC_BASE_URL")
+        and env.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN")
+        and env.get(f"{prefix}_ANTHROPIC_MODEL")
+    )
+
+
+def _provider_has_codex_responses_adapter(env: dict[str, str], provider_id: str) -> bool:
+    prefix = _provider_prefix(provider_id)
+    env_key = env.get(f"{prefix}_CODEX_ENV_KEY") or f"{prefix}_CODEX_AUTH_TOKEN"
+    return bool(
+        env.get(f"{prefix}_CODEX_BASE_URL")
+        and env.get(f"{prefix}_CODEX_MODEL")
+        and env_key
+        and env.get(env_key)
+        and (env.get(f"{prefix}_CODEX_WIRE_API") or "responses").strip().lower() == "responses"
+    )
+
+
+def _provider_allows_agent(env: dict[str, str], provider_id: str, agent_id: str) -> bool:
+    prefix = _provider_prefix(provider_id)
+    raw = env.get(f"{prefix}_SUPPORTED_AGENTS", "")
+    if raw:
+        allowed = {
+            str(item or "").strip().lower().replace("_", "-")
+            for item in raw.split(",")
+            if str(item or "").strip()
+        }
+        return str(agent_id or "").strip().lower().replace("_", "-") in allowed
+    if provider_id == "minimax":
+        return str(agent_id or "").strip().lower().replace("_", "-") == "codex"
+    return True
+
+
+def _ai_provider_capabilities_from_env(
+    env: dict[str, str],
+    *,
+    provider_filter: list[str] | None = None,
+    agent_filter: list[str] | None = None,
+) -> list[dict[str, object]]:
+    allowed_providers = {
+        _normalize_provider_id(item)
+        for item in (provider_filter or [])
+        if str(item or "").strip()
+    }
+    allowed_agents = {
+        str(item or "").strip().lower().replace("_", "-")
+        for item in (agent_filter or [])
+        if str(item or "").strip()
+    }
+    capabilities: list[dict[str, object]] = []
+    for provider_id in _ai_provider_ids_from_env(env):
+        if allowed_providers and provider_id not in allowed_providers:
+            continue
+        if (
+            _provider_has_anthropic_adapter(env, provider_id)
+            and _provider_allows_agent(env, provider_id, "claude")
+            and (not allowed_agents or "claude" in allowed_agents)
+        ):
+            capabilities.append(
+                {
+                    "provider_id": provider_id,
+                    "agent_id": "claude",
+                    "adapter_kind": "anthropic",
+                    "status": "configured",
+                    "enabled": True,
+                }
+            )
+        if (
+            _provider_has_codex_responses_adapter(env, provider_id)
+            and _provider_allows_agent(env, provider_id, "codex")
+            and (not allowed_agents or "codex" in allowed_agents)
+        ):
+            capabilities.append(
+                {
+                    "provider_id": provider_id,
+                    "agent_id": "codex",
+                    "adapter_kind": "openai-responses",
+                    "status": "configured",
+                    "enabled": True,
+                }
+            )
+    return capabilities
 
 
 def _ai_providers_configured(path: Path | None = None) -> bool:
     env = _parse_env(path or _secret_path("ai-providers"))
-    for provider_id in _ai_provider_ids_from_env(env):
-        prefix = _provider_prefix(provider_id)
-        if env.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN"):
-            return True
-    return False
+    return bool(_ai_provider_capabilities_from_env(env))
+
+
+def _default_agent_from_provider_env(env: dict[str, str], provider_id: str) -> str:
+    if _provider_has_anthropic_adapter(env, provider_id):
+        return "claude"
+    if _provider_has_codex_responses_adapter(env, provider_id):
+        return "codex"
+    return "claude"
 
 
 def _base_provider_env(
@@ -2272,13 +2370,14 @@ def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, s
     data = _base_provider_env(
         prefix=prefix,
         name="MiniMax M3",
-        description="MiniMax Anthropic-compatible Claude Code provider",
+        description="MiniMax native Responses provider for Codex",
         base_url=base_url,
         token=token,
         model=model,
     )
     data.update(
         {
+            f"{prefix}_SUPPORTED_AGENTS": existing.get(f"{prefix}_SUPPORTED_AGENTS", "codex"),
             f"{prefix}_AI_WORKER_MAX_CONCURRENCY": existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "5"),
             f"{prefix}_AI_WORKER_QUEUE_MAX": existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "20"),
             f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", "MiniMax"),
@@ -2295,50 +2394,69 @@ def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, s
 def _prompt_custom_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
     provider_id = _normalize_provider_id(_prompt_line("custom provider id", required=True))
     prefix = _provider_prefix(provider_id)
-    model = _prompt_line(f"{provider_id} ANTHROPIC_MODEL", default=existing.get(f"{prefix}_ANTHROPIC_MODEL", ""), required=True)
-    base_url = _prompt_line(
-        f"{provider_id} ANTHROPIC_BASE_URL",
-        default=existing.get(f"{prefix}_ANTHROPIC_BASE_URL", ""),
-        required=True,
-    )
-    token = _prompt_line(
-        f"{provider_id} ANTHROPIC_AUTH_TOKEN",
-        default=existing.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""),
-        required=True,
-        secret=True,
-    )
-    data = _base_provider_env(
-        prefix=prefix,
-        name=_prompt_line(f"{provider_id} display name", default=existing.get(f"{prefix}_PROVIDER_NAME", provider_id)),
-        description=_prompt_line(
-            f"{provider_id} description",
-            default=existing.get(f"{prefix}_PROVIDER_DESCRIPTION", "Anthropic-compatible Claude Code provider"),
+    data: dict[str, str] = {
+        f"{prefix}_PROVIDER_NAME": _prompt_line(
+            f"{provider_id} display name",
+            default=existing.get(f"{prefix}_PROVIDER_NAME", provider_id),
         ),
-        base_url=base_url,
-        token=token,
-        model=model,
-        effort=_prompt_line(f"{provider_id} CLAUDE_CODE_EFFORT_LEVEL", default=existing.get(f"{prefix}_CLAUDE_CODE_EFFORT_LEVEL", "max")),
+        f"{prefix}_PROVIDER_DESCRIPTION": _prompt_line(
+            f"{provider_id} description",
+            default=existing.get(f"{prefix}_PROVIDER_DESCRIPTION", "Custom AI provider"),
+        ),
+        f"{prefix}_PROVIDER_VISIBLE": existing.get(f"{prefix}_PROVIDER_VISIBLE", "1"),
+    }
+    add_claude = _prompt_bool(
+        f"Add Claude Code via Anthropic-compatible API for {provider_id}?",
+        default=bool(existing.get(f"{prefix}_ANTHROPIC_MODEL")),
     )
-    data[f"{prefix}_ANTHROPIC_DEFAULT_OPUS_MODEL"] = _prompt_line(
-        f"{provider_id} ANTHROPIC_DEFAULT_OPUS_MODEL",
-        default=existing.get(f"{prefix}_ANTHROPIC_DEFAULT_OPUS_MODEL", model),
-        required=True,
-    )
-    data[f"{prefix}_ANTHROPIC_DEFAULT_SONNET_MODEL"] = _prompt_line(
-        f"{provider_id} ANTHROPIC_DEFAULT_SONNET_MODEL",
-        default=existing.get(f"{prefix}_ANTHROPIC_DEFAULT_SONNET_MODEL", model),
-        required=True,
-    )
-    data[f"{prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL"] = _prompt_line(
-        f"{provider_id} ANTHROPIC_DEFAULT_HAIKU_MODEL",
-        default=existing.get(f"{prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL", model),
-        required=True,
-    )
-    data[f"{prefix}_CLAUDE_CODE_SUBAGENT_MODEL"] = _prompt_line(
-        f"{provider_id} CLAUDE_CODE_SUBAGENT_MODEL",
-        default=existing.get(f"{prefix}_CLAUDE_CODE_SUBAGENT_MODEL", model),
-        required=True,
-    )
+    model = existing.get(f"{prefix}_ANTHROPIC_MODEL", "")
+    if add_claude:
+        model = _prompt_line(f"{provider_id} ANTHROPIC_MODEL", default=model, required=True)
+        base_url = _prompt_line(
+            f"{provider_id} ANTHROPIC_BASE_URL",
+            default=existing.get(f"{prefix}_ANTHROPIC_BASE_URL", ""),
+            required=True,
+        )
+        token = _prompt_line(
+            f"{provider_id} ANTHROPIC_AUTH_TOKEN",
+            default=existing.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""),
+            required=True,
+            secret=True,
+        )
+        data.update(
+            _base_provider_env(
+                prefix=prefix,
+                name=data[f"{prefix}_PROVIDER_NAME"],
+                description=data[f"{prefix}_PROVIDER_DESCRIPTION"],
+                base_url=base_url,
+                token=token,
+                model=model,
+                effort=_prompt_line(
+                    f"{provider_id} CLAUDE_CODE_EFFORT_LEVEL",
+                    default=existing.get(f"{prefix}_CLAUDE_CODE_EFFORT_LEVEL", "max"),
+                ),
+            )
+        )
+        data[f"{prefix}_ANTHROPIC_DEFAULT_OPUS_MODEL"] = _prompt_line(
+            f"{provider_id} ANTHROPIC_DEFAULT_OPUS_MODEL",
+            default=existing.get(f"{prefix}_ANTHROPIC_DEFAULT_OPUS_MODEL", model),
+            required=True,
+        )
+        data[f"{prefix}_ANTHROPIC_DEFAULT_SONNET_MODEL"] = _prompt_line(
+            f"{provider_id} ANTHROPIC_DEFAULT_SONNET_MODEL",
+            default=existing.get(f"{prefix}_ANTHROPIC_DEFAULT_SONNET_MODEL", model),
+            required=True,
+        )
+        data[f"{prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL"] = _prompt_line(
+            f"{provider_id} ANTHROPIC_DEFAULT_HAIKU_MODEL",
+            default=existing.get(f"{prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL", model),
+            required=True,
+        )
+        data[f"{prefix}_CLAUDE_CODE_SUBAGENT_MODEL"] = _prompt_line(
+            f"{provider_id} CLAUDE_CODE_SUBAGENT_MODEL",
+            default=existing.get(f"{prefix}_CLAUDE_CODE_SUBAGENT_MODEL", model),
+            required=True,
+        )
     data[f"{prefix}_AI_WORKER_MAX_CONCURRENCY"] = _prompt_line(
         f"{provider_id} worker max concurrency",
         default=existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "3"),
@@ -2347,7 +2465,10 @@ def _prompt_custom_provider(existing: dict[str, str]) -> tuple[str, dict[str, st
         f"{provider_id} worker queue max",
         default=existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "50"),
     )
-    if _prompt_bool(f"Add Codex support for {provider_id}?", default=bool(existing.get(f"{prefix}_CODEX_MODEL"))):
+    if _prompt_bool(
+        f"Add Codex via native OpenAI Responses API for {provider_id}?",
+        default=bool(existing.get(f"{prefix}_CODEX_MODEL")),
+    ):
         data[f"{prefix}_CODEX_PROVIDER_NAME"] = _prompt_line(
             f"{provider_id} CODEX provider name",
             default=existing.get(f"{prefix}_CODEX_PROVIDER_NAME", provider_id),
@@ -2364,7 +2485,14 @@ def _prompt_custom_provider(existing: dict[str, str]) -> tuple[str, dict[str, st
         )
         data[f"{prefix}_CODEX_ENV_KEY"] = _prompt_line(
             f"{provider_id} CODEX token env key",
-            default=existing.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
+            default=existing.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_CODEX_AUTH_TOKEN"),
+        )
+        code_token_key = data[f"{prefix}_CODEX_ENV_KEY"]
+        data[code_token_key] = _prompt_line(
+            f"{provider_id} CODEX auth token",
+            default=existing.get(code_token_key, ""),
+            required=True,
+            secret=True,
         )
         data[f"{prefix}_CODEX_WIRE_API"] = _prompt_line(
             f"{provider_id} CODEX wire api",
@@ -2374,6 +2502,9 @@ def _prompt_custom_provider(existing: dict[str, str]) -> tuple[str, dict[str, st
             f"{provider_id} CODEX context window",
             default=existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "200000"),
         )
+    if not _ai_provider_capabilities_from_env({**existing, **data}, provider_filter=[provider_id]):
+        print(f"{provider_id} has no configured adapter; add at least Claude or Codex", file=sys.stderr)
+        return _prompt_custom_provider(existing)
     return provider_id, data
 
 
@@ -2416,7 +2547,10 @@ def _setup_ai_providers(*, force: bool = False, path: Path | None = None, title:
     data["AI_PROVIDER_IDS"] = ",".join(provider_ids)
     default_provider = _prompt_line("default provider", default=provider_ids[0])
     data["AI_DEFAULT_PROVIDER"] = default_provider if default_provider in provider_ids else provider_ids[0]
-    data["AI_DEFAULT_AGENT"] = _prompt_line("default agent", default=data.get("AI_DEFAULT_AGENT", "claude"))
+    data["AI_DEFAULT_AGENT"] = _prompt_line(
+        "default agent",
+        default=_default_agent_from_provider_env(data, data["AI_DEFAULT_PROVIDER"]),
+    )
     _write_env(path, data)
     print(f"updated AI providers: {', '.join(provider_ids)}")
     return 0
@@ -4219,8 +4353,8 @@ def _join_private_agent_node(args) -> int:
     if rc != 0:
         return rc
     public_key_text = public_key.read_text(encoding="utf-8")
-    provider_ids = [item.strip().lower().replace("_", "-") for item in (args.provider or []) if item.strip()]
-    agent_ids = [item.strip().lower().replace("_", "-") for item in (args.agent or ["claude"]) if item.strip()]
+    provider_filter = [item.strip().lower().replace("_", "-") for item in (args.provider or []) if item.strip()]
+    agent_filter = [item.strip().lower().replace("_", "-") for item in (args.agent or []) if item.strip()]
     node_name = (args.name or node_id).strip()[:128] or node_id
     if not _ai_providers_configured(provider_env_path):
         if getattr(args, "no_provider_setup", False):
@@ -4243,23 +4377,60 @@ def _join_private_agent_node(args) -> int:
         )
         if rc != 0:
             return rc
-    configured_provider_ids = _ai_provider_ids_from_env(_parse_env(provider_env_path))
-    if provider_ids:
-        missing = [provider_id for provider_id in provider_ids if provider_id not in configured_provider_ids]
+    provider_env = _parse_env(provider_env_path)
+    configured_provider_ids = _ai_provider_ids_from_env(provider_env)
+    if provider_filter:
+        missing = [provider_id for provider_id in provider_filter if provider_id not in configured_provider_ids]
         if missing:
             print(
                 f"private agent provider config at {provider_env_path} is missing: {', '.join(missing)}",
                 file=sys.stderr,
             )
             return 1
-    else:
-        provider_ids = configured_provider_ids
+    capabilities = _ai_provider_capabilities_from_env(
+        provider_env,
+        provider_filter=provider_filter,
+        agent_filter=agent_filter,
+    )
+    explicit_caps = []
+    for raw in getattr(args, "capability", None) or []:
+        parts = [part.strip().lower().replace("_", "-") for part in str(raw or "").split(":") if part.strip()]
+        if len(parts) not in {2, 3}:
+            print("--capability must be provider:agent or provider:agent:adapter", file=sys.stderr)
+            return 2
+        provider_id, agent_id = parts[0], parts[1]
+        explicit_caps.append(
+            {
+                "provider_id": provider_id,
+                "agent_id": agent_id,
+                "adapter_kind": parts[2] if len(parts) == 3 else ("anthropic" if agent_id == "claude" else "openai-responses"),
+                "status": "configured",
+                "enabled": True,
+            }
+        )
+    if explicit_caps:
+        available = {(cap["provider_id"], cap["agent_id"]) for cap in capabilities}
+        missing_caps = [cap for cap in explicit_caps if (cap["provider_id"], cap["agent_id"]) not in available]
+        if missing_caps:
+            text = ", ".join(f"{cap['provider_id']}:{cap['agent_id']}" for cap in missing_caps)
+            print(f"private agent provider config does not support capability: {text}", file=sys.stderr)
+            return 1
+        capabilities = explicit_caps
+    if not capabilities:
+        print(
+            f"private agent provider config at {provider_env_path} has no enabled Claude/Codex adapter",
+            file=sys.stderr,
+        )
+        return 1
+    provider_ids = sorted({str(cap["provider_id"]) for cap in capabilities})
+    agent_ids = sorted({str(cap["agent_id"]) for cap in capabilities})
     payload = {
         "node_id": node_id,
         "name": node_name,
         "public_key": public_key_text,
         "provider_ids": provider_ids,
         "agent_ids": agent_ids,
+        "capabilities": capabilities,
         "capacity": args.capacity,
         "queue_max": args.queue_max if args.queue_max is not None else args.capacity,
         "ttl_seconds": args.ttl,
@@ -4309,6 +4480,7 @@ def _join_private_agent_node(args) -> int:
             "AGENT_NODE_REGISTRATION_TTL_SECONDS": str(args.ttl),
             "AGENT_NODE_PROVIDER_IDS": ",".join(provider_ids),
             "AGENT_NODE_AGENT_IDS": ",".join(agent_ids),
+            "AGENT_NODE_CAPABILITIES": json.dumps(capabilities, separators=(",", ":")),
             "AGENT_NODE_LABELS": ",".join(labels),
             "AGENT_NODE_TOKEN": agent_env.get("AGENT_NODE_TOKEN") or _rand_hex(24),
             "AGENT_NODE_REGISTRATION_TOKEN": "",
@@ -4335,6 +4507,7 @@ def _join_private_agent_node(args) -> int:
                 "AGENT_NODE_REGISTRATION_TTL_SECONDS",
                 "AGENT_NODE_PROVIDER_IDS",
                 "AGENT_NODE_AGENT_IDS",
+                "AGENT_NODE_CAPABILITIES",
                 "AGENT_NODE_LABELS",
                 "AGENT_NODE_TOKEN",
             ],
@@ -5346,7 +5519,8 @@ def build_parser() -> argparse.ArgumentParser:
     private_join.add_argument("--queue-max", type=int)
     private_join.add_argument("--ttl", type=int, default=120)
     private_join.add_argument("--provider", action="append", default=[], help=_tx("local provider id supported by this node; repeatable", zh="本节点支持的本地供应商 ID；可重复", de="lokale Provider-ID dieses Nodes; wiederholbar", es="id de proveedor local soportado; repetible"))
-    private_join.add_argument("--agent", action="append", default=[], help=_tx("agent id supported by this node; repeatable; defaults to claude", zh="本节点支持的 Agent ID；可重复；默认 claude", de="Agent-ID dieses Nodes; wiederholbar; Standard claude", es="id de agent soportado; repetible; por defecto claude"))
+    private_join.add_argument("--agent", action="append", default=[], help=_tx("filter local adapters by agent id; repeatable", zh="按 Agent ID 过滤本地 adapter；可重复", de="lokale Adapter nach Agent-ID filtern; wiederholbar", es="filtrar adaptadores locales por id de agent; repetible"))
+    private_join.add_argument("--capability", action="append", default=[], help=_tx("explicit local capability provider:agent[:adapter]; repeatable", zh="显式本地能力 provider:agent[:adapter]；可重复", de="explizite lokale Faehigkeit provider:agent[:adapter]; wiederholbar", es="capacidad local explicita provider:agent[:adapter]; repetible"))
     private_join.add_argument("--label", action="append")
     private_join.add_argument("--pull", action="store_true", help=_tx("pull configured images before deploy", zh="部署前拉取已配置镜像", de="konfigurierte Images vor Deploy laden", es="descargar imagenes configuradas antes de desplegar"))
     private_join.add_argument("--build", action="store_true", help=_tx("build images from local source before deploy", zh="部署前从本地源码构建镜像", de="Images vor Deploy aus lokalem Quellcode bauen", es="construir imagenes desde codigo local antes de desplegar"))

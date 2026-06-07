@@ -99,6 +99,105 @@ AGENT_IDS = [
     if item.strip()
 ]
 
+
+def _default_adapter_kind(agent_id: str) -> str:
+    normalized = str(agent_id or "").strip().lower().replace("_", "-")
+    if normalized == "claude":
+        return "anthropic"
+    if normalized == "codex":
+        return "openai-responses"
+    return normalized or "unknown"
+
+
+def _capability_enabled_value(value: object, default: bool = True) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip().lower() not in {"0", "false", "no", "off", "disabled"}
+    return bool(value)
+
+
+def _provider_allows_agent(provider_id: str, agent_id: str) -> bool:
+    prefix = _provider_prefix(provider_id)
+    raw = str(os.environ.get(f"{prefix}_SUPPORTED_AGENTS") or "").strip()
+    if raw:
+        allowed = {
+            item.strip().lower().replace("_", "-")
+            for item in raw.split(",")
+            if item.strip()
+        }
+        return str(agent_id or "").strip().lower().replace("_", "-") in allowed
+    if str(provider_id or "").strip().lower().replace("_", "-") == "minimax":
+        return str(agent_id or "").strip().lower().replace("_", "-") == "codex"
+    return True
+
+
+def _configured_capabilities() -> list[dict]:
+    raw = os.environ.get("AGENT_NODE_CAPABILITIES", "").strip()
+    if raw:
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            parsed = []
+        if isinstance(parsed, list):
+            out = []
+            for item in parsed:
+                if not isinstance(item, dict):
+                    continue
+                provider_id = str(item.get("provider_id") or item.get("provider") or "").strip().lower().replace("_", "-")
+                agent_id = str(item.get("agent_id") or item.get("agent") or "").strip().lower().replace("_", "-")
+                if not provider_id or not agent_id:
+                    continue
+                out.append(
+                    {
+                        "provider_id": provider_id,
+                        "agent_id": agent_id,
+                        "adapter_kind": str(item.get("adapter_kind") or item.get("adapter") or _default_adapter_kind(agent_id)).strip().lower().replace("_", "-"),
+                        "status": str(item.get("status") or "configured").strip().lower().replace("_", "-"),
+                        "enabled": _capability_enabled_value(item.get("enabled"), True),
+                    }
+                )
+            if out:
+                return out
+    if PROVIDER_MODE != "local":
+        return []
+    out = []
+    for provider_id in PROVIDER_IDS:
+        prefix = _provider_prefix(provider_id)
+        anthropic_ok = (
+            _local_provider_value(prefix, "ANTHROPIC_BASE_URL")
+            and _local_provider_value(prefix, "ANTHROPIC_AUTH_TOKEN")
+            and _local_provider_value(prefix, "ANTHROPIC_MODEL")
+        )
+        if anthropic_ok and _provider_allows_agent(provider_id, "claude") and (not AGENT_IDS or "claude" in AGENT_IDS):
+            out.append(
+                {
+                    "provider_id": provider_id,
+                    "agent_id": "claude",
+                    "adapter_kind": "anthropic",
+                    "status": "configured",
+                    "enabled": True,
+                }
+            )
+        codex_env_key = _local_provider_value(prefix, "CODEX_ENV_KEY", f"{prefix}_CODEX_AUTH_TOKEN")
+        codex_ok = (
+            _local_provider_value(prefix, "CODEX_BASE_URL")
+            and _local_provider_value(prefix, "CODEX_MODEL")
+            and codex_env_key
+            and os.environ.get(codex_env_key, "")
+            and _local_provider_value(prefix, "CODEX_WIRE_API", "responses") == "responses"
+        )
+        if codex_ok and _provider_allows_agent(provider_id, "codex") and (not AGENT_IDS or "codex" in AGENT_IDS):
+            out.append(
+                {
+                    "provider_id": provider_id,
+                    "agent_id": "codex",
+                    "adapter_kind": "openai-responses",
+                    "status": "configured",
+                    "enabled": True,
+                }
+            )
+    return out
 _RUNS: dict[str, dict] = {}
 _RUNS_LOCK = threading.Lock()
 _PULL_RUNS_LOCK = threading.Lock()
@@ -284,6 +383,9 @@ def _local_provider_value(prefix: str, key: str, default: str = "") -> str:
     return str(os.environ.get(f"{prefix}_{key}") or default or "").strip()
 
 
+CAPABILITIES = _configured_capabilities()
+
+
 def _apply_local_provider(payload: dict) -> None:
     """Optionally replace backend-provided provider credentials with node-local ones.
 
@@ -330,7 +432,7 @@ def _apply_local_provider(payload: dict) -> None:
     elif agent_id == "codex":
         codex_base_url = _local_provider_value(prefix, "CODEX_BASE_URL")
         codex_model = _local_provider_value(prefix, "CODEX_MODEL")
-        codex_env_key = _local_provider_value(prefix, "CODEX_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN")
+        codex_env_key = _local_provider_value(prefix, "CODEX_ENV_KEY", f"{prefix}_CODEX_AUTH_TOKEN")
         codex_token = str(os.environ.get(codex_env_key) or anthropic_token or "").strip()
         if not codex_base_url or not codex_model or not codex_token:
             raise ValueError(f"local provider {provider_id} is missing Codex config")
@@ -755,6 +857,10 @@ def health():
         "proxy_tokens": proxy_tokens,
         "capacity": NODE_CAPACITY,
         "queue_max": NODE_QUEUE_MAX,
+        "provider_mode": PROVIDER_MODE,
+        "provider_ids": PROVIDER_IDS,
+        "agent_ids": AGENT_IDS,
+        "capabilities": CAPABILITIES,
     })
 
 
@@ -1364,6 +1470,7 @@ def _pull_loop() -> None:
                     "provider_mode": PROVIDER_MODE or "master",
                     "provider_ids": PROVIDER_IDS,
                     "agent_ids": AGENT_IDS,
+                    "capabilities": CAPABILITIES,
                     "labels": _pull_labels(),
                     "url": os.environ.get("AGENT_NODE_SELF_REGISTER_URL") or f"pull://{NODE_ID}",
                     "timeout_seconds": poll_timeout,

@@ -1786,6 +1786,101 @@ def _node_supports(value: str, allowed: Any) -> bool:
     return normalized in {str(item or "").strip().lower().replace("_", "-") for item in allowed}
 
 
+def _default_adapter_kind_for_agent(agent_id: str) -> str:
+    normalized = str(agent_id or "").strip().lower().replace("_", "-")
+    if normalized == "claude":
+        return "anthropic"
+    if normalized == "codex":
+        return "openai-responses"
+    return normalized or "unknown"
+
+
+def _normalize_agent_node_capabilities(value: Any) -> list[dict]:
+    if isinstance(value, str):
+        try:
+            value = json.loads(value or "[]")
+        except json.JSONDecodeError:
+            value = []
+    if not isinstance(value, list):
+        return []
+    out: list[dict] = []
+    seen: set[tuple[str, str, str]] = set()
+    for raw in value:
+        if not isinstance(raw, dict):
+            continue
+        provider_id = _normalize_provider_id(raw.get("provider_id") or raw.get("provider"))
+        agent_id = str(raw.get("agent_id") or raw.get("agent") or "").strip().lower().replace("_", "-")
+        if not provider_id or not agent_id:
+            continue
+        adapter_kind = str(
+            raw.get("adapter_kind") or raw.get("adapter") or _default_adapter_kind_for_agent(agent_id)
+        ).strip().lower().replace("_", "-")
+        key = (provider_id, agent_id, adapter_kind)
+        if key in seen:
+            continue
+        seen.add(key)
+        enabled_raw = raw.get("enabled", True)
+        enabled = (
+            enabled_raw.strip().lower() not in {"0", "false", "no", "off", "disabled"}
+            if isinstance(enabled_raw, str)
+            else bool(enabled_raw)
+        )
+        out.append(
+            {
+                "provider_id": provider_id,
+                "agent_id": agent_id,
+                "adapter_kind": adapter_kind,
+                "status": str(raw.get("status") or "configured").strip().lower().replace("_", "-"),
+                "enabled": enabled,
+            }
+        )
+    return out
+
+
+def _agent_node_capability_enabled(capability: dict) -> bool:
+    if not capability.get("enabled", True):
+        return False
+    status = str(capability.get("status") or "configured").strip().lower().replace("_", "-")
+    return status not in {"disabled", "failed", "unsupported", "unavailable", "off"}
+
+
+def _agent_node_capability_supports(capabilities: Any, provider_id: str, agent_id: str) -> Optional[bool]:
+    caps = _normalize_agent_node_capabilities(capabilities)
+    if not caps:
+        return None
+    wanted_provider = _normalize_provider_id(provider_id)
+    wanted_agent = str(agent_id or "").strip().lower().replace("_", "-")
+    return any(
+        _agent_node_capability_enabled(cap)
+        and cap.get("provider_id") == wanted_provider
+        and cap.get("agent_id") == wanted_agent
+        for cap in caps
+    )
+
+
+def _static_provider_allows_agent(provider: dict | None, agent_id: str) -> bool:
+    if not provider:
+        return False
+    normalized_agent = str(agent_id or "").strip().lower().replace("_", "-")
+    supported = provider.get("supported_agents")
+    if isinstance(supported, list) and supported and normalized_agent not in {str(item) for item in supported}:
+        return False
+    if normalized_agent == "claude":
+        return bool(provider.get("anthropic_configured", provider.get("configured", False)))
+    if normalized_agent == "codex":
+        return bool((provider.get("codex") or {}).get("configured"))
+    return False
+
+
+def _public_master_node_static_supports(provider_id: str, agent_id: str) -> bool:
+    provider_id = _normalize_provider_id(provider_id)
+    agent_id = str(agent_id or "").strip().lower().replace("_", "-")
+    if not provider_id or not agent_id:
+        return True
+    static = AI_PROVIDERS.get(provider_id)
+    return _static_provider_allows_agent(static, agent_id)
+
+
 def _registered_agent_node_records(
     *,
     agent_scope: str = "public",
@@ -1807,10 +1902,20 @@ def _registered_agent_node_records(
                     continue
             elif visibility == "private":
                 continue
-            if not _node_supports(provider_id, item.get("provider_ids")):
+            labels = item.get("labels") if isinstance(item.get("labels"), list) else []
+            record_mode = str(item.get("provider_mode") or "").strip().lower().replace("_", "-") or _agent_node_label_mode(labels)
+            if wanted_scope == "public" and record_mode not in {"local", "node", "self", "agent-local"}:
+                if not _public_master_node_static_supports(provider_id, agent_id):
+                    continue
+            capabilities = _normalize_agent_node_capabilities(item.get("capabilities"))
+            capability_match = _agent_node_capability_supports(capabilities, provider_id, agent_id)
+            if capability_match is False:
                 continue
-            if not _node_supports(agent_id, item.get("agent_ids")):
-                continue
+            if capability_match is None:
+                if not _node_supports(provider_id, item.get("provider_ids")):
+                    continue
+                if not _node_supports(agent_id, item.get("agent_ids")):
+                    continue
             if bool(item.get("paused") or False):
                 continue
             url = str(item.get("url") or "").rstrip("/")
@@ -1832,18 +1937,18 @@ def _registered_agent_node_records(
                 queue_max = max(0, min(10000, int(item.get("queue_max") or capacity)))
             except (TypeError, ValueError):
                 queue_max = capacity
-            labels = item.get("labels") if isinstance(item.get("labels"), list) else []
             records.append(
                 {
                     "node_id": str(item.get("node_id") or ""),
                     "url": url,
                     "capacity": capacity,
                     "queue_max": queue_max,
-                    "provider_mode": str(item.get("provider_mode") or "").strip().lower().replace("_", "-") or _agent_node_label_mode(labels),
+                    "provider_mode": record_mode,
                     "visibility": visibility,
                     "owner_user_id": item_owner,
                     "provider_ids": item.get("provider_ids") if isinstance(item.get("provider_ids"), list) else [],
                     "agent_ids": item.get("agent_ids") if isinstance(item.get("agent_ids"), list) else [],
+                    "capabilities": capabilities,
                 }
             )
         if records:
@@ -1882,14 +1987,21 @@ def _registered_agent_node_records(
             raw_paused = data.get(b"paused") or data.get("paused") or b"0"
             if _decode_redis_text(raw_paused, "0").strip().lower() in {"1", "true", "yes", "on"}:
                 continue
+            raw_capabilities = data.get(b"capabilities") or data.get("capabilities") or b"[]"
+            capabilities = _normalize_agent_node_capabilities(_decode_redis_text(raw_capabilities, "[]"))
+            record_mode = _agent_node_label_mode(labels)
+            if wanted_scope == "public" and record_mode not in {"local", "node", "self", "agent-local"}:
+                if not _public_master_node_static_supports(provider_id, agent_id):
+                    continue
             records.append(
                 {
                     "url": url,
                     "capacity": capacity,
                     "queue_max": queue_max,
-                    "provider_mode": _agent_node_label_mode(labels),
+                    "provider_mode": record_mode,
                     "visibility": "public",
                     "owner_user_id": "",
+                    "capabilities": capabilities,
                 }
             )
         return sorted(records, key=lambda item: item["url"])
@@ -1899,14 +2011,7 @@ def _registered_agent_node_records(
 
 
 def _static_provider_supports_agent(provider: dict, agent_id: str) -> bool:
-    supported = provider.get("supported_agents")
-    if isinstance(supported, list) and supported and agent_id not in {str(item) for item in supported}:
-        return False
-    if agent_id == "claude":
-        return True
-    if agent_id == "codex":
-        return bool((provider.get("codex") or {}).get("configured"))
-    return False
+    return _static_provider_allows_agent(provider, agent_id)
 
 
 def _visible_configured_agent_ids_for_provider(provider: dict) -> list[str]:
@@ -1919,12 +2024,25 @@ def _visible_configured_agent_ids_for_provider(provider: dict) -> list[str]:
     return out or ["claude"]
 
 
-def _provider_catalog_entry(provider_id: str, supported_agents: set[str], *, scope: str) -> dict:
+def _visible_agent_ids() -> set[str]:
+    return {
+        aid for aid, agent in AI_AGENTS.items()
+        if agent.get("visible", True) and agent.get("configured", False)
+    }
+
+
+def _provider_catalog_entry(
+    provider_id: str,
+    supported_agents: set[str],
+    *,
+    scope: str,
+    trust_node_agents: bool = False,
+) -> dict:
     provider_id = _normalize_provider_id(provider_id)
     static = AI_PROVIDERS.get(provider_id)
     if static:
         default_model = str(((static.get("models") or {}).get("default")) or "")
-        static_agents = set(_visible_configured_agent_ids_for_provider(static))
+        static_agents = _visible_agent_ids() if trust_node_agents else set(_visible_configured_agent_ids_for_provider(static))
         effective_agents = (
             set(supported_agents) & static_agents
             if supported_agents
@@ -1942,13 +2060,14 @@ def _provider_catalog_entry(provider_id: str, supported_agents: set[str], *, sco
             "scope": scope,
         }
     label = provider_id.replace("-", " ").strip().title() or provider_id
+    effective_agents = sorted(set(supported_agents) & _visible_agent_ids()) if supported_agents else []
     return {
         "id": provider_id,
         "name": label,
         "description": "Agent node local provider",
         "default_model": "",
         "configured": True,
-        "supported_agents": sorted(supported_agents) or ["claude"],
+        "supported_agents": effective_agents or ["claude"],
         "worker": _provider_worker_limits(provider_id),
         "source": "agent-node",
         "scope": scope,
@@ -1960,11 +2079,29 @@ def agent_node_provider_catalog(*, agent_scope: str = "public", owner_user_id: s
     scope = "private" if requested_scope == "private" else "public"
     providers: dict[str, set[str]] = {}
     provider_scope: dict[str, str] = {}
+    provider_trust_node_agents: dict[str, bool] = {}
     records = _registered_agent_node_records(
         agent_scope=scope,
         owner_user_id=owner_user_id if scope == "private" else "",
     )
     for record in records:
+        record_mode = str(record.get("provider_mode") or "master").strip().lower().replace("_", "-")
+        trust_record_agents = scope == "private" or record_mode in {"local", "node", "self", "agent-local"}
+        capabilities = [
+            cap for cap in _normalize_agent_node_capabilities(record.get("capabilities"))
+            if _agent_node_capability_enabled(cap)
+        ]
+        if capabilities:
+            for cap in capabilities:
+                provider_id = _normalize_provider_id(cap.get("provider_id"))
+                agent_id = str(cap.get("agent_id") or "").strip().lower().replace("_", "-")
+                if not provider_id or not agent_id:
+                    continue
+                providers.setdefault(provider_id, set()).add(agent_id)
+                provider_scope.setdefault(provider_id, scope)
+                if trust_record_agents:
+                    provider_trust_node_agents[provider_id] = True
+            continue
         raw_agents = record.get("agent_ids") if isinstance(record.get("agent_ids"), list) else []
         agent_ids = {
             str(item or "").strip().lower().replace("_", "-")
@@ -1980,7 +2117,7 @@ def agent_node_provider_catalog(*, agent_scope: str = "public", owner_user_id: s
         # Legacy public master nodes may not report provider_ids. They use
         # backend-managed providers, so expose the backend visible providers
         # only as a compatibility fallback for those old nodes.
-        if not provider_ids and scope == "public" and str(record.get("provider_mode") or "master") != "local":
+        if not provider_ids and scope == "public" and record_mode != "local":
             provider_ids = [
                 pid for pid, provider in AI_PROVIDERS.items()
                 if provider.get("visible", True) and provider.get("configured", False)
@@ -1990,13 +2127,20 @@ def agent_node_provider_catalog(*, agent_scope: str = "public", owner_user_id: s
                 continue
             current = providers.setdefault(provider_id, set())
             static = AI_PROVIDERS.get(provider_id)
-            if static and not raw_agents and scope == "public" and str(record.get("provider_mode") or "master") != "local":
+            if static and not raw_agents and scope == "public" and record_mode != "local":
                 current.update(_visible_configured_agent_ids_for_provider(static))
             else:
                 current.update(agent_ids)
             provider_scope.setdefault(provider_id, scope)
+            if trust_record_agents:
+                provider_trust_node_agents[provider_id] = True
     entries = [
-        _provider_catalog_entry(provider_id, agents, scope=provider_scope.get(provider_id, scope))
+        _provider_catalog_entry(
+            provider_id,
+            agents,
+            scope=provider_scope.get(provider_id, scope),
+            trust_node_agents=provider_trust_node_agents.get(provider_id, False),
+        )
         for provider_id, agents in sorted(providers.items())
     ]
     return [entry for entry in entries if entry.get("supported_agents")]
@@ -2373,10 +2517,14 @@ def _agent_pull_job_assignable_to_node(spec: dict, node_id: str) -> bool:
             return False
     elif record.get("visibility") == "private":
         return False
-    if not _node_supports(provider_id, record.get("provider_ids")):
+    capability_match = _agent_node_capability_supports(record.get("capabilities"), provider_id, agent_id)
+    if capability_match is False:
         return False
-    if not _node_supports(agent_id, record.get("agent_ids")):
-        return False
+    if capability_match is None:
+        if not _node_supports(provider_id, record.get("provider_ids")):
+            return False
+        if not _node_supports(agent_id, record.get("agent_ids")):
+            return False
     sticky_node = _agent_pull_session_node(session_id, agent_scope=agent_scope, owner_user_id=owner_user_id)
     if not sticky_node or sticky_node == node_id:
         return True
@@ -2613,6 +2761,7 @@ def agent_pull_acquire():
             provider_mode=provider_mode,
             provider_ids=body.get("provider_ids") if isinstance(body.get("provider_ids"), list) else [],
             agent_ids=body.get("agent_ids") if isinstance(body.get("agent_ids"), list) else [],
+            capabilities=body.get("capabilities") if isinstance(body.get("capabilities"), list) else [],
         )
         current_node = agent_node_registry.get_node(node_id)
         if current_node and current_node.get("paused"):

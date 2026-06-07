@@ -173,7 +173,7 @@ def _provider_supports_agent(provider: dict, agent_id: str) -> bool:
     if isinstance(supported, list) and supported and agent_id not in {str(item) for item in supported}:
         return False
     if agent_id == "claude":
-        return True
+        return bool(provider.get("anthropic_configured", provider.get("configured", False)))
     if agent_id == "codex":
         return bool((provider.get("codex") or {}).get("configured"))
     return False

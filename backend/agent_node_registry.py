@@ -39,6 +39,7 @@ def ensure_agent_nodes_table() -> None:
                 provider_mode TEXT NOT NULL DEFAULT '',
                 provider_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
                 agent_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+                capabilities JSONB NOT NULL DEFAULT '[]'::jsonb,
                 last_seen_ms BIGINT NOT NULL DEFAULT 0,
                 ttl_seconds INTEGER NOT NULL DEFAULT 120,
                 paused BOOLEAN NOT NULL DEFAULT FALSE,
@@ -60,6 +61,7 @@ def ensure_agent_nodes_table() -> None:
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS provider_mode TEXT NOT NULL DEFAULT ''")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS provider_ids JSONB NOT NULL DEFAULT '[]'::jsonb")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS agent_ids JSONB NOT NULL DEFAULT '[]'::jsonb")
+        db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS capabilities JSONB NOT NULL DEFAULT '[]'::jsonb")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS paused BOOLEAN NOT NULL DEFAULT FALSE")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS pause_reason TEXT NOT NULL DEFAULT ''")
         db_execute("ALTER TABLE agent_nodes ADD COLUMN IF NOT EXISTS paused_at_ms BIGINT NOT NULL DEFAULT 0")
@@ -76,6 +78,50 @@ def _json_list(value) -> list:
     if not isinstance(value, list):
         return []
     return [str(item).strip() for item in value if str(item or "").strip()]
+
+
+def _json_bool(value, default: bool = True) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip().lower() not in {"0", "false", "no", "off", "disabled"}
+    return bool(value)
+
+
+def _json_capabilities(value) -> list:
+    if isinstance(value, str):
+        try:
+            value = json.loads(value or "[]")
+        except json.JSONDecodeError:
+            value = []
+    if not isinstance(value, list):
+        return []
+    out = []
+    seen = set()
+    for raw in value:
+        if not isinstance(raw, dict):
+            continue
+        provider_id = str(raw.get("provider_id") or raw.get("provider") or "").strip().lower().replace("_", "-")
+        agent_id = str(raw.get("agent_id") or raw.get("agent") or "").strip().lower().replace("_", "-")
+        if not provider_id or not agent_id:
+            continue
+        adapter_kind = str(raw.get("adapter_kind") or raw.get("adapter") or "").strip().lower().replace("_", "-")
+        if not adapter_kind:
+            adapter_kind = "anthropic" if agent_id == "claude" else "openai-responses"
+        key = (provider_id, agent_id, adapter_kind)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(
+            {
+                "provider_id": provider_id[:64],
+                "agent_id": agent_id[:64],
+                "adapter_kind": adapter_kind[:64],
+                "status": str(raw.get("status") or "configured").strip().lower().replace("_", "-")[:64],
+                "enabled": _json_bool(raw.get("enabled"), True),
+            }
+        )
+    return out
 
 
 def _normalize_row(row: dict | None) -> dict | None:
@@ -105,6 +151,7 @@ def _normalize_row(row: dict | None) -> dict | None:
         "provider_mode": row.get("provider_mode") or label_map.get("provider-mode", ""),
         "provider_ids": _json_list(row.get("provider_ids")),
         "agent_ids": _json_list(row.get("agent_ids")),
+        "capabilities": _json_capabilities(row.get("capabilities")),
         "last_seen": int(row.get("last_seen") or row.get("last_seen_ms") or 0),
         "ttl_seconds": int(row.get("ttl_seconds") or 120),
         "paused": bool(row.get("paused") or False),
@@ -131,6 +178,7 @@ def upsert_node(
     provider_mode: str = "",
     provider_ids: list | None = None,
     agent_ids: list | None = None,
+    capabilities: list | None = None,
     touch_seen: bool = True,
 ) -> dict:
     ensure_agent_nodes_table()
@@ -149,14 +197,15 @@ def upsert_node(
     provider_mode = str(provider_mode or "").strip().lower().replace("_", "-")
     provider_ids = _json_list(provider_ids)
     agent_ids = _json_list(agent_ids)
+    capabilities = _json_capabilities(capabilities)
     db_execute(
         """
         INSERT INTO agent_nodes (
             node_id, display_name, url, capacity, queue_max, build_commit, build_version, labels,
             owner_user_id, visibility, auth_public_key, auth_key_id, provider_mode,
-            provider_ids, agent_ids, last_seen_ms, ttl_seconds
+            provider_ids, agent_ids, capabilities, last_seen_ms, ttl_seconds
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s, %s)
         ON CONFLICT (node_id) DO UPDATE SET
             display_name = COALESCE(NULLIF(EXCLUDED.display_name, ''), agent_nodes.display_name),
             url = EXCLUDED.url,
@@ -172,6 +221,7 @@ def upsert_node(
             provider_mode = COALESCE(NULLIF(EXCLUDED.provider_mode, ''), agent_nodes.provider_mode),
             provider_ids = CASE WHEN EXCLUDED.provider_ids = '[]'::jsonb THEN agent_nodes.provider_ids ELSE EXCLUDED.provider_ids END,
             agent_ids = CASE WHEN EXCLUDED.agent_ids = '[]'::jsonb THEN agent_nodes.agent_ids ELSE EXCLUDED.agent_ids END,
+            capabilities = CASE WHEN EXCLUDED.capabilities = '[]'::jsonb THEN agent_nodes.capabilities ELSE EXCLUDED.capabilities END,
             last_seen_ms = CASE WHEN EXCLUDED.last_seen_ms > 0 THEN EXCLUDED.last_seen_ms ELSE agent_nodes.last_seen_ms END,
             ttl_seconds = EXCLUDED.ttl_seconds,
             updated_at = NOW()
@@ -192,6 +242,7 @@ def upsert_node(
             provider_mode,
             json.dumps(provider_ids, ensure_ascii=False),
             json.dumps(agent_ids, ensure_ascii=False),
+            json.dumps(capabilities, ensure_ascii=False),
             now_ms,
             ttl_seconds,
         ],
@@ -213,6 +264,7 @@ def upsert_node(
         "provider_mode": provider_mode,
         "provider_ids": provider_ids,
         "agent_ids": agent_ids,
+        "capabilities": capabilities,
         "last_seen": now_ms,
         "ttl_seconds": ttl_seconds,
     }
@@ -224,7 +276,7 @@ def list_nodes() -> list[dict]:
         """
         SELECT node_id, display_name, url, capacity, queue_max, build_commit, build_version, labels::text AS labels,
                owner_user_id, visibility, auth_public_key, auth_key_id, provider_mode,
-               provider_ids::text AS provider_ids, agent_ids::text AS agent_ids,
+               provider_ids::text AS provider_ids, agent_ids::text AS agent_ids, capabilities::text AS capabilities,
                last_seen_ms AS last_seen, ttl_seconds,
                paused, pause_reason, paused_at_ms AS paused_at
         FROM agent_nodes
@@ -246,7 +298,7 @@ def get_node(node_id: str) -> dict | None:
         """
         SELECT node_id, display_name, url, capacity, queue_max, build_commit, build_version, labels::text AS labels,
                owner_user_id, visibility, auth_public_key, auth_key_id, provider_mode,
-               provider_ids::text AS provider_ids, agent_ids::text AS agent_ids,
+               provider_ids::text AS provider_ids, agent_ids::text AS agent_ids, capabilities::text AS capabilities,
                last_seen_ms AS last_seen, ttl_seconds,
                paused, pause_reason, paused_at_ms AS paused_at
         FROM agent_nodes

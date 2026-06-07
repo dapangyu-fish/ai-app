@@ -70,6 +70,63 @@ def _safe_list(value: object, *, limit: int = 32) -> list[str]:
     return out
 
 
+def _default_adapter_kind(agent_id: str) -> str:
+    normalized = str(agent_id or "").strip().lower().replace("_", "-")
+    if normalized == "claude":
+        return "anthropic"
+    if normalized == "codex":
+        return "openai-responses"
+    return normalized or "unknown"
+
+
+def _safe_capabilities(value: object, *, limit: int = 64) -> list[dict]:
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            raw_items = []
+        else:
+            try:
+                parsed = json.loads(text)
+            except json.JSONDecodeError:
+                parsed = []
+            raw_items = parsed if isinstance(parsed, list) else []
+    elif isinstance(value, list):
+        raw_items = value
+    else:
+        raw_items = []
+    out: list[dict] = []
+    seen: set[tuple[str, str, str]] = set()
+    for raw in raw_items:
+        if not isinstance(raw, dict):
+            continue
+        provider_id = str(raw.get("provider_id") or raw.get("provider") or "").strip().lower().replace("_", "-")
+        agent_id = str(raw.get("agent_id") or raw.get("agent") or "").strip().lower().replace("_", "-")
+        if not provider_id or not agent_id:
+            continue
+        adapter_kind = str(raw.get("adapter_kind") or raw.get("adapter") or _default_adapter_kind(agent_id)).strip().lower().replace("_", "-")
+        key = (provider_id, agent_id, adapter_kind)
+        if key in seen:
+            continue
+        seen.add(key)
+        enabled_raw = raw.get("enabled", True)
+        if isinstance(enabled_raw, str):
+            enabled = enabled_raw.strip().lower() not in {"0", "false", "no", "off", "disabled"}
+        else:
+            enabled = bool(enabled_raw)
+        out.append(
+            {
+                "provider_id": provider_id[:64],
+                "agent_id": agent_id[:64],
+                "adapter_kind": adapter_kind[:64],
+                "status": str(raw.get("status") or "configured").strip().lower().replace("_", "-")[:64],
+                "enabled": enabled,
+            }
+        )
+        if len(out) >= limit:
+            break
+    return out
+
+
 def _public_key_id(public_key: str) -> str:
     digest = hashlib.sha256(public_key.encode("utf-8")).hexdigest()
     return digest[:24]
@@ -246,6 +303,7 @@ def _node_row(key, data: dict[Any, Any]) -> dict:
         "auth_key_id": get("auth_key_id", ""),
         "provider_ids": _safe_list(raw("provider_ids")),
         "agent_ids": _safe_list(raw("agent_ids")),
+        "capabilities": _safe_capabilities(raw("capabilities")),
         "has_auth_public_key": bool(get("auth_public_key", "")),
         "last_seen": get_int("last_seen", 0),
         "ttl_seconds": get_int("ttl_seconds", 120),
@@ -453,6 +511,12 @@ def register_agent_node():
     labels = body.get("labels") if isinstance(body.get("labels"), list) else []
     build_commit = _safe_build_text(body.get("build_commit") or body.get("commit"))
     build_version = _safe_build_text(body.get("build_version") or body.get("version") or build_commit)
+    capabilities = _safe_capabilities(body.get("capabilities"))
+    provider_ids = _safe_list(body.get("provider_ids") or body.get("providers"))
+    agent_ids = _safe_list(body.get("agent_ids") or body.get("agents"))
+    if capabilities:
+        provider_ids = sorted({item["provider_id"] for item in capabilities})
+        agent_ids = sorted({item["agent_id"] for item in capabilities})
     existing = agent_node_registry.get_node(node_id)
     if existing and existing.get("visibility") == "private":
         return jsonify({"error": "node_id belongs to a private agent node"}), 403
@@ -470,8 +534,9 @@ def register_agent_node():
         "visibility": "public",
         "owner_user_id": "",
         "provider_mode": "",
-        "provider_ids": [],
-        "agent_ids": [],
+        "provider_ids": provider_ids,
+        "agent_ids": agent_ids,
+        "capabilities": capabilities,
         "last_seen": now_ms,
         "ttl_seconds": ttl_seconds,
     }
@@ -486,6 +551,9 @@ def register_agent_node():
         labels=labels,
         ttl_seconds=ttl_seconds,
         visibility="public",
+        provider_ids=provider_ids,
+        agent_ids=agent_ids,
+        capabilities=capabilities,
     )
     redis_data = {
         "node_id": node_id,
@@ -499,6 +567,9 @@ def register_agent_node():
         "labels": json.dumps(labels, ensure_ascii=False),
         "visibility": "public",
         "owner_user_id": "",
+        "provider_ids": json.dumps(provider_ids, ensure_ascii=False),
+        "agent_ids": json.dumps(agent_ids, ensure_ascii=False),
+        "capabilities": json.dumps(capabilities, ensure_ascii=False),
         "last_seen": str(now_ms),
         "ttl_seconds": str(ttl_seconds),
     }
@@ -605,8 +676,9 @@ def create_private_agent_join_token():
         body.get("node_id") or f"private-agent-{int(time.time())}-{jti[:6]}"
     )
     name = str(body.get("name") or node_id).strip()[:128] or node_id
-    providers = _safe_list(body.get("provider_ids") or body.get("providers") or "deepseek", limit=8) or ["deepseek"]
-    agents = _safe_list(body.get("agent_ids") or body.get("agents") or "claude", limit=8) or ["claude"]
+    capabilities = _safe_capabilities(body.get("capabilities"), limit=16)
+    providers = _safe_list(body.get("provider_ids") or body.get("providers"), limit=8)
+    agents = _safe_list(body.get("agent_ids") or body.get("agents"), limit=8)
     image_mode = str(
         body.get("image_mode")
         or body.get("deploy_image_mode")
@@ -617,6 +689,12 @@ def create_private_agent_join_token():
         image_mode = "pull"
     provider_args = " ".join(f"--provider {shlex.quote(item)}" for item in providers)
     agent_args = " ".join(f"--agent {shlex.quote(item)}" for item in agents)
+    capability_args = " ".join(
+        "--capability "
+        + shlex.quote(f"{item['provider_id']}:{item['agent_id']}:{item['adapter_kind']}")
+        for item in capabilities
+        if item.get("enabled", True)
+    )
     image_args = ""
     if image_mode == "pull":
         image_args = " --pull"
@@ -628,7 +706,7 @@ def create_private_agent_join_token():
         f"--backend {shlex.quote(backend_url)} "
         f"--node-id {shlex.quote(node_id)} "
         f"--name {shlex.quote(name)} "
-        f"{provider_args} {agent_args}{image_args}"
+        f"{provider_args} {agent_args} {capability_args}{image_args}"
     )
     return jsonify({
         "ok": True,
@@ -637,6 +715,7 @@ def create_private_agent_join_token():
         "expires_in_seconds": ttl_seconds,
         "image_mode": "build" if image_mode == "local" else image_mode,
         "name": name,
+        "capabilities": capabilities,
         "join_command": join_command,
     })
 
@@ -664,6 +743,10 @@ def create_private_agent_node():
         queue_max = capacity
     provider_ids = _safe_list(body.get("provider_ids") or body.get("providers"))
     agent_ids = _safe_list(body.get("agent_ids") or body.get("agents")) or ["claude"]
+    capabilities = _safe_capabilities(body.get("capabilities"))
+    if capabilities:
+        provider_ids = sorted({item["provider_id"] for item in capabilities})
+        agent_ids = sorted({item["agent_id"] for item in capabilities})
     labels = _safe_list(body.get("labels"), limit=64)
     if not any(label.startswith("name=") for label in labels):
         labels.append(f"name={name}")
@@ -687,6 +770,7 @@ def create_private_agent_node():
         provider_mode="local",
         provider_ids=provider_ids,
         agent_ids=agent_ids,
+        capabilities=capabilities,
         touch_seen=False,
     )
     return jsonify({

@@ -8,7 +8,6 @@ import 'package:http/http.dart' as http;
 import '../auth/auth_page.dart';
 import '../auth/auth_service.dart';
 import '../config/app_config.dart';
-import 'ai_chat_service.dart';
 
 class PrivateAgentNodesPage extends StatefulWidget {
   const PrivateAgentNodesPage({super.key});
@@ -162,15 +161,11 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
     if (!mounted) return;
     setState(() => _creatingJoin = true);
     try {
-      final provider = AiChatService.selectedProvider;
-      final agent = AiChatService.selectedAgentForProvider(provider);
       final resp = await _authedRequest(
         'POST',
         '/api/ai/private_agent/join_token',
         body: {
           'name': nodeName,
-          'provider_ids': [provider],
-          'agent_ids': [agent],
           'ttl_seconds': 900,
           'backend_url': AppConfig.backendUrl,
         },
@@ -856,10 +851,14 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
               runSpacing: 8,
               children: [
                 _statusChip(node.status, cs),
-                for (final provider in node.providerIds)
-                  _metricChip(cs, 'provider', provider),
-                for (final agent in node.agentIds)
-                  _metricChip(cs, 'agent', agent),
+                for (final capability in node.capabilityLabels)
+                  _metricChip(cs, 'capability', capability),
+                if (node.capabilityLabels.isEmpty) ...[
+                  for (final provider in node.providerIds)
+                    _metricChip(cs, 'provider', provider),
+                  for (final agent in node.agentIds)
+                    _metricChip(cs, 'agent', agent),
+                ],
                 if (node.version.isNotEmpty)
                   _metricChip(cs, 'version', node.version),
               ],
@@ -981,6 +980,7 @@ class _PrivateAgentNode {
   final String status;
   final List<String> providerIds;
   final List<String> agentIds;
+  final List<_PrivateAgentCapability> capabilities;
   final int activeRuns;
   final int capacity;
   final int queueDepth;
@@ -993,6 +993,7 @@ class _PrivateAgentNode {
     required this.status,
     required this.providerIds,
     required this.agentIds,
+    required this.capabilities,
     required this.activeRuns,
     required this.capacity,
     required this.queueDepth,
@@ -1007,6 +1008,7 @@ class _PrivateAgentNode {
       status: _str(json['status']),
       providerIds: _list(json['provider_ids']),
       agentIds: _list(json['agent_ids']),
+      capabilities: _capabilities(json['capabilities']),
       activeRuns: _int(json['active_runs']),
       capacity: _int(json['capacity']),
       queueDepth: _int(json['queue_depth']),
@@ -1016,6 +1018,18 @@ class _PrivateAgentNode {
   }
 
   String get displayName => name.isNotEmpty ? name : nodeId;
+
+  List<String> get capabilityLabels {
+    return capabilities
+        .where((capability) => capability.enabled)
+        .map((capability) {
+          final adapter = capability.adapterKind;
+          final suffix = adapter.isEmpty ? '' : ' · $adapter';
+          return '${capability.providerId}:${capability.agentId}$suffix';
+        })
+        .where((item) => item.trim().isNotEmpty)
+        .toList();
+  }
 
   static String _str(dynamic value) => value == null ? '' : '$value';
 
@@ -1039,5 +1053,44 @@ class _PrivateAgentNode {
           .toList();
     }
     return const [];
+  }
+
+  static List<_PrivateAgentCapability> _capabilities(dynamic value) {
+    if (value is! List) return const [];
+    return value
+        .whereType<Map>()
+        .map((item) => _PrivateAgentCapability.fromJson(item))
+        .where((item) => item.providerId.isNotEmpty && item.agentId.isNotEmpty)
+        .toList();
+  }
+}
+
+class _PrivateAgentCapability {
+  final String providerId;
+  final String agentId;
+  final String adapterKind;
+  final bool enabled;
+
+  const _PrivateAgentCapability({
+    required this.providerId,
+    required this.agentId,
+    required this.adapterKind,
+    required this.enabled,
+  });
+
+  factory _PrivateAgentCapability.fromJson(Map<dynamic, dynamic> json) {
+    return _PrivateAgentCapability(
+      providerId: _PrivateAgentNode._str(json['provider_id'] ?? json['provider']),
+      agentId: _PrivateAgentNode._str(json['agent_id'] ?? json['agent']),
+      adapterKind: _PrivateAgentNode._str(json['adapter_kind'] ?? json['adapter']),
+      enabled: _bool(json['enabled']),
+    );
+  }
+
+  static bool _bool(dynamic value) {
+    if (value == null) return true;
+    if (value is bool) return value;
+    return !{'0', 'false', 'no', 'off', 'disabled'}
+        .contains('$value'.trim().toLowerCase());
   }
 }

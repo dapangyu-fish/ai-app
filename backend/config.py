@@ -35,9 +35,9 @@ SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 #   MY_PROVIDER_ANTHROPIC_AUTH_TOKEN=...
 #   MY_PROVIDER_ANTHROPIC_MODEL=my-model
 #
-# 如果没有配置 AI_PROVIDER_IDS，系统默认保留 deepseek，并自动发现带有
-# <PREFIX>_ANTHROPIC_AUTH_TOKEN 的 provider。已下线的旧 provider 即使
-# 旧环境文件里残留变量也不会被自动注册。
+# 如果没有配置 AI_PROVIDER_IDS，系统默认保留 deepseek，并自动发现已
+# 配置 Anthropic adapter 或 Codex Responses adapter 的 provider。已下线
+# 的旧 provider 即使旧环境文件里残留变量也不会被自动注册。
 _LEGACY_DISABLED_PROVIDER_IDS = {"glm", "cc"}
 _ANTHROPIC_PROVIDER_SUFFIXES = (
     "_ANTHROPIC_BASE_URL",
@@ -46,6 +46,10 @@ _ANTHROPIC_PROVIDER_SUFFIXES = (
     "_ANTHROPIC_DEFAULT_OPUS_MODEL",
     "_ANTHROPIC_DEFAULT_SONNET_MODEL",
     "_ANTHROPIC_DEFAULT_HAIKU_MODEL",
+    "_CODEX_BASE_URL",
+    "_CODEX_MODEL",
+    "_CODEX_ENV_KEY",
+    "_CODEX_AUTH_TOKEN",
 )
 _BUILTIN_ANTHROPIC_PROVIDERS = {
     "deepseek": {
@@ -55,18 +59,17 @@ _BUILTIN_ANTHROPIC_PROVIDERS = {
         "model": "deepseek-v4-pro[1m]",
         "auth_env_fallbacks": (),
         "visible": "1",
-        "supported_agents": ("claude",),
     },
     "minimax": {
         "name": "MiniMax M3",
-        "description": "MiniMax Anthropic-compatible Claude Code provider",
+        "description": "MiniMax native Responses provider for Codex",
         "base_url": "https://api.minimaxi.com/anthropic",
         "model": "MiniMax-M3",
         "auth_env_fallbacks": (),
         "visible": "1",
-        # MiniMax-M3 is stable through the OpenAI Responses-compatible Codex
-        # path. Its Anthropic-compatible Claude Code stream can intermittently
-        # fail with "API Error: Failed to parse JSON" during tool-heavy runs.
+        # MiniMax's Anthropic endpoint is not currently stable with Claude Code
+        # streaming JSON parsing. Keep the token/env shape for Codex, but only
+        # expose the verified native Responses adapter by default.
         "supported_agents": ("codex",),
         "codex": {
             "provider_name": "MiniMax",
@@ -132,6 +135,14 @@ def _provider_has_auth_env(provider_id: str) -> bool:
     prefix = _provider_prefix(provider_id)
     if os.environ.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""):
         return True
+    codex_env_key = os.environ.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_CODEX_AUTH_TOKEN")
+    if (
+        os.environ.get(f"{prefix}_CODEX_BASE_URL", "")
+        and os.environ.get(f"{prefix}_CODEX_MODEL", "")
+        and codex_env_key
+        and os.environ.get(codex_env_key, "")
+    ):
+        return True
     builtin = _BUILTIN_ANTHROPIC_PROVIDERS.get(provider_id, {})
     return any(os.environ.get(env_name, "") for env_name in builtin.get("auth_env_fallbacks", ()))
 
@@ -158,7 +169,16 @@ def _discover_anthropic_provider_ids() -> list[str]:
             if provider_id in provider_ids:
                 continue
             # 自动发现只接受已配置 token 的供应商，避免仅有默认 base_url 时污染列表。
-            if os.environ.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""):
+            codex_env_key = os.environ.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_CODEX_AUTH_TOKEN")
+            if (
+                os.environ.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", "")
+                or (
+                    os.environ.get(f"{prefix}_CODEX_BASE_URL", "")
+                    and os.environ.get(f"{prefix}_CODEX_MODEL", "")
+                    and codex_env_key
+                    and os.environ.get(codex_env_key, "")
+                )
+            ):
                 provider_ids.append(provider_id)
             break
 
@@ -203,6 +223,7 @@ def _build_anthropic_provider(provider_id: str) -> dict:
         ),
     }
 
+    anthropic_configured = bool(base_url and auth_token and model)
     return {
         "id": provider_id,
         "name": _env_for_prefix(prefix, "PROVIDER_NAME", builtin.get("name", provider_id)),
@@ -228,7 +249,8 @@ def _build_anthropic_provider(provider_id: str) -> dict:
             "SUPPORTED_AGENTS",
             ",".join(builtin.get("supported_agents", ())),
         )),
-        "configured": bool(base_url and auth_token and model),
+        "anthropic_configured": anthropic_configured,
+        "configured": anthropic_configured,
         "visible": _env_bool_for_prefix(
             prefix,
             "PROVIDER_VISIBLE",
@@ -354,7 +376,7 @@ def _provider_codex_config(provider_id: str, prefix: str, builtin: dict) -> dict
     env_key = _env_for_prefix(
         prefix,
         "CODEX_ENV_KEY",
-        default_codex.get("env_key", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
+        default_codex.get("env_key", f"{prefix}_CODEX_AUTH_TOKEN"),
     )
     wire_api = _env_for_prefix(prefix, "CODEX_WIRE_API", default_codex.get("wire_api", "responses"))
     context_window = _env_for_prefix(
@@ -380,6 +402,10 @@ for _provider_id, _provider in AI_PROVIDERS.items():
         _provider_id,
         _provider_prefix(_provider_id),
         _BUILTIN_ANTHROPIC_PROVIDERS.get(_provider_id, {}),
+    )
+    _provider["configured"] = bool(
+        _provider.get("anthropic_configured")
+        or ((_provider.get("codex") or {}).get("configured"))
     )
 
 
