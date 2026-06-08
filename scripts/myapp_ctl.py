@@ -2197,6 +2197,13 @@ def _ai_provider_ids_from_env(env: dict[str, str]) -> list[str]:
             env_key = env.get(f"{prefix}_CODEX_ENV_KEY") or f"{prefix}_CODEX_AUTH_TOKEN"
             if env.get(f"{prefix}_CODEX_MODEL") and env_key and env.get(env_key) and provider_id not in out:
                 out.append(provider_id)
+    for key, value in env.items():
+        if key.endswith("_OPENCODE_BASE_URL") and value:
+            provider_id = _normalize_provider_id(key[: -len("_OPENCODE_BASE_URL")])
+            prefix = _provider_prefix(provider_id)
+            env_key = env.get(f"{prefix}_OPENCODE_ENV_KEY") or f"{prefix}_OPENCODE_AUTH_TOKEN"
+            if env.get(f"{prefix}_OPENCODE_MODEL") and env_key and env.get(env_key) and provider_id not in out:
+                out.append(provider_id)
     return out
 
 
@@ -2221,6 +2228,17 @@ def _provider_has_codex_responses_adapter(env: dict[str, str], provider_id: str)
     )
 
 
+def _provider_has_opencode_adapter(env: dict[str, str], provider_id: str) -> bool:
+    prefix = _provider_prefix(provider_id)
+    env_key = env.get(f"{prefix}_OPENCODE_ENV_KEY") or f"{prefix}_OPENCODE_AUTH_TOKEN"
+    return bool(
+        env.get(f"{prefix}_OPENCODE_BASE_URL")
+        and env.get(f"{prefix}_OPENCODE_MODEL")
+        and env_key
+        and env.get(env_key)
+    )
+
+
 def _provider_codex_adapter_kind(env: dict[str, str], provider_id: str) -> str:
     prefix = _provider_prefix(provider_id)
     relay = (env.get(f"{prefix}_CODEX_RELAY") or "").strip().lower().replace("_", "-")
@@ -2241,6 +2259,31 @@ def _provider_allows_agent(env: dict[str, str], provider_id: str, agent_id: str)
         }
         return str(agent_id or "").strip().lower().replace("_", "-") in allowed
     return True
+
+
+def _builtin_supported_agents(existing: dict[str, str], prefix: str) -> str:
+    raw = existing.get(f"{prefix}_SUPPORTED_AGENTS", "").strip()
+    if not raw:
+        return "claude,codex,opencode"
+    agents = [
+        item.strip().lower().replace("_", "-")
+        for item in raw.split(",")
+        if item.strip()
+    ]
+    if set(agents) == {"claude", "codex"}:
+        return "claude,codex,opencode"
+    return ",".join(agents)
+
+
+def _default_adapter_kind(agent_id: str) -> str:
+    normalized = str(agent_id or "").strip().lower().replace("_", "-")
+    if normalized == "claude":
+        return "anthropic"
+    if normalized == "opencode":
+        return "opencode"
+    if normalized == "codex":
+        return "openai-responses"
+    return normalized or "unknown"
 
 
 def _ai_provider_capabilities_from_env(
@@ -2291,6 +2334,20 @@ def _ai_provider_capabilities_from_env(
                     "enabled": True,
                 }
             )
+        if (
+            _provider_has_opencode_adapter(env, provider_id)
+            and _provider_allows_agent(env, provider_id, "opencode")
+            and (not allowed_agents or "opencode" in allowed_agents)
+        ):
+            capabilities.append(
+                {
+                    "provider_id": provider_id,
+                    "agent_id": "opencode",
+                    "adapter_kind": "opencode",
+                    "status": "configured",
+                    "enabled": True,
+                }
+            )
     return capabilities
 
 
@@ -2304,6 +2361,8 @@ def _default_agent_from_provider_env(env: dict[str, str], provider_id: str) -> s
         return "claude"
     if _provider_has_codex_responses_adapter(env, provider_id):
         return "codex"
+    if _provider_has_opencode_adapter(env, provider_id):
+        return "opencode"
     return "claude"
 
 
@@ -2355,10 +2414,7 @@ def _prompt_deepseek_provider(existing: dict[str, str]) -> tuple[str, dict[str, 
         token=token,
         model=model,
     )
-    data[f"{prefix}_SUPPORTED_AGENTS"] = existing.get(
-        f"{prefix}_SUPPORTED_AGENTS",
-        "claude,codex",
-    )
+    data[f"{prefix}_SUPPORTED_AGENTS"] = _builtin_supported_agents(existing, prefix)
     data.update(
         {
             f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", "DeepSeek"),
@@ -2369,6 +2425,11 @@ def _prompt_deepseek_provider(existing: dict[str, str]) -> tuple[str, dict[str, 
             f"{prefix}_CODEX_UPSTREAM_WIRE_API": existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", "chat-completions"),
             f"{prefix}_CODEX_RELAY": existing.get(f"{prefix}_CODEX_RELAY", "codex-relay"),
             f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "262144"),
+            f"{prefix}_OPENCODE_PROVIDER_NAME": existing.get(f"{prefix}_OPENCODE_PROVIDER_NAME", "DeepSeek"),
+            f"{prefix}_OPENCODE_BASE_URL": existing.get(f"{prefix}_OPENCODE_BASE_URL", "https://api.deepseek.com/v1"),
+            f"{prefix}_OPENCODE_MODEL": existing.get(f"{prefix}_OPENCODE_MODEL", "deepseek-v4-pro"),
+            f"{prefix}_OPENCODE_ENV_KEY": existing.get(f"{prefix}_OPENCODE_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
+            f"{prefix}_OPENCODE_PROVIDER_NPM": existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", "@ai-sdk/openai-compatible"),
         }
     )
     data[f"{prefix}_AI_WORKER_MAX_CONCURRENCY"] = existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "20")
@@ -2400,7 +2461,7 @@ def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, s
     )
     data.update(
         {
-            f"{prefix}_SUPPORTED_AGENTS": existing.get(f"{prefix}_SUPPORTED_AGENTS", "claude,codex"),
+            f"{prefix}_SUPPORTED_AGENTS": _builtin_supported_agents(existing, prefix),
             f"{prefix}_AI_WORKER_MAX_CONCURRENCY": existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "5"),
             f"{prefix}_AI_WORKER_QUEUE_MAX": existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "20"),
             f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", "MiniMax"),
@@ -2411,6 +2472,11 @@ def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, s
             f"{prefix}_CODEX_UPSTREAM_WIRE_API": existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", ""),
             f"{prefix}_CODEX_RELAY": existing.get(f"{prefix}_CODEX_RELAY", ""),
             f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "512000"),
+            f"{prefix}_OPENCODE_PROVIDER_NAME": existing.get(f"{prefix}_OPENCODE_PROVIDER_NAME", "MiniMax"),
+            f"{prefix}_OPENCODE_BASE_URL": existing.get(f"{prefix}_OPENCODE_BASE_URL", "https://api.minimaxi.com/anthropic/v1"),
+            f"{prefix}_OPENCODE_MODEL": existing.get(f"{prefix}_OPENCODE_MODEL", model),
+            f"{prefix}_OPENCODE_ENV_KEY": existing.get(f"{prefix}_OPENCODE_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
+            f"{prefix}_OPENCODE_PROVIDER_NPM": existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", "@ai-sdk/anthropic"),
         }
     )
     return provider_id, data
@@ -2540,9 +2606,50 @@ def _prompt_custom_provider(existing: dict[str, str]) -> tuple[str, dict[str, st
                 f"{provider_id} CODEX upstream wire api",
                 default=existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", "chat-completions"),
             )
+    if _prompt_bool(
+        f"Add OpenCode via OpenCode provider adapter for {provider_id}?",
+        default=bool(existing.get(f"{prefix}_OPENCODE_MODEL")),
+    ):
+        data[f"{prefix}_OPENCODE_PROVIDER_NAME"] = _prompt_line(
+            f"{provider_id} OPENCODE provider name",
+            default=existing.get(f"{prefix}_OPENCODE_PROVIDER_NAME", existing.get(f"{prefix}_CODEX_PROVIDER_NAME", provider_id)),
+        )
+        data[f"{prefix}_OPENCODE_BASE_URL"] = _prompt_line(
+            f"{provider_id} OPENCODE base URL",
+            default=existing.get(f"{prefix}_OPENCODE_BASE_URL", existing.get(f"{prefix}_CODEX_BASE_URL", "")),
+            required=True,
+        )
+        data[f"{prefix}_OPENCODE_MODEL"] = _prompt_line(
+            f"{provider_id} OPENCODE model",
+            default=existing.get(f"{prefix}_OPENCODE_MODEL", existing.get(f"{prefix}_CODEX_MODEL", model)),
+            required=True,
+        )
+        data[f"{prefix}_OPENCODE_ENV_KEY"] = _prompt_line(
+            f"{provider_id} OPENCODE token env key",
+            default=existing.get(f"{prefix}_OPENCODE_ENV_KEY", existing.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_OPENCODE_AUTH_TOKEN")),
+        )
+        opencode_token_key = data[f"{prefix}_OPENCODE_ENV_KEY"]
+        data[opencode_token_key] = _prompt_line(
+            f"{provider_id} OPENCODE auth token",
+            default=existing.get(opencode_token_key, ""),
+            required=True,
+            secret=True,
+        )
+        data[f"{prefix}_OPENCODE_PROVIDER_NPM"] = _prompt_line(
+            f"{provider_id} OPENCODE provider npm package",
+            default=existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", "@ai-sdk/openai-compatible"),
+        )
     if not _ai_provider_capabilities_from_env({**existing, **data}, provider_filter=[provider_id]):
-        print(f"{provider_id} has no configured adapter; add at least Claude or Codex", file=sys.stderr)
+        print(f"{provider_id} has no configured adapter; add at least Claude, Codex, or OpenCode", file=sys.stderr)
         return _prompt_custom_provider(existing)
+    ordered_agents = ["claude", "codex", "opencode"]
+    caps = _ai_provider_capabilities_from_env({**existing, **data}, provider_filter=[provider_id])
+    supported = [
+        agent_id
+        for agent_id in ordered_agents
+        if any(cap.get("agent_id") == agent_id for cap in caps)
+    ]
+    data[f"{prefix}_SUPPORTED_AGENTS"] = ",".join(supported)
     return provider_id, data
 
 
@@ -4441,7 +4548,7 @@ def _join_private_agent_node(args) -> int:
             {
                 "provider_id": provider_id,
                 "agent_id": agent_id,
-                "adapter_kind": parts[2] if len(parts) == 3 else ("anthropic" if agent_id == "claude" else "openai-responses"),
+                "adapter_kind": parts[2] if len(parts) == 3 else _default_adapter_kind(agent_id),
                 "status": "configured",
                 "enabled": True,
             }
@@ -4456,7 +4563,7 @@ def _join_private_agent_node(args) -> int:
         capabilities = explicit_caps
     if not capabilities:
         print(
-            f"private agent provider config at {provider_env_path} has no enabled Claude/Codex adapter",
+            f"private agent provider config at {provider_env_path} has no enabled Claude/Codex/OpenCode adapter",
             file=sys.stderr,
         )
         return 1

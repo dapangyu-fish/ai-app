@@ -36,7 +36,7 @@ agent-node
   | starts one Docker runtime container per active run
   v
 myapp-agent-runtime
-  | Claude/Codex CLI with isolated env and mounted workspace
+  | Claude/Codex/OpenCode CLI with isolated env and mounted workspace
   v
 agent-node provider proxy
   |
@@ -58,7 +58,7 @@ execution can be updated independently from the HTTP API.
 | Config Center | `myapp-config-center` | Public client config, APK upload/config links, remote flags |
 | User Center | `myapp-user-center` | Admin UI/API for user operations |
 | Agent node | `myapp-agent-node` plus optional `myapp-agent-node-<node>` | Pulls jobs, starts runtime containers, proxies provider calls, streams run events back |
-| Agent runtime | image only | Ubuntu 24.04 runtime with Claude/Codex tooling and a source snapshot under `/app` |
+| Agent runtime | image only | Ubuntu 24.04 runtime with Claude/Codex/OpenCode tooling and a source snapshot under `/app` |
 | Infra | `jsonapp-postgres`, `ai-session-redis`, `app-minio` | Data, queue/session state, object storage |
 | Supabase | `supabase-*` | Auth and storage-compatible services |
 | OpenIM | `myapp-openim-*` | IM, WebSocket, message storage, OpenIM dependencies |
@@ -181,7 +181,7 @@ backend queues job
 agent-node polls /api/ai/agent_pull/acquire
 backend assigns an eligible job
 agent-node starts myapp-agent-runtime container
-runtime runs Claude/Codex CLI
+runtime runs Claude/Codex/OpenCode CLI
 agent-node records JSONL logs and streams events/artifacts back
 backend writes Redis stream events for clients
 ```

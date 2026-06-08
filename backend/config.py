@@ -52,6 +52,11 @@ _ANTHROPIC_PROVIDER_SUFFIXES = (
     "_CODEX_AUTH_TOKEN",
     "_CODEX_RELAY",
     "_CODEX_UPSTREAM_WIRE_API",
+    "_OPENCODE_BASE_URL",
+    "_OPENCODE_MODEL",
+    "_OPENCODE_ENV_KEY",
+    "_OPENCODE_AUTH_TOKEN",
+    "_OPENCODE_PROVIDER_NPM",
 )
 _BUILTIN_ANTHROPIC_PROVIDERS = {
     "deepseek": {
@@ -61,7 +66,7 @@ _BUILTIN_ANTHROPIC_PROVIDERS = {
         "model": "deepseek-v4-pro[1m]",
         "auth_env_fallbacks": (),
         "visible": "1",
-        "supported_agents": ("claude", "codex"),
+        "supported_agents": ("claude", "codex", "opencode"),
         "codex": {
             "provider_name": "DeepSeek",
             "base_url": "https://api.deepseek.com/v1",
@@ -72,6 +77,13 @@ _BUILTIN_ANTHROPIC_PROVIDERS = {
             "env_key": "DEEPSEEK_ANTHROPIC_AUTH_TOKEN",
             "context_window": 262144,
         },
+        "opencode": {
+            "provider_name": "DeepSeek",
+            "base_url": "https://api.deepseek.com/v1",
+            "model": "deepseek-v4-pro",
+            "env_key": "DEEPSEEK_ANTHROPIC_AUTH_TOKEN",
+            "provider_npm": "@ai-sdk/openai-compatible",
+        },
     },
     "minimax": {
         "name": "MiniMax M3",
@@ -80,7 +92,7 @@ _BUILTIN_ANTHROPIC_PROVIDERS = {
         "model": "MiniMax-M3",
         "auth_env_fallbacks": (),
         "visible": "1",
-        "supported_agents": ("claude", "codex"),
+        "supported_agents": ("claude", "codex", "opencode"),
         "codex": {
             "provider_name": "MiniMax",
             "base_url": "https://api.minimaxi.com/v1",
@@ -88,6 +100,13 @@ _BUILTIN_ANTHROPIC_PROVIDERS = {
             "wire_api": "responses",
             "env_key": "MINIMAX_ANTHROPIC_AUTH_TOKEN",
             "context_window": 512000,
+        },
+        "opencode": {
+            "provider_name": "MiniMax",
+            "base_url": "https://api.minimaxi.com/anthropic/v1",
+            "model": "MiniMax-M3",
+            "env_key": "MINIMAX_ANTHROPIC_AUTH_TOKEN",
+            "provider_npm": "@ai-sdk/anthropic",
         },
     },
 }
@@ -153,6 +172,14 @@ def _provider_has_auth_env(provider_id: str) -> bool:
         and os.environ.get(codex_env_key, "")
     ):
         return True
+    opencode_env_key = os.environ.get(f"{prefix}_OPENCODE_ENV_KEY", f"{prefix}_OPENCODE_AUTH_TOKEN")
+    if (
+        os.environ.get(f"{prefix}_OPENCODE_BASE_URL", "")
+        and os.environ.get(f"{prefix}_OPENCODE_MODEL", "")
+        and opencode_env_key
+        and os.environ.get(opencode_env_key, "")
+    ):
+        return True
     builtin = _BUILTIN_ANTHROPIC_PROVIDERS.get(provider_id, {})
     return any(os.environ.get(env_name, "") for env_name in builtin.get("auth_env_fallbacks", ()))
 
@@ -180,6 +207,7 @@ def _discover_anthropic_provider_ids() -> list[str]:
                 continue
             # 自动发现只接受已配置 token 的供应商，避免仅有默认 base_url 时污染列表。
             codex_env_key = os.environ.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_CODEX_AUTH_TOKEN")
+            opencode_env_key = os.environ.get(f"{prefix}_OPENCODE_ENV_KEY", f"{prefix}_OPENCODE_AUTH_TOKEN")
             if (
                 os.environ.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", "")
                 or (
@@ -187,6 +215,12 @@ def _discover_anthropic_provider_ids() -> list[str]:
                     and os.environ.get(f"{prefix}_CODEX_MODEL", "")
                     and codex_env_key
                     and os.environ.get(codex_env_key, "")
+                )
+                or (
+                    os.environ.get(f"{prefix}_OPENCODE_BASE_URL", "")
+                    and os.environ.get(f"{prefix}_OPENCODE_MODEL", "")
+                    and opencode_env_key
+                    and os.environ.get(opencode_env_key, "")
                 )
             ):
                 provider_ids.append(provider_id)
@@ -368,6 +402,8 @@ CODEX_NPX_PACKAGE = os.environ.get("CODEX_NPX_PACKAGE", "@openai/codex@0.136.0")
 CODEX_NODE_BIN_DIR = os.environ.get("CODEX_NODE_BIN_DIR", "/root/.nvm/versions/node/v22.22.2/bin")
 CODEX_NPM_CACHE = os.environ.get("CODEX_NPM_CACHE", "/var/lib/ai-app/codex-npm-cache")
 CODEX_HOME = os.environ.get("CODEX_HOME", "/var/lib/ai-app/codex-home")
+OPENCODE_BIN = os.environ.get("OPENCODE_BIN", "/usr/local/bin/opencode")
+OPENCODE_HOME = os.environ.get("OPENCODE_HOME", "/var/lib/ai-app/opencode-home")
 
 
 def _path_has_executable(exe: str, extra_dir: str = "") -> bool:
@@ -415,8 +451,55 @@ def _provider_codex_config(provider_id: str, prefix: str, builtin: dict) -> dict
     }
 
 
+def _provider_opencode_config(provider_id: str, prefix: str, builtin: dict) -> dict:
+    default_opencode = builtin.get("opencode", {})
+    default_codex = builtin.get("codex", {})
+    model = _env_for_prefix(
+        prefix,
+        "OPENCODE_MODEL",
+        default_opencode.get("model", default_codex.get("model", "")),
+    )
+    base_url = _env_for_prefix(
+        prefix,
+        "OPENCODE_BASE_URL",
+        default_opencode.get("base_url", default_codex.get("base_url", "")),
+    )
+    env_key = _env_for_prefix(
+        prefix,
+        "OPENCODE_ENV_KEY",
+        default_opencode.get(
+            "env_key",
+            _env_for_prefix(prefix, "CODEX_ENV_KEY", default_codex.get("env_key", f"{prefix}_CODEX_AUTH_TOKEN")),
+        ),
+    )
+    provider_name = _env_for_prefix(
+        prefix,
+        "OPENCODE_PROVIDER_NAME",
+        default_opencode.get("provider_name", default_codex.get("provider_name", provider_id)),
+    )
+    provider_npm = _env_for_prefix(
+        prefix,
+        "OPENCODE_PROVIDER_NPM",
+        default_opencode.get("provider_npm", "@ai-sdk/openai-compatible"),
+    )
+    auth_token = os.environ.get(env_key, "") if env_key else ""
+    return {
+        "provider_name": provider_name,
+        "base_url": base_url,
+        "model": model,
+        "env_key": env_key,
+        "provider_npm": provider_npm,
+        "configured": bool(base_url and model and env_key and auth_token),
+    }
+
+
 for _provider_id, _provider in AI_PROVIDERS.items():
     _provider["codex"] = _provider_codex_config(
+        _provider_id,
+        _provider_prefix(_provider_id),
+        _BUILTIN_ANTHROPIC_PROVIDERS.get(_provider_id, {}),
+    )
+    _provider["opencode"] = _provider_opencode_config(
         _provider_id,
         _provider_prefix(_provider_id),
         _BUILTIN_ANTHROPIC_PROVIDERS.get(_provider_id, {}),
@@ -424,12 +507,13 @@ for _provider_id, _provider in AI_PROVIDERS.items():
     _provider["configured"] = bool(
         _provider.get("anthropic_configured")
         or ((_provider.get("codex") or {}).get("configured"))
+        or ((_provider.get("opencode") or {}).get("configured"))
     )
 
 
 def _agent_ids() -> list[str]:
     explicit = _split_csv(os.environ.get("AI_AGENT_IDS", ""))
-    return explicit or ["claude", "codex"]
+    return explicit or ["claude", "codex", "opencode"]
 
 
 def _build_agent(agent_id: str) -> dict:
@@ -449,6 +533,14 @@ def _build_agent(agent_id: str) -> dict:
             "name": _env_for_prefix(prefix, "AGENT_NAME", "Codex"),
             "description": _env_for_prefix(prefix, "AGENT_DESCRIPTION", "Codex CLI runner"),
             "configured": _path_has_executable(CODEX_BIN, CODEX_NODE_BIN_DIR),
+            "visible": _env_bool_for_prefix(prefix, "AGENT_VISIBLE", "1"),
+        }
+    if normalized == "opencode":
+        return {
+            "id": "opencode",
+            "name": _env_for_prefix(prefix, "AGENT_NAME", "OpenCode"),
+            "description": _env_for_prefix(prefix, "AGENT_DESCRIPTION", "OpenCode CLI runner"),
+            "configured": _path_has_executable(OPENCODE_BIN, CODEX_NODE_BIN_DIR),
             "visible": _env_bool_for_prefix(prefix, "AGENT_VISIBLE", "1"),
         }
     return {
@@ -484,7 +576,7 @@ AI_SESSION_REDIS_TTL_SECONDS = int(os.environ.get("AI_SESSION_REDIS_TTL_SECONDS"
 # - <PROVIDER>_AI_WORKER_MAX_CONCURRENCY / <PROVIDER>_AI_WORKER_QUEUE_MAX 用于供应商级限流。
 #   例：DEEPSEEK_AI_WORKER_MAX_CONCURRENCY=3，MINIMAX_AI_WORKER_QUEUE_MAX=20。
 # - AI_WORKER_PROVIDER_DEFAULT_* 可给所有未显式配置的 provider 设置默认值。
-# 瓶颈是同时跑的 Claude/Codex CLI 进程数、provider 限速和机器内存，不是 Redis 队列本身。
+# 瓶颈是同时跑的 Claude/Codex/OpenCode CLI 进程数、provider 限速和机器内存，不是 Redis 队列本身。
 AI_WORKER_MAX_CONCURRENCY = max(1, _env_int("AI_WORKER_MAX_CONCURRENCY", 3))
 AI_WORKER_QUEUE_MAX = max(0, _env_int("AI_WORKER_QUEUE_MAX", 50))
 AI_WORKER_PROVIDER_DEFAULT_MAX_CONCURRENCY = max(
@@ -497,7 +589,7 @@ AI_WORKER_PROVIDER_DEFAULT_QUEUE_MAX = max(
 )
 
 # AI 执行后端：
-# - local：保持旧行为，在 ai-worker 容器/进程内直接启动 Claude/Codex CLI。
+# - local：保持旧行为，在 ai-worker 容器/进程内直接启动 Claude/Codex CLI；OpenCode 仅支持 agent-node。
 # - agent-node：旧 direct 模式，ai-worker 主动连接 agent-node。
 # - agent-pull：runner 模式，agent-node 主动拉任务并回传事件，适合内网节点。
 # 默认 local 是为了向前兼容；生产容器化后由 compose/env 显式切到 agent-pull。

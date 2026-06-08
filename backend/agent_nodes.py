@@ -76,6 +76,8 @@ def _default_adapter_kind(agent_id: str) -> str:
         return "anthropic"
     if normalized == "codex":
         return "openai-responses"
+    if normalized == "opencode":
+        return "opencode"
     return normalized or "unknown"
 
 

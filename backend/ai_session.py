@@ -1081,6 +1081,54 @@ def parse_codex_line(line_str: str) -> List[dict]:
     return out
 
 
+def parse_opencode_line(line_str: str) -> List[dict]:
+    """Parse OpenCode `run --format json` plus runner export events."""
+    line_str = line_str.strip()
+    if not line_str:
+        return []
+    try:
+        event = json.loads(line_str)
+    except json.JSONDecodeError as e:
+        logger.warning(f"[OPENCODE_PARSE] JSON 解析失败: {e}, line: {line_str[:100]}...")
+        return []
+
+    out: List[dict] = []
+    evt_type = str(event.get("type") or "")
+    if evt_type == "step_start":
+        out.append({"status": "thinking", "message": "AI 正在思考..."})
+        return out
+    if evt_type == "opencode_export":
+        reasoning = event.get("reasoning")
+        text = event.get("text")
+        if isinstance(reasoning, str) and reasoning.strip():
+            out.append({"assistant_thinking": reasoning})
+            out.append({"final_thinking": reasoning})
+        if isinstance(text, str) and text.strip():
+            out.append({"assistant_content": text})
+            out.append({"final_content": text})
+        return out
+    if evt_type == "opencode_export_error":
+        message = event.get("message") or "OpenCode export failed"
+        out.append({"error": str(message), "needs_retry": True})
+        return out
+    if evt_type in {"error", "step_error"}:
+        message = event.get("message") or event.get("error") or "OpenCode 执行失败"
+        out.append({"error": str(message), "needs_retry": True})
+        return out
+
+    part = event.get("part")
+    if isinstance(part, dict):
+        part_type = str(part.get("type") or "")
+        text = part.get("text")
+        if part_type == "text" and isinstance(text, str) and text:
+            out.append({"assistant_content": text})
+        elif part_type == "reasoning" and isinstance(text, str) and text:
+            out.append({"assistant_thinking": text})
+        elif part_type in {"step-finish", "step_finish"}:
+            out.append({"status": "working", "message": "AI 正在处理..."})
+    return out
+
+
 def extract_final_texts(events: List[dict]) -> Tuple[Optional[str], Optional[str]]:
     """从所有事件里提取最终文本和 thinking。给 worker 完工时落 meta 用。"""
     final_text = None
@@ -1587,6 +1635,7 @@ def _dynamic_agent_node_provider(provider_id: Optional[str]) -> dict:
         "models": {"default": ""},
         "cli_env": {},
         "codex": {},
+        "opencode": {},
         "worker": _provider_worker_limits(pid),
     }
 
@@ -1691,6 +1740,39 @@ def _extract_codex_thread_id(line_str: str) -> Optional[str]:
         return None
     thread_id = event.get("thread_id")
     return str(thread_id) if thread_id else None
+
+
+def _extract_opencode_thread_id(line_str: str) -> Optional[str]:
+    try:
+        event = json.loads(line_str)
+    except json.JSONDecodeError:
+        return None
+    thread_id = event.get("sessionID") or event.get("session_id")
+    return str(thread_id) if thread_id else None
+
+
+def _parse_line_for_runner(runner: str):
+    if runner == "codex":
+        return parse_codex_line
+    if runner == "opencode":
+        return parse_opencode_line
+    return parse_cli_line
+
+
+def _extract_thread_id_for_runner(runner: str, line_str: str) -> Optional[str]:
+    if runner == "codex":
+        return _extract_codex_thread_id(line_str)
+    if runner == "opencode":
+        return _extract_opencode_thread_id(line_str)
+    return None
+
+
+def _runner_display_name(runner: str) -> str:
+    if runner == "codex":
+        return "Codex CLI"
+    if runner == "opencode":
+        return "OpenCode CLI"
+    return "Claude CLI"
 
 
 def _agent_node_headers() -> dict:
@@ -1807,6 +1889,8 @@ def _default_adapter_kind_for_agent(agent_id: str) -> str:
         return "anthropic"
     if normalized == "codex":
         return "openai-responses"
+    if normalized == "opencode":
+        return "opencode"
     return normalized or "unknown"
 
 
@@ -1863,12 +1947,14 @@ def _agent_node_capability_supports(capabilities: Any, provider_id: str, agent_i
     caps = _normalize_agent_node_capabilities(capabilities)
     if not caps:
         return None
-    wanted_provider = _normalize_provider_id(provider_id)
+    wanted_provider = str(provider_id or "").strip().lower().replace("_", "-")
     wanted_agent = str(agent_id or "").strip().lower().replace("_", "-")
+    if not wanted_provider and not wanted_agent:
+        return True
     return any(
         _agent_node_capability_enabled(cap)
-        and cap.get("provider_id") == wanted_provider
-        and cap.get("agent_id") == wanted_agent
+        and (not wanted_provider or cap.get("provider_id") == wanted_provider)
+        and (not wanted_agent or cap.get("agent_id") == wanted_agent)
         for cap in caps
     )
 
@@ -1884,6 +1970,8 @@ def _static_provider_allows_agent(provider: dict | None, agent_id: str) -> bool:
         return bool(provider.get("anthropic_configured", provider.get("configured", False)))
     if normalized_agent == "codex":
         return bool((provider.get("codex") or {}).get("configured"))
+    if normalized_agent == "opencode":
+        return bool((provider.get("opencode") or {}).get("configured"))
     return False
 
 
@@ -2256,9 +2344,45 @@ def _agent_node_codex_config(provider: dict, *, include_provider_secrets: bool =
     return codex
 
 
+def _agent_node_opencode_config(provider: dict, *, include_provider_secrets: bool = True) -> dict:
+    opencode = dict(provider.get("opencode") or {})
+    codex = dict(provider.get("codex") or {})
+    if not opencode:
+        opencode = {
+            "provider_name": codex.get("provider_name"),
+            "base_url": codex.get("base_url"),
+            "model": codex.get("model"),
+            "env_key": codex.get("env_key"),
+            "provider_npm": "@ai-sdk/openai-compatible",
+        }
+    if not opencode:
+        return {}
+    env_key = str(opencode.get("env_key") or "").strip()
+    token = os.environ.get(env_key, "") if include_provider_secrets and env_key else ""
+    runtime_env_key = "MYAPP_CODEX_AUTH_TOKEN"
+    return {
+        "provider_name": opencode.get("provider_name") or codex.get("provider_name") or provider.get("id"),
+        "base_url": opencode.get("base_url") or codex.get("base_url"),
+        "model": opencode.get("model") or codex.get("model"),
+        "env_key": runtime_env_key,
+        "provider_id": str(provider.get("id") or "custom").replace("-", "_"),
+        "opencode_provider_npm": opencode.get("provider_npm") or "@ai-sdk/openai-compatible",
+        "opencode_base_url": opencode.get("base_url") or codex.get("base_url"),
+        "opencode_model": opencode.get("model") or codex.get("model"),
+        "opencode_env_key": runtime_env_key,
+        "opencode_provider_name": opencode.get("provider_name") or codex.get("provider_name") or provider.get("id"),
+        "_runtime_token_env_key": runtime_env_key,
+        "_runtime_token": token,
+    }
+
+
 def _agent_node_runtime_config(provider: dict, runner: str, *, include_provider_secrets: bool) -> tuple[dict, dict]:
-    if runner == "codex":
-        codex = _agent_node_codex_config(provider, include_provider_secrets=include_provider_secrets)
+    if runner in {"codex", "opencode"}:
+        codex = (
+            _agent_node_opencode_config(provider, include_provider_secrets=include_provider_secrets)
+            if runner == "opencode"
+            else _agent_node_codex_config(provider, include_provider_secrets=include_provider_secrets)
+        )
         env = _agent_node_provider_env(provider, include_provider_secrets=include_provider_secrets)
         for key in list(env.keys()):
             if key.startswith("ANTHROPIC_") or key.startswith("CLAUDE_CODE_") or key == "API_TIMEOUT_MS":
@@ -2289,7 +2413,7 @@ def _build_agent_node_payload(
         runner,
         include_provider_secrets=include_provider_secrets,
     )
-    if runner == "codex":
+    if runner in {"codex", "opencode"}:
         prompt = _build_codex_prompt(turn_msg, sys_prompt, workspace=runtime_workspace)
     else:
         prompt = _build_user_turn_prompt(turn_msg, workspace=runtime_workspace)
@@ -2993,7 +3117,7 @@ def _run_agent_pull_worker(
     set_status,
     all_events: List[dict],
 ) -> None:
-    parse_line = parse_codex_line if runner == "codex" else parse_cli_line
+    parse_line = _parse_line_for_runner(runner)
     current_resume_id = agent_resume_id or ""
 
     def run_once(current_run_id: str, turn_msg: str) -> Optional[_AgentNodeRunResult]:
@@ -3093,10 +3217,9 @@ def _run_agent_pull_worker(
                 if item_type == "stdout":
                     line = str(item.get("line") or "")
                     _append_cli_log(session_id, "stdout", line)
-                    if runner == "codex":
-                        thread_id = _extract_codex_thread_id(line)
-                        if thread_id:
-                            store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
+                    thread_id = _extract_thread_id_for_runner(runner, line)
+                    if thread_id:
+                        store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
                     for ev in parse_line(line):
                         if _is_internal_cli_event(ev):
                             error_text = str(ev.get("cli_transport_error") or "")
@@ -3286,7 +3409,7 @@ def _run_agent_pull_worker(
                 and claude_cli_resume_enabled(provider.get("id"))
             ):
                 current_resume_id = session_id
-            elif runner == "codex" and not current_resume_id:
+            elif runner in {"codex", "opencode"} and not current_resume_id:
                 current_resume_id = store.get_meta(session_id).get("agent_thread_id") or ""
             _append_cli_log(session_id, "meta", json.dumps({
                 "event": "server_validation_repair_start",
@@ -3363,7 +3486,7 @@ def _run_agent_node_worker(
     except Exception:
         pass
 
-    parse_line = parse_codex_line if runner == "codex" else parse_cli_line
+    parse_line = _parse_line_for_runner(runner)
     current_resume_id = agent_resume_id or ""
 
     def run_once(current_run_id: str, turn_msg: str) -> Optional[_AgentNodeRunResult]:
@@ -3450,10 +3573,9 @@ def _run_agent_node_worker(
                 if item_type == "stdout":
                     line = str(item.get("line") or "")
                     _append_cli_log(session_id, "stdout", line)
-                    if runner == "codex":
-                        thread_id = _extract_codex_thread_id(line)
-                        if thread_id:
-                            store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
+                    thread_id = _extract_thread_id_for_runner(runner, line)
+                    if thread_id:
+                        store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
                     for ev in parse_line(line):
                         if _is_internal_cli_event(ev):
                             error_text = str(ev.get("cli_transport_error") or "")
@@ -3647,7 +3769,7 @@ def _run_agent_node_worker(
                 and claude_cli_resume_enabled(provider.get("id"))
             ):
                 current_resume_id = session_id
-            elif runner == "codex" and not current_resume_id:
+            elif runner in {"codex", "opencode"} and not current_resume_id:
                 current_resume_id = store.get_meta(session_id).get("agent_thread_id") or ""
             _append_cli_log(session_id, "meta", json.dumps({
                 "event": "server_validation_repair_start",
@@ -3807,6 +3929,9 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
         if AI_WORKER_EXECUTION_BACKEND != "local":
             raise ValueError(f"未知 AI_WORKER_EXECUTION_BACKEND: {AI_WORKER_EXECUTION_BACKEND}")
 
+        if runner == "opencode":
+            raise ValueError("本地 worker 暂不支持 OpenCode，请使用 agent-node 执行后端")
+
         if runner == "codex":
             _, env = _codex_env(provider, workspace)
             parse_line = parse_codex_line
@@ -3825,7 +3950,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             proc.stdin.write(prompt.encode("utf-8"))
             proc.stdin.close()
             first_lines = []
-        else:
+        elif runner == "claude":
             # Claude 有历史时 resume；首次会话直接指定 session-id 创建，避免无意义 fallback。
             resume_first = bool(agent_resume_id)
             cli_run_id = job_id or uuid.uuid4().hex
@@ -3923,16 +4048,17 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                     append_event(err_evt)
                     set_status(STATUS_FAILED, error=err_msg)
                     return
+        else:
+            raise ValueError(f"未知 AI Agent: {runner}")
 
         # ─── 4. 主循环：读 CLI 输出 → 解析 → 写 Redis ───
         line_count = 0
         for buffered in first_lines:
             _append_cli_log(session_id, "stdout", buffered)
             line_str = buffered.decode("utf-8", errors="replace")
-            if runner == "codex":
-                thread_id = _extract_codex_thread_id(line_str)
-                if thread_id:
-                    store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
+            thread_id = _extract_thread_id_for_runner(runner, line_str)
+            if thread_id:
+                store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
             for ev in parse_line(line_str):
                 if _is_internal_cli_event(ev):
                     all_events.append(ev)
@@ -3969,10 +4095,9 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
 
             _append_cli_log(session_id, "stdout", line)
             line_str = line.decode("utf-8", errors="replace")
-            if runner == "codex":
-                thread_id = _extract_codex_thread_id(line_str)
-                if thread_id:
-                    store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
+            thread_id = _extract_thread_id_for_runner(runner, line_str)
+            if thread_id:
+                store.r.hset(_meta_key(session_id), "agent_thread_id", thread_id)
             for ev in parse_line(line_str):
                 if _is_internal_cli_event(ev):
                     all_events.append(ev)
@@ -4006,7 +4131,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
         # ─── 5. 退出码 != 0 → 失败（含外部 kill） ───
         if proc.returncode != 0:
             killed_externally = proc.returncode in (-15, -9)
-            runner_name = "Codex CLI" if runner == "codex" else "Claude CLI"
+            runner_name = _runner_display_name(runner)
             err_text = proc.stderr.read().decode("utf-8", errors="replace")
             err_msg = (
                 f"{runner_name} 被外部信号 {proc.returncode} 终止"

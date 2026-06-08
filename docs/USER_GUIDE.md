@@ -74,7 +74,7 @@ client chat
   -> backend /api/ai/chat/start
   -> Redis session/queue
   -> agent-node pulls job
-  -> isolated runtime runs Claude/Codex
+  -> isolated runtime runs Claude/Codex/OpenCode
   -> JSON validated and uploaded
   -> backend stores terminal action
   -> client receives json_app_ready
@@ -147,6 +147,16 @@ myapp-ctl agent-node private status
 myapp-ctl agent ls
 myapp-ctl log agent-node -n 120
 ```
+
+私有节点暂停、恢复和容量调整必须在 agent 节点机器本机执行：
+
+```bash
+myapp-ctl agent-node pause --reason "maintenance"
+myapp-ctl agent-node resume
+myapp-ctl agent-node limits --capacity 2 --queue-max 10
+```
+
+客户端只同步和展示节点状态，不远程修改私有节点运行配置。
 
 管理端查看公开节点：
 
@@ -251,4 +261,3 @@ python3 backend/validate_json_app.py templates/<app>.json
 | 生成成功但客户端没打开 | 终态 action 丢失或客户端未恢复 result | 查 `/api/ai/chat/<session>/result` 和 backend log |
 | Web IM 异常 | OpenIM WASM bridge 或 OpenIM 地址错误 | 重新构建 `web_openim_bridge`，检查环境 JSON |
 | Push 不工作 | APNs/FCM/GeTui 未配置或 token 未注册 | `myapp-ctl secret ls` 和 backend push logs |
-

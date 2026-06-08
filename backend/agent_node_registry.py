@@ -107,7 +107,12 @@ def _json_capabilities(value) -> list:
             continue
         adapter_kind = str(raw.get("adapter_kind") or raw.get("adapter") or "").strip().lower().replace("_", "-")
         if not adapter_kind:
-            adapter_kind = "anthropic" if agent_id == "claude" else "openai-responses"
+            if agent_id == "claude":
+                adapter_kind = "anthropic"
+            elif agent_id == "opencode":
+                adapter_kind = "opencode"
+            else:
+                adapter_kind = "openai-responses"
         key = (provider_id, agent_id, adapter_kind)
         if key in seen:
             continue

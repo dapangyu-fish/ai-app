@@ -46,11 +46,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libasound2-dev \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
-    && npm install -g @anthropic-ai/claude-code @openai/codex@0.136.0 \
+    && npm install -g @anthropic-ai/claude-code @openai/codex@0.136.0 opencode-ai \
     && ln -sf "$(command -v claude)" /usr/local/bin/claude \
     && ln -sf "$(command -v codex)" /usr/local/bin/codex \
+    && ln -sf "$(command -v opencode)" /usr/local/bin/opencode \
     && claude --version \
     && codex --version \
+    && opencode --version \
     && python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel \
     && /opt/venv/bin/pip install --no-cache-dir codex-relay==0.3.3 \
@@ -60,11 +62,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV PATH=/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     CLAUDE_BIN=/usr/local/bin/claude \
     CODEX_BIN=/usr/local/bin/codex \
+    OPENCODE_BIN=/usr/local/bin/opencode \
     CODEX_RELAY_BIN=/opt/venv/bin/codex-relay \
     CODEX_NPX_PACKAGE=@openai/codex@0.136.0 \
     CODEX_NODE_BIN_DIR=/usr/bin \
     CODEX_NPM_CACHE=/home/agent/.npm \
     CODEX_HOME=/home/agent/.codex \
+    OPENCODE_HOME=/home/agent \
     AI_APP_PROJECT_ROOT=/app
 
 WORKDIR /app
@@ -84,7 +88,8 @@ COPY pubspec.yaml pubspec.lock analysis_options.yaml /app/
 COPY deploy/production/agent_runner.py /opt/myapp/agent_runner.py
 
 RUN useradd -m -u 10001 -s /bin/bash agent \
-    && mkdir -p /workspace /home/agent/.claude /home/agent/.codex /home/agent/.npm /run/myapp-agent \
+    && mkdir -p /workspace /home/agent/.claude /home/agent/.codex /home/agent/.npm \
+        /home/agent/.config/opencode /home/agent/.local/share/opencode /run/myapp-agent \
     && touch /run/myapp-agent/payload.json \
     && chown -R agent:agent /workspace /home/agent /opt/myapp /run/myapp-agent \
     && chmod 755 /opt/myapp/agent_runner.py
@@ -92,4 +97,4 @@ RUN useradd -m -u 10001 -s /bin/bash agent \
 USER 10001:10001
 WORKDIR /app
 
-CMD ["bash", "-lc", "python3 --version && node --version && claude --version && codex --version"]
+CMD ["bash", "-lc", "python3 --version && node --version && claude --version && codex --version && opencode --version"]

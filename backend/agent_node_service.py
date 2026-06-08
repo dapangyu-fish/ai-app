@@ -96,7 +96,7 @@ PROVIDER_IDS = [
 ]
 AGENT_IDS = [
     item.strip().lower().replace("_", "-")
-    for item in os.environ.get("AGENT_NODE_AGENT_IDS", "claude,codex").split(",")
+    for item in os.environ.get("AGENT_NODE_AGENT_IDS", "claude,codex,opencode").split(",")
     if item.strip()
 ]
 
@@ -107,6 +107,8 @@ def _default_adapter_kind(agent_id: str) -> str:
         return "anthropic"
     if normalized == "codex":
         return "openai-responses"
+    if normalized == "opencode":
+        return "opencode"
     return normalized or "unknown"
 
 
@@ -194,6 +196,23 @@ def _configured_capabilities() -> list[dict]:
                     "provider_id": provider_id,
                     "agent_id": "codex",
                     "adapter_kind": "openai-chat-completions-relay" if relay or upstream_wire_api else "openai-responses",
+                    "status": "configured",
+                    "enabled": True,
+                }
+            )
+        opencode_env_key = _local_provider_value(prefix, "OPENCODE_ENV_KEY")
+        opencode_ok = (
+            _local_provider_value(prefix, "OPENCODE_BASE_URL")
+            and _local_provider_value(prefix, "OPENCODE_MODEL")
+            and opencode_env_key
+            and os.environ.get(opencode_env_key, "")
+        )
+        if opencode_ok and _provider_allows_agent(provider_id, "opencode") and (not AGENT_IDS or "opencode" in AGENT_IDS):
+            out.append(
+                {
+                    "provider_id": provider_id,
+                    "agent_id": "opencode",
+                    "adapter_kind": "opencode",
                     "status": "configured",
                     "enabled": True,
                 }
@@ -286,6 +305,8 @@ def _session_paths(user_id: str, session_id: str, job_id: str) -> dict[str, Path
         "claude": session_root / "claude",
         "claude_config": session_root / ".claude.json",
         "codex": session_root / "codex",
+        "opencode_config": session_root / "opencode-config",
+        "opencode_data": session_root / "opencode-data",
         "session_workspace": workspace_session_root,
         "runs_root": workspace_session_root / "runs",
         "workspace": workspace_session_root / "current",
@@ -497,16 +518,35 @@ def _apply_local_provider(payload: dict) -> None:
                 "CLAUDE_CODE_EFFORT_LEVEL": _local_provider_value(prefix, "CLAUDE_CODE_EFFORT_LEVEL", "max"),
             }
         )
-    elif agent_id == "codex":
-        codex_base_url = _local_provider_value(prefix, "CODEX_BASE_URL")
-        codex_model = _local_provider_value(prefix, "CODEX_MODEL")
-        codex_env_key = _local_provider_value(prefix, "CODEX_ENV_KEY", f"{prefix}_CODEX_AUTH_TOKEN")
+    elif agent_id in {"codex", "opencode"}:
+        default_base_url = _local_provider_value(prefix, "CODEX_BASE_URL")
+        default_model = _local_provider_value(prefix, "CODEX_MODEL")
+        default_env_key = _local_provider_value(prefix, "CODEX_ENV_KEY", f"{prefix}_CODEX_AUTH_TOKEN")
+        codex_base_url = (
+            _local_provider_value(prefix, "OPENCODE_BASE_URL")
+            if agent_id == "opencode"
+            else default_base_url
+        )
+        codex_model = (
+            _local_provider_value(prefix, "OPENCODE_MODEL")
+            if agent_id == "opencode"
+            else default_model
+        )
+        codex_env_key = (
+            _local_provider_value(prefix, "OPENCODE_ENV_KEY")
+            if agent_id == "opencode"
+            else default_env_key
+        )
         codex_token = str(os.environ.get(codex_env_key) or anthropic_token or "").strip()
         if not codex_base_url or not codex_model or not codex_token:
-            raise ValueError(f"local provider {provider_id} is missing Codex config")
+            raise ValueError(f"local provider {provider_id} is missing {agent_id} config")
         codex.update(
             {
-                "provider_name": _local_provider_value(prefix, "CODEX_PROVIDER_NAME", provider_id),
+                "provider_name": (
+                    _local_provider_value(prefix, "OPENCODE_PROVIDER_NAME", _local_provider_value(prefix, "CODEX_PROVIDER_NAME", provider_id))
+                    if agent_id == "opencode"
+                    else _local_provider_value(prefix, "CODEX_PROVIDER_NAME", provider_id)
+                ),
                 "base_url": codex_base_url,
                 "model": codex_model,
                 "wire_api": _local_provider_value(prefix, "CODEX_WIRE_API", "responses"),
@@ -516,6 +556,16 @@ def _apply_local_provider(payload: dict) -> None:
                 "context_window": _local_provider_value(prefix, "CODEX_CONTEXT_WINDOW", str(codex.get("context_window") or "")),
             }
         )
+        if agent_id == "opencode":
+            codex.update(
+                {
+                    "opencode_provider_name": _local_provider_value(prefix, "OPENCODE_PROVIDER_NAME", codex.get("provider_name", provider_id)),
+                    "opencode_base_url": codex_base_url,
+                    "opencode_model": codex_model,
+                    "opencode_env_key": "MYAPP_CODEX_AUTH_TOKEN",
+                    "opencode_provider_npm": _local_provider_value(prefix, "OPENCODE_PROVIDER_NPM", "@ai-sdk/openai-compatible"),
+                }
+            )
         env["MYAPP_CODEX_AUTH_TOKEN"] = codex_token
     else:
         raise ValueError(f"local provider mode does not support agent_id: {agent_id}")
@@ -577,6 +627,8 @@ def _prepare_provider_proxy(payload: dict) -> list[str]:
         )
         issued.append(token)
         codex["base_url"] = f"{PROVIDER_PROXY_BASE_URL}/proxy/{token}"
+        if codex.get("opencode_base_url"):
+            codex["opencode_base_url"] = f"{PROVIDER_PROXY_BASE_URL}/proxy/{token}"
         env[codex_env_key] = token
 
     payload["env"] = env
@@ -636,6 +688,10 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
         f"{_docker_bind_source(paths['claude_config'])}:/home/agent/.claude.json:rw",
         "-v",
         f"{_docker_bind_source(paths['codex'])}:/home/agent/.codex:rw",
+        "-v",
+        f"{_docker_bind_source(paths['opencode_config'])}:/home/agent/.config/opencode:rw",
+        "-v",
+        f"{_docker_bind_source(paths['opencode_data'])}:/home/agent/.local/share/opencode:rw",
         "-v",
         f"{_docker_bind_source(paths['workspace'])}:/workspace:rw",
         "-v",

@@ -63,7 +63,7 @@ The backend image is shared by `backend`, `ai-worker`, `registry`,
 `config-center`, and `user-center`. Agent execution is split into:
 
 - `myapp-agent-node`: host service that owns Docker and starts runtime containers
-- `myapp-agent-runtime`: Ubuntu 24.04 image used for Claude/Codex runs
+- `myapp-agent-runtime`: Ubuntu 24.04 image used for Claude/Codex/OpenCode runs
 
 ## Security Model
 
@@ -80,8 +80,9 @@ The default data root is `/mnt/myapp`.
 
 Agent runtime containers do not receive backend, Supabase, OpenIM, push, or real
 provider keys. They receive a run payload and short-lived provider-proxy tokens.
-Claude/Codex talk to `http://agent-node:5590/proxy/<token>`; agent-node rewrites
-that request to DeepSeek/MiniMax and revokes the proxy token after the run.
+Claude/Codex/OpenCode talk to `http://agent-node:5590/proxy/<token>`;
+agent-node rewrites that request to DeepSeek/MiniMax and revokes the proxy token
+after the run.
 
 The runtime image includes the source needed for JSON-DSL inspection:
 `backend/`, `lib/`, `assets/`, `test/`, `templates/`, `docs/`, `scripts/`,
@@ -117,7 +118,7 @@ myapp-ctl setup --host <public-ip-or-domain> --data-root /mnt/myapp
 Setup is safe to rerun. It generates local stack secrets when missing, preserves
 existing values by default, and asks for human-provided values:
 
-- AI providers: DeepSeek, MiniMax, or custom Anthropic-compatible providers
+- AI providers: DeepSeek, MiniMax, or custom providers
 - Optional ASR: ByteDance/Doubao speech recognition
 - Optional email: Supabase SMTP/auth email settings
 - Optional push: APNs, FCM, and GeTui
@@ -128,10 +129,13 @@ optional; skipping them only disables those channels.
 Provider setup behavior:
 
 - Built-in DeepSeek and MiniMax prompts ask for the Anthropic-compatible values
-  needed by Claude Code.
-- Custom providers ask for each `ANTHROPIC_*` and `CLAUDE_CODE_*` value.
+  needed by Claude Code, then write Codex and OpenCode adapter values.
+- OpenCode uses provider-specific AI SDK packages: DeepSeek defaults to
+  `@ai-sdk/openai-compatible`; MiniMax defaults to `@ai-sdk/anthropic` with
+  `https://api.minimaxi.com/anthropic/v1`.
+- Custom providers can add Claude Code, Codex, OpenCode, or a mix of them.
 - The provider can also advertise supported agents, for example `claude` only
-  or `claude,codex`.
+  or `claude,codex,opencode`.
 - Provider keys are written only to host-local env files; they must never be
   committed to Git.
 
@@ -266,8 +270,8 @@ myapp-ctl agent ls
 myapp-ctl deploy agent-node --build --no-setup --no-test-user
 ```
 
-Agent runtime image, including Claude/Codex tooling, `agent_runner.py`, or files
-the isolated runtime needs under `/app`:
+Agent runtime image, including Claude/Codex/OpenCode tooling,
+`agent_runner.py`, or files the isolated runtime needs under `/app`:
 
 ```bash
 myapp-ctl deploy agent-runtime --build --no-setup --no-test-user
@@ -741,11 +745,13 @@ mixed public/private nodes on one machine, or multiple private nodes owned by
 different users. Use `--replace-existing-agent-node` only when intentionally
 converting the singleton node on that host.
 
-The app settings page has a Private Agent Nodes management view. It lists only
-the logged-in user's private nodes, can create a new join token by calling
-`POST /api/ai/private_agent/join_token`, and can pause, resume, delete, or tune
-capacity for nodes owned by that same user. The join-token response includes
-both `join_token` and a ready-to-copy `join_command`; the command includes the
+The app settings page has a Private Agent Nodes view. It lists only the
+logged-in user's private nodes and can create a new join token by calling
+`POST /api/ai/private_agent/join_token`. It is intentionally read-only after a
+node has joined: pause, resume, capacity, queue, and removal are controlled from
+the agent-node host with `myapp-ctl`, because the running node owns the local
+provider keys and runtime limits. The join-token response includes both
+`join_token` and a ready-to-copy `join_command`; the command includes the
 currently selected provider and agent. The token is short-lived and one-time.
 The long-lived private provider keys remain only on the user's agent-node host.
 The join-token API accepts `image_mode` as `pull`, `build`, or `none`; app

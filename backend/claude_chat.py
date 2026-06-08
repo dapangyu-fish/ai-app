@@ -176,6 +176,8 @@ def _provider_supports_agent(provider: dict, agent_id: str) -> bool:
         return bool(provider.get("anthropic_configured", provider.get("configured", False)))
     if agent_id == "codex":
         return bool((provider.get("codex") or {}).get("configured"))
+    if agent_id == "opencode":
+        return bool((provider.get("opencode") or {}).get("configured"))
     return False
 
 
@@ -190,6 +192,7 @@ def _dynamic_node_provider(provider_id: str, *, supported_agents: list[str] | No
         "models": {"default": ""},
         "cli_env": {},
         "codex": {},
+        "opencode": {},
         "supported_agents": supported_agents or ["claude"],
         "worker": {},
     }

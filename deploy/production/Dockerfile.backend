@@ -21,19 +21,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libasound2-dev \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
-    && npm install -g @anthropic-ai/claude-code \
+    && npm install -g @anthropic-ai/claude-code opencode-ai \
     && ln -sf "$(command -v claude)" /usr/local/bin/claude \
+    && ln -sf "$(command -v opencode)" /usr/local/bin/opencode \
     && claude --version \
-    && mkdir -p /var/lib/ai-app/codex-npm-cache /var/lib/ai-app/codex-home \
+    && opencode --version \
+    && mkdir -p /var/lib/ai-app/codex-npm-cache /var/lib/ai-app/codex-home /var/lib/ai-app/opencode-home \
     && npm_config_cache=/var/lib/ai-app/codex-npm-cache npx -y @openai/codex@0.136.0 --version \
     && rm -rf /var/lib/apt/lists/* /root/.npm
 
 ENV CLAUDE_BIN=/usr/local/bin/claude \
     CODEX_BIN=npx \
+    OPENCODE_BIN=/usr/local/bin/opencode \
     CODEX_NPX_PACKAGE=@openai/codex@0.136.0 \
     CODEX_NODE_BIN_DIR=/usr/bin \
     CODEX_NPM_CACHE=/var/lib/ai-app/codex-npm-cache \
-    CODEX_HOME=/var/lib/ai-app/codex-home
+    CODEX_HOME=/var/lib/ai-app/codex-home \
+    OPENCODE_HOME=/var/lib/ai-app/opencode-home
 
 COPY backend/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt && \

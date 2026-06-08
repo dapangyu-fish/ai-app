@@ -21,7 +21,6 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
   Map<String, dynamic> _summary = const {};
   bool _loading = false;
   bool _creatingJoin = false;
-  String? _busyNodeId;
 
   @override
   void initState() {
@@ -273,214 +272,6 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
     );
   }
 
-  Future<void> _pauseOrResume(_PrivateAgentNode node) async {
-    setState(() => _busyNodeId = node.nodeId);
-    try {
-      final action = node.status == 'paused' ? 'resume' : 'pause';
-      final resp = await _authedRequest(
-        'POST',
-        '/api/ai/private_agent/nodes/${Uri.encodeComponent(node.nodeId)}/$action',
-        body: action == 'pause' ? {'reason': 'paused from app settings'} : {},
-      );
-      final data = _decodeObject(resp);
-      if (resp.statusCode >= 400) {
-        throw Exception(data['error'] ?? 'HTTP ${resp.statusCode}');
-      }
-      await _loadNodes();
-    } catch (e) {
-      if (!mounted) return;
-      _snack(
-        _text(
-          zh: '更新节点状态失败：$e',
-          en: 'Failed to update node status: $e',
-          de: 'Node-Status konnte nicht aktualisiert werden: $e',
-          es: 'No se pudo actualizar el estado del nodo: $e',
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _busyNodeId = null);
-    }
-  }
-
-  Future<void> _deleteNode(_PrivateAgentNode node) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          _text(
-            zh: '删除私有 Agent Node',
-            en: 'Delete private Agent Node',
-            de: 'Private Agent Node loeschen',
-            es: 'Eliminar Agent Node privado',
-          ),
-        ),
-        content: Text(
-          _text(
-            zh: '删除后该节点不能再接收你的私有任务。节点机器上的本地文件和密钥不会被远程删除。',
-            en: 'After deletion, this node cannot receive your private jobs. Local files and keys on the host are not removed remotely.',
-            de: 'Nach dem Loeschen kann dieser Node keine privaten Jobs mehr empfangen. Lokale Dateien und Schluessel auf dem Host werden nicht entfernt.',
-            es: 'Despues de eliminarlo, este nodo no podra recibir tus tareas privadas. Los archivos y claves locales del host no se eliminan remotamente.',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              _text(zh: '取消', en: 'Cancel', de: 'Abbrechen', es: 'Cancelar'),
-            ),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              _text(zh: '删除', en: 'Delete', de: 'Loeschen', es: 'Eliminar'),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    setState(() => _busyNodeId = node.nodeId);
-    try {
-      final resp = await _authedRequest(
-        'DELETE',
-        '/api/ai/private_agent/nodes/${Uri.encodeComponent(node.nodeId)}',
-      );
-      final data = _decodeObject(resp);
-      if (resp.statusCode >= 400) {
-        throw Exception(data['error'] ?? 'HTTP ${resp.statusCode}');
-      }
-      await _loadNodes();
-    } catch (e) {
-      if (!mounted) return;
-      _snack(
-        _text(
-          zh: '删除节点失败：$e',
-          en: 'Failed to delete node: $e',
-          de: 'Node konnte nicht geloescht werden: $e',
-          es: 'No se pudo eliminar el nodo: $e',
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _busyNodeId = null);
-    }
-  }
-
-  Future<void> _editLimits(_PrivateAgentNode node) async {
-    final capacityController = TextEditingController(
-      text: node.capacity.toString(),
-    );
-    final queueController = TextEditingController(
-      text: node.queueMax.toString(),
-    );
-    final result = await showModalBottomSheet<Map<String, int>>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              0,
-              16,
-              16 + MediaQuery.of(ctx).viewInsets.bottom,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  _text(
-                    zh: '调整节点容量',
-                    en: 'Adjust node capacity',
-                    de: 'Node-Kapazitaet anpassen',
-                    es: 'Ajustar capacidad del nodo',
-                  ),
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: capacityController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: _text(
-                      zh: '最大并发',
-                      en: 'Max concurrency',
-                      de: 'Max. Parallelitaet',
-                      es: 'Concurrencia maxima',
-                    ),
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: queueController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: _text(
-                      zh: '最大队列',
-                      en: 'Max queue',
-                      de: 'Max. Warteschlange',
-                      es: 'Cola maxima',
-                    ),
-                    border: const OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop({
-                      'capacity':
-                          int.tryParse(capacityController.text.trim()) ??
-                          node.capacity,
-                      'queue_max':
-                          int.tryParse(queueController.text.trim()) ??
-                          node.queueMax,
-                    });
-                  },
-                  child: Text(
-                    _text(zh: '保存', en: 'Save', de: 'Speichern', es: 'Guardar'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-    capacityController.dispose();
-    queueController.dispose();
-    if (result == null) return;
-    setState(() => _busyNodeId = node.nodeId);
-    try {
-      final resp = await _authedRequest(
-        'POST',
-        '/api/ai/private_agent/nodes/${Uri.encodeComponent(node.nodeId)}/limits',
-        body: result,
-      );
-      final data = _decodeObject(resp);
-      if (resp.statusCode >= 400) {
-        throw Exception(data['error'] ?? 'HTTP ${resp.statusCode}');
-      }
-      await _loadNodes();
-    } catch (e) {
-      if (!mounted) return;
-      _snack(
-        _text(
-          zh: '调整容量失败：$e',
-          en: 'Failed to adjust capacity: $e',
-          de: 'Kapazitaet konnte nicht angepasst werden: $e',
-          es: 'No se pudo ajustar la capacidad: $e',
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _busyNodeId = null);
-    }
-  }
-
   void _showJoinCommand(String command) {
     final cs = Theme.of(context).colorScheme;
     showModalBottomSheet<void>(
@@ -665,10 +456,10 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
             const SizedBox(height: 12),
             Text(
               _text(
-                zh: '登录后可以注册和管理只属于你的私有 Agent Node。',
-                en: 'Sign in to register and manage private Agent Nodes that only belong to you.',
-                de: 'Melde dich an, um private Agent Nodes zu registrieren und zu verwalten.',
-                es: 'Inicia sesion para registrar y gestionar Agent Nodes privados solo tuyos.',
+                zh: '登录后可以注册和查看只属于你的私有 Agent Node。',
+                en: 'Sign in to register and monitor private Agent Nodes that only belong to you.',
+                de: 'Melde dich an, um private Agent Nodes zu registrieren und zu beobachten.',
+                es: 'Inicia sesion para registrar y ver Agent Nodes privados solo tuyos.',
               ),
               textAlign: TextAlign.center,
               style: TextStyle(color: cs.onSurfaceVariant),
@@ -789,7 +580,6 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
   }
 
   Widget _buildNodeCard(_PrivateAgentNode node, ColorScheme cs) {
-    final busy = _busyNodeId == node.nodeId;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -837,12 +627,6 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
                     ],
                   ),
                 ),
-                if (busy)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -864,51 +648,23 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
               ],
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: busy ? null : () => _pauseOrResume(node),
-                  icon: Icon(
-                    node.status == 'paused' ? Icons.play_arrow : Icons.pause,
-                  ),
-                  label: Text(
-                    node.status == 'paused'
-                        ? _text(
-                            zh: '恢复',
-                            en: 'Resume',
-                            de: 'Fortsetzen',
-                            es: 'Reanudar',
-                          )
-                        : _text(
-                            zh: '暂停',
-                            en: 'Pause',
-                            de: 'Pausieren',
-                            es: 'Pausar',
-                          ),
-                  ),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: cs.outlineVariant),
+              ),
+              child: Text(
+                _text(
+                  zh: '状态由节点心跳同步。暂停、恢复、容量和移除请在该 Agent Node 机器上使用 myapp-ctl 修改。',
+                  en: 'Status is synced from node heartbeats. Pause, resume, limits, and removal must be changed with myapp-ctl on this Agent Node host.',
+                  de: 'Der Status wird aus Node-Heartbeats synchronisiert. Pause, Fortsetzen, Limits und Entfernen muessen auf diesem Agent-Node-Host mit myapp-ctl geaendert werden.',
+                  es: 'El estado se sincroniza desde los heartbeats del nodo. Pausa, reanudacion, limites y eliminacion deben cambiarse con myapp-ctl en este host Agent Node.',
                 ),
-                OutlinedButton.icon(
-                  onPressed: busy ? null : () => _editLimits(node),
-                  icon: const Icon(Icons.tune),
-                  label: Text(
-                    _text(zh: '容量', en: 'Limits', de: 'Limits', es: 'Limites'),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: busy ? null : () => _deleteNode(node),
-                  icon: const Icon(Icons.delete_outline),
-                  label: Text(
-                    _text(
-                      zh: '删除',
-                      en: 'Delete',
-                      de: 'Loeschen',
-                      es: 'Eliminar',
-                    ),
-                  ),
-                ),
-              ],
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+              ),
             ),
           ],
         ),
@@ -1080,9 +836,13 @@ class _PrivateAgentCapability {
 
   factory _PrivateAgentCapability.fromJson(Map<dynamic, dynamic> json) {
     return _PrivateAgentCapability(
-      providerId: _PrivateAgentNode._str(json['provider_id'] ?? json['provider']),
+      providerId: _PrivateAgentNode._str(
+        json['provider_id'] ?? json['provider'],
+      ),
       agentId: _PrivateAgentNode._str(json['agent_id'] ?? json['agent']),
-      adapterKind: _PrivateAgentNode._str(json['adapter_kind'] ?? json['adapter']),
+      adapterKind: _PrivateAgentNode._str(
+        json['adapter_kind'] ?? json['adapter'],
+      ),
       enabled: _bool(json['enabled']),
     );
   }
@@ -1090,7 +850,12 @@ class _PrivateAgentCapability {
   static bool _bool(dynamic value) {
     if (value == null) return true;
     if (value is bool) return value;
-    return !{'0', 'false', 'no', 'off', 'disabled'}
-        .contains('$value'.trim().toLowerCase());
+    return !{
+      '0',
+      'false',
+      'no',
+      'off',
+      'disabled',
+    }.contains('$value'.trim().toLowerCase());
   }
 }
