@@ -2221,6 +2221,19 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
+  Future<void> _handleSelectAiProviderAgent(
+    String providerId,
+    String agentId,
+  ) async {
+    if (_activeAgentLocked) return;
+    final providerChanged = await _chatService.setActiveProvider(providerId);
+    final agentChanged = await _chatService.setActiveAgent(agentId);
+    if (!mounted) return;
+    if (providerChanged || agentChanged) {
+      setState(() {});
+    }
+  }
+
   /// 双击 heavyImpact，主观上明显比单次更"重"。
   /// 用于进入对话模式等关键状态切换；普通触摸/拖拽别用，会很烦。
   Future<void> _strongHapticBurst() async {
@@ -2369,6 +2382,7 @@ class _DesignerBallState extends State<DesignerBall>
               agentLocked: _activeAgentLocked,
               onSelectProvider: _handleSelectAiProvider,
               onSelectAgent: _handleSelectAiAgent,
+              onSelectProviderAgent: _handleSelectAiProviderAgent,
               onUploadCurrentApp: _handleUploadCurrentApp,
               onRetryDownload: _handleRetryDownload,
               onDownloadAndRun: _handleDownloadAndRun,

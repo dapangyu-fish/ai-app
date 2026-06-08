@@ -491,8 +491,13 @@ class AiChatService {
     if (session.providerId.isEmpty) {
       session.providerId = _selectedProvider;
     }
+    final locked =
+        session.committed ||
+        session.firstMessage.isNotEmpty ||
+        session.lastUserMessage.isNotEmpty;
     if (session.agentId.isEmpty ||
-        !providerSupportsAgent(session.providerId, session.agentId)) {
+        (!locked &&
+            !providerSupportsAgent(session.providerId, session.agentId))) {
       session.agentId = selectedAgentForProvider(session.providerId);
     }
   }
@@ -530,11 +535,8 @@ class AiChatService {
     final active = _active!;
     _ensureSessionRouting(active);
     final locked = activeAgentLocked;
-    if (locked && !providerSupportsAgent(providerId, active.agentId)) {
-      return false;
-    }
     active.providerId = providerId;
-    if (!providerSupportsAgent(providerId, active.agentId)) {
+    if (!locked && !providerSupportsAgent(providerId, active.agentId)) {
       active.agentId = selectedAgentForProvider(providerId);
     }
     active.updatedAt = DateTime.now().millisecondsSinceEpoch;

@@ -73,6 +73,8 @@ class ChatOverlay extends StatefulWidget {
   final Future<void> Function(String sid)? onSwitchSession;
   final Future<void> Function(String providerId)? onSelectProvider;
   final Future<void> Function(String agentId)? onSelectAgent;
+  final Future<void> Function(String providerId, String agentId)?
+  onSelectProviderAgent;
   final Future<void> Function(String sid)? onDeleteSession;
   final Future<void> Function(String sid, String newTitle)? onRenameSession;
 
@@ -113,6 +115,7 @@ class ChatOverlay extends StatefulWidget {
     this.onSwitchSession,
     this.onSelectProvider,
     this.onSelectAgent,
+    this.onSelectProviderAgent,
     this.onDeleteSession,
     this.onRenameSession,
     this.onProbeAllSessionStatus,
@@ -123,7 +126,7 @@ class ChatOverlay extends StatefulWidget {
   State<ChatOverlay> createState() => _ChatOverlayState();
 }
 
-enum _TopMenuKind { sessions, providers, agents }
+enum _TopMenuKind { sessions, providers }
 
 class _ChatOverlayState extends State<ChatOverlay> {
   double _offsetY = 0.0; // 窗口垂直偏移量
@@ -132,6 +135,7 @@ class _ChatOverlayState extends State<ChatOverlay> {
   // 这样能跟着拖动同步移动、保证 z-order 在字幕上面、再次点 chip 能切回关闭。
   // 不再用 showMenu (它走 root navigator overlay，物理位置在 chat overlay 下方)。
   _TopMenuKind? _openMenu;
+  String? _expandedProviderAgentId;
   Future<Set<String>>? _statusProbeFuture;
   SessionMeta? _actionsSession;
   SessionMeta? _deleteConfirmSession;
@@ -185,18 +189,29 @@ class _ChatOverlayState extends State<ChatOverlay> {
 
   void _toggleMenu(_TopMenuKind kind) {
     if (_openMenu == kind) {
-      setState(() => _openMenu = null);
+      setState(() {
+        _openMenu = null;
+        _expandedProviderAgentId = null;
+      });
     } else {
       // 每次打开重发起探活
       if (kind == _TopMenuKind.sessions) {
         _statusProbeFuture = widget.onProbeAllSessionStatus?.call();
       }
-      setState(() => _openMenu = kind);
+      setState(() {
+        _openMenu = kind;
+        _expandedProviderAgentId = null;
+      });
     }
   }
 
   void _closeMenu() {
-    if (_openMenu != null) setState(() => _openMenu = null);
+    if (_openMenu != null) {
+      setState(() {
+        _openMenu = null;
+        _expandedProviderAgentId = null;
+      });
+    }
   }
 
   String _providerLabel() {
@@ -208,38 +223,10 @@ class _ChatOverlayState extends State<ChatOverlay> {
         : 'Provider';
   }
 
-  String _agentLabel() {
-    for (final agent in widget.agents) {
-      if (agent.id == widget.selectedAgentId) return agent.name;
-    }
-    return widget.selectedAgentId.isNotEmpty ? widget.selectedAgentId : 'Agent';
-  }
-
-  bool _providerSupportsSelectedAgent(AiProvider provider) {
-    if (!widget.agentLocked || widget.selectedAgentId.isEmpty) return true;
-    final supported = provider.supportedAgentIds.isEmpty
+  List<AiAgent> _agentsForProvider(AiProvider provider) {
+    final ids = provider.supportedAgentIds.isEmpty
         ? const ['claude']
         : provider.supportedAgentIds;
-    return supported.contains(widget.selectedAgentId);
-  }
-
-  List<AiProvider> _selectableProviders() {
-    return widget.providers
-        .where(_providerSupportsSelectedAgent)
-        .toList(growable: false);
-  }
-
-  List<AiAgent> _selectableAgents() {
-    AiProvider? provider;
-    for (final candidate in widget.providers) {
-      if (candidate.id == widget.selectedProviderId) {
-        provider = candidate;
-        break;
-      }
-    }
-    final ids = provider?.supportedAgentIds.isEmpty ?? true
-        ? const ['claude']
-        : provider!.supportedAgentIds;
     return ids
         .map((id) {
           for (final agent in widget.agents) {
@@ -248,6 +235,18 @@ class _ChatOverlayState extends State<ChatOverlay> {
           return AiAgent(id: id, name: id, description: '', configured: true);
         })
         .toList(growable: false);
+  }
+
+  String _agentLabelForProvider(AiProvider provider) {
+    final agentId = widget.agentLocked
+        ? widget.selectedAgentId
+        : (provider.id == widget.selectedProviderId
+              ? widget.selectedAgentId
+              : AiChatService.selectedAgentForProvider(provider.id));
+    for (final agent in widget.agents) {
+      if (agent.id == agentId) return agent.name;
+    }
+    return agentId.isNotEmpty ? agentId : 'Agent';
   }
 
   void _openSessionActions(String sid) {
@@ -401,33 +400,20 @@ class _ChatOverlayState extends State<ChatOverlay> {
                         _SessionChip(
                           title: _currentSessionTitle(),
                           icon: Icons.forum_outlined,
-                          maxTextWidth: 76,
+                          width: 108,
+                          maxTextWidth: 58,
                           onTap: () => _toggleMenu(_TopMenuKind.sessions),
                         ),
                         const SizedBox(width: 3),
                         _SessionChip(
                           title: _providerLabel(),
                           icon: Icons.cloud_outlined,
-                          maxTextWidth: 68,
+                          width: 108,
+                          maxTextWidth: 58,
                           onTap:
                               widget.onSelectProvider != null &&
                                   widget.providers.isNotEmpty
                               ? () => _toggleMenu(_TopMenuKind.providers)
-                              : null,
-                        ),
-                        const SizedBox(width: 3),
-                        _SessionChip(
-                          title: _agentLabel(),
-                          icon: widget.agentLocked
-                              ? Icons.lock_outline
-                              : Icons.smart_toy_outlined,
-                          maxTextWidth: 58,
-                          showArrow: !widget.agentLocked,
-                          onTap:
-                              !widget.agentLocked &&
-                                  widget.onSelectAgent != null &&
-                                  _selectableAgents().isNotEmpty
-                              ? () => _toggleMenu(_TopMenuKind.agents)
                               : null,
                         ),
                         // 可拖动区域
@@ -601,23 +587,38 @@ class _ChatOverlayState extends State<ChatOverlay> {
                     },
                   ),
                   _TopMenuKind.providers => _AiProviderDropdownPanel(
-                    providers: _selectableProviders(),
+                    providers: widget.providers,
                     selectedProviderId: widget.selectedProviderId,
+                    selectedAgentId: widget.selectedAgentId,
+                    agentLocked: widget.agentLocked,
+                    expandedProviderId: _expandedProviderAgentId,
+                    agentLabelForProvider: _agentLabelForProvider,
+                    agentsForProvider: _agentsForProvider,
                     maxHeight:
                         screen.height - containerTop - 40 - bottomPadding - 20,
                     onSelectProvider: (providerId) async {
                       _closeMenu();
                       await widget.onSelectProvider?.call(providerId);
                     },
-                  ),
-                  _TopMenuKind.agents => _AiAgentDropdownPanel(
-                    agents: _selectableAgents(),
-                    selectedAgentId: widget.selectedAgentId,
-                    maxHeight:
-                        screen.height - containerTop - 40 - bottomPadding - 20,
-                    onSelectAgent: (agentId) async {
+                    onToggleProviderAgents: (providerId) {
+                      setState(() {
+                        _expandedProviderAgentId =
+                            _expandedProviderAgentId == providerId
+                            ? null
+                            : providerId;
+                      });
+                    },
+                    onSelectProviderAgent: (providerId, agentId) async {
                       _closeMenu();
-                      await widget.onSelectAgent?.call(agentId);
+                      if (widget.onSelectProviderAgent != null) {
+                        await widget.onSelectProviderAgent!(
+                          providerId,
+                          agentId,
+                        );
+                      } else {
+                        await widget.onSelectProvider?.call(providerId);
+                        await widget.onSelectAgent?.call(agentId);
+                      }
                     },
                   ),
                 },
@@ -909,15 +910,15 @@ class _NoGlowBehavior extends ScrollBehavior {
 class _SessionChip extends StatelessWidget {
   final String title;
   final IconData icon;
+  final double? width;
   final double maxTextWidth;
-  final bool showArrow;
   final VoidCallback? onTap;
 
   const _SessionChip({
     required this.title,
     required this.icon,
+    this.width,
     required this.maxTextWidth,
-    this.showArrow = true,
     required this.onTap,
   });
 
@@ -930,6 +931,7 @@ class _SessionChip extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Container(
+          width: width,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.12),
@@ -963,14 +965,12 @@ class _SessionChip extends StatelessWidget {
                   ),
                 ),
               ),
-              if (showArrow) ...[
-                const SizedBox(width: 2),
-                Icon(
-                  Icons.expand_more,
-                  color: Colors.white.withValues(alpha: enabled ? 0.5 : 0.25),
-                  size: 14,
-                ),
-              ],
+              const SizedBox(width: 2),
+              Icon(
+                Icons.expand_more,
+                color: Colors.white.withValues(alpha: enabled ? 0.5 : 0.25),
+                size: 14,
+              ),
             ],
           ),
         ),
@@ -1473,20 +1473,34 @@ class _SessionDropdownPanel extends StatelessWidget {
 class _AiProviderDropdownPanel extends StatelessWidget {
   final List<AiProvider> providers;
   final String selectedProviderId;
+  final String selectedAgentId;
+  final bool agentLocked;
+  final String? expandedProviderId;
+  final String Function(AiProvider provider) agentLabelForProvider;
+  final List<AiAgent> Function(AiProvider provider) agentsForProvider;
   final double maxHeight;
   final void Function(String providerId) onSelectProvider;
+  final void Function(String providerId) onToggleProviderAgents;
+  final void Function(String providerId, String agentId) onSelectProviderAgent;
 
   const _AiProviderDropdownPanel({
     required this.providers,
     required this.selectedProviderId,
+    required this.selectedAgentId,
+    required this.agentLocked,
+    required this.expandedProviderId,
+    required this.agentLabelForProvider,
+    required this.agentsForProvider,
     required this.maxHeight,
     required this.onSelectProvider,
+    required this.onToggleProviderAgents,
+    required this.onSelectProviderAgent,
   });
 
   @override
   Widget build(BuildContext context) {
     return _AiRouteDropdownFrame(
-      width: 240,
+      width: 276,
       maxHeight: maxHeight,
       emptyText: 'No providers',
       isEmpty: providers.isEmpty,
@@ -1497,14 +1511,31 @@ class _AiProviderDropdownPanel extends StatelessWidget {
         itemBuilder: (ctx, i) {
           final provider = providers[i];
           final selected = provider.id == selectedProviderId;
-          return _AiRouteMenuRow(
-            icon: Icons.cloud_outlined,
-            title: provider.name,
-            subtitle: provider.defaultModel.isNotEmpty
-                ? provider.defaultModel
-                : provider.id,
-            selected: selected,
-            onTap: () => onSelectProvider(provider.id),
+          final expanded = expandedProviderId == provider.id;
+          final providerAgents = agentsForProvider(provider);
+          final providerAgentId = selected
+              ? selectedAgentId
+              : AiChatService.selectedAgentForProvider(provider.id);
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _AiProviderMenuRow(
+                provider: provider,
+                selected: selected,
+                agentLabel: agentLabelForProvider(provider),
+                agentLocked: agentLocked,
+                expanded: expanded,
+                onSelectProvider: () => onSelectProvider(provider.id),
+                onToggleAgents: () => onToggleProviderAgents(provider.id),
+              ),
+              if (expanded)
+                _AiAgentInlineList(
+                  agents: providerAgents,
+                  selectedAgentId: providerAgentId,
+                  onSelectAgent: (agentId) =>
+                      onSelectProviderAgent(provider.id, agentId),
+                ),
+            ],
           );
         },
       ),
@@ -1512,43 +1543,200 @@ class _AiProviderDropdownPanel extends StatelessWidget {
   }
 }
 
-class _AiAgentDropdownPanel extends StatelessWidget {
+class _AiProviderMenuRow extends StatelessWidget {
+  final AiProvider provider;
+  final bool selected;
+  final String agentLabel;
+  final bool agentLocked;
+  final bool expanded;
+  final VoidCallback onSelectProvider;
+  final VoidCallback onToggleAgents;
+
+  const _AiProviderMenuRow({
+    required this.provider,
+    required this.selected,
+    required this.agentLabel,
+    required this.agentLocked,
+    required this.expanded,
+    required this.onSelectProvider,
+    required this.onToggleAgents,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final subtitle = provider.defaultModel.isNotEmpty
+        ? provider.defaultModel
+        : provider.id;
+    return Container(
+      color: selected ? Colors.white.withValues(alpha: 0.06) : null,
+      padding: const EdgeInsets.fromLTRB(12, 9, 8, 9),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              borderRadius: BorderRadius.circular(6),
+              onTap: onSelectProvider,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.cloud_outlined,
+                      color: selected ? Colors.purpleAccent : Colors.white54,
+                      size: 17,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            provider.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _AgentSelectorChip(
+            label: agentLabel,
+            locked: agentLocked,
+            expanded: expanded,
+            onTap: agentLocked ? null : onToggleAgents,
+          ),
+          if (selected) ...[
+            const SizedBox(width: 6),
+            const Icon(Icons.check, color: Colors.purpleAccent, size: 15),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _AgentSelectorChip extends StatelessWidget {
+  final String label;
+  final bool locked;
+  final bool expanded;
+  final VoidCallback? onTap;
+
+  const _AgentSelectorChip({
+    required this.label,
+    required this.locked,
+    required this.expanded,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(7),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 88),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: enabled ? 0.12 : 0.07),
+            borderRadius: BorderRadius.circular(7),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: enabled ? 0.18 : 0.1),
+              width: 0.5,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                locked ? Icons.lock_outline : Icons.smart_toy_outlined,
+                color: Colors.white.withValues(alpha: enabled ? 0.7 : 0.45),
+                size: 11,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: enabled ? 0.82 : 0.5),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (!locked) ...[
+                const SizedBox(width: 2),
+                Icon(
+                  expanded ? Icons.expand_less : Icons.expand_more,
+                  color: Colors.white.withValues(alpha: 0.55),
+                  size: 13,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AiAgentInlineList extends StatelessWidget {
   final List<AiAgent> agents;
   final String selectedAgentId;
-  final double maxHeight;
   final void Function(String agentId) onSelectAgent;
 
-  const _AiAgentDropdownPanel({
+  const _AiAgentInlineList({
     required this.agents,
     required this.selectedAgentId,
-    required this.maxHeight,
     required this.onSelectAgent,
   });
 
   @override
   Widget build(BuildContext context) {
-    return _AiRouteDropdownFrame(
-      width: 220,
-      maxHeight: maxHeight,
-      emptyText: 'No agents',
-      isEmpty: agents.isEmpty,
-      child: ListView.builder(
-        shrinkWrap: true,
-        padding: EdgeInsets.zero,
-        itemCount: agents.length,
-        itemBuilder: (ctx, i) {
-          final agent = agents[i];
-          final selected = agent.id == selectedAgentId;
-          return _AiRouteMenuRow(
-            icon: Icons.smart_toy_outlined,
-            title: agent.name,
-            subtitle: agent.description.isNotEmpty
-                ? agent.description
-                : agent.id,
-            selected: selected,
-            onTap: () => onSelectAgent(agent.id),
-          );
-        },
+    return Container(
+      color: Colors.black.withValues(alpha: 0.18),
+      padding: const EdgeInsets.only(left: 32, right: 8, bottom: 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: agents
+            .map((agent) {
+              final selected = agent.id == selectedAgentId;
+              return _AiRouteMenuRow(
+                icon: Icons.smart_toy_outlined,
+                title: agent.name,
+                subtitle: agent.description.isNotEmpty
+                    ? agent.description
+                    : agent.id,
+                selected: selected,
+                onTap: () => onSelectAgent(agent.id),
+                dense: true,
+              );
+            })
+            .toList(growable: false),
       ),
     );
   }
@@ -1611,6 +1799,7 @@ class _AiRouteMenuRow extends StatelessWidget {
   final String subtitle;
   final bool selected;
   final VoidCallback onTap;
+  final bool dense;
 
   const _AiRouteMenuRow({
     required this.icon,
@@ -1618,6 +1807,7 @@ class _AiRouteMenuRow extends StatelessWidget {
     required this.subtitle,
     required this.selected,
     required this.onTap,
+    this.dense = false,
   });
 
   @override
@@ -1626,7 +1816,10 @@ class _AiRouteMenuRow extends StatelessWidget {
       onTap: onTap,
       child: Container(
         color: selected ? Colors.white.withValues(alpha: 0.06) : null,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: EdgeInsets.symmetric(
+          horizontal: dense ? 8 : 12,
+          vertical: dense ? 7 : 10,
+        ),
         child: Row(
           children: [
             Icon(
