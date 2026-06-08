@@ -62,15 +62,12 @@ _BUILTIN_ANTHROPIC_PROVIDERS = {
     },
     "minimax": {
         "name": "MiniMax M3",
-        "description": "MiniMax native Responses provider for Codex",
+        "description": "MiniMax Anthropic-compatible and native Responses provider",
         "base_url": "https://api.minimaxi.com/anthropic",
         "model": "MiniMax-M3",
         "auth_env_fallbacks": (),
         "visible": "1",
-        # MiniMax's Anthropic endpoint is not currently stable with Claude Code
-        # streaming JSON parsing. Keep the token/env shape for Codex, but only
-        # expose the verified native Responses adapter by default.
-        "supported_agents": ("codex",),
+        "supported_agents": ("claude", "codex"),
         "codex": {
             "provider_name": "MiniMax",
             "base_url": "https://api.minimaxi.com/v1",

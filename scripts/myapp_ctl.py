@@ -2231,8 +2231,6 @@ def _provider_allows_agent(env: dict[str, str], provider_id: str, agent_id: str)
             if str(item or "").strip()
         }
         return str(agent_id or "").strip().lower().replace("_", "-") in allowed
-    if provider_id == "minimax":
-        return str(agent_id or "").strip().lower().replace("_", "-") == "codex"
     return True
 
 
@@ -2370,14 +2368,14 @@ def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, s
     data = _base_provider_env(
         prefix=prefix,
         name="MiniMax M3",
-        description="MiniMax native Responses provider for Codex",
+        description="MiniMax Anthropic-compatible and native Responses provider",
         base_url=base_url,
         token=token,
         model=model,
     )
     data.update(
         {
-            f"{prefix}_SUPPORTED_AGENTS": existing.get(f"{prefix}_SUPPORTED_AGENTS", "codex"),
+            f"{prefix}_SUPPORTED_AGENTS": existing.get(f"{prefix}_SUPPORTED_AGENTS", "claude,codex"),
             f"{prefix}_AI_WORKER_MAX_CONCURRENCY": existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "5"),
             f"{prefix}_AI_WORKER_QUEUE_MAX": existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "20"),
             f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", "MiniMax"),

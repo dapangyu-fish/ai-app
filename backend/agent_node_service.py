@@ -128,8 +128,6 @@ def _provider_allows_agent(provider_id: str, agent_id: str) -> bool:
             if item.strip()
         }
         return str(agent_id or "").strip().lower().replace("_", "-") in allowed
-    if str(provider_id or "").strip().lower().replace("_", "-") == "minimax":
-        return str(agent_id or "").strip().lower().replace("_", "-") == "codex"
     return True
 
 
