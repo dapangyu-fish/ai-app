@@ -1152,16 +1152,31 @@ def _kill_proc(session_id: str) -> bool:
     return True
 
 
-def is_session_proc_alive(session_id: str) -> bool:
+def is_session_proc_alive(
+    session_id: str,
+    provider_id: Optional[str] = None,
+    meta: Optional[dict] = None,
+) -> bool:
     """跨 gunicorn worker 判断运行租约是否还活着。"""
+    if meta is None:
+        try:
+            meta = SessionStore().get_meta(session_id)
+        except redis.exceptions.RedisError:
+            meta = {}
+    provider = provider_id or _job_provider_from_json((meta or {}).get("queued_job"), (meta or {}).get("provider"))
+    lease_keys = [_running_lease_key()]
+    if provider:
+        lease_keys.append(_provider_running_lease_key(provider))
+    now_ms = int(time.time() * 1000)
     try:
-        score = get_redis().zscore(_running_lease_key(), session_id)
+        r = get_redis()
+        for key in dict.fromkeys(lease_keys):
+            score = r.zscore(key, session_id)
+            if score is not None and float(score) > now_ms:
+                return True
     except redis.exceptions.RedisError as e:
         logger.warning(f"[WORKER_QUEUE] 读取 running lease 失败 sid={session_id}: {e}")
-        return False
-    if score is None:
-        return False
-    return float(score) > int(time.time() * 1000)
+    return False
 
 
 def _queue_status_message(position: Optional[int]) -> str:
@@ -2381,6 +2396,67 @@ def _agent_pull_meta_int(meta: dict, key: str) -> int:
         return int(meta.get(key) or 0)
     except (TypeError, ValueError):
         return 0
+
+
+def is_remote_agent_session_alive(session_id: str, meta: Optional[dict] = None) -> bool:
+    """判断 agent-pull 远端 run 是否仍处于可恢复/可等待状态。
+
+    SSE handler 不能只靠 backend worker lease 判定 pull-mode 任务是否死亡：
+    实际 agent 进程在 agent-node 容器里，且 run 刚 stop 后还需要一点时间
+    让 ai-worker 完成校验、上传、写 final status。
+    """
+    if meta is None:
+        try:
+            meta = SessionStore().get_meta(session_id)
+        except redis.exceptions.RedisError:
+            meta = {}
+    run_id = str((meta or {}).get("agent_pull_run_id") or "").strip()
+    if not run_id:
+        return False
+    job_meta = _agent_pull_job_meta(run_id)
+    if not job_meta:
+        return False
+    if str(job_meta.get("abort_requested") or "") == "1":
+        return False
+
+    now_ms = int(time.time() * 1000)
+    status = str(job_meta.get("status") or "").strip().lower()
+    try:
+        idle_timeout_seconds = max(
+            30.0,
+            float(os.environ.get("AGENT_PULL_EVENT_IDLE_TIMEOUT_SECONDS", "180")),
+        )
+    except (TypeError, ValueError):
+        idle_timeout_seconds = 180.0
+    try:
+        post_stop_grace_seconds = max(
+            10.0,
+            float(os.environ.get("AGENT_PULL_REMOTE_STATUS_GRACE_SECONDS", "120")),
+        )
+    except (TypeError, ValueError):
+        post_stop_grace_seconds = 120.0
+    post_stop_grace_ms = int(post_stop_grace_seconds * 1000)
+
+    if status in {"assigned", "running", "started"}:
+        last_seen_ms = max(
+            _agent_pull_meta_int(job_meta, "last_seen_at"),
+            _agent_pull_meta_int(job_meta, "assigned_at"),
+        )
+        return bool(last_seen_ms and now_ms - last_seen_ms <= int((idle_timeout_seconds + 30.0) * 1000))
+
+    if status in {"queued", "pending"}:
+        created_ms = _agent_pull_meta_int(job_meta, "created_at")
+        return bool(created_ms and now_ms - created_ms <= post_stop_grace_ms)
+
+    if status in {"done", "failed", "aborted"}:
+        finished_ms = max(
+            _agent_pull_meta_int(job_meta, "finished_at"),
+            _agent_pull_meta_int(job_meta, "last_seen_at"),
+        )
+        return bool(finished_ms and now_ms - finished_ms <= post_stop_grace_ms)
+
+    created_ms = _agent_pull_meta_int(job_meta, "created_at")
+    return bool(created_ms and now_ms - created_ms <= post_stop_grace_ms)
 
 
 def _agent_pull_release_node_running(run_id: str, node_id: str = "") -> None:

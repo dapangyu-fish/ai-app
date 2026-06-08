@@ -50,16 +50,28 @@ _ANTHROPIC_PROVIDER_SUFFIXES = (
     "_CODEX_MODEL",
     "_CODEX_ENV_KEY",
     "_CODEX_AUTH_TOKEN",
+    "_CODEX_RELAY",
+    "_CODEX_UPSTREAM_WIRE_API",
 )
 _BUILTIN_ANTHROPIC_PROVIDERS = {
     "deepseek": {
         "name": "DeepSeek V4 Pro",
-        "description": "DeepSeek Anthropic-compatible Claude Code provider",
+        "description": "DeepSeek Anthropic-compatible Claude Code provider and Chat Completions Codex provider",
         "base_url": "https://api.deepseek.com/anthropic",
         "model": "deepseek-v4-pro[1m]",
         "auth_env_fallbacks": (),
         "visible": "1",
-        "supported_agents": ("claude",),
+        "supported_agents": ("claude", "codex"),
+        "codex": {
+            "provider_name": "DeepSeek",
+            "base_url": "https://api.deepseek.com/v1",
+            "model": "deepseek-v4-pro",
+            "wire_api": "responses",
+            "upstream_wire_api": "chat-completions",
+            "relay": "codex-relay",
+            "env_key": "DEEPSEEK_ANTHROPIC_AUTH_TOKEN",
+            "context_window": 262144,
+        },
     },
     "minimax": {
         "name": "MiniMax M3",
@@ -383,12 +395,20 @@ def _provider_codex_config(provider_id: str, prefix: str, builtin: dict) -> dict
         str(default_codex.get("context_window", "")),
     )
     provider_name = _env_for_prefix(prefix, "CODEX_PROVIDER_NAME", default_codex.get("provider_name", provider_id))
+    relay = _env_for_prefix(prefix, "CODEX_RELAY", default_codex.get("relay", ""))
+    upstream_wire_api = _env_for_prefix(
+        prefix,
+        "CODEX_UPSTREAM_WIRE_API",
+        default_codex.get("upstream_wire_api", ""),
+    )
     auth_token = os.environ.get(env_key, "") if env_key else ""
     return {
         "provider_name": provider_name,
         "base_url": base_url,
         "model": model,
         "wire_api": wire_api,
+        "upstream_wire_api": upstream_wire_api,
+        "relay": relay,
         "env_key": env_key,
         "context_window": context_window,
         "configured": bool(base_url and model and env_key and auth_token),

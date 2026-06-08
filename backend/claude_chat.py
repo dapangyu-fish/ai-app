@@ -1037,7 +1037,8 @@ def chat_start():
                         break
                 if not terminal_observed:
                     # 旧 worker 还没把 status 写成 terminal，但 proc 已死的话风险有限
-                    if not ai_session.is_session_proc_alive(session_id):
+                    remote_alive = ai_session.is_remote_agent_session_alive(session_id, m)
+                    if not ai_session.is_session_proc_alive(session_id, meta=m) and not remote_alive:
                         logger.warning(
                             f"[CHAT_START] sid={session_id} 20s 没等到 STATUS_ABORTED 但 running lease 已释放，"
                             f"继续 create_meta；旧 worker 后续 set_status 可能造成短暂状态错乱"
@@ -1204,7 +1205,10 @@ def _build_sse_stream(session_id: str, last_id: str):
         # 客户端 idle timeout 不会触发（心跳还在），所以必须 backend 主动告诉它
         if status == ai_session.STATUS_RUNNING and _time.time() >= next_zombie_check:
             next_zombie_check = _time.time() + 10
-            if not ai_session.is_session_proc_alive(session_id):
+            if not ai_session.is_session_proc_alive(session_id, meta=meta):
+                if ai_session.is_remote_agent_session_alive(session_id, meta):
+                    logger.debug("[CHAT_STREAM] sid=%s local lease missing but remote agent run is alive", session_id)
+                    continue
                 logger.warning(
                     f"[CHAT_STREAM] sid={session_id} 僵尸 session（running 但 proc 不在）"
                     f"——大概率后端重启过，标 FAILED + needs_retry"
@@ -1326,6 +1330,11 @@ def chat_status_v2(session_id):
     # 不返回 final_text 这种大字段；想要完整结果走 /result
     meta = ai_session.reconcile_stale_queued(session_id)
     status = meta.get("status")
+    local_alive = False
+    remote_alive = False
+    if status not in ai_session.TERMINAL_STATUSES:
+        local_alive = ai_session.is_session_proc_alive(session_id, meta=meta)
+        remote_alive = ai_session.is_remote_agent_session_alive(session_id, meta)
     return jsonify({
         "session_id": session_id,
         "status": status,
@@ -1337,7 +1346,8 @@ def chat_status_v2(session_id):
         "error": meta.get("error", ""),
         "queue_position": ai_session.get_queue_position(session_id) if status == ai_session.STATUS_QUEUED else None,
         "queue_message": ai_session.get_queue_message(session_id) if status == ai_session.STATUS_QUEUED else "",
-        "process_alive": ai_session.is_session_proc_alive(session_id),
+        "process_alive": local_alive or remote_alive,
+        "remote_agent_alive": remote_alive,
     })
 
 

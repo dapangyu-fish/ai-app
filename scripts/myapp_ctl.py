@@ -2221,6 +2221,15 @@ def _provider_has_codex_responses_adapter(env: dict[str, str], provider_id: str)
     )
 
 
+def _provider_codex_adapter_kind(env: dict[str, str], provider_id: str) -> str:
+    prefix = _provider_prefix(provider_id)
+    relay = (env.get(f"{prefix}_CODEX_RELAY") or "").strip().lower().replace("_", "-")
+    upstream_wire_api = (env.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API") or "").strip().lower().replace("_", "-")
+    if relay or upstream_wire_api in {"chat-completions", "openai-chat-completions"}:
+        return "openai-chat-completions-relay"
+    return "openai-responses"
+
+
 def _provider_allows_agent(env: dict[str, str], provider_id: str, agent_id: str) -> bool:
     prefix = _provider_prefix(provider_id)
     raw = env.get(f"{prefix}_SUPPORTED_AGENTS", "")
@@ -2277,7 +2286,7 @@ def _ai_provider_capabilities_from_env(
                 {
                     "provider_id": provider_id,
                     "agent_id": "codex",
-                    "adapter_kind": "openai-responses",
+                    "adapter_kind": _provider_codex_adapter_kind(env, provider_id),
                     "status": "configured",
                     "enabled": True,
                 }
@@ -2348,7 +2357,19 @@ def _prompt_deepseek_provider(existing: dict[str, str]) -> tuple[str, dict[str, 
     )
     data[f"{prefix}_SUPPORTED_AGENTS"] = existing.get(
         f"{prefix}_SUPPORTED_AGENTS",
-        "claude",
+        "claude,codex",
+    )
+    data.update(
+        {
+            f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", "DeepSeek"),
+            f"{prefix}_CODEX_BASE_URL": existing.get(f"{prefix}_CODEX_BASE_URL", "https://api.deepseek.com/v1"),
+            f"{prefix}_CODEX_MODEL": existing.get(f"{prefix}_CODEX_MODEL", "deepseek-v4-pro"),
+            f"{prefix}_CODEX_ENV_KEY": existing.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
+            f"{prefix}_CODEX_WIRE_API": existing.get(f"{prefix}_CODEX_WIRE_API", "responses"),
+            f"{prefix}_CODEX_UPSTREAM_WIRE_API": existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", "chat-completions"),
+            f"{prefix}_CODEX_RELAY": existing.get(f"{prefix}_CODEX_RELAY", "codex-relay"),
+            f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "262144"),
+        }
     )
     data[f"{prefix}_AI_WORKER_MAX_CONCURRENCY"] = existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "20")
     data[f"{prefix}_AI_WORKER_QUEUE_MAX"] = existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "100")
@@ -2387,6 +2408,8 @@ def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, s
             f"{prefix}_CODEX_MODEL": existing.get(f"{prefix}_CODEX_MODEL", model),
             f"{prefix}_CODEX_ENV_KEY": existing.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
             f"{prefix}_CODEX_WIRE_API": existing.get(f"{prefix}_CODEX_WIRE_API", "responses"),
+            f"{prefix}_CODEX_UPSTREAM_WIRE_API": existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", ""),
+            f"{prefix}_CODEX_RELAY": existing.get(f"{prefix}_CODEX_RELAY", ""),
             f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "512000"),
         }
     )
@@ -2468,7 +2491,7 @@ def _prompt_custom_provider(existing: dict[str, str]) -> tuple[str, dict[str, st
         default=existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "50"),
     )
     if _prompt_bool(
-        f"Add Codex via native OpenAI Responses API for {provider_id}?",
+        f"Add Codex via OpenAI Responses API for {provider_id}?",
         default=bool(existing.get(f"{prefix}_CODEX_MODEL")),
     ):
         data[f"{prefix}_CODEX_PROVIDER_NAME"] = _prompt_line(
@@ -2504,6 +2527,19 @@ def _prompt_custom_provider(existing: dict[str, str]) -> tuple[str, dict[str, st
             f"{provider_id} CODEX context window",
             default=existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "200000"),
         )
+        use_relay = _prompt_bool(
+            f"Use codex-relay to convert Codex Responses to upstream chat/completions for {provider_id}?",
+            default=bool(existing.get(f"{prefix}_CODEX_RELAY")),
+        )
+        if use_relay:
+            data[f"{prefix}_CODEX_RELAY"] = _prompt_line(
+                f"{provider_id} CODEX relay",
+                default=existing.get(f"{prefix}_CODEX_RELAY", "codex-relay"),
+            )
+            data[f"{prefix}_CODEX_UPSTREAM_WIRE_API"] = _prompt_line(
+                f"{provider_id} CODEX upstream wire api",
+                default=existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", "chat-completions"),
+            )
     if not _ai_provider_capabilities_from_env({**existing, **data}, provider_filter=[provider_id]):
         print(f"{provider_id} has no configured adapter; add at least Claude or Codex", file=sys.stderr)
         return _prompt_custom_provider(existing)

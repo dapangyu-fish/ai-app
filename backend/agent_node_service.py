@@ -187,11 +187,13 @@ def _configured_capabilities() -> list[dict]:
             and _local_provider_value(prefix, "CODEX_WIRE_API", "responses") == "responses"
         )
         if codex_ok and _provider_allows_agent(provider_id, "codex") and (not AGENT_IDS or "codex" in AGENT_IDS):
+            relay = _local_provider_value(prefix, "CODEX_RELAY")
+            upstream_wire_api = _local_provider_value(prefix, "CODEX_UPSTREAM_WIRE_API")
             out.append(
                 {
                     "provider_id": provider_id,
                     "agent_id": "codex",
-                    "adapter_kind": "openai-responses",
+                    "adapter_kind": "openai-chat-completions-relay" if relay or upstream_wire_api else "openai-responses",
                     "status": "configured",
                     "enabled": True,
                 }
@@ -508,6 +510,8 @@ def _apply_local_provider(payload: dict) -> None:
                 "base_url": codex_base_url,
                 "model": codex_model,
                 "wire_api": _local_provider_value(prefix, "CODEX_WIRE_API", "responses"),
+                "upstream_wire_api": _local_provider_value(prefix, "CODEX_UPSTREAM_WIRE_API"),
+                "relay": _local_provider_value(prefix, "CODEX_RELAY"),
                 "env_key": "MYAPP_CODEX_AUTH_TOKEN",
                 "context_window": _local_provider_value(prefix, "CODEX_CONTEXT_WINDOW", str(codex.get("context_window") or "")),
             }

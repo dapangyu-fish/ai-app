@@ -53,12 +53,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && codex --version \
     && python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && /opt/venv/bin/pip install --no-cache-dir codex-relay==0.3.3 \
     && npm_config_cache=/tmp/codex-npm-cache npx -y @openai/codex@0.136.0 --version \
     && rm -rf /var/lib/apt/lists/* /root/.npm /tmp/codex-npm-cache
 
 ENV PATH=/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     CLAUDE_BIN=/usr/local/bin/claude \
     CODEX_BIN=/usr/local/bin/codex \
+    CODEX_RELAY_BIN=/opt/venv/bin/codex-relay \
     CODEX_NPX_PACKAGE=@openai/codex@0.136.0 \
     CODEX_NODE_BIN_DIR=/usr/bin \
     CODEX_NPM_CACHE=/home/agent/.npm \
