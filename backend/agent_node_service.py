@@ -1154,6 +1154,11 @@ def _upstream_headers(proxy_token: str, upstream_token: str) -> dict:
         headers[key] = text
     if not auth_seen:
         headers["Authorization"] = f"Bearer {upstream_token}"
+    # Keep provider proxy streaming byte-stable. Some providers may return
+    # compressed SSE when the SDK advertises br/gzip; Python requests may not
+    # decode every encoding consistently while we intentionally strip
+    # content-encoding from downstream headers.
+    headers["Accept-Encoding"] = "identity"
     return headers
 
 
@@ -1396,6 +1401,15 @@ def provider_proxy(token: str, subpath: str):
             },
         )
 
+    content_type = upstream.headers.get("content-type", "")
+
+    def generate_sse():
+        try:
+            for line in upstream.iter_lines(chunk_size=1, decode_unicode=False):
+                yield line + b"\n"
+        finally:
+            upstream.close()
+
     def generate():
         try:
             for chunk in upstream.iter_content(chunk_size=65536):
@@ -1405,7 +1419,7 @@ def provider_proxy(token: str, subpath: str):
             upstream.close()
 
     return Response(
-        stream_with_context(generate()),
+        stream_with_context(generate_sse() if "text/event-stream" in content_type.lower() else generate()),
         status=upstream.status_code,
         headers=_response_headers(upstream),
     )
