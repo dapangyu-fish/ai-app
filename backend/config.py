@@ -59,6 +59,7 @@ _BUILTIN_ANTHROPIC_PROVIDERS = {
         "model": "deepseek-v4-pro[1m]",
         "auth_env_fallbacks": (),
         "visible": "1",
+        "supported_agents": ("claude",),
     },
     "minimax": {
         "name": "MiniMax M3",

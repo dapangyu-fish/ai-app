@@ -237,12 +237,18 @@ class _ChatOverlayState extends State<ChatOverlay> {
         .toList(growable: false);
   }
 
+  bool _providerSupportsAgent(AiProvider provider, String agentId) {
+    if (agentId.isEmpty) return true;
+    final ids = provider.supportedAgentIds.isEmpty
+        ? const ['claude']
+        : provider.supportedAgentIds;
+    return ids.contains(agentId);
+  }
+
   String _agentLabelForProvider(AiProvider provider) {
-    final agentId = widget.agentLocked
+    final agentId = provider.id == widget.selectedProviderId
         ? widget.selectedAgentId
-        : (provider.id == widget.selectedProviderId
-              ? widget.selectedAgentId
-              : AiChatService.selectedAgentForProvider(provider.id));
+        : AiChatService.selectedAgentForProvider(provider.id);
     for (final agent in widget.agents) {
       if (agent.id == agentId) return agent.name;
     }
@@ -594,6 +600,11 @@ class _ChatOverlayState extends State<ChatOverlay> {
                     expandedProviderId: _expandedProviderAgentId,
                     agentLabelForProvider: _agentLabelForProvider,
                     agentsForProvider: _agentsForProvider,
+                    providerSupportsSelectedAgent: (provider) =>
+                        _providerSupportsAgent(
+                          provider,
+                          widget.selectedAgentId,
+                        ),
                     maxHeight:
                         screen.height - containerTop - 40 - bottomPadding - 20,
                     onSelectProvider: (providerId) async {
@@ -1478,6 +1489,7 @@ class _AiProviderDropdownPanel extends StatelessWidget {
   final String? expandedProviderId;
   final String Function(AiProvider provider) agentLabelForProvider;
   final List<AiAgent> Function(AiProvider provider) agentsForProvider;
+  final bool Function(AiProvider provider) providerSupportsSelectedAgent;
   final double maxHeight;
   final void Function(String providerId) onSelectProvider;
   final void Function(String providerId) onToggleProviderAgents;
@@ -1491,6 +1503,7 @@ class _AiProviderDropdownPanel extends StatelessWidget {
     required this.expandedProviderId,
     required this.agentLabelForProvider,
     required this.agentsForProvider,
+    required this.providerSupportsSelectedAgent,
     required this.maxHeight,
     required this.onSelectProvider,
     required this.onToggleProviderAgents,
@@ -1516,17 +1529,26 @@ class _AiProviderDropdownPanel extends StatelessWidget {
           final providerAgentId = selected
               ? selectedAgentId
               : AiChatService.selectedAgentForProvider(provider.id);
+          final enabled =
+              selected ||
+              !agentLocked ||
+              providerSupportsSelectedAgent(provider);
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               _AiProviderMenuRow(
                 provider: provider,
                 selected: selected,
+                enabled: enabled,
                 agentLabel: agentLabelForProvider(provider),
                 agentLocked: agentLocked,
                 expanded: expanded,
-                onSelectProvider: () => onSelectProvider(provider.id),
-                onToggleAgents: () => onToggleProviderAgents(provider.id),
+                onSelectProvider: () {
+                  if (enabled) onSelectProvider(provider.id);
+                },
+                onToggleAgents: () {
+                  if (enabled) onToggleProviderAgents(provider.id);
+                },
               ),
               if (expanded)
                 _AiAgentInlineList(
@@ -1546,6 +1568,7 @@ class _AiProviderDropdownPanel extends StatelessWidget {
 class _AiProviderMenuRow extends StatelessWidget {
   final AiProvider provider;
   final bool selected;
+  final bool enabled;
   final String agentLabel;
   final bool agentLocked;
   final bool expanded;
@@ -1555,6 +1578,7 @@ class _AiProviderMenuRow extends StatelessWidget {
   const _AiProviderMenuRow({
     required this.provider,
     required this.selected,
+    required this.enabled,
     required this.agentLabel,
     required this.agentLocked,
     required this.expanded,
@@ -1567,6 +1591,11 @@ class _AiProviderMenuRow extends StatelessWidget {
     final subtitle = provider.defaultModel.isNotEmpty
         ? provider.defaultModel
         : provider.id;
+    final primaryColor = enabled ? Colors.white : Colors.white38;
+    final secondaryColor = enabled ? Colors.white54 : Colors.white30;
+    final iconColor = selected
+        ? Colors.purpleAccent
+        : (enabled ? Colors.white54 : Colors.white30);
     return Container(
       color: selected ? Colors.white.withValues(alpha: 0.06) : null,
       padding: const EdgeInsets.fromLTRB(12, 9, 8, 9),
@@ -1575,16 +1604,12 @@ class _AiProviderMenuRow extends StatelessWidget {
           Expanded(
             child: InkWell(
               borderRadius: BorderRadius.circular(6),
-              onTap: onSelectProvider,
+              onTap: enabled ? onSelectProvider : null,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.cloud_outlined,
-                      color: selected ? Colors.purpleAccent : Colors.white54,
-                      size: 17,
-                    ),
+                    Icon(Icons.cloud_outlined, color: iconColor, size: 17),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(
@@ -1594,8 +1619,8 @@ class _AiProviderMenuRow extends StatelessWidget {
                             provider.name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: primaryColor,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                             ),
@@ -1605,8 +1630,8 @@ class _AiProviderMenuRow extends StatelessWidget {
                             subtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white54,
+                            style: TextStyle(
+                              color: secondaryColor,
                               fontSize: 11,
                             ),
                           ),
@@ -1621,9 +1646,9 @@ class _AiProviderMenuRow extends StatelessWidget {
           const SizedBox(width: 8),
           _AgentSelectorChip(
             label: agentLabel,
-            locked: agentLocked,
+            locked: agentLocked || !enabled,
             expanded: expanded,
-            onTap: agentLocked ? null : onToggleAgents,
+            onTap: agentLocked || !enabled ? null : onToggleAgents,
           ),
           if (selected) ...[
             const SizedBox(width: 6),

@@ -2346,6 +2346,10 @@ def _prompt_deepseek_provider(existing: dict[str, str]) -> tuple[str, dict[str, 
         token=token,
         model=model,
     )
+    data[f"{prefix}_SUPPORTED_AGENTS"] = existing.get(
+        f"{prefix}_SUPPORTED_AGENTS",
+        "claude",
+    )
     data[f"{prefix}_AI_WORKER_MAX_CONCURRENCY"] = existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "20")
     data[f"{prefix}_AI_WORKER_QUEUE_MAX"] = existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "100")
     return provider_id, data

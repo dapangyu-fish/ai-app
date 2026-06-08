@@ -206,11 +206,16 @@ class AiChatService {
     return null;
   }
 
+  static List<String> _supportedAgentIdsFor(AiProvider? provider) {
+    if (provider == null || provider.supportedAgentIds.isEmpty) {
+      return const ['claude'];
+    }
+    return provider.supportedAgentIds;
+  }
+
   static List<AiAgent> agentsForProvider(String providerId) {
     final provider = providerById(providerId);
-    final ids = provider?.supportedAgentIds.isEmpty ?? true
-        ? const ['claude']
-        : provider!.supportedAgentIds;
+    final ids = _supportedAgentIdsFor(provider);
     return ids
         .map((id) {
           return agentById(id) ??
@@ -223,10 +228,7 @@ class AiChatService {
     if (agentId.isEmpty) return true;
     final provider = providerById(providerId);
     if (provider == null) return true;
-    final supported = provider.supportedAgentIds.isEmpty
-        ? const ['claude']
-        : provider.supportedAgentIds;
-    return supported.contains(agentId);
+    return _supportedAgentIdsFor(provider).contains(agentId);
   }
 
   /// Assistant 文本必须原样展示；客户端动作只来自后端结构化 client_action 事件。
@@ -359,7 +361,7 @@ class AiChatService {
         break;
       }
     }
-    final supported = provider?.supportedAgentIds ?? const ['claude'];
+    final supported = _supportedAgentIdsFor(provider);
     final saved = _selectedAgentsByProvider[providerId];
     if (saved != null && supported.contains(saved)) return saved;
     if (supported.contains('claude')) return 'claude';
@@ -376,12 +378,40 @@ class AiChatService {
       (candidate) => candidate.id == _selectedProvider,
       orElse: () => _providers.first,
     );
+    var changedAgentCache = false;
+    _selectedAgentsByProvider.removeWhere((providerId, agentId) {
+      final provider = providerById(providerId);
+      final shouldRemove =
+          !providerIds.contains(providerId) ||
+          !_supportedAgentIdsFor(provider).contains(agentId);
+      if (shouldRemove) changedAgentCache = true;
+      return shouldRemove;
+    });
+    for (final provider in _providers) {
+      final supported = _supportedAgentIdsFor(provider);
+      final saved = _selectedAgentsByProvider[provider.id];
+      if (saved == null || !supported.contains(saved)) {
+        _selectedAgentsByProvider[provider.id] = selectedAgentForProvider(
+          provider.id,
+        );
+        changedAgentCache = true;
+      }
+    }
     final agentId = selectedAgentForProvider(provider.id);
-    if (!_selectedAgentsByProvider.containsKey(provider.id) ||
-        !provider.supportedAgentIds.contains(
-          _selectedAgentsByProvider[provider.id],
-        )) {
-      await setAgentForProvider(provider.id, agentId);
+    if (_selectedAgentsByProvider[provider.id] != agentId) {
+      _selectedAgentsByProvider[provider.id] = agentId;
+      changedAgentCache = true;
+    }
+    if (changedAgentCache) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _agentByProviderKey,
+        json.encode(_selectedAgentsByProvider),
+      );
+      await prefs.setString(
+        _agentKey,
+        selectedAgentForProvider(_selectedProvider),
+      );
     }
   }
 
@@ -535,6 +565,9 @@ class AiChatService {
     final active = _active!;
     _ensureSessionRouting(active);
     final locked = activeAgentLocked;
+    if (locked && !providerSupportsAgent(providerId, active.agentId)) {
+      return false;
+    }
     active.providerId = providerId;
     if (!locked && !providerSupportsAgent(providerId, active.agentId)) {
       active.agentId = selectedAgentForProvider(providerId);
