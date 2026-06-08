@@ -406,7 +406,7 @@ myapp-ctl agent-node join --backend <url> --node-id <id> --name <name> --agent-t
 MYAPP_PRIVATE_AGENT_JOIN_TOKEN=<token> myapp-ctl agent-node private join --backend <url> --node-id <id> --name <name>
 myapp-ctl agent-node pause [node-id] [--reason <text>]
 myapp-ctl agent-node resume [node-id]
-myapp-ctl agent-node limits --capacity <n> --queue-max <n> [--force]
+myapp-ctl agent-node limits --capacity <n> --queue-max <n>
 myapp-ctl agent-node rm <node-id>
 ```
 
@@ -641,16 +641,20 @@ myapp-ctl agent-node resume myapp-agent-2
 Paused pull nodes keep heartbeating and stay visible in `agent-node ls`, but the
 backend does not assign new runs to them. Existing runs are not aborted.
 
-Change the local pull-node concurrency:
+Hot-update the local pull-node concurrency:
 
 ```bash
-# Run on the agent host. This writes local limits and restarts agent-node.
+# Run on the agent host. This writes local limits and updates the running
+# agent-node process without restarting active agent containers.
 myapp-ctl agent-node capacity 3 --queue-max 20
 myapp-ctl agent-node limits --capacity 3 --queue-max 20
 ```
 
-The command refuses to restart while local agent runs are active unless
-`--force` is passed. A safer maintenance sequence is:
+Increasing `capacity` lets the node acquire more runs on its next pull loop.
+Decreasing `capacity` never aborts active runs; it only prevents the node from
+accepting new work until `RUNS < CAP`. `queue-max` affects future queue
+admission and does not clear already queued work. To stop accepting new work
+before changing limits:
 
 ```bash
 myapp-ctl agent-node pause --reason "resize capacity"

@@ -5152,6 +5152,15 @@ def _active_local_agent_container_names() -> list[str]:
     ]
 
 
+def _local_agent_node_url(agent_env: dict[str, str]) -> str:
+    port = str(agent_env.get("AGENT_NODE_PORT") or "5590").strip() or "5590"
+    return f"http://127.0.0.1:{port}"
+
+
+def _local_agent_node_token(agent_env: dict[str, str]) -> str:
+    return os.environ.get("AGENT_NODE_TOKEN") or agent_env.get("AGENT_NODE_TOKEN", "")
+
+
 def _set_local_agent_node_limits(args) -> int:
     agent_env = _parse_env(_secret_path("agent"))
     current_capacity = agent_env.get("AGENT_NODE_CAPACITY", "1")
@@ -5171,32 +5180,39 @@ def _set_local_agent_node_limits(args) -> int:
     except (TypeError, ValueError):
         print("queue max must be an integer from 0 to 10000", file=sys.stderr)
         return 2
-    active = _active_local_agent_container_names()
-    if active and not args.force and not args.no_restart:
-        print(
-            f"refusing to restart agent-node while {len(active)} agent run(s) are active; "
-            "wait for them to finish, pause the node first, or pass --force",
-            file=sys.stderr,
-        )
-        return 1
     agent_env["AGENT_NODE_CAPACITY"] = str(capacity)
     agent_env["AGENT_NODE_QUEUE_MAX"] = str(queue_max)
     _write_env(_secret_path("agent"), agent_env)
     _safe_write_default_config_snapshot()
+    node_url = _local_agent_node_url(agent_env)
+    data, status, error = _agent_node_request_json(
+        node_url,
+        "/admin/limits",
+        method="POST",
+        payload={"capacity": capacity, "queue_max": queue_max},
+        token=_local_agent_node_token(agent_env),
+        timeout=5.0,
+    )
+    if not data:
+        print(
+            "agent-node limits were saved, but live hot update failed: "
+            f"{status or '-'} {error}. Start or update agent-node and retry.",
+            file=sys.stderr,
+        )
+        return 1
+    previous = data.get("previous") or {}
+    limits = data.get("limits") or {}
+    running = data.get("running", "-")
     print(
-        f"updated local agent-node limits: "
-        f"capacity {current_capacity} -> {capacity}, queue_max {current_queue_max} -> {queue_max}",
+        "updated live agent-node limits: "
+        f"capacity {previous.get('capacity', current_capacity)} -> {limits.get('capacity', capacity)}, "
+        f"queue_max {previous.get('queue_max', current_queue_max)} -> {limits.get('queue_max', queue_max)}, "
+        f"active_runs={running}",
         flush=True,
     )
-    if args.no_restart:
-        print("agent-node was not restarted; deploy/restart agent-node for this to take effect")
-        return 0
-    rc = _run(["myapp-ctl", "deploy", "agent-node", "--no-setup", "--no-test-user"], capture=False).returncode
-    if rc != 0:
-        return rc
-    backend_url = (args.backend or agent_env.get("AGENT_NODE_BACKEND_URL") or "").rstrip("/")
+    backend_url = (args.backend or "").rstrip("/")
     if backend_url:
-        time.sleep(2)
+        time.sleep(1)
         data, status, error = _agent_node_request_json(
             backend_url,
             "/api/ai/agent_nodes?probe=1",
@@ -5618,22 +5634,22 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_resume.add_argument("--token")
     agent_node_resume.add_argument("--json", action="store_true")
     agent_node_resume.set_defaults(func=cmd_agent_node)
-    agent_node_capacity = agent_node_sub.add_parser("capacity", help=_tx("set local pull agent capacity and restart agent-node", zh="设置本机 pull Agent 并发并重启 agent-node", de="lokale Pull-Agent-Kapazitaet setzen und agent-node neu starten", es="definir capacidad local del agent pull y reiniciar agent-node"), usage=_tx("myapp-ctl agent-node capacity <n> [options]", zh="myapp-ctl agent-node capacity <n> [选项]", de="myapp-ctl agent-node capacity <n> [Optionen]", es="myapp-ctl agent-node capacity <n> [opciones]"))
+    agent_node_capacity = agent_node_sub.add_parser("capacity", help=_tx("hot-update local pull agent capacity", zh="热更新本机 pull Agent 并发", de="lokale Pull-Agent-Kapazitaet live aktualisieren", es="actualizar en caliente la capacidad local del agent pull"), usage=_tx("myapp-ctl agent-node capacity <n> [options]", zh="myapp-ctl agent-node capacity <n> [选项]", de="myapp-ctl agent-node capacity <n> [Optionen]", es="myapp-ctl agent-node capacity <n> [opciones]"))
     agent_node_capacity.add_argument("capacity", type=int)
     agent_node_capacity.add_argument("--queue-max", type=int, help=_tx("local pull queue max reported by this agent node", zh="本 Agent 节点上报的本地 pull 队列上限", de="lokales Pull-Queue-Maximum, das dieser Agent meldet", es="maximo de cola pull local reportado por este agent"))
     agent_node_capacity.add_argument("--backend", help=_tx("master backend URL; defaults to AGENT_NODE_BACKEND_URL", zh="主后端 URL；默认 AGENT_NODE_BACKEND_URL", de="Master-Backend-URL; Standard AGENT_NODE_BACKEND_URL", es="URL del backend maestro; por defecto AGENT_NODE_BACKEND_URL"))
     agent_node_capacity.add_argument("--token")
-    agent_node_capacity.add_argument("--no-restart", action="store_true", help=_tx("only write local limits", zh="仅写入本地限制，不重启", de="nur lokale Limits schreiben", es="solo escribir limites locales"))
-    agent_node_capacity.add_argument("--force", action="store_true", help=_tx("restart even if local agent runs are active", zh="即使本机有活跃 Agent 任务也重启", de="auch bei aktiven lokalen Agent-Laeufen neu starten", es="reiniciar aunque haya tareas agent locales activas"))
+    agent_node_capacity.add_argument("--no-restart", action="store_true", help=_tx("deprecated; limits are hot-updated without restart", zh="已废弃；限制现在会无重启热更新", de="veraltet; Limits werden ohne Neustart live aktualisiert", es="obsoleto; los limites se actualizan sin reinicio"))
+    agent_node_capacity.add_argument("--force", action="store_true", help=_tx("deprecated; active runs are never interrupted by limits updates", zh="已废弃；更新限制不会中断活跃任务", de="veraltet; aktive Laeufe werden durch Limit-Updates nie unterbrochen", es="obsoleto; las tareas activas no se interrumpen por cambios de limites"))
     agent_node_capacity.add_argument("--json", action="store_true")
     agent_node_capacity.set_defaults(func=cmd_agent_node)
-    agent_node_limits = agent_node_sub.add_parser("limits", help=_tx("set local pull agent capacity/queue limits and restart agent-node", zh="设置本机 pull Agent 并发/队列限制并重启 agent-node", de="lokale Pull-Agent-Kapazitaet/Queue-Limits setzen und agent-node neu starten", es="definir capacidad/cola local del agent pull y reiniciar agent-node"), usage=_tx("myapp-ctl agent-node limits [options]", zh="myapp-ctl agent-node limits [选项]", de="myapp-ctl agent-node limits [Optionen]", es="myapp-ctl agent-node limits [opciones]"))
+    agent_node_limits = agent_node_sub.add_parser("limits", help=_tx("hot-update local pull agent capacity/queue limits", zh="热更新本机 pull Agent 并发/队列限制", de="lokale Pull-Agent-Kapazitaet/Queue-Limits live aktualisieren", es="actualizar en caliente capacidad/cola local del agent pull"), usage=_tx("myapp-ctl agent-node limits [options]", zh="myapp-ctl agent-node limits [选项]", de="myapp-ctl agent-node limits [Optionen]", es="myapp-ctl agent-node limits [opciones]"))
     agent_node_limits.add_argument("--capacity", type=int)
     agent_node_limits.add_argument("--queue-max", type=int)
     agent_node_limits.add_argument("--backend", help=_tx("master backend URL; defaults to AGENT_NODE_BACKEND_URL", zh="主后端 URL；默认 AGENT_NODE_BACKEND_URL", de="Master-Backend-URL; Standard AGENT_NODE_BACKEND_URL", es="URL del backend maestro; por defecto AGENT_NODE_BACKEND_URL"))
     agent_node_limits.add_argument("--token")
-    agent_node_limits.add_argument("--no-restart", action="store_true", help=_tx("only write local limits", zh="仅写入本地限制，不重启", de="nur lokale Limits schreiben", es="solo escribir limites locales"))
-    agent_node_limits.add_argument("--force", action="store_true", help=_tx("restart even if local agent runs are active", zh="即使本机有活跃 Agent 任务也重启", de="auch bei aktiven lokalen Agent-Laeufen neu starten", es="reiniciar aunque haya tareas agent locales activas"))
+    agent_node_limits.add_argument("--no-restart", action="store_true", help=_tx("deprecated; limits are hot-updated without restart", zh="已废弃；限制现在会无重启热更新", de="veraltet; Limits werden ohne Neustart live aktualisiert", es="obsoleto; los limites se actualizan sin reinicio"))
+    agent_node_limits.add_argument("--force", action="store_true", help=_tx("deprecated; active runs are never interrupted by limits updates", zh="已废弃；更新限制不会中断活跃任务", de="veraltet; aktive Laeufe werden durch Limit-Updates nie unterbrochen", es="obsoleto; las tareas activas no se interrumpen por cambios de limites"))
     agent_node_limits.add_argument("--json", action="store_true")
     agent_node_limits.set_defaults(func=cmd_agent_node)
     agent_node_private = agent_node_sub.add_parser("private", help=_tx("manage a user-private agent node", zh="管理用户私有 Agent 节点", de="privaten Benutzer-Agent-Node verwalten", es="gestionar agent node privado de usuario"), usage=_tx("myapp-ctl agent-node private <command> [args]", zh="myapp-ctl agent-node private <命令> [参数]", de="myapp-ctl agent-node private <Befehl> [Argumente]", es="myapp-ctl agent-node private <comando> [args]"))

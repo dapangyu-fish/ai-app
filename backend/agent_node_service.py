@@ -75,14 +75,15 @@ PULL_ERROR_BACKOFF_MAX_SECONDS = float(os.environ.get("AGENT_NODE_POLL_ERROR_BAC
 PULL_EVENT_FLUSH_LIVE_SECONDS = float(os.environ.get("AGENT_NODE_EVENT_FLUSH_LIVE_MS", "200")) / 1000.0
 PULL_EVENT_FLUSH_BACKGROUND_SECONDS = float(os.environ.get("AGENT_NODE_EVENT_FLUSH_BACKGROUND_SECONDS", "5"))
 PULL_EVENT_BATCH_MAX = int(os.environ.get("AGENT_NODE_EVENT_BATCH_MAX", "64"))
+LIMITS_PATH = STATE_ROOT / "limits.json"
 try:
-    NODE_CAPACITY = max(1, int(os.environ.get("AGENT_NODE_CAPACITY", "1")))
+    DEFAULT_NODE_CAPACITY = max(1, int(os.environ.get("AGENT_NODE_CAPACITY", "1")))
 except ValueError:
-    NODE_CAPACITY = 1
+    DEFAULT_NODE_CAPACITY = 1
 try:
-    NODE_QUEUE_MAX = max(0, int(os.environ.get("AGENT_NODE_QUEUE_MAX", str(NODE_CAPACITY))))
+    DEFAULT_NODE_QUEUE_MAX = max(0, int(os.environ.get("AGENT_NODE_QUEUE_MAX", str(DEFAULT_NODE_CAPACITY))))
 except ValueError:
-    NODE_QUEUE_MAX = NODE_CAPACITY
+    DEFAULT_NODE_QUEUE_MAX = DEFAULT_NODE_CAPACITY
 RUN_RETENTION_SECONDS = int(os.environ.get("AGENT_NODE_RUN_RETENTION_SECONDS", "604800"))
 RUN_SNAPSHOT_MAX_FILE_BYTES = int(os.environ.get("AGENT_NODE_RUN_SNAPSHOT_MAX_FILE_BYTES", "52428800"))
 RUN_SNAPSHOT_MAX_FILES = int(os.environ.get("AGENT_NODE_RUN_SNAPSHOT_MAX_FILES", "5000"))
@@ -473,6 +474,79 @@ def _local_provider_value(prefix: str, key: str, default: str = "") -> str:
 
 
 CAPABILITIES = _configured_capabilities()
+
+
+def _normalize_limits(capacity: object, queue_max: object, *, fallback: dict | None = None) -> dict:
+    fallback = fallback or {}
+    try:
+        normalized_capacity = max(1, min(100, int(capacity)))
+    except (TypeError, ValueError):
+        normalized_capacity = max(1, min(100, int(fallback.get("capacity") or DEFAULT_NODE_CAPACITY)))
+    try:
+        normalized_queue_max = max(0, min(10000, int(queue_max)))
+    except (TypeError, ValueError):
+        normalized_queue_max = max(0, min(10000, int(fallback.get("queue_max") or normalized_capacity)))
+    return {
+        "capacity": normalized_capacity,
+        "queue_max": normalized_queue_max,
+    }
+
+
+def _load_limits() -> dict:
+    limits = _normalize_limits(DEFAULT_NODE_CAPACITY, DEFAULT_NODE_QUEUE_MAX)
+    try:
+        data = json.loads(LIMITS_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {
+            **limits,
+            "source": "env",
+            "updated_at": 0,
+        }
+    if not isinstance(data, dict):
+        return {
+            **limits,
+            "source": "env",
+            "updated_at": 0,
+        }
+    loaded = _normalize_limits(data.get("capacity"), data.get("queue_max"), fallback=limits)
+    return {
+        **loaded,
+        "source": str(data.get("source") or "state"),
+        "updated_at": int(data.get("updated_at") or 0),
+    }
+
+
+_LIMITS_LOCK = threading.Lock()
+_NODE_LIMITS = _load_limits()
+
+
+def _current_limits() -> dict:
+    with _LIMITS_LOCK:
+        return dict(_NODE_LIMITS)
+
+
+def _write_limits(limits: dict) -> None:
+    LIMITS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp = LIMITS_PATH.with_suffix(LIMITS_PATH.suffix + ".tmp")
+    tmp.write_text(json.dumps(limits, ensure_ascii=False, sort_keys=True) + "\n", encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    tmp.replace(LIMITS_PATH)
+    os.chmod(LIMITS_PATH, 0o600)
+
+
+def _set_limits(capacity: object, queue_max: object, *, source: str = "api") -> dict:
+    with _LIMITS_LOCK:
+        previous = dict(_NODE_LIMITS)
+        updated = _normalize_limits(capacity, queue_max, fallback=previous)
+        updated["source"] = source
+        updated["updated_at"] = _now_ms()
+        _NODE_LIMITS.clear()
+        _NODE_LIMITS.update(updated)
+    _write_limits(updated)
+    return {
+        "previous": previous,
+        "current": dict(updated),
+    }
 
 
 def _apply_local_provider(payload: dict) -> None:
@@ -970,6 +1044,7 @@ def _run_start_metadata(run_id: str) -> dict:
 @APP.get("/health")
 def health():
     running = len(_docker_active_agent_containers())
+    limits = _current_limits()
     _cleanup_proxy_tokens()
     with _PROXY_LOCK:
         proxy_tokens = len(_PROXY_TOKENS)
@@ -984,12 +1059,41 @@ def health():
         "version": BUILD_VERSION,
         "running": running,
         "proxy_tokens": proxy_tokens,
-        "capacity": NODE_CAPACITY,
-        "queue_max": NODE_QUEUE_MAX,
+        "capacity": limits["capacity"],
+        "queue_max": limits["queue_max"],
+        "limits": limits,
         "provider_mode": PROVIDER_MODE,
         "provider_ids": PROVIDER_IDS,
         "agent_ids": AGENT_IDS,
         "capabilities": CAPABILITIES,
+    })
+
+
+@APP.get("/admin/limits")
+def get_limits():
+    return jsonify({
+        "ok": True,
+        "limits": _current_limits(),
+        "running": len(_docker_active_agent_containers()),
+    })
+
+
+@APP.post("/admin/limits")
+def update_limits():
+    data = request.get_json(silent=True) or {}
+    current = _current_limits()
+    if "capacity" not in data and "queue_max" not in data:
+        return jsonify({"error": "capacity or queue_max is required"}), 400
+    result = _set_limits(
+        data.get("capacity", current["capacity"]),
+        data.get("queue_max", current["queue_max"]),
+        source="api",
+    )
+    return jsonify({
+        "ok": True,
+        "previous": result["previous"],
+        "limits": result["current"],
+        "running": len(_docker_active_agent_containers()),
     })
 
 
@@ -1586,7 +1690,9 @@ def _pull_loop() -> None:
     while True:
         try:
             active_runs = _pull_active_count()
-            capacity = max(1, NODE_CAPACITY)
+            limits = _current_limits()
+            capacity = limits["capacity"]
+            queue_max = limits["queue_max"]
             accept_jobs = active_runs < capacity
             poll_timeout = PULL_TIMEOUT_SECONDS if accept_jobs else 0
             response = requests.post(
@@ -1596,7 +1702,7 @@ def _pull_loop() -> None:
                     "node_id": NODE_ID,
                     "name": NODE_NAME,
                     "capacity": capacity,
-                    "queue_max": NODE_QUEUE_MAX,
+                    "queue_max": queue_max,
                     "build_commit": BUILD_COMMIT,
                     "build_version": BUILD_VERSION,
                     "provider_mode": PROVIDER_MODE or "master",
