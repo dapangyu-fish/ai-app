@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -391,6 +392,19 @@ def _extract_opencode_export_json(raw: str) -> dict:
         return {}
 
 
+def _split_inline_think(text: str) -> tuple[str, str]:
+    thinking_parts: list[str] = []
+
+    def replace(match: re.Match) -> str:
+        thinking = _str(match.group(1)).strip()
+        if thinking:
+            thinking_parts.append(thinking)
+        return ""
+
+    cleaned = re.sub(r"<think>\s*(.*?)\s*</think>", replace, text, flags=re.IGNORECASE | re.DOTALL).strip()
+    return "\n".join(thinking_parts).strip(), cleaned
+
+
 def _emit_opencode_export(session_id: str, env: dict) -> None:
     if not session_id:
         return
@@ -441,7 +455,11 @@ def _emit_opencode_export(session_id: str, env: dict) -> None:
             if part.get("type") == "reasoning":
                 reasoning_parts.append(text)
             elif part.get("type") == "text":
-                text_parts.append(text)
+                inline_thinking, cleaned_text = _split_inline_think(text)
+                if inline_thinking:
+                    reasoning_parts.append(inline_thinking)
+                if cleaned_text:
+                    text_parts.append(cleaned_text)
     print(
         json.dumps(
             {

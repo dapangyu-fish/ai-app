@@ -130,9 +130,10 @@ Provider setup behavior:
 
 - Built-in DeepSeek and MiniMax prompts ask for the Anthropic-compatible values
   needed by Claude Code, then write Codex and OpenCode adapter values.
-- OpenCode uses provider-specific AI SDK packages: DeepSeek defaults to
-  `@ai-sdk/openai-compatible`; MiniMax defaults to `@ai-sdk/anthropic` with
-  `https://api.minimaxi.com/anthropic/v1`.
+- OpenCode uses provider-specific AI SDK packages. DeepSeek and MiniMax both
+  default to `@ai-sdk/openai-compatible`; MiniMax uses
+  `https://api.minimaxi.com/v1` because its Anthropic streaming endpoint does
+  not reliably emit text deltas for OpenCode.
 - Custom providers can add Claude Code, Codex, OpenCode, or a mix of them.
 - The provider can also advertise supported agents, for example `claude` only
   or `claude,codex,opencode`.

@@ -2473,10 +2473,10 @@ def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, s
             f"{prefix}_CODEX_RELAY": existing.get(f"{prefix}_CODEX_RELAY", ""),
             f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "512000"),
             f"{prefix}_OPENCODE_PROVIDER_NAME": existing.get(f"{prefix}_OPENCODE_PROVIDER_NAME", "MiniMax"),
-            f"{prefix}_OPENCODE_BASE_URL": existing.get(f"{prefix}_OPENCODE_BASE_URL", "https://api.minimaxi.com/anthropic/v1"),
+            f"{prefix}_OPENCODE_BASE_URL": existing.get(f"{prefix}_OPENCODE_BASE_URL", "https://api.minimaxi.com/v1"),
             f"{prefix}_OPENCODE_MODEL": existing.get(f"{prefix}_OPENCODE_MODEL", model),
             f"{prefix}_OPENCODE_ENV_KEY": existing.get(f"{prefix}_OPENCODE_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
-            f"{prefix}_OPENCODE_PROVIDER_NPM": existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", "@ai-sdk/anthropic"),
+            f"{prefix}_OPENCODE_PROVIDER_NPM": existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", "@ai-sdk/openai-compatible"),
         }
     )
     return provider_id, data
