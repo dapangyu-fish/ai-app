@@ -220,6 +220,7 @@ class _DesignerBallState extends State<DesignerBall>
     // 加载 AI 对话 session，加载完之后异步检查上一轮有没有未完成 / 已完成的任务
     // 不 await，不阻塞 UI 启动
     _chatService.loadSession().then((_) async {
+      await _refreshAiRoutingOptions();
       await _loadMessagesForSession(_chatService.sessionId);
       if (!mounted) return;
       setState(() {});
@@ -541,6 +542,7 @@ class _DesignerBallState extends State<DesignerBall>
       // 重新登录后重新加载本地 session 信息（_lastUserMessage 等可能在断网期间陈旧）
       // 然后异步触发恢复
       _chatService.loadSession().then((_) async {
+        await _refreshAiRoutingOptions();
         await _loadMessagesForSession(_chatService.sessionId);
         if (mounted) {
           setState(() {});
@@ -560,6 +562,14 @@ class _DesignerBallState extends State<DesignerBall>
     if (event == 'resume') {
       unawaited(_probeAiSessionAfterAppResume());
     }
+  }
+
+  Future<void> _refreshAiRoutingOptions() async {
+    await Future.wait([
+      AiChatService.fetchProviders(agentScope: _chatService.activeAgentScope),
+      AiChatService.fetchAgents(),
+    ]);
+    if (mounted) setState(() {});
   }
 
   void _detachAiStreamForAppBackground() {
@@ -591,6 +601,7 @@ class _DesignerBallState extends State<DesignerBall>
       if (!mounted || !AuthService.authNotifier.value) return;
 
       await _chatService.loadSession();
+      await _refreshAiRoutingOptions();
       await _loadMessagesForSession(_chatService.sessionId);
       if (!mounted) return;
       setState(() {});
@@ -1136,6 +1147,7 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 最终检查：手已离开 → 只设置 chatMode 但不开始录音
     setState(() => _chatMode = true);
+    unawaited(_refreshAiRoutingOptions());
     _startSessionReconcileTimer(immediate: true);
     if (!_pointerDown) {
       debugPrint(
@@ -2136,6 +2148,7 @@ class _DesignerBallState extends State<DesignerBall>
   Future<void> _handleNewSession() async {
     _cancelCurrentStream(); // 防止老 session 迟到事件流进新桶
     await _chatService.createNewSession();
+    await _refreshAiRoutingOptions();
     if (!mounted) return;
     _messageBuckets.putIfAbsent(_chatService.sessionId, () => []);
     _loadedMessageBucketIds.add(_chatService.sessionId);
@@ -2151,6 +2164,7 @@ class _DesignerBallState extends State<DesignerBall>
   Future<void> _handleSwitchSession(String sid) async {
     _cancelCurrentStream(); // 同上
     await _chatService.switchToSession(sid);
+    await _refreshAiRoutingOptions();
     await _loadMessagesForSession(sid);
     if (!mounted) return;
     setState(() {});
@@ -2167,6 +2181,7 @@ class _DesignerBallState extends State<DesignerBall>
     _messageBuckets.remove(sid);
     await _deletePersistedMessagesForSession(sid);
     await _chatService.deleteSession(sid);
+    await _refreshAiRoutingOptions();
     if (!mounted) return;
     setState(() {});
   }
@@ -2175,6 +2190,35 @@ class _DesignerBallState extends State<DesignerBall>
     await _chatService.renameSession(sid, title);
     if (!mounted) return;
     setState(() {});
+  }
+
+  bool get _activeAgentLocked {
+    return _chatService.activeAgentLocked ||
+        _messages.any(
+          (message) =>
+              message.content.trim().isNotEmpty ||
+              message.action != null ||
+              message.failedJsonUrl != null ||
+              message.jsonUrl != null ||
+              message.jsonApp != null,
+        );
+  }
+
+  Future<void> _handleSelectAiProvider(String providerId) async {
+    final changed = await _chatService.setActiveProvider(providerId);
+    if (!mounted) return;
+    if (changed) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _handleSelectAiAgent(String agentId) async {
+    if (_activeAgentLocked) return;
+    final changed = await _chatService.setActiveAgent(agentId);
+    if (!mounted) return;
+    if (changed) {
+      setState(() {});
+    }
   }
 
   /// 双击 heavyImpact，主观上明显比单次更"重"。
@@ -2318,6 +2362,13 @@ class _DesignerBallState extends State<DesignerBall>
               scrollController: _scrollController,
               activeSessionId: _chatService.sessionId,
               getSessions: _chatService.listSessions,
+              providers: AiChatService.providers,
+              agents: AiChatService.agents,
+              selectedProviderId: _chatService.activeProvider,
+              selectedAgentId: _chatService.activeAgent,
+              agentLocked: _activeAgentLocked,
+              onSelectProvider: _handleSelectAiProvider,
+              onSelectAgent: _handleSelectAiAgent,
               onUploadCurrentApp: _handleUploadCurrentApp,
               onRetryDownload: _handleRetryDownload,
               onDownloadAndRun: _handleDownloadAndRun,

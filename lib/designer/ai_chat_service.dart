@@ -192,6 +192,43 @@ class AiChatService {
   static List<AiProvider> get providers => _providers;
   static List<AiAgent> get agents => _agents;
 
+  static AiProvider? providerById(String providerId) {
+    for (final provider in _providers) {
+      if (provider.id == providerId) return provider;
+    }
+    return null;
+  }
+
+  static AiAgent? agentById(String agentId) {
+    for (final agent in _agents) {
+      if (agent.id == agentId) return agent;
+    }
+    return null;
+  }
+
+  static List<AiAgent> agentsForProvider(String providerId) {
+    final provider = providerById(providerId);
+    final ids = provider?.supportedAgentIds.isEmpty ?? true
+        ? const ['claude']
+        : provider!.supportedAgentIds;
+    return ids
+        .map((id) {
+          return agentById(id) ??
+              AiAgent(id: id, name: id, description: '', configured: true);
+        })
+        .toList(growable: false);
+  }
+
+  static bool providerSupportsAgent(String providerId, String agentId) {
+    if (agentId.isEmpty) return true;
+    final provider = providerById(providerId);
+    if (provider == null) return true;
+    final supported = provider.supportedAgentIds.isEmpty
+        ? const ['claude']
+        : provider.supportedAgentIds;
+    return supported.contains(agentId);
+  }
+
   /// Assistant 文本必须原样展示；客户端动作只来自后端结构化 client_action 事件。
   static String cleanAssistantDisplayText(String text) => text;
 
@@ -418,6 +455,108 @@ class AiChatService {
   /// 对外暴露当前 active sid（后兼容老 designer_ball 调用）
   String get sessionId => _activeSessionId;
   String get lastUserMessage => _active?.lastUserMessage ?? '';
+  String get activeProvider {
+    final active = _active;
+    if (active == null) return _selectedProvider;
+    _ensureSessionRouting(active);
+    return active.providerId;
+  }
+
+  String get activeAgent {
+    final active = _active;
+    if (active == null) return selectedAgentForProvider(_selectedProvider);
+    _ensureSessionRouting(active);
+    return active.agentId;
+  }
+
+  String get activeAgentScope {
+    final active = _active;
+    if (active == null) return _selectedAgentScope;
+    _ensureSessionRouting(active);
+    return active.agentScope;
+  }
+
+  bool get activeAgentLocked {
+    final active = _active;
+    if (active == null) return false;
+    return active.committed ||
+        active.firstMessage.isNotEmpty ||
+        active.lastUserMessage.isNotEmpty;
+  }
+
+  void _ensureSessionRouting(SessionMeta session) {
+    session.agentScope = _normalizeAgentScope(
+      session.agentScope.isNotEmpty ? session.agentScope : _selectedAgentScope,
+    );
+    if (session.providerId.isEmpty) {
+      session.providerId = _selectedProvider;
+    }
+    if (session.agentId.isEmpty ||
+        !providerSupportsAgent(session.providerId, session.agentId)) {
+      session.agentId = selectedAgentForProvider(session.providerId);
+    }
+  }
+
+  SessionMeta _createSessionMeta() {
+    return SessionMeta(
+      id: _generateSessionId(),
+      providerId: _selectedProvider,
+      agentId: selectedAgentForProvider(_selectedProvider),
+      agentScope: _selectedAgentScope,
+    );
+  }
+
+  Future<void> _syncDefaultsFromActive() async {
+    final active = _active;
+    if (active == null) return;
+    _ensureSessionRouting(active);
+    _selectedProvider = active.providerId;
+    _selectedAgentScope = active.agentScope;
+    _selectedAgentsByProvider[active.providerId] = active.agentId;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_providerKey, _selectedProvider);
+    await prefs.setString(_agentScopeKey, _selectedAgentScope);
+    await prefs.setString(_agentKey, active.agentId);
+    await prefs.setString(
+      _agentByProviderKey,
+      json.encode(_selectedAgentsByProvider),
+    );
+  }
+
+  Future<bool> setActiveProvider(String providerId) async {
+    if (_active == null) {
+      await createNewSession();
+    }
+    final active = _active!;
+    _ensureSessionRouting(active);
+    final locked = activeAgentLocked;
+    if (locked && !providerSupportsAgent(providerId, active.agentId)) {
+      return false;
+    }
+    active.providerId = providerId;
+    if (!providerSupportsAgent(providerId, active.agentId)) {
+      active.agentId = selectedAgentForProvider(providerId);
+    }
+    active.updatedAt = DateTime.now().millisecondsSinceEpoch;
+    await _syncDefaultsFromActive();
+    await _persistSessions();
+    return true;
+  }
+
+  Future<bool> setActiveAgent(String agentId) async {
+    if (_active == null) {
+      await createNewSession();
+    }
+    final active = _active!;
+    _ensureSessionRouting(active);
+    if (activeAgentLocked) return false;
+    if (!providerSupportsAgent(active.providerId, agentId)) return false;
+    active.agentId = agentId;
+    active.updatedAt = DateTime.now().millisecondsSinceEpoch;
+    await _syncDefaultsFromActive();
+    await _persistSessions();
+    return true;
+  }
 
   /// 当前所有 session（含未提交的内存占位），按 updatedAt 倒序
   List<SessionMeta> listSessions() {
@@ -480,11 +619,15 @@ class AiChatService {
     // 不变量：loadSession 返回后 sessionId 一定非空。调用方（designer_ball
     // _sendTextToAi 等）写 _messageBuckets 时直接拿 sessionId 作 key，不用兜底。
     if (_activeSessionId.isEmpty) {
-      final placeholder = SessionMeta(id: _generateSessionId());
+      final placeholder = _createSessionMeta();
       _sessions.add(placeholder);
       _activeSessionId = placeholder.id;
     }
 
+    for (final session in _sessions) {
+      _ensureSessionRouting(session);
+    }
+    await _syncDefaultsFromActive();
     await _persistSessions();
     debugPrint(
       '[AI_CHAT] loadSession: ${_sessions.length} 条，active=$_activeSessionId',
@@ -510,9 +653,10 @@ class AiChatService {
     _lastEntryId = '0';
     // 丢弃旧的未提交占位（最多只能存在一个）
     _sessions.removeWhere((s) => !s.committed);
-    final fresh = SessionMeta(id: _generateSessionId());
+    final fresh = _createSessionMeta();
     _sessions.add(fresh);
     _activeSessionId = fresh.id;
+    await _syncDefaultsFromActive();
     await _persistSessions();
     debugPrint('[AI_CHAT] createNewSession: sid=${fresh.id}');
     return fresh;
@@ -529,6 +673,7 @@ class AiChatService {
     _aborting = false;
     _lastEntryId = '0';
     _activeSessionId = sid;
+    await _syncDefaultsFromActive();
     await _persistSessions();
     debugPrint('[AI_CHAT] switchToSession: sid=$sid');
   }
@@ -556,11 +701,12 @@ class AiChatService {
         _activeSessionId = _sessions.first.id;
       } else {
         // 保持不变量：sessionId 永远非空。删完所有会话自动垫一条占位。
-        final placeholder = SessionMeta(id: _generateSessionId());
+        final placeholder = _createSessionMeta();
         _sessions.add(placeholder);
         _activeSessionId = placeholder.id;
       }
     }
+    await _syncDefaultsFromActive();
     await _persistSessions();
     debugPrint('[AI_CHAT] deleteSession: sid=$sid wasActive=$wasActive');
   }
@@ -735,11 +881,16 @@ class AiChatService {
       await createNewSession();
     }
     final active = _active!;
+    _ensureSessionRouting(active);
+    final providerId = active.providerId;
+    final agentId = active.agentId;
+    final agentScope = active.agentScope;
 
     debugPrint('[AI_CHAT] ========== 发送消息 ==========');
     debugPrint('[AI_CHAT] 消息内容: $userMessage');
     debugPrint('[AI_CHAT] Session ID: ${active.id}');
-    debugPrint('[AI_CHAT] Provider: $_selectedProvider');
+    debugPrint('[AI_CHAT] Provider: $providerId');
+    debugPrint('[AI_CHAT] Agent: $agentId');
     debugPrint('[AI_CHAT] ====================================');
 
     // ── 1. POST /start：起 worker ──
@@ -747,6 +898,9 @@ class AiChatService {
       userMessage,
       forceRestart: true,
       contextMessages: contextMessages,
+      providerId: providerId,
+      agentId: agentId,
+      agentScope: agentScope,
     );
     if (startResult.error != null) {
       yield ChatEvent(error: startResult.error, quota: startResult.quota);
@@ -1608,6 +1762,9 @@ class AiChatService {
     String userMessage, {
     required bool forceRestart,
     List<Map<String, String>>? contextMessages,
+    required String providerId,
+    required String agentId,
+    required String agentScope,
   }) async {
     const maxAttempts = 3;
     Object? lastError;
@@ -1623,9 +1780,9 @@ class AiChatService {
         final body = json.encode({
           'messages': _buildStartMessages(userMessage, contextMessages),
           'session_id': _activeSessionId,
-          'provider': _selectedProvider,
-          'agent': selectedAgent,
-          'agent_scope': _selectedAgentScope,
+          'provider': providerId,
+          'agent': agentId,
+          'agent_scope': agentScope,
           'force_restart': forceRestart,
         });
         var resp = await http
@@ -1804,6 +1961,9 @@ class AiChatService {
 
     final client = http.Client();
     _activeClient = client;
+    final providerId = activeProvider;
+    final agentId = activeAgent;
+    final agentScope = activeAgentScope;
 
     try {
       final request = http.Request(
@@ -1819,9 +1979,9 @@ class AiChatService {
         'prompt': userPrompt,
         if (currentApp != null) 'current_app': currentApp,
         if (crashLog != null) 'crash_log': crashLog,
-        'provider': _selectedProvider,
-        'agent': selectedAgent,
-        'agent_scope': _selectedAgentScope,
+        'provider': providerId,
+        'agent': agentId,
+        'agent_scope': agentScope,
       });
 
       final response = await client

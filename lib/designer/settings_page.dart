@@ -23,11 +23,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   AsrMode _asrMode = AsrMode.online;
   ThemeMode _themeMode = appThemeMode.value;
-  String _selectedProvider = AiChatService.selectedProvider;
   String _agentScope = AiChatService.selectedAgentScope;
-  List<AiProvider> _providers = AiChatService.providers;
-  List<AiAgent> _agents = AiChatService.agents;
-  bool _loadingProviders = false;
 
   // 默认启动 App 当前选择（subtitle 展示用，进选择页改完再 reload）
   DefaultStartupConfig _defaultStartup = const DefaultStartupConfig.none();
@@ -37,7 +33,6 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _loadSettings();
     _fetchProviders();
-    _fetchAgents();
     _loadDefaultStartup();
   }
 
@@ -51,32 +46,17 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _asrMode = AsrModePrefs.notifier.value;
       _themeMode = appThemeMode.value;
-      _selectedProvider = AiChatService.selectedProvider;
       _agentScope = AiChatService.selectedAgentScope;
     });
   }
 
   Future<void> _fetchProviders() async {
-    setState(() => _loadingProviders = true);
-    final providers = await AiChatService.fetchProviders(
-      agentScope: _agentScope,
-    );
+    await Future.wait([
+      AiChatService.fetchProviders(agentScope: _agentScope),
+      AiChatService.fetchAgents(),
+    ]);
     if (mounted) {
-      setState(() {
-        _providers = providers;
-        _selectedProvider = AiChatService.selectedProvider;
-        _agentScope = AiChatService.selectedAgentScope;
-        _loadingProviders = false;
-      });
-    }
-  }
-
-  Future<void> _fetchAgents() async {
-    final agents = await AiChatService.fetchAgents();
-    if (mounted) {
-      setState(() {
-        _agents = agents;
-      });
+      setState(() => _agentScope = AiChatService.selectedAgentScope);
     }
   }
 
@@ -95,21 +75,6 @@ class _SettingsPageState extends State<SettingsPage> {
         _themeMode = mode;
       });
     }
-  }
-
-  Future<void> _selectProvider(String providerId) async {
-    await AiChatService.setProvider(providerId);
-    setState(() {
-      _selectedProvider = providerId;
-    });
-  }
-
-  Future<void> _selectProviderAgent(String providerId, String agentId) async {
-    await AiChatService.setProvider(providerId);
-    await AiChatService.setAgentForProvider(providerId, agentId);
-    setState(() {
-      _selectedProvider = providerId;
-    });
   }
 
   Future<void> _selectAgentScope(String scope) async {
@@ -161,9 +126,15 @@ class _SettingsPageState extends State<SettingsPage> {
             const SizedBox(height: 8.0),
             _buildThemeModeSelector(cs),
             const SizedBox(height: 24.0),
-            _buildSectionTitle(t.settingsAiProvider, cs),
-            const SizedBox(height: 8.0),
-            _buildProviderSelector(cs),
+            _buildSectionTitle(
+              _privateAgentText(
+                zh: 'Agent 调度',
+                en: 'Agent routing',
+                de: 'Agent-Routing',
+                es: 'Enrutamiento de agent',
+              ),
+              cs,
+            ),
             const SizedBox(height: 8.0),
             _buildAgentScopeSelector(cs),
             const SizedBox(height: 8.0),
@@ -337,121 +308,6 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildProviderSelector(ColorScheme cs) {
-    if (_loadingProviders && _providers.isEmpty) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      );
-    }
-
-    if (_providers.isEmpty) {
-      final t = T.of(context);
-      return Card(
-        child: ListTile(
-          leading: const Icon(Icons.cloud_off),
-          title: Text(t.settingsProvidersFailed),
-          subtitle: Text(t.settingsProvidersFallback),
-          trailing: IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchProviders,
-          ),
-        ),
-      );
-    }
-
-    return Card(
-      child: Column(
-        children: _providers.map((provider) {
-          final selected = provider.id == _selectedProvider;
-          final agents = _agentsForProvider(provider);
-          final selectedAgent =
-              agents.any(
-                (agent) =>
-                    agent.id ==
-                    AiChatService.selectedAgentForProvider(provider.id),
-              )
-              ? AiChatService.selectedAgentForProvider(provider.id)
-              : agents.first.id;
-          return InkWell(
-            onTap: () => _selectProvider(provider.id),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
-              child: Row(
-                children: [
-                  Icon(
-                    selected
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_unchecked,
-                    color: selected ? cs.primary : cs.outline,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          provider.name,
-                          style: TextStyle(
-                            fontWeight: selected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          provider.description.isNotEmpty
-                              ? '${provider.description} (${provider.defaultModel})'
-                              : T.fmt(T.of(context).settingsModelWith, {
-                                  'model': provider.defaultModel,
-                                }),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: cs.onSurfaceVariant,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    width: 128,
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedAgent,
-                        isExpanded: true,
-                        items: agents.map((agent) {
-                          return DropdownMenuItem<String>(
-                            value: agent.id,
-                            child: Text(
-                              agent.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            _selectProviderAgent(provider.id, value);
-                          }
-                        },
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
   Widget _buildAgentScopeSelector(ColorScheme cs) {
     final labels = {
       'public': _privateAgentText(
@@ -558,25 +414,5 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
     );
-  }
-
-  List<AiAgent> _agentsForProvider(AiProvider provider) {
-    final ids = provider.supportedAgentIds.isEmpty
-        ? const ['claude']
-        : provider.supportedAgentIds;
-    final result = <AiAgent>[];
-    for (final id in ids) {
-      AiAgent? agent;
-      for (final candidate in _agents) {
-        if (candidate.id == id) {
-          agent = candidate;
-          break;
-        }
-      }
-      result.add(
-        agent ?? AiAgent(id: id, name: id, description: '', configured: true),
-      );
-    }
-    return result;
   }
 }

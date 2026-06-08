@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'ai_chat_service.dart';
 import 'session_meta.dart';
 import '../i18n/framework_strings.dart';
 
@@ -63,8 +64,15 @@ class ChatOverlay extends StatefulWidget {
   // 多会话回调（由 designer_ball 注入；service 完成实际状态变更）
   final String activeSessionId;
   final List<SessionMeta> Function() getSessions;
+  final List<AiProvider> providers;
+  final List<AiAgent> agents;
+  final String selectedProviderId;
+  final String selectedAgentId;
+  final bool agentLocked;
   final Future<void> Function()? onNewSession;
   final Future<void> Function(String sid)? onSwitchSession;
+  final Future<void> Function(String providerId)? onSelectProvider;
+  final Future<void> Function(String agentId)? onSelectAgent;
   final Future<void> Function(String sid)? onDeleteSession;
   final Future<void> Function(String sid, String newTitle)? onRenameSession;
 
@@ -89,6 +97,11 @@ class ChatOverlay extends StatefulWidget {
     required this.scrollController,
     required this.activeSessionId,
     required this.getSessions,
+    this.providers = const [],
+    this.agents = const [],
+    this.selectedProviderId = '',
+    this.selectedAgentId = '',
+    this.agentLocked = false,
     this.liveTranscript,
     this.onRunJsonApp,
     this.onClear,
@@ -98,6 +111,8 @@ class ChatOverlay extends StatefulWidget {
     this.onRetryLastTurn,
     this.onNewSession,
     this.onSwitchSession,
+    this.onSelectProvider,
+    this.onSelectAgent,
     this.onDeleteSession,
     this.onRenameSession,
     this.onProbeAllSessionStatus,
@@ -108,13 +123,15 @@ class ChatOverlay extends StatefulWidget {
   State<ChatOverlay> createState() => _ChatOverlayState();
 }
 
+enum _TopMenuKind { sessions, providers, agents }
+
 class _ChatOverlayState extends State<ChatOverlay> {
   double _offsetY = 0.0; // 窗口垂直偏移量
 
   // 下拉菜单 state：菜单作为 chat overlay 自己 Stack 内的一层渲染，
   // 这样能跟着拖动同步移动、保证 z-order 在字幕上面、再次点 chip 能切回关闭。
   // 不再用 showMenu (它走 root navigator overlay，物理位置在 chat overlay 下方)。
-  bool _menuOpen = false;
+  _TopMenuKind? _openMenu;
   Future<Set<String>>? _statusProbeFuture;
   SessionMeta? _actionsSession;
   SessionMeta? _deleteConfirmSession;
@@ -166,18 +183,71 @@ class _ChatOverlayState extends State<ChatOverlay> {
     return defaultTitle;
   }
 
-  void _toggleMenu() {
-    if (_menuOpen) {
-      setState(() => _menuOpen = false);
+  void _toggleMenu(_TopMenuKind kind) {
+    if (_openMenu == kind) {
+      setState(() => _openMenu = null);
     } else {
       // 每次打开重发起探活
-      _statusProbeFuture = widget.onProbeAllSessionStatus?.call();
-      setState(() => _menuOpen = true);
+      if (kind == _TopMenuKind.sessions) {
+        _statusProbeFuture = widget.onProbeAllSessionStatus?.call();
+      }
+      setState(() => _openMenu = kind);
     }
   }
 
   void _closeMenu() {
-    if (_menuOpen) setState(() => _menuOpen = false);
+    if (_openMenu != null) setState(() => _openMenu = null);
+  }
+
+  String _providerLabel() {
+    for (final provider in widget.providers) {
+      if (provider.id == widget.selectedProviderId) return provider.name;
+    }
+    return widget.selectedProviderId.isNotEmpty
+        ? widget.selectedProviderId
+        : 'Provider';
+  }
+
+  String _agentLabel() {
+    for (final agent in widget.agents) {
+      if (agent.id == widget.selectedAgentId) return agent.name;
+    }
+    return widget.selectedAgentId.isNotEmpty ? widget.selectedAgentId : 'Agent';
+  }
+
+  bool _providerSupportsSelectedAgent(AiProvider provider) {
+    if (!widget.agentLocked || widget.selectedAgentId.isEmpty) return true;
+    final supported = provider.supportedAgentIds.isEmpty
+        ? const ['claude']
+        : provider.supportedAgentIds;
+    return supported.contains(widget.selectedAgentId);
+  }
+
+  List<AiProvider> _selectableProviders() {
+    return widget.providers
+        .where(_providerSupportsSelectedAgent)
+        .toList(growable: false);
+  }
+
+  List<AiAgent> _selectableAgents() {
+    AiProvider? provider;
+    for (final candidate in widget.providers) {
+      if (candidate.id == widget.selectedProviderId) {
+        provider = candidate;
+        break;
+      }
+    }
+    final ids = provider?.supportedAgentIds.isEmpty ?? true
+        ? const ['claude']
+        : provider!.supportedAgentIds;
+    return ids
+        .map((id) {
+          for (final agent in widget.agents) {
+            if (agent.id == id) return agent;
+          }
+          return AiAgent(id: id, name: id, description: '', configured: true);
+        })
+        .toList(growable: false);
   }
 
   void _openSessionActions(String sid) {
@@ -330,7 +400,35 @@ class _ChatOverlayState extends State<ChatOverlay> {
                         ],
                         _SessionChip(
                           title: _currentSessionTitle(),
-                          onTap: _toggleMenu,
+                          icon: Icons.forum_outlined,
+                          maxTextWidth: 76,
+                          onTap: () => _toggleMenu(_TopMenuKind.sessions),
+                        ),
+                        const SizedBox(width: 3),
+                        _SessionChip(
+                          title: _providerLabel(),
+                          icon: Icons.cloud_outlined,
+                          maxTextWidth: 68,
+                          onTap:
+                              widget.onSelectProvider != null &&
+                                  widget.providers.isNotEmpty
+                              ? () => _toggleMenu(_TopMenuKind.providers)
+                              : null,
+                        ),
+                        const SizedBox(width: 3),
+                        _SessionChip(
+                          title: _agentLabel(),
+                          icon: widget.agentLocked
+                              ? Icons.lock_outline
+                              : Icons.smart_toy_outlined,
+                          maxTextWidth: 58,
+                          showArrow: !widget.agentLocked,
+                          onTap:
+                              !widget.agentLocked &&
+                                  widget.onSelectAgent != null &&
+                                  _selectableAgents().isNotEmpty
+                              ? () => _toggleMenu(_TopMenuKind.agents)
+                              : null,
                         ),
                         // 可拖动区域
                         Expanded(
@@ -458,7 +556,7 @@ class _ChatOverlayState extends State<ChatOverlay> {
           ),
           // 2. 下拉菜单：作为 outer Stack 的兄弟节点而不是嵌在字幕容器里；
           //    这样既不会被 Clip.hardEdge 截掉、也不受字幕容器宽高变化影响
-          if (_menuOpen) ...[
+          if (_openMenu != null) ...[
             // backdrop 覆盖标题栏下方所有屏幕区域，点空白处关菜单
             Positioned(
               left: 0,
@@ -475,26 +573,53 @@ class _ChatOverlayState extends State<ChatOverlay> {
             Positioned(
               top: containerTop + 40,
               left: 12 + 38, // chat overlay 左缘 12 + chip 在标题栏内的偏移 ~38
-              child: _SessionDropdownPanel(
-                sessions: widget.getSessions(),
-                activeSessionId: widget.activeSessionId,
-                statusProbeFuture: _statusProbeFuture,
-                // 最多顶到屏幕底部留点边界
-                maxHeight:
-                    screen.height - containerTop - 40 - bottomPadding - 20,
-                onNewSession: () async {
-                  _closeMenu();
-                  await widget.onNewSession?.call();
-                },
-                onSwitchSession: (sid) async {
-                  _closeMenu();
-                  if (sid != widget.activeSessionId) {
-                    await widget.onSwitchSession?.call(sid);
-                  }
-                },
-                onMoreTap: (sid) async {
-                  _closeMenu();
-                  _openSessionActions(sid);
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: screen.width - 24 - 38 - 12,
+                ),
+                child: switch (_openMenu!) {
+                  _TopMenuKind.sessions => _SessionDropdownPanel(
+                    sessions: widget.getSessions(),
+                    activeSessionId: widget.activeSessionId,
+                    statusProbeFuture: _statusProbeFuture,
+                    // 最多顶到屏幕底部留点边界
+                    maxHeight:
+                        screen.height - containerTop - 40 - bottomPadding - 20,
+                    onNewSession: () async {
+                      _closeMenu();
+                      await widget.onNewSession?.call();
+                    },
+                    onSwitchSession: (sid) async {
+                      _closeMenu();
+                      if (sid != widget.activeSessionId) {
+                        await widget.onSwitchSession?.call(sid);
+                      }
+                    },
+                    onMoreTap: (sid) async {
+                      _closeMenu();
+                      _openSessionActions(sid);
+                    },
+                  ),
+                  _TopMenuKind.providers => _AiProviderDropdownPanel(
+                    providers: _selectableProviders(),
+                    selectedProviderId: widget.selectedProviderId,
+                    maxHeight:
+                        screen.height - containerTop - 40 - bottomPadding - 20,
+                    onSelectProvider: (providerId) async {
+                      _closeMenu();
+                      await widget.onSelectProvider?.call(providerId);
+                    },
+                  ),
+                  _TopMenuKind.agents => _AiAgentDropdownPanel(
+                    agents: _selectableAgents(),
+                    selectedAgentId: widget.selectedAgentId,
+                    maxHeight:
+                        screen.height - containerTop - 40 - bottomPadding - 20,
+                    onSelectAgent: (agentId) async {
+                      _closeMenu();
+                      await widget.onSelectAgent?.call(agentId);
+                    },
+                  ),
                 },
               ),
             ),
@@ -783,12 +908,22 @@ class _NoGlowBehavior extends ScrollBehavior {
 /// 会话切换小标签 —— 点击触发 onTap，由调用方控制下拉菜单显隐
 class _SessionChip extends StatelessWidget {
   final String title;
-  final VoidCallback onTap;
+  final IconData icon;
+  final double maxTextWidth;
+  final bool showArrow;
+  final VoidCallback? onTap;
 
-  const _SessionChip({required this.title, required this.onTap});
+  const _SessionChip({
+    required this.title,
+    required this.icon,
+    required this.maxTextWidth,
+    this.showArrow = true,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final enabled = onTap != null;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -800,7 +935,7 @@ class _SessionChip extends StatelessWidget {
             color: Colors.white.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white.withValues(alpha: enabled ? 0.2 : 0.12),
               width: 0.5,
             ),
           ),
@@ -808,30 +943,34 @@ class _SessionChip extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.forum_outlined,
-                color: Colors.white.withValues(alpha: 0.7),
+                icon,
+                color: Colors.white.withValues(alpha: enabled ? 0.7 : 0.45),
                 size: 12,
               ),
               const SizedBox(width: 5),
               ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 110),
+                constraints: BoxConstraints(maxWidth: maxTextWidth),
                 child: Text(
                   title,
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.85),
+                    color: Colors.white.withValues(
+                      alpha: enabled ? 0.85 : 0.55,
+                    ),
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
-              const SizedBox(width: 2),
-              Icon(
-                Icons.expand_more,
-                color: Colors.white.withValues(alpha: 0.5),
-                size: 14,
-              ),
+              if (showArrow) ...[
+                const SizedBox(width: 2),
+                Icon(
+                  Icons.expand_more,
+                  color: Colors.white.withValues(alpha: enabled ? 0.5 : 0.25),
+                  size: 14,
+                ),
+              ],
             ],
           ),
         ),
@@ -1325,6 +1464,209 @@ class _SessionDropdownPanel extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AiProviderDropdownPanel extends StatelessWidget {
+  final List<AiProvider> providers;
+  final String selectedProviderId;
+  final double maxHeight;
+  final void Function(String providerId) onSelectProvider;
+
+  const _AiProviderDropdownPanel({
+    required this.providers,
+    required this.selectedProviderId,
+    required this.maxHeight,
+    required this.onSelectProvider,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _AiRouteDropdownFrame(
+      width: 240,
+      maxHeight: maxHeight,
+      emptyText: 'No providers',
+      isEmpty: providers.isEmpty,
+      child: ListView.builder(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        itemCount: providers.length,
+        itemBuilder: (ctx, i) {
+          final provider = providers[i];
+          final selected = provider.id == selectedProviderId;
+          return _AiRouteMenuRow(
+            icon: Icons.cloud_outlined,
+            title: provider.name,
+            subtitle: provider.defaultModel.isNotEmpty
+                ? provider.defaultModel
+                : provider.id,
+            selected: selected,
+            onTap: () => onSelectProvider(provider.id),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _AiAgentDropdownPanel extends StatelessWidget {
+  final List<AiAgent> agents;
+  final String selectedAgentId;
+  final double maxHeight;
+  final void Function(String agentId) onSelectAgent;
+
+  const _AiAgentDropdownPanel({
+    required this.agents,
+    required this.selectedAgentId,
+    required this.maxHeight,
+    required this.onSelectAgent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _AiRouteDropdownFrame(
+      width: 220,
+      maxHeight: maxHeight,
+      emptyText: 'No agents',
+      isEmpty: agents.isEmpty,
+      child: ListView.builder(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        itemCount: agents.length,
+        itemBuilder: (ctx, i) {
+          final agent = agents[i];
+          final selected = agent.id == selectedAgentId;
+          return _AiRouteMenuRow(
+            icon: Icons.smart_toy_outlined,
+            title: agent.name,
+            subtitle: agent.description.isNotEmpty
+                ? agent.description
+                : agent.id,
+            selected: selected,
+            onTap: () => onSelectAgent(agent.id),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _AiRouteDropdownFrame extends StatelessWidget {
+  final double width;
+  final double maxHeight;
+  final bool isEmpty;
+  final String emptyText;
+  final Widget child;
+
+  const _AiRouteDropdownFrame({
+    required this.width,
+    required this.maxHeight,
+    required this.isEmpty,
+    required this.emptyText,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      elevation: 8,
+      borderRadius: BorderRadius.circular(10),
+      shadowColor: Colors.black.withValues(alpha: 0.5),
+      child: Container(
+        width: width,
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2C2C2E),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.15),
+            width: 0.5,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Text(
+                    emptyText,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  ),
+                )
+              : child,
+        ),
+      ),
+    );
+  }
+}
+
+class _AiRouteMenuRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _AiRouteMenuRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        color: selected ? Colors.white.withValues(alpha: 0.06) : null,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: selected ? Colors.purpleAccent : Colors.white54,
+              size: 17,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (selected)
+              const Icon(Icons.check, color: Colors.purpleAccent, size: 16),
+          ],
         ),
       ),
     );
