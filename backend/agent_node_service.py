@@ -1178,6 +1178,170 @@ def _response_headers(upstream_response: requests.Response) -> list[tuple[str, s
     ]
 
 
+def _request_json_body() -> Optional[dict]:
+    try:
+        data = request.get_json(silent=True)
+    except Exception:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _should_synthesize_minimax_opencode_stream(proxy: dict, subpath: str, body: Optional[dict]) -> bool:
+    if request.method.upper() != "POST":
+        return False
+    provider_id = str(proxy.get("provider_id") or "").strip().lower().replace("_", "-")
+    agent_id = str(proxy.get("agent_id") or "").strip().lower().replace("_", "-")
+    if provider_id != "minimax" or agent_id != "opencode":
+        return False
+    if not subpath.rstrip("/").endswith("messages"):
+        return False
+    return bool(isinstance(body, dict) and body.get("stream") is True)
+
+
+def _sse_frame(event: str, data: dict) -> bytes:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False, separators=(',', ':'))}\n\n".encode("utf-8")
+
+
+def _anthropic_text_from_message(data: dict) -> str:
+    parts: list[str] = []
+    for block in data.get("content") or []:
+        if not isinstance(block, dict):
+            continue
+        if block.get("type") == "text":
+            text = block.get("text")
+            if isinstance(text, str) and text:
+                parts.append(text)
+    return "".join(parts)
+
+
+def _synthesized_anthropic_stream(data: dict) -> list[bytes]:
+    message = {
+        "id": data.get("id"),
+        "type": data.get("type") or "message",
+        "role": data.get("role") or "assistant",
+        "content": [],
+        "model": data.get("model"),
+        "stop_reason": None,
+        "stop_sequence": None,
+        "usage": {
+            "input_tokens": 0,
+            "output_tokens": 0,
+        },
+    }
+    frames = [
+        _sse_frame("message_start", {"type": "message_start", "message": message}),
+    ]
+    text = _anthropic_text_from_message(data)
+    if text:
+        frames.extend(
+            [
+                _sse_frame(
+                    "content_block_start",
+                    {
+                        "type": "content_block_start",
+                        "index": 0,
+                        "content_block": {"type": "text", "text": ""},
+                    },
+                ),
+                _sse_frame(
+                    "content_block_delta",
+                    {
+                        "type": "content_block_delta",
+                        "index": 0,
+                        "delta": {"type": "text_delta", "text": text},
+                    },
+                ),
+                _sse_frame("content_block_stop", {"type": "content_block_stop", "index": 0}),
+            ]
+        )
+    usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
+    frames.extend(
+        [
+            _sse_frame(
+                "message_delta",
+                {
+                    "type": "message_delta",
+                    "delta": {"stop_reason": data.get("stop_reason") or "end_turn"},
+                    "usage": usage,
+                },
+            ),
+            _sse_frame("message_stop", {"type": "message_stop"}),
+        ]
+    )
+    return frames
+
+
+def _minimax_opencode_stream_response(
+    proxy: dict,
+    upstream_url: str,
+    proxy_token: str,
+    upstream_token: str,
+    body: dict,
+) -> Response:
+    run_id = str(proxy.get("run_id") or "")
+    upstream_body = dict(body)
+    upstream_body.pop("stream", None)
+    try:
+        upstream = requests.request(
+            request.method,
+            upstream_url,
+            headers=_upstream_headers(proxy_token, upstream_token),
+            data=json.dumps(upstream_body, ensure_ascii=False).encode("utf-8"),
+            stream=False,
+            timeout=(PROVIDER_PROXY_CONNECT_TIMEOUT_SECONDS, PROVIDER_PROXY_READ_TIMEOUT_SECONDS),
+        )
+    except requests.RequestException as exc:
+        if run_id:
+            _json_line(
+                _run_log_path(run_id),
+                {
+                    "type": "proxy_error",
+                    "method": request.method,
+                    "subpath": "messages",
+                    "upstream_url": upstream_url,
+                    "message": str(exc),
+                    "compat": "minimax-opencode-nonstream",
+                    "ts": _now_ms(),
+                },
+            )
+        return jsonify({"error": "provider proxy upstream request failed", "detail": str(exc)}), 502
+
+    if upstream.status_code >= 400:
+        return Response(upstream.content, status=upstream.status_code, headers=_response_headers(upstream))
+
+    try:
+        data = upstream.json()
+    except ValueError:
+        return Response(upstream.content, status=upstream.status_code, headers=_response_headers(upstream))
+
+    text_len = len(_anthropic_text_from_message(data))
+    if run_id:
+        _json_line(
+            _run_log_path(run_id),
+            {
+                "type": "proxy_response",
+                "method": request.method,
+                "subpath": "messages",
+                "upstream_url": upstream_url,
+                "status_code": upstream.status_code,
+                "content_type": "text/event-stream; charset=utf-8",
+                "compat": "minimax-opencode-nonstream-to-sse",
+                "text_len": text_len,
+                "ts": _now_ms(),
+            },
+        )
+
+    frames = _synthesized_anthropic_stream(data)
+    return Response(
+        stream_with_context(iter(frames)),
+        status=upstream.status_code,
+        headers=[
+            ("content-type", "text/event-stream; charset=utf-8"),
+            ("cache-control", "no-cache"),
+        ],
+    )
+
+
 @APP.route("/proxy/<token>", defaults={"subpath": ""}, methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
 @APP.route("/proxy/<token>/<path:subpath>", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
 def provider_proxy(token: str, subpath: str):
@@ -1192,6 +1356,9 @@ def provider_proxy(token: str, subpath: str):
     upstream_url = urljoin(f"{upstream_base}/", subpath)
     if request.query_string:
         upstream_url = f"{upstream_url}?{request.query_string.decode('utf-8', errors='replace')}"
+    body = _request_json_body()
+    if _should_synthesize_minimax_opencode_stream(proxy, subpath, body):
+        return _minimax_opencode_stream_response(proxy, upstream_url, token, upstream_token, body or {})
     try:
         upstream = requests.request(
             request.method,
