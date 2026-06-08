@@ -1,13 +1,17 @@
 # JSON-DSL Registry 服务
 
-独立的包注册中心服务，负责 JSON-DSL 组件和应用的依赖解析、命名空间管理。
+独立的包注册中心服务，负责 JSON-DSL 组件和应用的依赖解析、命名空间管理、发布校验、市场列表和富化索引。
+
+生产部署以 [`deploy/production/README.md`](../deploy/production/README.md) 和
+`myapp-ctl deploy` 为准。本文件主要记录 Registry API、数据结构和本地开发调试方式。
 
 ## 服务信息
 
 - **端口**: 3254
 - **域名**: https://myapp-registry.dapangyu.work
-- **存储**: MinIO (`json-component` bucket)
-- **索引文件**: `_index.json`
+- **运行时包存储**: MinIO `json-component` bucket
+- **运行时解析真源**: `json-component/_index.json` + 对应 JSON 包文件
+- **市场富化索引**: Postgres `registry_packages`，用于详情、AI 摘要、tech_stack、点赞和安装统计；不替代 `_index.json`
 
 ## 命名空间规则
 
@@ -22,15 +26,21 @@
 - 权限: 用户只能发布自己命名空间下的包
 - 路径: `mycompany/frontend/ui-kit/ui-kit-1.0.0.json`
 
-## 部署步骤
+## 本地开发 / 手工调试
+
+生产请不要按下面的 `nohup python3 ...` 裸跑流程部署。当前支持的生产路径是：
+
+```bash
+./deploy/production/install_ctl.sh
+myapp-ctl setup --host <public-ip-or-domain>
+myapp-ctl deploy --build   # or --pull
+```
 
 ### 1. 初始化索引文件
 
-从现有数据库迁移数据到 MinIO：
+从旧 `app_registry` 迁移数据到 MinIO `_index.json` 时才需要运行：
 
 ```bash
-# 在服务器上执行
-ssh root@myapp-backend.dapangyu.work
 cd /path/to/ai-app
 python3 backend/registry_init.py
 ```
@@ -40,9 +50,8 @@ python3 backend/registry_init.py
 ### 2. 启动 Registry 服务
 
 ```bash
-# 在服务器上执行
 cd /path/to/ai-app
-nohup python3 backend/registry_server.py > logs/registry.log 2>&1 &
+python3 backend/registry_server.py
 ```
 
 ### 3. 配置 Nginx 反向代理
@@ -93,6 +102,8 @@ GET /health
 
 ```bash
 GET /resolve?name=common-ui&version=^1.0.0
+GET /resolve?appid=<uuid>
+GET /resolve_appid?appid=<uuid>
 ```
 
 响应:
@@ -172,16 +183,22 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
+  "namespace": "mycompany/frontend",
+  "name": "ui-kit",
+  "appid": "08ad186c-0000-4000-8000-000000000000",
+  "version": "1.0.0",
+  "description": "Reusable UI kit",
+  "type": "library",
   "json_content": {
     "dsl": "3.3",
+    "appid": "08ad186c-0000-4000-8000-000000000000",
     "meta": {
       "name": "mycompany/frontend/ui-kit",
       "version": "1.0.0",
       "type": "library"
     },
     "global": { ... }
-  },
-  "force_update": false
+  }
 }
 ```
 
@@ -229,7 +246,8 @@ Content-Type: application/json
 }
 ```
 
-如果提供了 `url`，客户端会直接使用，不通过 Registry 解析。
+旧对象格式仍可被解析，但当前加载器实际使用包名和 `version` 约束通过
+`CacheManager` / Registry 下载；`url` 字段只作为历史兼容元数据保留，不再作为直接下载入口。
 
 ## 测试
 
@@ -258,7 +276,13 @@ curl http://localhost:3254/package/common-ui
       "versions": ["1.0.0"],
       "path": "common-ui",
       "author_id": "uuid-xxx",
-      "created_at": "2026-04-21T10:00:00Z"
+      "appid": "08ad186c-0000-4000-8000-000000000000",
+      "created_at": "2026-04-21T10:00:00Z",
+      "version_sources": {"1.0.0": "local"},
+      "meta_type": "library",
+      "description": "Common UI widgets",
+      "author": "admin",
+      "displayName": "Common UI"
     },
     "mycompany/frontend/ui-kit": {
       "type": "user",
@@ -266,31 +290,26 @@ curl http://localhost:3254/package/common-ui
       "versions": ["1.0.0"],
       "path": "mycompany/frontend/ui-kit",
       "author_id": "uuid-yyy",
-      "created_at": "2026-04-21T11:00:00Z"
+      "appid": "08ad186c-1111-4000-8000-000000000000",
+      "created_at": "2026-04-21T11:00:00Z",
+      "version_sources": {"1.0.0": "local"},
+      "meta_type": "library"
     }
   },
-  "namespaces": {
-    "mycompany": {
-      "owner_id": "uuid-yyy",
-      "owner_email": "user@example.com",
-      "created_at": "2026-04-21T09:00:00Z",
-      "sub_namespaces": ["frontend"]
-    },
-    "mycompany/frontend": {
-      "owner_id": "uuid-yyy",
-      "created_at": "2026-04-21T09:30:00Z"
-    }
-  }
+  "namespaces": {}
 }
 ```
+
+`namespaces` 字段是历史兼容字段。当前命名空间和发布权限以 Postgres
+`namespaces` / `namespace_members` 表为准。
 
 ## 注意事项
 
 1. **命名空间唯一性**: 首次发布时必须先创建命名空间
 2. **权限控制**: 用户只能发布自己命名空间下的包
-3. **版本不可变**: 已发布的版本不能修改（除非 `force_update=true`）
-4. **索引文件**: 所有操作都会更新 `_index.json`，确保 MinIO 可写
-5. **并发安全**: 当前实现不支持高并发写入，生产环境建议加锁
+3. **版本不可变**: 已发布的同名同版本不能覆盖；发布新内容必须递增版本号
+4. **索引文件**: 运行时解析依赖 `_index.json`，确保 MinIO 可写
+5. **富化索引**: `registry_packages` 只服务市场详情/搜索增强/统计，不是运行时依赖解析的唯一真源
 
 ## 故障排查
 

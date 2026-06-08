@@ -111,7 +111,8 @@ bash backend/upload_with_signature.sh "$TMPFILE"
 聊天生成模式下禁止自动发布到商店。不要调用：
 
 - `publish_script.py`
-- `/api/store/publish`
+- Registry `/publish`
+- legacy `/api/store/publish`
 - 任何 publish 相关 curl
 
 只有用户明确说“发布/上架/publish”时才处理发布。

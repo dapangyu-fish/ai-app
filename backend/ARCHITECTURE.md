@@ -19,11 +19,11 @@ backend:5566
   |-- claude_chat.py          AI chat API, provider/agent selection, SSE replay
   |-- agent_nodes.py          public/private agent-node registry APIs
   |-- im.py / openim.py       OpenIM token, user search, push-token bridge
-  |-- store.py                app store / registry-facing APIs
+  |-- store.py                legacy store routes plus AI/IM upload URL helpers
   |-- bytedance_asr_routes.py ASR websocket proxy
   |
   |-- ai-session-redis        AI queue, session metadata, SSE event streams
-  |-- jsonapp-postgres        registry/app/user metadata used by backend
+  |-- jsonapp-postgres        quotas, device tokens, agent nodes, registry enrichment/social data
   |-- app-minio               JSON apps, media, temporary generated files
   |-- supabase-*              auth, REST, storage-compatible services
   |-- openim-*                IM server, MySQL, Mongo, Redis, Kafka, MinIO
@@ -90,7 +90,7 @@ Current AI chat endpoints:
 ```text
 GET  /api/ai/providers?agent_scope=public|private
 POST /api/ai/chat/start
-GET  /api/ai/chat/<session_id>/stream_token
+POST /api/ai/chat/<session_id>/stream_token
 GET  /api/ai/chat/<session_id>/stream?last_id=<redis-stream-id>
 GET  /api/ai/chat/<session_id>/result
 GET  /api/ai/chat/<session_id>/status
@@ -159,16 +159,22 @@ ai:queue:pending:<provider>               list
 ai:queue:running                          hash
 ai:queue:running:<provider>               hash
 ai:agent_pull:pending                     list
-ai:agent_pull:job:<job_id>                string/json
-ai:agent_node:heartbeat:<node_id>         string/json
+ai:agent_pull:pending:user:<user_id>      list
+ai:agent_pull:job:<job_id>                hash with JSON spec/status fields
+ai:agent_pull:events:<job_id>             stream
+ai:agent_pull:artifact:<job_id>:<path>    string
+ai:agent_pull:node_running:<node_id>      set
+ai:agent_node:<node_id>                   hash, short-lived compatibility/cache state
 ```
 
 Session metadata and stream data are TTL-based. The durable source for published
-apps and generated JSON files is object storage/Registry, not Redis.
+apps and generated JSON files is object storage/Registry, not Redis. Durable
+agent-node registration lives in Postgres `agent_nodes`; Redis keeps queue,
+assignment, running, stream, and artifact state with TTLs.
 
 ## 5. Agent Execution Model
 
-The current default is pull mode:
+The compose default is pull mode (`AI_WORKER_EXECUTION_BACKEND=agent-pull`):
 
 ```text
 backend queues job
@@ -182,6 +188,10 @@ backend writes Redis stream events for clients
 
 Pull mode means an extra agent host only needs outbound access to the backend.
 It does not need a public inbound port.
+
+The code also contains direct `agent-node` and `local` execution backends for
+controlled deployments and development, but they are not the default path in the
+production compose files.
 
 Scheduling behavior:
 

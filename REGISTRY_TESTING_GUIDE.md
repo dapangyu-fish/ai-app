@@ -1,5 +1,8 @@
 # Registry 服务测试指南
 
+> 当前 Registry 已在主架构中使用。本指南用于验证现有服务/API；生产部署以
+> `deploy/production/README.md` 的 `myapp-ctl` 流程为准。
+
 ## 测试环境准备
 
 1. 确保 Registry 服务正在运行：
@@ -8,7 +11,8 @@
    ```
    应该返回：`{"status": "ok"}`
 
-2. 确保你的 Flutter 应用已经更新了 `dependency_loader.dart`（已在 feature/registry-service 分支完成）
+2. 确保当前客户端使用 `lib/json_ui/dependency_loader.dart` + `CacheManager`
+   解析 Registry 依赖；这是当前主分支代码路径。
 
 ## 测试方法
 
@@ -142,12 +146,12 @@ curl "https://myapp-registry.dapangyu.work/package/common-ui"
 
 **解决方法**:
 - 检查 _index.json 中是否有该版本
-- 运行 `python3 registry_init.py` 重建索引
+- 必要时运行 `python3 backend/registry_init.py` 从旧 `app_registry` 重建索引
 - 检查 MinIO 中是否有对应的文件
 
 ## 下一步
 
-测试通过后，可以：
-1. 在 Flutter 应用中添加"发布到市场"功能入口
-2. 将 feature/registry-service 分支合并到 main
-3. 编写用户文档，说明如何发布和使用组件包
+测试通过后，可以继续验证：
+1. 客户端市场页 `/packages`、详情页 `/packages/<name>/detail`。
+2. Registry `/publish` 的静态校验、命名空间权限和版本递增规则。
+3. Postgres `registry_packages` 富化索引是否正确补充摘要、tech_stack、点赞和安装统计。

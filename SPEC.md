@@ -23,11 +23,11 @@ ai-app/
 │   ├── designer/          # 悬浮球和 AI 对话
 │   └── config/            # 配置管理
 ├── backend/               # Python 后端服务
-│   ├── ai_server.py       # 主服务入口
+│   ├── app.py             # 主 Flask 服务入口
 │   ├── auth.py            # 认证模块
 │   ├── database.py        # 数据库操作
-│   ├── store.py           # 应用商店
-│   ├── registry_server.py # Registry 服务（独立进程）
+│   ├── store.py           # legacy store 路由 + AI/IM 上传 URL helper
+│   ├── registry_server.py # 当前 JSON-APP 市场/包 Registry 服务（独立进程）
 │   └── config.py          # 配置管理
 ├── templates/             # JSON-APP 模板
 └── JSON-DSL.md           # DSL 规范文档
@@ -127,6 +127,7 @@ conn = psycopg2.connect(...)  # 禁止！
 **涉及的表**：
 - `chat_quotas` - 聊天配额管理
 - `app_registry` - 应用注册表（已废弃）
+- `registry_packages` - Registry 市场详情、富化、点赞/安装统计索引；不替代 MinIO `_index.json`
 - `namespaces` - 命名空间表（新增）
 - `namespace_members` - 命名空间成员表（新增）
 
@@ -200,14 +201,15 @@ url = minio_client.presigned_get_object(
 
 **示例**：
 ```
-✅ GET  /api/namespaces          # 获取命名空间列表
-✅ POST /api/namespaces          # 创建命名空间
-✅ GET  /api/namespaces/{id}     # 获取单个命名空间
-✅ PUT  /api/namespaces/{id}     # 更新命名空间
-✅ DELETE /api/namespaces/{id}   # 删除命名空间
+✅ GET  /namespaces                         # Registry 公开命名空间列表
+✅ GET  /my-namespaces                      # 当前用户命名空间列表
+✅ POST /namespace/create                   # 创建命名空间
+✅ GET  /namespace/{id}/members             # 获取命名空间成员
+✅ PUT  /namespace/{id}/members/{user_id}   # 更新成员角色
+✅ DELETE /namespace/{id}/members/{user_id} # 删除成员
 
 ❌ GET  /api/getNamespaces       # 不要在 URL 中使用动词
-❌ POST /api/namespace           # 使用复数形式
+❌ POST /api/namespace           # 避免新增这种和现有 Registry 路由风格冲突的入口
 ```
 
 ### 4.2 HTTP 状态码
@@ -541,13 +543,13 @@ Future<User> getUserInfo(String userId) async {
 **示例**：
 
 ```python
-@app.route('/api/namespaces', methods=['GET'])
+@app.route('/my-namespaces', methods=['GET'])
 @require_auth
-def get_namespaces():
+def my_namespaces():
     """
     获取用户的命名空间列表
     
-    GET /api/namespaces
+    GET /my-namespaces
     
     Headers:
         Authorization: Bearer <token>
@@ -621,7 +623,7 @@ DEEPSEEK_KEY=...
 **后端服务**：
 ```bash
 # 主服务（端口 5566）
-python backend/ai_server.py
+python backend/app.py
 
 # Registry 服务（端口 3254）
 python backend/registry_server.py

@@ -40,8 +40,8 @@ Network expectations for an all-in-one backend:
 | Port | Service | External use |
 |---|---|---|
 | `5566` | Backend API | Required by clients and pull-mode agent hosts |
-| `5000` | Registry | Required by clients unless fronted/proxied |
-| `3254` | Config Center | Required by clients |
+| `3254` | Registry | Required by clients unless fronted/proxied |
+| `5000` | Config Center | Required by clients |
 | OpenIM HTTP/WS ports | OpenIM | Required for IM on mobile/Web |
 | `5590` | Agent Node | Local/internal in pull mode; do not expose unless using direct mode |
 

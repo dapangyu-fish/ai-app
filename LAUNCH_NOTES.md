@@ -1,5 +1,8 @@
 # MyApp Launch Notes
 
+> 历史发布/策略备忘，包含当时的代码体量、计划和判断。当前架构事实请以
+> `README.md`、`backend/ARCHITECTURE.md`、`backend/REGISTRY_README.md` 和代码为准。
+
 > 这份文档是 Claude 在 2026-05-19 仔细读完 ~41k 行代码 + 全部 docs 后整理。
 > 目的：评估开源 launch + 火起来的可行性 + 给出具体行动清单。
 > 你慢慢看，把不同意的直接划掉就行。
@@ -350,7 +353,7 @@ Happy to answer questions about the DSL design, AI prompt engineering, or the
 
 - 现役 `registry_server.py` 用 **MinIO 上单个 `_index.json`** 存全部包目录
 - 每次 publish / mirror sync 都 **load 整个文件 → 改 → 写回整个文件**（在 `index_lock` 里）
-- Postgres `app_registry` 表是**老 store.py（已废弃，410）**用的，新 registry 不碰
+- Postgres `app_registry` 表是**老 store.py legacy 路由**用的，新 Registry 主链路不碰
 - 历史：当初主动从 Postgres 迁到了 MinIO json（`registry_init.py` 是迁移脚本）
 
 ### 三个会同时爆发的问题（同一个根因 + 同一个解）

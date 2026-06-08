@@ -204,7 +204,7 @@ i. **游戏类型 profile 自检**：如果用户需求包含明确游戏类型�
 
 - ❌ **禁止使用 `publish_script.py`**
 - ❌ **禁止调用任何 publish 相关的命令**
-- ❌ **禁止使用 `curl` 或其他方式调用 `/api/store/publish` 接口**
+- ❌ **禁止使用 `curl` 或其他方式调用 Registry `/publish` 或 legacy `/api/store/publish` 接口**
 - ❌ **禁止自作主张发布应用**
 
 **只有在以下情况下才能发布**：

@@ -218,7 +218,7 @@ Agent 一个中立关卡节奏骨架：安全开场、首次接敌、掩体交�
 | `123` / `true` / `[]` | 原始值 | 直接使用 | `"value": []` |
 | `"{{ path }}"` | 模板引用 | 解析为变量的**原始类型**（List/Map/String 等） | `"value": "{{ global.list }}"` → 实际 List |
 | `"前缀 {{ path }} 后缀"` | 模板插值 | 解析为**字符串**（变量 toString 后拼接） | `"value": "共 {{ global.count }} 条"` → `"共 5 条"` |
-| `{ "op": [...] }` 单 key + key 在 op 集合 | JsonLogic 表达式 | 通过 jsonlogic 引擎**求值** | `"value": { "merge": [...] }` |
+| `{ "if": [...] }` / `{ "+": [...] }` 等单 key + key 在 op 集合 | JsonLogic 表达式 | 通过 jsonlogic 引擎**求值** | `"value": { "merge": [...] }` |
 | `{ "key": ..., "key2": ... }` 数据 Map | 普通数据对象 | **原样传递**，递归展开内部 `{{ }}` 模板，不走 jsonlogic | `"item": { "id": "{{ loop.index }}", "name": "..." }` |
 
 **关键区分**：

@@ -61,7 +61,7 @@ bash backend/upload_with_signature.sh "$TMPFILE"
 
 ## 4. 禁止事项
 
-- 禁止自动调用 `publish_script.py` 或任何 publish/store publish API。只有用户明确要求“发布/上架/publish”时才可发布。
+- 禁止自动调用 `publish_script.py`、Registry `/publish`、legacy `/api/store/publish` 或任何 publish API。只有用户明确要求“发布/上架/publish”时才可发布。
 - 禁止自创 DSL 字段、widget、action。对不确定项读相关源码或模板确认。
 - 禁止在聊天回复里输出客户端协议标签。客户端动作只能写入 `$AI_APP_WORKSPACE/client_actions.json`。
 - 禁止在聊天框输出整份大 JSON。
