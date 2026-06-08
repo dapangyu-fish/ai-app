@@ -1619,11 +1619,11 @@ class _DesignerBallState extends State<DesignerBall>
         _messages.last.content == content) {
       return;
     }
-    if (_messages.length >= 2 &&
-        _messages[_messages.length - 2].role == 'user' &&
-        _messages[_messages.length - 2].content == content &&
-        _messages.last.role == 'assistant') {
-      return;
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      final message = _messages[i];
+      if (message.role != 'user') continue;
+      if (message.content == content) return;
+      break;
     }
     _messages.add(ChatMessage(role: 'user', content: content));
   }

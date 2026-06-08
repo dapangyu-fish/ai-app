@@ -543,6 +543,11 @@ for _provider_id in AI_PROVIDERS:
 # Registry summary 富化：后台批量摘要的 CLI 小池（跟生成的大池隔离，饿不死用户生成）
 SUMMARY_MAX_CONCURRENCY = _env_int("SUMMARY_MAX_CONCURRENCY", 3)
 SUMMARY_CLI_TIMEOUT = _env_int("SUMMARY_CLI_TIMEOUT", 120)
+SUMMARY_EXECUTION_BACKEND = (
+    os.environ.get("SUMMARY_EXECUTION_BACKEND", "auto").strip().lower().replace("_", "-")
+    or "auto"
+)
+SUMMARY_AGENT_NODE_URL = os.environ.get("SUMMARY_AGENT_NODE_URL", "").rstrip("/")
 
 
 # 角色配额

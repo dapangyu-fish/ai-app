@@ -51,6 +51,7 @@ PROVIDER_PROXY_BASE_URL = os.environ.get("AGENT_NODE_PROVIDER_PROXY_BASE_URL", "
 PROVIDER_PROXY_TOKEN_TTL_SECONDS = int(os.environ.get("AGENT_NODE_PROVIDER_PROXY_TOKEN_TTL_SECONDS", "21600"))
 PROVIDER_PROXY_CONNECT_TIMEOUT_SECONDS = float(os.environ.get("AGENT_NODE_PROVIDER_PROXY_CONNECT_TIMEOUT_SECONDS", "30"))
 PROVIDER_PROXY_READ_TIMEOUT_SECONDS = float(os.environ.get("AGENT_NODE_PROVIDER_PROXY_READ_TIMEOUT_SECONDS", "900"))
+INITIAL_FILES_MAX_BYTES = int(os.environ.get("AGENT_NODE_INITIAL_FILES_MAX_BYTES", str(20 * 1024 * 1024)))
 NODE_TOKEN = os.environ.get("AGENT_NODE_TOKEN", "")
 REGISTRATION_TOKEN = os.environ.get("AGENT_NODE_REGISTRATION_TOKEN", NODE_TOKEN)
 AUTH_MODE = os.environ.get("AGENT_NODE_AUTH_MODE", "shared").strip().lower().replace("_", "-")
@@ -360,6 +361,73 @@ def _copy_workspace_snapshot(source: Path, target: Path, log_path: Path) -> None
         raise
 
 
+def _safe_workspace_file(workspace: Path, relative_path: object) -> Path:
+    text = str(relative_path or "").replace("\\", "/").lstrip("/")
+    if not text or "\x00" in text:
+        raise ValueError("initial file path is empty or invalid")
+    root = workspace.resolve()
+    target = (workspace / text).resolve()
+    if target == root or root not in target.parents:
+        raise ValueError(f"initial file path escapes workspace: {text}")
+    return target
+
+
+def _write_initial_files(workspace: Path, initial_files: object) -> None:
+    if initial_files in (None, "", []):
+        return
+    if not isinstance(initial_files, list):
+        raise ValueError("initial_files must be a list")
+    if len(initial_files) > 20:
+        raise ValueError("too many initial files")
+
+    total_bytes = 0
+    for item in initial_files:
+        if not isinstance(item, dict):
+            raise ValueError("initial file entry must be an object")
+        target = _safe_workspace_file(workspace, item.get("path") or item.get("name"))
+        if "content_b64" in item:
+            import base64
+
+            data = base64.b64decode(str(item.get("content_b64") or ""), validate=True)
+        else:
+            data = str(item.get("content") or "").encode("utf-8")
+        total_bytes += len(data)
+        if total_bytes > INITIAL_FILES_MAX_BYTES:
+            raise ValueError("initial files exceed size limit")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+
+
+def _secret_redactions(payload: dict) -> list[str]:
+    values: list[str] = []
+    env = payload.get("env") if isinstance(payload.get("env"), dict) else {}
+    for key, value in env.items():
+        upper = str(key).upper()
+        if any(marker in upper for marker in ("TOKEN", "KEY", "SECRET", "PASSWORD")):
+            text = str(value or "")
+            if len(text) >= 8:
+                values.append(text)
+    for token in payload.get("_proxy_tokens") or []:
+        text = str(token or "")
+        if len(text) >= 8:
+            values.append(text)
+    values.sort(key=len, reverse=True)
+    deduped: list[str] = []
+    seen = set()
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        deduped.append(value)
+    return deduped
+
+
+def _redact_text(text: str, redactions: list[str]) -> str:
+    for value in redactions:
+        text = text.replace(value, f"<redacted len={len(value)}>")
+    return text
+
+
 def _issue_proxy_token(run_id: str, upstream_base_url: str, upstream_token: str, *, provider_id: str, agent_id: str) -> str:
     token = secrets.token_urlsafe(32)
     with _PROXY_LOCK:
@@ -587,10 +655,12 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
     return cmd, docker_env
 
 
-def _pump_stream(log_path: Path, kind: str, stream) -> None:
+def _pump_stream(log_path: Path, kind: str, stream, redactions: list[str]) -> None:
     assert stream is not None
     for raw in iter(stream.readline, b""):
         line = raw.decode("utf-8", errors="replace")
+        if redactions:
+            line = _redact_text(line, redactions)
         _json_line(log_path, {"type": kind, "line": line, "ts": _now_ms()})
 
 
@@ -617,6 +687,7 @@ def _start_run_thread(
     log_path: Path,
     paths: dict[str, Path],
     proxy_tokens: list[str],
+    redactions: list[str],
 ) -> None:
     def abort_requested() -> bool:
         with _RUNS_LOCK:
@@ -647,8 +718,8 @@ def _start_run_thread(
                     subprocess.run(["docker", "rm", "-f", container], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     _json_line(log_path, {"type": "abort_applied", "container": container, "ts": _now_ms()})
             threads = [
-                threading.Thread(target=_pump_stream, args=(log_path, "stdout", proc.stdout), daemon=True),
-                threading.Thread(target=_pump_stream, args=(log_path, "stderr", proc.stderr), daemon=True),
+                threading.Thread(target=_pump_stream, args=(log_path, "stdout", proc.stdout, redactions), daemon=True),
+                threading.Thread(target=_pump_stream, args=(log_path, "stderr", proc.stderr, redactions), daemon=True),
             ]
             for thread in threads:
                 thread.start()
@@ -1046,10 +1117,13 @@ def _create_local_run(data: dict) -> str:
     paths = _session_paths(user_id, session_id, job_id)
     payload_path = _run_payload_path(run_id)
     try:
+        paths["workspace"].mkdir(parents=True, exist_ok=True)
+        _write_initial_files(paths["workspace"], data.get("initial_files"))
         _apply_local_provider(payload)
         proxy_tokens = _prepare_provider_proxy(payload)
     except ValueError as exc:
         raise ValueError(str(exc))
+    redactions = _secret_redactions(payload)
     cmd, docker_env = _docker_cmd(run_id, payload, payload_path, paths)
     log_path = _run_log_path(run_id)
     _json_line(log_path, _redacted_start_payload(payload, cmd))
@@ -1074,7 +1148,7 @@ def _create_local_run(data: dict) -> str:
         }
     if abort_requested:
         _json_line(log_path, {"type": "abort_requested", "reason": "pre_start", "ts": _now_ms()})
-    _start_run_thread(run_id, payload, cmd, docker_env, log_path, paths, proxy_tokens)
+    _start_run_thread(run_id, payload, cmd, docker_env, log_path, paths, proxy_tokens, redactions)
     return run_id
 
 
