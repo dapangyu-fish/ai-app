@@ -3,8 +3,10 @@
 Use this flow to test an AI-generated JSON-APP end to end in the real Flutter
 Web interpreter, without logging in and without copying the JSON into the app.
 
-This is intentionally a development-only path. The Flutter entry point only
-honors it in debug builds on localhost.
+This is intentionally a development and Agent-runtime review path. Absolute
+local file paths are only honored on localhost/debug-style entry points.
+Hosted Web preview supports `remote_file`, but the remote value must be a
+loopback `http(s)` URL served from the same machine running the browser.
 
 ## Run
 
@@ -77,6 +79,27 @@ https://myapp-web.dapangyu.work/?remote_file=http%3A%2F%2F127.0.0.1%3A6666%2Fapp
 
 The hosted page fetches the JSON from the browser's own loopback interface. The
 helper emits CORS and Private Network Access headers for this preview path.
+
+## Agent Runtime Visual Review
+
+The isolated Agent runtime packages the same hosted-loopback flow as a CLI:
+
+```bash
+myapp-visual-review "$AI_APP_WORKSPACE/app.json" --capture-small
+```
+
+The tool starts a loopback JSON server, opens the hosted Flutter Web client,
+captures mobile screenshots through headless Chrome, and writes:
+
+```text
+$AI_APP_WORKSPACE/visual_review/report.md
+$AI_APP_WORKSPACE/visual_review/report.json
+$AI_APP_WORKSPACE/visual_review/screenshots/
+```
+
+The tool does not call a visual model. If the active Claude/Codex/OpenCode
+model supports image input, the Agent should inspect the referenced PNG files
+itself and revise `app.json` before final upload.
 
 ## Why This Exists
 

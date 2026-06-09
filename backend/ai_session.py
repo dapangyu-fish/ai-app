@@ -1543,6 +1543,44 @@ def _run_redis_job(job: _WorkerJob) -> None:
         _complete_running(job.session_id, job.provider_id)
 
 
+def _env_enabled(name: str, default: str = "0") -> bool:
+    return str(os.environ.get(name, default)).strip().lower() in {"1", "true", "yes", "on", "enabled"}
+
+
+def _visual_review_env() -> dict[str, str]:
+    keys = (
+        "AI_APP_VISUAL_REVIEW_ENABLED",
+        "AI_APP_VISUAL_REVIEW_CMD",
+        "AI_APP_VISUAL_REVIEW_WEB_BASE",
+        "AI_APP_VISUAL_REVIEW_REMOTE_PARAM",
+        "AI_APP_VISUAL_REVIEW_PRIMARY_VIEWPORT",
+        "AI_APP_VISUAL_REVIEW_SMALL_VIEWPORT",
+        "AI_APP_VISUAL_REVIEW_MAX_CLICKS",
+        "AI_APP_VISUAL_REVIEW_TIMEOUT",
+        "AI_APP_VISUAL_REVIEW_STABILIZE_SECONDS",
+    )
+    return {key: os.environ[key] for key in keys if os.environ.get(key)}
+
+
+def _build_visual_review_prompt_note(*, workspace: Optional[str] = None) -> str:
+    if not _env_enabled("AI_APP_VISUAL_REVIEW_ENABLED"):
+        return ""
+    cmd = os.environ.get("AI_APP_VISUAL_REVIEW_CMD", "myapp-visual-review").strip() or "myapp-visual-review"
+    app_path = "$AI_APP_WORKSPACE/app.json" if workspace else "app.json"
+    capture_small = " --capture-small" if os.environ.get("AI_APP_VISUAL_REVIEW_SMALL_VIEWPORT", "").strip() else ""
+    return (
+        "\n\n视觉复检工具（本轮可选能力，不能替代 validate/upload）："
+        f"\n- 运行命令：`{cmd} \"{app_path}\"{capture_small}`。"
+        "\n- 该工具只负责用真实 Flutter Web JSON 解释器渲染、截图和生成 report.md/report.json；"
+        "不会调用任何额外视觉 API。"
+        "\n- 如果当前 Agent/模型支持读取图片，复杂 APP、视觉质量敏感 APP、游戏或多页面 APP "
+        "在最终上传前至少运行一次，并打开 `$AI_APP_WORKSPACE/visual_review/report.md` 中引用的 PNG 截图，"
+        "根据真实画面修复 JSON 后重新 repair/validate。"
+        "\n- 如果当前模型不能读取图片，只能把视觉复检报告当作渲染/截图证据；不要声称已经完成图片级视觉评估。"
+        "\n- 视觉复检不是客户端动作；最终仍必须通过 upload_with_signature.sh 写入 client_actions。"
+    )
+
+
 def _build_user_turn_prompt(last_msg: str, *, workspace: Optional[str] = None) -> str:
     workspace_note = ""
     if workspace:
@@ -1552,6 +1590,7 @@ def _build_user_turn_prompt(last_msg: str, *, workspace: Optional[str] = None) -
             "\n生成器、下载的 manifest、app.json、校验输出都放在 AI_APP_WORKSPACE 下；"
             "不要写 /tmp/app.json 或 /tmp/generate_app.py。"
         )
+    visual_review_note = _build_visual_review_prompt_note(workspace=workspace)
     final_protocol_note = (
         "\n\n最终交付协议（本轮普通提示重复注入，必须逐字符遵守）："
         "如果用户只是问能力、使用方式、普通闲聊、澄清问题或解释错误，且没有要求新建/修改/修复/发布 APP，"
@@ -1571,6 +1610,7 @@ def _build_user_turn_prompt(last_msg: str, *, workspace: Optional[str] = None) -
         f"{workspace_note}\n请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户；"
         "如果该提示词要求先分类、读取索引或按需阅读分层文档，每一轮都必须重新执行。"
         "不要遗忘工作目录、repair/validate、上传和 client_actions 结构化动作规则。"
+        f"{visual_review_note}"
         f"{final_protocol_note}"
     )
 
@@ -2325,6 +2365,7 @@ def _agent_node_provider_env(provider: dict, *, include_provider_secrets: bool =
     env["AI_APP_PROJECT_ROOT"] = PROJECT_ROOT
     env["REGISTRY_BASE_URL"] = os.environ.get("REGISTRY_BASE_URL", "")
     env["MINIO_PUBLIC_URL"] = os.environ.get("MINIO_PUBLIC_URL", "")
+    env.update(_visual_review_env())
     return {k: v for k, v in env.items() if v is not None}
 
 

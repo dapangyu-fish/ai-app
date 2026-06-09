@@ -21,6 +21,7 @@ import 'i18n/language_switcher.dart';
 import 'i18n/meta_helper.dart';
 import 'theme/theme_controller.dart';
 import 'platform/native_fs.dart';
+import 'platform/local_json_debug_status.dart';
 import 'json_ui/interpreter.dart';
 import 'json_ui/cache_manager.dart';
 import 'json_ui/semver.dart';
@@ -712,6 +713,22 @@ class _LocalJsonDebugLoaderState extends ConsumerState<_LocalJsonDebugLoader> {
   String? _error;
   String? _fileName;
 
+  void _publishDebugStatus(
+    String status, {
+    String? error,
+    String? fileName,
+  }) {
+    if (!kIsWeb) return;
+    setLocalJsonDebugStatus({
+      'status': status,
+      'source': widget.source,
+      'hostedRemote': widget.hostedRemote,
+      if (error != null) 'error': error,
+      if (fileName != null) 'fileName': fileName,
+      'updatedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -758,6 +775,7 @@ class _LocalJsonDebugLoaderState extends ConsumerState<_LocalJsonDebugLoader> {
   }
 
   Future<void> _load() async {
+    _publishDebugStatus('loading');
     setState(() {
       _loading = true;
       _error = null;
@@ -772,6 +790,7 @@ class _LocalJsonDebugLoaderState extends ConsumerState<_LocalJsonDebugLoader> {
       final fallback = widget.source.split('/').last;
       final fileName = resolveDisplayName(meta, fallback: fallback);
       if (!mounted) return;
+      _publishDebugStatus('loaded', fileName: fileName);
       setState(() {
         _fileName = fileName;
         _loading = false;
@@ -779,6 +798,7 @@ class _LocalJsonDebugLoaderState extends ConsumerState<_LocalJsonDebugLoader> {
     } catch (e, stack) {
       debugPrint('[LocalJsonDebug] load failed: $e\n$stack');
       if (!mounted) return;
+      _publishDebugStatus('error', error: e.toString());
       setState(() {
         _error = e.toString();
         _loading = false;

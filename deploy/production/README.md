@@ -278,6 +278,17 @@ Agent runtime image, including Claude/Codex/OpenCode tooling,
 myapp-ctl deploy agent-runtime --build --no-setup --no-test-user
 ```
 
+This includes the visual review tool used by image-capable Agent/model runs:
+
+```bash
+myapp-visual-review "$AI_APP_WORKSPACE/app.json" --capture-small
+```
+
+The tool renders through the hosted Flutter Web JSON interpreter, writes
+`visual_review/report.md`, `report.json`, and screenshots, and does not call a
+separate vision API. The running Agent reads the screenshots itself when its
+model supports image input.
+
 Both agent-node and runtime changed:
 
 ```bash

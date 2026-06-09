@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         bash \
         ca-certificates \
         curl \
+        gnupg \
         wget \
         git \
         openssh-client \
@@ -46,6 +47,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libasound2-dev \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
+    && install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /etc/apt/keyrings/google-linux.gpg \
+    && chmod 0644 /etc/apt/keyrings/google-linux.gpg \
+    && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-linux.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        google-chrome-stable \
+        fonts-liberation \
+        fonts-noto-cjk \
+        fonts-noto-color-emoji \
     && npm install -g @anthropic-ai/claude-code @openai/codex@0.136.0 opencode-ai \
     && ln -sf "$(command -v claude)" /usr/local/bin/claude \
     && ln -sf "$(command -v codex)" /usr/local/bin/codex \
@@ -53,6 +64,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && claude --version \
     && codex --version \
     && opencode --version \
+    && google-chrome --version \
     && python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel \
     && /opt/venv/bin/pip install --no-cache-dir codex-relay==0.3.3 \
@@ -69,7 +81,14 @@ ENV PATH=/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/
     CODEX_NPM_CACHE=/home/agent/.npm \
     CODEX_HOME=/home/agent/.codex \
     OPENCODE_HOME=/home/agent \
-    AI_APP_PROJECT_ROOT=/app
+    AI_APP_PROJECT_ROOT=/app \
+    AI_APP_VISUAL_REVIEW_ENABLED=1 \
+    AI_APP_VISUAL_REVIEW_CMD=myapp-visual-review \
+    AI_APP_VISUAL_REVIEW_WEB_BASE=https://myapp-web.dapangyu.work \
+    AI_APP_VISUAL_REVIEW_REMOTE_PARAM=remote_file \
+    AI_APP_VISUAL_REVIEW_PRIMARY_VIEWPORT=402x874 \
+    AI_APP_VISUAL_REVIEW_SMALL_VIEWPORT=360x780 \
+    AI_APP_VISUAL_REVIEW_MAX_CLICKS=4
 
 WORKDIR /app
 
@@ -87,7 +106,10 @@ COPY JSON-DSL.md /app/JSON-DSL.md
 COPY pubspec.yaml pubspec.lock analysis_options.yaml /app/
 COPY deploy/production/agent_runner.py /opt/myapp/agent_runner.py
 
-RUN useradd -m -u 10001 -s /bin/bash agent \
+RUN chmod 755 /app/scripts/myapp_visual_review.py \
+    && ln -sf /app/scripts/myapp_visual_review.py /usr/local/bin/myapp-visual-review \
+    && myapp-visual-review --help >/dev/null \
+    && useradd -m -u 10001 -s /bin/bash agent \
     && mkdir -p /workspace /home/agent/.claude /home/agent/.codex /home/agent/.npm \
         /home/agent/.config/opencode /home/agent/.local/share/opencode /run/myapp-agent \
     && touch /run/myapp-agent/payload.json \
