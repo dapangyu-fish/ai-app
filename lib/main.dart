@@ -32,6 +32,7 @@ import 'designer/designer_ball.dart';
 import 'designer/market_detail_page.dart';
 import 'designer/market_favorites.dart';
 import 'designer/settings_page.dart';
+import 'designer/hidden_env_entry.dart';
 import 'designer/ai_chat_service.dart';
 import 'designer/app_storage.dart';
 import 'designer/default_startup_prefs.dart';
@@ -1505,12 +1506,14 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
               // Top bar
               Row(
                 children: [
-                  Text(
-                    t.homeAppTitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: cs.onSurface,
+                  HiddenEnvEntry(
+                    child: Text(
+                      t.homeAppTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: cs.onSurface,
+                      ),
                     ),
                   ),
                   const Spacer(),
