@@ -67,11 +67,27 @@ const List<String> _localJsonDebugParamNames = [
   'json_app',
 ];
 
+const List<String> _remoteJsonParamNames = [
+  'remote_file',
+  'remote_json',
+  'remote_json_url',
+];
+
 const List<String> _webAppIdParamNames = ['appid', 'app_id'];
 
 String? _localJsonDebugSource() {
   final params = Uri.base.queryParameters;
   for (final name in _localJsonDebugParamNames) {
+    final value = params[name]?.trim();
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return null;
+}
+
+String? _remoteJsonSource() {
+  if (!kIsWeb) return null;
+  final params = Uri.base.queryParameters;
+  for (final name in _remoteJsonParamNames) {
     final value = params[name]?.trim();
     if (value != null && value.isNotEmpty) return value;
   }
@@ -93,6 +109,17 @@ bool _isLocalDebugHost() {
   final host = Uri.base.host.toLowerCase();
   return host.isEmpty ||
       host == 'localhost' ||
+      host == '127.0.0.1' ||
+      host == '::1' ||
+      host == '[::1]';
+}
+
+bool _isAllowedHostedRemoteJsonSource(String source) {
+  final uri = Uri.tryParse(source);
+  if (uri == null || !uri.hasScheme || !uri.hasAuthority) return false;
+  if (uri.scheme != 'http' && uri.scheme != 'https') return false;
+  final host = uri.host.toLowerCase();
+  return host == 'localhost' ||
       host == '127.0.0.1' ||
       host == '::1' ||
       host == '[::1]';
@@ -656,13 +683,22 @@ class JsonDslApp extends ConsumerWidget {
 
 class _LocalJsonDebugLoader extends ConsumerStatefulWidget {
   final String source;
+  final bool hostedRemote;
 
-  const _LocalJsonDebugLoader({required this.source});
+  const _LocalJsonDebugLoader({
+    required this.source,
+    this.hostedRemote = false,
+  });
 
   static Widget? maybeBuild() {
     final source = _localJsonDebugSource();
-    if (source == null || !_isLocalDebugHost()) return null;
-    return _LocalJsonDebugLoader(source: source);
+    if (source != null) {
+      if (!_isLocalDebugHost()) return null;
+      return _LocalJsonDebugLoader(source: source);
+    }
+    final remoteSource = _remoteJsonSource();
+    if (remoteSource == null) return null;
+    return _LocalJsonDebugLoader(source: remoteSource, hostedRemote: true);
   }
 
   @override
@@ -682,6 +718,12 @@ class _LocalJsonDebugLoaderState extends ConsumerState<_LocalJsonDebugLoader> {
   }
 
   Future<String> _readJsonSource(String source) async {
+    if (widget.hostedRemote &&
+        !_isAllowedHostedRemoteJsonSource(source)) {
+      throw Exception(
+        'remote_file only supports loopback http(s) URLs: $source',
+      );
+    }
     final uri = Uri.tryParse(source);
     if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
       final resp = await http.get(uri).timeout(const Duration(seconds: 20));

@@ -48,12 +48,35 @@ horizontally.
   or an `http(s)` URL to a JSON file.
 - `local_json_server`: optional helper endpoint. Defaults to
   `http://127.0.0.1:8765/json`.
+- `remote_file`, `remote_json`, or `remote_json_url`: Web-hosted preview URL
+  for an already-running hosted Flutter Web client. This is intended for URLs
+  such as `https://myapp-web.dapangyu.work/?remote_file=...`. The value must be
+  a loopback `http(s)` URL such as `http://127.0.0.1:6666/app.json`; absolute
+  filesystem paths are intentionally not accepted on hosted domains.
 
 Example:
 
 ```text
 http://localhost:5555/?local_json=/tmp/app.json&local_json_server=http://127.0.0.1:8765/json
 ```
+
+Hosted Web preview without uploading the JSON:
+
+```bash
+python3 scripts/local_json_server.py \
+  --port 6666 \
+  --file /tmp/app.json \
+  --allow-origin https://myapp-web.dapangyu.work
+```
+
+Then open:
+
+```text
+https://myapp-web.dapangyu.work/?remote_file=http%3A%2F%2F127.0.0.1%3A6666%2Fapp.json
+```
+
+The hosted page fetches the JSON from the browser's own loopback interface. The
+helper emits CORS and Private Network Access headers for this preview path.
 
 ## Why This Exists
 

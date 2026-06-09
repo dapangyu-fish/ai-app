@@ -28,6 +28,10 @@ LOCAL_ORIGINS = {
     "[::1]",
 }
 
+DEFAULT_ALLOWED_ORIGINS = {
+    "https://myapp-web.dapangyu.work",
+}
+
 
 def _origin_host(origin: str) -> str:
     if not origin:
@@ -38,37 +42,58 @@ def _origin_host(origin: str) -> str:
         return ""
 
 
+def _origin_allowed(origin: str, allowed_origins: set[str]) -> bool:
+    if not origin:
+        return True
+    if origin in allowed_origins:
+        return True
+    return _origin_host(origin) in LOCAL_ORIGINS
+
+
 class LocalJsonHandler(BaseHTTPRequestHandler):
     server_version = "LocalJsonDebug/1.0"
 
     def end_headers(self) -> None:
         origin = self.headers.get("Origin", "")
-        host = _origin_host(origin)
-        if not origin or host in LOCAL_ORIGINS:
+        allowed_origins = getattr(self.server, "allowed_origins", set())
+        if _origin_allowed(origin, allowed_origins):
             self.send_header("Access-Control-Allow-Origin", origin or "*")
             self.send_header("Vary", "Origin")
             self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
             self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Access-Control-Allow-Private-Network", "true")
         super().end_headers()
 
     def do_OPTIONS(self) -> None:
-        self.send_response(HTTPStatus.NO_CONTENT)
+        origin = self.headers.get("Origin", "")
+        allowed_origins = getattr(self.server, "allowed_origins", set())
+        if not _origin_allowed(origin, allowed_origins):
+            self.send_response(HTTPStatus.FORBIDDEN)
+        else:
+            self.send_response(HTTPStatus.NO_CONTENT)
         self.end_headers()
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
-        if parsed.path != "/json":
-            self._send_json(HTTPStatus.NOT_FOUND, {"error": "Use /json?path=/abs/app.json"})
-            return
-
         origin = self.headers.get("Origin", "")
-        host = _origin_host(origin)
-        if origin and host not in LOCAL_ORIGINS:
-            self._send_json(HTTPStatus.FORBIDDEN, {"error": "Origin must be localhost"})
+        allowed_origins = getattr(self.server, "allowed_origins", set())
+        if not _origin_allowed(origin, allowed_origins):
+            self._send_json(HTTPStatus.FORBIDDEN, {"error": "Origin not allowed"})
             return
 
-        params = parse_qs(parsed.query)
-        file_path = (params.get("path") or [""])[0]
+        single_file = getattr(self.server, "single_file", "")
+        if single_file and parsed.path in {"/app.json", "/json"}:
+            file_path = single_file
+        elif parsed.path == "/json":
+            params = parse_qs(parsed.query)
+            file_path = (params.get("path") or [""])[0]
+        else:
+            self._send_json(
+                HTTPStatus.NOT_FOUND,
+                {"error": "Use /json?path=/abs/app.json or --file with /app.json"},
+            )
+            return
+
         if not file_path:
             self._send_json(HTTPStatus.BAD_REQUEST, {"error": "Missing path"})
             return
@@ -116,10 +141,25 @@ def main() -> None:
     )
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument(
+        "--file",
+        default="",
+        help="Serve one JSON file directly at /app.json for hosted Web preview.",
+    )
+    parser.add_argument(
+        "--allow-origin",
+        action="append",
+        default=[],
+        help="Additional allowed CORS origin. Can be repeated.",
+    )
     args = parser.parse_args()
 
     server = ThreadingHTTPServer((args.host, args.port), LocalJsonHandler)
+    server.single_file = os.path.abspath(args.file) if args.file else ""
+    server.allowed_origins = DEFAULT_ALLOWED_ORIGINS | set(args.allow_origin)
     print(f"Serving local JSON debug helper on http://{args.host}:{args.port}/json")
+    if server.single_file:
+        print(f"Serving {server.single_file} on http://{args.host}:{args.port}/app.json")
     try:
         server.serve_forever()
     except KeyboardInterrupt:
