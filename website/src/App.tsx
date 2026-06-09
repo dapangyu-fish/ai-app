@@ -656,6 +656,169 @@ function DocsPage({ lang }: { lang: Lang }) {
           ],
         },
       ];
+  const commandReferenceGroups = zh
+    ? [
+        {
+          title: '生命周期和服务',
+          body: '部署、更新、重启、日志和卸载。targets 可以是服务名，也可以配合 --group 使用 infra / supabase / openim / agent / core。',
+          lines: [
+            'myapp-ctl status [service ...] [--json]',
+            'myapp-ctl deploy [target ...] [--build|--pull|--plan|--dry-run]',
+            'myapp-ctl deploy --group infra|supabase|openim|agent|core --pull',
+            'myapp-ctl restart [service ...]',
+            'myapp-ctl log <service> [-n 120] [-f]',
+            'myapp-ctl update [--source <checkout>] [--no-pull]',
+            'myapp-ctl uninstall --yes [--purge] [--volumes] [--images] [--remove-ctl]',
+          ],
+        },
+        {
+          title: '首次配置和密钥',
+          body: 'setup 是交互式入口；secret 用来查看、生成、设置和删除服务器本机密钥。生产密钥不要写入 Git。',
+          lines: [
+            'myapp-ctl setup [--host <host>] [--data-root /mnt/myapp] [--force]',
+            'myapp-ctl setup [--no-ai] [--no-asr] [--no-email] [--no-push]',
+            'myapp-ctl secret init-stack [--host <host>] [--data-root /mnt/myapp] [--force]',
+            'myapp-ctl secret ls',
+            'myapp-ctl secret get <group> <key> [--show]',
+            'myapp-ctl secret set <group> KEY=value [KEY2=value2 ...]',
+            'myapp-ctl secret generate <group> KEY [KEY2 ...] [--bytes 32]',
+            'myapp-ctl secret rm <group> KEY [KEY2 ...]',
+          ],
+        },
+        {
+          title: '配置、域名和客户端环境',
+          body: '配置包可用于迁移和恢复；client-env 会输出客户端可导入的环境 JSON 和二维码。',
+          lines: [
+            'myapp-ctl config view [--show-secrets]',
+            'myapp-ctl config export --out <path.json|path.yaml> [--redacted]',
+            'myapp-ctl config import <path.json|path.yaml> --yes',
+            'myapp-ctl config lang [zh|en|de|es]',
+            'myapp-ctl domain ls',
+            'myapp-ctl domain set <name> <url>',
+            'myapp-ctl domain rm <name>',
+            'myapp-ctl client-env [--host <host>] [--name <name>] [--json] [--terminal-qr]',
+          ],
+        },
+        {
+          title: '镜像',
+          body: '镜像目标目前是 all、backend、agent-node、agent-runtime。--build 走源码，--pull 走已发布镜像。',
+          lines: [
+            'myapp-ctl image ls',
+            'myapp-ctl image build [all|backend|agent-node|agent-runtime]',
+            'myapp-ctl image pull [all|backend|agent-node|agent-runtime]',
+            'myapp-ctl image push [all|backend|agent-node|agent-runtime]',
+          ],
+        },
+        {
+          title: '公共 Agent Node',
+          body: 'agent-node ls 是集群视角；agent ls 只看当前机器正在跑的 agent 容器。',
+          lines: [
+            'myapp-ctl agent ls',
+            'myapp-ctl agent-node ls [--namespace public|all|<user-id>] [--json] [--no-probe]',
+            'myapp-ctl agent-node status [node-id] [--namespace public|all|<user-id>] [--json] [--no-probe]',
+            'myapp-ctl agent-node add --backend <url> --host <host> --node-id <id> --name <name> [--pull|--build]',
+            'myapp-ctl agent-node join --backend <url> --node-id <id> --name <name> --agent-token <token> --registration-token <token>',
+            'myapp-ctl agent-node register --backend <url> --node-id <id> --url <url>',
+            'myapp-ctl agent-node pause [node-id] [--reason <text>]',
+            'myapp-ctl agent-node resume [node-id]',
+            'myapp-ctl agent-node capacity <n> [--queue-max <n>]',
+            'myapp-ctl agent-node limits --capacity <n> --queue-max <n>',
+            'myapp-ctl agent-node rm <node-id>',
+          ],
+        },
+        {
+          title: '用户私有 Agent Node',
+          body: '私有节点只服务所属用户，长效 provider key 留在节点本地。App 设置页会生成一次性 join token 和 join command。',
+          lines: [
+            'MYAPP_PRIVATE_AGENT_JOIN_TOKEN=<token> myapp-ctl agent-node private join --backend <url> --node-id <id> --name <name> --pull',
+            'myapp-ctl agent-node private join --backend <url> --node-id <id> --name <name> --provider deepseek --agent claude --capacity 2 --queue-max 10',
+            'myapp-ctl agent-node private ls',
+            'myapp-ctl agent-node private status [node-id]',
+            'myapp-ctl agent-node private ls --auth-token <user-token>',
+          ],
+        },
+      ]
+    : [
+        {
+          title: 'Lifecycle and services',
+          body: 'Deploy, update, restart, logs and uninstall. Targets can be service names, or use --group with infra / supabase / openim / agent / core.',
+          lines: [
+            'myapp-ctl status [service ...] [--json]',
+            'myapp-ctl deploy [target ...] [--build|--pull|--plan|--dry-run]',
+            'myapp-ctl deploy --group infra|supabase|openim|agent|core --pull',
+            'myapp-ctl restart [service ...]',
+            'myapp-ctl log <service> [-n 120] [-f]',
+            'myapp-ctl update [--source <checkout>] [--no-pull]',
+            'myapp-ctl uninstall --yes [--purge] [--volumes] [--images] [--remove-ctl]',
+          ],
+        },
+        {
+          title: 'Setup and secrets',
+          body: 'setup is the interactive entrypoint; secret manages host-local credentials. Do not put production secrets in Git.',
+          lines: [
+            'myapp-ctl setup [--host <host>] [--data-root /mnt/myapp] [--force]',
+            'myapp-ctl setup [--no-ai] [--no-asr] [--no-email] [--no-push]',
+            'myapp-ctl secret init-stack [--host <host>] [--data-root /mnt/myapp] [--force]',
+            'myapp-ctl secret ls',
+            'myapp-ctl secret get <group> <key> [--show]',
+            'myapp-ctl secret set <group> KEY=value [KEY2=value2 ...]',
+            'myapp-ctl secret generate <group> KEY [KEY2 ...] [--bytes 32]',
+            'myapp-ctl secret rm <group> KEY [KEY2 ...]',
+          ],
+        },
+        {
+          title: 'Config, domains and client env',
+          body: 'Config bundles are used for migration and recovery; client-env prints importable client JSON and QR codes.',
+          lines: [
+            'myapp-ctl config view [--show-secrets]',
+            'myapp-ctl config export --out <path.json|path.yaml> [--redacted]',
+            'myapp-ctl config import <path.json|path.yaml> --yes',
+            'myapp-ctl config lang [zh|en|de|es]',
+            'myapp-ctl domain ls',
+            'myapp-ctl domain set <name> <url>',
+            'myapp-ctl domain rm <name>',
+            'myapp-ctl client-env [--host <host>] [--name <name>] [--json] [--terminal-qr]',
+          ],
+        },
+        {
+          title: 'Images',
+          body: 'Current image targets are all, backend, agent-node and agent-runtime. --build uses source; --pull uses published images.',
+          lines: [
+            'myapp-ctl image ls',
+            'myapp-ctl image build [all|backend|agent-node|agent-runtime]',
+            'myapp-ctl image pull [all|backend|agent-node|agent-runtime]',
+            'myapp-ctl image push [all|backend|agent-node|agent-runtime]',
+          ],
+        },
+        {
+          title: 'Public Agent Node',
+          body: 'agent-node ls is the cluster view; agent ls is local-only and shows running agent containers on this host.',
+          lines: [
+            'myapp-ctl agent ls',
+            'myapp-ctl agent-node ls [--namespace public|all|<user-id>] [--json] [--no-probe]',
+            'myapp-ctl agent-node status [node-id] [--namespace public|all|<user-id>] [--json] [--no-probe]',
+            'myapp-ctl agent-node add --backend <url> --host <host> --node-id <id> --name <name> [--pull|--build]',
+            'myapp-ctl agent-node join --backend <url> --node-id <id> --name <name> --agent-token <token> --registration-token <token>',
+            'myapp-ctl agent-node register --backend <url> --node-id <id> --url <url>',
+            'myapp-ctl agent-node pause [node-id] [--reason <text>]',
+            'myapp-ctl agent-node resume [node-id]',
+            'myapp-ctl agent-node capacity <n> [--queue-max <n>]',
+            'myapp-ctl agent-node limits --capacity <n> --queue-max <n>',
+            'myapp-ctl agent-node rm <node-id>',
+          ],
+        },
+        {
+          title: 'User-private Agent Node',
+          body: 'Private nodes serve only their owner, and long-lived provider keys stay on the node host. The app settings page creates a one-time join token and command.',
+          lines: [
+            'MYAPP_PRIVATE_AGENT_JOIN_TOKEN=<token> myapp-ctl agent-node private join --backend <url> --node-id <id> --name <name> --pull',
+            'myapp-ctl agent-node private join --backend <url> --node-id <id> --name <name> --provider deepseek --agent claude --capacity 2 --queue-max 10',
+            'myapp-ctl agent-node private ls',
+            'myapp-ctl agent-node private status [node-id]',
+            'myapp-ctl agent-node private ls --auth-token <user-token>',
+          ],
+        },
+      ];
 
   return (
     <>
@@ -706,6 +869,7 @@ function DocsPage({ lang }: { lang: Lang }) {
             <a href="#architecture-docs">{zh ? '架构图' : 'Architecture'}</a>
             <a href="#install">{zh ? '安装部署' : 'Install'}</a>
             <a href="#operations">{zh ? '更新运维' : 'Operations'}</a>
+            <a href="#cli-reference">{zh ? 'CLI 命令' : 'CLI reference'}</a>
             <a href="#agent-nodes">{zh ? 'Agent Node' : 'Agent Node'}</a>
             <a href="#private-agent">{zh ? '私有节点' : 'Private nodes'}</a>
             <a href="#clients">{zh ? '客户端' : 'Clients'}</a>
@@ -810,6 +974,33 @@ function DocsPage({ lang }: { lang: Lang }) {
                     <TerminalBox lines={item.lines} />
                   </div>
                 ))}
+              </div>
+            </article>
+
+            <article className="docsBlock" id="cli-reference">
+              <p className="eyebrow">{zh ? '命令参考' : 'Command reference'}</p>
+              <h2>{zh ? '常用二级命令和关键参数' : 'Common subcommands and key flags'}</h2>
+              <p>
+                {zh
+                  ? '下面是官网内置的精简参考，覆盖当前主线最常用的二级命令。更细的参数以服务器上 myapp-ctl <命令> --help 为准。'
+                  : 'This is the compact reference embedded in the website. For the full argument list, run myapp-ctl <command> --help on the host.'}
+              </p>
+              <div className="docsCommandList">
+                {commandReferenceGroups.map((item) => (
+                  <div className="docsCommandItem" key={item.title}>
+                    <strong>{item.title}</strong>
+                    <small>{item.body}</small>
+                    <TerminalBox lines={item.lines} />
+                  </div>
+                ))}
+              </div>
+              <div className="docsBoundaryNote">
+                <ShieldCheck size={18} />
+                <p>
+                  {zh
+                    ? '兼容说明：myapp-ctl agent add 和 myapp-ctl agent register 仍是旧别名，新文档统一使用 agent-node add / register。'
+                    : 'Compatibility note: myapp-ctl agent add and myapp-ctl agent register remain old aliases; new docs use agent-node add / register.'}
+                </p>
               </div>
             </article>
 
