@@ -2011,7 +2011,7 @@ section {
   }
 
   .shell {
-    width: min(100% - 28px, 1160px);
+    width: min(100% - 8px, 1160px);
   }
 
   .navLinks {
@@ -2055,6 +2055,10 @@ section {
 
   .hero {
     padding-top: 48px;
+  }
+
+  .heroGrid {
+    width: 100%;
   }
 
   .heroCopy {
@@ -2103,6 +2107,11 @@ section {
     width: 100%;
   }
 
+  .heroAside {
+    justify-self: stretch;
+    padding-top: 18px;
+  }
+
   .proofRow {
     justify-content: center;
   }
@@ -2116,12 +2125,13 @@ section {
   }
 
   .phoneStage {
-    width: min(100%, 390px);
-    padding: 10px;
+    width: min(100%, 430px);
+    padding: 12px;
+    margin: 0 auto;
   }
 
   .phoneGlow {
-    inset: 12px;
+    inset: 16px;
   }
 
   .docsHero {
