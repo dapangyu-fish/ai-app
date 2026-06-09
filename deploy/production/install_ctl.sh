@@ -85,6 +85,9 @@ fi
 install -d -m 755 "$INSTALL_ROOT/deploy/production"
 install -m 644 "$ROOT_DIR/deploy/production/docker-compose.core.yml" "$INSTALL_ROOT/deploy/production/docker-compose.core.yml"
 install -m 644 "$ROOT_DIR/backend/schema.sql" "$INSTALL_ROOT/deploy/production/schema.sql"
+rm -rf "$INSTALL_ROOT/backend/providers"
+install -d -m 755 "$INSTALL_ROOT/backend"
+cp -a "$ROOT_DIR/backend/providers" "$INSTALL_ROOT/backend/providers"
 
 SUPABASE_INSTALL="$INSTALL_ROOT/deploy/production/supabase"
 OPENIM_INSTALL="$INSTALL_ROOT/deploy/production/openim"

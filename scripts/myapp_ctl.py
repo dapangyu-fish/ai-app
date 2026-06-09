@@ -2177,7 +2177,54 @@ def _split_csv(value: str) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+_PROVIDER_REGISTRY = None
+_PROVIDER_REGISTRY_ATTEMPTED = False
+
+
+def _provider_registry():
+    global _PROVIDER_REGISTRY, _PROVIDER_REGISTRY_ATTEMPTED
+    if _PROVIDER_REGISTRY_ATTEMPTED:
+        return _PROVIDER_REGISTRY
+    _PROVIDER_REGISTRY_ATTEMPTED = True
+    candidates = []
+    try:
+        script_root = Path(__file__).resolve().parents[1]
+        candidates.append(script_root)
+    except Exception:
+        pass
+    try:
+        source = Path(_cfg().get("paths", {}).get("source", "")).expanduser()
+        if source:
+            candidates.append(source)
+    except Exception:
+        pass
+    for root in candidates:
+        provider_root = root / "backend"
+        if not root or not (provider_root / "providers" / "registry.py").exists():
+            continue
+        text = str(provider_root)
+        if text not in sys.path:
+            sys.path.insert(0, text)
+        try:
+            from providers import registry
+        except Exception:
+            continue
+        _PROVIDER_REGISTRY = registry
+        return _PROVIDER_REGISTRY
+    return None
+
+
+def _builtin_provider(provider_id: str) -> dict:
+    registry = _provider_registry()
+    if registry:
+        return registry.builtin_provider(provider_id)
+    return {}
+
+
 def _ai_provider_ids_from_env(env: dict[str, str]) -> list[str]:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_ids_from_env(env)
     ids = [_normalize_provider_id(item) for item in _split_csv(env.get("AI_PROVIDER_IDS", ""))]
     seen = set()
     out: list[str] = []
@@ -2208,6 +2255,9 @@ def _ai_provider_ids_from_env(env: dict[str, str]) -> list[str]:
 
 
 def _provider_has_anthropic_adapter(env: dict[str, str], provider_id: str) -> bool:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_has_anthropic_adapter(env, provider_id)
     prefix = _provider_prefix(provider_id)
     return bool(
         env.get(f"{prefix}_ANTHROPIC_BASE_URL")
@@ -2217,6 +2267,9 @@ def _provider_has_anthropic_adapter(env: dict[str, str], provider_id: str) -> bo
 
 
 def _provider_has_codex_responses_adapter(env: dict[str, str], provider_id: str) -> bool:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_has_codex_responses_adapter(env, provider_id)
     prefix = _provider_prefix(provider_id)
     env_key = env.get(f"{prefix}_CODEX_ENV_KEY") or f"{prefix}_CODEX_AUTH_TOKEN"
     return bool(
@@ -2229,6 +2282,9 @@ def _provider_has_codex_responses_adapter(env: dict[str, str], provider_id: str)
 
 
 def _provider_has_opencode_adapter(env: dict[str, str], provider_id: str) -> bool:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_has_opencode_adapter(env, provider_id)
     prefix = _provider_prefix(provider_id)
     env_key = env.get(f"{prefix}_OPENCODE_ENV_KEY") or f"{prefix}_OPENCODE_AUTH_TOKEN"
     return bool(
@@ -2240,6 +2296,9 @@ def _provider_has_opencode_adapter(env: dict[str, str], provider_id: str) -> boo
 
 
 def _provider_codex_adapter_kind(env: dict[str, str], provider_id: str) -> str:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_codex_adapter_kind(env, provider_id)
     prefix = _provider_prefix(provider_id)
     relay = (env.get(f"{prefix}_CODEX_RELAY") or "").strip().lower().replace("_", "-")
     upstream_wire_api = (env.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API") or "").strip().lower().replace("_", "-")
@@ -2249,6 +2308,9 @@ def _provider_codex_adapter_kind(env: dict[str, str], provider_id: str) -> str:
 
 
 def _provider_allows_agent(env: dict[str, str], provider_id: str, agent_id: str) -> bool:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_allows_agent(env, provider_id, agent_id)
     prefix = _provider_prefix(provider_id)
     raw = env.get(f"{prefix}_SUPPORTED_AGENTS", "")
     if raw:
@@ -2262,6 +2324,9 @@ def _provider_allows_agent(env: dict[str, str], provider_id: str, agent_id: str)
 
 
 def _builtin_supported_agents(existing: dict[str, str], prefix: str) -> str:
+    registry = _provider_registry()
+    if registry:
+        return registry.builtin_supported_agents(existing, prefix)
     raw = existing.get(f"{prefix}_SUPPORTED_AGENTS", "").strip()
     if not raw:
         return "claude,codex,opencode"
@@ -2276,6 +2341,9 @@ def _builtin_supported_agents(existing: dict[str, str], prefix: str) -> str:
 
 
 def _default_adapter_kind(agent_id: str) -> str:
+    registry = _provider_registry()
+    if registry:
+        return registry.default_adapter_kind(agent_id)
     normalized = str(agent_id or "").strip().lower().replace("_", "-")
     if normalized == "claude":
         return "anthropic"
@@ -2292,6 +2360,13 @@ def _ai_provider_capabilities_from_env(
     provider_filter: list[str] | None = None,
     agent_filter: list[str] | None = None,
 ) -> list[dict[str, object]]:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_capabilities_from_env(
+            env,
+            provider_filter=provider_filter,
+            agent_filter=agent_filter,
+        )
     allowed_providers = {
         _normalize_provider_id(item)
         for item in (provider_filter or [])
@@ -2357,6 +2432,9 @@ def _ai_providers_configured(path: Path | None = None) -> bool:
 
 
 def _default_agent_from_provider_env(env: dict[str, str], provider_id: str) -> str:
+    registry = _provider_registry()
+    if registry:
+        return registry.default_agent_from_provider_env(env, provider_id)
     if _provider_has_anthropic_adapter(env, provider_id):
         return "claude"
     if _provider_has_codex_responses_adapter(env, provider_id):
@@ -2395,10 +2473,16 @@ def _base_provider_env(
 def _prompt_deepseek_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
     provider_id = "deepseek"
     prefix = _provider_prefix(provider_id)
-    model = _prompt_line(f"{provider_id} model", default=existing.get(f"{prefix}_ANTHROPIC_MODEL", "deepseek-v4-pro[1m]"))
+    builtin = _builtin_provider(provider_id)
+    adapters = builtin.get("adapters") if isinstance(builtin.get("adapters"), dict) else {}
+    claude = adapters.get("claude") or {}
+    codex = adapters.get("codex") or {}
+    opencode = adapters.get("opencode") or {}
+    worker = builtin.get("worker") if isinstance(builtin.get("worker"), dict) else {}
+    model = _prompt_line(f"{provider_id} model", default=existing.get(f"{prefix}_ANTHROPIC_MODEL", claude.get("model", "deepseek-v4-pro[1m]")))
     base_url = _prompt_line(
         f"{provider_id} Anthropic base URL",
-        default=existing.get(f"{prefix}_ANTHROPIC_BASE_URL", "https://api.deepseek.com/anthropic"),
+        default=existing.get(f"{prefix}_ANTHROPIC_BASE_URL", claude.get("base_url", "https://api.deepseek.com/anthropic")),
     )
     token = _prompt_line(
         f"{provider_id} Anthropic auth token",
@@ -2408,8 +2492,8 @@ def _prompt_deepseek_provider(existing: dict[str, str]) -> tuple[str, dict[str, 
     )
     data = _base_provider_env(
         prefix=prefix,
-        name="DeepSeek V4 Pro",
-        description="DeepSeek Anthropic-compatible Claude Code provider",
+        name=builtin.get("name", "DeepSeek V4 Pro"),
+        description=builtin.get("setup_description", "DeepSeek Anthropic-compatible Claude Code provider"),
         base_url=base_url,
         token=token,
         model=model,
@@ -2417,33 +2501,39 @@ def _prompt_deepseek_provider(existing: dict[str, str]) -> tuple[str, dict[str, 
     data[f"{prefix}_SUPPORTED_AGENTS"] = _builtin_supported_agents(existing, prefix)
     data.update(
         {
-            f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", "DeepSeek"),
-            f"{prefix}_CODEX_BASE_URL": existing.get(f"{prefix}_CODEX_BASE_URL", "https://api.deepseek.com/v1"),
-            f"{prefix}_CODEX_MODEL": existing.get(f"{prefix}_CODEX_MODEL", "deepseek-v4-pro"),
-            f"{prefix}_CODEX_ENV_KEY": existing.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
-            f"{prefix}_CODEX_WIRE_API": existing.get(f"{prefix}_CODEX_WIRE_API", "responses"),
-            f"{prefix}_CODEX_UPSTREAM_WIRE_API": existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", "chat-completions"),
-            f"{prefix}_CODEX_RELAY": existing.get(f"{prefix}_CODEX_RELAY", "codex-relay"),
-            f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "262144"),
-            f"{prefix}_OPENCODE_PROVIDER_NAME": existing.get(f"{prefix}_OPENCODE_PROVIDER_NAME", "DeepSeek"),
-            f"{prefix}_OPENCODE_BASE_URL": existing.get(f"{prefix}_OPENCODE_BASE_URL", "https://api.deepseek.com/v1"),
-            f"{prefix}_OPENCODE_MODEL": existing.get(f"{prefix}_OPENCODE_MODEL", "deepseek-v4-pro"),
-            f"{prefix}_OPENCODE_ENV_KEY": existing.get(f"{prefix}_OPENCODE_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
-            f"{prefix}_OPENCODE_PROVIDER_NPM": existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", "@ai-sdk/openai-compatible"),
+            f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", codex.get("provider_name", "DeepSeek")),
+            f"{prefix}_CODEX_BASE_URL": existing.get(f"{prefix}_CODEX_BASE_URL", codex.get("base_url", "https://api.deepseek.com/v1")),
+            f"{prefix}_CODEX_MODEL": existing.get(f"{prefix}_CODEX_MODEL", codex.get("model", "deepseek-v4-pro")),
+            f"{prefix}_CODEX_ENV_KEY": existing.get(f"{prefix}_CODEX_ENV_KEY", codex.get("env_key", f"{prefix}_ANTHROPIC_AUTH_TOKEN")),
+            f"{prefix}_CODEX_WIRE_API": existing.get(f"{prefix}_CODEX_WIRE_API", codex.get("wire_api", "responses")),
+            f"{prefix}_CODEX_UPSTREAM_WIRE_API": existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", codex.get("upstream_wire_api", "chat-completions")),
+            f"{prefix}_CODEX_RELAY": existing.get(f"{prefix}_CODEX_RELAY", codex.get("relay", "codex-relay")),
+            f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", str(codex.get("context_window", "262144"))),
+            f"{prefix}_OPENCODE_PROVIDER_NAME": existing.get(f"{prefix}_OPENCODE_PROVIDER_NAME", opencode.get("provider_name", "DeepSeek")),
+            f"{prefix}_OPENCODE_BASE_URL": existing.get(f"{prefix}_OPENCODE_BASE_URL", opencode.get("base_url", "https://api.deepseek.com/v1")),
+            f"{prefix}_OPENCODE_MODEL": existing.get(f"{prefix}_OPENCODE_MODEL", opencode.get("model", "deepseek-v4-pro")),
+            f"{prefix}_OPENCODE_ENV_KEY": existing.get(f"{prefix}_OPENCODE_ENV_KEY", opencode.get("env_key", f"{prefix}_ANTHROPIC_AUTH_TOKEN")),
+            f"{prefix}_OPENCODE_PROVIDER_NPM": existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", opencode.get("provider_npm", "@ai-sdk/openai-compatible")),
         }
     )
-    data[f"{prefix}_AI_WORKER_MAX_CONCURRENCY"] = existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "20")
-    data[f"{prefix}_AI_WORKER_QUEUE_MAX"] = existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "100")
+    data[f"{prefix}_AI_WORKER_MAX_CONCURRENCY"] = existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", worker.get("max_concurrency", "20"))
+    data[f"{prefix}_AI_WORKER_QUEUE_MAX"] = existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", worker.get("queue_max", "100"))
     return provider_id, data
 
 
 def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
     provider_id = "minimax"
     prefix = _provider_prefix(provider_id)
-    model = _prompt_line(f"{provider_id} model", default=existing.get(f"{prefix}_ANTHROPIC_MODEL", "MiniMax-M3"))
+    builtin = _builtin_provider(provider_id)
+    adapters = builtin.get("adapters") if isinstance(builtin.get("adapters"), dict) else {}
+    claude = adapters.get("claude") or {}
+    codex = adapters.get("codex") or {}
+    opencode = adapters.get("opencode") or {}
+    worker = builtin.get("worker") if isinstance(builtin.get("worker"), dict) else {}
+    model = _prompt_line(f"{provider_id} model", default=existing.get(f"{prefix}_ANTHROPIC_MODEL", claude.get("model", "MiniMax-M3")))
     base_url = _prompt_line(
         f"{provider_id} Anthropic base URL",
-        default=existing.get(f"{prefix}_ANTHROPIC_BASE_URL", "https://api.minimaxi.com/anthropic"),
+        default=existing.get(f"{prefix}_ANTHROPIC_BASE_URL", claude.get("base_url", "https://api.minimaxi.com/anthropic")),
     )
     token = _prompt_line(
         f"{provider_id} Anthropic auth token",
@@ -2453,8 +2543,8 @@ def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, s
     )
     data = _base_provider_env(
         prefix=prefix,
-        name="MiniMax M3",
-        description="MiniMax Anthropic-compatible and native Responses provider",
+        name=builtin.get("name", "MiniMax M3"),
+        description=builtin.get("setup_description", "MiniMax Anthropic-compatible and native Responses provider"),
         base_url=base_url,
         token=token,
         model=model,
@@ -2462,21 +2552,21 @@ def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, s
     data.update(
         {
             f"{prefix}_SUPPORTED_AGENTS": _builtin_supported_agents(existing, prefix),
-            f"{prefix}_AI_WORKER_MAX_CONCURRENCY": existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "5"),
-            f"{prefix}_AI_WORKER_QUEUE_MAX": existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "20"),
-            f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", "MiniMax"),
-            f"{prefix}_CODEX_BASE_URL": existing.get(f"{prefix}_CODEX_BASE_URL", "https://api.minimaxi.com/v1"),
-            f"{prefix}_CODEX_MODEL": existing.get(f"{prefix}_CODEX_MODEL", model),
-            f"{prefix}_CODEX_ENV_KEY": existing.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
-            f"{prefix}_CODEX_WIRE_API": existing.get(f"{prefix}_CODEX_WIRE_API", "responses"),
-            f"{prefix}_CODEX_UPSTREAM_WIRE_API": existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", ""),
-            f"{prefix}_CODEX_RELAY": existing.get(f"{prefix}_CODEX_RELAY", ""),
-            f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "512000"),
-            f"{prefix}_OPENCODE_PROVIDER_NAME": existing.get(f"{prefix}_OPENCODE_PROVIDER_NAME", "MiniMax"),
-            f"{prefix}_OPENCODE_BASE_URL": existing.get(f"{prefix}_OPENCODE_BASE_URL", "https://api.minimaxi.com/v1"),
-            f"{prefix}_OPENCODE_MODEL": existing.get(f"{prefix}_OPENCODE_MODEL", model),
-            f"{prefix}_OPENCODE_ENV_KEY": existing.get(f"{prefix}_OPENCODE_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
-            f"{prefix}_OPENCODE_PROVIDER_NPM": existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", "@ai-sdk/openai-compatible"),
+            f"{prefix}_AI_WORKER_MAX_CONCURRENCY": existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", worker.get("max_concurrency", "5")),
+            f"{prefix}_AI_WORKER_QUEUE_MAX": existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", worker.get("queue_max", "20")),
+            f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", codex.get("provider_name", "MiniMax")),
+            f"{prefix}_CODEX_BASE_URL": existing.get(f"{prefix}_CODEX_BASE_URL", codex.get("base_url", "https://api.minimaxi.com/v1")),
+            f"{prefix}_CODEX_MODEL": existing.get(f"{prefix}_CODEX_MODEL", codex.get("model", model)),
+            f"{prefix}_CODEX_ENV_KEY": existing.get(f"{prefix}_CODEX_ENV_KEY", codex.get("env_key", f"{prefix}_ANTHROPIC_AUTH_TOKEN")),
+            f"{prefix}_CODEX_WIRE_API": existing.get(f"{prefix}_CODEX_WIRE_API", codex.get("wire_api", "responses")),
+            f"{prefix}_CODEX_UPSTREAM_WIRE_API": existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", codex.get("upstream_wire_api", "")),
+            f"{prefix}_CODEX_RELAY": existing.get(f"{prefix}_CODEX_RELAY", codex.get("relay", "")),
+            f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", str(codex.get("context_window", "512000"))),
+            f"{prefix}_OPENCODE_PROVIDER_NAME": existing.get(f"{prefix}_OPENCODE_PROVIDER_NAME", opencode.get("provider_name", "MiniMax")),
+            f"{prefix}_OPENCODE_BASE_URL": existing.get(f"{prefix}_OPENCODE_BASE_URL", opencode.get("base_url", "https://api.minimaxi.com/v1")),
+            f"{prefix}_OPENCODE_MODEL": existing.get(f"{prefix}_OPENCODE_MODEL", opencode.get("model", model)),
+            f"{prefix}_OPENCODE_ENV_KEY": existing.get(f"{prefix}_OPENCODE_ENV_KEY", opencode.get("env_key", f"{prefix}_ANTHROPIC_AUTH_TOKEN")),
+            f"{prefix}_OPENCODE_PROVIDER_NPM": existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", opencode.get("provider_npm", "@ai-sdk/openai-compatible")),
         }
     )
     return provider_id, data

@@ -7,6 +7,23 @@ import os
 import shutil
 from dotenv import load_dotenv
 
+try:
+    from providers.registry import build_providers
+    from providers.schema import (
+        env_bool_for_prefix as _registry_env_bool_for_prefix,
+        env_for_prefix as _registry_env_for_prefix,
+        provider_prefix as _provider_prefix,
+        split_csv as _split_csv,
+    )
+except ModuleNotFoundError:
+    from backend.providers.registry import build_providers
+    from backend.providers.schema import (
+        env_bool_for_prefix as _registry_env_bool_for_prefix,
+        env_for_prefix as _registry_env_for_prefix,
+        provider_prefix as _provider_prefix,
+        split_csv as _split_csv,
+    )
+
 # .env 加载顺序（首个存在的文件生效）：
 #   1. $BACKEND_ENV_PATH 环境变量指定的路径（本地/临时调试用）
 #   2. backend/.env             （仓库内位置，仅本地开发兜底）
@@ -26,117 +43,12 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://myapp-auth.dapangyu.work"
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
-# Anthropic-compatible Claude CLI provider 配置。
-#
-# 内置 provider 只放非敏感默认值；token 只从环境变量读取，不能进仓库。
-# 后续新增供应商优先用环境变量，不需要改代码：
-#   AI_PROVIDER_IDS=deepseek,minimax,my-provider
-#   MY_PROVIDER_ANTHROPIC_BASE_URL=https://example.com/anthropic
-#   MY_PROVIDER_ANTHROPIC_AUTH_TOKEN=...
-#   MY_PROVIDER_ANTHROPIC_MODEL=my-model
-#
-# 如果没有配置 AI_PROVIDER_IDS，系统默认保留 deepseek，并自动发现已
-# 配置 Anthropic adapter 或 Codex Responses adapter 的 provider。已下线
-# 的旧 provider 即使旧环境文件里残留变量也不会被自动注册。
-_LEGACY_DISABLED_PROVIDER_IDS = {"glm", "cc"}
-_ANTHROPIC_PROVIDER_SUFFIXES = (
-    "_ANTHROPIC_BASE_URL",
-    "_ANTHROPIC_AUTH_TOKEN",
-    "_ANTHROPIC_MODEL",
-    "_ANTHROPIC_DEFAULT_OPUS_MODEL",
-    "_ANTHROPIC_DEFAULT_SONNET_MODEL",
-    "_ANTHROPIC_DEFAULT_HAIKU_MODEL",
-    "_CODEX_BASE_URL",
-    "_CODEX_MODEL",
-    "_CODEX_ENV_KEY",
-    "_CODEX_AUTH_TOKEN",
-    "_CODEX_RELAY",
-    "_CODEX_UPSTREAM_WIRE_API",
-    "_OPENCODE_BASE_URL",
-    "_OPENCODE_MODEL",
-    "_OPENCODE_ENV_KEY",
-    "_OPENCODE_AUTH_TOKEN",
-    "_OPENCODE_PROVIDER_NPM",
-)
-_BUILTIN_ANTHROPIC_PROVIDERS = {
-    "deepseek": {
-        "name": "DeepSeek V4 Pro",
-        "description": "DeepSeek Anthropic-compatible Claude Code provider and Chat Completions Codex provider",
-        "base_url": "https://api.deepseek.com/anthropic",
-        "model": "deepseek-v4-pro[1m]",
-        "auth_env_fallbacks": (),
-        "visible": "1",
-        "supported_agents": ("claude", "codex", "opencode"),
-        "codex": {
-            "provider_name": "DeepSeek",
-            "base_url": "https://api.deepseek.com/v1",
-            "model": "deepseek-v4-pro",
-            "wire_api": "responses",
-            "upstream_wire_api": "chat-completions",
-            "relay": "codex-relay",
-            "env_key": "DEEPSEEK_ANTHROPIC_AUTH_TOKEN",
-            "context_window": 262144,
-        },
-        "opencode": {
-            "provider_name": "DeepSeek",
-            "base_url": "https://api.deepseek.com/v1",
-            "model": "deepseek-v4-pro",
-            "env_key": "DEEPSEEK_ANTHROPIC_AUTH_TOKEN",
-            "provider_npm": "@ai-sdk/openai-compatible",
-        },
-    },
-    "minimax": {
-        "name": "MiniMax M3",
-        "description": "MiniMax Anthropic-compatible and native Responses provider",
-        "base_url": "https://api.minimaxi.com/anthropic",
-        "model": "MiniMax-M3",
-        "auth_env_fallbacks": (),
-        "visible": "1",
-        "supported_agents": ("claude", "codex", "opencode"),
-        "codex": {
-            "provider_name": "MiniMax",
-            "base_url": "https://api.minimaxi.com/v1",
-            "model": "MiniMax-M3",
-            "wire_api": "responses",
-            "env_key": "MINIMAX_ANTHROPIC_AUTH_TOKEN",
-            "context_window": 512000,
-        },
-        "opencode": {
-            "provider_name": "MiniMax",
-            "base_url": "https://api.minimaxi.com/v1",
-            "model": "MiniMax-M3",
-            "env_key": "MINIMAX_ANTHROPIC_AUTH_TOKEN",
-            "provider_npm": "@ai-sdk/openai-compatible",
-        },
-    },
-}
-
-
-def _split_csv(value: str) -> list[str]:
-    return [item.strip() for item in value.split(",") if item.strip()]
-
-
-def _provider_prefix(provider_id: str) -> str:
-    return "".join(ch.upper() if ch.isalnum() else "_" for ch in provider_id)
-
-
-def _provider_id_from_prefix(prefix: str) -> str:
-    return prefix.lower().replace("_", "-")
-
-
 def _env_for_prefix(prefix: str, key: str, default: str = "") -> str:
-    value = os.environ.get(f"{prefix}_{key}")
-    return value if value is not None else default
+    return _registry_env_for_prefix(os.environ, prefix, key, default)
 
 
 def _env_bool_for_prefix(prefix: str, key: str, default: str = "1") -> bool:
-    value = os.environ.get(f"{prefix}_{key}")
-    if value is None and key == "PROVIDER_VISIBLE":
-        value = os.environ.get(f"{prefix}_VISIBLE")
-    if value is None:
-        value = default
-    value = value.strip().lower()
-    return value not in {"0", "false", "no", "off", "disabled", "hidden"}
+    return _registry_env_bool_for_prefix(os.environ, prefix, key, default)
 
 
 def _env_int(name: str, default: int) -> int:
@@ -149,164 +61,12 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
-def _provider_auth_token(provider_id: str, prefix: str, builtin: dict) -> str:
-    token = _env_for_prefix(prefix, "ANTHROPIC_AUTH_TOKEN")
-    if token:
-        return token
-    for env_name in builtin.get("auth_env_fallbacks", ()):
-        fallback = os.environ.get(env_name, "")
-        if fallback:
-            return fallback
-    return ""
-
-
-def _provider_has_auth_env(provider_id: str) -> bool:
-    prefix = _provider_prefix(provider_id)
-    if os.environ.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""):
-        return True
-    codex_env_key = os.environ.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_CODEX_AUTH_TOKEN")
-    if (
-        os.environ.get(f"{prefix}_CODEX_BASE_URL", "")
-        and os.environ.get(f"{prefix}_CODEX_MODEL", "")
-        and codex_env_key
-        and os.environ.get(codex_env_key, "")
-    ):
-        return True
-    opencode_env_key = os.environ.get(f"{prefix}_OPENCODE_ENV_KEY", f"{prefix}_OPENCODE_AUTH_TOKEN")
-    if (
-        os.environ.get(f"{prefix}_OPENCODE_BASE_URL", "")
-        and os.environ.get(f"{prefix}_OPENCODE_MODEL", "")
-        and opencode_env_key
-        and os.environ.get(opencode_env_key, "")
-    ):
-        return True
-    builtin = _BUILTIN_ANTHROPIC_PROVIDERS.get(provider_id, {})
-    return any(os.environ.get(env_name, "") for env_name in builtin.get("auth_env_fallbacks", ()))
-
-
-def _discover_anthropic_provider_ids() -> list[str]:
-    explicit_ids = _split_csv(os.environ.get("AI_PROVIDER_IDS", ""))
-    if explicit_ids:
-        provider_ids = explicit_ids
-    else:
-        provider_ids = ["deepseek"]
-        if _provider_has_auth_env("minimax"):
-            provider_ids.append("minimax")
-
-    for env_name in os.environ:
-        for suffix in _ANTHROPIC_PROVIDER_SUFFIXES:
-            if not env_name.endswith(suffix):
-                continue
-            prefix = env_name[: -len(suffix)]
-            if prefix in {"", "ANTHROPIC"}:
-                continue
-            provider_id = _provider_id_from_prefix(prefix)
-            if provider_id in _LEGACY_DISABLED_PROVIDER_IDS:
-                continue
-            if provider_id in provider_ids:
-                continue
-            # 自动发现只接受已配置 token 的供应商，避免仅有默认 base_url 时污染列表。
-            codex_env_key = os.environ.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_CODEX_AUTH_TOKEN")
-            opencode_env_key = os.environ.get(f"{prefix}_OPENCODE_ENV_KEY", f"{prefix}_OPENCODE_AUTH_TOKEN")
-            if (
-                os.environ.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", "")
-                or (
-                    os.environ.get(f"{prefix}_CODEX_BASE_URL", "")
-                    and os.environ.get(f"{prefix}_CODEX_MODEL", "")
-                    and codex_env_key
-                    and os.environ.get(codex_env_key, "")
-                )
-                or (
-                    os.environ.get(f"{prefix}_OPENCODE_BASE_URL", "")
-                    and os.environ.get(f"{prefix}_OPENCODE_MODEL", "")
-                    and opencode_env_key
-                    and os.environ.get(opencode_env_key, "")
-                )
-            ):
-                provider_ids.append(provider_id)
-            break
-
-    result = []
-    seen = set()
-    for provider_id in provider_ids:
-        normalized = provider_id.strip().lower().replace("_", "-")
-        if not normalized or normalized in _LEGACY_DISABLED_PROVIDER_IDS or normalized in seen:
-            continue
-        seen.add(normalized)
-        result.append(normalized)
-    return result or ["deepseek"]
-
-
-def _build_anthropic_provider(provider_id: str) -> dict:
-    prefix = _provider_prefix(provider_id)
-    builtin = _BUILTIN_ANTHROPIC_PROVIDERS.get(provider_id, {})
-    default_model = builtin.get("model", "")
-
-    base_url = _env_for_prefix(prefix, "ANTHROPIC_BASE_URL", builtin.get("base_url", ""))
-    auth_token = _provider_auth_token(provider_id, prefix, builtin)
-    model = _env_for_prefix(prefix, "ANTHROPIC_MODEL", default_model)
-    opus_model = _env_for_prefix(prefix, "ANTHROPIC_DEFAULT_OPUS_MODEL", model)
-    sonnet_model = _env_for_prefix(prefix, "ANTHROPIC_DEFAULT_SONNET_MODEL", model)
-    haiku_model = _env_for_prefix(prefix, "ANTHROPIC_DEFAULT_HAIKU_MODEL", model)
-    subagent_model = _env_for_prefix(prefix, "CLAUDE_CODE_SUBAGENT_MODEL", model)
-    effort_level = _env_for_prefix(prefix, "CLAUDE_CODE_EFFORT_LEVEL", "max")
-    timeout_ms = _env_for_prefix(prefix, "API_TIMEOUT_MS", "600000")
-
-    cli_env = {
-        "ANTHROPIC_BASE_URL": base_url,
-        "ANTHROPIC_AUTH_TOKEN": auth_token,
-        "ANTHROPIC_MODEL": model,
-        "ANTHROPIC_DEFAULT_OPUS_MODEL": opus_model,
-        "ANTHROPIC_DEFAULT_SONNET_MODEL": sonnet_model,
-        "ANTHROPIC_DEFAULT_HAIKU_MODEL": haiku_model,
-        "CLAUDE_CODE_SUBAGENT_MODEL": subagent_model,
-        "CLAUDE_CODE_EFFORT_LEVEL": effort_level,
-        "API_TIMEOUT_MS": timeout_ms,
-        "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": _env_for_prefix(
-            prefix, "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1"
-        ),
-    }
-
-    anthropic_configured = bool(base_url and auth_token and model)
-    return {
-        "id": provider_id,
-        "name": _env_for_prefix(prefix, "PROVIDER_NAME", builtin.get("name", provider_id)),
-        "description": _env_for_prefix(
-            prefix,
-            "PROVIDER_DESCRIPTION",
-            builtin.get("description", "Anthropic-compatible Claude Code provider"),
-        ),
-        "type": "anthropic",
-        "base_url": base_url,
-        "api_key": auth_token,
-        "models": {
-            "default": model,
-            "haiku": haiku_model,
-            "sonnet": sonnet_model,
-            "opus": opus_model,
-        },
-        "agent_model": subagent_model,
-        "cli_env": cli_env,
-        "cli_model": model,
-        "supported_agents": _split_csv(_env_for_prefix(
-            prefix,
-            "SUPPORTED_AGENTS",
-            ",".join(builtin.get("supported_agents", ())),
-        )),
-        "anthropic_configured": anthropic_configured,
-        "configured": anthropic_configured,
-        "visible": _env_bool_for_prefix(
-            prefix,
-            "PROVIDER_VISIBLE",
-            builtin.get("visible", "1"),
-        ),
-    }
-
-
-AI_PROVIDERS = {
-    provider_id: _build_anthropic_provider(provider_id)
-    for provider_id in _discover_anthropic_provider_ids()
-}
+# AI provider 配置入口。
+#
+# 非敏感默认值按 provider/agent adapter 存在 backend/providers/<provider>/<agent>/。
+# 这里保持原有 AI_PROVIDERS dict 形状，避免影响 ai_session、claude_chat 和
+# 生产 env 文件；真实 token 仍只从环境变量读取。
+AI_PROVIDERS = build_providers(os.environ)
 
 DEFAULT_PROVIDER = os.environ.get("AI_DEFAULT_PROVIDER", "deepseek").strip().lower().replace("_", "-") or "deepseek"
 _VISIBLE_PROVIDER_IDS = [
@@ -413,102 +173,6 @@ def _path_has_executable(exe: str, extra_dir: str = "") -> bool:
     if extra_dir:
         search_path = f"{extra_dir}{os.pathsep}{search_path}"
     return shutil.which(exe, path=search_path) is not None
-
-
-def _provider_codex_config(provider_id: str, prefix: str, builtin: dict) -> dict:
-    default_codex = builtin.get("codex", {})
-    model = _env_for_prefix(prefix, "CODEX_MODEL", default_codex.get("model", ""))
-    base_url = _env_for_prefix(prefix, "CODEX_BASE_URL", default_codex.get("base_url", ""))
-    env_key = _env_for_prefix(
-        prefix,
-        "CODEX_ENV_KEY",
-        default_codex.get("env_key", f"{prefix}_CODEX_AUTH_TOKEN"),
-    )
-    wire_api = _env_for_prefix(prefix, "CODEX_WIRE_API", default_codex.get("wire_api", "responses"))
-    context_window = _env_for_prefix(
-        prefix,
-        "CODEX_CONTEXT_WINDOW",
-        str(default_codex.get("context_window", "")),
-    )
-    provider_name = _env_for_prefix(prefix, "CODEX_PROVIDER_NAME", default_codex.get("provider_name", provider_id))
-    relay = _env_for_prefix(prefix, "CODEX_RELAY", default_codex.get("relay", ""))
-    upstream_wire_api = _env_for_prefix(
-        prefix,
-        "CODEX_UPSTREAM_WIRE_API",
-        default_codex.get("upstream_wire_api", ""),
-    )
-    auth_token = os.environ.get(env_key, "") if env_key else ""
-    return {
-        "provider_name": provider_name,
-        "base_url": base_url,
-        "model": model,
-        "wire_api": wire_api,
-        "upstream_wire_api": upstream_wire_api,
-        "relay": relay,
-        "env_key": env_key,
-        "context_window": context_window,
-        "configured": bool(base_url and model and env_key and auth_token),
-    }
-
-
-def _provider_opencode_config(provider_id: str, prefix: str, builtin: dict) -> dict:
-    default_opencode = builtin.get("opencode", {})
-    default_codex = builtin.get("codex", {})
-    model = _env_for_prefix(
-        prefix,
-        "OPENCODE_MODEL",
-        default_opencode.get("model", default_codex.get("model", "")),
-    )
-    base_url = _env_for_prefix(
-        prefix,
-        "OPENCODE_BASE_URL",
-        default_opencode.get("base_url", default_codex.get("base_url", "")),
-    )
-    env_key = _env_for_prefix(
-        prefix,
-        "OPENCODE_ENV_KEY",
-        default_opencode.get(
-            "env_key",
-            _env_for_prefix(prefix, "CODEX_ENV_KEY", default_codex.get("env_key", f"{prefix}_CODEX_AUTH_TOKEN")),
-        ),
-    )
-    provider_name = _env_for_prefix(
-        prefix,
-        "OPENCODE_PROVIDER_NAME",
-        default_opencode.get("provider_name", default_codex.get("provider_name", provider_id)),
-    )
-    provider_npm = _env_for_prefix(
-        prefix,
-        "OPENCODE_PROVIDER_NPM",
-        default_opencode.get("provider_npm", "@ai-sdk/openai-compatible"),
-    )
-    auth_token = os.environ.get(env_key, "") if env_key else ""
-    return {
-        "provider_name": provider_name,
-        "base_url": base_url,
-        "model": model,
-        "env_key": env_key,
-        "provider_npm": provider_npm,
-        "configured": bool(base_url and model and env_key and auth_token),
-    }
-
-
-for _provider_id, _provider in AI_PROVIDERS.items():
-    _provider["codex"] = _provider_codex_config(
-        _provider_id,
-        _provider_prefix(_provider_id),
-        _BUILTIN_ANTHROPIC_PROVIDERS.get(_provider_id, {}),
-    )
-    _provider["opencode"] = _provider_opencode_config(
-        _provider_id,
-        _provider_prefix(_provider_id),
-        _BUILTIN_ANTHROPIC_PROVIDERS.get(_provider_id, {}),
-    )
-    _provider["configured"] = bool(
-        _provider.get("anthropic_configured")
-        or ((_provider.get("codex") or {}).get("configured"))
-        or ((_provider.get("opencode") or {}).get("configured"))
-    )
 
 
 def _agent_ids() -> list[str]:

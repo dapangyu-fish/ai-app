@@ -27,6 +27,7 @@ COPY backend/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir flask gunicorn requests "PyJWT[crypto]>=2.8.0"
 
 COPY backend/agent_node_service.py /app/backend/agent_node_service.py
+COPY backend/providers/ /app/backend/providers/
 
 ENV AGENT_NODE_HOST=0.0.0.0 \
     AGENT_NODE_PORT=5590 \
