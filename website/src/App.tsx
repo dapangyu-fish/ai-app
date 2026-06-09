@@ -349,15 +349,25 @@ function PhonePreview({ compact = false }: { compact?: boolean }) {
         <div className="sideButton sideButtonPower" />
         <div className="sideButton sideButtonVolumeUp" />
         <div className="sideButton sideButtonVolumeDown" />
-        <div className="phoneSpeaker" />
         <div className="phoneScreen">
-          <iframe
-            title="MyApp live Web client"
-            src={WEB_APP_URL}
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            allow="clipboard-read; clipboard-write; camera; microphone"
-          />
+          <div className="phoneStatusBar" aria-hidden="true">
+            <span>9:41</span>
+            <div className="phoneStatusIcons">
+              <span className="phoneSignal"><i /><i /><i /></span>
+              <span className="phoneWifi"><i /><i /><i /></span>
+              <span className="phoneBattery"><i /></span>
+            </div>
+          </div>
+          <div className="phoneDynamicIsland" aria-hidden="true" />
+          <div className="phoneViewport">
+            <iframe
+              title="MyApp live Web client"
+              src={WEB_APP_URL}
+              loading="eager"
+              referrerPolicy="no-referrer"
+              allow="clipboard-read; clipboard-write; camera; microphone"
+            />
+          </div>
         </div>
       </div>
     </div>

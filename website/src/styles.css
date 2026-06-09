@@ -448,9 +448,9 @@ select {
 
 .phoneStage {
   position: relative;
-  width: min(100%, calc(var(--phone-width, 390px) + 36px));
+  width: min(100%, calc(var(--phone-width, 430px) + 40px));
   justify-self: center;
-  padding: 18px;
+  padding: 20px;
 }
 
 .heroAside {
@@ -460,7 +460,7 @@ select {
 }
 
 .phoneStage.compact {
-  width: min(100%, calc(var(--phone-width, 320px) + 36px));
+  width: min(100%, calc(var(--phone-width, 360px) + 36px));
 }
 
 .phoneGlow {
@@ -475,12 +475,12 @@ select {
 .phoneShell {
   position: relative;
   margin: 0 auto;
-  width: min(var(--phone-width, 390px), 100%);
+  width: min(var(--phone-width, 430px), 100%);
   height: auto;
-  aspect-ratio: var(--phone-ratio, 390 / 844);
+  aspect-ratio: var(--phone-ratio, 430 / 932);
   border: 1px solid rgba(190, 199, 214, 0.74);
-  border-radius: 42px;
-  padding: 7px;
+  border-radius: 48px;
+  padding: 8px;
   background:
     linear-gradient(135deg, rgba(216, 223, 235, 0.38), rgba(84, 93, 111, 0.2) 24%, rgba(7, 8, 10, 0.96) 58%),
     #11151b;
@@ -489,19 +489,25 @@ select {
     inset 0 0 0 1px rgba(255, 255, 255, 0.16),
     inset 0 0 0 3px rgba(0, 0, 0, 0.62),
     0 0 0 8px rgba(255, 255, 255, 0.025);
-  touch-action: none;
+  touch-action: pan-y;
 }
 
-.phoneSpeaker {
+.phoneDynamicIsland {
   position: absolute;
-  top: 7px;
+  top: 16px;
   left: 50%;
-  z-index: 2;
-  width: 96px;
-  height: 24px;
+  z-index: 4;
+  width: 124px;
+  height: 35px;
   transform: translateX(-50%);
-  border-radius: 0 0 16px 16px;
-  background: #080a0e;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 78% 45%, rgba(42, 50, 65, 0.82) 0 4px, transparent 5px),
+    linear-gradient(180deg, #080a0f, #000);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 1px 8px rgba(0, 0, 0, 0.42);
   pointer-events: none;
 }
 
@@ -540,11 +546,146 @@ select {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  border-radius: 35px;
+  border-radius: 40px;
   background: #07080b;
 }
 
-.phoneScreen iframe {
+.phoneStatusBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  color: #f7fbff;
+  font-size: 13px;
+  font-weight: 760;
+  letter-spacing: 0;
+  background: linear-gradient(180deg, #050609 0%, #07080b 100%);
+  pointer-events: none;
+}
+
+.phoneStatusBar > span,
+.phoneStatusIcons {
+  position: absolute;
+  top: 16px;
+  height: 35px;
+}
+
+.phoneStatusBar > span {
+  left: clamp(16px, calc(50% - 168px), 48px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+}
+
+.phoneStatusIcons {
+  right: clamp(16px, calc(50% - 168px), 48px);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.phoneSignal {
+  display: inline-flex;
+  align-items: end;
+  gap: 2px;
+  width: 16px;
+  height: 12px;
+}
+
+.phoneSignal i {
+  display: block;
+  width: 3px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.phoneSignal i:nth-child(1) { height: 4px; opacity: 0.72; }
+.phoneSignal i:nth-child(2) { height: 7px; opacity: 0.86; }
+.phoneSignal i:nth-child(3) { height: 10px; }
+
+.phoneWifi {
+  position: relative;
+  display: inline-block;
+  width: 17px;
+  height: 12px;
+}
+
+.phoneWifi i {
+  position: absolute;
+  left: 50%;
+  display: block;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 999px;
+  transform: translateX(-50%);
+}
+
+.phoneWifi i:nth-child(1) {
+  top: 1px;
+  width: 17px;
+  height: 17px;
+}
+
+.phoneWifi i:nth-child(2) {
+  top: 5px;
+  width: 11px;
+  height: 11px;
+}
+
+.phoneWifi i:nth-child(3) {
+  top: 10px;
+  width: 4px;
+  height: 4px;
+  border: 0;
+  background: currentColor;
+}
+
+.phoneBattery {
+  position: relative;
+  display: inline-block;
+  width: 21px;
+  height: 10px;
+  border: 1.6px solid currentColor;
+  border-radius: 3px;
+}
+
+.phoneBattery::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  right: -4px;
+  width: 2px;
+  height: 4px;
+  border-radius: 0 2px 2px 0;
+  background: currentColor;
+}
+
+.phoneBattery i {
+  position: absolute;
+  inset: 2px 3px 2px 2px;
+  border-radius: 1.5px;
+  background: currentColor;
+}
+
+.phoneViewport {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 60px;
+  bottom: 0;
+  overflow: hidden;
+  border-radius: 0 0 40px 40px;
+  background: #ffffff;
+}
+
+.phoneViewport iframe {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1852,17 +1993,23 @@ section {
 
 @media (min-width: 941px) and (max-width: 1080px) {
   .heroGrid {
-    grid-template-columns: minmax(0, 1fr) minmax(390px, 420px);
-    gap: 36px;
+    grid-template-columns: minmax(0, 1fr) minmax(420px, 450px);
+    gap: 32px;
   }
 
   .phoneStage {
-    width: min(100%, calc(var(--phone-width, 390px) + 28px));
+    width: min(100%, calc(var(--phone-width, 420px) + 28px));
     padding: 14px;
   }
 }
 
 @media (max-width: 720px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   .shell {
     width: min(100% - 28px, 1160px);
   }
@@ -1910,6 +2057,11 @@ section {
     padding-top: 48px;
   }
 
+  .heroCopy {
+    width: 100%;
+    max-width: 100%;
+  }
+
   .metricRow,
   .stackGrid,
   .stepsGrid,
@@ -1931,7 +2083,9 @@ section {
   }
 
   .lead {
-    max-width: 100%;
+    max-width: min(100%, 350px);
+    margin-left: auto;
+    margin-right: auto;
     font-size: 16px;
     overflow-wrap: anywhere;
   }
@@ -1962,8 +2116,8 @@ section {
   }
 
   .phoneStage {
-    width: min(100%, 336px);
-    padding: 14px;
+    width: min(100%, 390px);
+    padding: 10px;
   }
 
   .phoneGlow {
