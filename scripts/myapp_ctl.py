@@ -1226,6 +1226,13 @@ def _build_commit_for_source(source_dir: Path) -> str:
     override = str(os.environ.get("MYAPP_BUILD_COMMIT") or "").strip()
     if override:
         return override[:128]
+    for marker in (".myapp-build-commit", ".myapp-build-version"):
+        try:
+            value = (source_dir / marker).read_text(encoding="utf-8").strip()
+        except OSError:
+            value = ""
+        if value:
+            return value[:128]
     if not shutil.which("git"):
         return "unknown"
     proc = _run(["git", "-C", str(source_dir), "rev-parse", "--verify", "HEAD"])
