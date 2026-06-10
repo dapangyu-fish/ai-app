@@ -41,26 +41,22 @@ select {
 }
 
 .site {
-  --bg: #07090d;
-  --bg2: #10151d;
-  --panel: rgba(17, 22, 32, 0.78);
-  --panel2: rgba(21, 27, 39, 0.92);
-  --line: rgba(132, 153, 184, 0.22);
-  --text: #eef4ff;
-  --muted: #93a0b6;
-  --faint: #5d697c;
-  --primary: #61a8ff;
-  --primary2: #46d7c8;
-  --accent: #f7c948;
-  --danger: #ff6b9d;
+  --bg: #0a0a0a;
+  --bg2: #141414;
+  --panel: rgba(20, 20, 20, 0.78);
+  --panel2: rgba(24, 24, 24, 0.92);
+  --line: rgba(255, 255, 255, 0.1);
+  --text: #ffffff;
+  --muted: #999999;
+  --faint: #666666;
+  --primary: #ffffff;
+  --primary2: #e0e0e0;
+  --accent: #cccccc;
+  --danger: #ffffff;
   min-height: 100vh;
   color: var(--text);
   overflow-x: hidden;
-  background:
-    radial-gradient(circle at 70% 8%, rgba(70, 215, 200, 0.18), transparent 28%),
-    radial-gradient(circle at 16% 18%, rgba(97, 168, 255, 0.18), transparent 30%),
-    linear-gradient(135deg, rgba(247, 201, 72, 0.07), transparent 28%),
-    linear-gradient(180deg, var(--bg), #07080c 52%, var(--bg));
+  background: linear-gradient(180deg, var(--bg), #000000 52%, var(--bg));
 }
 
 .shell {
@@ -222,11 +218,9 @@ select {
   flex-wrap: wrap;
   justify-content: center;
   text-align: center;
-  border: 1px solid color-mix(in srgb, var(--primary2) 34%, var(--line));
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background:
-    linear-gradient(90deg, rgba(70, 215, 200, 0.14), rgba(97, 168, 255, 0.12)),
-    color-mix(in srgb, var(--bg2) 72%, transparent);
+  background: color-mix(in srgb, var(--bg2) 72%, transparent);
   padding: 7px 13px;
 }
 
@@ -245,10 +239,7 @@ select {
 
 .hero h1 span {
   display: block;
-  color: transparent;
-  background: linear-gradient(92deg, #ffffff 0%, #8fc5ff 42%, #46d7c8 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
+  color: #ffffff;
 }
 
 .lead {

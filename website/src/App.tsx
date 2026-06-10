@@ -35,7 +35,7 @@ type Page = 'home' | 'docs';
 const WEB_APP_URL = 'https://myapp-web.dapangyu.work/';
 const TESTFLIGHT_URL = 'https://testflight.apple.com/join/3Fk5Exnn';
 const APK_URL = 'https://myapp-oss-endpoint.dapangyu.work/myapp-releases/android/apk/latest.apk';
-const GITHUB_URL = '';
+const GITHUB_URL = 'https://github.com/dapangyu-fish/ai-app';
 const GITHUB_PUBLIC = GITHUB_URL.length > 0;
 const REVIEW_BOUNDARY_URL = '/docs#runtime-boundary';
 
