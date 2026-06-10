@@ -866,26 +866,35 @@ def _build_server_repair_request(
 
 
 def _tool_status_message(tool_name: str, tool_input: dict) -> str:
-    """工具调用 → 用户友好提示文案。和旧 claude_chat 行为一致。"""
+    """工具调用 → 返回状态 key（前端根据 key 做 i18n）。
+
+    返回格式：
+    - 简单 key: "tool.reading"
+    - 带参数: "tool.reading_file|config.json" (前端用 | 分割)
+    """
     if tool_name == "Read":
         file_path = tool_input.get("file_path", "")
-        return f"正在阅读 {os.path.basename(file_path)}..." if file_path else "正在阅读文件..."
+        if file_path:
+            return f"tool.reading_file|{os.path.basename(file_path)}"
+        return "tool.reading"
     elif tool_name == "Write":
         file_path = tool_input.get("file_path", "")
-        return f"正在写入 {os.path.basename(file_path)}..." if file_path else "正在写入文件..."
+        if file_path:
+            return f"tool.writing_file|{os.path.basename(file_path)}"
+        return "tool.writing"
     elif tool_name in ("Grep", "Glob"):
-        return "正在搜索代码..."
+        return "tool.searching"
     elif tool_name == "Bash":
-        return "正在运行终端命令..."
+        return "tool.running_command"
     elif tool_name == "Edit":
-        return "正在编辑文件..."
+        return "tool.editing"
     elif tool_name == "WebFetch":
-        return "正在获取网页..."
+        return "tool.fetching_web"
     elif tool_name == "WebSearch":
-        return "正在搜索网络..."
+        return "tool.searching_web"
     elif tool_name in ("Task", "TodoWrite", "TaskUpdate"):
-        return "正在更新执行计划..."
-    return f"正在使用工具 {tool_name}..."
+        return "tool.updating_plan"
+    return f"tool.using_tool|{tool_name}"
 
 
 def parse_cli_line(line_str: str) -> List[dict]:
@@ -909,7 +918,7 @@ def parse_cli_line(line_str: str) -> List[dict]:
     evt_type = event.get("type")
 
     if evt_type == "system":
-        out.append({"status": "init", "message": "AI 引擎已启动"})
+        out.append({"status": "init", "message": "status.ai_engine_started"})
 
     elif evt_type == "stream_event":
         ev = event.get("event", {})

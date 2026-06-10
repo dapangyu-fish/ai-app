@@ -429,6 +429,20 @@ class _Strings {
   final String chatStatusGenerating; // "正在生成代码..."
   final String chatStatusStartingAi; // "正在启动 AI 引擎..."
   final String chatStatusResumingLast; // "正在恢复上次对话..."
+
+  // ── AI 工具调用状态 ──
+  final String toolStatusReading; // "正在阅读文件..."
+  final String toolStatusReadingFile; // "正在阅读 {file}..." (需要替换 {file})
+  final String toolStatusWriting; // "正在写入文件..."
+  final String toolStatusWritingFile; // "正在写入 {file}..."
+  final String toolStatusSearching; // "正在搜索代码..."
+  final String toolStatusRunningCommand; // "正在运行终端命令..."
+  final String toolStatusEditing; // "正在编辑文件..."
+  final String toolStatusFetchingWeb; // "正在获取网页..."
+  final String toolStatusSearchingWeb; // "正在搜索网络..."
+  final String toolStatusUpdatingPlan; // "正在更新执行计划..."
+  final String toolStatusUsingTool; // "正在使用工具 {tool}..."
+  final String toolStatusAiEngineStarted; // "AI 引擎已启动"
   final String chatActionUploadCurrentApp; // "上传当前应用配置"
   final String chatActionRetryDownloadJson; // "重试下载 JSON"
   final String chatTimeJustNow; // "刚刚"
@@ -907,6 +921,18 @@ class _Strings {
     required this.chatStatusGenerating,
     required this.chatStatusStartingAi,
     required this.chatStatusResumingLast,
+    required this.toolStatusReading,
+    required this.toolStatusReadingFile,
+    required this.toolStatusWriting,
+    required this.toolStatusWritingFile,
+    required this.toolStatusSearching,
+    required this.toolStatusRunningCommand,
+    required this.toolStatusEditing,
+    required this.toolStatusFetchingWeb,
+    required this.toolStatusSearchingWeb,
+    required this.toolStatusUpdatingPlan,
+    required this.toolStatusUsingTool,
+    required this.toolStatusAiEngineStarted,
     required this.chatActionUploadCurrentApp,
     required this.chatActionRetryDownloadJson,
     required this.chatTimeJustNow,
@@ -1375,6 +1401,18 @@ const _Strings _zhCN = _Strings(
   chatStatusGenerating: '正在生成代码...',
   chatStatusStartingAi: '正在启动 AI 引擎...',
   chatStatusResumingLast: '正在恢复上次对话...',
+  toolStatusReading: '正在阅读文件...',
+  toolStatusReadingFile: '正在阅读 {file}...',
+  toolStatusWriting: '正在写入文件...',
+  toolStatusWritingFile: '正在写入 {file}...',
+  toolStatusSearching: '正在搜索代码...',
+  toolStatusRunningCommand: '正在运行终端命令...',
+  toolStatusEditing: '正在编辑文件...',
+  toolStatusFetchingWeb: '正在获取网页...',
+  toolStatusSearchingWeb: '正在搜索网络...',
+  toolStatusUpdatingPlan: '正在更新执行计划...',
+  toolStatusUsingTool: '正在使用工具 {tool}...',
+  toolStatusAiEngineStarted: 'AI 引擎已启动',
   chatActionUploadCurrentApp: '上传当前应用配置',
   chatActionRetryDownloadJson: '重试下载 JSON',
   chatTimeJustNow: '刚刚',
@@ -1854,6 +1892,18 @@ const _Strings _enUS = _Strings(
   chatStatusGenerating: 'Generating code...',
   chatStatusStartingAi: 'Starting AI engine...',
   chatStatusResumingLast: 'Resuming last conversation...',
+  toolStatusReading: 'Reading file...',
+  toolStatusReadingFile: 'Reading {file}...',
+  toolStatusWriting: 'Writing file...',
+  toolStatusWritingFile: 'Writing {file}...',
+  toolStatusSearching: 'Searching code...',
+  toolStatusRunningCommand: 'Running terminal command...',
+  toolStatusEditing: 'Editing file...',
+  toolStatusFetchingWeb: 'Fetching webpage...',
+  toolStatusSearchingWeb: 'Searching web...',
+  toolStatusUpdatingPlan: 'Updating execution plan...',
+  toolStatusUsingTool: 'Using tool {tool}...',
+  toolStatusAiEngineStarted: 'AI engine started',
   chatActionUploadCurrentApp: 'Upload current app config',
   chatActionRetryDownloadJson: 'Retry downloading JSON',
   chatTimeJustNow: 'just now',
@@ -2344,6 +2394,18 @@ const _Strings _deDE = _Strings(
   chatStatusGenerating: 'Code wird generiert...',
   chatStatusStartingAi: 'KI-Modul wird gestartet...',
   chatStatusResumingLast: 'Letzte Unterhaltung wird wiederhergestellt...',
+  toolStatusReading: 'Datei wird gelesen...',
+  toolStatusReadingFile: '{file} wird gelesen...',
+  toolStatusWriting: 'Datei wird geschrieben...',
+  toolStatusWritingFile: '{file} wird geschrieben...',
+  toolStatusSearching: 'Code wird durchsucht...',
+  toolStatusRunningCommand: 'Terminal-Befehl wird ausgeführt...',
+  toolStatusEditing: 'Datei wird bearbeitet...',
+  toolStatusFetchingWeb: 'Webseite wird abgerufen...',
+  toolStatusSearchingWeb: 'Web wird durchsucht...',
+  toolStatusUpdatingPlan: 'Ausführungsplan wird aktualisiert...',
+  toolStatusUsingTool: 'Tool {tool} wird verwendet...',
+  toolStatusAiEngineStarted: 'KI-Modul gestartet',
   chatActionUploadCurrentApp: 'Aktuelle App-Konfiguration hochladen',
   chatActionRetryDownloadJson: 'JSON-Download wiederholen',
   chatTimeJustNow: 'gerade eben',
@@ -2835,6 +2897,18 @@ const _Strings _esES = _Strings(
   chatStatusGenerating: 'Generando código...',
   chatStatusStartingAi: 'Iniciando motor de IA...',
   chatStatusResumingLast: 'Restaurando conversación anterior...',
+  toolStatusReading: 'Leyendo archivo...',
+  toolStatusReadingFile: 'Leyendo {file}...',
+  toolStatusWriting: 'Escribiendo archivo...',
+  toolStatusWritingFile: 'Escribiendo {file}...',
+  toolStatusSearching: 'Buscando código...',
+  toolStatusRunningCommand: 'Ejecutando comando de terminal...',
+  toolStatusEditing: 'Editando archivo...',
+  toolStatusFetchingWeb: 'Obteniendo página web...',
+  toolStatusSearchingWeb: 'Buscando en web...',
+  toolStatusUpdatingPlan: 'Actualizando plan de ejecución...',
+  toolStatusUsingTool: 'Usando herramienta {tool}...',
+  toolStatusAiEngineStarted: 'Motor de IA iniciado',
   chatActionUploadCurrentApp: 'Subir configuración actual',
   chatActionRetryDownloadJson: 'Reintentar descarga del JSON',
   chatTimeJustNow: 'ahora mismo',

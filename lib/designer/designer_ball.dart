@@ -1334,7 +1334,7 @@ class _DesignerBallState extends State<DesignerBall>
           setState(() {
             // 有工具动作时直接在浮层里显示，避免看起来像卡住
             _isGeneratingJson = true;
-            _generatingStatusMessage = event.statusMessage!;
+            _generatingStatusMessage = _translateStatusKey(event.statusMessage!);
           });
           _scrollToBottom();
           return;
@@ -2254,6 +2254,44 @@ class _DesignerBallState extends State<DesignerBall>
         );
       }
     });
+  }
+
+  /// 翻译后端发送的状态 key 为本地化文案
+  String _translateStatusKey(String key) {
+    // 格式: "tool.reading" 或 "tool.reading_file|config.json"
+    final parts = key.split('|');
+    final statusKey = parts[0];
+    final param = parts.length > 1 ? parts[1] : null;
+
+    switch (statusKey) {
+      case 'status.ai_engine_started':
+        return T.current.toolStatusAiEngineStarted;
+      case 'tool.reading':
+        return T.current.toolStatusReading;
+      case 'tool.reading_file':
+        return T.current.toolStatusReadingFile.replaceAll('{file}', param ?? '');
+      case 'tool.writing':
+        return T.current.toolStatusWriting;
+      case 'tool.writing_file':
+        return T.current.toolStatusWritingFile.replaceAll('{file}', param ?? '');
+      case 'tool.searching':
+        return T.current.toolStatusSearching;
+      case 'tool.running_command':
+        return T.current.toolStatusRunningCommand;
+      case 'tool.editing':
+        return T.current.toolStatusEditing;
+      case 'tool.fetching_web':
+        return T.current.toolStatusFetchingWeb;
+      case 'tool.searching_web':
+        return T.current.toolStatusSearchingWeb;
+      case 'tool.updating_plan':
+        return T.current.toolStatusUpdatingPlan;
+      case 'tool.using_tool':
+        return T.current.toolStatusUsingTool.replaceAll('{tool}', param ?? '');
+      default:
+        // 向后兼容：如果不是 key 格式，直接返回原文
+        return key;
+    }
   }
 
   // ════════════════════════════════════════════════════════

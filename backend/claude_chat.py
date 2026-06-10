@@ -357,25 +357,30 @@ def session_status():
     return jsonify({"session_id": session_id, "alive": alive})
 
 def _tool_status_message(tool_name, tool_input):
+    """工具调用 → 返回状态 key（前端根据 key 做 i18n）。"""
     if tool_name == "Read":
         file_path = tool_input.get("file_path", "")
-        return f"正在阅读 {os.path.basename(file_path)}..." if file_path else "正在阅读文件..."
+        if file_path:
+            return f"tool.reading_file|{os.path.basename(file_path)}"
+        return "tool.reading"
     elif tool_name == "Write":
         file_path = tool_input.get("file_path", "")
-        return f"正在写入 {os.path.basename(file_path)}..." if file_path else "正在写入文件..."
+        if file_path:
+            return f"tool.writing_file|{os.path.basename(file_path)}"
+        return "tool.writing"
     elif tool_name in ("Grep", "Glob"):
-        return "正在搜索代码..."
+        return "tool.searching"
     elif tool_name == "Bash":
-        return "正在运行终端命令..."
+        return "tool.running_command"
     elif tool_name == "Edit":
-        return "正在编辑文件..."
+        return "tool.editing"
     elif tool_name == "WebFetch":
-        return "正在获取网页..."
+        return "tool.fetching_web"
     elif tool_name == "WebSearch":
-        return "正在搜索网络..."
+        return "tool.searching_web"
     elif tool_name in ("Task", "TodoWrite", "TaskUpdate"):
-        return "正在更新执行计划..."
-    return f"正在使用工具 {tool_name}..."
+        return "tool.updating_plan"
+    return f"tool.using_tool|{tool_name}"
 
 
 # ────────── /tmp/ai-uploads 清理 ──────────
