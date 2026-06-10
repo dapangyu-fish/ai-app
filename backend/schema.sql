@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS registry_packages (
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 包点赞 / 下载（per-user，本地互动指标，不随 mirror 传播）
+-- 包点赞 / 下载（本地互动指标，不随 mirror 传播）
 CREATE TABLE IF NOT EXISTS package_likes (
     package_name TEXT NOT NULL,
     user_id      TEXT NOT NULL,
@@ -110,6 +110,19 @@ CREATE TABLE IF NOT EXISTS package_installs (
     user_id      TEXT NOT NULL,
     first_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (package_name, user_id)
+);
+-- 每次成功运行/下载一行；install_count 使用该表统计。package_installs 保留为
+-- per-user/per-device 去重明细，兼容旧数据和独立用户语义。
+CREATE TABLE IF NOT EXISTS package_install_events (
+    id           BIGSERIAL PRIMARY KEY,
+    package_name TEXT NOT NULL,
+    user_id      TEXT NOT NULL DEFAULT '',
+    actor_type   TEXT NOT NULL DEFAULT '',
+    source       TEXT NOT NULL DEFAULT '',
+    user_agent   TEXT NOT NULL DEFAULT '',
+    ip_hash      TEXT NOT NULL DEFAULT '',
+    legacy_key   TEXT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Indexes for better performance
@@ -123,3 +136,8 @@ CREATE INDEX IF NOT EXISTS idx_registry_packages_category ON registry_packages(c
 CREATE INDEX IF NOT EXISTS idx_registry_packages_author ON registry_packages(author_id);
 CREATE INDEX IF NOT EXISTS idx_package_likes_name ON package_likes(package_name);
 CREATE INDEX IF NOT EXISTS idx_package_installs_name ON package_installs(package_name);
+CREATE INDEX IF NOT EXISTS idx_package_install_events_name ON package_install_events(package_name);
+CREATE INDEX IF NOT EXISTS idx_package_install_events_created_at ON package_install_events(created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_package_install_events_legacy_key
+    ON package_install_events(legacy_key)
+    WHERE legacy_key IS NOT NULL;

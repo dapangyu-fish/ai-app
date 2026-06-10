@@ -1,11 +1,11 @@
 // 市场 App 详情页 + 用户主页
 // ─────────────────────────────────────────────────────────
 // - MarketAppDetailPage: 点市场卡片进，展示作者(头像可点)/summary/tech_stack/
-//   点赞下载量/运行按钮。运行=pop 返回带 version 的 app map 让市场加载 + 发 install 埋点。
+//   点赞下载量/运行按钮。运行=pop 返回带 version 的 app map 让市场加载。
 // - MarketUserProfilePage: 点作者进，展示总下载/总点赞 + 他的 app 列表。
 //
 // 数据来自 registry: GET /packages/<name>/detail、GET /users/<id>/profile。
-// 点赞/install 走 POST，带 AuthService.token。
+// 点赞走 POST/DELETE，带 AuthService.token。运行埋点在实际加载成功后记录。
 
 import 'dart:convert';
 
@@ -234,18 +234,6 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
   }
 
   Future<void> _run() async {
-    // 发 install 埋点（fire-and-forget），然后 pop 返回选中版本让市场加载
-    final token = AuthService.token;
-    if (token != null) {
-      // ignore: unawaited_futures
-      http
-          .post(
-            Uri.parse('${AppConfig.registryUrl}/packages/$_name/install'),
-            headers: {'Authorization': 'Bearer $token'},
-          )
-          .timeout(const Duration(seconds: 5))
-          .catchError((_) => http.Response('', 0));
-    }
     if (!mounted) return;
     final appToRun = Map<String, dynamic>.from(widget.app);
     final version = _selectedVersion?.trim();

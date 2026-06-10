@@ -32,6 +32,7 @@ import 'json_ui/widgets/drawer_helper.dart' as drawer_helper;
 import 'designer/designer_ball.dart';
 import 'designer/market_detail_page.dart';
 import 'designer/market_favorites.dart';
+import 'designer/registry_usage_service.dart';
 import 'designer/settings_page.dart';
 import 'designer/hidden_env_entry.dart';
 import 'designer/ai_chat_service.dart';
@@ -945,6 +946,12 @@ class _WebAppIdStartupLoaderState
       final interpreter = ref.read(interpreterProvider);
       interpreter.loadConfig(config);
       await interpreter.executeSteps();
+      unawaited(
+        RegistryUsageService.recordRun(
+          resolved['name']?.toString() ?? '',
+          source: 'web_appid_startup',
+        ),
+      );
 
       final meta = config['meta'] as Map<String, dynamic>?;
       final fallback =
@@ -1374,6 +1381,12 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       final interpreter = ref.read(interpreterProvider);
       interpreter.loadConfig(config);
       await interpreter.executeSteps();
+      unawaited(
+        RegistryUsageService.recordRun(
+          name,
+          source: isStartupRoot ? 'startup_market' : 'market',
+        ),
+      );
 
       // 用 displayName（多语言）作为 fileName 标题；优先 config.meta，再回退到 app dict
       final configMeta = config['meta'] as Map<String, dynamic>?;

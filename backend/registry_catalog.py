@@ -511,15 +511,83 @@ def resolve_author(author_id: Optional[str], fallback_name: Optional[str] = None
 # 点赞 / 下载
 # ═══════════════════════════════════════════════════════════
 
-def record_install(name: str, user_id: str) -> None:
-    """记一次下载（per-user 去重）。"""
+_install_event_table_ready = False
+
+
+def _ensure_install_event_table(cur) -> None:
+    """Ensure per-run install events exist and seed old unique install rows once."""
+    global _install_event_table_ready
+    if _install_event_table_ready:
+        return
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS package_install_events (
+          id           BIGSERIAL PRIMARY KEY,
+          package_name TEXT NOT NULL,
+          user_id      TEXT NOT NULL DEFAULT '',
+          actor_type   TEXT NOT NULL DEFAULT '',
+          source       TEXT NOT NULL DEFAULT '',
+          user_agent   TEXT NOT NULL DEFAULT '',
+          ip_hash      TEXT NOT NULL DEFAULT '',
+          legacy_key   TEXT,
+          created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_package_install_events_name
+        ON package_install_events(package_name)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_package_install_events_created_at
+        ON package_install_events(created_at DESC)
+    """)
+    cur.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_package_install_events_legacy_key
+        ON package_install_events(legacy_key)
+        WHERE legacy_key IS NOT NULL
+    """)
+    cur.execute("""
+        INSERT INTO package_install_events
+          (package_name, user_id, actor_type, source, created_at, legacy_key)
+        SELECT package_name, user_id, 'legacy', 'legacy_unique', first_at,
+               package_name || E'\\x1f' || user_id
+        FROM package_installs
+        ON CONFLICT DO NOTHING
+    """)
+    cur.connection.commit()
+    _install_event_table_ready = True
+
+
+def record_install(
+    name: str,
+    user_id: str,
+    *,
+    actor_type: str = "user",
+    source: str = "",
+    user_agent: str = "",
+    ip_hash: str = "",
+) -> None:
+    """Record one app run/download event and keep the legacy unique actor table."""
     conn = _conn()
     try:
         with conn.cursor() as cur:
+            _ensure_install_event_table(cur)
             cur.execute(
                 "INSERT INTO package_installs (package_name, user_id) VALUES (%s, %s) "
                 "ON CONFLICT (package_name, user_id) DO NOTHING",
                 [name, user_id],
+            )
+            cur.execute(
+                """INSERT INTO package_install_events
+                   (package_name, user_id, actor_type, source, user_agent, ip_hash)
+                   VALUES (%s, %s, %s, %s, %s, %s)""",
+                [
+                    name,
+                    user_id,
+                    actor_type[:32],
+                    source[:80],
+                    user_agent[:512],
+                    ip_hash[:128],
+                ],
             )
         conn.commit()
     finally:
@@ -545,9 +613,10 @@ def set_like(name: str, user_id: str, liked: bool) -> None:
 
 def _counts(cur, name: str) -> tuple:
     # cur 可能是 RealDictCursor（fetchone 返 dict），用列别名按 key 取，别用 [0]
+    _ensure_install_event_table(cur)
     cur.execute("SELECT count(*) AS c FROM package_likes WHERE package_name=%s", [name])
     likes = cur.fetchone()["c"]
-    cur.execute("SELECT count(*) AS c FROM package_installs WHERE package_name=%s", [name])
+    cur.execute("SELECT count(*) AS c FROM package_install_events WHERE package_name=%s", [name])
     installs = cur.fetchone()["c"]
     return likes, installs
 
@@ -587,11 +656,12 @@ def get_user_profile(author_id: str) -> dict:
     conn = _conn()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            _ensure_install_event_table(cur)
             # 名下所有包 + 各自点赞/下载量
             cur.execute("""
                 SELECT p.name, p.author_name, p.category, p.summary_zh, p.summary_en, p.tech_stack,
                        (SELECT count(*) FROM package_likes l WHERE l.package_name=p.name)    AS like_count,
-                       (SELECT count(*) FROM package_installs i WHERE i.package_name=p.name) AS install_count
+                       (SELECT count(*) FROM package_install_events i WHERE i.package_name=p.name) AS install_count
                 FROM registry_packages p
                 WHERE p.author_id = %s
                 ORDER BY p.name

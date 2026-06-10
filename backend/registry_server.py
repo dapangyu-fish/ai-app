@@ -9,6 +9,7 @@ JSON-DSL Registry Server
 """
 
 import io
+import hashlib
 import json
 import os
 import re
@@ -51,6 +52,21 @@ INDEX_FILE = "_index.json"
 PORT = 3254
 
 app = Flask(__name__)
+
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers.setdefault("Access-Control-Allow-Origin", "*")
+    response.headers.setdefault(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, OPTIONS",
+    )
+    response.headers.setdefault(
+        "Access-Control-Allow-Headers",
+        "Authorization, Content-Type, X-Requested-With",
+    )
+    response.headers.setdefault("Access-Control-Max-Age", "86400")
+    return response
 
 # MinIO 客户端
 minio_client = Minio(
@@ -124,6 +140,53 @@ def require_auth(f):
         request.user_role = _get_user_role(request.supabase_user)
         return f(*args, **kwargs)
     return decorated
+
+
+def _optional_bearer_user_id():
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    token = auth[7:]
+
+    admin_token = os.environ.get("REGISTRY_ADMIN_TOKEN", "")
+    if admin_token and token == admin_token:
+        return os.environ.get(
+            "REGISTRY_ADMIN_AUTHOR_ID",
+            os.environ.get("REGISTRY_ADMIN_AUTHOR_EMAIL", "admin"),
+        ).strip() or "admin"
+
+    try:
+        resp = requests.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers=_supabase_headers(token),
+            timeout=8,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("id")
+    except Exception:
+        pass
+    return None
+
+
+def _clean_install_actor_id(value):
+    value = str(value or "").strip()
+    if not value:
+        return ""
+    value = re.sub(r"[^a-zA-Z0-9_.:@-]", "_", value)
+    return value[:160]
+
+
+def _install_ip_hash():
+    raw_ip = (
+        request.headers.get("CF-Connecting-IP")
+        or request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        or request.remote_addr
+        or ""
+    )
+    if not raw_ip:
+        return ""
+    salt = os.environ.get("REGISTRY_INSTALL_IP_HASH_SALT", "myapp-registry-install")
+    return hashlib.sha256(f"{salt}:{raw_ip}".encode("utf-8")).hexdigest()
 
 
 def _load_index():
@@ -1294,10 +1357,29 @@ def user_profile(author_id):
 
 
 @app.route('/packages/<path:name>/install', methods=['POST'])
-@require_auth
 def package_install(name):
-    """下载埋点（per-user 去重）。客户端运行/下载时调。"""
-    registry_catalog.record_install(name, request.supabase_user.get("id"))
+    """运行/下载埋点。登录、游客和未登录 Web 都可记录；每次成功运行都计数。"""
+    with index_lock:
+        index = _load_index()
+        if name not in index.get("packages", {}):
+            return jsonify({"error": f"包 '{name}' 不存在"}), 404
+
+    body = request.get_json(silent=True) or {}
+    user_id = _optional_bearer_user_id()
+    actor_type = "user" if user_id else "guest"
+    actor_id = _clean_install_actor_id(user_id or body.get("client_user_id"))
+    if not actor_id:
+        actor_type = "anonymous"
+        actor_id = f"anon:{_install_ip_hash()[:32] or 'unknown'}"
+    source = _clean_install_actor_id(body.get("source") or request.args.get("source") or "")
+    registry_catalog.record_install(
+        name,
+        actor_id,
+        actor_type=actor_type,
+        source=source,
+        user_agent=request.headers.get("User-Agent", ""),
+        ip_hash=_install_ip_hash(),
+    )
     return jsonify({"ok": True})
 
 
