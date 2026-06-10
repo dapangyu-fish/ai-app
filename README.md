@@ -8,6 +8,8 @@
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()
 
+> **Platform Status**: ✅ Production (iOS/Android/Web) • ⚠️ Experimental (macOS, core features only) • 🚧 Untested (Linux/Windows)
+
 ---
 
 ## What is this?
@@ -20,7 +22,45 @@ Three things in one repo:
 
 The name **MyApp** is intentional: each user can create, install, and operate "my app" on top of the shared runtime.
 
-The flagship use case: **a user opens the app → chats with AI → AI returns a JSON-DSL → the app loads and runs it instantly inside the capabilities already compiled into the client**.
+The flagship use case: **a user opens the app → chats with AI (generation typically takes 10-20 minutes) → AI returns a JSON-DSL → the app loads and runs it instantly** inside the capabilities already compiled into the client.
+
+---
+
+## Platform Support
+
+MyApp is built with Flutter and supports multiple platforms with varying feature completeness:
+
+### ✅ Production Ready (All Features)
+
+- **iOS** — Full support including IM, push notifications, camera, biometric auth, all native capabilities
+- **Android** — Full support including IM, push notifications, camera, biometric auth, all native capabilities
+- **Web** — Full support with IM via OpenIM WASM bridge (push notifications not available)
+
+### ⚠️ Experimental (Core Features)
+
+- **macOS** — Tested and working well. Core JSON runtime, UI rendering, auth, AI chat, file picker, and biometric auth all work. IM chat and push notifications are not supported due to third-party SDK limitations.
+
+### 🚧 Untested (Likely to Work)
+
+- **Linux** — Has build configuration and should work for core features. IM chat and push notifications are not supported.
+- **Windows** — Has build configuration and should work for core features. IM chat and push notifications are not supported.
+
+### Feature Availability
+
+| Feature | iOS | Android | Web | macOS | Linux | Windows |
+|---------|-----|---------|-----|-------|-------|---------|
+| JSON-DSL Runtime | ✅ | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
+| UI Rendering | ✅ | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
+| Network & Storage | ✅ | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
+| IM Chat | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Push Notifications | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Camera | ✅ | ✅ | ✅ | ⚠️ | ❌ | ❌ |
+| Biometric Auth | ✅ | ✅ | ❌ | ✅ | ❌ | ⚠️ |
+| Flame Games | ✅ | ✅ | ✅ | ✅ | ⚠️ | ⚠️ |
+
+**Legend**: ✅ Tested & Working • ⚠️ Untested but Should Work • ❌ Not Supported
+
+Most JSON-DSL apps work across all platforms. Platform-specific features gracefully degrade with clear user feedback when unavailable.
 
 ---
 
@@ -30,7 +70,7 @@ The flagship use case: **a user opens the app → chats with AI → AI returns a
 - **AI-native** — the DSL is designed to be LLM-friendly. The included AI chat (Claude / DeepSeek / MiniMax) generates apps that actually render.
 - **Batteries included** — IM with push, AI proxy, package registry, namespaces, mirroring, user center, environment switching — all wired together. Not "yet another low-code framework that punts on auth".
 - **Self-hostable** — `myapp-ctl deploy` manages the backend stack, agent runtime, registry, config center, and service secrets from one host-level CLI.
-- **Cross-platform** — same JSON-DSL renders on iOS, Android, Web, macOS, Linux, Windows.
+- **Cross-platform** — same JSON-DSL renders on iOS, Android, Web (production-tested), macOS (experimentally tested), Linux, Windows. Core features work across all platforms; platform-specific features (IM, push) gracefully degrade on unsupported platforms.
 
 ---
 
@@ -325,7 +365,7 @@ licensed by their authors unless they explicitly say otherwise.
 
 ## Roadmap (in priority order)
 
-- [ ] Drop a 60-second viral demo video (AI → app in 30 seconds)
+- [ ] Drop a 60-second viral demo video (AI → JSON config in ~10-20 min → app runs instantly)
 - [ ] Public hosted free tier
 - [ ] App share-link with QR (open AI-generated app via deep link)
 - [ ] Add CI (GitHub Actions: pub get, analyze, build APK)

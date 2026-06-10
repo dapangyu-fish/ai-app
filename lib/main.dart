@@ -1714,7 +1714,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                           messenger.showSnackBar(
                             const SnackBar(
                               content: Text(
-                                'IM 仅支持 iOS / Android（OpenIM SDK 限制）。请在 iOS 模拟器或真机上运行。',
+                                'IM 仅支持 iOS / Android / Web（OpenIM SDK 限制）。桌面端暂不支持。',
                               ),
                               duration: Duration(seconds: 3),
                             ),
