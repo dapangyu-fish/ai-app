@@ -396,10 +396,26 @@ class JsonInterpreter extends ChangeNotifier {
 
   /// 每次求值前，将当前状态组装为 jsonlogic 的 data 参数
   /// global.computed.* 会被即时求值，作为 global 名空间下的"派生字段"暴露
+  /// 性能优化：使用版本号机制缓存结果，避免重复构建
+  Map<String, dynamic>? _cachedDataContext;
+  int _cachedContextVersion = -1;
+
   Map<String, dynamic> _buildDataContext() {
-    Map<String, dynamic> globalView = _variables;
+    // 检查缓存是否有效（没有 computed 时才启用缓存，有 computed 时需要每次重新求值）
     final computed = (_config['global'] as Map<String, dynamic>?)?['computed'];
-    if (computed is Map && computed.isNotEmpty) {
+    final hasComputed = computed is Map && computed.isNotEmpty;
+
+    if (!hasComputed &&
+        _cachedDataContext != null &&
+        _cachedContextVersion == _contextVersion &&
+        _loopContextStack.isEmpty &&
+        _paramsStack.isEmpty &&
+        _eventContextStack.isEmpty) {
+      return _cachedDataContext!;
+    }
+
+    Map<String, dynamic> globalView = _variables;
+    if (hasComputed) {
       // 只有真存在 computed 时才浅拷贝并注入，避免每次求值都付拷贝成本
       globalView = Map<String, dynamic>.from(_variables);
       for (final entry in computed.entries) {
@@ -417,13 +433,30 @@ class JsonInterpreter extends ChangeNotifier {
         }
       }
     }
-    return {
+
+    final context = {
       'global': globalView,
       'loop': _loopContextStack.isNotEmpty ? _loopContextStack.last : {},
       'params': _paramsStack.isNotEmpty ? _paramsStack.last : {},
       'event': _eventContextStack.isNotEmpty ? _eventContextStack.last : {},
     };
+
+    // 缓存结果（只有在没有 computed 且栈为空时才缓存）
+    if (!hasComputed &&
+        _loopContextStack.isEmpty &&
+        _paramsStack.isEmpty &&
+        _eventContextStack.isEmpty) {
+      _cachedDataContext = context;
+      _cachedContextVersion = _contextVersion;
+    }
+
+    return context;
   }
+
+  // ============ 数据上下文延迟构建优化 ============
+
+  /// 数据上下文缓存版本号
+  int _contextVersion = 0;
 
   /// 通过 jsonlogic 求值表达式
   /// 仅用于原始 JSON 配置中的 jsonlogic 表达式（Map），不用于已解析的运行时数据
@@ -453,6 +486,20 @@ class JsonInterpreter extends ChangeNotifier {
         return _jl.apply(preprocessed, _buildDataContext());
       }
       // 数据 Map：值再走一遍 evaluate，模板 / 嵌套 jsonlogic 都能正确展开
+      // 性能优化：先检测是否有需要求值的值，如果没有则直接返回原 Map
+      bool hasExpressions = false;
+      for (var v in value.values) {
+        if (_needsEvaluation(v)) {
+          hasExpressions = true;
+          break;
+        }
+      }
+
+      if (!hasExpressions) {
+        return value; // 无需求值，直接返回原 Map，避免不必要的拷贝
+      }
+
+      // 有表达式才创建新 Map 并递归求值
       final out = <String, dynamic>{};
       value.forEach((k, v) {
         out[k] = _evaluateExpression(v);
@@ -462,11 +509,40 @@ class JsonInterpreter extends ChangeNotifier {
 
     // List → 元素再走 evaluate（之前只处理字符串模板，这里改成全递归
     // 保持一致：List<Map> 里如果有数据 Map，里面的 {{ }} 现在也能解开）
+    // 性能优化：先检测是否有需要求值的元素
     if (value is List) {
+      bool hasExpressions = false;
+      for (var item in value) {
+        if (_needsEvaluation(item)) {
+          hasExpressions = true;
+          break;
+        }
+      }
+
+      if (!hasExpressions) {
+        return value; // 无需求值，直接返回原 List
+      }
+
       return value.map(_evaluateExpression).toList();
     }
 
     return value;
+  }
+
+  /// 检测一个值是否需要求值
+  /// 性能优化：避免不必要的深拷贝
+  static bool _needsEvaluation(dynamic v) {
+    if (v == null || v is num || v is bool) return false;
+    if (v is String) {
+      return v.contains('{{') && v.contains('}}');
+    }
+    if (v is Map<String, dynamic>) {
+      return _looksLikeJsonLogic(v) || v.values.any(_needsEvaluation);
+    }
+    if (v is List) {
+      return v.any(_needsEvaluation);
+    }
+    return false;
   }
 
   /// 判断一个 Map 是否是 jsonlogic 表达式（而不是普通数据 Map）：
@@ -804,6 +880,35 @@ class JsonInterpreter extends ChangeNotifier {
     return _depLoader.findVariable(depName, varPath);
   }
 
+  // ============ 批量更新优化 ============
+
+  /// 批量更新标志：true 时延迟通知监听器
+  bool _batchUpdating = false;
+  bool _needsNotify = false;
+
+  /// 批量更新：在回调中的多次 setVariable 只触发一次监听器通知
+  /// 性能优化：避免频繁重建 UI
+  void batchUpdate(void Function() updates) {
+    if (_batchUpdating) {
+      // 已经在批量更新中，直接执行
+      updates();
+      return;
+    }
+
+    _batchUpdating = true;
+    _needsNotify = false;
+
+    try {
+      updates();
+    } finally {
+      _batchUpdating = false;
+      if (_needsNotify) {
+        _needsNotify = false;
+        notifyListeners();
+      }
+    }
+  }
+
   void setVariable(String path, dynamic value) {
     if (path.startsWith(r'$.')) {
       path = path.substring(2);
@@ -812,10 +917,20 @@ class JsonInterpreter extends ChangeNotifier {
     if (path.startsWith('global.')) {
       final subPath = path.substring(7);
       _setNestedValue(_variables, subPath, value);
-      notifyListeners();
+      _notifyVariableChange();
     } else if (!path.startsWith('loop.') && !path.startsWith('params.')) {
       // 没有前缀的直接当 global 变量（与 getVariable 行为一致）
       _setNestedValue(_variables, path, value);
+      _notifyVariableChange();
+    }
+  }
+
+  /// 通知变量变更（考虑批量更新）
+  void _notifyVariableChange() {
+    _contextVersion++; // 性能优化：增加版本号，使数据上下文缓存失效
+    if (_batchUpdating) {
+      _needsNotify = true;
+    } else {
       notifyListeners();
     }
   }
