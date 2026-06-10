@@ -567,9 +567,11 @@ class JsonInterpreter extends ChangeNotifier {
     Map<String, dynamic> locals,
   ) {
     final data = _buildDataContext();
-    data.addAll(locals);
+    // 🚨 修复：data 可能是缓存的不可变 Map，需要先拷贝再添加 locals
+    final mutableData = Map<String, dynamic>.from(data);
+    mutableData.addAll(locals);
     final preprocessed = _resolveTemplatesInRule(rule);
-    return _jl.apply(preprocessed, data);
+    return _jl.apply(preprocessed, mutableData);
   }
 
   /// jsonlogic 标准 operator + 本文件 _createJsonLogic 里 jl.add 注册的自定义 op。
