@@ -4307,8 +4307,8 @@ def _edge_proxy_location(upstream: str, *, strip_prefix: str = "") -> str:
         rewrite = f"    rewrite ^/{strip_prefix}/?(.*)$ /$1 break;\n"
     return f"""
   location /{strip_prefix} {{
-{rewrite}    set $myapp_upstream {netloc};
-    proxy_http_version 1.1;
+    set $myapp_upstream {netloc};
+{rewrite}    proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
