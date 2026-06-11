@@ -43,6 +43,7 @@ Network expectations for an all-in-one backend:
 | `3254` | Registry | Required by clients unless fronted/proxied |
 | `5000` | Config Center | Required by clients |
 | OpenIM HTTP/WS ports | OpenIM | Required for IM on mobile/Web |
+| `80`, `443` | edge-nginx | Recommended public ingress when `myapp-ctl ingress` is enabled |
 | `5590` | Agent Node | Local/internal in pull mode; do not expose unless using direct mode |
 
 If a reverse proxy or domain layer is used, point clients at the public HTTPS
@@ -57,6 +58,7 @@ URLs through `myapp-ctl domain set ...` or by generating the correct
 - Infra: JSON app Postgres, AI session Redis, App MinIO
 - Auth/storage: self-hosted Supabase compose group
 - IM: OpenIM compose group
+- Public ingress: optional Docker-managed `edge-nginx`
 - AI execution: agent-node plus isolated Ubuntu agent runtime containers
 
 The backend image is shared by `backend`, `ai-worker`, `registry`,
@@ -172,6 +174,18 @@ Or pull images on an image-based host:
 myapp-ctl deploy --pull
 ```
 
+Use a Docker Hub mirror prefix when the host cannot pull directly from Docker
+Hub:
+
+```bash
+myapp-ctl deploy --pull --mirror=mirror.houlang.cloud/dh
+```
+
+With `--mirror`, `myapp-ctl` pulls images through the mirror prefix, then tags
+them back to their original image names before starting Compose services. This
+applies to MyApp images and Compose-managed images such as Supabase, Postgres,
+Redis, MinIO, and OpenIM.
+
 If AI provider config is missing, interactive deploy starts the setup wizard. In
 non-interactive shells it fails and tells you to run setup explicitly.
 
@@ -216,6 +230,53 @@ The client import JSON is the supported way to connect Web/iOS/Android clients
 to this backend. Do not hand-edit client constants for normal environment
 switching.
 
+## Managed Edge Nginx
+
+`myapp-ctl` can manage a Dockerized nginx ingress instead of modifying the host
+nginx service. The component is `edge-nginx` in group `edge`.
+
+Interactive setup:
+
+```bash
+myapp-ctl ingress setup
+myapp-ctl deploy --group edge --pull
+```
+
+Non-interactive example:
+
+```bash
+myapp-ctl ingress setup --yes \
+  --website-domain myapp.example.com \
+  --webapp-domain myapp-web.example.com \
+  --backend-domain myapp-backend.example.com \
+  --auth-domain myapp-auth.example.com \
+  --oss-domain myapp-oss.example.com \
+  --oss-console-domain myapp-oss-console.example.com \
+  --registry-domain myapp-registry.example.com \
+  --config-center-domain myapp-config.example.com \
+  --user-center-domain myapp-user.example.com \
+  --openim-domain myapp-im.example.com \
+  --crt /etc/ssl/myapp/fullchain.pem \
+  --key /etc/ssl/myapp/privkey.pem
+myapp-ctl deploy --group edge --pull
+```
+
+The generated config lives under `<data-root>/edge-nginx/`. Certificate files
+are copied into `<data-root>/edge-nginx/certs/` and mounted read-only into the
+container. If no cert/key is configured, `edge-nginx` renders HTTP-only config.
+
+`edge-nginx` supports:
+
+- WebSocket upgrade headers for OpenIM and Supabase realtime
+- SSE-friendly proxying with buffering disabled
+- large upload/download defaults via `client_max_body_size 2g` and long proxy
+  timeouts
+- static mounts for `<data-root>/static/website` and `<data-root>/static/webapp`
+
+Host-based routing needs distinct domains for production. If every domain is
+left as the same IPv4, `myapp-ctl` prints a warning because a single `443`
+listener cannot distinguish all services by hostname.
+
 ## Source Build vs Image Pull
 
 `--build` and `--pull` are deliberately explicit:
@@ -224,6 +285,7 @@ switching.
 |---|---|---|
 | `--build` | Development/test host or source-controlled production host | Builds images from the checkout recorded in `/etc/myapp/ctl.json` |
 | `--pull` | Image-based production host | Pulls configured images and starts containers |
+| `--pull --mirror=<prefix>` | Image-based host behind slow or blocked Docker Hub access | Pulls `<prefix>/<image>` and tags it back to `<image>` |
 | no flag | Component already has an image locally | Starts/restarts without building or pulling |
 
 Refresh the installed control CLI and compose definitions before routine
@@ -302,6 +364,7 @@ For image-based hosts, use `--pull` after pushing images:
 myapp-ctl update
 myapp-ctl deploy backend ai-worker --pull --no-setup --no-test-user
 myapp-ctl deploy agent-node agent-runtime --pull --no-setup --no-test-user
+myapp-ctl deploy --pull --mirror=mirror.houlang.cloud/dh --no-setup --no-test-user
 ```
 
 Auth, Redis, Postgres, OpenIM, Supabase, and MinIO should stay up unless their
@@ -324,6 +387,7 @@ myapp-ctl deploy --group supabase --pull
 myapp-ctl deploy --group openim --pull
 myapp-ctl deploy --group agent --pull
 myapp-ctl deploy --group core --pull
+myapp-ctl deploy --group edge --pull
 ```
 
 Restart without rebuilding:
@@ -369,19 +433,19 @@ Core service operations:
 
 ```bash
 myapp-ctl status [service ...] [--json]
-myapp-ctl deploy [service|group ...] [--build|--pull|--plan|--dry-run]
-myapp-ctl deploy --group infra|supabase|openim|agent|core [--build|--pull]
+myapp-ctl deploy [service|group ...] [--build|--pull] [--mirror <prefix>] [--plan|--dry-run]
+myapp-ctl deploy --group infra|supabase|openim|agent|core|edge [--build|--pull] [--mirror <prefix>]
 myapp-ctl restart [service|group ...]
 myapp-ctl log <service> [-n 120] [-f]
 myapp-ctl update [--source <checkout>] [--no-pull]
-myapp-ctl uninstall --yes [--purge] [--volumes] [--images] [--remove-ctl]
+myapp-ctl uninstall --yes [--purge] [--volumes] [--remove-ctl]
 ```
 
 Configuration and secrets:
 
 ```bash
 myapp-ctl setup [--host <host>] [--data-root /mnt/myapp] [--force]
-myapp-ctl setup [--no-ai] [--no-asr] [--no-email] [--no-push]
+myapp-ctl setup [--no-ingress] [--no-ai] [--no-asr] [--no-email] [--no-push]
 myapp-ctl secret init-stack [--host <host>] [--data-root /mnt/myapp] [--force]
 myapp-ctl secret ls
 myapp-ctl secret get <group> <key> [--show]
@@ -395,6 +459,10 @@ myapp-ctl config lang [zh|en|de|es]
 myapp-ctl domain ls
 myapp-ctl domain set <name> <url>
 myapp-ctl domain rm <name>
+myapp-ctl ingress setup [--host <host>] [--crt <fullchain.pem>] [--key <privkey.pem>]
+myapp-ctl ingress render [--dry-run]
+myapp-ctl ingress reload
+myapp-ctl ingress status
 myapp-ctl client-env [--host <host>] [--name <name>] [--json] [--terminal-qr]
 ```
 
@@ -463,17 +531,20 @@ are not used for MyApp databases or object stores.
 
 Operational rule:
 
-- `myapp-ctl uninstall --yes --purge` removes containers and `/etc/myapp`
-  runtime/config files, but does not remove the data root.
+- `myapp-ctl uninstall --yes --purge` removes containers and legacy named
+  volumes, but preserves `/etc/myapp`, Docker images, and the data root.
 - If `<data-root>/myapp-config.json` and service data directories still exist,
   a host can be reconstructed from the same data root.
-- Destroying data is always a separate explicit manual `rm -rf <data-root>`.
+- Destroying local data, host config, or cached images is always a separate
+  explicit manual command printed after uninstall.
 
 Important paths:
 
 - `/mnt/myapp/jsonapp-postgres/data`
 - `/mnt/myapp/ai-session-redis/data`
 - `/mnt/myapp/app-minio/data`
+- `/mnt/myapp/edge-nginx/{nginx.conf,conf.d,certs,logs}`
+- `/mnt/myapp/static/{website,webapp}`
 - `/mnt/myapp/config-center/data`
 - `/mnt/myapp/agent-node/{state,workspaces,logs}`
 - `/mnt/myapp/supabase-db/{data,config}`
@@ -497,6 +568,7 @@ curl -fsS http://127.0.0.1:5566/api/ai/providers
 curl -fsS http://127.0.0.1:3254/health
 curl -fsS http://127.0.0.1:5000/api/v1/public
 curl -fsS http://127.0.0.1:5590/health
+curl -fsS http://127.0.0.1/edge-healthz
 curl -fsS -H "apikey: $(myapp-ctl secret get supabase ANON_KEY --show)" \
   http://127.0.0.1:18000/auth/v1/health
 myapp-ctl agent ls
@@ -532,10 +604,11 @@ Stop and remove managed services while preserving data root:
 myapp-ctl uninstall --yes --purge
 ```
 
-This removes containers, legacy named volumes, host-local `/etc/myapp` runtime
-files, installed compose/config files, and MyApp images. It does not delete the
-persistent data root. The command prints the explicit `rm -rf -- <data-root>`
-line to run manually if you intentionally want to destroy all local data.
+This removes containers and legacy named volumes only. It preserves
+`/etc/myapp`, MyApp Docker images, and the persistent data root. The command
+prints explicit manual cleanup commands for `rm -rf -- <data-root>`,
+`rm -rf -- /etc/myapp`, and `docker rmi -f ...` if you intentionally want a
+destructive reset.
 
 ## Multi-Host Agent Nodes
 

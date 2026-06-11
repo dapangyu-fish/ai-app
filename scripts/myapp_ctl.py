@@ -51,6 +51,11 @@ DATA_ROOT_DIRS = [
     "agent-node/workspaces",
     "agent-node/logs",
     "agent-nodes",
+    "edge-nginx/conf.d",
+    "edge-nginx/certs",
+    "edge-nginx/logs",
+    "static/website",
+    "static/webapp",
     "jsonapp-postgres/data",
     "ai-session-redis/data",
     "app-minio/data",
@@ -108,6 +113,7 @@ DEPLOY_ORDER = [
     "ai-worker",
     "config-center",
     "user-center",
+    "edge-nginx",
 ]
 IMAGE_TARGETS = {
     "agent-runtime": ("agent_runtime", "deploy/production/Dockerfile.agent-runtime"),
@@ -120,6 +126,7 @@ COMPOSE_ENV_FILE_NAMES = [
     "backend.env",
     "supabase.env",
     "openim.env",
+    "edge.env",
     "ai-providers.env",
     "agent.env",
     "push.env",
@@ -128,6 +135,24 @@ COMPOSE_ENV_FILE_NAMES = [
 ]
 _SETUP_SECRET_FILE_CONTAINER_ROOT = "/etc/myapp/secret-files"
 _SETUP_SECRET_FILE_HOST_DIR = "files"
+EDGE_ROUTE_SPECS = [
+    {"key": "website", "label": "Website", "kind": "static", "root": "/usr/share/nginx/website"},
+    {"key": "webapp", "label": "Web app", "kind": "static", "root": "/usr/share/nginx/webapp"},
+    {"key": "backend", "label": "Backend API", "kind": "proxy", "upstream": "http://backend:5566"},
+    {"key": "auth", "label": "Supabase Auth", "kind": "proxy", "upstream": "http://supabase-kong:8000"},
+    {"key": "oss", "label": "MinIO endpoint", "kind": "proxy", "upstream": "http://app-minio:9000"},
+    {"key": "oss_console", "label": "MinIO console", "kind": "proxy", "upstream": "http://app-minio:9090"},
+    {"key": "registry", "label": "App registry", "kind": "proxy", "upstream": "http://registry:3254"},
+    {"key": "config_center", "label": "Config Center", "kind": "proxy", "upstream": "http://config-center:5000"},
+    {"key": "user_center", "label": "User Center", "kind": "proxy", "upstream": "http://user-center:5567"},
+    {
+        "key": "openim",
+        "label": "OpenIM",
+        "kind": "openim",
+        "api_upstream": "http://myapp-openim-server:10002",
+        "ws_upstream": "http://myapp-openim-server:10001",
+    },
+]
 _LANG = "en"
 _LANGUAGES = {
     "zh": "中文",
@@ -681,18 +706,24 @@ def _ensure_data_root_config(data_root: str | None = None, *, interactive: bool 
     cfg = _cfg()
     existing = str(cfg.get("paths", {}).get("data_root") or "").strip()
     selected = data_root or os.environ.get("MYAPP_DATA_ROOT") or existing or DEFAULT_DATA_ROOT
+    prompted = False
     if interactive and sys.stdin.isatty():
         should_prompt = not data_root and not cfg.get("paths", {}).get("data_root_prompted")
         if should_prompt:
-            selected = _prompt_line("MyApp data root", default=selected or DEFAULT_DATA_ROOT, required=True)
+            selected = _prompt_line("MyApp data root (all persistent service data)", default=selected or DEFAULT_DATA_ROOT, required=True)
+            prompted = True
     root = Path(str(selected)).expanduser()
     if not root.is_absolute():
         root = (Path.cwd() / root).resolve()
     if str(root) in {"/", "/mnt", "/var", "/opt", "/etc"}:
         raise ValueError(f"unsafe MyApp data root: {root}")
     _apply_data_root_to_cfg(cfg, root)
-    cfg.setdefault("paths", {})["data_root_prompted"] = True
+    cfg.setdefault("paths", {})["data_root_prompted"] = bool(
+        cfg.get("paths", {}).get("data_root_prompted") or prompted or data_root or os.environ.get("MYAPP_DATA_ROOT")
+    )
     _save_json(CONFIG_PATH, cfg, mode=0o644)
+    if interactive:
+        print(f"Using MyApp data root: {root}")
     return root
 
 
@@ -1278,6 +1309,11 @@ def _ordered_service_names(names: list[str]) -> list[str]:
 
 def _service_names_for_target(target: str | None, group: str | None = None) -> list[str]:
     services = _services()
+    if not services:
+        raise KeyError(
+            f"service inventory is empty or missing: {SERVICES_PATH}; "
+            "run deploy/production/install_ctl.sh before deploy"
+        )
     if group:
         names = [name for name, spec in services.items() if spec.get("group") == group]
         if not names:
@@ -1310,6 +1346,18 @@ def _service_names_for_targets(targets: list[str] | None, group: str | None = No
     for target in raw_targets:
         names.extend(_service_names_for_target(target))
     return _ordered_service_names(names)
+
+
+def _is_edge_ingress_disabled() -> bool:
+    ingress = _cfg().get("ingress")
+    return isinstance(ingress, dict) and ingress.get("enabled") is False
+
+
+def _filter_disabled_optional_services(names: list[str]) -> list[str]:
+    if "edge-nginx" not in names or not _is_edge_ingress_disabled():
+        return names
+    print("skip edge-nginx: ingress is disabled; enable it with `myapp-ctl ingress setup`")
+    return [name for name in names if name != "edge-nginx"]
 
 
 def _compose_command(spec: dict, command: list[str]) -> list[str]:
@@ -1453,7 +1501,118 @@ def _compose_cmd(spec: dict, action: str) -> int:
     return _run(cmd, capture=False).returncode
 
 
-def _deploy_images(targets: list[str], *, action: str, dry_run: bool) -> int:
+def _normalize_image_mirror(mirror: str | None) -> str | None:
+    value = (mirror or "").strip().rstrip("/")
+    return value or None
+
+
+def _pull_image(image: str, *, mirror: str | None, dry_run: bool) -> int:
+    mirror = _normalize_image_mirror(mirror)
+    if mirror:
+        source = f"{mirror}/{image}"
+        rc = _run_or_print(["docker", "pull", source], dry_run=dry_run)
+        if rc != 0:
+            return rc
+        return _run_or_print(["docker", "tag", source, image], dry_run=dry_run)
+    return _run_or_print(["docker", "pull", image], dry_run=dry_run)
+
+
+def _compose_config_spec(spec: dict) -> dict:
+    config_spec = dict(spec)
+    project_dir = Path(config_spec.get("project_dir", "."))
+    if not project_dir.exists():
+        parts = project_dir.parts
+        for idx in range(len(parts) - 1):
+            if parts[idx] == "deploy" and parts[idx + 1] == "production":
+                candidate = _source_dir() / Path(*parts[idx:])
+                files = config_spec.get("compose_files") or []
+                if candidate.exists() and all((candidate / name).exists() for name in files):
+                    config_spec["project_dir"] = str(candidate)
+                break
+    return config_spec
+
+
+def _compose_images_for_spec(spec: dict, compose_services: list[str] | None = None) -> tuple[int, list[str]]:
+    config_spec = _compose_config_spec(spec)
+    if compose_services:
+        cmd = _compose_command(config_spec, ["config", "--format", "json"])
+        proc = _run(cmd)
+        if proc.returncode != 0:
+            if proc.stderr.strip():
+                print(proc.stderr.strip(), file=sys.stderr)
+            return proc.returncode, []
+        try:
+            data = json.loads(proc.stdout)
+        except json.JSONDecodeError as exc:
+            print(f"docker compose config returned invalid JSON: {exc}", file=sys.stderr)
+            return 1, []
+        services = data.get("services") or {}
+        images: list[str] = []
+        seen: set[str] = set()
+        for service in compose_services:
+            image = str((services.get(service) or {}).get("image") or "").strip()
+            if not image or image in seen:
+                continue
+            seen.add(image)
+            images.append(image)
+        return 0, images
+    cmd = _compose_command(config_spec, ["config", "--images"])
+    proc = _run(cmd)
+    if proc.returncode != 0:
+        if proc.stderr.strip():
+            print(proc.stderr.strip(), file=sys.stderr)
+        return proc.returncode, []
+    images: list[str] = []
+    seen: set[str] = set()
+    for line in proc.stdout.splitlines():
+        image = line.strip()
+        if not image or image in seen:
+            continue
+        seen.add(image)
+        images.append(image)
+    return 0, images
+
+
+def _compose_images_for_names(names: list[str]) -> tuple[int, list[str]]:
+    services = _services()
+    groups: dict[tuple[str, tuple[str, ...]], tuple[dict, list[str]]] = {}
+    for name in names:
+        spec = services[name]
+        if spec.get("kind") != "compose":
+            continue
+        key = (str(spec.get("project_dir", ".")), tuple(spec.get("compose_files") or []))
+        if key not in groups:
+            groups[key] = (spec, [])
+        groups[key][1].append(str(spec.get("compose_service") or name))
+    images: list[str] = []
+    seen: set[str] = set()
+    for spec, compose_services in groups.values():
+        rc, spec_images = _compose_images_for_spec(spec, compose_services)
+        if rc != 0:
+            return rc, []
+        for image in spec_images:
+            if image in seen:
+                continue
+            seen.add(image)
+            images.append(image)
+    return 0, images
+
+
+def _pull_compose_images(names: list[str], *, mirror: str | None, dry_run: bool, skip_images: set[str] | None = None) -> int:
+    rc, images = _compose_images_for_names(names)
+    if rc != 0:
+        return rc
+    skip_images = skip_images or set()
+    for image in images:
+        if image in skip_images:
+            continue
+        rc = _pull_image(image, mirror=mirror, dry_run=dry_run)
+        if rc != 0:
+            return rc
+    return 0
+
+
+def _deploy_images(targets: list[str], *, action: str, dry_run: bool, mirror: str | None = None) -> int:
     source_dir = _source_dir()
     build_commit = ""
     build_version = ""
@@ -1480,7 +1639,10 @@ def _deploy_images(targets: list[str], *, action: str, dry_run: bool) -> int:
         elif action == "push":
             cmd = ["docker", "push", image]
         elif action == "pull":
-            cmd = ["docker", "pull", image]
+            rc = _pull_image(image, mirror=mirror, dry_run=dry_run)
+            if rc != 0:
+                return rc
+            continue
         else:
             raise ValueError(action)
         rc = _run_or_print(cmd, dry_run=dry_run)
@@ -1575,6 +1737,10 @@ def _prepare_openim_config(spec: dict, *, dry_run: bool) -> int:
 def _prepare_deploy(names: list[str], *, dry_run: bool) -> int:
     if _group_in_names(names, "supabase"):
         rc = _seed_supabase_postgres_custom_config(dry_run=dry_run)
+        if rc != 0:
+            return rc
+    if "edge-nginx" in names:
+        rc = _render_edge_nginx_config(dry_run=dry_run)
         if rc != 0:
             return rc
     if not _group_in_names(names, "openim"):
@@ -1724,7 +1890,6 @@ def cmd_uninstall(args) -> int:
     services = _services()
     names = _ordered_service_names(list(services))
     purge = bool(args.purge)
-    remove_images = bool(args.images or purge)
     dry_run = bool(args.dry_run)
     data_root = _data_root_from_cfg()
 
@@ -1764,37 +1929,26 @@ def cmd_uninstall(args) -> int:
         if rc != 0:
             return rc
 
-    if remove_images:
-        for target in IMAGE_TARGETS:
-            if not dry_run and not _image_exists(_configured_image(target)):
-                continue
-            rc = _run_or_print(["docker", "rmi", "-f", _configured_image(target)], dry_run=dry_run)
-            if rc != 0:
-                return rc
-
     if purge or args.state:
         print(f"# preserve MyApp data/state under {data_root}")
     if purge or args.logs:
         print(f"# preserve MyApp data/logs under {data_root}")
     if purge or args.secrets:
-        try:
-            _secret_dir().resolve().relative_to(data_root.resolve())
-            print(f"# preserve data-root secrets dir: {_secret_dir()}")
-        except (OSError, ValueError):
-            _remove_path(_secret_dir(), dry_run=dry_run)
+        print("# preserve MyApp host config and secrets under /etc/myapp")
     if purge or args.install_files:
-        cfg = _cfg()
-        root = Path(cfg.get("paths", {}).get("root", "/opt/myapp"))
-        _remove_path(root / "deploy/production", dry_run=dry_run)
-        _remove_installed_config_path(CONFIG_PATH, dry_run=dry_run)
-        _remove_installed_config_path(SERVICES_PATH, dry_run=dry_run)
+        print("# preserve installed myapp-ctl service inventory and compose files")
     if args.remove_ctl:
         _remove_path(Path("/usr/local/bin/myapp-ctl"), dry_run=dry_run)
         _remove_path(Path("/opt/myapp/bin/myapp-ctl"), dry_run=dry_run)
     print("uninstall completed" if not dry_run else "uninstall dry-run completed")
     print(f"data root preserved: {data_root}")
-    print("to permanently delete all MyApp local data and the restorable config snapshot, run manually:")
+    print("host config preserved: /etc/myapp")
+    print("Docker images preserved.")
+    print("To permanently delete local data/config/images, run manually as needed:")
     print(f"  rm -rf -- {shlex.quote(str(data_root))}")
+    print("  rm -rf -- /etc/myapp")
+    image_args = " ".join(shlex.quote(_configured_image(target)) for target in IMAGE_TARGETS)
+    print(f"  docker rmi -f {image_args}")
     return 0
 
 
@@ -1802,11 +1956,18 @@ def cmd_deploy(args) -> int:
     if args.build and args.pull:
         print("--build and --pull cannot be used together", file=sys.stderr)
         return 2
+    if getattr(args, "mirror", None) and not args.pull:
+        print("--mirror requires --pull", file=sys.stderr)
+        return 2
     try:
         names = _service_names_for_targets(args.targets, args.group)
     except KeyError as exc:
         print(str(exc), file=sys.stderr)
         return 2
+    names = _filter_disabled_optional_services(names)
+    if not names:
+        print("nothing to deploy")
+        return 0
     image_targets = _image_targets_for_names(names)
     if args.plan:
         services = _services()
@@ -1842,7 +2003,11 @@ def cmd_deploy(args) -> int:
         if rc != 0:
             return rc
     elif args.pull:
-        rc = _deploy_images(image_targets, action="pull", dry_run=args.dry_run)
+        rc = _deploy_images(image_targets, action="pull", dry_run=args.dry_run, mirror=args.mirror)
+        if rc != 0:
+            return rc
+        pulled_images = {_configured_image(target) for target in image_targets}
+        rc = _pull_compose_images(names, mirror=args.mirror, dry_run=args.dry_run, skip_images=pulled_images)
         if rc != 0:
             return rc
     else:
@@ -1889,8 +2054,8 @@ def _is_full_deploy(args) -> bool:
 
 
 def cmd_setup(args) -> int:
-    if args.no_ai and args.no_asr and args.no_email and args.no_push:
-        print("nothing to configure: --no-ai, --no-asr, --no-email, and --no-push were all passed", file=sys.stderr)
+    if args.no_ingress and args.no_ai and args.no_asr and args.no_email and args.no_push:
+        print("nothing to configure: --no-ingress, --no-ai, --no-asr, --no-email, and --no-push were all passed", file=sys.stderr)
         return 2
     try:
         data_root = _ensure_data_root_config(getattr(args, "data_root", None), interactive=True)
@@ -1901,6 +2066,7 @@ def cmd_setup(args) -> int:
     rc = _run_setup_wizard(
         host=args.host,
         force=args.force,
+        include_ingress=not args.no_ingress,
         include_ai=not args.no_ai,
         include_asr=not args.no_asr,
         include_email=not args.no_email,
@@ -2988,6 +3154,7 @@ def _run_setup_wizard(
     *,
     host: str | None = None,
     force: bool = False,
+    include_ingress: bool = True,
     include_ai: bool = True,
     include_asr: bool = True,
     include_email: bool = True,
@@ -2996,6 +3163,22 @@ def _run_setup_wizard(
     rc = _init_stack_secrets(host=host, force=False, quiet=True)
     if rc != 0:
         return rc
+    if include_ingress:
+        class _IngressSetupArgs:
+            pass
+
+        ingress_args = _IngressSetupArgs()
+        ingress_args.host = host
+        ingress_args.crt = None
+        ingress_args.key = None
+        ingress_args.http_port = None
+        ingress_args.https_port = None
+        ingress_args.http_only = False
+        ingress_args.client_max_body_size = None
+        ingress_args.yes = False
+        rc = _setup_ingress_from_args(ingress_args, interactive=sys.stdin.isatty())
+        if rc != 0:
+            return rc
     if include_ai:
         rc = _setup_ai_providers(force=force)
         if rc != 0:
@@ -3535,12 +3718,23 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "USER_CENTER_SESSION_SECRET": _rand_hex(32),
         "USER_CENTER_COOKIE_SECURE": "false",
     }
+    edge_defaults = {
+        "MYAPP_DATA_ROOT": str(data_root),
+        "EDGE_NGINX_HTTP_PORT": "80",
+        "EDGE_NGINX_HTTPS_PORT": "443",
+        "EDGE_NGINX_ENABLE_TLS": "false",
+        "EDGE_NGINX_CLIENT_MAX_BODY_SIZE": "2g",
+        "EDGE_NGINX_PROXY_READ_TIMEOUT": "3600s",
+        "EDGE_NGINX_PROXY_SEND_TIMEOUT": "3600s",
+        "EDGE_NGINX_PROXY_CONNECT_TIMEOUT": "60s",
+    }
 
     changed = {
         "backend": _merge_env_group("backend", backend_defaults, force=force),
         "supabase": _merge_env_group("supabase", supabase_defaults, force=force),
         "openim": _merge_env_group("openim", openim_defaults, force=force),
         "agent": _merge_env_group("agent", agent_defaults, force=force),
+        "edge": _merge_env_group("edge", edge_defaults, force=force),
         "config-center": _merge_env_group("config-center", config_center_defaults, force=force),
         "user-center": _merge_env_group("user-center", user_center_defaults, force=force),
     }
@@ -3665,8 +3859,16 @@ def _load_config_bundle(path: Path) -> dict:
 def _import_config_bundle_data(bundle: dict) -> None:
     if isinstance(bundle.get("config"), dict):
         _save_json(CONFIG_PATH, bundle["config"], mode=0o644)
-    if isinstance(bundle.get("services"), dict):
-        _save_json(SERVICES_PATH, bundle["services"], mode=0o644)
+    services = bundle.get("services")
+    if isinstance(services, dict):
+        service_rows = services.get("services") if isinstance(services.get("services"), dict) else None
+        if service_rows:
+            _save_json(SERVICES_PATH, services, mode=0o644)
+        elif not SERVICES_PATH.exists():
+            print(
+                f"skip config bundle services restore: {SERVICES_PATH} is missing and bundle has no services",
+                file=sys.stderr,
+            )
     secret_dir = _secret_dir()
     secret_dir.mkdir(parents=True, exist_ok=True)
     os.chmod(secret_dir, 0o700)
@@ -3858,6 +4060,452 @@ def cmd_domain(args) -> int:
     return 2
 
 
+def _default_ipv4() -> str:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            value = sock.getsockname()[0]
+            if value:
+                return value
+    except OSError:
+        pass
+    try:
+        return socket.gethostbyname(socket.gethostname())
+    except OSError:
+        return "127.0.0.1"
+
+
+def _edge_template_dir() -> Path:
+    cfg_root = Path(_cfg().get("paths", {}).get("root", "/opt/myapp"))
+    installed = cfg_root / "deploy/production/edge-nginx/templates"
+    if installed.exists():
+        return installed
+    return _source_dir() / "deploy/production/edge-nginx/templates"
+
+
+def _edge_template(name: str) -> str:
+    return (_edge_template_dir() / name).read_text(encoding="utf-8")
+
+
+def _hostname_from_url_or_host(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    parsed = urlparse(text if "://" in text else f"//{text}")
+    return parsed.hostname or text.split("/", 1)[0].split(":", 1)[0]
+
+
+def _netloc_from_url_or_host(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    parsed = urlparse(text if "://" in text else f"//{text}")
+    return parsed.netloc or text.split("://")[-1].split("/", 1)[0]
+
+
+def _edge_url(host: str, *, tls: bool) -> str:
+    return f"{'https' if tls else 'http'}://{host}"
+
+
+def _edge_ws_url(host: str, *, tls: bool) -> str:
+    return f"{'wss' if tls else 'ws'}://{host}/ws"
+
+
+def _edge_paths() -> dict[str, Path]:
+    data_root = _data_root_from_cfg()
+    root = data_root / "edge-nginx"
+    return {
+        "root": root,
+        "conf": root / "conf.d",
+        "certs": root / "certs",
+        "logs": root / "logs",
+        "nginx_conf": root / "nginx.conf",
+        "site_conf": root / "conf.d/myapp.conf",
+        "cert": root / "certs/fullchain.pem",
+        "key": root / "certs/privkey.pem",
+    }
+
+
+def _edge_route_host_defaults(default_host: str) -> dict[str, str]:
+    cfg = _cfg()
+    ingress = cfg.get("ingress", {}) if isinstance(cfg.get("ingress"), dict) else {}
+    ingress_domains = ingress.get("domains", {}) if isinstance(ingress.get("domains"), dict) else {}
+    domains = cfg.get("domains", {}) if isinstance(cfg.get("domains"), dict) else {}
+    out: dict[str, str] = {}
+    for spec in EDGE_ROUTE_SPECS:
+        key = str(spec["key"])
+        out[key] = (
+            _hostname_from_url_or_host(str(ingress_domains.get(key) or ""))
+            or _hostname_from_url_or_host(str(domains.get(key) or ""))
+            or default_host
+        )
+    return out
+
+
+def _edge_effective_config() -> dict:
+    cfg = _cfg()
+    ingress = cfg.get("ingress", {}) if isinstance(cfg.get("ingress"), dict) else {}
+    edge_env = _parse_env(_secret_path("edge"))
+    default_host = str(ingress.get("default_host") or _public_host(None) or _default_ipv4()).strip()
+    default_host = _hostname_from_url_or_host(default_host) or _default_ipv4()
+    hosts = _edge_route_host_defaults(default_host)
+    if "tls_enabled" in ingress:
+        tls_enabled = bool(ingress.get("tls_enabled"))
+    else:
+        tls_enabled = _truthy_env(edge_env.get("EDGE_NGINX_ENABLE_TLS", "false"))
+    return {
+        "enabled": bool(ingress.get("enabled", True)),
+        "default_host": default_host,
+        "hosts": hosts,
+        "tls_enabled": tls_enabled,
+        "cert_source": str(ingress.get("cert_source") or ""),
+        "key_source": str(ingress.get("key_source") or ""),
+        "http_port": str(ingress.get("http_port") or edge_env.get("EDGE_NGINX_HTTP_PORT") or "80"),
+        "https_port": str(ingress.get("https_port") or edge_env.get("EDGE_NGINX_HTTPS_PORT") or "443"),
+        "client_max_body_size": str(ingress.get("client_max_body_size") or edge_env.get("EDGE_NGINX_CLIENT_MAX_BODY_SIZE") or "2g"),
+        "proxy_read_timeout": str(ingress.get("proxy_read_timeout") or edge_env.get("EDGE_NGINX_PROXY_READ_TIMEOUT") or "3600s"),
+        "proxy_send_timeout": str(ingress.get("proxy_send_timeout") or edge_env.get("EDGE_NGINX_PROXY_SEND_TIMEOUT") or "3600s"),
+        "proxy_connect_timeout": str(ingress.get("proxy_connect_timeout") or edge_env.get("EDGE_NGINX_PROXY_CONNECT_TIMEOUT") or "60s"),
+    }
+
+
+def _warn_duplicate_edge_hosts(hosts: dict[str, str]) -> None:
+    seen: dict[str, list[str]] = {}
+    for key, host in hosts.items():
+        seen.setdefault(host, []).append(key)
+    duplicates = {host: keys for host, keys in seen.items() if host and len(keys) > 1}
+    for host, keys in duplicates.items():
+        print(
+            f"warning: edge-nginx hostname {host!r} is used by multiple services: {', '.join(keys)}; "
+            "host-based routing needs unique domains for production.",
+            file=sys.stderr,
+        )
+
+
+def _copy_edge_certificates(config: dict, *, dry_run: bool) -> bool:
+    if not config.get("tls_enabled"):
+        return True
+    paths = _edge_paths()
+    cert_source = Path(str(config.get("cert_source") or "")).expanduser()
+    key_source = Path(str(config.get("key_source") or "")).expanduser()
+    if not cert_source.is_file() or not key_source.is_file():
+        print("edge-nginx TLS is enabled but certificate/key file is missing", file=sys.stderr)
+        print(f"  cert: {cert_source}", file=sys.stderr)
+        print(f"  key:  {key_source}", file=sys.stderr)
+        return False
+    for source, target, mode in ((cert_source, paths["cert"], 0o644), (key_source, paths["key"], 0o600)):
+        print(f"+ install -m {oct(mode)[2:]} {source} {target}")
+        if dry_run:
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+        os.chmod(target, mode)
+    return True
+
+
+def _edge_proxy_location(upstream: str, *, strip_prefix: str = "") -> str:
+    suffix = "/" if strip_prefix else ""
+    return f"""
+  location /{strip_prefix} {{
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_pass {upstream}{suffix};
+  }}"""
+
+
+def _edge_route_body(spec: dict) -> str:
+    kind = spec.get("kind")
+    if kind == "static":
+        root = spec.get("root")
+        return f"""
+  location / {{
+    root {root};
+    try_files $uri $uri/ /index.html;
+  }}"""
+    if kind == "openim":
+        return (
+            _edge_proxy_location(str(spec["ws_upstream"]), strip_prefix="ws")
+            + "\n"
+            + _edge_proxy_location(str(spec["api_upstream"]))
+        )
+    return _edge_proxy_location(str(spec["upstream"]))
+
+
+def _edge_server_block(host: str, body: str, *, tls: bool, redirect_http: bool = True) -> str:
+    health = """
+  location = /edge-healthz {
+    add_header Content-Type text/plain;
+    return 200 'ok\\n';
+  }"""
+    http_body = f"""
+  listen 80;
+  server_name {host};
+{health}
+"""
+    if tls and redirect_http:
+        http_body += """
+  location / {
+    return 301 https://$host$request_uri;
+  }
+"""
+    else:
+        http_body += body + "\n"
+    block = "server {\n" + http_body + "}\n"
+    if tls:
+        block += f"""
+server {{
+  listen 443 ssl;
+  http2 on;
+  server_name {host};
+  ssl_certificate /etc/nginx/certs/fullchain.pem;
+  ssl_certificate_key /etc/nginx/certs/privkey.pem;
+  ssl_session_cache shared:SSL:10m;
+  ssl_session_timeout 1d;
+{health}
+{body}
+}}
+"""
+    return block
+
+
+def _edge_default_server_block(*, tls: bool) -> str:
+    block = """
+server {
+  listen 80 default_server;
+  server_name _;
+  location = /edge-healthz {
+    add_header Content-Type text/plain;
+    return 200 'ok\\n';
+  }
+  location / {
+    return 404;
+  }
+}
+"""
+    if tls:
+        block += """
+server {
+  listen 443 ssl default_server;
+  http2 on;
+  server_name _;
+  ssl_certificate /etc/nginx/certs/fullchain.pem;
+  ssl_certificate_key /etc/nginx/certs/privkey.pem;
+  location = /edge-healthz {
+    add_header Content-Type text/plain;
+    return 200 'ok\\n';
+  }
+  location / {
+    return 404;
+  }
+}
+"""
+    return block
+
+
+def _render_edge_server_blocks(config: dict) -> str:
+    hosts = config["hosts"]
+    tls = bool(config.get("tls_enabled"))
+    used: set[str] = set()
+    blocks = [_edge_default_server_block(tls=tls)]
+    for spec in EDGE_ROUTE_SPECS:
+        key = str(spec["key"])
+        host = str(hosts.get(key) or "").strip()
+        if not host or host in used:
+            continue
+        used.add(host)
+        blocks.append(_edge_server_block(host, _edge_route_body(spec), tls=tls))
+    return "\n".join(blocks)
+
+
+def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
+    tls = bool(config.get("tls_enabled"))
+    hosts: dict[str, str] = config["hosts"]
+    urls = {key: _edge_url(host, tls=tls) for key, host in hosts.items()}
+    cfg = _cfg()
+    domains = cfg.setdefault("domains", {})
+    domains.update(urls)
+    if not dry_run:
+        _save_json(CONFIG_PATH, cfg, mode=0o644)
+    backend_values = {
+        "PUBLIC_HOST": hosts.get("backend", config["default_host"]),
+        "BACKEND_PUBLIC_URL": urls["backend"],
+        "SUPABASE_URL": urls["auth"],
+        "OPENIM_API_URL": urls["openim"],
+        "OPENIM_WS_URL": _edge_ws_url(hosts["openim"], tls=tls),
+        "APP_MINIO_PUBLIC_URL": urls["oss"],
+        "APP_MINIO_CONSOLE_PUBLIC_URL": urls["oss_console"],
+        "REGISTRY_PUBLIC_URL": urls["registry"],
+    }
+    supabase_values = {
+        "API_EXTERNAL_URL": urls["auth"],
+        "SUPABASE_PUBLIC_URL": urls["auth"],
+        "SITE_URL": urls["webapp"],
+        "ADDITIONAL_REDIRECT_URLS": ",".join(sorted({urls["website"], urls["webapp"]})),
+    }
+    user_center_values = {"USER_CENTER_COOKIE_SECURE": "true" if tls else "false"}
+    openim_values = {"HOST_IP": hosts.get("openim", config["default_host"])}
+    edge_values = {
+        "MYAPP_DATA_ROOT": str(_data_root_from_cfg()),
+        "EDGE_NGINX_HTTP_PORT": str(config["http_port"]),
+        "EDGE_NGINX_HTTPS_PORT": str(config["https_port"]),
+        "EDGE_NGINX_ENABLE_TLS": "true" if tls else "false",
+        "EDGE_NGINX_CLIENT_MAX_BODY_SIZE": str(config["client_max_body_size"]),
+        "EDGE_NGINX_PROXY_READ_TIMEOUT": str(config["proxy_read_timeout"]),
+        "EDGE_NGINX_PROXY_SEND_TIMEOUT": str(config["proxy_send_timeout"]),
+        "EDGE_NGINX_PROXY_CONNECT_TIMEOUT": str(config["proxy_connect_timeout"]),
+    }
+    if dry_run:
+        for group, values in (
+            ("backend", backend_values),
+            ("supabase", supabase_values),
+            ("openim", openim_values),
+            ("user-center", user_center_values),
+            ("edge", edge_values),
+        ):
+            print(f"# would update {group}: " + ", ".join(sorted(values)))
+        return
+    _merge_env_group("backend", backend_values, force=True)
+    _merge_env_group("supabase", supabase_values, force=True)
+    _merge_env_group("openim", openim_values, force=True)
+    _merge_env_group("user-center", user_center_values, force=True)
+    _merge_env_group("edge", edge_values, force=True)
+
+
+def _render_edge_nginx_config(*, dry_run: bool = False) -> int:
+    config = _edge_effective_config()
+    if not config.get("enabled", True):
+        print("edge-nginx ingress is disabled")
+        return 0
+    _warn_duplicate_edge_hosts(config["hosts"])
+    if not _copy_edge_certificates(config, dry_run=dry_run):
+        return 1
+    paths = _edge_paths()
+    nginx_conf = _edge_template("nginx.conf.tpl")
+    nginx_conf = (
+        nginx_conf.replace("{{CLIENT_MAX_BODY_SIZE}}", str(config["client_max_body_size"]))
+        .replace("{{PROXY_READ_TIMEOUT}}", str(config["proxy_read_timeout"]))
+        .replace("{{PROXY_SEND_TIMEOUT}}", str(config["proxy_send_timeout"]))
+        .replace("{{PROXY_CONNECT_TIMEOUT}}", str(config["proxy_connect_timeout"]))
+    )
+    server_blocks = _render_edge_server_blocks(config)
+    site_conf = _edge_template("myapp.conf.tpl").replace("{{SERVER_BLOCKS}}", server_blocks)
+    for path, body in ((paths["nginx_conf"], nginx_conf), (paths["site_conf"], site_conf)):
+        print(f"+ write {path}")
+        if dry_run:
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body, encoding="utf-8")
+        os.chmod(path, 0o644)
+    _apply_edge_public_urls(config, dry_run=dry_run)
+    if not dry_run:
+        _safe_write_default_config_snapshot()
+    return 0
+
+
+def _save_ingress_config(config: dict) -> None:
+    cfg = _cfg()
+    cfg["ingress"] = config
+    _save_json(CONFIG_PATH, cfg, mode=0o644)
+
+
+def _setup_ingress_from_args(args, *, interactive: bool) -> int:
+    rc = _init_stack_secrets(host=getattr(args, "host", None), quiet=True)
+    if rc != 0:
+        return rc
+    existing = _cfg().get("ingress", {}) if isinstance(_cfg().get("ingress"), dict) else {}
+    default_host = _hostname_from_url_or_host(getattr(args, "host", None) or existing.get("default_host") or _default_ipv4())
+    enabled = True
+    if interactive:
+        print(_tx("Managed edge-nginx ingress setup.", zh="托管 edge-nginx 入口配置。", de="Managed edge-nginx Ingress einrichten.", es="Configurar ingress edge-nginx gestionado."))
+        enabled = _prompt_bool(_tx("enable managed edge-nginx ingress?", zh="启用托管 edge-nginx 入口？", de="Managed edge-nginx Ingress aktivieren?", es="activar ingress edge-nginx gestionado?"), default=bool(existing.get("enabled", True)))
+        if not enabled:
+            _save_ingress_config({"enabled": False})
+            print("edge-nginx ingress disabled")
+            return 0
+        default_host = _prompt_line(_tx("default public IPv4/domain", zh="默认公网 IPv4/域名", de="Standard oeffentliche IPv4/Domain", es="IPv4/dominio publico por defecto"), default=default_host, required=True)
+    domains_existing = existing.get("domains", {}) if isinstance(existing.get("domains"), dict) else {}
+    domains: dict[str, str] = {}
+    for spec in EDGE_ROUTE_SPECS:
+        key = str(spec["key"])
+        default = _hostname_from_url_or_host(str(domains_existing.get(key) or "")) or default_host
+        if interactive:
+            value = _prompt_line(f"{spec['label']} domain", default=default, required=True)
+        else:
+            value = _hostname_from_url_or_host(str(getattr(args, key, "") or "")) or default
+        domains[key] = _hostname_from_url_or_host(value) or default_host
+    http_port = getattr(args, "http_port", None) or existing.get("http_port") or "80"
+    https_port = getattr(args, "https_port", None) or existing.get("https_port") or "443"
+    if interactive:
+        http_port = _prompt_port("HTTP port mapping host port", default=str(http_port))
+        https_port = _prompt_port("HTTPS port mapping host port", default=str(https_port))
+    cert_source = str(getattr(args, "crt", None) or existing.get("cert_source") or "")
+    key_source = str(getattr(args, "key", None) or existing.get("key_source") or "")
+    tls_enabled = bool(cert_source and key_source) and not getattr(args, "http_only", False)
+    if interactive:
+        tls_enabled = _prompt_bool("enable HTTPS with existing certificate files?", default=bool(cert_source and key_source))
+        if tls_enabled:
+            cert_source = _prompt_line("SSL certificate crt/fullchain path", default=cert_source, required=True)
+            key_source = _prompt_line("SSL certificate key path", default=key_source, required=True)
+        else:
+            cert_source = ""
+            key_source = ""
+    config = {
+        "enabled": True,
+        "default_host": _hostname_from_url_or_host(default_host),
+        "domains": domains,
+        "http_port": str(http_port),
+        "https_port": str(https_port),
+        "tls_enabled": bool(tls_enabled),
+        "cert_source": cert_source,
+        "key_source": key_source,
+        "client_max_body_size": str(getattr(args, "client_max_body_size", None) or existing.get("client_max_body_size") or "2g"),
+        "proxy_read_timeout": str(existing.get("proxy_read_timeout") or "3600s"),
+        "proxy_send_timeout": str(existing.get("proxy_send_timeout") or "3600s"),
+        "proxy_connect_timeout": str(existing.get("proxy_connect_timeout") or "60s"),
+    }
+    _save_ingress_config(config)
+    rc = _render_edge_nginx_config(dry_run=False)
+    if rc == 0:
+        print("edge-nginx ingress config rendered")
+    return rc
+
+
+def cmd_ingress(args) -> int:
+    if args.ingress_cmd == "setup":
+        return _setup_ingress_from_args(args, interactive=sys.stdin.isatty() and not getattr(args, "yes", False))
+    if args.ingress_cmd == "render":
+        return _render_edge_nginx_config(dry_run=args.dry_run)
+    if args.ingress_cmd == "reload":
+        rc = _render_edge_nginx_config(dry_run=False)
+        if rc != 0:
+            return rc
+        info = _docker_inspect("myapp-edge-nginx")
+        if not info or info.get("State", {}).get("Status") != "running":
+            print("myapp-edge-nginx is not running; run: myapp-ctl deploy --group edge --pull", file=sys.stderr)
+            return 1
+        rc = _run_or_print(["docker", "exec", "myapp-edge-nginx", "nginx", "-t"], dry_run=False)
+        if rc != 0:
+            return rc
+        return _run_or_print(["docker", "exec", "myapp-edge-nginx", "nginx", "-s", "reload"], dry_run=False)
+    if args.ingress_cmd == "status":
+        config = _edge_effective_config()
+        rows = [{"name": key, "host": host} for key, host in sorted(config["hosts"].items())]
+        print(f"enabled: {config.get('enabled', True)}")
+        print(f"tls: {config.get('tls_enabled')}")
+        print(f"http port: {config.get('http_port')}")
+        print(f"https port: {config.get('https_port')}")
+        _print_table(rows, [("name", "NAME"), ("host", "HOST")])
+        return 0
+    return 2
+
+
 def _strip_trailing_slash(value: str) -> str:
     return value.rstrip("/")
 
@@ -3892,9 +4540,14 @@ def _client_env_payload(*, host: str | None = None, name: str | None = None) -> 
         im_api_url = _host_port_url("http", public_host, openim_env.get("OPENIM_API_PORT") or "10002")
         im_ws_url = _host_port_url("ws", public_host, openim_env.get("OPENIM_WS_PORT") or "10001")
     else:
-        supabase_url = backend_env.get("SUPABASE_URL") or _host_port_url("http", public_host, supabase_env.get("KONG_HTTP_PORT") or "18000")
-        im_api_url = backend_env.get("OPENIM_API_URL") or _host_port_url("http", public_host, openim_env.get("OPENIM_API_PORT") or "10002")
-        im_ws_url = backend_env.get("OPENIM_WS_URL") or _host_port_url("ws", public_host, openim_env.get("OPENIM_WS_PORT") or "10001")
+        auth_domain = _strip_trailing_slash(str(domains.get("auth") or "").strip())
+        openim_domain = _strip_trailing_slash(str(domains.get("openim") or "").strip())
+        supabase_url = auth_domain or backend_env.get("SUPABASE_URL") or _host_port_url("http", public_host, supabase_env.get("KONG_HTTP_PORT") or "18000")
+        im_api_url = openim_domain or backend_env.get("OPENIM_API_URL") or _host_port_url("http", public_host, openim_env.get("OPENIM_API_PORT") or "10002")
+        if openim_domain:
+            im_ws_url = ("wss://" if openim_domain.startswith("https://") else "ws://") + _netloc_from_url_or_host(openim_domain) + "/ws"
+        else:
+            im_ws_url = backend_env.get("OPENIM_WS_URL") or _host_port_url("ws", public_host, openim_env.get("OPENIM_WS_PORT") or "10001")
 
     env_name = name or f"MyApp {public_host}"
     return {
@@ -5559,12 +6212,13 @@ def build_parser() -> argparse.ArgumentParser:
     deploy.add_argument("targets", nargs="*", help=_tx("service/group names; omitted means all", zh="服务或分组名；省略表示全部", de="Dienst- oder Gruppennamen; ohne Angabe alle", es="nombres de servicio o grupo; omitido significa todos"))
     deploy.add_argument(
         "--group",
-        choices=["infra", "agent", "core", "openim", "supabase"],
+        choices=["infra", "agent", "core", "openim", "supabase", "edge"],
         metavar="GROUP",
-        help=_tx("service group: infra, agent, core, openim, supabase", zh="服务分组: infra, agent, core, openim, supabase", de="Dienstgruppe: infra, agent, core, openim, supabase", es="grupo de servicios: infra, agent, core, openim, supabase"),
+        help=_tx("service group: infra, agent, core, openim, supabase, edge", zh="服务分组: infra, agent, core, openim, supabase, edge", de="Dienstgruppe: infra, agent, core, openim, supabase, edge", es="grupo de servicios: infra, agent, core, openim, supabase, edge"),
     )
     deploy.add_argument("--build", action="store_true", help=_tx("build required images from the local source tree before deploy", zh="部署前从本地源码构建所需镜像", de="benoetigte Images vor dem Deploy aus lokalem Quellcode bauen", es="construir imagenes necesarias desde el codigo local antes de desplegar"))
     deploy.add_argument("--pull", action="store_true", help=_tx("pull required images before deploy", zh="部署前拉取所需镜像", de="benoetigte Images vor dem Deploy laden", es="descargar imagenes necesarias antes de desplegar"))
+    deploy.add_argument("--mirror", help=_tx("Docker image mirror prefix used with --pull, for example mirror.houlang.cloud/dh", zh="配合 --pull 使用的 Docker 镜像站前缀，例如 mirror.houlang.cloud/dh", de="Docker-Image-Mirror-Prefix fuer --pull, z.B. mirror.houlang.cloud/dh", es="prefijo mirror de imagenes Docker para --pull, por ejemplo mirror.houlang.cloud/dh"))
     deploy.add_argument("--plan", action="store_true", help=_tx("print deployment plan only", zh="仅打印部署计划", de="nur den Deployment-Plan ausgeben", es="solo imprimir el plan de despliegue"))
     deploy.add_argument("--dry-run", action="store_true")
     deploy.add_argument("--force", action="store_true", help=_tx("deploy even when active AI runs may be interrupted", zh="即使可能打断活跃 AI 任务也继续部署", de="auch deployen, wenn aktive KI-Laeufe unterbrochen werden koennen", es="desplegar aunque pueda interrumpir tareas activas de IA"))
@@ -5585,6 +6239,7 @@ def build_parser() -> argparse.ArgumentParser:
     setup.add_argument("--host", help=_tx("public host/IP used in generated local service URLs", zh="生成本地服务 URL 时使用的公网域名或 IP", de="oeffentlicher Host/IP fuer generierte lokale Dienst-URLs", es="host/IP publico usado en URLs locales generadas"))
     setup.add_argument("--data-root", help=_tx("local persistent data root, for example /mnt/myapp", zh="本地持久化数据根目录，例如 /mnt/myapp", de="lokales persistentes Datenverzeichnis, z.B. /mnt/myapp", es="raiz local persistente, por ejemplo /mnt/myapp"))
     setup.add_argument("--force", action="store_true", help=_tx("replace existing setup config instead of offering to keep it", zh="替换现有配置，不再询问是否保留", de="bestehende Setup-Konfiguration ersetzen", es="reemplazar configuracion existente sin preguntar"))
+    setup.add_argument("--no-ingress", action="store_true", help=_tx("skip managed edge-nginx ingress setup", zh="跳过托管 edge-nginx 入口配置", de="Managed edge-nginx Ingress ueberspringen", es="omitir ingress edge-nginx gestionado"))
     setup.add_argument("--no-ai", action="store_true", help=_tx("skip AI provider setup", zh="跳过 AI 供应商配置", de="KI-Anbieter-Setup ueberspringen", es="omitir setup de proveedor de IA"))
     setup.add_argument("--no-asr", action="store_true", help=_tx("skip optional ByteDance ASR setup", zh="跳过可选 ByteDance ASR 配置", de="optionales ByteDance-ASR-Setup ueberspringen", es="omitir setup opcional de ByteDance ASR"))
     setup.add_argument("--no-email", action="store_true", help=_tx("skip optional Supabase SMTP email setup", zh="跳过可选 Supabase SMTP 邮件配置", de="optionales Supabase-SMTP-Mail-Setup ueberspringen", es="omitir setup opcional de correo SMTP Supabase"))
@@ -5596,13 +6251,13 @@ def build_parser() -> argparse.ArgumentParser:
     update.set_defaults(func=cmd_update)
     uninstall = sub.add_parser("uninstall", help=_tx("stop and remove deployed services", zh="停止并移除已部署服务", de="deployte Dienste stoppen und entfernen", es="detener y eliminar servicios desplegados"), usage=_tx("myapp-ctl uninstall --yes [options]", zh="myapp-ctl uninstall --yes [选项]", de="myapp-ctl uninstall --yes [Optionen]", es="myapp-ctl uninstall --yes [opciones]"))
     uninstall.add_argument("--yes", action="store_true", help=_tx("required confirmation for destructive cleanup", zh="破坏性清理所需确认", de="erforderliche Bestaetigung fuer destruktive Bereinigung", es="confirmacion requerida para limpieza destructiva"))
-    uninstall.add_argument("--purge", action="store_true", help=_tx("remove containers, legacy compose volumes, secrets, install config, and app images; preserve data root", zh="移除容器、旧 compose volume、密钥、安装配置和应用镜像；保留 data root", de="Container, alte Compose-Volumes, Secrets, Install-Konfiguration und Images entfernen; data root behalten", es="eliminar contenedores, volumenes compose legados, secretos, config e imagenes; conservar data root"))
+    uninstall.add_argument("--purge", action="store_true", help=_tx("remove containers and legacy compose volumes only; preserve data root, /etc/myapp, and images", zh="仅移除容器和旧 compose volume；保留 data root、/etc/myapp 和镜像", de="nur Container und alte Compose-Volumes entfernen; data root, /etc/myapp und Images behalten", es="eliminar solo contenedores y volumenes compose legados; conservar data root, /etc/myapp e imagenes"))
     uninstall.add_argument("--volumes", action="store_true", help=_tx("remove legacy compose named volumes while stopping services; bind-path data is preserved", zh="停止服务时移除旧 compose 命名 volume；保留 bind-path 数据", de="alte benannte Compose-Volumes beim Stoppen entfernen; Bind-Pfad-Daten bleiben", es="eliminar volumenes compose legados al detener; datos bind-path se conservan"))
     uninstall.add_argument("--state", action="store_true", help=_tx("deprecated; data-root state is always preserved", zh="已废弃；data-root state 始终保留", de="veraltet; data-root state bleibt immer erhalten", es="obsoleto; data-root state siempre se conserva"))
     uninstall.add_argument("--logs", action="store_true", help=_tx("deprecated; data-root logs are always preserved", zh="已废弃；data-root logs 始终保留", de="veraltet; data-root logs bleiben immer erhalten", es="obsoleto; data-root logs siempre se conservan"))
-    uninstall.add_argument("--secrets", action="store_true", help=_tx("remove /etc/myapp/secrets.d", zh="移除 /etc/myapp/secrets.d", de="/etc/myapp/secrets.d entfernen", es="eliminar /etc/myapp/secrets.d"))
-    uninstall.add_argument("--install-files", action="store_true", help=_tx("remove installed compose/config files", zh="移除已安装的 compose/config 文件", de="installierte Compose-/Config-Dateien entfernen", es="eliminar archivos compose/config instalados"))
-    uninstall.add_argument("--images", action="store_true", help=_tx("remove configured MyApp Docker images", zh="移除已配置 MyApp Docker 镜像", de="konfigurierte MyApp Docker-Images entfernen", es="eliminar imagenes Docker MyApp configuradas"))
+    uninstall.add_argument("--secrets", action="store_true", help=_tx("deprecated no-op; /etc/myapp deletion is printed as a manual command", zh="已废弃且不执行删除；/etc/myapp 删除命令会作为手动命令打印", de="veraltet und ohne Wirkung; /etc/myapp-Loeschbefehl wird nur ausgegeben", es="obsoleto y sin efecto; el borrado de /etc/myapp se imprime como comando manual"))
+    uninstall.add_argument("--install-files", action="store_true", help=_tx("deprecated no-op; installed files are preserved", zh="已废弃且不执行删除；保留已安装文件", de="veraltet und ohne Wirkung; installierte Dateien bleiben erhalten", es="obsoleto y sin efecto; archivos instalados se conservan"))
+    uninstall.add_argument("--images", action="store_true", help=_tx("deprecated no-op; image deletion is printed as a manual command", zh="已废弃且不执行删除；镜像删除命令会作为手动命令打印", de="veraltet und ohne Wirkung; Image-Loeschbefehl wird nur ausgegeben", es="obsoleto y sin efecto; el borrado de imagenes se imprime como comando manual"))
     uninstall.add_argument("--remove-ctl", action="store_true", help=_tx("remove the myapp-ctl executable after cleanup", zh="清理后移除 myapp-ctl 可执行文件", de="myapp-ctl nach der Bereinigung entfernen", es="eliminar ejecutable myapp-ctl tras la limpieza"))
     uninstall.add_argument("--dry-run", action="store_true")
     uninstall.set_defaults(func=cmd_uninstall)
@@ -5610,9 +6265,9 @@ def build_parser() -> argparse.ArgumentParser:
     restart.add_argument("targets", nargs="*", help=_tx("service/group names; omitted means all", zh="服务或分组名；省略表示全部", de="Dienst- oder Gruppennamen; ohne Angabe alle", es="nombres de servicio o grupo; omitido significa todos"))
     restart.add_argument(
         "--group",
-        choices=["infra", "agent", "core", "openim", "supabase"],
+        choices=["infra", "agent", "core", "openim", "supabase", "edge"],
         metavar="GROUP",
-        help=_tx("service group: infra, agent, core, openim, supabase", zh="服务分组: infra, agent, core, openim, supabase", de="Dienstgruppe: infra, agent, core, openim, supabase", es="grupo de servicios: infra, agent, core, openim, supabase"),
+        help=_tx("service group: infra, agent, core, openim, supabase, edge", zh="服务分组: infra, agent, core, openim, supabase, edge", de="Dienstgruppe: infra, agent, core, openim, supabase, edge", es="grupo de servicios: infra, agent, core, openim, supabase, edge"),
     )
     restart.set_defaults(func=cmd_restart)
     secret = sub.add_parser("secret", help=_tx("manage host-local secrets", zh="管理本机密钥", de="host-lokale Secrets verwalten", es="gestionar secretos locales del host"), usage=_tx("myapp-ctl secret <command> [args]", zh="myapp-ctl secret <命令> [参数]", de="myapp-ctl secret <Befehl> [Argumente]", es="myapp-ctl secret <comando> [args]"))
@@ -5674,6 +6329,30 @@ def build_parser() -> argparse.ArgumentParser:
     domain_rm = domain_sub.add_parser("rm", help=_tx("remove a domain override", zh="移除域名覆盖", de="Domain-Override entfernen", es="eliminar override de dominio"), usage=_tx("myapp-ctl domain rm <name>", zh="myapp-ctl domain rm <名称>", de="myapp-ctl domain rm <Name>", es="myapp-ctl domain rm <nombre>"))
     domain_rm.add_argument("name")
     domain_rm.set_defaults(func=cmd_domain)
+    ingress = sub.add_parser("ingress", help=_tx("manage Docker-based edge-nginx ingress", zh="管理 Docker 化 edge-nginx 入口", de="Docker-basiertes edge-nginx Ingress verwalten", es="gestionar ingress edge-nginx basado en Docker"), usage=_tx("myapp-ctl ingress <command> [args]", zh="myapp-ctl ingress <命令> [参数]", de="myapp-ctl ingress <Befehl> [Argumente]", es="myapp-ctl ingress <comando> [args]"))
+    ingress_sub = _add_subcommands(ingress, "ingress_cmd")
+    ingress_setup = ingress_sub.add_parser("setup", help=_tx("configure domains, ports, and certificates", zh="配置域名、端口和证书", de="Domains, Ports und Zertifikate konfigurieren", es="configurar dominios, puertos y certificados"), usage=_tx("myapp-ctl ingress setup [options]", zh="myapp-ctl ingress setup [选项]", de="myapp-ctl ingress setup [Optionen]", es="myapp-ctl ingress setup [opciones]"))
+    ingress_setup.add_argument("--host", help=_tx("default IPv4/domain for all ingress prompts", zh="所有入口提示的默认 IPv4/域名", de="Standard IPv4/Domain fuer alle Ingress-Abfragen", es="IPv4/dominio por defecto para ingress"))
+    for spec in EDGE_ROUTE_SPECS:
+        key = str(spec["key"])
+        ingress_setup.add_argument(
+            f"--{key.replace('_', '-')}-domain",
+            dest=key,
+            help=_tx(f"{spec['label']} domain", zh=f"{spec['label']} 域名", de=f"{spec['label']} Domain", es=f"dominio de {spec['label']}"),
+        )
+    ingress_setup.add_argument("--crt", help=_tx("SSL certificate crt/fullchain path on this host", zh="本机 SSL 证书 crt/fullchain 路径", de="SSL-Zertifikat crt/fullchain auf diesem Host", es="ruta del certificado SSL crt/fullchain en este host"))
+    ingress_setup.add_argument("--key", help=_tx("SSL certificate key path on this host", zh="本机 SSL 证书 key 路径", de="SSL-Zertifikat-Key auf diesem Host", es="ruta de la clave SSL en este host"))
+    ingress_setup.add_argument("--http-port", default=None, help=_tx("host HTTP port mapped to edge-nginx :80", zh="映射到 edge-nginx :80 的宿主机 HTTP 端口", de="Host-HTTP-Port fuer edge-nginx :80", es="puerto HTTP host para edge-nginx :80"))
+    ingress_setup.add_argument("--https-port", default=None, help=_tx("host HTTPS port mapped to edge-nginx :443", zh="映射到 edge-nginx :443 的宿主机 HTTPS 端口", de="Host-HTTPS-Port fuer edge-nginx :443", es="puerto HTTPS host para edge-nginx :443"))
+    ingress_setup.add_argument("--client-max-body-size", default=None, help=_tx("nginx client_max_body_size, default 2g", zh="nginx client_max_body_size，默认 2g", de="nginx client_max_body_size, Standard 2g", es="nginx client_max_body_size, por defecto 2g"))
+    ingress_setup.add_argument("--http-only", action="store_true", help=_tx("render HTTP-only ingress even if cert paths are configured", zh="即使已配置证书路径也渲染 HTTP-only 入口", de="HTTP-only Ingress rendern, auch wenn Zertifikate konfiguriert sind", es="renderizar ingress solo HTTP aunque haya certificados"))
+    ingress_setup.add_argument("--yes", action="store_true", help=_tx("non-interactive setup using defaults/options", zh="使用默认值/参数进行非交互配置", de="nichtinteraktives Setup mit Defaults/Optionen", es="setup no interactivo con valores por defecto/opciones"))
+    ingress_setup.set_defaults(func=cmd_ingress)
+    ingress_render = ingress_sub.add_parser("render", help=_tx("render nginx config into the data root", zh="将 nginx 配置渲染到 data root", de="nginx-Konfiguration ins Datenverzeichnis rendern", es="renderizar config nginx en data root"), usage=_tx("myapp-ctl ingress render [--dry-run]", zh="myapp-ctl ingress render [--dry-run]", de="myapp-ctl ingress render [--dry-run]", es="myapp-ctl ingress render [--dry-run]"))
+    ingress_render.add_argument("--dry-run", action="store_true")
+    ingress_render.set_defaults(func=cmd_ingress)
+    ingress_sub.add_parser("reload", help=_tx("render and reload the running edge-nginx container", zh="渲染并重载运行中的 edge-nginx 容器", de="rendern und laufenden edge-nginx Container neu laden", es="renderizar y recargar contenedor edge-nginx"), usage="myapp-ctl ingress reload").set_defaults(func=cmd_ingress)
+    ingress_sub.add_parser("status", help=_tx("show effective ingress config", zh="查看当前入口配置", de="effektive Ingress-Konfiguration anzeigen", es="mostrar config efectiva de ingress"), usage="myapp-ctl ingress status").set_defaults(func=cmd_ingress)
     client_env = sub.add_parser("client-env", help=_tx("generate client Service Environment import JSON and QR", zh="生成客户端服务环境导入 JSON 和二维码", de="Client-Service-Environment JSON und QR erzeugen", es="generar JSON y QR de entorno de servicio del cliente"), usage=_tx("myapp-ctl client-env [options]", zh="myapp-ctl client-env [选项]", de="myapp-ctl client-env [Optionen]", es="myapp-ctl client-env [opciones]"))
     client_env.add_argument("--host", help=_tx("public host/IP to use in generated URLs", zh="生成 URL 使用的公网域名或 IP", de="oeffentlicher Host/IP fuer generierte URLs", es="host/IP publico para URLs generadas"))
     client_env.add_argument("--name", help=_tx("environment name shown in the client", zh="客户端显示的环境名称", de="im Client angezeigter Umgebungsname", es="nombre de entorno mostrado en el cliente"))

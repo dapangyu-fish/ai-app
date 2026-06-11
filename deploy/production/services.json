@@ -59,6 +59,14 @@
       "kind": "image",
       "image": "dapangyufish/myapp-agent-runtime:agent-control-plane"
     },
+    "edge-nginx": {
+      "group": "edge",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.edge.yml"],
+      "compose_service": "edge-nginx",
+      "container": "myapp-edge-nginx"
+    },
     "ai-session-redis": {
       "group": "infra",
       "kind": "compose",

@@ -1,0 +1,41 @@
+name: myapp-edge
+
+services:
+  edge-nginx:
+    image: nginx:1.27-alpine
+    container_name: myapp-edge-nginx
+    restart: unless-stopped
+    volumes:
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/edge-nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/edge-nginx/conf.d:/etc/nginx/conf.d:ro
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/edge-nginx/certs:/etc/nginx/certs:ro
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/edge-nginx/logs:/var/log/nginx
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/static/website:/usr/share/nginx/website:ro
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/static/webapp:/usr/share/nginx/webapp:ro
+    ports:
+      - "${EDGE_NGINX_HTTP_PORT:-80}:80"
+      - "${EDGE_NGINX_HTTPS_PORT:-443}:443"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    networks:
+      - myapp
+      - supabase
+      - openim
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  myapp:
+    name: myapp_default
+    external: true
+  supabase:
+    name: supabase_default
+    external: true
+  openim:
+    name: myapp-openim_default
+    external: true
