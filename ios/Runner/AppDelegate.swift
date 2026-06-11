@@ -1,4 +1,5 @@
 import Flutter
+import Security
 import UIKit
 import UserNotifications
 
@@ -74,7 +75,7 @@ import UserNotifications
     pushChannel?.invokeMethod("onDeviceToken", arguments: ["token": hex, "env": env])
   }
 
-  // 从 embedded.mobileprovision 读 Entitlements.aps-environment
+  // 从 code-sign entitlement 读 aps-environment；读不到再 fallback 到 embedded.mobileprovision。
   // - dev / ad-hoc / enterprise / AppStore 真机：文件都在，按里头的 aps-environment 走
   // - 模拟器：iOS 16+ 模拟器能拿真 APNs token 走 sandbox，但 bundle 里没 mobileprovision —
   //          所以单独短路返 development，不能让兜底落到 production（曾踩此坑：sim 注册成
@@ -83,6 +84,9 @@ import UserNotifications
     #if targetEnvironment(simulator)
     return "development"
     #else
+    if let env = readApsEnvironmentFromEntitlements() {
+      return env
+    }
     guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
           let data = try? Data(contentsOf: url) else {
       return "production"
@@ -100,6 +104,26 @@ import UserNotifications
     }
     return aps == "development" ? "development" : "production"
     #endif
+  }
+
+  private static func readApsEnvironmentFromEntitlements() -> String? {
+    guard let task = SecTaskCreateFromSelf(kCFAllocatorDefault) else {
+      return nil
+    }
+    guard let value = SecTaskCopyValueForEntitlement(
+      task,
+      "aps-environment" as CFString,
+      nil
+    ) else {
+      return nil
+    }
+    guard let aps = value as? String else {
+      return nil
+    }
+    if aps == "development" || aps == "production" {
+      return aps
+    }
+    return nil
   }
 
   // APNs 注册失败 —— 通知 Flutter
