@@ -16,6 +16,7 @@
 // 失败约定：返回 null + debugPrint。调用方负责 toast / 重试。
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -34,11 +35,11 @@ enum ImMediaPurpose {
   file;
 
   String get name => switch (this) {
-        ImMediaPurpose.image => 'image',
-        ImMediaPurpose.snapshot => 'snapshot',
-        ImMediaPurpose.video => 'video',
-        ImMediaPurpose.file => 'file',
-      };
+    ImMediaPurpose.image => 'image',
+    ImMediaPurpose.snapshot => 'snapshot',
+    ImMediaPurpose.video => 'video',
+    ImMediaPurpose.file => 'file',
+  };
 }
 
 class ImMediaUploadResult {
@@ -48,6 +49,8 @@ class ImMediaUploadResult {
 }
 
 class ImMediaUploader {
+  static const int _putMaxAttempts = 3;
+
   static String get _backendUrl => AppConfig.backendUrl;
 
   /// 上传 [file]，成功返回 public URL。失败返回 null。
@@ -87,7 +90,8 @@ class ImMediaUploader {
       debugPrint('[IM Uploader] 文件没后缀，无法上传: ${file.path}');
       return null;
     }
-    final contentType = overrideContentType ??
+    final contentType =
+        overrideContentType ??
         mime_pkg.lookupMimeType(file.path) ??
         'application/octet-stream';
 
@@ -126,26 +130,32 @@ class ImMediaUploader {
       return null;
     }
     try {
-      final resp = await http.post(
-        Uri.parse('$_backendUrl/api/im/media/upload-url'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: '{"purpose":"${purpose.name}","ext":"$ext","content_type":"$contentType","size":$size}',
-      ).timeout(const Duration(seconds: 10));
+      final resp = await http
+          .post(
+            Uri.parse('$_backendUrl/api/im/media/upload-url'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: json.encode({
+              'purpose': purpose.name,
+              'ext': ext,
+              'content_type': contentType,
+              'size': size,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (resp.statusCode != 200) {
         debugPrint('[IM Uploader] 申请预签名失败 ${resp.statusCode}: ${resp.body}');
         return null;
       }
-      final body = resp.body;
-      // 简单 JSON 提取，避免引入 json.decode 全套（也可以用 dart:convert，无所谓）
-      final put = _extract(body, 'put_url');
-      final pub = _extract(body, 'public_url');
-      final key = _extract(body, 'key');
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      final put = data['put_url']?.toString();
+      final pub = data['public_url']?.toString();
+      final key = data['key']?.toString();
       if (put == null || pub == null || key == null) {
-        debugPrint('[IM Uploader] 后端响应缺字段: $body');
+        debugPrint('[IM Uploader] 后端响应缺字段: ${resp.body}');
         return null;
       }
       return _PresignedUpload(putUrl: put, publicUrl: pub, key: key);
@@ -161,53 +171,108 @@ class ImMediaUploader {
     required String contentType,
     void Function(int sent, int total)? onProgress,
   }) async {
-    try {
-      // 用 dart:io HttpClient 而不是 http 包，因为 http 不支持上传进度
-      final total = await file.length();
-      final uri = Uri.parse(putUrl);
-      final client = HttpClient();
+    // 用 dart:io HttpClient 而不是 http 包，因为 http 不支持上传进度。
+    // 直传链路会经过移动网络 + edge-nginx + MinIO，偶发 5xx/连接断开时
+    // 对同一个预签名 PUT URL 短重试是安全的：object key 相同，成功后结果一致。
+    final total = await file.length();
+    final uri = Uri.parse(putUrl);
+    for (var attempt = 1; attempt <= _putMaxAttempts; attempt++) {
       try {
-        final req = await client.putUrl(uri);
-        req.headers.set(HttpHeaders.contentTypeHeader, contentType);
-        req.contentLength = total;
-
-        // 流式 read + 写，每个 chunk 触发 onProgress
-        int sent = 0;
-        await for (final chunk in file.openRead()) {
-          req.add(chunk);
-          sent += chunk.length;
-          if (onProgress != null) onProgress(sent, total);
-        }
-        final resp = await req.close();
-        if (resp.statusCode >= 200 && resp.statusCode < 300) {
-          // 把 body 抽干，避免连接 dangling
-          await resp.drain<void>();
-          return true;
-        }
-        final errBody = await resp.transform(const SystemEncoding().decoder).join();
-        debugPrint('[IM Uploader] PUT 失败 ${resp.statusCode}: $errBody');
+        final ok = await _putAttempt(
+          uri: uri,
+          file: file,
+          contentType: contentType,
+          total: total,
+          attempt: attempt,
+          onProgress: onProgress,
+        );
+        if (ok) return true;
         return false;
-      } finally {
-        client.close(force: false);
+      } on _RetryablePutFailure {
+        if (attempt == _putMaxAttempts) {
+          return false;
+        }
+        await Future.delayed(_putRetryDelay(attempt));
+      } catch (e) {
+        debugPrint(
+          '[IM Uploader] PUT 异常 (attempt $attempt/$_putMaxAttempts): $e',
+        );
+        if (attempt == _putMaxAttempts) {
+          return false;
+        }
+        await Future.delayed(_putRetryDelay(attempt));
       }
-    } catch (e) {
-      debugPrint('[IM Uploader] PUT 异常: $e');
-      return false;
+    }
+    return false;
+  }
+
+  static bool _isRetryablePutStatus(int statusCode) {
+    return statusCode == 408 ||
+        statusCode == 425 ||
+        statusCode == 429 ||
+        statusCode == 500 ||
+        statusCode == 502 ||
+        statusCode == 503 ||
+        statusCode == 504;
+  }
+
+  static Duration _putRetryDelay(int attempt) {
+    return switch (attempt) {
+      1 => const Duration(milliseconds: 500),
+      2 => const Duration(milliseconds: 1200),
+      _ => const Duration(milliseconds: 2000),
+    };
+  }
+
+  /// 单次 PUT 上传。拆出来是为了让状态码重试和网络异常重试共用外层循环，
+  /// 不重复写流式上传逻辑。
+  static Future<bool> _putAttempt({
+    required Uri uri,
+    required File file,
+    required String contentType,
+    required int total,
+    required int attempt,
+    void Function(int sent, int total)? onProgress,
+  }) async {
+    final client = HttpClient();
+    try {
+      final req = await client.putUrl(uri);
+      req.headers.set(HttpHeaders.contentTypeHeader, contentType);
+      req.contentLength = total;
+
+      int sent = 0;
+      await for (final chunk in file.openRead()) {
+        req.add(chunk);
+        sent += chunk.length;
+        if (onProgress != null) onProgress(sent, total);
+      }
+      final resp = await req.close();
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        await resp.drain<void>();
+        return true;
+      }
+      final errBody = await resp.transform(utf8.decoder).join();
+      debugPrint(
+        '[IM Uploader] PUT 失败 ${resp.statusCode} '
+        '(attempt $attempt/$_putMaxAttempts): $errBody',
+      );
+      if (!_isRetryablePutStatus(resp.statusCode)) return false;
+      throw _RetryablePutFailure();
+    } finally {
+      client.close(force: false);
     }
   }
-
-  /// 从 JSON 字符串里抠 "key": "value" 形式的字段。仅用于已知后端响应格式。
-  /// 后端字段值不含 quote / 反斜杠，所以这个简单提取够用，且省 dart:convert 依赖。
-  static String? _extract(String json, String key) {
-    final pattern = RegExp('"${RegExp.escape(key)}"\\s*:\\s*"([^"]*)"');
-    final m = pattern.firstMatch(json);
-    return m?.group(1);
-  }
 }
+
+class _RetryablePutFailure implements Exception {}
 
 class _PresignedUpload {
   final String putUrl;
   final String publicUrl;
   final String key;
-  _PresignedUpload({required this.putUrl, required this.publicUrl, required this.key});
+  _PresignedUpload({
+    required this.putUrl,
+    required this.publicUrl,
+    required this.key,
+  });
 }
