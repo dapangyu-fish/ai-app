@@ -272,8 +272,30 @@ class _IMChatPageState extends State<IMChatPage> {
     final text = _inputController.text.trim();
     if (text.isEmpty) return;
 
+    final ready = await IMService.instance.ensureConnected();
+    if (!ready) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(T.of(context).homeImLoginFailed)));
+      return;
+    }
+
     _inputController.clear();
-    final pending = await IMService.instance.createTextMessage(text);
+    late final Message pending;
+    try {
+      pending = await IMService.instance
+          .createTextMessage(text)
+          .timeout(const Duration(seconds: 8));
+    } catch (e) {
+      debugPrint('[IM] 创建文本消息失败: $e');
+      if (!mounted) return;
+      _inputController.text = text;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(T.of(context).authErrSendFailed)));
+      return;
+    }
 
     if (mounted) {
       setState(() => _messages.insert(0, pending));

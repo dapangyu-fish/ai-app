@@ -67,6 +67,11 @@ class IMService {
   bool _loggedIn = false;
   // 复用进行中的 login future，防止 `_AuthGate.build()` 反复触发登录（rebuild 重入）
   Future<bool>? _loginInFlight;
+  Future<bool>? _reconnectInFlight;
+
+  static const Duration _sdkLoginTimeout = Duration(seconds: 15);
+  static const Duration _sdkSendTimeout = Duration(seconds: 25);
+  static const Duration _sdkReadTimeout = Duration(seconds: 12);
 
   final ValueNotifier<bool> connectionNotifier = ValueNotifier(false);
   final ValueNotifier<int> unreadCountNotifier = ValueNotifier(0);
@@ -242,7 +247,7 @@ class IMService {
       return false;
     }
     if (!AuthService.isLoggedIn) return false;
-    if (_loggedIn) return true;
+    if (_loggedIn && connectionNotifier.value) return true;
     if (_loginInFlight != null) return _loginInFlight!;
 
     final future = _doLogin();
@@ -263,6 +268,9 @@ class IMService {
     Object? lastError;
     for (var attempt = 1; attempt <= 3; attempt++) {
       try {
+        if (_loggedIn && !connectionNotifier.value) {
+          await _logoutSdkBestEffort();
+        }
         final credentials = await _fetchIMCredentials();
         if (credentials == null) {
           lastError = 'fetch credentials returned null';
@@ -277,7 +285,9 @@ class IMService {
           // 防止 wipe 删目录后 SDK login 打不开 SQLite
           await init();
 
-          await OpenIM.iMManager.login(userID: _imUserId!, token: _imToken!);
+          await OpenIM.iMManager
+              .login(userID: _imUserId!, token: _imToken!)
+              .timeout(_sdkLoginTimeout);
 
           _loggedIn = true;
           connectionNotifier.value = true;
@@ -303,7 +313,7 @@ class IMService {
   Future<void> logout() async {
     try {
       if (_loggedIn) {
-        await OpenIM.iMManager.logout();
+        await OpenIM.iMManager.logout().timeout(const Duration(seconds: 5));
       }
     } catch (_) {}
     _loggedIn = false;
@@ -340,7 +350,9 @@ class IMService {
     if (_imToken != null && _imUserId != null) {
       try {
         await init();
-        await OpenIM.iMManager.login(userID: _imUserId!, token: _imToken!);
+        await OpenIM.iMManager
+            .login(userID: _imUserId!, token: _imToken!)
+            .timeout(_sdkLoginTimeout);
         _loggedIn = true;
         connectionNotifier.value = true;
         await _updateUnreadCount();
@@ -374,6 +386,43 @@ class IMService {
     FcmService.instance.start();
   }
 
+  /// 确保 SDK 处于可发送/可拉取状态。
+  ///
+  /// `_loggedIn` 是我们自己的状态位，OpenIM 底层长连接断开时它不会自动变回
+  /// false。之前这种情况下 `login()` 会因为 `_loggedIn=true` 直接返回，导致
+  /// 好友列表读到本地旧缓存、发消息一直处于 sending。这里把连接状态也纳入判定。
+  Future<bool> ensureConnected() async {
+    if (!isPlatformSupported || !AuthService.isLoggedIn) return false;
+    if (_loggedIn && connectionNotifier.value) return true;
+    if (_reconnectInFlight != null) return _reconnectInFlight!;
+
+    final future = _reconnect();
+    _reconnectInFlight = future;
+    try {
+      return await future;
+    } finally {
+      _reconnectInFlight = null;
+    }
+  }
+
+  Future<bool> _reconnect() async {
+    debugPrint('[IM] 连接未就绪，尝试重连');
+    if (_loggedIn && !connectionNotifier.value) {
+      await _logoutSdkBestEffort();
+    }
+    _loggedIn = false;
+    connectionNotifier.value = false;
+    return login();
+  }
+
+  Future<void> _logoutSdkBestEffort() async {
+    try {
+      await OpenIM.iMManager.logout().timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('[IM] 重连前 logout 忽略失败: $e');
+    }
+  }
+
   // ---------- 消息操作 ----------
 
   /// 创建一条本地文本消息（不发送，只是 SDK 帮你拼好 Message 结构 + 分配 clientMsgID）
@@ -398,17 +447,24 @@ class IMService {
       return null;
     }
     try {
-      return await OpenIM.iMManager.messageManager.sendMessage(
-        message: message,
-        offlinePushInfo: OfflinePushInfo(
-          title: T.current.imPushNewMessage,
-          desc: previewText.length > 50
-              ? '${previewText.substring(0, 50)}...'
-              : previewText,
-        ),
-        userID: userID,
-        groupID: groupID,
-      );
+      final ready = await ensureConnected();
+      if (!ready) {
+        debugPrint('[IM] 发送失败: IM 未连接');
+        return null;
+      }
+      return await OpenIM.iMManager.messageManager
+          .sendMessage(
+            message: message,
+            offlinePushInfo: OfflinePushInfo(
+              title: T.current.imPushNewMessage,
+              desc: previewText.length > 50
+                  ? '${previewText.substring(0, 50)}...'
+                  : previewText,
+            ),
+            userID: userID,
+            groupID: groupID,
+          )
+          .timeout(_sdkSendTimeout);
     } catch (e) {
       debugPrint('[IM] 发送失败: $e');
       return null;
@@ -448,17 +504,21 @@ class IMService {
       return null;
     }
     try {
+      final ready = await ensureConnected();
+      if (!ready) return null;
       final msg = await OpenIM.iMManager.messageManager
           .createImageMessageFromFullPath(imagePath: imagePath);
-      return await OpenIM.iMManager.messageManager.sendMessage(
-        message: msg,
-        offlinePushInfo: OfflinePushInfo(
-          title: T.current.imPushNewMessage,
-          desc: T.current.imPushImagePreview,
-        ),
-        userID: userID,
-        groupID: groupID,
-      );
+      return await OpenIM.iMManager.messageManager
+          .sendMessage(
+            message: msg,
+            offlinePushInfo: OfflinePushInfo(
+              title: T.current.imPushNewMessage,
+              desc: T.current.imPushImagePreview,
+            ),
+            userID: userID,
+            groupID: groupID,
+          )
+          .timeout(_sdkSendTimeout);
     } catch (e) {
       debugPrint('[IM] 发送图片失败: $e');
       return null;
@@ -633,9 +693,11 @@ class IMService {
   /// 只是清旧未读时）回调延迟或不触发，所以这里手动 _updateUnreadCount() 兜底。
   Future<void> markConversationRead({required String conversationID}) async {
     try {
-      await OpenIM.iMManager.conversationManager.markConversationMessageAsRead(
-        conversationID: conversationID,
-      );
+      final ready = await ensureConnected();
+      if (!ready) return;
+      await OpenIM.iMManager.conversationManager
+          .markConversationMessageAsRead(conversationID: conversationID)
+          .timeout(_sdkReadTimeout);
       // 立刻刷一次总未读数，不依赖回调时机
       await _updateUnreadCount();
     } catch (e) {
@@ -648,8 +710,11 @@ class IMService {
   /// 获取会话列表
   Future<List<ConversationInfo>> getConversationList() async {
     try {
+      final ready = await ensureConnected();
+      if (!ready) return [];
       final list = await OpenIM.iMManager.conversationManager
-          .getConversationListSplit(offset: 0, count: 100);
+          .getConversationListSplit(offset: 0, count: 100)
+          .timeout(_sdkReadTimeout);
       return list;
     } catch (e) {
       debugPrint('[IM] 获取会话列表失败: $e');
@@ -664,12 +729,15 @@ class IMService {
     int count = 20,
   }) async {
     try {
+      final ready = await ensureConnected();
+      if (!ready) return [];
       final result = await OpenIM.iMManager.messageManager
           .getAdvancedHistoryMessageList(
             conversationID: conversationID,
             startMsg: startMsg,
             count: count,
-          );
+          )
+          .timeout(_sdkReadTimeout);
       return result.messageList ?? [];
     } catch (e) {
       debugPrint('[IM] 获取历史消息失败: $e');
@@ -683,9 +751,11 @@ class IMService {
   Future<List<PublicUserInfo>> getUsersInfo(List<String> userIDList) async {
     if (userIDList.isEmpty) return [];
     try {
-      return await OpenIM.iMManager.userManager.getUsersInfo(
-        userIDList: userIDList,
-      );
+      final ready = await ensureConnected();
+      if (!ready) return [];
+      return await OpenIM.iMManager.userManager
+          .getUsersInfo(userIDList: userIDList)
+          .timeout(_sdkReadTimeout);
     } catch (e) {
       debugPrint('[IM] 获取用户信息失败: $e');
       return [];
@@ -795,7 +865,11 @@ class IMService {
   /// 获取已加入的群列表
   Future<List<GroupInfo>> getJoinedGroups() async {
     try {
-      return await OpenIM.iMManager.groupManager.getJoinedGroupList();
+      final ready = await ensureConnected();
+      if (!ready) return [];
+      return await OpenIM.iMManager.groupManager.getJoinedGroupList().timeout(
+        _sdkReadTimeout,
+      );
     } catch (e) {
       debugPrint('[IM] 获取群列表失败: $e');
       return [];
@@ -807,7 +881,11 @@ class IMService {
   /// 拉好友列表
   Future<List<FriendInfo>> getFriendList() async {
     try {
-      return await OpenIM.iMManager.friendshipManager.getFriendList();
+      final ready = await ensureConnected();
+      if (!ready) return [];
+      return await OpenIM.iMManager.friendshipManager.getFriendList().timeout(
+        _sdkReadTimeout,
+      );
     } catch (e) {
       debugPrint('[IM] 获取好友列表失败: $e');
       return [];
@@ -822,10 +900,11 @@ class IMService {
     String reqMsg = '',
   }) async {
     try {
-      await OpenIM.iMManager.friendshipManager.addFriend(
-        userID: userID,
-        reason: reqMsg,
-      );
+      final ready = await ensureConnected();
+      if (!ready) return false;
+      await OpenIM.iMManager.friendshipManager
+          .addFriend(userID: userID, reason: reqMsg)
+          .timeout(_sdkReadTimeout);
       return true;
     } catch (e) {
       debugPrint('[IM] 发送好友申请失败: $e');
@@ -836,8 +915,11 @@ class IMService {
   /// 我收到的好友申请列表（待处理 / 历史）
   Future<List<FriendApplicationInfo>> getIncomingFriendApplications() async {
     try {
+      final ready = await ensureConnected();
+      if (!ready) return [];
       return await OpenIM.iMManager.friendshipManager
-          .getFriendApplicationListAsRecipient();
+          .getFriendApplicationListAsRecipient()
+          .timeout(_sdkReadTimeout);
     } catch (e) {
       debugPrint('[IM] 获取收到的好友申请失败: $e');
       return [];
@@ -847,8 +929,11 @@ class IMService {
   /// 我发出的好友申请列表（待对方处理）
   Future<List<FriendApplicationInfo>> getOutgoingFriendApplications() async {
     try {
+      final ready = await ensureConnected();
+      if (!ready) return [];
       return await OpenIM.iMManager.friendshipManager
-          .getFriendApplicationListAsApplicant();
+          .getFriendApplicationListAsApplicant()
+          .timeout(_sdkReadTimeout);
     } catch (e) {
       debugPrint('[IM] 获取发出的好友申请失败: $e');
       return [];
@@ -861,10 +946,11 @@ class IMService {
     String handleMsg = '',
   }) async {
     try {
-      await OpenIM.iMManager.friendshipManager.acceptFriendApplication(
-        userID: fromUserID,
-        handleMsg: handleMsg,
-      );
+      final ready = await ensureConnected();
+      if (!ready) return false;
+      await OpenIM.iMManager.friendshipManager
+          .acceptFriendApplication(userID: fromUserID, handleMsg: handleMsg)
+          .timeout(_sdkReadTimeout);
       return true;
     } catch (e) {
       debugPrint('[IM] 同意好友申请失败: $e');
@@ -878,10 +964,11 @@ class IMService {
     String handleMsg = '',
   }) async {
     try {
-      await OpenIM.iMManager.friendshipManager.refuseFriendApplication(
-        userID: fromUserID,
-        handleMsg: handleMsg,
-      );
+      final ready = await ensureConnected();
+      if (!ready) return false;
+      await OpenIM.iMManager.friendshipManager
+          .refuseFriendApplication(userID: fromUserID, handleMsg: handleMsg)
+          .timeout(_sdkReadTimeout);
       return true;
     } catch (e) {
       debugPrint('[IM] 拒绝好友申请失败: $e');
@@ -892,7 +979,11 @@ class IMService {
   /// 删除好友
   Future<bool> deleteFriend(String userID) async {
     try {
-      await OpenIM.iMManager.friendshipManager.deleteFriend(userID: userID);
+      final ready = await ensureConnected();
+      if (!ready) return false;
+      await OpenIM.iMManager.friendshipManager
+          .deleteFriend(userID: userID)
+          .timeout(_sdkReadTimeout);
       return true;
     } catch (e) {
       debugPrint('[IM] 删除好友失败: $e');
@@ -1007,10 +1098,15 @@ class IMService {
   Future<void> _refreshIMToken() async {
     final credentials = await _fetchIMCredentials();
     if (credentials != null) {
+      _imUserId = credentials['im_user_id'] ?? _imUserId;
       _imToken = credentials['im_token'];
+      _wsUrl = credentials['ws_url'] ?? _wsUrl;
+      _apiUrl = credentials['api_url'] ?? _apiUrl;
       await _saveCredentials();
       try {
-        await OpenIM.iMManager.login(userID: _imUserId!, token: _imToken!);
+        await OpenIM.iMManager
+            .login(userID: _imUserId!, token: _imToken!)
+            .timeout(_sdkLoginTimeout);
         _loggedIn = true;
         connectionNotifier.value = true;
       } catch (e) {
