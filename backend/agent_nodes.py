@@ -30,6 +30,8 @@ from ai_session import get_redis
 
 _PRIVATE_JOIN_TOKEN_SALT = "myapp-private-agent-join"
 _PRIVATE_JOIN_TOKEN_MAX_AGE_SECONDS = 3600
+DEFAULT_AGENT_NODE_CAPACITY = 10
+DEFAULT_AGENT_NODE_QUEUE_MAX = 100
 
 
 def _safe_node_id(value: object) -> str:
@@ -292,8 +294,8 @@ def _node_row(key, data: dict[Any, Any]) -> dict:
         "display_name": display_name,
         "url": url,
         "host": label_host or parsed.hostname or "",
-        "capacity": get_int("capacity", 1),
-        "queue_max": get_int("queue_max", 0),
+        "capacity": get_int("capacity", DEFAULT_AGENT_NODE_CAPACITY),
+        "queue_max": get_int("queue_max", DEFAULT_AGENT_NODE_QUEUE_MAX),
         "build_commit": build_commit,
         "build_version": build_version,
         "version": build_version or build_commit,
@@ -376,8 +378,8 @@ def _probe_agent_node(row: dict) -> dict:
             "reachable": True,
             "health": "ok" if payload.get("ok", True) else "error",
             "active_runs": int(payload.get("running") or 0),
-            "capacity": int(payload.get("capacity") or row.get("capacity") or 1),
-            "queue_max": int(payload.get("queue_max") or row.get("queue_max") or 0),
+            "capacity": int(payload.get("capacity") or row.get("capacity") or DEFAULT_AGENT_NODE_CAPACITY),
+            "queue_max": int(payload.get("queue_max") or row.get("queue_max") or DEFAULT_AGENT_NODE_QUEUE_MAX),
             "build_commit": _safe_build_text(payload.get("build_commit") or row.get("build_commit")),
             "build_version": _safe_build_text(
                 payload.get("build_version")
@@ -499,13 +501,13 @@ def register_agent_node():
     if not url:
         return jsonify({"error": "url is required"}), 400
     try:
-        capacity = max(1, int(body.get("capacity") or 1))
+        capacity = max(1, int(body.get("capacity") or DEFAULT_AGENT_NODE_CAPACITY))
     except (TypeError, ValueError):
-        capacity = 1
+        capacity = DEFAULT_AGENT_NODE_CAPACITY
     try:
-        queue_max = max(0, min(10000, int(body.get("queue_max") if body.get("queue_max") is not None else capacity)))
+        queue_max = max(0, min(10000, int(body.get("queue_max") if body.get("queue_max") is not None else DEFAULT_AGENT_NODE_QUEUE_MAX)))
     except (TypeError, ValueError):
-        queue_max = capacity
+        queue_max = DEFAULT_AGENT_NODE_QUEUE_MAX
     try:
         ttl_seconds = max(30, int(body.get("ttl_seconds") or 120))
     except (TypeError, ValueError):
@@ -736,13 +738,13 @@ def create_private_agent_node():
     node_id = _safe_node_id(body.get("node_id") or f"private-{user_id[:8]}-{int(time.time())}")
     name = str(body.get("name") or node_id).strip()[:80]
     try:
-        capacity = max(1, min(20, int(body.get("capacity") or 1)))
+        capacity = max(1, min(20, int(body.get("capacity") or DEFAULT_AGENT_NODE_CAPACITY)))
     except (TypeError, ValueError):
-        capacity = 1
+        capacity = DEFAULT_AGENT_NODE_CAPACITY
     try:
-        queue_max = max(0, min(200, int(body.get("queue_max") if body.get("queue_max") is not None else capacity)))
+        queue_max = max(0, min(200, int(body.get("queue_max") if body.get("queue_max") is not None else DEFAULT_AGENT_NODE_QUEUE_MAX)))
     except (TypeError, ValueError):
-        queue_max = capacity
+        queue_max = DEFAULT_AGENT_NODE_QUEUE_MAX
     provider_ids = _safe_list(body.get("provider_ids") or body.get("providers"))
     agent_ids = _safe_list(body.get("agent_ids") or body.get("agents")) or ["claude"]
     capabilities = _safe_capabilities(body.get("capabilities"))
