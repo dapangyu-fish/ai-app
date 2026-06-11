@@ -29,6 +29,7 @@ PR-1 范围：仅本文件 + app.py 注册。客户端 lib/im/im_media_uploader.
 import os
 import uuid
 from datetime import datetime, timedelta
+from urllib.parse import urlparse
 
 from flask import jsonify, request
 from minio import Minio
@@ -104,6 +105,26 @@ _minio_client = Minio(
     secret_key=MINIO_SECRET_KEY,
     secure=MINIO_SECURE,
 )
+
+
+def _minio_presign_client() -> Minio:
+    """Sign client-facing URLs with the public OSS host.
+
+    S3 v4 signatures include the Host header. The object operations still use
+    the internal service endpoint, but presigned URLs sent to mobile clients
+    must be signed for the public domain they will actually PUT to.
+    """
+    public_base = (MINIO_PUBLIC_URL or "").rstrip("/")
+    if public_base:
+        parsed = urlparse(public_base)
+        if parsed.netloc:
+            return Minio(
+                parsed.netloc,
+                access_key=MINIO_ACCESS_KEY,
+                secret_key=MINIO_SECRET_KEY,
+                secure=parsed.scheme == "https",
+            )
+    return _minio_client
 
 
 def _ensure_bucket():
@@ -187,7 +208,7 @@ def upload_url():
     try:
         _ensure_bucket()
         key = _build_key(purpose, user_id, ext)
-        put_url = _minio_client.presigned_put_object(BUCKET, key, expires=PRESIGN_TTL)
+        put_url = _minio_presign_client().presigned_put_object(BUCKET, key, expires=PRESIGN_TTL)
         public_url = f"{MINIO_PUBLIC_URL.rstrip('/')}/{BUCKET}/{key}"
         return jsonify({
             "put_url": put_url,
