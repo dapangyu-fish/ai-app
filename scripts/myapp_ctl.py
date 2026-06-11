@@ -1660,6 +1660,7 @@ def _prepare_openim_config(spec: dict, *, dry_run: bool) -> int:
     project_dir = Path(spec.get("project_dir", "."))
     cfg_dir = project_dir / "config-rendered"
     env = _parse_env(_secret_path("openim"))
+    backend_env = _parse_env(_secret_path("backend"))
     required = [
         "HOST_IP",
         "OPENIM_MONGO_PASSWORD",
@@ -1668,6 +1669,7 @@ def _prepare_openim_config(spec: dict, *, dry_run: bool) -> int:
         "OPENIM_MINIO_SECRET_KEY",
         "OPENIM_MINIO_PORT",
         "OPENIM_SECRET",
+        "OPENIM_WEBHOOK_SECRET",
     ]
     missing = [key for key in required if not env.get(key)]
     if missing:
@@ -1722,6 +1724,19 @@ def _prepare_openim_config(spec: dict, *, dry_run: bool) -> int:
         ],
         "share.yml": [("secret: openIM123", f"secret: {env['OPENIM_SECRET']}")],
     }
+    backend_public_url = (
+        backend_env.get("BACKEND_PUBLIC_URL")
+        or backend_env.get("PUBLIC_URL")
+        or f"http://{env['HOST_IP']}:{backend_env.get('BACKEND_PORT') or '5566'}"
+    ).rstrip("/")
+    webhook_url = (
+        f"{backend_public_url}/api/im/after_send_msg"
+        f"?secret={env['OPENIM_WEBHOOK_SECRET']}"
+    )
+    replacements["webhooks.yml"] = [
+        ("url: http://127.0.0.1:10006/callbackExample", f"url: {webhook_url}"),
+        ("afterSendSingleMsg:\n  enable: false\n  timeout: 5", "afterSendSingleMsg:\n  enable: true\n  timeout: 10"),
+    ]
     for rel, pairs in replacements.items():
         path = cfg_dir / rel
         if not path.exists():

@@ -1,6 +1,6 @@
 # OpenIM full stack managed by myapp-ctl.
-# Push webhooks are intentionally left unset; backend/im.py talks to
-# openim-server directly and mobile push is handled by MyApp services.
+# myapp-ctl renders webhooks.yml so afterSendSingleMsg calls the MyApp backend,
+# which dispatches APNs/FCM/GeTui notifications from registered device tokens.
 
 name: myapp-openim
 
