@@ -3571,6 +3571,7 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "REGISTRY_PORT": "3254",
         "CONFIG_CENTER_PORT": "5000",
         "USER_CENTER_PORT": "5567",
+        "BACKEND_GUNICORN_WORKERS": "10",
         "JSONAPP_DB_USER": "jsonapp",
         "JSONAPP_DB_NAME": "jsonapp",
         "JSONAPP_DB_PASSWORD": _rand_token(32),
@@ -3721,6 +3722,8 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "AGENT_NODE_ID": _cfg().get("node", {}).get("id", os.uname().nodename),
         "AGENT_NODE_PROVIDER_MODE": "master",
         "AGENT_NODE_PULL_ENABLED": "1",
+        "AGENT_NODE_CAPACITY": "10",
+        "AGENT_NODE_QUEUE_MAX": "100",
     }
     config_center_defaults = {
         "CONFIG_CENTER_ADMIN_USERNAME": "admin",
@@ -5579,8 +5582,8 @@ def _local_agent_node_register_command() -> list[str]:
         .replace("_", "-")
         or "master"
     )
-    capacity = agent_env.get("AGENT_NODE_CAPACITY") or "1"
-    queue_max = agent_env.get("AGENT_NODE_QUEUE_MAX") or capacity
+    capacity = agent_env.get("AGENT_NODE_CAPACITY") or "10"
+    queue_max = agent_env.get("AGENT_NODE_QUEUE_MAX") or "100"
     ttl = agent_env.get("AGENT_NODE_REGISTRATION_TTL_SECONDS") or "180"
     return [
         "/usr/local/bin/myapp-ctl",
@@ -5928,8 +5931,8 @@ def _local_agent_node_token(agent_env: dict[str, str]) -> str:
 
 def _set_local_agent_node_limits(args) -> int:
     agent_env = _parse_env(_secret_path("agent"))
-    current_capacity = agent_env.get("AGENT_NODE_CAPACITY", "1")
-    current_queue_max = agent_env.get("AGENT_NODE_QUEUE_MAX", current_capacity)
+    current_capacity = agent_env.get("AGENT_NODE_CAPACITY", "10")
+    current_queue_max = agent_env.get("AGENT_NODE_QUEUE_MAX", "100")
     capacity_value = getattr(args, "capacity", None)
     queue_max_value = getattr(args, "queue_max", None)
     if capacity_value is None and queue_max_value is None:
@@ -6401,8 +6404,8 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_register.add_argument("--url")
     agent_node_register.add_argument("--node-id")
     agent_node_register.add_argument("--name", help=_tx("human-readable node name shown in dashboards", zh="控制面板展示的人类可读节点名称", de="lesbarer Node-Name fuer Dashboards", es="nombre legible del nodo para paneles"))
-    agent_node_register.add_argument("--capacity", type=int, default=1)
-    agent_node_register.add_argument("--queue-max", type=int)
+    agent_node_register.add_argument("--capacity", type=int, default=10)
+    agent_node_register.add_argument("--queue-max", type=int, default=100)
     agent_node_register.add_argument("--ttl", type=int, default=120)
     agent_node_register.add_argument("--token")
     agent_node_register.add_argument("--label", action="append")
@@ -6467,8 +6470,8 @@ def build_parser() -> argparse.ArgumentParser:
     private_join.add_argument("--host")
     private_join.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
     private_join.add_argument("--local-port", type=int, default=5590)
-    private_join.add_argument("--capacity", type=int, default=1)
-    private_join.add_argument("--queue-max", type=int)
+    private_join.add_argument("--capacity", type=int, default=10)
+    private_join.add_argument("--queue-max", type=int, default=100)
     private_join.add_argument("--ttl", type=int, default=120)
     private_join.add_argument("--provider", action="append", default=[], help=_tx("local provider id supported by this node; repeatable", zh="本节点支持的本地供应商 ID；可重复", de="lokale Provider-ID dieses Nodes; wiederholbar", es="id de proveedor local soportado; repetible"))
     private_join.add_argument("--agent", action="append", default=[], help=_tx("filter local adapters by agent id; repeatable", zh="按 Agent ID 过滤本地 adapter；可重复", de="lokale Adapter nach Agent-ID filtern; wiederholbar", es="filtrar adaptadores locales por id de agent; repetible"))
@@ -6488,8 +6491,8 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_add.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
     agent_node_add.add_argument("--local-port", type=int, default=5590)
     agent_node_add.add_argument("--public-port", type=int, default=5591)
-    agent_node_add.add_argument("--capacity", type=int, default=1)
-    agent_node_add.add_argument("--queue-max", type=int)
+    agent_node_add.add_argument("--capacity", type=int, default=10)
+    agent_node_add.add_argument("--queue-max", type=int, default=100)
     agent_node_add.add_argument("--ttl", type=int, default=180)
     agent_node_add.add_argument("--label", action="append")
     agent_node_add.add_argument("--mode", choices=["pull", "direct"], default="pull", metavar="MODE", help=_tx("agent connection mode: pull, direct", zh="Agent 连接模式: pull, direct", de="Agent-Verbindungsmodus: pull, direct", es="modo de conexion agent: pull, direct"))
@@ -6509,8 +6512,8 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_join.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
     agent_node_join.add_argument("--local-port", type=int, default=5590)
     agent_node_join.add_argument("--public-port", type=int, default=5591)
-    agent_node_join.add_argument("--capacity", type=int, default=1)
-    agent_node_join.add_argument("--queue-max", type=int)
+    agent_node_join.add_argument("--capacity", type=int, default=10)
+    agent_node_join.add_argument("--queue-max", type=int, default=100)
     agent_node_join.add_argument("--ttl", type=int, default=180)
     agent_node_join.add_argument("--label", action="append")
     agent_node_join.add_argument("--mode", choices=["pull", "direct"], default="pull", metavar="MODE", help=_tx("agent connection mode: pull, direct", zh="Agent 连接模式: pull, direct", de="Agent-Verbindungsmodus: pull, direct", es="modo de conexion agent: pull, direct"))
@@ -6535,8 +6538,8 @@ def build_parser() -> argparse.ArgumentParser:
     agent_add.add_argument("--data-root", default=DEFAULT_DATA_ROOT)
     agent_add.add_argument("--local-port", type=int, default=5590)
     agent_add.add_argument("--public-port", type=int, default=5591)
-    agent_add.add_argument("--capacity", type=int, default=1)
-    agent_add.add_argument("--queue-max", type=int)
+    agent_add.add_argument("--capacity", type=int, default=10)
+    agent_add.add_argument("--queue-max", type=int, default=100)
     agent_add.add_argument("--ttl", type=int, default=180)
     agent_add.add_argument("--label", action="append")
     agent_add.add_argument("--mode", choices=["pull", "direct"], default="pull", metavar="MODE", help=_tx("agent connection mode: pull, direct", zh="Agent 连接模式: pull, direct", de="Agent-Verbindungsmodus: pull, direct", es="modo de conexion agent: pull, direct"))
@@ -6559,8 +6562,8 @@ def build_parser() -> argparse.ArgumentParser:
     agent_register.add_argument("--url")
     agent_register.add_argument("--node-id")
     agent_register.add_argument("--name", help=_tx("human-readable node name shown in dashboards", zh="控制面板展示的人类可读节点名称", de="lesbarer Node-Name fuer Dashboards", es="nombre legible del nodo para paneles"))
-    agent_register.add_argument("--capacity", type=int, default=1)
-    agent_register.add_argument("--queue-max", type=int)
+    agent_register.add_argument("--capacity", type=int, default=10)
+    agent_register.add_argument("--queue-max", type=int, default=100)
     agent_register.add_argument("--ttl", type=int, default=120)
     agent_register.add_argument("--token")
     agent_register.add_argument("--label", action="append")

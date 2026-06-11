@@ -593,6 +593,8 @@ Provider API expectations:
 
 - `deepseek`: configured when available, usually supports `claude`
 - `minimax`: configured when available, supports `claude` and `codex`
+- Backend API default gunicorn workers: `10`
+- Default agent-node local limits: `capacity=10`, `queue_max=100`
 - DeepSeek default worker limits: `20/100`
 - MiniMax default worker limits: `5/20`
 
@@ -705,8 +707,10 @@ source of provider keys, not the DeepSeek/MiniMax provider selected by a user
 request.
 
 `capacity` is both a scheduler weight and the pull-node local limit. The
-agent-node counts Docker runtime containers plus jobs it has just acquired but
-not fully started yet, so it does not over-pull during container startup.
+default is `capacity=10` and `queue_max=100` for new deployments and new join
+commands unless overridden. The agent-node counts Docker runtime containers plus
+jobs it has just acquired but not fully started yet, so it does not over-pull
+during container startup.
 
 `--name` is the human-readable display name shown in dashboards and CLI tables.
 The stable scheduler identity is still `--node-id`.
