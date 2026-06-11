@@ -108,6 +108,7 @@ def create_app():
 
     # 注册 OpenIM 桥接路由
     app.add_url_rule("/api/im/token", methods=["POST"], view_func=im.get_im_token)
+    app.add_url_rule("/api/im/friends", methods=["GET"], view_func=im.list_friends)
     app.add_url_rule("/api/im/users/lookup", methods=["GET"], view_func=im.lookup_user)
     app.add_url_rule("/api/im/users/search", methods=["GET"], view_func=im.search_users)
     app.add_url_rule("/api/im/users/profiles", methods=["GET"], view_func=im.user_profiles)
@@ -144,7 +145,7 @@ if __name__ == "__main__":
     logger.info("   Auth:  /api/auth/{register,login,verify,refresh,logout,user,avatar,quota}")
     logger.info("   Chat:  POST /chat (SSE, quota-limited, DSL-aware)")
     logger.info("   Store: /api/store/{apps,components,publish,delete}")
-    logger.info("   IM:    /api/im/{token,users/lookup,users/search,push_token,media/upload-url,after_send_msg,offline_push_hook}")
+    logger.info("   IM:    /api/im/{token,friends,users/lookup,users/search,push_token,media/upload-url,after_send_msg,offline_push_hook}")
     logger.info("   ASR:   WebSocket /socket.io (豆包语音识别)")
     logger.info("   ⚠️  本地开发模式（werkzeug）；生产用 gunicorn -k eventlet -w <N> app:app + ai_worker_daemon.py")
     socketio.run(app, host="0.0.0.0", port=PORT, allow_unsafe_werkzeug=True)

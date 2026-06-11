@@ -275,6 +275,12 @@ class IMService {
       await _callAsync('addFriend', {'toUserID': userID, 'reqMsg': reqMsg});
       return true;
     } catch (e) {
+      if (_isAlreadyFriendsError(e)) {
+        debugPrint(
+          '[IM_WEB] friend relation already exists, treat as ok: $userID',
+        );
+        return true;
+      }
       debugPrint('[IM_WEB] addFriend failed: $e');
       return false;
     }
@@ -399,7 +405,9 @@ class IMService {
   Future<List<Map<String, dynamic>>> getFriendListAsMaps() async {
     await login();
     final list = _asList(await _callAsync('getFriendList'));
-    return list.map((item) => _friendInfoToMap(_asMap(item))).toList();
+    final local = list.map((item) => _friendInfoToMap(_asMap(item))).toList();
+    final server = await _fetchServerFriendListAsMaps();
+    return _mergeFriendMaps(local, server);
   }
 
   Future<List<Map<String, dynamic>>>
@@ -563,6 +571,102 @@ class IMService {
     'face_url': f['faceURL']?.toString() ?? '',
     'remark': f['remark']?.toString() ?? '',
   };
+
+  Future<List<Map<String, dynamic>>> _fetchServerFriendListAsMaps() async {
+    try {
+      final token = AuthService.token;
+      if (token == null || token.isEmpty) return const [];
+      final resp = await http
+          .get(
+            Uri.parse('$_backendUrl/api/im/friends'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) {
+        debugPrint(
+          '[IM_WEB] server friend list failed ${resp.statusCode}: ${resp.body}',
+        );
+        return const [];
+      }
+
+      final data = json.decode(resp.body);
+      if (data is! Map<String, dynamic>) return const [];
+      final rawFriends = data['friends'];
+      if (rawFriends is! List) return const [];
+
+      final friends = <Map<String, dynamic>>[];
+      for (final raw in rawFriends) {
+        if (raw is! Map) continue;
+        final map = _asMap(raw);
+        final id =
+            map['user_id']?.toString() ?? map['im_user_id']?.toString() ?? '';
+        if (id.isEmpty) continue;
+        final face =
+            map['face_url']?.toString() ?? map['avatar_url']?.toString() ?? '';
+        friends.add({
+          'user_id': id,
+          'nickname': map['nickname']?.toString() ?? '',
+          'face_url': face,
+          'avatar_url': face,
+          'remark': map['remark']?.toString() ?? '',
+          'email': map['email']?.toString() ?? '',
+          'source': map['source']?.toString() ?? 'server',
+        });
+      }
+      return friends;
+    } catch (e) {
+      debugPrint('[IM_WEB] server friend list exception: $e');
+      return const [];
+    }
+  }
+
+  List<Map<String, dynamic>> _mergeFriendMaps(
+    List<Map<String, dynamic>> local,
+    List<Map<String, dynamic>> server,
+  ) {
+    final byId = <String, Map<String, dynamic>>{};
+    for (final item in [...local, ...server]) {
+      final id = item['user_id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+      final prev = byId[id];
+      if (prev == null) {
+        byId[id] = Map<String, dynamic>.from(item);
+        continue;
+      }
+      final merged = Map<String, dynamic>.from(prev);
+      for (final entry in item.entries) {
+        final value = entry.value;
+        if (value != null && value.toString().isNotEmpty) {
+          merged[entry.key] = value;
+        }
+      }
+      byId[id] = merged;
+    }
+    final result = byId.values.toList();
+    result.sort((a, b) {
+      final an =
+          ((a['remark']?.toString().isNotEmpty == true)
+                  ? a['remark']
+                  : a['nickname'])
+              ?.toString()
+              .toLowerCase();
+      final bn =
+          ((b['remark']?.toString().isNotEmpty == true)
+                  ? b['remark']
+                  : b['nickname'])
+              ?.toString()
+              .toLowerCase();
+      return (an ?? '').compareTo(bn ?? '');
+    });
+    return result;
+  }
+
+  bool _isAlreadyFriendsError(Object e) {
+    final text = e.toString().toLowerCase();
+    return text.contains('1304') ||
+        text.contains('relationshipalreadyerror') ||
+        text.contains('already friends');
+  }
 
   Map<String, dynamic> _friendApplicationToMap(Map<String, dynamic> a) => {
     'from_user_id': a['fromUserID']?.toString() ?? '',

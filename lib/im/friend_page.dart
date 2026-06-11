@@ -31,7 +31,7 @@ class IMFriendPage extends StatefulWidget {
 }
 
 class _IMFriendPageState extends State<IMFriendPage> {
-  List<FriendInfo> _friends = [];
+  List<Map<String, dynamic>> _friends = [];
   int _pendingApplications = 0;
   bool _loading = true;
   StreamSubscription<FriendshipEvent>? _friendshipSub;
@@ -54,7 +54,7 @@ class _IMFriendPageState extends State<IMFriendPage> {
   }
 
   Future<void> _load() async {
-    final friends = await IMService.instance.getFriendList();
+    final friends = await IMService.instance.getFriendListAsMaps();
     final apps = await IMService.instance.getIncomingFriendApplications();
     final pending = apps.where((a) => (a.handleResult ?? 0) == 0).length;
     if (!mounted) return;
@@ -240,17 +240,20 @@ class _IMFriendPageState extends State<IMFriendPage> {
     );
   }
 
-  Widget _buildFriendTile(FriendInfo f, ColorScheme cs) {
+  Widget _buildFriendTile(Map<String, dynamic> f, ColorScheme cs) {
     final s = T.of(context);
+    final userId = f['user_id']?.toString() ?? '';
+    final remark = f['remark']?.toString() ?? '';
+    final nickname = f['nickname']?.toString() ?? '';
+    final faceUrl = f['face_url']?.toString() ?? '';
     final name =
-        (f.remark?.isNotEmpty == true ? f.remark : null) ??
-        (f.nickname?.isNotEmpty == true ? f.nickname : null) ??
-        f.userID ??
+        (remark.isNotEmpty ? remark : null) ??
+        (nickname.isNotEmpty ? nickname : null) ??
+        (userId.isNotEmpty ? userId : null) ??
         '?';
-    final faceUrl = f.faceURL;
 
     return Dismissible(
-      key: Key('friend-${f.userID}'),
+      key: Key('friend-$userId'),
       direction: DismissDirection.endToStart,
       confirmDismiss: (_) async {
         return await showDialog<bool>(
@@ -273,7 +276,9 @@ class _IMFriendPageState extends State<IMFriendPage> {
         );
       },
       onDismissed: (_) async {
-        await IMService.instance.deleteFriend(f.userID!);
+        if (userId.isNotEmpty) {
+          await IMService.instance.deleteFriend(userId);
+        }
         _load();
       },
       background: Container(
@@ -286,10 +291,10 @@ class _IMFriendPageState extends State<IMFriendPage> {
         leading: CircleAvatar(
           radius: 22,
           backgroundColor: cs.primaryContainer,
-          backgroundImage: faceUrl != null && faceUrl.isNotEmpty
+          backgroundImage: faceUrl.isNotEmpty
               ? CachedNetworkImageProvider(faceUrl)
               : null,
-          child: faceUrl == null || faceUrl.isEmpty
+          child: faceUrl.isEmpty
               ? Text(
                   name[0].toUpperCase(),
                   style: TextStyle(color: cs.onPrimaryContainer),
@@ -298,7 +303,7 @@ class _IMFriendPageState extends State<IMFriendPage> {
         ),
         title: Text(name),
         subtitle: Text(
-          f.userID ?? '',
+          userId,
           style: TextStyle(
             fontFamily: 'monospace',
             fontSize: 11,
@@ -308,9 +313,10 @@ class _IMFriendPageState extends State<IMFriendPage> {
           overflow: TextOverflow.ellipsis,
         ),
         onTap: () {
+          if (userId.isEmpty) return;
           // 进 1:1 聊天页。conversationID 用 OpenIM 标准格式 si_<a>_<b>（按 ID 字典序拼）
           final myId = IMService.instance.currentUserId ?? '';
-          final ids = [myId, f.userID!]..sort();
+          final ids = [myId, userId]..sort();
           final convId = 'si_${ids[0]}_${ids[1]}';
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -319,7 +325,7 @@ class _IMFriendPageState extends State<IMFriendPage> {
                 conversationName: name,
                 faceURL: faceUrl,
                 conversationType: 1, // 1=单聊
-                userID: f.userID,
+                userID: userId,
                 groupID: null,
               ),
             ),

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import '../i18n/framework_strings.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -907,6 +908,10 @@ class IMService {
           .timeout(_sdkReadTimeout);
       return true;
     } catch (e) {
+      if (_isAlreadyFriendsError(e)) {
+        debugPrint('[IM] 好友关系已存在，按发送申请成功处理: $userID');
+        return true;
+      }
       debugPrint('[IM] 发送好友申请失败: $e');
       return false;
     }
@@ -1175,13 +1180,18 @@ class IMService {
 
   /// 好友 userID 集合（@im_search_users 标记 is_friend 用）。
   Future<Set<String>> getFriendIds() async {
-    final friends = await getFriendList();
-    return friends.map((f) => f.userID).whereType<String>().toSet();
+    final friends = await getFriendListAsMaps();
+    return friends
+        .map((f) => f['user_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
   }
 
   Future<List<Map<String, dynamic>>> getFriendListAsMaps() async {
     final friends = await getFriendList();
-    return friends.map(_friendInfoToMap).toList();
+    final local = friends.map(_friendInfoToMap).toList();
+    final server = await _fetchServerFriendListAsMaps();
+    return _mergeFriendMaps(local, server);
   }
 
   Future<List<Map<String, dynamic>>>
@@ -1242,6 +1252,98 @@ class IMService {
       'face_url': f.faceURL ?? '',
       'remark': f.remark ?? '',
     };
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchServerFriendListAsMaps() async {
+    try {
+      final token = AuthService.token;
+      if (token == null || token.isEmpty) return const [];
+      final uri = Uri.parse('$_backendUrl/api/im/friends');
+      final resp = await http
+          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) {
+        debugPrint('[IM] 服务端好友列表失败 ${resp.statusCode}: ${resp.body}');
+        return const [];
+      }
+
+      final data = json.decode(resp.body);
+      if (data is! Map<String, dynamic>) return const [];
+      final rawFriends = data['friends'];
+      if (rawFriends is! List) return const [];
+
+      final friends = <Map<String, dynamic>>[];
+      for (final raw in rawFriends) {
+        if (raw is! Map) continue;
+        final id =
+            raw['user_id']?.toString() ?? raw['im_user_id']?.toString() ?? '';
+        if (id.isEmpty) continue;
+        final face =
+            raw['face_url']?.toString() ?? raw['avatar_url']?.toString() ?? '';
+        friends.add({
+          'user_id': id,
+          'nickname': raw['nickname']?.toString() ?? '',
+          'face_url': face,
+          'avatar_url': face,
+          'remark': raw['remark']?.toString() ?? '',
+          'email': raw['email']?.toString() ?? '',
+          'source': raw['source']?.toString() ?? 'server',
+        });
+      }
+      return friends;
+    } catch (e) {
+      debugPrint('[IM] 服务端好友列表异常: $e');
+      return const [];
+    }
+  }
+
+  List<Map<String, dynamic>> _mergeFriendMaps(
+    List<Map<String, dynamic>> local,
+    List<Map<String, dynamic>> server,
+  ) {
+    final byId = <String, Map<String, dynamic>>{};
+    for (final item in [...local, ...server]) {
+      final id = item['user_id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+      final prev = byId[id];
+      if (prev == null) {
+        byId[id] = Map<String, dynamic>.from(item);
+        continue;
+      }
+      final merged = Map<String, dynamic>.from(prev);
+      for (final entry in item.entries) {
+        final value = entry.value;
+        if (value != null && value.toString().isNotEmpty) {
+          merged[entry.key] = value;
+        }
+      }
+      byId[id] = merged;
+    }
+    final result = byId.values.toList();
+    result.sort((a, b) {
+      final an =
+          (a['remark']?.toString().isNotEmpty == true
+                  ? a['remark']
+                  : a['nickname'])
+              ?.toString()
+              .toLowerCase();
+      final bn =
+          (b['remark']?.toString().isNotEmpty == true
+                  ? b['remark']
+                  : b['nickname'])
+              ?.toString()
+              .toLowerCase();
+      return (an ?? '').compareTo(bn ?? '');
+    });
+    return result;
+  }
+
+  bool _isAlreadyFriendsError(Object e) {
+    if (e is PlatformException && e.code == '1304') return true;
+    final text = e.toString().toLowerCase();
+    return text.contains('1304') ||
+        text.contains('relationshipalreadyerror') ||
+        text.contains('already friends');
   }
 
   Map<String, dynamic> _friendApplicationToMap(FriendApplicationInfo a) {
