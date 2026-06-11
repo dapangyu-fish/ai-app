@@ -26,6 +26,8 @@ http {
   proxy_read_timeout {{PROXY_READ_TIMEOUT}};
   proxy_send_timeout {{PROXY_SEND_TIMEOUT}};
   proxy_connect_timeout {{PROXY_CONNECT_TIMEOUT}};
+  resolver 127.0.0.11 valid=10s ipv6=off;
+  resolver_timeout 5s;
 
   map $http_upgrade $connection_upgrade {
     default upgrade;

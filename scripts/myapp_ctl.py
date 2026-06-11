@@ -41,6 +41,8 @@ SUPABASE_POSTGRES_IMAGE = "supabase/postgres:15.8.1.085"
 DATA_ROOT_DIRS = [
     "state",
     "logs",
+    "secrets.d/files/apns",
+    "secrets.d/files/fcm",
     "backend",
     "ai-worker",
     "registry",
@@ -439,7 +441,7 @@ _MESSAGES = {
   image ls|build|pull|push      管理 Docker 镜像
   agent ls                      查看当前机器正在运行的 Agent
   agent-node ls|status|register 管理集群 Agent 物理节点
-  uninstall --yes [--purge]     停止部署；保留 data root 数据
+  uninstall --yes               停止部署；保留配置和 data root 数据
 
 示例:
   myapp-ctl status
@@ -477,7 +479,7 @@ Images and agents:
   image ls|build|pull|push      Manage Docker images
   agent ls                      Inspect running agents on this host
   agent-node ls|status|register Manage cluster agent hosts
-  uninstall --yes [--purge]     Stop deployment; preserve data root
+  uninstall --yes               Stop deployment; preserve config and data root
 
 Examples:
   myapp-ctl status
@@ -515,7 +517,7 @@ Images und Agents:
   image ls|build|pull|push      Docker-Images verwalten
   agent ls                      Laufende Agents auf diesem Host anzeigen
   agent-node ls|status|register Cluster-Agent-Hosts verwalten
-  uninstall --yes [--purge]     Deployment stoppen; data root behalten
+  uninstall --yes               Deployment stoppen; Konfiguration und data root behalten
 
 Beispiele:
   myapp-ctl status
@@ -553,7 +555,7 @@ Imagenes y agentes:
   image ls|build|pull|push      Gestiona imagenes Docker
   agent ls                      Consulta agents activos en este host
   agent-node ls|status|register Gestiona hosts agent del cluster
-  uninstall --yes [--purge]     Detiene el despliegue; conserva data root
+  uninstall --yes               Detiene el despliegue; conserva configuracion y data root
 
 Ejemplos:
   myapp-ctl status
@@ -656,6 +658,7 @@ def _default_cfg() -> dict:
             "state": f"{DEFAULT_DATA_ROOT}/state",
             "logs": f"{DEFAULT_DATA_ROOT}/logs",
             "secrets_dir": "/etc/myapp/secrets.d",
+            "runtime_secrets_dir": f"{DEFAULT_DATA_ROOT}/secrets.d",
             "agent_log_dir": f"{DEFAULT_DATA_ROOT}/agent-node/logs",
             "config_bundle": f"{DEFAULT_DATA_ROOT}/myapp-config.json",
         },
@@ -689,6 +692,7 @@ def _apply_data_root_to_cfg(cfg: dict, data_root: Path) -> dict:
     paths["state"] = str(data_root / "state")
     paths["logs"] = str(data_root / "logs")
     paths.setdefault("secrets_dir", "/etc/myapp/secrets.d")
+    paths["runtime_secrets_dir"] = str(data_root / "secrets.d")
     paths["agent_log_dir"] = str(data_root / "agent-node" / "logs")
     paths["config_bundle"] = str(data_root / "myapp-config.json")
     return cfg
@@ -752,6 +756,17 @@ def _ensure_data_root_layout(data_root: Path | None = None) -> Path:
     for path in sorted(leaf_dirs, key=lambda p: len(p.parts)):
         try:
             os.chmod(path, 0o777)
+        except OSError:
+            pass
+    for path in [
+        root / "secrets.d",
+        root / "secrets.d" / "files",
+        root / "secrets.d" / "files" / "apns",
+        root / "secrets.d" / "files" / "fcm",
+    ]:
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+            os.chmod(path, 0o700)
         except OSError:
             pass
     return root
@@ -1373,8 +1388,17 @@ def _compose_command(spec: dict, command: list[str]) -> list[str]:
 
 
 def _compose_env_files() -> list[Path]:
+    runtime_dir = _runtime_secret_dir()
     secret_dir = _secret_dir()
-    return [secret_dir / name for name in COMPOSE_ENV_FILE_NAMES if (secret_dir / name).exists()]
+    files: list[Path] = []
+    for name in COMPOSE_ENV_FILE_NAMES:
+        runtime_path = runtime_dir / name
+        host_path = secret_dir / name
+        if runtime_path.exists():
+            files.append(runtime_path)
+        elif host_path.exists():
+            files.append(host_path)
+    return files
 
 
 def _run_or_print(cmd: list[str], *, dry_run: bool) -> int:
@@ -1904,7 +1928,6 @@ def cmd_uninstall(args) -> int:
         return 2
     services = _services()
     names = _ordered_service_names(list(services))
-    purge = bool(args.purge)
     dry_run = bool(args.dry_run)
     data_root = _data_root_from_cfg()
 
@@ -1914,7 +1937,7 @@ def cmd_uninstall(args) -> int:
         if not dry_run and (not project_dir.exists() or any(not path.exists() for path in compose_files)):
             continue
         cmd = _compose_command(spec, ["down", "--remove-orphans"])
-        if purge or args.volumes:
+        if args.volumes:
             cmd.append("--volumes")
         rc = _run_or_print(cmd, dry_run=dry_run)
         if rc != 0:
@@ -1944,13 +1967,13 @@ def cmd_uninstall(args) -> int:
         if rc != 0:
             return rc
 
-    if purge or args.state:
+    if args.state:
         print(f"# preserve MyApp data/state under {data_root}")
-    if purge or args.logs:
+    if args.logs:
         print(f"# preserve MyApp data/logs under {data_root}")
-    if purge or args.secrets:
+    if args.secrets:
         print("# preserve MyApp host config and secrets under /etc/myapp")
-    if purge or args.install_files:
+    if args.install_files:
         print("# preserve installed myapp-ctl service inventory and compose files")
     if args.remove_ctl:
         _remove_path(Path("/usr/local/bin/myapp-ctl"), dry_run=dry_run)
@@ -1959,11 +1982,8 @@ def cmd_uninstall(args) -> int:
     print(f"data root preserved: {data_root}")
     print("host config preserved: /etc/myapp")
     print("Docker images preserved.")
-    print("To permanently delete local data/config/images, run manually as needed:")
-    print(f"  rm -rf -- {shlex.quote(str(data_root))}")
-    print("  rm -rf -- /etc/myapp")
-    image_args = " ".join(shlex.quote(_configured_image(target)) for target in IMAGE_TARGETS)
-    print(f"  docker rmi -f {image_args}")
+    print("To permanently delete local service data, run manually if needed:")
+    print(f"  find {shlex.quote(str(data_root))} -mindepth 1 -maxdepth 1 -exec rm -rf -- {{}} +")
     return 0
 
 
@@ -2013,6 +2033,8 @@ def cmd_deploy(args) -> int:
     rc = _ensure_human_config_for_deploy(args, names)
     if rc != 0:
         return rc
+    if not args.dry_run:
+        _sync_runtime_secrets_from_host_config(data_root)
     if args.build:
         rc = _deploy_images(image_targets, action="build", dry_run=args.dry_run)
         if rc != 0:
@@ -2029,8 +2051,6 @@ def cmd_deploy(args) -> int:
         rc = _ensure_images(image_targets, dry_run=args.dry_run)
         if rc != 0:
             return rc
-    if not args.dry_run:
-        _init_stack_secrets(quiet=True)
     rc = _prepare_deploy(names, dry_run=args.dry_run)
     if rc != 0:
         return rc
@@ -2058,8 +2078,6 @@ def cmd_deploy(args) -> int:
             name=args.client_env_name,
             terminal_qr=not args.no_terminal_qr,
         )
-    if not args.dry_run:
-        _safe_write_default_config_snapshot()
     return 0
 
 
@@ -2176,8 +2194,72 @@ def _secret_dir() -> Path:
     return Path(_cfg().get("paths", {}).get("secrets_dir", "/etc/myapp/secrets.d"))
 
 
+def _runtime_secret_dir(data_root: Path | None = None) -> Path:
+    configured = str(_cfg().get("paths", {}).get("runtime_secrets_dir") or "").strip()
+    if configured:
+        path = Path(configured).expanduser()
+        if not path.is_absolute():
+            path = (Path.cwd() / path).resolve()
+        return path
+    root = data_root or _data_root_from_cfg()
+    return root / "secrets.d"
+
+
 def _secret_path(group: str) -> Path:
     return _secret_dir() / f"{group.replace('/', '_').replace('..', '_')}.env"
+
+
+def _runtime_secret_path(group: str, data_root: Path | None = None) -> Path:
+    return _runtime_secret_dir(data_root) / f"{group.replace('/', '_').replace('..', '_')}.env"
+
+
+def _copy_file_secure(src: Path, dst: Path, *, mode: int = 0o600) -> None:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dst.with_name(dst.name + ".tmp")
+    shutil.copy2(src, tmp)
+    os.chmod(tmp, mode)
+    tmp.replace(dst)
+    os.chmod(dst, mode)
+
+
+def _sync_runtime_secrets_from_host_config(data_root: Path | None = None) -> None:
+    """Materialize runtime env files under data root from host-local config.
+
+    `/etc/myapp/secrets.d` is the durable host configuration and last cluster
+    secret backup. Compose services consume the data-root copy so wiping
+    `/mnt/myapp` never deletes the source of truth.
+    """
+    source = _secret_dir()
+    target = _runtime_secret_dir(data_root)
+    target.mkdir(parents=True, exist_ok=True)
+    os.chmod(target, 0o700)
+    for name in COMPOSE_ENV_FILE_NAMES:
+        src = source / name
+        dst = target / name
+        if src.exists():
+            _copy_file_secure(src, dst, mode=0o600)
+        elif dst.exists():
+            dst.unlink()
+    src_files = source / _SETUP_SECRET_FILE_HOST_DIR
+    dst_files = target / _SETUP_SECRET_FILE_HOST_DIR
+    if src_files.exists():
+        if dst_files.exists():
+            shutil.rmtree(dst_files)
+        shutil.copytree(src_files, dst_files)
+        for root, dirs, files in os.walk(dst_files):
+            for dirname in dirs:
+                try:
+                    os.chmod(Path(root) / dirname, 0o700)
+                except OSError:
+                    pass
+            for filename in files:
+                try:
+                    os.chmod(Path(root) / filename, 0o600)
+                except OSError:
+                    pass
+        os.chmod(dst_files, 0o700)
+    elif dst_files.exists():
+        shutil.rmtree(dst_files)
 
 
 def _decode_env_value(value: str) -> str:
@@ -3235,7 +3317,7 @@ def _deploy_can_seed_test_user(names: list[str]) -> bool:
 def _ensure_human_config_for_deploy(args, names: list[str]) -> int:
     if args.dry_run:
         return 0
-    rc = _init_stack_secrets(host=getattr(args, "host", None), quiet=True)
+    rc = _init_stack_secrets(host=getattr(args, "host", None), quiet=True, write_snapshot=False)
     if rc != 0:
         return rc
     if not _deploy_requires_ai_config(names) or _ai_providers_configured():
@@ -3537,7 +3619,7 @@ def _merge_env_group(group: str, values: dict[str, str], *, force: bool = False)
     return changed
 
 
-def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: bool = False) -> int:
+def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: bool = False, write_snapshot: bool = True) -> int:
     public_host = _public_host(host)
     _persist_public_host_if_explicit(host, public_host)
     data_root = _ensure_data_root_layout(_data_root_from_cfg())
@@ -3566,6 +3648,7 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "MYAPP_AGENT_NODE_IMAGE": _configured_image("agent-node"),
         "MYAPP_AGENT_RUNTIME_IMAGE": _configured_image("agent-runtime"),
         "MYAPP_DATA_ROOT": str(data_root),
+        "MYAPP_RUNTIME_SECRETS_DIR": str(_runtime_secret_dir(data_root)),
         "PUBLIC_HOST": public_host,
         "BACKEND_PORT": "5566",
         "REGISTRY_PORT": "3254",
@@ -3756,21 +3839,11 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "config-center": _merge_env_group("config-center", config_center_defaults, force=force),
         "user-center": _merge_env_group("user-center", user_center_defaults, force=force),
     }
-    image_changed = _merge_env_group(
-        "backend",
-        {
-            "MYAPP_BACKEND_IMAGE": _configured_image("backend"),
-            "MYAPP_AGENT_NODE_IMAGE": _configured_image("agent-node"),
-            "MYAPP_AGENT_RUNTIME_IMAGE": _configured_image("agent-runtime"),
-        },
-        force=True,
-    )
-    if image_changed:
-        changed["backend"].extend(key for key in image_changed if key not in changed["backend"])
     if not quiet:
         rows = [{"group": group, "keys": len(keys)} for group, keys in changed.items()]
         _print_table(rows, [("group", "GROUP"), ("keys", "CHANGED_KEYS")])
-    _safe_write_default_config_snapshot()
+    if write_snapshot:
+        _safe_write_default_config_snapshot()
     return 0
 
 
@@ -3941,10 +4014,10 @@ def _restore_data_root_config_if_needed(data_root: Path, *, force: bool = False)
 
 
 def _safe_write_default_config_snapshot() -> None:
-    try:
-        _write_default_config_snapshot()
-    except Exception as exc:
-        print(f"warning: myapp-config.json snapshot not written: {exc}", file=sys.stderr)
+    # Configuration now lives under /etc/myapp. Keep explicit
+    # `myapp-ctl config export` for operator-controlled backups, but do not
+    # auto-create a second config layer under the data root.
+    return None
 
 
 def cmd_config(args) -> int:
@@ -4222,9 +4295,19 @@ def _copy_edge_certificates(config: dict, *, dry_run: bool) -> bool:
 
 
 def _edge_proxy_location(upstream: str, *, strip_prefix: str = "") -> str:
-    suffix = "/" if strip_prefix else ""
+    parsed = urlparse(upstream)
+    scheme = parsed.scheme or "http"
+    netloc = parsed.netloc or parsed.path.split("/", 1)[0]
+    path = parsed.path if parsed.netloc else ""
+    path = "" if path in {"", "/"} else path.rstrip("/")
+    if scheme not in {"http", "https"} or not netloc:
+        raise ValueError(f"unsupported edge upstream: {upstream!r}")
+    rewrite = ""
+    if strip_prefix:
+        rewrite = f"    rewrite ^/{strip_prefix}/?(.*)$ /$1 break;\n"
     return f"""
   location /{strip_prefix} {{
+{rewrite}    set $myapp_upstream {netloc};
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -4234,7 +4317,7 @@ def _edge_proxy_location(upstream: str, *, strip_prefix: str = "") -> str:
     proxy_set_header Connection $connection_upgrade;
     proxy_buffering off;
     proxy_request_buffering off;
-    proxy_pass {upstream}{suffix};
+    proxy_pass {scheme}://$myapp_upstream{path};
   }}"""
 
 
@@ -6269,13 +6352,12 @@ def build_parser() -> argparse.ArgumentParser:
     update.set_defaults(func=cmd_update)
     uninstall = sub.add_parser("uninstall", help=_tx("stop and remove deployed services", zh="停止并移除已部署服务", de="deployte Dienste stoppen und entfernen", es="detener y eliminar servicios desplegados"), usage=_tx("myapp-ctl uninstall --yes [options]", zh="myapp-ctl uninstall --yes [选项]", de="myapp-ctl uninstall --yes [Optionen]", es="myapp-ctl uninstall --yes [opciones]"))
     uninstall.add_argument("--yes", action="store_true", help=_tx("required confirmation for destructive cleanup", zh="破坏性清理所需确认", de="erforderliche Bestaetigung fuer destruktive Bereinigung", es="confirmacion requerida para limpieza destructiva"))
-    uninstall.add_argument("--purge", action="store_true", help=_tx("remove containers and legacy compose volumes only; preserve data root, /etc/myapp, and images", zh="仅移除容器和旧 compose volume；保留 data root、/etc/myapp 和镜像", de="nur Container und alte Compose-Volumes entfernen; data root, /etc/myapp und Images behalten", es="eliminar solo contenedores y volumenes compose legados; conservar data root, /etc/myapp e imagenes"))
     uninstall.add_argument("--volumes", action="store_true", help=_tx("remove legacy compose named volumes while stopping services; bind-path data is preserved", zh="停止服务时移除旧 compose 命名 volume；保留 bind-path 数据", de="alte benannte Compose-Volumes beim Stoppen entfernen; Bind-Pfad-Daten bleiben", es="eliminar volumenes compose legados al detener; datos bind-path se conservan"))
     uninstall.add_argument("--state", action="store_true", help=_tx("deprecated; data-root state is always preserved", zh="已废弃；data-root state 始终保留", de="veraltet; data-root state bleibt immer erhalten", es="obsoleto; data-root state siempre se conserva"))
     uninstall.add_argument("--logs", action="store_true", help=_tx("deprecated; data-root logs are always preserved", zh="已废弃；data-root logs 始终保留", de="veraltet; data-root logs bleiben immer erhalten", es="obsoleto; data-root logs siempre se conservan"))
-    uninstall.add_argument("--secrets", action="store_true", help=_tx("deprecated no-op; /etc/myapp deletion is printed as a manual command", zh="已废弃且不执行删除；/etc/myapp 删除命令会作为手动命令打印", de="veraltet und ohne Wirkung; /etc/myapp-Loeschbefehl wird nur ausgegeben", es="obsoleto y sin efecto; el borrado de /etc/myapp se imprime como comando manual"))
+    uninstall.add_argument("--secrets", action="store_true", help=_tx("deprecated no-op; /etc/myapp is always preserved", zh="已废弃且不执行删除；/etc/myapp 始终保留", de="veraltet und ohne Wirkung; /etc/myapp bleibt immer erhalten", es="obsoleto y sin efecto; /etc/myapp siempre se conserva"))
     uninstall.add_argument("--install-files", action="store_true", help=_tx("deprecated no-op; installed files are preserved", zh="已废弃且不执行删除；保留已安装文件", de="veraltet und ohne Wirkung; installierte Dateien bleiben erhalten", es="obsoleto y sin efecto; archivos instalados se conservan"))
-    uninstall.add_argument("--images", action="store_true", help=_tx("deprecated no-op; image deletion is printed as a manual command", zh="已废弃且不执行删除；镜像删除命令会作为手动命令打印", de="veraltet und ohne Wirkung; Image-Loeschbefehl wird nur ausgegeben", es="obsoleto y sin efecto; el borrado de imagenes se imprime como comando manual"))
+    uninstall.add_argument("--images", action="store_true", help=_tx("deprecated no-op; Docker images are always preserved", zh="已废弃且不执行删除；Docker 镜像始终保留", de="veraltet und ohne Wirkung; Docker-Images bleiben immer erhalten", es="obsoleto y sin efecto; las imagenes Docker siempre se conservan"))
     uninstall.add_argument("--remove-ctl", action="store_true", help=_tx("remove the myapp-ctl executable after cleanup", zh="清理后移除 myapp-ctl 可执行文件", de="myapp-ctl nach der Bereinigung entfernen", es="eliminar ejecutable myapp-ctl tras la limpieza"))
     uninstall.add_argument("--dry-run", action="store_true")
     uninstall.set_defaults(func=cmd_uninstall)

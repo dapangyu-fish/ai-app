@@ -73,12 +73,22 @@ Host and service secrets live outside Git:
 
 - `/etc/myapp/ctl.json`: host-local control configuration
 - `/etc/myapp/services.json`: service inventory installed by `install_ctl.sh`
-- `/etc/myapp/secrets.d/*.env`: service secrets, mode `600`
+- `/etc/myapp/secrets.d/*.env`: durable host deployment config and the last
+  generated cluster secret set, mode `600`
 - `/etc/myapp/secrets.d/files/**`: APNs/FCM file secrets copied by setup
-- `<data-root>/myapp-config.json`: restorable permission-protected bundle,
-  mode `600`
+- `<data-root>/secrets.d/*.env`: runtime copy consumed by Docker Compose,
+  regenerated from `/etc/myapp/secrets.d` on every deploy
+- `<data-root>/secrets.d/files/**`: runtime copy mounted into services that
+  need secret files
+- `<data-root>/myapp-config.json`: optional explicit export target created by
+  `myapp-ctl config export`, mode `600`
 
 The default data root is `/mnt/myapp`.
+
+`/etc/myapp` is the recovery source of truth. If the data root is deleted, a
+subsequent `myapp-ctl deploy` recreates `<data-root>/secrets.d` from
+`/etc/myapp/secrets.d`, then starts a fresh cluster with empty service data but
+the same deployment config and preserved cluster credentials.
 
 Agent runtime containers do not receive backend, Supabase, OpenIM, push, or real
 provider keys. They receive a run payload and short-lived provider-proxy tokens.
@@ -144,7 +154,9 @@ Provider setup behavior:
 
 For APNs and FCM, either paste the secret content or enter a server-local file
 path such as `/etc/apns/AuthKey_8NM9U7CJCJ.p8`. `myapp-ctl` copies files into
-`/etc/myapp/secrets.d/files/` and writes container-visible paths into `push.env`.
+`/etc/myapp/secrets.d/files/`; deploy syncs them into
+`<data-root>/secrets.d/files/` and writes container-visible paths into
+`push.env`.
 
 Inspect configured keys without revealing values:
 
@@ -192,6 +204,7 @@ non-interactive shells it fails and tells you to run setup explicitly.
 A full deploy:
 
 - creates the complete data-root directory tree up front
+- materializes `<data-root>/secrets.d` from `/etc/myapp/secrets.d`
 - starts infra, Supabase, OpenIM, agent-node, backend, worker, Registry, Config
   Center, and User Center
 - writes `<data-root>/state/client-environment.json`
@@ -438,7 +451,7 @@ myapp-ctl deploy --group infra|supabase|openim|agent|core|edge [--build|--pull] 
 myapp-ctl restart [service|group ...]
 myapp-ctl log <service> [-n 120] [-f]
 myapp-ctl update [--source <checkout>] [--no-pull]
-myapp-ctl uninstall --yes [--purge] [--volumes] [--remove-ctl]
+myapp-ctl uninstall --yes [--volumes] [--remove-ctl]
 ```
 
 Configuration and secrets:
@@ -504,7 +517,6 @@ myapp-ctl config view
 Export restorable config:
 
 ```bash
-myapp-ctl config export --out /mnt/myapp/myapp-config.json
 myapp-ctl config export --out /root/myapp-config.json
 myapp-ctl config export --out /root/myapp-config.yaml
 ```
@@ -521,22 +533,28 @@ Restore:
 myapp-ctl config import /root/myapp-config.json --yes
 ```
 
-If `/etc/myapp` is missing but `/mnt/myapp/myapp-config.json` exists,
-`myapp-ctl deploy --data-root /mnt/myapp ...` imports the bundle before starting
-services. If service data under `/mnt/myapp` is still present, the cluster starts
-from the same local state.
+If `/etc/myapp` is missing but a legacy `/mnt/myapp/myapp-config.json` exists,
+`myapp-ctl deploy --data-root /mnt/myapp ...` can still import the bundle before
+starting services. This is a compatibility path only; new backups should be
+created explicitly with `myapp-ctl config export --out /root/myapp-config.json`.
 
 Persistent service data is bind-mounted from the data root. Docker named volumes
 are not used for MyApp databases or object stores.
 
 Operational rule:
 
-- `myapp-ctl uninstall --yes --purge` removes containers and legacy named
-  volumes, but preserves `/etc/myapp`, Docker images, and the data root.
-- If `<data-root>/myapp-config.json` and service data directories still exist,
-  a host can be reconstructed from the same data root.
-- Destroying local data, host config, or cached images is always a separate
-  explicit manual command printed after uninstall.
+- `myapp-ctl uninstall --yes` removes managed containers and networks only.
+- `myapp-ctl uninstall --yes --volumes` additionally removes legacy Docker
+  named volumes. MyApp databases and object stores use bind paths under the
+  data root, so they are still preserved.
+- Uninstall always preserves `/etc/myapp`, installed service inventory,
+  compose files, Docker images, and the data root.
+- If `/etc/myapp` still exists, a data-root wipe can be reconstructed by running
+  `myapp-ctl deploy` again; data is lost, but deployment config and preserved
+  cluster credentials are reused.
+- Destroying local service data is always a separate explicit manual command.
+  Host config and cached images are preserved by uninstall and are not part of
+  the uninstall cleanup flow.
 
 Important paths:
 
@@ -603,14 +621,20 @@ Provider API expectations:
 Stop and remove managed services while preserving data root:
 
 ```bash
-myapp-ctl uninstall --yes --purge
+myapp-ctl uninstall --yes
 ```
 
-This removes containers and legacy named volumes only. It preserves
-`/etc/myapp`, MyApp Docker images, and the persistent data root. The command
-prints explicit manual cleanup commands for `rm -rf -- <data-root>`,
-`rm -rf -- /etc/myapp`, and `docker rmi -f ...` if you intentionally want a
-destructive reset.
+This removes managed containers and networks only. It preserves `/etc/myapp`,
+installed service inventory, compose files, MyApp Docker images, and the
+persistent data root. The command prints an explicit manual cleanup command for
+the data root only if you intentionally want to destroy local service data.
+
+To also remove legacy Docker named volumes while still preserving bind-path
+service data:
+
+```bash
+myapp-ctl uninstall --yes --volumes
+```
 
 ## Multi-Host Agent Nodes
 

@@ -63,13 +63,13 @@ services:
     working_dir: /app/backend
     command: ["gunicorn", "-k", "eventlet", "-w", "${BACKEND_GUNICORN_WORKERS:-10}", "-b", "0.0.0.0:5566", "app:app"]
     env_file:
-      - path: /etc/myapp/secrets.d/backend.env
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
         required: false
-      - path: /etc/myapp/secrets.d/ai-providers.env
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/ai-providers.env
         required: false
-      - path: /etc/myapp/secrets.d/agent.env
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/agent.env
         required: false
-      - path: /etc/myapp/secrets.d/push.env
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/push.env
         required: false
     environment:
       DB_HOST: jsonapp-postgres
@@ -116,7 +116,7 @@ services:
       FLASK_SECRET_KEY: "${FLASK_SECRET_KEY:-}"
       PORT: "5566"
     volumes:
-      - /etc/myapp/secrets.d/files:/etc/myapp/secret-files:ro
+      - ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/files:/etc/myapp/secret-files:ro
     ports:
       - "${BACKEND_PORT:-5566}:5566"
     healthcheck:
@@ -140,11 +140,11 @@ services:
     working_dir: /app/backend
     command: ["python", "ai_worker_daemon.py"]
     env_file:
-      - path: /etc/myapp/secrets.d/backend.env
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
         required: false
-      - path: /etc/myapp/secrets.d/ai-providers.env
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/ai-providers.env
         required: false
-      - path: /etc/myapp/secrets.d/agent.env
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/agent.env
         required: false
     environment:
       DB_HOST: jsonapp-postgres
@@ -194,7 +194,7 @@ services:
     working_dir: /app/backend
     command: ["gunicorn", "-k", "gthread", "-w", "2", "--threads", "8", "-b", "0.0.0.0:3254", "registry_server:app"]
     env_file:
-      - path: /etc/myapp/secrets.d/backend.env
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
         required: false
     environment:
       DB_HOST: jsonapp-postgres
@@ -226,7 +226,7 @@ services:
     working_dir: /app/config_center
     command: ["gunicorn", "-k", "gthread", "-w", "1", "--threads", "4", "-b", "0.0.0.0:5000", "app:app"]
     env_file:
-      - path: /etc/myapp/secrets.d/config-center.env
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/config-center.env
         required: false
     environment:
       ADMIN_USERNAME: "${CONFIG_CENTER_ADMIN_USERNAME:-admin}"
@@ -252,7 +252,7 @@ services:
     working_dir: /app/user_center
     command: ["gunicorn", "-k", "gthread", "-w", "1", "--threads", "4", "-b", "0.0.0.0:5567", "app:app"]
     env_file:
-      - path: /etc/myapp/secrets.d/backend.env
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
         required: false
     environment:
       SUPABASE_URL: "${SUPABASE_URL:-}"
@@ -269,7 +269,7 @@ services:
     container_name: myapp-agent-node
     restart: unless-stopped
     env_file:
-      - path: /etc/myapp/secrets.d/agent.env
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/agent.env
         required: false
       - path: ${AGENT_NODE_AI_PROVIDERS_ENV_FILE:-/mnt/myapp/agent-node/ai-providers.env}
         required: false

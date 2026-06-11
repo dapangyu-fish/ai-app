@@ -618,7 +618,7 @@ function DocsPage({ lang }: { lang: Lang }) {
         {
           title: '备份和恢复',
           lines: [
-            'myapp-ctl config export --out /mnt/myapp/myapp-config.json',
+            'myapp-ctl config export --out /root/myapp-config.json',
             'myapp-ctl config export --redacted --out /root/myapp-config.redacted.json',
             'myapp-ctl config import /root/myapp-config.json --yes',
           ],
@@ -626,8 +626,8 @@ function DocsPage({ lang }: { lang: Lang }) {
         {
           title: '清理环境',
           lines: [
-            'myapp-ctl uninstall --yes --purge',
-            '# data root 不会自动删除；确认销毁时手动 rm -rf /mnt/myapp',
+            'myapp-ctl uninstall --yes',
+            '# 配置和 data root 不会自动删除；确认销毁时手动 rm -rf /mnt/myapp',
           ],
         },
       ]
@@ -653,7 +653,7 @@ function DocsPage({ lang }: { lang: Lang }) {
         {
           title: 'Backup and restore',
           lines: [
-            'myapp-ctl config export --out /mnt/myapp/myapp-config.json',
+            'myapp-ctl config export --out /root/myapp-config.json',
             'myapp-ctl config export --redacted --out /root/myapp-config.redacted.json',
             'myapp-ctl config import /root/myapp-config.json --yes',
           ],
@@ -661,8 +661,8 @@ function DocsPage({ lang }: { lang: Lang }) {
         {
           title: 'Uninstall',
           lines: [
-            'myapp-ctl uninstall --yes --purge',
-            '# data root is preserved; manually rm -rf /mnt/myapp only when destroying data',
+            'myapp-ctl uninstall --yes',
+            '# config and data root are preserved; manually rm -rf /mnt/myapp only when destroying data',
           ],
         },
       ];
@@ -678,7 +678,7 @@ function DocsPage({ lang }: { lang: Lang }) {
             'myapp-ctl restart [service ...]',
             'myapp-ctl log <service> [-n 120] [-f]',
             'myapp-ctl update [--source <checkout>] [--no-pull]',
-            'myapp-ctl uninstall --yes [--purge] [--volumes] [--images] [--remove-ctl]',
+            'myapp-ctl uninstall --yes [--volumes] [--images] [--remove-ctl]',
           ],
         },
         {
@@ -759,7 +759,7 @@ function DocsPage({ lang }: { lang: Lang }) {
             'myapp-ctl restart [service ...]',
             'myapp-ctl log <service> [-n 120] [-f]',
             'myapp-ctl update [--source <checkout>] [--no-pull]',
-            'myapp-ctl uninstall --yes [--purge] [--volumes] [--images] [--remove-ctl]',
+            'myapp-ctl uninstall --yes [--volumes] [--images] [--remove-ctl]',
           ],
         },
         {
