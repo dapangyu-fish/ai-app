@@ -1077,16 +1077,23 @@ class AiChatService {
   ///  - ResumeCompleted：注入 user 气泡 + assistant 气泡 + 可能的下载按钮
   ///  - ResumeStreaming：注入 user 气泡 + 空 assistant 气泡 + listen stream
   ///  - ResumeNeedsRetry：注入 user 气泡 + "已中断，点击重试" 系统消息
-  Future<ResumeResult> tryResumeUnfinished() async {
+  Future<ResumeResult> tryResumeUnfinished({
+    bool forceDetachLocalClient = false,
+  }) async {
     final active = _active;
     if (active == null || active.lastUserMessage.isEmpty) {
       return const ResumeNothing();
     }
     // 防御：确保还没有正在跑的 stream
     if (_activeClient != null) {
-      debugPrint('[AI_CHAT] tryResumeUnfinished: 已有活跃 client，跳过');
-      return const ResumeNothing();
+      if (!forceDetachLocalClient) {
+        debugPrint('[AI_CHAT] tryResumeUnfinished: 已有活跃 client，跳过');
+        return const ResumeNothing();
+      }
+      debugPrint('[AI_CHAT] tryResumeUnfinished: 强制关闭半挂 client 后恢复');
+      abortLocal();
     }
+    if (forceDetachLocalClient) _aborting = false;
     try {
       final token = AuthService.token;
       if (token == null) return const ResumeNothing();

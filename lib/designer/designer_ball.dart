@@ -161,8 +161,10 @@ class _DesignerBallState extends State<DesignerBall>
   final ByteDanceAsrService _bytedanceAsr = ByteDanceAsrService.instance;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
+  int _streamEpoch = 0;
   bool _resumeInFlight = false;
   bool _appResumeProbeInFlight = false;
+  Timer? _appResumeFollowUpTimer;
   Timer? _sessionReconcileTimer;
   bool _sessionReconcileInFlight = false;
   // 老的 5s 独立 heartbeat 已被删掉。新逻辑：
@@ -408,6 +410,7 @@ class _DesignerBallState extends State<DesignerBall>
   void dispose() {
     _longPressTimer?.cancel();
     _streamSub?.cancel();
+    _appResumeFollowUpTimer?.cancel();
     _messagePersistTimer?.cancel();
     _sessionReconcileTimer?.cancel();
     unawaited(_flushActiveMessages());
@@ -555,8 +558,11 @@ class _DesignerBallState extends State<DesignerBall>
   void _onAppLifecycleChanged() {
     if (!mounted) return;
     final event = appLifecycleEvent.value;
-    if (event == 'pause' || event == 'hidden') {
-      _detachAiStreamForAppBackground();
+    if (event == 'inactive' ||
+        event == 'pause' ||
+        event == 'hidden' ||
+        event == 'detached') {
+      _detachAiStreamForAppBackground(event);
       return;
     }
     if (event == 'resume') {
@@ -572,17 +578,26 @@ class _DesignerBallState extends State<DesignerBall>
     if (mounted) setState(() {});
   }
 
-  void _detachAiStreamForAppBackground() {
+  void _detachAiStreamForAppBackground(String lifecycleEvent) {
+    _detachAiStreamForLifecycle(reason: 'app-$lifecycleEvent', resetUi: true);
+  }
+
+  void _detachAiStreamForLifecycle({
+    required String reason,
+    required bool resetUi,
+  }) {
     final sub = _streamSub;
-    if (sub == null) return;
-    debugPrint('[DesignerBall] app background: detach local AI stream');
-    if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
-      _chatService.commitPartial(_messages.last.content);
+    _streamEpoch++;
+    if (sub != null) {
+      debugPrint('[DesignerBall] $reason: detach local AI stream');
+      if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+        _chatService.commitPartial(_messages.last.content);
+      }
+      _streamSub = null;
+      unawaited(sub.cancel());
     }
-    _streamSub = null;
-    unawaited(sub.cancel());
     _chatService.abortLocal();
-    if (mounted) {
+    if (resetUi && mounted) {
       setState(() {
         _isThinking = false;
         _isGeneratingJson = false;
@@ -600,6 +615,9 @@ class _DesignerBallState extends State<DesignerBall>
       await Future.delayed(const Duration(milliseconds: 350));
       if (!mounted || !AuthService.authNotifier.value) return;
 
+      // 移动端后台恢复时，旧 SSE/http client 可能已经半断但 Dart 订阅对象仍存在。
+      // 先强制丢弃本地连接，再通过 /status + /result 或 /stream 恢复。
+      _detachAiStreamForLifecycle(reason: 'app-resume-probe', resetUi: false);
       await _chatService.loadSession();
       await _refreshAiRoutingOptions();
       await _loadMessagesForSession(_chatService.sessionId);
@@ -607,15 +625,24 @@ class _DesignerBallState extends State<DesignerBall>
       setState(() {});
 
       debugPrint('[DesignerBall] app resumed: probe AI session');
-      await _maybeResumeUnfinishedSession();
+      await _maybeResumeUnfinishedSession(forceDetachLocalStream: true);
       if (mounted) {
         unawaited(_flushActiveMessages());
+        _scheduleAppResumeFollowUpReconcile();
       }
     } catch (e) {
       debugPrint('[DesignerBall] app resume probe failed (ignored): $e');
     } finally {
       _appResumeProbeInFlight = false;
     }
+  }
+
+  void _scheduleAppResumeFollowUpReconcile() {
+    _appResumeFollowUpTimer?.cancel();
+    _appResumeFollowUpTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      unawaited(_reconcileActiveSession(reason: 'resume-follow-up'));
+    });
   }
 
   void _startSessionReconcileTimer({bool immediate = false}) {
@@ -1313,6 +1340,8 @@ class _DesignerBallState extends State<DesignerBall>
   /// 调用方负责在调本方法之前把 user 气泡 / 空 assistant 气泡先注入好。
   void _attachAiStream(Stream<ChatEvent> stream) {
     _startSessionReconcileTimer();
+    final streamEpoch = ++_streamEpoch;
+    bool isCurrentStream() => mounted && streamEpoch == _streamEpoch;
     // 用于累积流式事件中的指令，[DONE] 时统一处理
     Map<String, dynamic>? pendingJsonApp;
     String? pendingRequestAction;
@@ -1322,6 +1351,7 @@ class _DesignerBallState extends State<DesignerBall>
 
     _streamSub = stream.listen(
       (event) {
+        if (!isCurrentStream()) return;
         if (event.isGeneratingJson) {
           setState(() {
             _isGeneratingJson = true;
@@ -1334,7 +1364,9 @@ class _DesignerBallState extends State<DesignerBall>
           setState(() {
             // 有工具动作时直接在浮层里显示，避免看起来像卡住
             _isGeneratingJson = true;
-            _generatingStatusMessage = _translateStatusKey(event.statusMessage!);
+            _generatingStatusMessage = _translateStatusKey(
+              event.statusMessage!,
+            );
           });
           _scrollToBottom();
           return;
@@ -1464,6 +1496,7 @@ class _DesignerBallState extends State<DesignerBall>
         }
       },
       onError: (e) {
+        if (!isCurrentStream()) return;
         _streamSub = null;
         setState(() {
           _isThinking = false;
@@ -1486,6 +1519,7 @@ class _DesignerBallState extends State<DesignerBall>
         _startSessionReconcileTimer(immediate: true);
       },
       onDone: () {
+        if (!isCurrentStream()) return;
         _streamSub = null;
         debugPrint(
           '[DesignerBall] AI stream onDone: '
@@ -1553,15 +1587,29 @@ class _DesignerBallState extends State<DesignerBall>
 
   /// app 启动/重新打开字幕时：检查后端有没有上一轮未完成 / 已完成的任务，
   /// 并合并到当前消息桶，避免关闭字幕后恢复时重复插入 user/assistant 气泡。
-  Future<void> _maybeResumeUnfinishedSession() =>
-      _resumeActiveSessionIfNeeded();
+  Future<void> _maybeResumeUnfinishedSession({
+    bool forceDetachLocalStream = false,
+  }) => _resumeActiveSessionIfNeeded(
+    forceDetachLocalStream: forceDetachLocalStream,
+  );
 
-  Future<void> _resumeActiveSessionIfNeeded() async {
+  Future<void> _resumeActiveSessionIfNeeded({
+    bool forceDetachLocalStream = false,
+  }) async {
     if (!mounted) return;
-    if (_resumeInFlight || _streamSub != null) return;
+    if (_resumeInFlight) return;
+    if (_streamSub != null) {
+      if (!forceDetachLocalStream) return;
+      _detachAiStreamForLifecycle(
+        reason: 'resume-stale-stream',
+        resetUi: false,
+      );
+    }
     _resumeInFlight = true;
     try {
-      final result = await _chatService.tryResumeUnfinished();
+      final result = await _chatService.tryResumeUnfinished(
+        forceDetachLocalClient: forceDetachLocalStream,
+      );
       if (!mounted) return;
       switch (result) {
         case ResumeNothing():
@@ -1589,6 +1637,7 @@ class _DesignerBallState extends State<DesignerBall>
             );
           });
           _scrollToBottom();
+          _stopSessionReconcileTimer();
         case ResumeStreaming(:final userMessage, :final stream):
           setState(() {
             _ensureUserMessage(userMessage);
@@ -1616,6 +1665,7 @@ class _DesignerBallState extends State<DesignerBall>
             }
           });
           _scrollToBottom();
+          _stopSessionReconcileTimer();
       }
     } catch (e) {
       debugPrint('[DesignerBall] resume 失败 (静默): $e');
@@ -2002,6 +2052,7 @@ class _DesignerBallState extends State<DesignerBall>
   /// UI 状态**，否则会出现：在 session A "正在生成代码" 中途切到 session B（已 done），
   /// 但 _isGeneratingJson 没被清，B 的视图还在转圈。
   void _cancelCurrentStream() {
+    _streamEpoch++;
     if (_streamSub != null) {
       // 保存已收到的部分回复到对话历史
       if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
@@ -2032,6 +2083,7 @@ class _DesignerBallState extends State<DesignerBall>
   /// 只隐藏字幕时使用：断开本地 SSE 节省资源，但保留当前 session 和消息占位。
   /// 后端 worker 继续跑；用户从快捷菜单恢复会话时会通过 /status + /stream 接回。
   void _detachCurrentStreamForHide() {
+    _streamEpoch++;
     if (_streamSub != null) {
       if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
         _chatService.commitPartial(_messages.last.content);
@@ -2061,10 +2113,13 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 直接发送给 AI
     _cancelCurrentStream();
+    final streamEpoch = ++_streamEpoch;
+    bool isCurrentStream() => mounted && streamEpoch == _streamEpoch;
     _streamSub = _chatService
         .sendStream(crashReport, contextMessages: _aiConversationPayload())
         .listen(
           (event) {
+            if (!isCurrentStream()) return;
             if (event.error != null && event.content == null) {
               setState(() {
                 _isThinking = false;
@@ -2102,6 +2157,8 @@ class _DesignerBallState extends State<DesignerBall>
             }
           },
           onError: (e) {
+            if (!isCurrentStream()) return;
+            _streamSub = null;
             setState(() {
               _isThinking = false;
               _messages.last = ChatMessage(
@@ -2109,6 +2166,10 @@ class _DesignerBallState extends State<DesignerBall>
                 content: T.fmt(T.current.chatAnalysisFailedWith, {'err': e}),
               );
             });
+          },
+          onDone: () {
+            if (!isCurrentStream()) return;
+            _streamSub = null;
           },
         );
   }
@@ -2269,11 +2330,17 @@ class _DesignerBallState extends State<DesignerBall>
       case 'tool.reading':
         return T.current.toolStatusReading;
       case 'tool.reading_file':
-        return T.current.toolStatusReadingFile.replaceAll('{file}', param ?? '');
+        return T.current.toolStatusReadingFile.replaceAll(
+          '{file}',
+          param ?? '',
+        );
       case 'tool.writing':
         return T.current.toolStatusWriting;
       case 'tool.writing_file':
-        return T.current.toolStatusWritingFile.replaceAll('{file}', param ?? '');
+        return T.current.toolStatusWritingFile.replaceAll(
+          '{file}',
+          param ?? '',
+        );
       case 'tool.searching':
         return T.current.toolStatusSearching;
       case 'tool.running_command':
