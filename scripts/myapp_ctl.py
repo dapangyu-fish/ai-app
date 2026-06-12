@@ -3458,6 +3458,25 @@ def _deploy_requires_ai_config(names: list[str]) -> bool:
     return mode in {"local", "node", "self", "agent-local"}
 
 
+def _deploy_has_required_ai_config(names: list[str]) -> bool:
+    if any(name in {"backend", "ai-worker"} for name in names):
+        return _ai_providers_configured()
+    if "agent-node" not in names:
+        return True
+    agent_env = _parse_env(_secret_path("agent"))
+    mode = (
+        agent_env
+        .get("AGENT_NODE_PROVIDER_MODE", "master")
+        .strip()
+        .lower()
+        .replace("_", "-")
+    )
+    if mode in {"local", "node", "self", "agent-local"}:
+        provider_env_path = agent_env.get("AGENT_NODE_AI_PROVIDERS_ENV_FILE", "").strip()
+        return bool(provider_env_path and _ai_providers_configured(Path(provider_env_path)))
+    return True
+
+
 def _deploy_can_seed_test_user(names: list[str]) -> bool:
     return "supabase-auth" in names
 
@@ -3468,7 +3487,7 @@ def _ensure_human_config_for_deploy(args, names: list[str]) -> int:
     rc = _init_stack_secrets(host=getattr(args, "host", None), quiet=True, write_snapshot=False)
     if rc != 0:
         return rc
-    if not _deploy_requires_ai_config(names) or _ai_providers_configured():
+    if not _deploy_requires_ai_config(names) or _deploy_has_required_ai_config(names):
         return 0
     if getattr(args, "no_setup", False):
         print("AI provider config is missing; run: myapp-ctl setup", file=sys.stderr)
