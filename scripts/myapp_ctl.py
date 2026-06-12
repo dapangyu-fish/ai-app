@@ -3666,12 +3666,28 @@ def _persist_public_host_if_explicit(host: str | None, public_host: str) -> None
     _save_json(CONFIG_PATH, cfg, mode=0o644)
 
 
+_IMAGE_ENV_KEYS = {
+    "MYAPP_BACKEND_IMAGE",
+    "MYAPP_AGENT_NODE_IMAGE",
+    "MYAPP_AGENT_RUNTIME_IMAGE",
+}
+_LEGACY_OFFICIAL_IMAGE_PREFIX = "dapangyufish/myapp-"
+
+
+def _should_replace_env_value(group: str, key: str, current: str, *, force: bool) -> bool:
+    if force or not current:
+        return True
+    if group == "backend" and key in _IMAGE_ENV_KEYS:
+        return current.strip().startswith(_LEGACY_OFFICIAL_IMAGE_PREFIX)
+    return False
+
+
 def _merge_env_group(group: str, values: dict[str, str], *, force: bool = False) -> list[str]:
     path = _secret_path(group)
     data = _parse_env(path)
     changed: list[str] = []
     for key, value in values.items():
-        if force or not data.get(key):
+        if _should_replace_env_value(group, key, data.get(key, ""), force=force):
             data[key] = value
             changed.append(key)
     if changed:
