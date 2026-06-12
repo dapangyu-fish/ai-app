@@ -2575,6 +2575,17 @@ def _ai_provider_ids_from_env(env: dict[str, str]) -> list[str]:
             if env.get(f"{prefix}_CODEX_MODEL") and env_key and env.get(env_key) and provider_id not in out:
                 out.append(provider_id)
     for key, value in env.items():
+        if key.endswith("_CODEX_AUTH_MODE") and str(value or "").strip().lower().replace("_", "-") in {"native", "native-codex"}:
+            provider_id = _normalize_provider_id(key[: -len("_CODEX_AUTH_MODE")])
+            prefix = _provider_prefix(provider_id)
+            if (
+                env.get(f"{prefix}_CODEX_MODEL")
+                and env.get(f"{prefix}_CODEX_HOME_PATH")
+                and env.get(f"{prefix}_CODEX_MACHINE_ID_PATH")
+                and provider_id not in out
+            ):
+                out.append(provider_id)
+    for key, value in env.items():
         if key.endswith("_OPENCODE_BASE_URL") and value:
             provider_id = _normalize_provider_id(key[: -len("_OPENCODE_BASE_URL")])
             prefix = _provider_prefix(provider_id)
@@ -2601,6 +2612,12 @@ def _provider_has_codex_responses_adapter(env: dict[str, str], provider_id: str)
     if registry:
         return registry.provider_has_codex_responses_adapter(env, provider_id)
     prefix = _provider_prefix(provider_id)
+    if (env.get(f"{prefix}_CODEX_AUTH_MODE") or "").strip().lower().replace("_", "-") in {"native", "native-codex"}:
+        return bool(
+            env.get(f"{prefix}_CODEX_MODEL")
+            and env.get(f"{prefix}_CODEX_HOME_PATH")
+            and env.get(f"{prefix}_CODEX_MACHINE_ID_PATH")
+        )
     env_key = env.get(f"{prefix}_CODEX_ENV_KEY") or f"{prefix}_CODEX_AUTH_TOKEN"
     return bool(
         env.get(f"{prefix}_CODEX_BASE_URL")
@@ -2630,6 +2647,8 @@ def _provider_codex_adapter_kind(env: dict[str, str], provider_id: str) -> str:
     if registry:
         return registry.provider_codex_adapter_kind(env, provider_id)
     prefix = _provider_prefix(provider_id)
+    if (env.get(f"{prefix}_CODEX_AUTH_MODE") or "").strip().lower().replace("_", "-") in {"native", "native-codex"}:
+        return "native-codex"
     relay = (env.get(f"{prefix}_CODEX_RELAY") or "").strip().lower().replace("_", "-")
     upstream_wire_api = (env.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API") or "").strip().lower().replace("_", "-")
     if relay or upstream_wire_api in {"chat-completions", "openai-chat-completions"}:
@@ -2902,6 +2921,72 @@ def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, s
     return provider_id, data
 
 
+def _native_codex_default_user_spec(codex_home: str) -> str:
+    try:
+        stat_result = Path(codex_home).stat()
+        return f"{stat_result.st_uid}:{stat_result.st_gid}"
+    except OSError:
+        return f"{os.getuid()}:{os.getgid()}"
+
+
+def _prompt_native_codex_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
+    provider_id = "native-codex"
+    prefix = _provider_prefix(provider_id)
+    builtin = _builtin_provider(provider_id)
+    adapters = builtin.get("adapters") if isinstance(builtin.get("adapters"), dict) else {}
+    codex = adapters.get("codex") or {}
+    worker = builtin.get("worker") if isinstance(builtin.get("worker"), dict) else {}
+    default_home = existing.get(f"{prefix}_CODEX_HOME_PATH", "")
+    if not default_home:
+        default_home = str((Path.home() / ".codex").expanduser().resolve(strict=False))
+    codex_home = _prompt_line(
+        "native Codex host ~/.codex path",
+        default=default_home,
+        required=True,
+    )
+    codex_home = str(Path(codex_home).expanduser().resolve(strict=False))
+    machine_id_path = _prompt_line(
+        "native Codex host /etc/machine-id path",
+        default=existing.get(f"{prefix}_CODEX_MACHINE_ID_PATH", codex.get("machine_id_path", "/etc/machine-id")),
+        required=True,
+    )
+    machine_id_path = str(Path(machine_id_path).expanduser().resolve(strict=False))
+    container_user = _prompt_line(
+        "native Codex runtime UID:GID",
+        default=existing.get(f"{prefix}_CODEX_CONTAINER_USER", _native_codex_default_user_spec(codex_home)),
+        required=True,
+    )
+    if not re.match(r"^[0-9]+:[0-9]+$", container_user):
+        print("native Codex runtime UID:GID must look like 1000:1000", file=sys.stderr)
+        return _prompt_native_codex_provider(existing)
+    data = {
+        f"{prefix}_PROVIDER_NAME": existing.get(f"{prefix}_PROVIDER_NAME", builtin.get("name", "Native Codex GPT-5.5")),
+        f"{prefix}_PROVIDER_DESCRIPTION": existing.get(
+            f"{prefix}_PROVIDER_DESCRIPTION",
+            builtin.get("setup_description", "Native Codex CLI plan login; no API token is stored by MyApp"),
+        ),
+        f"{prefix}_PROVIDER_VISIBLE": existing.get(f"{prefix}_PROVIDER_VISIBLE", "1"),
+        f"{prefix}_SUPPORTED_AGENTS": "codex",
+        f"{prefix}_AI_WORKER_MAX_CONCURRENCY": existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", worker.get("max_concurrency", "1")),
+        f"{prefix}_AI_WORKER_QUEUE_MAX": existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", worker.get("queue_max", "20")),
+        f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", codex.get("provider_name", "Native Codex")),
+        f"{prefix}_CODEX_MODEL": _prompt_line(
+            "native Codex model",
+            default=existing.get(f"{prefix}_CODEX_MODEL", codex.get("model", "gpt-5.5")),
+            required=True,
+        ),
+        f"{prefix}_CODEX_AUTH_MODE": "native",
+        f"{prefix}_CODEX_WIRE_API": "native",
+        f"{prefix}_CODEX_BASE_URL": "",
+        f"{prefix}_CODEX_ENV_KEY": "",
+        f"{prefix}_CODEX_HOME_PATH": codex_home,
+        f"{prefix}_CODEX_MACHINE_ID_PATH": machine_id_path,
+        f"{prefix}_CODEX_CONTAINER_USER": container_user,
+        f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", str(codex.get("context_window", "512000"))),
+    }
+    return provider_id, data
+
+
 def _prompt_custom_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
     provider_id = _normalize_provider_id(_prompt_line("custom provider id", required=True))
     prefix = _provider_prefix(provider_id)
@@ -3088,7 +3173,8 @@ def _setup_ai_providers(*, force: bool = False, path: Path | None = None, title:
     while True:
         print("  1) deepseek")
         print("  2) minimax")
-        print("  3) custom")
+        print("  3) native-codex")
+        print("  4) custom")
         choice = _prompt_line("select provider", default="1" if not provider_ids else "n")
         if choice.lower() in {"n", "next", "done", "q", "quit"} and provider_ids:
             break
@@ -3096,7 +3182,9 @@ def _setup_ai_providers(*, force: bool = False, path: Path | None = None, title:
             provider_id, values = _prompt_deepseek_provider(existing)
         elif choice == "2" or choice.lower() == "minimax":
             provider_id, values = _prompt_minimax_provider(existing)
-        elif choice == "3" or choice.lower() in {"custom", "other"}:
+        elif choice == "3" or choice.lower() in {"native-codex", "native_codex", "codex-native"}:
+            provider_id, values = _prompt_native_codex_provider(existing)
+        elif choice == "4" or choice.lower() in {"custom", "other"}:
             provider_id, values = _prompt_custom_provider(existing)
         else:
             print("unknown provider choice", file=sys.stderr)

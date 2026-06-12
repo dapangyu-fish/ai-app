@@ -209,6 +209,8 @@ def _session_paths(user_id: str, session_id: str, job_id: str) -> dict[str, Path
         "claude": session_root / "claude",
         "claude_config": session_root / ".claude.json",
         "codex": session_root / "codex",
+        "npm_cache": session_root / "npm-cache",
+        "home_cache": session_root / "home-cache",
         "opencode_config": session_root / "opencode-config",
         "opencode_data": session_root / "opencode-data",
         "session_workspace": workspace_session_root,
@@ -376,6 +378,39 @@ def _local_provider_value(prefix: str, key: str, default: str = "") -> str:
     return str(os.environ.get(f"{prefix}_{key}") or default or "").strip()
 
 
+def _normalize_adapter_flag(value: object) -> str:
+    return str(value or "").strip().lower().replace("_", "-")
+
+
+def _is_native_codex_config(codex: dict | None) -> bool:
+    codex = codex or {}
+    return (
+        _normalize_adapter_flag(codex.get("auth_mode")) in {"native", "native-codex"}
+        or _normalize_adapter_flag(codex.get("wire_api")) in {"native", "native-codex"}
+        or _normalize_adapter_flag(codex.get("adapter_kind")) == "native-codex"
+    )
+
+
+def _native_codex_container_user(codex: dict) -> str:
+    configured = str(codex.get("container_user") or "").strip()
+    if re.match(r"^[0-9]+:[0-9]+$", configured):
+        return configured
+    fallback = os.environ.get("AGENT_NODE_CONTAINER_USER", "10001:10001").strip()
+    return fallback if re.match(r"^[0-9]+:[0-9]+$", fallback) else "10001:10001"
+
+
+def _native_codex_host_path(value: object, *, label: str) -> Path:
+    text = str(value or "").strip()
+    if not text:
+        raise ValueError(f"native Codex requires {label}")
+    if text.startswith("~"):
+        raise ValueError(f"native Codex {label} must be an absolute host path, not {text!r}")
+    path = Path(text)
+    if not path.is_absolute():
+        raise ValueError(f"native Codex {label} must be an absolute host path: {text}")
+    return path
+
+
 CAPABILITIES = _configured_capabilities()
 
 
@@ -496,6 +531,31 @@ def _apply_local_provider(payload: dict) -> None:
             }
         )
     elif agent_id in {"codex", "opencode"}:
+        codex_auth_mode = _normalize_adapter_flag(_local_provider_value(prefix, "CODEX_AUTH_MODE", codex.get("auth_mode") or ""))
+        if agent_id == "codex" and codex_auth_mode in {"native", "native-codex"}:
+            codex_model = _local_provider_value(prefix, "CODEX_MODEL", codex.get("model") or "gpt-5.5")
+            codex_home = _local_provider_value(prefix, "CODEX_HOME_PATH", codex.get("home_path") or "")
+            machine_id = _local_provider_value(prefix, "CODEX_MACHINE_ID_PATH", codex.get("machine_id_path") or "/etc/machine-id")
+            if not codex_model or not codex_home or not machine_id:
+                raise ValueError(f"local provider {provider_id} is missing native Codex config")
+            codex.update(
+                {
+                    "provider_name": _local_provider_value(prefix, "CODEX_PROVIDER_NAME", codex.get("provider_name") or provider_id),
+                    "base_url": "",
+                    "model": codex_model,
+                    "wire_api": "native",
+                    "auth_mode": "native",
+                    "adapter_kind": "native-codex",
+                    "home_path": codex_home,
+                    "machine_id_path": machine_id,
+                    "container_user": _local_provider_value(prefix, "CODEX_CONTAINER_USER", codex.get("container_user") or ""),
+                    "env_key": "",
+                    "context_window": _local_provider_value(prefix, "CODEX_CONTEXT_WINDOW", str(codex.get("context_window") or "")),
+                }
+            )
+            payload["env"] = env
+            payload["codex"] = codex
+            return
         default_base_url = _local_provider_value(prefix, "CODEX_BASE_URL")
         default_model = _local_provider_value(prefix, "CODEX_MODEL")
         default_env_key = _local_provider_value(prefix, "CODEX_ENV_KEY", f"{prefix}_CODEX_AUTH_TOKEN")
@@ -594,7 +654,7 @@ def _prepare_provider_proxy(payload: dict) -> list[str]:
     codex_base_url = str(codex.get("base_url") or "").strip()
     codex_env_key = str(codex.get("env_key") or "").strip()
     codex_token = str(env.get(codex_env_key) or "").strip() if codex_env_key else ""
-    if codex_base_url and codex_env_key and codex_token:
+    if not _is_native_codex_config(codex) and codex_base_url and codex_env_key and codex_token:
         token = _issue_proxy_token(
             run_id,
             codex_base_url,
@@ -616,6 +676,11 @@ def _prepare_provider_proxy(payload: dict) -> list[str]:
 
 def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str, Path]) -> tuple[list[str], dict]:
     container_name = f"myapp-agent-{_safe_part(run_id, uuid.uuid4().hex)}"
+    codex_config = dict(payload.get("codex") or {})
+    native_codex = (
+        str(payload.get("agent_id") or "").strip().lower().replace("_", "-") == "codex"
+        and _is_native_codex_config(codex_config)
+    )
     for key, path in paths.items():
         if key == "claude_config":
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -639,6 +704,24 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
     payload_without_env.pop("_proxy_tokens", None)
     payload_path.write_text(json.dumps(payload_without_env, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
+    container_user = "10001:10001"
+    codex_mount_source = _docker_bind_source(paths["codex"])
+    codex_mount_args = ["-v", f"{codex_mount_source}:/home/agent/.codex:rw"]
+    extra_mount_args: list[str] = []
+    if native_codex:
+        home_path = _native_codex_host_path(codex_config.get("home_path"), label="CODEX_HOME_PATH")
+        machine_id_path = _native_codex_host_path(codex_config.get("machine_id_path") or "/etc/machine-id", label="CODEX_MACHINE_ID_PATH")
+        container_user = _native_codex_container_user(codex_config)
+        extra_mount_args.extend(
+            [
+                "--mount",
+                f"type=bind,source={home_path},target=/run/myapp-host-codex,readonly",
+                "--mount",
+                f"type=bind,source={machine_id_path},target=/etc/machine-id,readonly",
+            ]
+        )
+        runtime_env["MYAPP_NATIVE_CODEX_SOURCE"] = "/run/myapp-host-codex"
+
     cmd = [
         "docker",
         "run",
@@ -656,15 +739,18 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
         "--security-opt",
         "no-new-privileges",
         "--user",
-        "10001:10001",
+        container_user,
         "--workdir",
         PROJECT_ROOT,
         "-v",
         f"{_docker_bind_source(paths['claude'])}:/home/agent/.claude:rw",
         "-v",
         f"{_docker_bind_source(paths['claude_config'])}:/home/agent/.claude.json:rw",
+        *codex_mount_args,
         "-v",
-        f"{_docker_bind_source(paths['codex'])}:/home/agent/.codex:rw",
+        f"{_docker_bind_source(paths['npm_cache'])}:/home/agent/.npm:rw",
+        "-v",
+        f"{_docker_bind_source(paths['home_cache'])}:/home/agent/.cache:rw",
         "-v",
         f"{_docker_bind_source(paths['opencode_config'])}:/home/agent/.config/opencode:rw",
         "-v",
@@ -678,6 +764,7 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
         "-e",
         f"AI_APP_PROJECT_ROOT={PROJECT_ROOT}",
     ]
+    cmd.extend(extra_mount_args)
     if ALLOW_HOST_GATEWAY:
         cmd.extend(["--add-host", "host.docker.internal:host-gateway"])
     for key in sorted(runtime_env):

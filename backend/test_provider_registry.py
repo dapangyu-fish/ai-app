@@ -83,8 +83,38 @@ def test_capabilities_from_env() -> None:
     ]
 
 
+def test_native_codex_provider() -> None:
+    env = {
+        "AI_PROVIDER_IDS": "native-codex",
+        "NATIVE_CODEX_CODEX_AUTH_MODE": "native",
+        "NATIVE_CODEX_CODEX_WIRE_API": "native",
+        "NATIVE_CODEX_CODEX_MODEL": "gpt-5.5",
+        "NATIVE_CODEX_CODEX_HOME_PATH": "/home/fish/.codex",
+        "NATIVE_CODEX_CODEX_MACHINE_ID_PATH": "/etc/machine-id",
+        "NATIVE_CODEX_CODEX_CONTAINER_USER": "1000:1000",
+    }
+    providers = registry.build_providers(env)
+    native = providers["native-codex"]
+    assert native["configured"] is True
+    assert native["supported_agents"] == ["codex"]
+    assert native["codex"]["configured"] is True
+    assert native["codex"]["auth_mode"] == "native"
+    assert native["codex"]["wire_api"] == "native"
+    assert native["codex"]["home_path"] == "/home/fish/.codex"
+    assert native["codex"]["container_user"] == "1000:1000"
+    assert registry.provider_capabilities_from_env(env) == [
+        {
+            "provider_id": "native-codex",
+            "agent_id": "codex",
+            "adapter_kind": "native-codex",
+            "status": "configured",
+            "enabled": True,
+        }
+    ]
+
+
 if __name__ == "__main__":
     test_builtin_provider_defaults()
     test_capabilities_from_env()
+    test_native_codex_provider()
     print(json.dumps({"ok": True}, sort_keys=True))
-

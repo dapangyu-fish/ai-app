@@ -13,6 +13,7 @@ from typing import Any
 
 from .deepseek.provider import PROVIDER as DEEPSEEK_PROVIDER
 from .minimax.provider import PROVIDER as MINIMAX_PROVIDER
+from .native_codex.provider import PROVIDER as NATIVE_CODEX_PROVIDER
 from .schema import (
     LEGACY_DISABLED_PROVIDER_IDS,
     ORDERED_AGENT_IDS,
@@ -32,7 +33,37 @@ from .schema import (
 BUILTIN_PROVIDERS = {
     "deepseek": DEEPSEEK_PROVIDER,
     "minimax": MINIMAX_PROVIDER,
+    "native-codex": NATIVE_CODEX_PROVIDER,
 }
+
+
+def _normalize_adapter_flag(value: object) -> str:
+    return str(value or "").strip().lower().replace("_", "-")
+
+
+def _codex_auth_mode(env: dict[str, str], prefix: str, default_codex: dict[str, Any] | None = None) -> str:
+    default_codex = default_codex or {}
+    return _normalize_adapter_flag(env_for_prefix(env, prefix, "CODEX_AUTH_MODE", default_codex.get("auth_mode", "")))
+
+
+def _codex_is_native(env: dict[str, str], provider_id: str) -> bool:
+    prefix = provider_prefix(provider_id)
+    default_codex = builtin_adapter(provider_id, "codex")
+    auth_mode = _codex_auth_mode(env, prefix, default_codex)
+    wire_api = _normalize_adapter_flag(env_for_prefix(env, prefix, "CODEX_WIRE_API", default_codex.get("wire_api", "")))
+    adapter_kind = _normalize_adapter_flag(default_codex.get("adapter_kind"))
+    return auth_mode in {"native", "native-codex"} or wire_api in {"native", "native-codex"} or adapter_kind == "native-codex"
+
+
+def _native_codex_configured(env: dict[str, str], provider_id: str) -> bool:
+    prefix = provider_prefix(provider_id)
+    default_codex = builtin_adapter(provider_id, "codex")
+    if not _codex_is_native(env, provider_id):
+        return False
+    model = env_for_prefix(env, prefix, "CODEX_MODEL", default_codex.get("model", ""))
+    home_path = env.get(f"{prefix}_CODEX_HOME_PATH", "")
+    machine_id_path = env.get(f"{prefix}_CODEX_MACHINE_ID_PATH", "")
+    return bool(model and home_path and machine_id_path)
 
 
 def builtin_provider(provider_id: str) -> dict[str, Any]:
@@ -49,6 +80,8 @@ def provider_has_auth_env(env: dict[str, str], provider_id: str) -> bool:
     provider_id = normalize_provider_id(provider_id)
     prefix = provider_prefix(provider_id)
     if env.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""):
+        return True
+    if _native_codex_configured(env, provider_id):
         return True
     codex_env_key = env.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_CODEX_AUTH_TOKEN")
     if env.get(f"{prefix}_CODEX_BASE_URL", "") and env.get(f"{prefix}_CODEX_MODEL", "") and codex_env_key and env.get(codex_env_key, ""):
@@ -184,7 +217,17 @@ def provider_codex_config(provider_id: str, env: dict[str, str] | None = None) -
     provider_name = env_for_prefix(env, prefix, "CODEX_PROVIDER_NAME", default_codex.get("provider_name", provider_id))
     relay = env_for_prefix(env, prefix, "CODEX_RELAY", default_codex.get("relay", ""))
     upstream_wire_api = env_for_prefix(env, prefix, "CODEX_UPSTREAM_WIRE_API", default_codex.get("upstream_wire_api", ""))
+    auth_mode = _codex_auth_mode(env, prefix, default_codex)
+    home_path = env_for_prefix(env, prefix, "CODEX_HOME_PATH", default_codex.get("home_path", ""))
+    machine_id_path = env_for_prefix(env, prefix, "CODEX_MACHINE_ID_PATH", default_codex.get("machine_id_path", ""))
+    container_user = env_for_prefix(env, prefix, "CODEX_CONTAINER_USER", default_codex.get("container_user", ""))
     auth_token = env.get(env_key, "") if env_key else ""
+    native_configured = bool(
+        auth_mode in {"native", "native-codex"}
+        and model
+        and env.get(f"{prefix}_CODEX_HOME_PATH", "")
+        and env.get(f"{prefix}_CODEX_MACHINE_ID_PATH", "")
+    )
     return {
         "provider_name": provider_name,
         "base_url": base_url,
@@ -193,8 +236,12 @@ def provider_codex_config(provider_id: str, env: dict[str, str] | None = None) -
         "upstream_wire_api": upstream_wire_api,
         "relay": relay,
         "env_key": env_key,
+        "auth_mode": auth_mode,
+        "home_path": home_path,
+        "machine_id_path": machine_id_path,
+        "container_user": container_user,
         "context_window": context_window,
-        "configured": bool(base_url and model and env_key and auth_token),
+        "configured": native_configured or bool(base_url and model and env_key and auth_token),
     }
 
 
@@ -267,6 +314,11 @@ def provider_ids_from_env(env: dict[str, str]) -> list[str]:
             if env.get(f"{prefix}_CODEX_MODEL") and env_key and env.get(env_key) and provider_id not in out:
                 out.append(provider_id)
     for key, value in env.items():
+        if key.endswith("_CODEX_AUTH_MODE") and str(value or "").strip().lower().replace("_", "-") in {"native", "native-codex"}:
+            provider_id = normalize_provider_id(key[: -len("_CODEX_AUTH_MODE")])
+            if provider_id not in out and _native_codex_configured(env, provider_id):
+                out.append(provider_id)
+    for key, value in env.items():
         if key.endswith("_OPENCODE_BASE_URL") and value:
             provider_id = normalize_provider_id(key[: -len("_OPENCODE_BASE_URL")])
             prefix = provider_prefix(provider_id)
@@ -288,6 +340,8 @@ def provider_has_codex_responses_adapter(
     wire_api_case_sensitive: bool = False,
 ) -> bool:
     prefix = provider_prefix(provider_id)
+    if _native_codex_configured(env, provider_id):
+        return True
     env_key = env.get(f"{prefix}_CODEX_ENV_KEY") or f"{prefix}_CODEX_AUTH_TOKEN"
     wire_api = env.get(f"{prefix}_CODEX_WIRE_API") or "responses"
     wire_api_ok = wire_api == "responses" if wire_api_case_sensitive else wire_api.strip().lower() == "responses"
@@ -314,6 +368,8 @@ def provider_has_opencode_adapter(
 
 
 def provider_codex_adapter_kind(env: dict[str, str], provider_id: str) -> str:
+    if _codex_is_native(env, provider_id):
+        return "native-codex"
     prefix = provider_prefix(provider_id)
     relay = (env.get(f"{prefix}_CODEX_RELAY") or "").strip().lower().replace("_", "-")
     upstream_wire_api = (env.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API") or "").strip().lower().replace("_", "-")

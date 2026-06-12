@@ -2428,6 +2428,18 @@ def _agent_node_codex_config(provider: dict, *, include_provider_secrets: bool =
     codex = dict(provider.get("codex") or {})
     if not codex:
         return {}
+    auth_mode = str(codex.get("auth_mode") or "").strip().lower().replace("_", "-")
+    wire_api = str(codex.get("wire_api") or "").strip().lower().replace("_", "-")
+    adapter_kind = str(codex.get("adapter_kind") or "").strip().lower().replace("_", "-")
+    if auth_mode in {"native", "native-codex"} or wire_api in {"native", "native-codex"} or adapter_kind == "native-codex":
+        codex["auth_mode"] = "native"
+        codex["wire_api"] = "native"
+        codex["adapter_kind"] = "native-codex"
+        codex["env_key"] = ""
+        codex["provider_id"] = str(provider.get("id") or "native-codex").replace("-", "_")
+        codex.pop("_runtime_token_env_key", None)
+        codex.pop("_runtime_token", None)
+        return codex
     # The real token is placed in the submit payload under a runtime-only env key;
     # agent-node rewrites it to a per-run proxy token before starting the container.
     env_key = str(codex.get("env_key") or "").strip()

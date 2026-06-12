@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -81,12 +82,41 @@ def _normalize_flag(value: object) -> str:
 
 
 def _codex_needs_relay(codex: dict) -> bool:
+    if _is_native_codex(codex):
+        return False
     relay = _normalize_flag(codex.get("relay") or codex.get("responses_relay") or codex.get("protocol_relay"))
     upstream_wire_api = _normalize_flag(codex.get("upstream_wire_api") or codex.get("upstream_api"))
     return relay in {"1", "true", "yes", "on", "codex-relay", "chat-completions"} or upstream_wire_api in {
         "chat-completions",
         "openai-chat-completions",
     }
+
+
+def _is_native_codex(codex: dict) -> bool:
+    return (
+        _normalize_flag(codex.get("auth_mode")) in {"native", "native-codex"}
+        or _normalize_flag(codex.get("wire_api")) in {"native", "native-codex"}
+        or _normalize_flag(codex.get("adapter_kind")) == "native-codex"
+    )
+
+
+def _prepare_native_codex_home(payload: dict, env: dict) -> None:
+    codex = dict(payload.get("codex") or {})
+    if not _is_native_codex(codex):
+        return
+    source = Path(_str(env.get("MYAPP_NATIVE_CODEX_SOURCE") or "/run/myapp-host-codex"))
+    target = Path(_str(env.get("CODEX_HOME") or "/home/agent/.codex"))
+    marker = target / ".myapp-native-codex-seeded"
+    if marker.exists():
+        return
+    if not source.exists() or not source.is_dir():
+        raise RuntimeError(f"native Codex source is not mounted or is not a directory: {source}")
+    target.mkdir(parents=True, exist_ok=True)
+    try:
+        shutil.copytree(source, target, dirs_exist_ok=True, symlinks=True)
+    except Exception as exc:
+        raise RuntimeError(f"failed to seed native Codex home from read-only host mount: {exc}") from exc
+    marker.write_text(str(int(time.time())) + "\n", encoding="utf-8")
 
 
 def _free_local_port() -> int:
@@ -201,6 +231,7 @@ def _claude_cmd(payload: dict) -> list[str]:
 
 def _codex_cmd(payload: dict) -> list[str]:
     codex = payload.get("codex") or {}
+    native_codex = _is_native_codex(codex)
     provider_key = _str(codex.get("provider_id") or payload.get("provider_id") or "custom")
     provider_key = provider_key.replace("-", "_")
     provider_name = _str(codex.get("provider_name") or provider_key)
@@ -216,25 +247,34 @@ def _codex_cmd(payload: dict) -> list[str]:
     cmd.extend(
         [
             "--json",
-            "--ignore-user-config",
             "--skip-git-repo-check",
             "--dangerously-bypass-approvals-and-sandbox",
             "--output-last-message",
             str(Path(WORKSPACE) / "codex-last-message.txt"),
-            "-c",
-            f"model_provider={_toml_string(provider_key)}",
-            "-c",
-            f"model={_toml_string(codex.get('model', ''))}",
-            "-c",
-            f"model_providers.{provider_key}.name={_toml_string(provider_name)}",
-            "-c",
-            f"model_providers.{provider_key}.base_url={_toml_string(codex.get('base_url', ''))}",
-            "-c",
-            f"model_providers.{provider_key}.env_key={_toml_string(codex.get('env_key', ''))}",
-            "-c",
-            f"model_providers.{provider_key}.wire_api={_toml_string(codex.get('wire_api', 'responses'))}",
         ]
     )
+    if native_codex:
+        model = _str(codex.get("model", "")).strip()
+        if model:
+            cmd.extend(["-c", f"model={_toml_string(model)}"])
+    else:
+        cmd.extend(
+            [
+                "--ignore-user-config",
+                "-c",
+                f"model_provider={_toml_string(provider_key)}",
+                "-c",
+                f"model={_toml_string(codex.get('model', ''))}",
+                "-c",
+                f"model_providers.{provider_key}.name={_toml_string(provider_name)}",
+                "-c",
+                f"model_providers.{provider_key}.base_url={_toml_string(codex.get('base_url', ''))}",
+                "-c",
+                f"model_providers.{provider_key}.env_key={_toml_string(codex.get('env_key', ''))}",
+                "-c",
+                f"model_providers.{provider_key}.wire_api={_toml_string(codex.get('wire_api', 'responses'))}",
+            ]
+        )
     context_window = _str(codex.get("context_window")).strip()
     if context_window.isdigit():
         cmd.extend(["-c", f"model_context_window={context_window}"])
@@ -495,6 +535,7 @@ def main() -> int:
     relay_proc: subprocess.Popen | None = None
     relay_threads: list[threading.Thread] = []
     if agent_id == "codex":
+        _prepare_native_codex_home(payload, env)
         payload, relay_proc, relay_threads = _start_codex_relay(payload, env)
         cmd = _codex_cmd(payload)
         stdin_data = _str(payload.get("prompt")).encode("utf-8")
