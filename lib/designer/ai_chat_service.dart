@@ -187,6 +187,7 @@ class AiChatService {
 
   static String get selectedProvider => _selectedProvider;
   static String get selectedAgentScope => _selectedAgentScope;
+  static String get providersScope => _providersScope;
   static String get selectedAgent =>
       selectedAgentForProvider(_selectedProvider);
   static List<AiProvider> get providers => _providers;
@@ -328,6 +329,13 @@ class AiChatService {
   static String _normalizeAgentScope(String value) {
     final normalized = value.trim().toLowerCase().replaceAll('_', '-');
     return normalized == 'private' ? 'private' : 'public';
+  }
+
+  static String _selectionAgentScope(String? scope) {
+    return _normalizeAgentScope(
+      scope ??
+          (_providersScope.isNotEmpty ? _providersScope : _selectedAgentScope),
+    );
   }
 
   static Future<void> setAgentScope(String scope) async {
@@ -558,20 +566,46 @@ class AiChatService {
     );
   }
 
-  Future<bool> setActiveProvider(String providerId) async {
+  Future<bool> setActiveProvider(
+    String providerId, {
+    String? agentScope,
+  }) async {
     if (_active == null) {
       await createNewSession();
     }
     final active = _active!;
     _ensureSessionRouting(active);
+    final targetScope = _selectionAgentScope(agentScope);
     final locked = activeAgentLocked;
     if (locked && !providerSupportsAgent(providerId, active.agentId)) {
       return false;
     }
+    active.agentScope = targetScope;
     active.providerId = providerId;
     if (!locked && !providerSupportsAgent(providerId, active.agentId)) {
       active.agentId = selectedAgentForProvider(providerId);
     }
+    active.updatedAt = DateTime.now().millisecondsSinceEpoch;
+    await _syncDefaultsFromActive();
+    await _persistSessions();
+    return true;
+  }
+
+  Future<bool> setActiveProviderAgent(
+    String providerId,
+    String agentId, {
+    String? agentScope,
+  }) async {
+    if (_active == null) {
+      await createNewSession();
+    }
+    final active = _active!;
+    _ensureSessionRouting(active);
+    if (activeAgentLocked) return false;
+    if (!providerSupportsAgent(providerId, agentId)) return false;
+    active.agentScope = _selectionAgentScope(agentScope);
+    active.providerId = providerId;
+    active.agentId = agentId;
     active.updatedAt = DateTime.now().millisecondsSinceEpoch;
     await _syncDefaultsFromActive();
     await _persistSessions();

@@ -2253,6 +2253,18 @@ class _DesignerBallState extends State<DesignerBall>
     setState(() {});
   }
 
+  void _showAiRouteLockedHint() {
+    final ctx = JsonDslApp.navigatorKey.currentContext ?? context;
+    final messenger = ScaffoldMessenger.maybeOf(ctx);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(
+      const SnackBar(
+        content: Text('当前会话的执行 Agent 已锁定，请新建会话后再选择这个供应商。'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   bool get _activeAgentLocked {
     return _chatService.activeAgentLocked ||
         _messages.any(
@@ -2266,19 +2278,29 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   Future<void> _handleSelectAiProvider(String providerId) async {
-    final changed = await _chatService.setActiveProvider(providerId);
+    final changed = await _chatService.setActiveProvider(
+      providerId,
+      agentScope: AiChatService.providersScope,
+    );
     if (!mounted) return;
     if (changed) {
       setState(() {});
+    } else {
+      _showAiRouteLockedHint();
     }
   }
 
   Future<void> _handleSelectAiAgent(String agentId) async {
-    if (_activeAgentLocked) return;
+    if (_activeAgentLocked) {
+      _showAiRouteLockedHint();
+      return;
+    }
     final changed = await _chatService.setActiveAgent(agentId);
     if (!mounted) return;
     if (changed) {
       setState(() {});
+    } else {
+      _showAiRouteLockedHint();
     }
   }
 
@@ -2286,12 +2308,20 @@ class _DesignerBallState extends State<DesignerBall>
     String providerId,
     String agentId,
   ) async {
-    if (_activeAgentLocked) return;
-    final providerChanged = await _chatService.setActiveProvider(providerId);
-    final agentChanged = await _chatService.setActiveAgent(agentId);
+    if (_activeAgentLocked) {
+      _showAiRouteLockedHint();
+      return;
+    }
+    final changed = await _chatService.setActiveProviderAgent(
+      providerId,
+      agentId,
+      agentScope: AiChatService.providersScope,
+    );
     if (!mounted) return;
-    if (providerChanged || agentChanged) {
+    if (changed) {
       setState(() {});
+    } else {
+      _showAiRouteLockedHint();
     }
   }
 
