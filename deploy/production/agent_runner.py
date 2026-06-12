@@ -119,6 +119,24 @@ def _prepare_native_codex_home(payload: dict, env: dict) -> None:
     marker.write_text(str(int(time.time())) + "\n", encoding="utf-8")
 
 
+def _configure_native_codex_env(payload: dict, env: dict) -> None:
+    codex = dict(payload.get("codex") or {})
+    if not _is_native_codex(codex):
+        return
+    home = _str(env.get("HOME") or "/myapp-agent-home").strip() or "/myapp-agent-home"
+    if home == "/home/agent":
+        home = "/myapp-agent-home"
+    env["HOME"] = home
+    env["CODEX_HOME"] = _str(env.get("CODEX_HOME") or f"{home}/.codex")
+    env["CODEX_NPM_CACHE"] = _str(env.get("CODEX_NPM_CACHE") or f"{home}/.npm")
+    env["npm_config_cache"] = _str(env.get("npm_config_cache") or f"{home}/.npm")
+    env["XDG_CACHE_HOME"] = _str(env.get("XDG_CACHE_HOME") or f"{home}/.cache")
+    env["XDG_CONFIG_HOME"] = _str(env.get("XDG_CONFIG_HOME") or f"{home}/.config")
+    env["XDG_DATA_HOME"] = _str(env.get("XDG_DATA_HOME") or f"{home}/.local/share")
+    env["OPENCODE_HOME"] = _str(env.get("OPENCODE_HOME") or home)
+    Path(home).mkdir(parents=True, exist_ok=True)
+
+
 def _free_local_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
@@ -535,6 +553,7 @@ def main() -> int:
     relay_proc: subprocess.Popen | None = None
     relay_threads: list[threading.Thread] = []
     if agent_id == "codex":
+        _configure_native_codex_env(payload, env)
         _prepare_native_codex_home(payload, env)
         payload, relay_proc, relay_threads = _start_codex_relay(payload, env)
         cmd = _codex_cmd(payload)

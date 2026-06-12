@@ -211,6 +211,7 @@ def _session_paths(user_id: str, session_id: str, job_id: str) -> dict[str, Path
         "codex": session_root / "codex",
         "npm_cache": session_root / "npm-cache",
         "home_cache": session_root / "home-cache",
+        "runtime_home": session_root / "home",
         "opencode_config": session_root / "opencode-config",
         "opencode_data": session_root / "opencode-data",
         "session_workspace": workspace_session_root,
@@ -705,13 +706,32 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
     payload_path.write_text(json.dumps(payload_without_env, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     container_user = "10001:10001"
-    codex_mount_source = _docker_bind_source(paths["codex"])
-    codex_mount_args = ["-v", f"{codex_mount_source}:/home/agent/.codex:rw"]
+    state_mount_args = [
+        "-v",
+        f"{_docker_bind_source(paths['claude'])}:/home/agent/.claude:rw",
+        "-v",
+        f"{_docker_bind_source(paths['claude_config'])}:/home/agent/.claude.json:rw",
+        "-v",
+        f"{_docker_bind_source(paths['codex'])}:/home/agent/.codex:rw",
+        "-v",
+        f"{_docker_bind_source(paths['npm_cache'])}:/home/agent/.npm:rw",
+        "-v",
+        f"{_docker_bind_source(paths['home_cache'])}:/home/agent/.cache:rw",
+        "-v",
+        f"{_docker_bind_source(paths['opencode_config'])}:/home/agent/.config/opencode:rw",
+        "-v",
+        f"{_docker_bind_source(paths['opencode_data'])}:/home/agent/.local/share/opencode:rw",
+    ]
     extra_mount_args: list[str] = []
     if native_codex:
         home_path = _native_codex_host_path(codex_config.get("home_path"), label="CODEX_HOME_PATH")
         machine_id_path = _native_codex_host_path(codex_config.get("machine_id_path") or "/etc/machine-id", label="CODEX_MACHINE_ID_PATH")
         container_user = _native_codex_container_user(codex_config)
+        native_home = "/myapp-agent-home"
+        state_mount_args = [
+            "-v",
+            f"{_docker_bind_source(paths['runtime_home'])}:{native_home}:rw",
+        ]
         extra_mount_args.extend(
             [
                 "--mount",
@@ -721,6 +741,14 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
             ]
         )
         runtime_env["MYAPP_NATIVE_CODEX_SOURCE"] = "/run/myapp-host-codex"
+        runtime_env["HOME"] = native_home
+        runtime_env["CODEX_HOME"] = f"{native_home}/.codex"
+        runtime_env["CODEX_NPM_CACHE"] = f"{native_home}/.npm"
+        runtime_env["npm_config_cache"] = f"{native_home}/.npm"
+        runtime_env["XDG_CACHE_HOME"] = f"{native_home}/.cache"
+        runtime_env["XDG_CONFIG_HOME"] = f"{native_home}/.config"
+        runtime_env["XDG_DATA_HOME"] = f"{native_home}/.local/share"
+        runtime_env["OPENCODE_HOME"] = native_home
 
     cmd = [
         "docker",
@@ -742,19 +770,7 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
         container_user,
         "--workdir",
         PROJECT_ROOT,
-        "-v",
-        f"{_docker_bind_source(paths['claude'])}:/home/agent/.claude:rw",
-        "-v",
-        f"{_docker_bind_source(paths['claude_config'])}:/home/agent/.claude.json:rw",
-        *codex_mount_args,
-        "-v",
-        f"{_docker_bind_source(paths['npm_cache'])}:/home/agent/.npm:rw",
-        "-v",
-        f"{_docker_bind_source(paths['home_cache'])}:/home/agent/.cache:rw",
-        "-v",
-        f"{_docker_bind_source(paths['opencode_config'])}:/home/agent/.config/opencode:rw",
-        "-v",
-        f"{_docker_bind_source(paths['opencode_data'])}:/home/agent/.local/share/opencode:rw",
+        *state_mount_args,
         "-v",
         f"{_docker_bind_source(paths['workspace'])}:/workspace:rw",
         "-v",
