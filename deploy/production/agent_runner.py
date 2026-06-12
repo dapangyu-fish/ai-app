@@ -272,9 +272,19 @@ def _codex_cmd(payload: dict) -> list[str]:
         ]
     )
     if native_codex:
-        model = _str(codex.get("model", "")).strip()
+        model = _str(codex.get("model", "gpt-5.5")).strip() or "gpt-5.5"
+        reasoning_effort = _str(
+            codex.get("model_reasoning_effort")
+            or codex.get("reasoning_effort")
+            or "xhigh"
+        ).strip()
         if model:
-            cmd.extend(["-c", f"model={_toml_string(model)}"])
+            cmd.extend(["-m", model])
+        if reasoning_effort:
+            cmd.extend([
+                "--config",
+                f"model_reasoning_effort={_toml_string(reasoning_effort)}",
+            ])
     else:
         cmd.extend(
             [
