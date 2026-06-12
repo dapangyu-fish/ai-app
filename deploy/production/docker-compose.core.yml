@@ -48,7 +48,7 @@ services:
       - "${APP_MINIO_CONSOLE_PORT:-9090}:9090"
 
   backend:
-    image: "${MYAPP_BACKEND_IMAGE:-dapangyufish/myapp-backend:agent-control-plane}"
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyu/myapp-backend:agent-control-plane}"
     container_name: myapp-backend
     restart: unless-stopped
     depends_on:
@@ -82,6 +82,7 @@ services:
       AI_SESSION_REDIS_PASSWORD: "${BACKEND_REDIS_PASSWORD:-redis-dev-password}"
       AI_SESSION_REDIS_TTL_SECONDS: "${AI_SESSION_REDIS_TTL_SECONDS:-86400}"
       AI_WORKER_EXECUTION_BACKEND: "${AI_WORKER_EXECUTION_BACKEND:-agent-pull}"
+      CONFIG_CENTER_URL: "${CONFIG_CENTER_INTERNAL_URL:-http://config-center:5000}"
       AGENT_NODE_URL: "http://agent-node:5590"
       AGENT_NODE_URLS: "${AGENT_NODE_URLS:-http://agent-node:5590}"
       AGENT_NODE_TOKEN: "${AGENT_NODE_TOKEN:-}"
@@ -127,7 +128,7 @@ services:
       start_period: 30s
 
   ai-worker:
-    image: "${MYAPP_BACKEND_IMAGE:-dapangyufish/myapp-backend:agent-control-plane}"
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyu/myapp-backend:agent-control-plane}"
     container_name: myapp-ai-worker
     restart: unless-stopped
     depends_on:
@@ -157,6 +158,7 @@ services:
       AI_SESSION_REDIS_PASSWORD: "${BACKEND_REDIS_PASSWORD:-redis-dev-password}"
       AI_SESSION_REDIS_TTL_SECONDS: "${AI_SESSION_REDIS_TTL_SECONDS:-86400}"
       AI_WORKER_EXECUTION_BACKEND: "${AI_WORKER_EXECUTION_BACKEND:-agent-pull}"
+      CONFIG_CENTER_URL: "${CONFIG_CENTER_INTERNAL_URL:-http://config-center:5000}"
       AGENT_NODE_URL: "http://agent-node:5590"
       AGENT_NODE_URLS: "${AGENT_NODE_URLS:-http://agent-node:5590}"
       AGENT_NODE_TOKEN: "${AGENT_NODE_TOKEN:-}"
@@ -183,7 +185,7 @@ services:
       MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
 
   registry:
-    image: "${MYAPP_BACKEND_IMAGE:-dapangyufish/myapp-backend:agent-control-plane}"
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyu/myapp-backend:agent-control-plane}"
     container_name: myapp-registry
     restart: unless-stopped
     depends_on:
@@ -220,7 +222,7 @@ services:
       start_period: 20s
 
   config-center:
-    image: "${MYAPP_BACKEND_IMAGE:-dapangyufish/myapp-backend:agent-control-plane}"
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyu/myapp-backend:agent-control-plane}"
     container_name: myapp-config-center
     restart: unless-stopped
     working_dir: /app/config_center
@@ -246,7 +248,7 @@ services:
       - "${CONFIG_CENTER_PORT:-5000}:5000"
 
   user-center:
-    image: "${MYAPP_BACKEND_IMAGE:-dapangyufish/myapp-backend:agent-control-plane}"
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyu/myapp-backend:agent-control-plane}"
     container_name: myapp-user-center
     restart: unless-stopped
     working_dir: /app/user_center
@@ -265,7 +267,7 @@ services:
       - "${USER_CENTER_PORT:-5567}:5567"
 
   agent-node:
-    image: "${MYAPP_AGENT_NODE_IMAGE:-dapangyufish/myapp-agent-node:agent-control-plane}"
+    image: "${MYAPP_AGENT_NODE_IMAGE:-dapangyu/myapp-agent-node:agent-control-plane}"
     container_name: myapp-agent-node
     restart: unless-stopped
     env_file:
@@ -289,7 +291,7 @@ services:
       AGENT_NODE_EVENT_FLUSH_BACKGROUND_SECONDS: "${AGENT_NODE_EVENT_FLUSH_BACKGROUND_SECONDS:-5}"
       AGENT_NODE_SELF_REGISTER_URL: "${AGENT_NODE_SELF_REGISTER_URL:-}"
       PUBLIC_HOST: "${PUBLIC_HOST:-127.0.0.1}"
-      AGENT_NODE_RUNTIME_IMAGE: "${MYAPP_AGENT_RUNTIME_IMAGE:-dapangyufish/myapp-agent-runtime:agent-control-plane}"
+      AGENT_NODE_RUNTIME_IMAGE: "${MYAPP_AGENT_RUNTIME_IMAGE:-dapangyu/myapp-agent-runtime:agent-control-plane}"
       AGENT_NODE_DOCKER_NETWORK: "${AGENT_NODE_DOCKER_NETWORK:-myapp_agent_runtime}"
       AGENT_NODE_ALLOW_HOST_GATEWAY: "${AGENT_NODE_ALLOW_HOST_GATEWAY:-0}"
       AGENT_NODE_PROVIDER_PROXY_BASE_URL: "${AGENT_NODE_PROVIDER_PROXY_BASE_URL:-http://agent-node:5590}"

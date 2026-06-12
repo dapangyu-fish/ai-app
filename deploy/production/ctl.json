@@ -19,13 +19,16 @@
   },
   "registries": {
     "docker_hub": {
-      "namespace": "dapangyufish"
+      "namespace": "dapangyu"
     }
   },
   "images": {
-    "backend": "dapangyufish/myapp-backend:agent-control-plane",
-    "agent_node": "dapangyufish/myapp-agent-node:agent-control-plane",
-    "agent_runtime": "dapangyufish/myapp-agent-runtime:agent-control-plane"
+    "backend": "dapangyu/myapp-backend:agent-control-plane",
+    "agent_node": "dapangyu/myapp-agent-node:agent-control-plane",
+    "agent_runtime": "dapangyu/myapp-agent-runtime:agent-control-plane",
+    "backend_base": "dapangyu/myapp-backend-base:agent-control-plane",
+    "agent_node_base": "dapangyu/myapp-agent-node-base:agent-control-plane",
+    "agent_runtime_base": "dapangyu/myapp-agent-runtime-base:agent-control-plane"
   },
   "domains": {
     "backend": "http://127.0.0.1:5566",

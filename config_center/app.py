@@ -149,6 +149,12 @@ def init_db() -> None:
             ("pause_register", "false", "bool", "暂停新用户注册"),
             ("pause_login", "false", "bool", "暂停登录"),
             ("pause_request", "false", "bool", "紧急熔断：暂停所有客户端请求"),
+            (
+                "ai_generation_pipeline",
+                '"json_dsl_v1"',
+                "string",
+                "AI APP 生成链路：json_dsl_v1 或 dart_to_json_v2",
+            ),
             ("splash_text", '""', "string", "闪屏底部文案（空串=不显示）"),
             ("splash_duration_ms", "1500", "number", "闪屏展示时长（毫秒）"),
         ]

@@ -132,20 +132,82 @@ GENERATE_PROMPT_PATH = (
     if GENERATE_PROMPT_MODE in ("legacy", "full")
     else INDEXED_GENERATE_PROMPT_PATH
 )
+GENERATION_PIPELINE_V1 = "json_dsl_v1"
+GENERATION_PIPELINE_V2 = "dart_to_json_v2"
+SUPPORTED_GENERATION_PIPELINES = {GENERATION_PIPELINE_V1, GENERATION_PIPELINE_V2}
+AI_GENERATION_PIPELINE_DEFAULT = (
+    os.environ.get("AI_GENERATION_PIPELINE_DEFAULT")
+    or os.environ.get("AI_GENERATION_PIPELINE")
+    or GENERATION_PIPELINE_V1
+).strip().lower().replace("-", "_") or GENERATION_PIPELINE_V1
+if AI_GENERATION_PIPELINE_DEFAULT not in SUPPORTED_GENERATION_PIPELINES:
+    AI_GENERATION_PIPELINE_DEFAULT = GENERATION_PIPELINE_V1
+CONFIG_CENTER_URL = os.environ.get("CONFIG_CENTER_URL", "").rstrip("/")
+AI_GENERATION_PIPELINE_CONFIG_KEY = os.environ.get(
+    "AI_GENERATION_PIPELINE_CONFIG_KEY",
+    "ai_generation_pipeline",
+).strip() or "ai_generation_pipeline"
+AI_GENERATION_PIPELINE_CONFIG_TTL_SECONDS = max(
+    1,
+    _env_int("AI_GENERATION_PIPELINE_CONFIG_TTL_SECONDS", 30),
+)
+PIPELINE_PROMPTS_DIR = os.path.join(PROMPTS_DIR, "pipelines")
+V2_PROMPT_DIR = os.path.join(PIPELINE_PROMPTS_DIR, GENERATION_PIPELINE_V2)
+V2_PROMPT_FILES = (
+    "system.md",
+    "capability_inventory.md",
+    "dart_subset.md",
+    "dart_generation.md",
+    "json_translation.md",
+    "validation_upload.md",
+)
 
 
-def load_generate_prompt() -> str:
+def normalize_generation_pipeline(value: str | None) -> str:
+    normalized = (value or "").strip().lower().replace("-", "_")
+    if normalized in {"v1", "json", "json_dsl", "json_dsl_v1", "legacy"}:
+        return GENERATION_PIPELINE_V1
+    if normalized in {"v2", "dart", "dart_to_json", "dart_to_json_v2"}:
+        return GENERATION_PIPELINE_V2
+    return GENERATION_PIPELINE_V1
+
+
+def generation_prompt_reference(pipeline: str | None = None) -> str:
+    pipeline_id = normalize_generation_pipeline(pipeline or AI_GENERATION_PIPELINE_DEFAULT)
+    if pipeline_id == GENERATION_PIPELINE_V2:
+        return os.path.join(V2_PROMPT_DIR, "system.md")
+    return GENERATE_PROMPT_PATH
+
+
+def _load_v2_generate_prompt() -> str:
+    parts = []
+    for filename in V2_PROMPT_FILES:
+        path = os.path.join(V2_PROMPT_DIR, filename)
+        if not os.path.isfile(path):
+            continue
+        with open(path, "r", encoding="utf-8") as f:
+            parts.append(f.read().strip())
+    if not parts:
+        raise FileNotFoundError(os.path.join(V2_PROMPT_DIR, "system.md"))
+    return "\n\n".join(part for part in parts if part)
+
+
+def load_generate_prompt(pipeline: str | None = None) -> str:
     """读取系统 prompt，**运行时**把硬编码的生产域名替换成当前环境实际地址。
 
     生产：REGISTRY_BASE_URL / MINIO_PUBLIC_URL 都是 dapangyu.work，replace 是 no-op
     测试环境：env 注入 http://IP:port，prompt 里 AI 看到的引用就指向测试服了
     （否则 AI 生成的 JSON-APP 会硬塞生产 URL，跑起来仍然访问生产）。
     """
-    prompt_path = GENERATE_PROMPT_PATH
-    if not os.path.isfile(prompt_path):
-        prompt_path = LEGACY_GENERATE_PROMPT_PATH
-    with open(prompt_path, "r", encoding="utf-8") as f:
-        content = f.read()
+    pipeline_id = normalize_generation_pipeline(pipeline or AI_GENERATION_PIPELINE_DEFAULT)
+    if pipeline_id == GENERATION_PIPELINE_V2:
+        content = _load_v2_generate_prompt()
+    else:
+        prompt_path = GENERATE_PROMPT_PATH
+        if not os.path.isfile(prompt_path):
+            prompt_path = LEGACY_GENERATE_PROMPT_PATH
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            content = f.read()
     return (
         content
         .replace("https://myapp-registry.dapangyu.work", REGISTRY_BASE_URL)

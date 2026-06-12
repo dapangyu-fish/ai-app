@@ -1,99 +1,13 @@
-FROM ubuntu:24.04
+ARG BASE_IMAGE=dapangyu/myapp-agent-runtime-base:agent-control-plane
+FROM ${BASE_IMAGE}
 
 ARG MYAPP_BUILD_COMMIT=unknown
 ARG MYAPP_BUILD_VERSION=unknown
 
-ENV DEBIAN_FRONTEND=noninteractive \
-    LANG=C.UTF-8 \
-    LC_ALL=C.UTF-8 \
-    PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    MYAPP_BUILD_COMMIT=${MYAPP_BUILD_COMMIT} \
+ENV MYAPP_BUILD_COMMIT=${MYAPP_BUILD_COMMIT} \
     MYAPP_BUILD_VERSION=${MYAPP_BUILD_VERSION}
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        bash \
-        ca-certificates \
-        curl \
-        gnupg \
-        wget \
-        git \
-        openssh-client \
-        coreutils \
-        findutils \
-        grep \
-        sed \
-        gawk \
-        ripgrep \
-        jq \
-        procps \
-        psmisc \
-        lsof \
-        file \
-        tree \
-        unzip \
-        zip \
-        tar \
-        gzip \
-        xz-utils \
-        uuid-runtime \
-        python3 \
-        python3-dev \
-        python3-pip \
-        python3-venv \
-        build-essential \
-        libpq5 \
-        portaudio19-dev \
-        libasound2-dev \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y --no-install-recommends nodejs \
-    && install -m 0755 -d /etc/apt/keyrings \
-    && curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /etc/apt/keyrings/google-linux.gpg \
-    && chmod 0644 /etc/apt/keyrings/google-linux.gpg \
-    && echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-linux.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        google-chrome-stable \
-        fonts-liberation \
-        fonts-noto-cjk \
-        fonts-noto-color-emoji \
-    && npm install -g @anthropic-ai/claude-code @openai/codex@0.136.0 opencode-ai \
-    && ln -sf "$(command -v claude)" /usr/local/bin/claude \
-    && ln -sf "$(command -v codex)" /usr/local/bin/codex \
-    && ln -sf "$(command -v opencode)" /usr/local/bin/opencode \
-    && claude --version \
-    && codex --version \
-    && opencode --version \
-    && google-chrome --version \
-    && python3 -m venv /opt/venv \
-    && /opt/venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && /opt/venv/bin/pip install --no-cache-dir codex-relay==0.3.3 \
-    && npm_config_cache=/tmp/codex-npm-cache npx -y @openai/codex@0.136.0 --version \
-    && rm -rf /var/lib/apt/lists/* /root/.npm /tmp/codex-npm-cache
-
-ENV PATH=/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
-    CLAUDE_BIN=/usr/local/bin/claude \
-    CODEX_BIN=/usr/local/bin/codex \
-    OPENCODE_BIN=/usr/local/bin/opencode \
-    CODEX_RELAY_BIN=/opt/venv/bin/codex-relay \
-    CODEX_NPX_PACKAGE=@openai/codex@0.136.0 \
-    CODEX_NODE_BIN_DIR=/usr/bin \
-    CODEX_NPM_CACHE=/home/agent/.npm \
-    CODEX_HOME=/home/agent/.codex \
-    OPENCODE_HOME=/home/agent \
-    AI_APP_PROJECT_ROOT=/app \
-    AI_APP_VISUAL_REVIEW_ENABLED=1 \
-    AI_APP_VISUAL_REVIEW_CMD=myapp-visual-review \
-    AI_APP_VISUAL_REVIEW_WEB_BASE=https://myapp-web.dapangyu.work \
-    AI_APP_VISUAL_REVIEW_REMOTE_PARAM=remote_file \
-    AI_APP_VISUAL_REVIEW_PRIMARY_VIEWPORT=402x874 \
-    AI_APP_VISUAL_REVIEW_SMALL_VIEWPORT=360x780 \
-    AI_APP_VISUAL_REVIEW_MAX_CLICKS=4
-
 WORKDIR /app
-
-COPY backend/requirements.txt /tmp/requirements.txt
-RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY backend/ /app/backend/
 COPY lib/ /app/lib/
@@ -109,11 +23,7 @@ COPY deploy/production/agent_runner.py /opt/myapp/agent_runner.py
 RUN chmod 755 /app/scripts/myapp_visual_review.py \
     && ln -sf /app/scripts/myapp_visual_review.py /usr/local/bin/myapp-visual-review \
     && myapp-visual-review --help >/dev/null \
-    && useradd -m -u 10001 -s /bin/bash agent \
-    && mkdir -p /workspace /home/agent/.claude /home/agent/.codex /home/agent/.npm \
-        /home/agent/.config/opencode /home/agent/.local/share/opencode /run/myapp-agent \
-    && touch /run/myapp-agent/payload.json \
-    && chown -R agent:agent /workspace /home/agent /opt/myapp /run/myapp-agent \
+    && chown -R agent:agent /opt/myapp /run/myapp-agent \
     && chmod 755 /opt/myapp/agent_runner.py
 
 USER 10001:10001

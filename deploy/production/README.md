@@ -297,9 +297,21 @@ listener cannot distinguish all services by hostname.
 | Mode | Use when | Behavior |
 |---|---|---|
 | `--build` | Development/test host or source-controlled production host | Builds images from the checkout recorded in `/etc/myapp/ctl.json` |
+| `--build --base` | Dependency/runtime update | Builds base images first, then builds code images from those bases |
 | `--pull` | Image-based production host | Pulls configured images and starts containers |
+| `--pull --base` | New build host that also needs local base tags | Pulls base images and final images |
 | `--pull --mirror=<prefix>` | Image-based host behind slow or blocked Docker Hub access | Pulls `<prefix>/<image>` and tags it back to `<image>` |
 | no flag | Component already has an image locally | Starts/restarts without building or pulling |
+
+The three deployable images are split into base and code layers:
+
+- `dapangyu/myapp-backend-base:<tag>` -> `dapangyu/myapp-backend:<tag>`
+- `dapangyu/myapp-agent-node-base:<tag>` -> `dapangyu/myapp-agent-node:<tag>`
+- `dapangyu/myapp-agent-runtime-base:<tag>` -> `dapangyu/myapp-agent-runtime:<tag>`
+
+Use the base build only when apt packages, Python requirements, npm tooling,
+Chrome, Claude/Codex/OpenCode, or other runtime dependencies changed. For
+normal Python/Dart/JSON prompt/code updates, build only the final code images.
 
 Refresh the installed control CLI and compose definitions before routine
 updates:
@@ -369,6 +381,12 @@ Both agent-node and runtime changed:
 ```bash
 myapp-ctl agent ls
 myapp-ctl deploy agent-node agent-runtime --build --no-setup --no-test-user
+```
+
+Runtime dependency change, for example a new apt package or agent CLI version:
+
+```bash
+myapp-ctl deploy agent-runtime --build --base --no-setup --no-test-user
 ```
 
 For image-based hosts, use `--pull` after pushing images:
@@ -483,9 +501,9 @@ Image operations:
 
 ```bash
 myapp-ctl image ls
-myapp-ctl image build [all|backend|agent-node|agent-runtime]
-myapp-ctl image pull [all|backend|agent-node|agent-runtime]
-myapp-ctl image push [all|backend|agent-node|agent-runtime]
+myapp-ctl image build [all|backend|agent-node|agent-runtime] [--base]
+myapp-ctl image pull [all|backend|agent-node|agent-runtime] [--base]
+myapp-ctl image push [all|backend|agent-node|agent-runtime] [--base]
 ```
 
 Agent operations:
@@ -494,7 +512,7 @@ Agent operations:
 myapp-ctl agent ls
 myapp-ctl agent-node ls [--namespace public|all|<user-id>] [--json] [--no-probe]
 myapp-ctl agent-node status [node-id] [--namespace public|all|<user-id>] [--json] [--no-probe]
-myapp-ctl agent-node add --backend <url> --host <host> --node-id <id> --name <name> [--pull|--build]
+myapp-ctl agent-node add --backend <url> --host <host> --node-id <id> --name <name> [--pull|--build] [--base]
 myapp-ctl agent-node join --backend <url> --node-id <id> --name <name> --agent-token <token> --registration-token <token>
 MYAPP_PRIVATE_AGENT_JOIN_TOKEN=<token> myapp-ctl agent-node private join --backend <url> --node-id <id> --name <name>
 myapp-ctl agent-node pause [node-id] [--reason <text>]

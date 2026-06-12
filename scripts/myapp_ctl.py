@@ -122,6 +122,11 @@ IMAGE_TARGETS = {
     "agent-node": ("agent_node", "deploy/production/Dockerfile.agent-node"),
     "backend": ("backend", "deploy/production/Dockerfile.backend"),
 }
+IMAGE_BASE_TARGETS = {
+    "agent-runtime": ("agent_runtime_base", "deploy/production/Dockerfile.agent-runtime-base"),
+    "agent-node": ("agent_node_base", "deploy/production/Dockerfile.agent-node-base"),
+    "backend": ("backend_base", "deploy/production/Dockerfile.backend-base"),
+}
 BACKEND_IMAGE_SERVICES = {"backend", "ai-worker", "registry", "config-center", "user-center"}
 DEFAULT_NETWORKS = ["myapp_default", "myapp_agent_runtime"]
 COMPOSE_ENV_FILE_NAMES = [
@@ -1122,17 +1127,18 @@ def _run_agent_node_instance(
     provider_env_path: Path | None = None,
     build: bool = False,
     pull: bool = False,
+    include_base: bool = False,
 ) -> int:
     if build and pull:
         print("--build and --pull cannot be used together", file=sys.stderr)
         return 2
     image_targets = ["agent-runtime", "agent-node"]
     if build:
-        rc = _deploy_images(image_targets, action="build", dry_run=False)
+        rc = _deploy_images(image_targets, action="build", dry_run=False, include_base=include_base)
         if rc != 0:
             return rc
     elif pull:
-        rc = _deploy_images(image_targets, action="pull", dry_run=False)
+        rc = _deploy_images(image_targets, action="pull", dry_run=False, include_base=include_base)
         if rc != 0:
             return rc
     for network in DEFAULT_NETWORKS:
@@ -1292,7 +1298,14 @@ def _build_commit_for_source(source_dir: Path) -> str:
 def _configured_image(target: str) -> str:
     cfg_images = _cfg().get("images", {})
     key, _ = IMAGE_TARGETS[target]
-    default = f"dapangyufish/myapp-{target}:agent-control-plane"
+    default = f"dapangyu/myapp-{target}:agent-control-plane"
+    return str(cfg_images.get(key) or default)
+
+
+def _configured_base_image(target: str) -> str:
+    cfg_images = _cfg().get("images", {})
+    key, _ = IMAGE_BASE_TARGETS[target]
+    default = f"dapangyu/myapp-{target}-base:agent-control-plane"
     return str(cfg_images.get(key) or default)
 
 
@@ -1636,20 +1649,46 @@ def _pull_compose_images(names: list[str], *, mirror: str | None, dry_run: bool,
     return 0
 
 
-def _deploy_images(targets: list[str], *, action: str, dry_run: bool, mirror: str | None = None) -> int:
+def _deploy_images(
+    targets: list[str],
+    *,
+    action: str,
+    dry_run: bool,
+    mirror: str | None = None,
+    include_base: bool = False,
+) -> int:
     source_dir = _source_dir()
     build_commit = ""
     build_version = ""
+    base_done: set[str] = set()
     for target in targets:
         image = _configured_image(target)
         if action == "build":
             if not build_commit:
                 build_commit = _build_commit_for_source(source_dir)
                 build_version = str(os.environ.get("MYAPP_BUILD_VERSION") or build_commit).strip()[:128] or build_commit
+            base_image = _configured_base_image(target)
+            if include_base and target not in base_done:
+                _, base_dockerfile = IMAGE_BASE_TARGETS[target]
+                base_cmd = [
+                    "docker",
+                    "build",
+                    "-f",
+                    str(source_dir / base_dockerfile),
+                    "-t",
+                    base_image,
+                    str(source_dir),
+                ]
+                rc = _run_or_print(base_cmd, dry_run=dry_run)
+                if rc != 0:
+                    return rc
+                base_done.add(target)
             _, dockerfile = IMAGE_TARGETS[target]
             cmd = [
                 "docker",
                 "build",
+                "--build-arg",
+                f"BASE_IMAGE={base_image}",
                 "--build-arg",
                 f"MYAPP_BUILD_COMMIT={build_commit}",
                 "--build-arg",
@@ -1661,8 +1700,18 @@ def _deploy_images(targets: list[str], *, action: str, dry_run: bool, mirror: st
                 str(source_dir),
             ]
         elif action == "push":
+            if include_base and target not in base_done:
+                rc = _run_or_print(["docker", "push", _configured_base_image(target)], dry_run=dry_run)
+                if rc != 0:
+                    return rc
+                base_done.add(target)
             cmd = ["docker", "push", image]
         elif action == "pull":
+            if include_base and target not in base_done:
+                rc = _pull_image(_configured_base_image(target), mirror=mirror, dry_run=dry_run)
+                if rc != 0:
+                    return rc
+                base_done.add(target)
             rc = _pull_image(image, mirror=mirror, dry_run=dry_run)
             if rc != 0:
                 return rc
@@ -1991,6 +2040,9 @@ def cmd_deploy(args) -> int:
     if args.build and args.pull:
         print("--build and --pull cannot be used together", file=sys.stderr)
         return 2
+    if getattr(args, "base", False) and not (args.build or args.pull):
+        print("--base requires --build or --pull", file=sys.stderr)
+        return 2
     if getattr(args, "mirror", None) and not args.pull:
         print("--mirror requires --pull", file=sys.stderr)
         return 2
@@ -2011,6 +2063,8 @@ def cmd_deploy(args) -> int:
         print("deploy plan:")
         if image_targets:
             print("  images: " + ", ".join(image_targets))
+            if getattr(args, "base", False):
+                print("  base images: " + ", ".join(_configured_base_image(target) for target in image_targets))
         if compose_names:
             print("  compose services: " + ", ".join(compose_names))
         if docker_names:
@@ -2036,11 +2090,17 @@ def cmd_deploy(args) -> int:
     if not args.dry_run:
         _sync_runtime_secrets_from_host_config(data_root)
     if args.build:
-        rc = _deploy_images(image_targets, action="build", dry_run=args.dry_run)
+        rc = _deploy_images(image_targets, action="build", dry_run=args.dry_run, include_base=bool(getattr(args, "base", False)))
         if rc != 0:
             return rc
     elif args.pull:
-        rc = _deploy_images(image_targets, action="pull", dry_run=args.dry_run, mirror=args.mirror)
+        rc = _deploy_images(
+            image_targets,
+            action="pull",
+            dry_run=args.dry_run,
+            mirror=args.mirror,
+            include_base=bool(getattr(args, "base", False)),
+        )
         if rc != 0:
             return rc
         pulled_images = {_configured_image(target) for target in image_targets}
@@ -4764,19 +4824,33 @@ def cmd_image(args) -> int:
         rows = []
         for target in IMAGE_TARGETS:
             image = _configured_image(target)
+            base_image = _configured_base_image(target)
             rows.append({
                 "target": target,
                 "image": image,
+                "base_image": base_image,
                 "state": "present" if _image_exists(image) else "missing",
+                "base_state": "present" if _image_exists(base_image) else "missing",
             })
-        _print_table(rows, [("target", "TARGET"), ("state", "STATE"), ("image", "IMAGE")])
+        _print_table(rows, [
+            ("target", "TARGET"),
+            ("state", "STATE"),
+            ("image", "IMAGE"),
+            ("base_state", "BASE"),
+            ("base_image", "BASE_IMAGE"),
+        ])
         return 0
     try:
         targets = _image_targets_for_arg(args.target)
     except KeyError as exc:
         print(str(exc), file=sys.stderr)
         return 2
-    return _deploy_images(targets, action=args.image_cmd, dry_run=args.dry_run)
+    return _deploy_images(
+        targets,
+        action=args.image_cmd,
+        dry_run=args.dry_run,
+        include_base=bool(getattr(args, "base", False)),
+    )
 
 
 def _run_log_summary(path: Path) -> dict:
@@ -4917,6 +4991,8 @@ def _print_agent_add_script(args) -> int:
         join_cmd.append("--pull")
     if getattr(args, "build", False):
         join_cmd.append("--build")
+    if getattr(args, "base", False):
+        join_cmd.append("--base")
     if mode == "direct":
         join_cmd.extend(["--public-port", str(args.public_port)])
         if args.no_nginx:
@@ -4937,6 +5013,9 @@ def _print_agent_add_script(args) -> int:
 def _join_agent_node(args) -> int:
     if args.build and args.pull:
         print("--build and --pull cannot be used together", file=sys.stderr)
+        return 2
+    if getattr(args, "base", False) and not (args.build or args.pull):
+        print("--base requires --build or --pull", file=sys.stderr)
         return 2
     backend_url = (args.backend or "").rstrip("/")
     mode = (args.mode or "pull").strip().lower().replace("_", "-")
@@ -5089,6 +5168,7 @@ def _join_agent_node(args) -> int:
             provider_env_path=provider_env_path,
             build=bool(args.build),
             pull=bool(args.pull),
+            include_base=bool(getattr(args, "base", False)),
         )
         if rc != 0:
             return rc
@@ -5159,6 +5239,8 @@ def _join_agent_node(args) -> int:
         deploy_args.append("--pull")
     elif args.build:
         deploy_args.append("--build")
+    if getattr(args, "base", False):
+        deploy_args.append("--base")
     rc = _run(deploy_args, capture=False).returncode
     if rc != 0:
         return rc
@@ -5315,6 +5397,9 @@ def _status_private_agent_node(args) -> int:
 def _join_private_agent_node(args) -> int:
     if args.build and args.pull:
         print("--build and --pull cannot be used together", file=sys.stderr)
+        return 2
+    if getattr(args, "base", False) and not (args.build or args.pull):
+        print("--base requires --build or --pull", file=sys.stderr)
         return 2
     backend_url = (args.backend or "").rstrip("/")
     if not backend_url:
@@ -5524,6 +5609,7 @@ def _join_private_agent_node(args) -> int:
             provider_env_path=provider_env_path,
             build=bool(args.build),
             pull=bool(args.pull),
+            include_base=bool(getattr(args, "base", False)),
         )
     else:
         _write_env(_secret_path("agent"), new_agent_env)
@@ -5533,6 +5619,8 @@ def _join_private_agent_node(args) -> int:
             deploy_cmd.append("--build")
         elif args.pull:
             deploy_cmd.append("--pull")
+        if getattr(args, "base", False):
+            deploy_cmd.append("--base")
         rc = _run(deploy_cmd, capture=False).returncode
     if rc != 0:
         return rc
@@ -6304,6 +6392,16 @@ def build_parser() -> argparse.ArgumentParser:
             help=_tx("image target: all, agent-runtime, agent-node, backend", zh="镜像目标: all, agent-runtime, agent-node, backend", de="Image-Ziel: all, agent-runtime, agent-node, backend", es="destino de imagen: all, agent-runtime, agent-node, backend"),
         )
         image_action.add_argument("--dry-run", action="store_true")
+        image_action.add_argument(
+            "--base",
+            action="store_true",
+            help=_tx(
+                "also process base images; use when apt/pip/npm/agent runtime dependencies changed",
+                zh="同时处理 base 镜像；apt/pip/npm/agent 运行时依赖变化时使用",
+                de="auch Base-Images verarbeiten; nutzen, wenn apt/pip/npm/Agent-Laufzeitabhaengigkeiten geaendert wurden",
+                es="procesar tambien imagenes base; usar cuando cambien dependencias apt/pip/npm/runtime de agentes",
+            ),
+        )
         image_action.set_defaults(func=cmd_image)
     deploy = sub.add_parser(
         "deploy",
@@ -6319,6 +6417,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
     deploy.add_argument("--build", action="store_true", help=_tx("build required images from the local source tree before deploy", zh="部署前从本地源码构建所需镜像", de="benoetigte Images vor dem Deploy aus lokalem Quellcode bauen", es="construir imagenes necesarias desde el codigo local antes de desplegar"))
     deploy.add_argument("--pull", action="store_true", help=_tx("pull required images before deploy", zh="部署前拉取所需镜像", de="benoetigte Images vor dem Deploy laden", es="descargar imagenes necesarias antes de desplegar"))
+    deploy.add_argument(
+        "--base",
+        action="store_true",
+        help=_tx(
+            "with --build/--pull, also build or pull base images",
+            zh="配合 --build/--pull，同时构建或拉取 base 镜像",
+            de="mit --build/--pull auch Base-Images bauen oder laden",
+            es="con --build/--pull, construir o descargar tambien imagenes base",
+        ),
+    )
     deploy.add_argument("--mirror", help=_tx("Docker image mirror prefix used with --pull, for example mirror.houlang.cloud/dh", zh="配合 --pull 使用的 Docker 镜像站前缀，例如 mirror.houlang.cloud/dh", de="Docker-Image-Mirror-Prefix fuer --pull, z.B. mirror.houlang.cloud/dh", es="prefijo mirror de imagenes Docker para --pull, por ejemplo mirror.houlang.cloud/dh"))
     deploy.add_argument("--plan", action="store_true", help=_tx("print deployment plan only", zh="仅打印部署计划", de="nur den Deployment-Plan ausgeben", es="solo imprimir el plan de despliegue"))
     deploy.add_argument("--dry-run", action="store_true")
@@ -6561,6 +6669,7 @@ def build_parser() -> argparse.ArgumentParser:
     private_join.add_argument("--label", action="append")
     private_join.add_argument("--pull", action="store_true", help=_tx("pull configured images before deploy", zh="部署前拉取已配置镜像", de="konfigurierte Images vor Deploy laden", es="descargar imagenes configuradas antes de desplegar"))
     private_join.add_argument("--build", action="store_true", help=_tx("build images from local source before deploy", zh="部署前从本地源码构建镜像", de="Images vor Deploy aus lokalem Quellcode bauen", es="construir imagenes desde codigo local antes de desplegar"))
+    private_join.add_argument("--base", action="store_true", help=_tx("also build or pull base images", zh="同时构建或拉取 base 镜像", de="auch Base-Images bauen oder laden", es="construir o descargar tambien imagenes base"))
     private_join.add_argument("--no-provider-setup", action="store_true", help=_tx("do not prompt for local AI provider config", zh="不交互配置本地 AI 供应商", de="nicht nach lokaler KI-Provider-Konfiguration fragen", es="no pedir configuracion local de proveedor IA"))
     private_join.add_argument("--replace-existing-agent-node", action="store_true", help=_tx("allow replacing the singleton myapp-agent-node on this host", zh="允许替换本机 singleton myapp-agent-node", de="Singleton myapp-agent-node auf diesem Host ersetzen", es="permitir reemplazar el singleton myapp-agent-node de este host"))
     private_join.set_defaults(func=cmd_agent_node)
@@ -6581,6 +6690,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_add.add_argument("--provider-mode", choices=["master", "local"], default="master", metavar="MODE", help=_tx("provider key source: master, local", zh="供应商密钥来源: master, local", de="Provider-Key-Quelle: master, local", es="origen de claves del proveedor: master, local"))
     agent_node_add.add_argument("--pull", action="store_true", help=_tx("make the join command pull required images", zh="生成的加入命令会拉取所需镜像", de="Join-Befehl laedt benoetigte Images", es="el comando join descargara imagenes necesarias"))
     agent_node_add.add_argument("--build", action="store_true", help=_tx("make the join command build required images locally", zh="生成的加入命令会在本地构建所需镜像", de="Join-Befehl baut benoetigte Images lokal", es="el comando join construira imagenes localmente"))
+    agent_node_add.add_argument("--base", action="store_true", help=_tx("make the join command also process base images", zh="生成的加入命令也处理 base 镜像", de="Join-Befehl verarbeitet auch Base-Images", es="el comando join tambien procesara imagenes base"))
     agent_node_add.add_argument("--no-nginx", action="store_true")
     agent_node_add.add_argument("--allow-from", help=_tx("optional source IP allowed through ufw for the public agent port", zh="可选：允许通过 ufw 访问公网 Agent 端口的来源 IP", de="optionale Quell-IP, die ufw fuer den oeffentlichen Agent-Port erlaubt", es="IP origen opcional permitida por ufw para el puerto agent publico"))
     agent_node_add.add_argument("--no-timer", action="store_true")
@@ -6604,6 +6714,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_node_join.add_argument("--registration-token", required=True)
     agent_node_join.add_argument("--pull", action="store_true", help=_tx("pull required images before deploy", zh="部署前拉取所需镜像", de="benoetigte Images vor dem Deploy laden", es="descargar imagenes necesarias antes de desplegar"))
     agent_node_join.add_argument("--build", action="store_true", help=_tx("build required images locally before deploy", zh="部署前在本地构建所需镜像", de="benoetigte Images lokal vor dem Deploy bauen", es="construir imagenes localmente antes de desplegar"))
+    agent_node_join.add_argument("--base", action="store_true", help=_tx("also build or pull base images", zh="同时构建或拉取 base 镜像", de="auch Base-Images bauen oder laden", es="construir o descargar tambien imagenes base"))
     agent_node_join.add_argument("--no-nginx", action="store_true")
     agent_node_join.add_argument("--allow-from", help=_tx("optional source IP allowed through ufw for the public agent port", zh="可选：允许通过 ufw 访问公网 Agent 端口的来源 IP", de="optionale Quell-IP, die ufw fuer den oeffentlichen Agent-Port erlaubt", es="IP origen opcional permitida por ufw para el puerto agent publico"))
     agent_node_join.add_argument("--no-timer", action="store_true")
@@ -6628,6 +6739,7 @@ def build_parser() -> argparse.ArgumentParser:
     agent_add.add_argument("--provider-mode", choices=["master", "local"], default="master", metavar="MODE", help=_tx("provider key source: master, local", zh="供应商密钥来源: master, local", de="Provider-Key-Quelle: master, local", es="origen de claves del proveedor: master, local"))
     agent_add.add_argument("--pull", action="store_true", help=_tx("generate a pull-based deploy command instead of build", zh="生成基于 pull 的部署命令，而不是 build", de="Pull-basierten Deploy-Befehl statt Build erzeugen", es="generar comando de despliegue pull en lugar de build"))
     agent_add.add_argument("--build", action="store_true", help=_tx("make the join command build required images locally", zh="生成的加入命令会在本地构建所需镜像", de="Join-Befehl baut benoetigte Images lokal", es="el comando join construira imagenes localmente"))
+    agent_add.add_argument("--base", action="store_true", help=_tx("make the join command also process base images", zh="生成的加入命令也处理 base 镜像", de="Join-Befehl verarbeitet auch Base-Images", es="el comando join tambien procesara imagenes base"))
     agent_add.add_argument("--no-nginx", action="store_true")
     agent_add.add_argument("--allow-from", help=_tx("optional source IP allowed through ufw for the public agent port", zh="可选：允许通过 ufw 访问公网 Agent 端口的来源 IP", de="optionale Quell-IP, die ufw fuer den oeffentlichen Agent-Port erlaubt", es="IP origen opcional permitida por ufw para el puerto agent publico"))
     agent_add.add_argument("--no-timer", action="store_true")

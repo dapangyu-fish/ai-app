@@ -35,7 +35,7 @@ APP = Flask(__name__)
 
 NODE_ID = os.environ.get("AGENT_NODE_ID", os.uname().nodename)
 NODE_NAME = os.environ.get("AGENT_NODE_NAME", NODE_ID).strip()[:128] or NODE_ID
-RUNTIME_IMAGE = os.environ.get("AGENT_NODE_RUNTIME_IMAGE", "dapangyufish/myapp-agent-runtime:latest")
+RUNTIME_IMAGE = os.environ.get("AGENT_NODE_RUNTIME_IMAGE", "dapangyu/myapp-agent-runtime:latest")
 STATE_ROOT = Path(os.environ.get("AGENT_NODE_STATE_ROOT", "/var/lib/myapp/agent-node/state"))
 WORKSPACE_ROOT = Path(os.environ.get("AGENT_NODE_WORKSPACE_ROOT", "/var/lib/myapp/agent-node/workspaces"))
 HOST_STATE_ROOT = Path(os.environ.get("AGENT_NODE_HOST_STATE_ROOT", str(STATE_ROOT)))

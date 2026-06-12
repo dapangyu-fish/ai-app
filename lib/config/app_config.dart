@@ -7,7 +7,7 @@ import 'environment_service.dart';
 /// import 'package:flutter_application_1/config/app_config.dart';
 ///
 /// // 使用后端API地址
-/// final url = '${AppConfig.backendUrl}/api/chat';
+/// final url = '${AppConfig.backendUrl}/api/ai/chat/start';
 /// ```
 ///
 /// 这 7 个 URL 默认是生产环境（编译期 `String.fromEnvironment` 可覆盖），
@@ -96,11 +96,8 @@ class AppConfig {
 
   // ==================== API端点配置 ====================
 
-  /// AI对话API端点
-  static String get chatApiUrl => '$backendUrl/chat';
-
   /// AI供应商列表API端点
-  static String get providersApiUrl => '$backendUrl/api/providers';
+  static String get providersApiUrl => '$backendUrl/api/ai/providers';
 
   /// 豆包ASR WebSocket端点
   static String get bytedanceAsrUrl => backendUrl;

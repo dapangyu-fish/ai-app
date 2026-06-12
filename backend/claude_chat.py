@@ -1,8 +1,6 @@
 import json
 import os
-import subprocess
 import logging
-import threading
 from flask import current_app, request, jsonify, Response, stream_with_context
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from config import (
@@ -10,79 +8,18 @@ from config import (
     AI_PROVIDERS,
     DEFAULT_AGENT,
     DEFAULT_PROVIDER,
-    PROJECT_ROOT,
-    GENERATE_PROMPT_PATH,
-    CLAUDE_BIN,
-    load_generate_prompt,
 )
 from auth import require_auth, verify_access_token
 from database import get_quota_info, increment_quota
 from config import ROLE_QUOTAS
+try:
+    from generation_pipeline import resolve_generation_pipeline
+except ModuleNotFoundError:
+    from backend.generation_pipeline import resolve_generation_pipeline
 
 logger = logging.getLogger(__name__)
-_session_procs = {}
-_session_procs_lock = threading.Lock()
 _STREAM_TOKEN_SALT = "ai-chat-stream-token-v1"
 _STREAM_TOKEN_MAX_AGE = 120
-
-_CLI_LOG_DIR = os.environ.get("CLAUDE_CLI_LOG_DIR", "/mnt/storage00/log")
-_cli_log_lock = threading.Lock()
-_cli_log_warned = False
-
-
-def _append_cli_log(session_id, kind, line):
-    """把 Claude CLI 的原始输出按 session 追加到 JSONL 文件，便于排查问题。
-
-    kind: stdout / stderr / meta，原样写入。
-    line: bytes 或 str；不会做任何裁剪、格式化，最大化保留原始数据。
-    """
-    global _cli_log_warned
-    if not session_id:
-        return
-    try:
-        if isinstance(line, bytes):
-            text = line.decode("utf-8", errors="replace")
-        else:
-            text = str(line)
-        if not text.endswith("\n"):
-            text += "\n"
-        with _cli_log_lock:
-            os.makedirs(_CLI_LOG_DIR, exist_ok=True)
-            path = os.path.join(_CLI_LOG_DIR, f"{session_id}.jsonl")
-            with open(path, "a", encoding="utf-8") as f:
-                if kind == "stdout":
-                    f.write(text)
-                else:
-                    # 非 stdout（meta / stderr）包一层，便于识别
-                    wrapper = json.dumps(
-                        {"_log_kind": kind, "data": text.rstrip("\n")},
-                        ensure_ascii=False,
-                    )
-                    f.write(wrapper + "\n")
-    except Exception as e:
-        if not _cli_log_warned:
-            _cli_log_warned = True
-            logger.warning(f"[CLI_LOG] 写入 CLI 日志失败（仅提示一次）: {e}")
-
-
-def _register_session_proc(session_id, proc):
-    with _session_procs_lock:
-        _session_procs[session_id] = proc
-
-
-def _clear_session_proc(session_id, proc=None):
-    with _session_procs_lock:
-        current = _session_procs.get(session_id)
-        if proc is None or current is proc:
-            _session_procs.pop(session_id, None)
-
-
-def _is_session_proc_alive(session_id):
-    with _session_procs_lock:
-        proc = _session_procs.get(session_id)
-    if proc is None:
-        return False
-    return proc.poll() is None
 
 
 def _stream_token_serializer():
@@ -138,18 +75,6 @@ def _optional_auth_user_id() -> str:
 
 def _normalize_provider_id(provider_id=None):
     return (provider_id or DEFAULT_PROVIDER).strip().lower().replace("_", "-") or DEFAULT_PROVIDER
-
-
-def _get_provider(provider_id=None):
-    pid = _normalize_provider_id(provider_id)
-    cfg = AI_PROVIDERS.get(pid)
-    if not cfg:
-        raise ValueError(f"未知 AI 供应商: {pid}")
-    if not cfg.get("configured"):
-        raise ValueError(f"AI 供应商未配置: {pid}")
-    if not cfg.get("visible", True):
-        raise ValueError(f"AI 供应商当前不可用: {pid}")
-    return cfg
 
 
 def _normalize_agent_id(agent_id=None):
@@ -348,506 +273,9 @@ def list_agents():
     return jsonify({"agents": agents, "default_agent": DEFAULT_AGENT})
 
 
-@require_auth
-def session_status():
-    session_id = request.args.get("session_id", "")
-    if not session_id:
-        return jsonify({"error": "session_id 是必需的"}), 400
-    alive = _is_session_proc_alive(session_id)
-    return jsonify({"session_id": session_id, "alive": alive})
-
-def _tool_status_message(tool_name, tool_input):
-    """工具调用 → 返回状态 key（前端根据 key 做 i18n）。"""
-    if tool_name == "Read":
-        file_path = tool_input.get("file_path", "")
-        if file_path:
-            return f"tool.reading_file|{os.path.basename(file_path)}"
-        return "tool.reading"
-    elif tool_name == "Write":
-        file_path = tool_input.get("file_path", "")
-        if file_path:
-            return f"tool.writing_file|{os.path.basename(file_path)}"
-        return "tool.writing"
-    elif tool_name in ("Grep", "Glob"):
-        return "tool.searching"
-    elif tool_name == "Bash":
-        return "tool.running_command"
-    elif tool_name == "Edit":
-        return "tool.editing"
-    elif tool_name == "WebFetch":
-        return "tool.fetching_web"
-    elif tool_name == "WebSearch":
-        return "tool.searching_web"
-    elif tool_name in ("Task", "TodoWrite", "TaskUpdate"):
-        return "tool.updating_plan"
-    return f"tool.using_tool|{tool_name}"
-
-
-# ────────── /tmp/ai-uploads 清理 ──────────
-# AI 在每个 session 用 mktemp 在 /tmp/ai-uploads/ 生成随机路径下载 JSON 配置（见
-# generate_app_prompt.md "获取当前应用配置"）。文件不会自己消失，需要清理。
-# 没用 cron / systemd timer——开销极低（listdir + stat 几十微秒），每次 chat 顺手扫一次
-
-_UPLOAD_DIR = "/tmp/ai-uploads"
-_UPLOAD_RETENTION_SECONDS = 86400  # 24h
-
-
-def _cleanup_old_ai_uploads() -> None:
-    """删 /tmp/ai-uploads/ 里 mtime 超过 24h 的文件，幂等且吞所有 OSError"""
-    import time
-    if not os.path.isdir(_UPLOAD_DIR):
-        return
-    cutoff = time.time() - _UPLOAD_RETENTION_SECONDS
-    deleted = 0
-    try:
-        names = os.listdir(_UPLOAD_DIR)
-    except OSError:
-        return
-    for name in names:
-        p = os.path.join(_UPLOAD_DIR, name)
-        try:
-            if os.path.isfile(p) and os.path.getmtime(p) < cutoff:
-                os.unlink(p)
-                deleted += 1
-        except OSError:
-            pass
-    if deleted:
-        logger.info(f"[chat] 清理 {_UPLOAD_DIR} 旧文件 {deleted} 个 (>24h)")
-
-
-@require_auth
-def chat():
-    """纯粹的 AI 聊天接口，完全交由 Claude 自主处理（前端负责解析动作或 JSON）。"""
-    _cleanup_old_ai_uploads()
-    user_id = request.supabase_user.get("id")
-    role = request.user_role
-
-    logger.info(f"[CHAT] 收到聊天请求 - user_id: {user_id}, role: {role}")
-
-    used, limit, remaining = get_quota_info(
-        user_id, role, ROLE_QUOTAS,
-        app_metadata=request.supabase_user.get("app_metadata"),
-    )
-    logger.debug(f"[CHAT] 配额信息 - used: {used}, limit: {limit}, remaining: {remaining}")
-
-    if remaining <= 0:
-        logger.warning(f"[CHAT] 配额已用完 - user_id: {user_id}")
-        return jsonify({"error": "配额已用完", "quota": {"used": used, "limit": limit}}), 429
-
-    body = request.get_json(silent=True) or {}
-    messages = body.get("messages", [])
-    session_id = body.get("session_id")
-    provider_id = body.get("provider")
-
-    logger.info(f"[CHAT] session_id: {session_id}, provider: {provider_id}, messages count: {len(messages)}")
-
-    if not messages or not session_id:
-        logger.error(f"[CHAT] 缺少必需参数 - messages: {bool(messages)}, session_id: {bool(session_id)}")
-        return jsonify({"error": "messages 和 session_id 是必需的"}), 400
-
-    # 提取最后一条用户消息
-    last_msg = ""
-    for m in reversed(messages):
-        if m.get("role") == "user":
-            last_msg = m.get("content", "")
-            break
-
-    logger.debug(f"[CHAT] 用户消息: {last_msg[:100]}..." if len(last_msg) > 100 else f"[CHAT] 用户消息: {last_msg}")
-
-    if not last_msg:
-        logger.error(f"[CHAT] 未找到用户消息")
-        return jsonify({"error": "未找到用户消息"}), 400
-
-    try:
-        provider = _get_provider(provider_id)
-    except ValueError as e:
-        logger.warning(f"[CHAT] provider rejected: {e}")
-        return jsonify({"error": str(e), "code": "AI_PROVIDER_UNAVAILABLE"}), 400
-    logger.info(f"[CHAT] 使用 AI 供应商: {provider.get('name', provider_id)}")
-
-    cli_env = provider.get("cli_env", {})
-    env = os.environ.copy()
-    for k, v in cli_env.items():
-        env[k] = v
-    env.pop("ANTHROPIC_API_KEY", None)
-    env["IS_SANDBOX"] = "1"
-    try:
-        workspace = ai_session._prepare_worker_workspace(session_id, "legacy")
-        env["AI_APP_WORKSPACE"] = workspace
-        env["AI_APP_PROJECT_ROOT"] = PROJECT_ROOT
-    except Exception as e:
-        workspace = None
-        logger.warning(f"[CHAT] legacy workspace 初始化失败，将走 prompt fallback: {e}")
-
-    logger.debug(f"[CHAT] CLI 环境变量: {list(cli_env.keys())}")
-
-    increment_quota(user_id)
-    # 新一轮被接受前清掉旧 abort 标记；如果旧 running lease 仍存活，上面已经直接返回。
-    ai_session.clear_abort(session_id)
-    new_remaining = remaining - 1
-    logger.info(f"[CHAT] 配额已扣除，剩余: {new_remaining}")
-
-    def run_cli(is_resume=True):
-        # 走 config.load_generate_prompt() 而不是直接 open() —— 它会把硬编码的
-        # 生产 URL（myapp-registry / myapp-oss-endpoint）替换成当前环境的 URL，
-        # 否则测试环境跑出来的 JSON-APP 会嵌入生产域名
-        sys_prompt = load_generate_prompt()
-        final_protocol_note = (
-            "\n\n最终交付协议（本轮普通提示重复注入，必须逐字符遵守）："
-            "如果用户只是问能力、使用方式、普通闲聊、澄清问题或解释错误，且没有要求新建/修改/修复/发布 APP，"
-            "本轮不进入生成流程，不读取分层索引，不运行命令，不上传文件，只用自然语言直接回答。"
-            "这类普通回答禁止出现任何客户端协议标签字面量。"
-            "如果本轮需要客户端执行动作，禁止在最终回答里写 `[json_app_url]` 或 `[request_action]` 标签；"
-            "必须写入 `$AI_APP_WORKSPACE/client_actions.json`，格式为 "
-            "`{\"client_actions\":[{\"type\":\"request_upload_current_app\"}]}` 或 "
-            "`{\"client_actions\":[{\"type\":\"json_app_ready\",\"url\":\"https://...\"}]}`。"
-            "上传 JSON-APP 时必须执行 `bash backend/upload_with_signature.sh \"$AI_APP_WORKSPACE/app.json\"`；"
-            "该脚本成功后会自动写入结构化动作文件；隔离运行时可能先请求后端代上传，"
-            "后端会转换成客户端可用的 `json_app_ready` 事件。你只需在自然语言中简短说明已生成。"
-            "如果需要请求用户上传当前应用，先写入 `request_upload_current_app` 动作文件，再用自然语言说明需要查看当前应用。"
-        )
-                    
-        cmd = [
-            CLAUDE_BIN,
-            "--dangerously-skip-permissions",
-            "--output-format", "stream-json",
-            "--include-partial-messages",
-            "--verbose",
-            "-p", (
-                f"本轮用户的请求:\n<user_request>\n{last_msg}\n</user_request>\n"
-                + (
-                    "本轮后端已为你分配独立工作目录，必须使用它隔离所有临时文件："
-                    f"\nAI_APP_WORKSPACE={workspace}\n"
-                    "生成器、下载的 manifest、app.json、校验输出都放在 AI_APP_WORKSPACE 下；"
-                    "不要写 /tmp/app.json 或 /tmp/generate_app.py。\n"
-                    if workspace else ""
-                )
-                + f"请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户；"
-                "如果该提示词要求先分类、读取索引或按需阅读分层文档，每一轮都必须重新执行。"
-                "不要遗忘工作目录、repair/validate、上传和 client_actions 结构化动作规则。"
-                + final_protocol_note
-            )
-        ]
-
-        if is_resume:
-            cmd.extend(["-r", session_id])
-            logger.info(f"[CLI] 恢复已有会话: {session_id}")
-        else:
-            cmd.extend(["--session-id", session_id])
-            logger.info(f"[CLI] 创建新会话: {session_id}")
-            if sys_prompt:
-                # 将系统提示词作为一个长参数传递（需要 CLI 支持 --append-system-prompt）
-                cmd.extend(["--append-system-prompt", sys_prompt])
-                logger.debug(f"[CLI] 已添加系统提示词，长度: {len(sys_prompt)}")
-
-        logger.info(f"[CLI] 执行命令: {' '.join(cmd[:6])}... (共 {len(cmd)} 个参数)")
-        logger.debug(f"[CLI] 工作目录: {PROJECT_ROOT}")
-        logger.debug(f"[CLI] 环境变量: IS_SANDBOX=1, ANTHROPIC_BASE_URL={env.get('ANTHROPIC_BASE_URL', 'N/A')}")
-
-        _append_cli_log(session_id, "meta", json.dumps({
-            "event": "cli_start",
-            "is_resume": is_resume,
-            "session_id": session_id,
-            "provider": provider.get("id"),
-            "cmd_preview": cmd[:6],
-            "cmd_arg_count": len(cmd),
-        }, ensure_ascii=False))
-
-        return subprocess.Popen(
-            cmd,
-            cwd=PROJECT_ROOT,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            stdin=subprocess.DEVNULL,
-            env=env,
-            bufsize=1
-        )
-
-    def generate():
-        # 先尝试作为老会话恢复
-        logger.info(f"[STREAM] 开始生成流式响应")
-        proc = run_cli(is_resume=True)
-        _register_session_proc(session_id, proc)
-        logger.debug(f"[STREAM] CLI 进程已启动，PID: {proc.pid}")
-
-        initial_lines = []
-        logger.debug(f"[STREAM] 等待 CLI 首行输出...")
-        while True:
-            line = proc.stdout.readline()
-            if not line:
-                logger.debug(f"[STREAM] 读取到空行，退出等待")
-                break
-            initial_lines.append(line)
-            _append_cli_log(session_id, "stdout", line)
-            line_str = line.decode("utf-8", errors="replace").strip()
-            if line_str:
-                logger.debug(f"[STREAM] 收到首行输出: {line_str[:100]}...")
-                break
-
-        # 此时可能进程已经退出（如发生错误），给它 0.1s 彻底清理以获取准确的 returncode
-        try:
-            proc.wait(timeout=0.1)
-        except subprocess.TimeoutExpired:
-            logger.debug(f"[STREAM] CLI 进程仍在运行")
-            pass
-
-        if proc.returncode is not None and proc.returncode != 0:
-            stderr_text = proc.stderr.read().decode("utf-8", errors="replace")
-            stdout_text = b"".join(initial_lines).decode("utf-8", errors="replace") + proc.stdout.read().decode("utf-8", errors="replace")
-            full_err = stderr_text + "\n" + stdout_text
-
-            logger.warning(f"[STREAM] CLI 进程异常退出，returncode: {proc.returncode}")
-            logger.debug(f"[STREAM] stderr: {stderr_text[:500]}...")
-            logger.debug(f"[STREAM] stdout: {stdout_text[:500]}...")
-
-            _append_cli_log(session_id, "stderr", stderr_text)
-            _append_cli_log(session_id, "meta", json.dumps({
-                "event": "cli_exit_nonzero",
-                "returncode": proc.returncode,
-            }, ensure_ascii=False))
-
-            if "No conversation found" in full_err or "requires a valid session ID" in full_err:
-                # fallback: 创建新会话
-                logger.info(f"[STREAM] 会话不存在，fallback 到创建新会话")
-                proc = run_cli(is_resume=False)
-                _register_session_proc(session_id, proc)
-                logger.debug(f"[STREAM] 新 CLI 进程已启动，PID: {proc.pid}")
-                initial_lines = []
-            else:
-                logger.error(f"[STREAM] CLI 启动失败: {stderr_text}")
-                yield f'data: {json.dumps({"error": f"Claude CLI 启动失败 (code {proc.returncode}): {stderr_text}"}, ensure_ascii=False)}\n\n'
-                yield "data: [DONE]\n\n"
-                return
-
-        def process_stream(process, buffered_lines):
-            import time
-            import threading
-            from queue import Queue, Empty
-
-            logger.info(f"[STREAM] 开始处理流式输出，缓冲行数: {len(buffered_lines)}")
-            line_count = 0
-            last_data_time = time.time()
-
-            for line in buffered_lines:
-                line_count += 1
-                yield from _parse_line(line, line_count)
-                last_data_time = time.time()
-
-            logger.debug(f"[STREAM] 缓冲行处理完毕，开始实时读取...")
-
-            # 使用队列 + 线程实现非阻塞读取（跨平台兼容）
-            line_queue = Queue()
-
-            def reader_thread():
-                try:
-                    for line in iter(process.stdout.readline, b''):
-                        if line:
-                            _append_cli_log(session_id, "stdout", line)
-                            line_queue.put(('data', line))
-                    line_queue.put(('eof', None))
-                except Exception as e:
-                    line_queue.put(('error', str(e)))
-
-            reader = threading.Thread(target=reader_thread, daemon=True)
-            reader.start()
-
-            # 主循环：读取数据或发送心跳
-            while True:
-                try:
-                    # 尝试从队列获取数据，超时 10 秒
-                    msg_type, data = line_queue.get(timeout=10.0)
-
-                    if msg_type == 'eof':
-                        logger.debug(f"[STREAM] 读取线程结束")
-                        break
-                    elif msg_type == 'error':
-                        logger.error(f"[STREAM] 读取线程异常: {data}")
-                        break
-                    elif msg_type == 'data':
-                        line_count += 1
-                        yield from _parse_line(data, line_count)
-                        last_data_time = time.time()
-
-                except Empty:
-                    # 超时，发送心跳
-                    current_time = time.time()
-                    logger.debug(f"[STREAM] 发送心跳 (已 {int(current_time - last_data_time)}s 无数据)")
-                    yield ': heartbeat\n\n'  # SSE 注释格式的心跳
-
-            logger.info(f"[STREAM] CLI 输出结束，共处理 {line_count} 行")
-            process.wait()
-            logger.debug(f"[STREAM] CLI 进程退出，returncode: {process.returncode}")
-
-            if process.returncode != 0:
-                err = process.stderr.read().decode("utf-8", errors="replace")
-                if err:
-                    logger.error(f"[STREAM] CLI 异常退出: {err}")
-                    _append_cli_log(session_id, "stderr", err)
-                    yield f'data: {json.dumps({"error": f"Claude CLI 异常退出: {err}"}, ensure_ascii=False)}\n\n'
-
-            try:
-                for action in ai_session._load_client_actions(workspace, session_id):
-                    yield f'data: {json.dumps({"client_action": action}, ensure_ascii=False)}\n\n'
-            except Exception as e:
-                logger.warning(f"[STREAM] 读取 client_actions 失败: {e}")
-
-            logger.info(f"[STREAM] 发送配额信息和结束标记")
-            yield f'data: {json.dumps({"quota": {"used": used + 1, "limit": limit, "remaining": new_remaining}})}\n\n'
-            yield "data: [DONE]\n\n"
-            _append_cli_log(session_id, "meta", json.dumps({
-                "event": "stream_done",
-                "returncode": process.returncode,
-                "lines": line_count,
-            }, ensure_ascii=False))
-            _clear_session_proc(session_id, process)
-
-
-        def _parse_line(raw_line, line_num=0):
-            line_str = raw_line.decode("utf-8", errors="replace").strip()
-            if not line_str:
-                return
-            try:
-                event = json.loads(line_str)
-                evt_type = event.get("type")
-
-                if evt_type == "system":
-                    logger.debug(f"[EVENT #{line_num}] system 事件")
-                    yield f'data: {json.dumps({"status": "init", "message": "AI 引擎已启动"}, ensure_ascii=False)}\n\n'
-
-                elif evt_type == "stream_event":
-                    # 处理实时的 delta 增量流
-                    ev = event.get("event", {})
-                    ev_type = ev.get("type")
-
-                    # 消息开始事件
-                    if ev_type == "message_start":
-                        logger.debug(f"[EVENT #{line_num}] message_start")
-                        yield f'data: {json.dumps({"event": "message_start"}, ensure_ascii=False)}\n\n'
-
-                    # 消息结束事件
-                    elif ev_type == "message_stop":
-                        logger.debug(f"[EVENT #{line_num}] message_stop")
-                        yield f'data: {json.dumps({"event": "message_stop"}, ensure_ascii=False)}\n\n'
-
-                    # 内容块开始事件（可能包含工具调用信息）
-                    elif ev_type == "content_block_start":
-                        content_block = ev.get("content_block", {})
-                        block_type = content_block.get("type")
-                        logger.debug(f"[EVENT #{line_num}] content_block_start: {block_type}")
-
-                        # 如果是工具调用开始，发送状态消息
-                        if block_type == "tool_use":
-                            tool_name = content_block.get("name", "")
-                            tool_input = content_block.get("input", {})
-                            if tool_name:
-                                logger.info(f"[EVENT #{line_num}] 工具调用开始: {tool_name}")
-                                status_msg = _tool_status_message(tool_name, tool_input)
-                                yield f'data: {json.dumps({"status": tool_name.lower(), "message": status_msg}, ensure_ascii=False)}\n\n'
-                        # 思考块开始 → 显式告诉客户端"AI 正在思考..."，避免 thinking_delta
-                        # 静默刷屏期间用户以为卡住。客户端 status handler 会亮起转圈+文案。
-                        elif block_type == "thinking":
-                            logger.debug(f"[EVENT #{line_num}] thinking 块开始")
-                            yield f'data: {json.dumps({"status": "thinking", "message": "AI 正在思考..."}, ensure_ascii=False)}\n\n'
-
-                    # 内容块增量事件
-                    elif ev_type == "content_block_delta":
-                        delta = ev.get("delta", {})
-                        delta_type = delta.get("type")
-
-                        if delta_type == "text_delta":
-                            text_chunk = delta.get("text", "")
-                            if text_chunk:
-                                logger.debug(f"[EVENT #{line_num}] text_delta: {text_chunk[:50]}...")
-                                yield f'data: {json.dumps({"content": text_chunk}, ensure_ascii=False)}\n\n'
-
-                        elif delta_type == "thinking_delta":
-                            think_chunk = delta.get("thinking", "")
-                            if think_chunk:
-                                logger.debug(f"[EVENT #{line_num}] thinking_delta: {think_chunk[:50]}...")
-                                yield f'data: {json.dumps({"thinking": think_chunk}, ensure_ascii=False)}\n\n'
-
-                        elif delta_type == "input_json_delta":
-                            # 工具输入参数的增量构造 — 发送状态提示让客户端知道 AI 正在准备工具调用
-                            logger.debug(f"[EVENT #{line_num}] input_json_delta")
-                            yield f'data: {json.dumps({"status": "tool_preparing", "message": "AI 正在构造工具参数..."}, ensure_ascii=False)}\n\n'
-
-                    # 内容块结束事件
-                    elif ev_type == "content_block_stop":
-                        logger.debug(f"[EVENT #{line_num}] content_block_stop")
-
-                    # 消息增量事件（元数据更新，如 stop_reason）
-                    elif ev_type == "message_delta":
-                        delta = ev.get("delta", {})
-                        stop_reason = delta.get("stop_reason")
-                        if stop_reason:
-                            logger.debug(f"[EVENT #{line_num}] message_delta: stop_reason={stop_reason}")
-
-                    else:
-                        logger.debug(f"[EVENT #{line_num}] 未处理的 stream_event 类型: {ev_type}")
-
-                elif evt_type == "assistant":
-                    # 处理整体状态、工具调用，以及 resume 模式下可能整块下发的文本
-                    msg = event.get("message", {})
-                    logger.debug(f"[EVENT #{line_num}] assistant 事件，content blocks: {len(msg.get('content', []))}")
-                    for block in msg.get("content", []):
-                        btype = block.get("type")
-                        if btype == "tool_use":
-                            tool_name = block.get("name", "")
-                            tool_input = block.get("input", {})
-                            logger.info(f"[EVENT #{line_num}] 工具调用: {tool_name}")
-                            status_msg = _tool_status_message(tool_name, tool_input)
-                            yield f'data: {json.dumps({"status": tool_name.lower(), "message": status_msg}, ensure_ascii=False)}\n\n'
-                        elif btype == "text":
-                            # resume 流里有时不发 stream_event 的 text_delta，而是直接整块 text 放在 assistant 事件
-                            text_value = block.get("text", "")
-                            if text_value:
-                                logger.info(f"[EVENT #{line_num}] assistant 文本块下发，长度: {len(text_value)}")
-                                yield f'data: {json.dumps({"assistant_content": text_value}, ensure_ascii=False)}\n\n'
-                        elif btype == "thinking":
-                            think_value = block.get("thinking", "")
-                            if think_value:
-                                logger.info(f"[EVENT #{line_num}] assistant 思考块下发，长度: {len(think_value)}")
-                                yield f'data: {json.dumps({"assistant_thinking": think_value}, ensure_ascii=False)}\n\n'
-
-                elif evt_type == "result":
-                    logger.debug(f"[EVENT #{line_num}] result 事件，is_error: {event.get('is_error')}")
-                    if event.get("is_error"):
-                        # 错误情况
-                        res = event.get("result", "")
-                        logger.error(f"[EVENT #{line_num}] 生成中断: {res[:200]}...")
-                        yield f'data: {json.dumps({"error": f"生成中断: {res}"}, ensure_ascii=False)}\n\n'
-                    else:
-                        # 正常结束，发送完整的最终文本（用于替换之前的增量累积）
-                        msg = event.get("message", {})
-                        for block in msg.get("content", []):
-                            if block.get("type") == "text":
-                                final_text = block.get("text", "")
-                                if final_text:
-                                    logger.info(f"[EVENT #{line_num}] 发送最终完整文本，长度: {len(final_text)}")
-                                    yield f'data: {json.dumps({"final_content": final_text}, ensure_ascii=False)}\n\n'
-                            elif block.get("type") == "thinking":
-                                final_thinking = block.get("thinking", "")
-                                if final_thinking:
-                                    logger.info(f"[EVENT #{line_num}] 发送最终完整思考，长度: {len(final_thinking)}")
-                                    yield f'data: {json.dumps({"final_thinking": final_thinking}, ensure_ascii=False)}\n\n'
-                else:
-                    logger.debug(f"[EVENT #{line_num}] 未处理的事件类型: {evt_type}")
-            except json.JSONDecodeError as e:
-                logger.warning(f"[EVENT #{line_num}] JSON 解析失败: {e}, line: {line_str[:100]}...")
-
-        yield from process_stream(proc, initial_lines)
-
-    return Response(
-        stream_with_context(generate()),
-        mimetype="text/event-stream",
-        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"}
-    )
-
-
 # ════════════════════════════════════════════════════════════════════════════
-# 新流（feat/ai-background-push）：worker 与 HTTP 连接解耦
+# 当前 Chat 流：worker 与 HTTP 连接解耦
 #
-# 老 /chat 端点保持不变（client 切走 = 任务断），新流：
 #   POST /api/ai/chat/start             → 起 worker，立刻返 session_id
 #   GET  /api/ai/chat/<id>/stream       → SSE 从 Redis 读，可断重连（last_id 续）
 #   GET  /api/ai/chat/<id>/result       → 一次性返回最终文本（任务完成后）
@@ -918,7 +346,6 @@ def chat_start():
     Body: {messages, session_id, provider?, agent?}
     Resp: {session_id, status: "running"}
     """
-    _cleanup_old_ai_uploads()
     user_id = request.supabase_user.get("id")
     role = request.user_role
 
@@ -1100,6 +527,15 @@ def chat_start():
         # 新一轮 job 必须清掉上一次 /abort 留下的短 TTL 标记。
         # 否则 ai-worker acquire 后会把新 job 当成旧 job 的 abort，留下 queued 幽灵状态。
         ai_session.clear_abort(session_id)
+        pipeline_selection = resolve_generation_pipeline()
+        generation_pipeline = pipeline_selection.id
+        logger.info(
+            "[CHAT_START] sid=%s generation_pipeline=%s source=%s raw=%s",
+            session_id,
+            generation_pipeline,
+            pipeline_selection.source,
+            pipeline_selection.raw_value,
+        )
 
         # 写 meta + 提交到显式队列。只有接受入队后才扣配额。
         store.create_meta(
@@ -1112,6 +548,7 @@ def chat_start():
             quota_remaining=new_remaining,
             status=ai_session.STATUS_QUEUED,
             agent_scope=agent_scope,
+            generation_pipeline=generation_pipeline,
         )
         if interrupted_previous:
             store.append_event(session_id, {
@@ -1127,6 +564,7 @@ def chat_start():
             quota_limit=limit,
             quota_remaining=new_remaining,
             agent_scope=agent_scope,
+            generation_pipeline=generation_pipeline,
         )
         if not accepted:
             store.set_status(session_id, ai_session.STATUS_FAILED, error="AI worker queue full")
@@ -1145,6 +583,7 @@ def chat_start():
             "queue_position": queue_position,
             "agent": agent_id,
             "agent_scope": agent_scope,
+            "generation_pipeline": generation_pipeline,
             "resumed": False,
         })
     finally:
@@ -1165,7 +604,7 @@ def _build_sse_stream(session_id: str, last_id: str):
     store = ai_session.SessionStore()
     cursor = last_id
     started_at = _time.time()
-    # 僵尸检测：第一次检查在 5s 后（给 worker 注册 _session_procs 留余量），之后每 10s 检查一次
+    # 僵尸检测：第一次检查在 5s 后（给 worker/agent-node 注册运行态留余量），之后每 10s 检查一次
     next_zombie_check = started_at + 5
     next_queue_status = started_at
 
@@ -1208,8 +647,8 @@ def _build_sse_stream(session_id: str, last_id: str):
             yield 'data: [DONE]\n\n'
             return
 
-        # 僵尸检测：status 是 running 但进程不在 _session_procs（dict 在内存里，
-        # 后端重启就丢了；worker 线程也可能因 OOM / 异常没写完 status 就崩了）
+        # 僵尸检测：status 是 running 但本地/远端运行态都不存在。
+        # 后端重启、worker OOM 或 agent-node 异常退出时，meta 可能没及时落成 terminal。
         # 客户端 idle timeout 不会触发（心跳还在），所以必须 backend 主动告诉它
         if status == ai_session.STATUS_RUNNING and _time.time() >= next_zombie_check:
             next_zombie_check = _time.time() + 10
@@ -1319,6 +758,7 @@ def chat_result(session_id):
         "final_text": meta.get("final_text", ""),
         "final_thinking": meta.get("final_thinking", ""),
         "client_actions": client_actions,
+        "generation_pipeline": meta.get("generation_pipeline", ""),
         "error": meta.get("error", ""),
         "started_at": meta.get("started_at"),
         "finished_at": meta.get("finished_at"),
@@ -1348,6 +788,7 @@ def chat_status_v2(session_id):
         "status": status,
         "provider": meta.get("provider", ""),
         "agent": meta.get("agent", ""),
+        "generation_pipeline": meta.get("generation_pipeline", ""),
         "event_count": int(meta.get("event_count", "0") or "0"),
         "started_at": meta.get("started_at"),
         "finished_at": meta.get("finished_at"),

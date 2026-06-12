@@ -1,0 +1,39 @@
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        procps \
+        gcc \
+        build-essential \
+        libpq5 \
+        portaudio19-dev \
+        libasound2-dev \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && npm install -g @anthropic-ai/claude-code opencode-ai \
+    && ln -sf "$(command -v claude)" /usr/local/bin/claude \
+    && ln -sf "$(command -v opencode)" /usr/local/bin/opencode \
+    && claude --version \
+    && opencode --version \
+    && mkdir -p /var/lib/ai-app/codex-npm-cache /var/lib/ai-app/codex-home /var/lib/ai-app/opencode-home \
+    && npm_config_cache=/var/lib/ai-app/codex-npm-cache npx -y @openai/codex@0.136.0 --version \
+    && rm -rf /var/lib/apt/lists/* /root/.npm
+
+ENV CLAUDE_BIN=/usr/local/bin/claude \
+    CODEX_BIN=npx \
+    OPENCODE_BIN=/usr/local/bin/opencode \
+    CODEX_NPX_PACKAGE=@openai/codex@0.136.0 \
+    CODEX_NODE_BIN_DIR=/usr/bin \
+    CODEX_NPM_CACHE=/var/lib/ai-app/codex-npm-cache \
+    CODEX_HOME=/var/lib/ai-app/codex-home \
+    OPENCODE_HOME=/var/lib/ai-app/opencode-home
+
+COPY backend/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
+    pip install --no-cache-dir "pyjwt>=2.8.0" "httpx>=0.27.0" "flask-caching>=2.1.0"

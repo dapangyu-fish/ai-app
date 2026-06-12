@@ -57,7 +57,7 @@
     "agent-runtime": {
       "group": "agent",
       "kind": "image",
-      "image": "dapangyufish/myapp-agent-runtime:agent-control-plane"
+      "image": "dapangyu/myapp-agent-runtime:agent-control-plane"
     },
     "edge-nginx": {
       "group": "edge",

@@ -71,14 +71,16 @@ from config import (
     CODEX_NPX_PACKAGE,
     DEFAULT_AGENT,
     DEFAULT_PROVIDER,
-    GENERATE_PROMPT_PATH,
+    GENERATION_PIPELINE_V1,
     MINIO_ACCESS_KEY,
     MINIO_ENDPOINT,
     MINIO_PUBLIC_URL,
     MINIO_SECRET_KEY,
     MINIO_SECURE,
     PROJECT_ROOT,
+    generation_prompt_reference,
     load_generate_prompt,
+    normalize_generation_pipeline,
 )
 
 logger = logging.getLogger(__name__)
@@ -401,7 +403,8 @@ class SessionStore:
                     agent: str = DEFAULT_AGENT,
                     quota_used: int, quota_limit: int, quota_remaining: int,
                     status: str = STATUS_RUNNING,
-                    agent_scope: str = "public") -> None:
+                    agent_scope: str = "public",
+                    generation_pipeline: str = GENERATION_PIPELINE_V1) -> None:
         """新一轮 worker 起前调。会清掉旧 stream + 旧 meta（避免上一轮的 final_text /
         error / 老事件被新一轮的 client 当成本轮内容读到）。"""
         # 1. 旧 stream 整个删（如果存在）—— 上一轮的事件不能让本轮 client 重放
@@ -418,6 +421,7 @@ class SessionStore:
             "provider": provider,
             "agent": agent,
             "agent_scope": agent_scope or "public",
+            "generation_pipeline": normalize_generation_pipeline(generation_pipeline),
             "status": status,
             "started_at": str(int(time.time() * 1000)),
             "event_count": "0",
@@ -1170,6 +1174,7 @@ class _WorkerJob:
     agent_resume_id: Optional[str]
     user_id: str
     agent_scope: str
+    generation_pipeline: str
     quota_used: int
     quota_limit: int
     quota_remaining: int
@@ -1326,6 +1331,7 @@ def _job_from_json(raw) -> _WorkerJob:
         agent_resume_id=data.get("agent_resume_id"),
         user_id=data["user_id"],
         agent_scope=str(data.get("agent_scope") or "public").strip().lower(),
+        generation_pipeline=normalize_generation_pipeline(data.get("generation_pipeline")),
         quota_used=int(data["quota_used"]),
         quota_limit=int(data["quota_limit"]),
         quota_remaining=int(data["quota_remaining"]),
@@ -1522,6 +1528,7 @@ def _run_redis_job(job: _WorkerJob) -> None:
             job.provider_id,
             job.agent_id,
             job.agent_resume_id,
+            job.generation_pipeline,
             job.quota_used,
             job.quota_limit,
             job.quota_remaining,
@@ -1590,7 +1597,28 @@ def _build_visual_review_prompt_note(*, workspace: Optional[str] = None) -> str:
     )
 
 
-def _build_user_turn_prompt(last_msg: str, *, workspace: Optional[str] = None) -> str:
+def _build_pipeline_turn_note(generation_pipeline: str, *, workspace: Optional[str] = None) -> str:
+    pipeline = normalize_generation_pipeline(generation_pipeline)
+    if pipeline != "dart_to_json_v2":
+        return f"\n\n本轮生成链路: {pipeline}。"
+    plan_path = "$AI_APP_WORKSPACE/app_dart_plan.dart" if workspace else "app_dart_plan.dart"
+    json_path = "$AI_APP_WORKSPACE/app.json" if workspace else "app.json"
+    return (
+        f"\n\n本轮生成链路: {pipeline}。"
+        f"\n必须先在受限 JSON-DSL 能力范围内生成 Flutter/Dart 风格设计稿 `{plan_path}`，"
+        "该文件只能使用系统提示词允许的受限 Dart UI plan 语法，禁止使用 JSON-DSL 无法表达的 Flutter 能力。"
+        f"\n然后把 `{plan_path}` 逐屏、逐状态、逐动作语义等效转换为 JSON-DSL `{json_path}`。"
+        "\n最终仍必须执行 repair、validate、可选视觉复检和 upload_with_signature.sh；"
+        "Dart plan 只是中间设计稿，绝不能作为最终交付物。"
+    )
+
+
+def _build_user_turn_prompt(
+    last_msg: str,
+    *,
+    workspace: Optional[str] = None,
+    generation_pipeline: str = GENERATION_PIPELINE_V1,
+) -> str:
     workspace_note = ""
     if workspace:
         workspace_note = (
@@ -1600,6 +1628,9 @@ def _build_user_turn_prompt(last_msg: str, *, workspace: Optional[str] = None) -
             "不要写 /tmp/app.json 或 /tmp/generate_app.py。"
         )
     visual_review_note = _build_visual_review_prompt_note(workspace=workspace)
+    pipeline = normalize_generation_pipeline(generation_pipeline)
+    pipeline_note = _build_pipeline_turn_note(pipeline, workspace=workspace)
+    prompt_reference = generation_prompt_reference(pipeline)
     final_protocol_note = (
         "\n\n最终交付协议（本轮普通提示重复注入，必须逐字符遵守）："
         "如果用户只是问能力、使用方式、普通闲聊、澄清问题或解释错误，且没有要求新建/修改/修复/发布 APP，"
@@ -1616,7 +1647,7 @@ def _build_user_turn_prompt(last_msg: str, *, workspace: Optional[str] = None) -
     )
     return (
         f"本轮用户的请求:\n<user_request>\n{last_msg}\n</user_request>"
-        f"{workspace_note}\n请实现用户要求并严格按照系统提示词{GENERATE_PROMPT_PATH}中的信息答复用户；"
+        f"{workspace_note}{pipeline_note}\n请实现用户要求并严格按照系统提示词{prompt_reference}中的信息答复用户；"
         "如果该提示词要求先分类、读取索引或按需阅读分层文档，每一轮都必须重新执行。"
         "不要遗忘工作目录、repair/validate、上传和 client_actions 结构化动作规则。"
         f"{visual_review_note}"
@@ -1632,6 +1663,7 @@ def _build_cli_cmd(
     *,
     workspace: Optional[str] = None,
     cli_session_id: Optional[str] = None,
+    generation_pipeline: str = GENERATION_PIPELINE_V1,
 ) -> list:
     cmd = [
         CLAUDE_BIN,
@@ -1639,7 +1671,11 @@ def _build_cli_cmd(
         "--output-format", "stream-json",
         "--include-partial-messages",
         "--verbose",
-        "-p", _build_user_turn_prompt(last_msg, workspace=workspace),
+        "-p", _build_user_turn_prompt(
+            last_msg,
+            workspace=workspace,
+            generation_pipeline=generation_pipeline,
+        ),
     ]
     if is_resume:
         cmd.extend(["-r", session_id])
@@ -1768,7 +1804,13 @@ def _build_codex_cmd(
     return cmd
 
 
-def _build_codex_prompt(last_msg: str, sys_prompt: str, *, workspace: Optional[str]) -> str:
+def _build_codex_prompt(
+    last_msg: str,
+    sys_prompt: str,
+    *,
+    workspace: Optional[str],
+    generation_pipeline: str = GENERATION_PIPELINE_V1,
+) -> str:
     system_block = ""
     if sys_prompt:
         system_block = (
@@ -1777,7 +1819,11 @@ def _build_codex_prompt(last_msg: str, sys_prompt: str, *, workspace: Optional[s
             f"{sys_prompt}\n"
             "</core_generation_prompt>\n\n"
         )
-    return system_block + _build_user_turn_prompt(last_msg, workspace=workspace)
+    return system_block + _build_user_turn_prompt(
+        last_msg,
+        workspace=workspace,
+        generation_pipeline=generation_pipeline,
+    )
 
 
 def _extract_codex_thread_id(line_str: str) -> Optional[str]:
@@ -2455,6 +2501,7 @@ def _build_agent_node_payload(
     resume_id: str,
     turn_msg: str,
     sys_prompt: str,
+    generation_pipeline: str,
     include_provider_secrets: bool,
 ) -> dict:
     runtime_workspace = "/workspace"
@@ -2464,9 +2511,18 @@ def _build_agent_node_payload(
         include_provider_secrets=include_provider_secrets,
     )
     if runner in {"codex", "opencode"}:
-        prompt = _build_codex_prompt(turn_msg, sys_prompt, workspace=runtime_workspace)
+        prompt = _build_codex_prompt(
+            turn_msg,
+            sys_prompt,
+            workspace=runtime_workspace,
+            generation_pipeline=generation_pipeline,
+        )
     else:
-        prompt = _build_user_turn_prompt(turn_msg, workspace=runtime_workspace)
+        prompt = _build_user_turn_prompt(
+            turn_msg,
+            workspace=runtime_workspace,
+            generation_pipeline=generation_pipeline,
+        )
     return {
         "run_id": run_id,
         "session_id": session_id,
@@ -2475,6 +2531,7 @@ def _build_agent_node_payload(
         "user_id": user_id or "user",
         "provider_id": provider.get("id"),
         "agent_id": runner,
+        "generation_pipeline": normalize_generation_pipeline(generation_pipeline),
         "resume_id": resume_id or "",
         "prompt": prompt,
         "system_prompt": sys_prompt if runner == "claude" and not resume_id else "",
@@ -2493,6 +2550,7 @@ def _agent_pull_enqueue_run(
     resume_id: str,
     turn_msg: str,
     sys_prompt: str,
+    generation_pipeline: str = GENERATION_PIPELINE_V1,
     agent_scope: str = "public",
 ) -> None:
     now_ms = int(time.time() * 1000)
@@ -2504,6 +2562,7 @@ def _agent_pull_enqueue_run(
         "provider_id": provider_id,
         "agent_id": runner,
         "agent_scope": agent_scope,
+        "generation_pipeline": normalize_generation_pipeline(generation_pipeline),
         "resume_id": resume_id or "",
         "turn_msg": turn_msg,
         "sys_prompt": sys_prompt,
@@ -3051,6 +3110,7 @@ def agent_pull_acquire():
         resume_id=str(spec.get("resume_id") or ""),
         turn_msg=str(spec.get("turn_msg") or ""),
         sys_prompt=str(spec.get("sys_prompt") or ""),
+        generation_pipeline=normalize_generation_pipeline(spec.get("generation_pipeline")),
         include_provider_secrets=include_provider_secrets,
     )
     now_ms = int(time.time() * 1000)
@@ -3159,6 +3219,7 @@ def _run_agent_pull_worker(
     runner: str,
     agent_resume_id: Optional[str],
     sys_prompt: str,
+    generation_pipeline: str,
     quota_used: int,
     quota_limit: int,
     quota_remaining: int,
@@ -3201,6 +3262,7 @@ def _run_agent_pull_worker(
             resume_id=current_resume_id,
             turn_msg=turn_msg,
             sys_prompt=sys_prompt,
+            generation_pipeline=generation_pipeline,
             agent_scope=scope,
         )
         try:
@@ -3519,6 +3581,7 @@ def _run_agent_node_worker(
     runner: str,
     agent_resume_id: Optional[str],
     sys_prompt: str,
+    generation_pipeline: str,
     workspace: str,
     quota_used: int,
     quota_limit: int,
@@ -3552,6 +3615,7 @@ def _run_agent_node_worker(
             resume_id=current_resume_id,
             turn_msg=turn_msg,
             sys_prompt=sys_prompt,
+            generation_pipeline=generation_pipeline,
             include_provider_secrets=include_provider_secrets,
         )
         try:
@@ -3871,6 +3935,7 @@ def _run_agent_node_worker(
 
 def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                  agent_id: Optional[str], agent_resume_id: Optional[str],
+                 generation_pipeline: str,
                  quota_used: int, quota_limit: int, quota_remaining: int,
                  job_id: Optional[str] = None) -> None:
     """线程池 worker 入口。
@@ -3905,14 +3970,19 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
         return True
 
     try:
+        generation_pipeline = normalize_generation_pipeline(generation_pipeline)
         # ─── 1. 起进程 ───
         # load_generate_prompt() 在生产是 no-op，测试环境会把 prompt 里硬编码的
         # 生产 URL 替换成实际环境 URL，避免 AI 生成的 JSON-APP 嵌入生产域名
         sys_prompt = ""
         try:
-            sys_prompt = load_generate_prompt()
+            sys_prompt = load_generate_prompt(generation_pipeline)
         except FileNotFoundError:
-            logger.warning(f"[WORKER] 系统提示词文件未找到: {GENERATE_PROMPT_PATH}")
+            logger.warning(
+                "[WORKER] 系统提示词文件未找到 pipeline=%s ref=%s",
+                generation_pipeline,
+                generation_prompt_reference(generation_pipeline),
+            )
 
         if _uses_agent_pull_backend():
             provider = _dynamic_agent_node_provider(provider_id)
@@ -3932,6 +4002,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
             "provider": provider.get("id"),
             "agent": runner,
             "execution_backend": AI_WORKER_EXECUTION_BACKEND,
+            "generation_pipeline": generation_pipeline,
             "agent_resume_id": agent_resume_id or "",
             "user_msg_len": len(last_msg),
             "workspace": workspace,
@@ -3948,6 +4019,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 runner=runner,
                 agent_resume_id=agent_resume_id,
                 sys_prompt=sys_prompt,
+                generation_pipeline=generation_pipeline,
                 quota_used=quota_used,
                 quota_limit=quota_limit,
                 quota_remaining=quota_remaining,
@@ -3967,6 +4039,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 runner=runner,
                 agent_resume_id=agent_resume_id,
                 sys_prompt=sys_prompt,
+                generation_pipeline=generation_pipeline,
                 workspace=workspace,
                 quota_used=quota_used,
                 quota_limit=quota_limit,
@@ -3985,7 +4058,12 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
         if runner == "codex":
             _, env = _codex_env(provider, workspace)
             parse_line = parse_codex_line
-            prompt = _build_codex_prompt(last_msg, sys_prompt, workspace=workspace)
+            prompt = _build_codex_prompt(
+                last_msg,
+                sys_prompt,
+                workspace=workspace,
+                generation_pipeline=generation_pipeline,
+            )
             cmd = _build_codex_cmd(provider, workspace, resume_id=agent_resume_id)
             logger.info(
                 f"[WORKER] sid={session_id} 起 Codex CLI "
@@ -4011,6 +4089,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 is_resume=resume_first,
                 workspace=workspace,
                 cli_session_id=_agent_cli_session_id(session_id, cli_run_id),
+                generation_pipeline=generation_pipeline,
             )
             logger.info(
                 f"[WORKER] sid={session_id} 起 Claude CLI "
@@ -4071,6 +4150,7 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                         is_resume=False,
                         workspace=workspace,
                         cli_session_id=_agent_cli_session_id(session_id, cli_run_id),
+                        generation_pipeline=generation_pipeline,
                     )
                     proc = subprocess.Popen(
                         cmd, cwd=PROJECT_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -4273,7 +4353,8 @@ def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
                   agent_resume_id: Optional[str] = None,
                   user_id: str, quota_used: int, quota_limit: int,
                   quota_remaining: int,
-                  agent_scope: str = "public") -> Tuple[bool, Optional[int]]:
+                  agent_scope: str = "public",
+                  generation_pipeline: str = GENERATION_PIPELINE_V1) -> Tuple[bool, Optional[int]]:
     """提交 worker 到 Redis 显式等待队列。立刻返回，不等任务完成。
 
     调用前应先 SessionStore.create_meta(status=queued)；这里只负责排队。
@@ -4299,6 +4380,7 @@ def submit_worker(session_id: str, last_msg: str, provider_id: Optional[str],
         agent_resume_id=agent_resume_id,
         user_id=user_id,
         agent_scope="private" if str(agent_scope or "").strip().lower() == "private" else "public",
+        generation_pipeline=normalize_generation_pipeline(generation_pipeline),
         quota_used=quota_used,
         quota_limit=quota_limit,
         quota_remaining=quota_remaining,

@@ -67,7 +67,6 @@ def create_app():
     app.add_url_rule("/api/auth/quota", methods=["GET"], view_func=auth.get_quota)
 
     # 注册 Chat 路由
-    app.add_url_rule("/api/ai/session_status", methods=["GET"], view_func=claude_chat.session_status)
     # 新路径（feat/ai-background-push）：worker 与 HTTP 解耦，支持后台续跑 + SSE 重连
     # 详见 backend/ARCHITECTURE.md §3
     app.add_url_rule("/api/ai/chat/start", methods=["POST"], view_func=claude_chat.chat_start)
@@ -143,7 +142,7 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
     logger.info(f"🚀 JSON DSL Backend on http://0.0.0.0:{PORT}")
     logger.info("   Auth:  /api/auth/{register,login,verify,refresh,logout,user,avatar,quota}")
-    logger.info("   Chat:  POST /chat (SSE, quota-limited, DSL-aware)")
+    logger.info("   Chat:  /api/ai/chat/{start,stream,result,status,abort}")
     logger.info("   Store: /api/store/{apps,components,publish,delete}")
     logger.info("   IM:    /api/im/{token,friends,users/lookup,users/search,push_token,media/upload-url,after_send_msg,offline_push_hook}")
     logger.info("   ASR:   WebSocket /socket.io (豆包语音识别)")
