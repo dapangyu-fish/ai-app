@@ -903,6 +903,7 @@ def _resolve_server_upload_actions(
     agent_node_url: str = "",
     run_id: str = "",
     agent_pull_run_id: str = "",
+    owner_user_id: str = "",
 ) -> List[dict]:
     resolved: List[dict] = []
     last_json_app_ready: Optional[dict] = None
@@ -922,8 +923,8 @@ def _resolve_server_upload_actions(
                     else _artifact_from_local_workspace(workspace, relative_path, session_id)
                 )
                 bundle = load_bundle_bytes(raw)
-                owner_user_id = SessionStore().get_meta(session_id).get("user_id") or "user"
-                deploy_result = deploy_bundle(owner_user_id, bundle, source=f"ai-session:{session_id}")
+                resolved_owner_user_id = owner_user_id or SessionStore().get_meta(session_id).get("user_id") or "user"
+                deploy_result = deploy_bundle(resolved_owner_user_id, bundle, source=f"ai-session:{session_id}")
                 resolved.append({
                     "type": "faas_service_ready",
                     "service_id": deploy_result.service_id,
@@ -3393,18 +3394,18 @@ def _run_agent_pull_worker(
 ) -> None:
     parse_line = _parse_line_for_runner(runner)
     current_resume_id = agent_resume_id or ""
+    owner_user_id = store.get_meta(session_id).get("user_id") or "user"
 
     def run_once(current_run_id: str, turn_msg: str) -> Optional[_AgentNodeRunResult]:
         if store.is_aborted(session_id):
             set_status(STATUS_ABORTED)
             return None
-        user_id = store.get_meta(session_id).get("user_id") or "user"
         scope = "private" if agent_scope == "private" else "public"
         provider_id = str(provider.get("id") or DEFAULT_PROVIDER)
         if not _wait_for_agent_pull_node(
             float(os.environ.get("AGENT_PULL_NODE_WAIT_SECONDS", "5")),
             agent_scope=scope,
-            owner_user_id=user_id,
+            owner_user_id=owner_user_id,
             provider_id=provider_id,
             agent_id=runner,
         ):
@@ -3419,7 +3420,7 @@ def _run_agent_pull_worker(
         _agent_pull_enqueue_run(
             run_id=current_run_id,
             session_id=session_id,
-            user_id=user_id,
+            user_id=owner_user_id,
             provider_id=provider_id,
             runner=runner,
             resume_id=current_resume_id,
@@ -3625,6 +3626,7 @@ def _run_agent_pull_worker(
                 session_id,
                 workspace=None,
                 agent_pull_run_id=run_result.run_id,
+                owner_user_id=owner_user_id,
             )
             break
         except ServerUploadValidationError as exc:
@@ -3746,6 +3748,7 @@ def _run_agent_node_worker(
 
     parse_line = _parse_line_for_runner(runner)
     current_resume_id = agent_resume_id or ""
+    owner_user_id = store.get_meta(session_id).get("user_id") or "user"
 
     def run_once(current_run_id: str, turn_msg: str) -> Optional[_AgentNodeRunResult]:
         if store.is_aborted(session_id):
@@ -3754,7 +3757,7 @@ def _run_agent_node_worker(
         payload = _build_agent_node_payload(
             run_id=current_run_id,
             session_id=session_id,
-            user_id=store.get_meta(session_id).get("user_id") or "user",
+            user_id=owner_user_id,
             provider=provider,
             runner=runner,
             resume_id=current_resume_id,
@@ -3969,6 +3972,7 @@ def _run_agent_node_worker(
                 workspace=workspace,
                 agent_node_url=agent_node_url,
                 run_id=run_result.run_id,
+                owner_user_id=owner_user_id,
             )
             break
         except ServerUploadValidationError as exc:
@@ -4427,7 +4431,12 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
                 "tail": tail,
             }, ensure_ascii=False))
         client_actions = _load_client_actions(workspace, session_id)
-        client_actions = _resolve_server_upload_actions(client_actions, session_id, workspace=workspace)
+        client_actions = _resolve_server_upload_actions(
+            client_actions,
+            session_id,
+            workspace=workspace,
+            owner_user_id=str(meta_user_id),
+        )
         for action in client_actions:
             if append_event({"client_action": action}):
                 all_events.append({"client_action": action})
