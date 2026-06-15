@@ -7,10 +7,17 @@ import argparse
 import json
 import os
 from pathlib import Path
+import re
 import sys
 from typing import Any
 
 import requests
+
+_SECRET_BODY_RE = re.compile(
+    r'((?:"?[^",:{}\s]*(?:token|password|secret|authorization)[^",:{}\s]*"?\s*[:=]\s*)'
+    r')("[^"]*"|[^,\s}]+)',
+    re.IGNORECASE,
+)
 
 
 def _read_secret(*, env_name: str = "", file_path: str = "") -> str:
@@ -25,17 +32,25 @@ def _auth(username: str, password: str):
     return (username, password) if password else None
 
 
+def _safe_body(text: str, *, include: bool) -> str:
+    if not include:
+        return ""
+    redacted = _SECRET_BODY_RE.sub(r'\1"***"', text)
+    return redacted[:500]
+
+
 def _check_http(name: str, method: str, url: str, *, auth=None, timeout: float = 8.0, ok_statuses: set[int] | None = None) -> dict[str, Any]:
     ok_statuses = ok_statuses or {200}
     try:
         resp = requests.request(method, url, auth=auth, timeout=timeout)
-        body = resp.text[:500]
+        ok = resp.status_code in ok_statuses
+        body = _safe_body(resp.text, include=not ok)
         return {
             "name": name,
-            "ok": resp.status_code in ok_statuses,
+            "ok": ok,
             "status": resp.status_code,
             "url": url,
-            "body": body,
+            **({"body": body} if body else {}),
         }
     except Exception as exc:
         return {

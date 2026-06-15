@@ -38,9 +38,21 @@ class _Handler(BaseHTTPRequestHandler):
             auth = self.headers.get("Authorization", "")
             expected = "Basic " + base64.b64encode(f"admin:{self.password}".encode("utf-8")).decode("ascii")
             if auth != expected:
-                _json_response(self, 401, {"error": "unauthorized"})
+                _json_response(self, 401, {"error": "unauthorized", "token": "bad-secret-token"})
                 return
-            _json_response(self, 200, [])
+            _json_response(
+                self,
+                200,
+                [
+                    {
+                        "name": "existing-faas",
+                        "envVars": {
+                            "MYAPP_FAAS_RUNTIME_TOKEN": "runtime-token-should-not-leak",
+                            "PASSWORD": "password-should-not-leak",
+                        },
+                    }
+                ],
+            )
             return
         if path == "/api/faas/health":
             _json_response(self, 200, {"ok": True, "deploy_mode": "local-docker"})
@@ -101,12 +113,18 @@ def test_gateway_check_success_and_auth_failure() -> None:
     assert good.returncode == 0, good.stderr or good.stdout
     good_payload = json.loads(good.stdout)
     assert good_payload["ok"] is True
+    good_text = json.dumps(good_payload)
+    assert "runtime-token-should-not-leak" not in good_text
+    assert "password-should-not-leak" not in good_text
+    good_functions = [item for item in good_payload["checks"] if item["name"] == "gateway-functions"][0]
+    assert "body" not in good_functions
 
     assert bad.returncode == 1
     bad_payload = json.loads(bad.stdout)
     assert bad_payload["ok"] is False
     functions = [item for item in bad_payload["checks"] if item["name"] == "gateway-functions"][0]
     assert functions["status"] == 401
+    assert "bad-secret-token" not in json.dumps(functions)
 
 
 if __name__ == "__main__":
