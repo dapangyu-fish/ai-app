@@ -210,7 +210,8 @@ def _faas_manifest_for_user(user_id: str) -> Optional[dict]:
             "services": services,
             "note": (
                 "This is a read-only manifest. To update an existing backend, "
-                "reuse its service_id in faas_bundle.json."
+                "reuse its service_id in faas_bundle.json. The invoke proxy "
+                "enforces the listed routes and methods."
             ),
         }
     except Exception as exc:
@@ -1737,6 +1738,9 @@ def _build_faas_backend_prompt_note(*, workspace: Optional[str] = None) -> str:
         "`{\"service\":{\"slug\":\"todo-api\",\"routes\":[{\"path\":\"/items\",\"methods\":[\"GET\",\"POST\"]}]},"
         "\"files\":{\"app.py\":\"...Flask app code...\",\"requirements.txt\":\"flask==3.0.3\\n\"}}`。"
         "\n- `app.py` 必须定义 Flask `app`，接口路径必须与 service.routes 保持一致；"
+        "后端代理会强制校验 `service.routes` 中声明的 path/method，JSON-APP 调用未声明路径会得到 404，"
+        "调用未声明 method 会得到 405；因此前端会调用的每个接口都必须在 routes 中逐一声明。"
+        "动态路径可使用 Flask 风格如 `/items/<item_id>` 或 `/files/<path:tail>`。"
         "不要读取环境变量、不要访问本机文件、不要启动额外 server、不要使用 subprocess/socket。"
         "\n- JSON-APP 调用后端时先使用相对地址 `/api/faas/invoke/<service_id>/<route>`；"
         "如果前端需要调用该服务，bundle.service.service_id 必须写一个稳定 kebab-case id，"

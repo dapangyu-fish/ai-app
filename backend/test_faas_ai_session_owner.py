@@ -146,7 +146,17 @@ def test_faas_action_can_deploy_agent_pull_artifact() -> None:
     assert actions[0]["invoke_url"] == "/api/faas/invoke/notes-api"
 
 
+def test_faas_prompt_note_mentions_route_enforcement() -> None:
+    note = ai_session._build_faas_backend_prompt_note(workspace="/tmp/workspace")
+    assert "service.routes" in note
+    assert "404" in note
+    assert "405" in note
+    assert "/items/<item_id>" in note
+    assert "server_deploy_faas_service" in note
+
+
 if __name__ == "__main__":
     test_faas_action_owner_comes_from_authenticated_session()
     test_faas_action_can_deploy_agent_pull_artifact()
+    test_faas_prompt_note_mentions_route_enforcement()
     print(json.dumps({"ok": True}, sort_keys=True))

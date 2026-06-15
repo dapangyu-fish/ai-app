@@ -44,6 +44,11 @@ $AI_APP_WORKSPACE/client_actions.json
 If the generated JSON APP also needs upload, include the existing
 `server_upload_app_json` action as usual.
 
+The invoke proxy enforces `service.routes`: calls to undeclared paths return
+404 and calls with undeclared HTTP methods return 405. Any endpoint the JSON APP
+will call must be declared in the bundle, including dynamic Flask-style routes
+such as `/items/<item_id>` or `/files/<path:tail>`.
+
 ## Bundle Shape
 
 ```json
