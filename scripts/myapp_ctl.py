@@ -5317,6 +5317,40 @@ def cmd_faas(args) -> int:
         if args.keep:
             cmd.append("--keep")
         return _run(cmd, capture=False).returncode
+    if args.faas_cmd == "openfaas-gateway-smoke":
+        script = _source_dir() / "scripts" / "faas_openfaas_gateway_smoke.py"
+        if not script.is_file():
+            print(f"faas real OpenFaaS gateway smoke script not found: {script}", file=sys.stderr)
+            return 1
+        configured = _parse_env(_secret_path("faas"))
+        runtime_image = args.runtime_image or configured.get("FAAS_OPENFAAS_RUNTIME_IMAGE") or _configured_image("faas-runtime")
+        cmd = [
+            sys.executable,
+            str(script),
+            "--runtime-image",
+            runtime_image,
+            "--base-url",
+            args.base_url or _backend_base_url(None),
+            "--gateway",
+            args.gateway,
+            "--username",
+            args.username,
+            "--bundle-base-url",
+            args.bundle_base_url,
+            "--user-id",
+            args.user_id,
+            "--service-id",
+            args.service_id,
+        ]
+        if args.yes:
+            cmd.append("--yes")
+        if args.password_env:
+            cmd.extend(["--password-env", args.password_env])
+        if args.password_file:
+            cmd.extend(["--password-file", args.password_file])
+        if args.pull_stack:
+            cmd.append("--pull-stack")
+        return _run(cmd, capture=False).returncode
     if args.faas_cmd == "ai-action-smoke":
         script = _source_dir() / "scripts" / "faas_ai_action_smoke.py"
         if not script.is_file():
@@ -7190,6 +7224,19 @@ def build_parser() -> argparse.ArgumentParser:
     faas_openfaas_backend_smoke.add_argument("--pull-stack", action="store_true", help=_tx("pull backend/FaaS stack images while redeploying", zh="重部署时拉取 backend/FaaS 栈镜像", de="Backend/FaaS-Stack-Images beim Redeploy pullen", es="hacer pull de imagenes backend/FaaS al redesplegar"))
     faas_openfaas_backend_smoke.add_argument("--keep", action="store_true", help=_tx("keep test runtime containers after completion", zh="完成后保留测试 runtime 容器", de="Test-Runtime-Container nach Abschluss behalten", es="mantener contenedores runtime de prueba"))
     faas_openfaas_backend_smoke.set_defaults(func=cmd_faas)
+    faas_openfaas_gateway_smoke = faas_sub.add_parser("openfaas-gateway-smoke", help=_tx("temporarily switch deployed backend to a real OpenFaaS/faasd gateway and run smoke", zh="临时切换已部署后端到真实 OpenFaaS/faasd gateway 并运行冒烟测试", de="Backend temporaer auf echtes OpenFaaS/faasd Gateway schalten und Smoke ausfuehren", es="cambiar temporalmente backend a gateway OpenFaaS/faasd real y ejecutar smoke"), usage=_tx("myapp-ctl faas openfaas-gateway-smoke --yes --gateway URL --bundle-base-url URL [options]", zh="myapp-ctl faas openfaas-gateway-smoke --yes --gateway URL --bundle-base-url URL [选项]", de="myapp-ctl faas openfaas-gateway-smoke --yes --gateway URL --bundle-base-url URL [Optionen]", es="myapp-ctl faas openfaas-gateway-smoke --yes --gateway URL --bundle-base-url URL [opciones]"))
+    faas_openfaas_gateway_smoke.add_argument("--yes", action="store_true", help=_tx("confirm temporary config switch and backend restart", zh="确认临时切换配置并重启后端", de="temporaere Konfigurationsaenderung und Backend-Neustart bestaetigen", es="confirmar cambio temporal y reinicio backend"))
+    faas_openfaas_gateway_smoke.add_argument("--gateway", required=True, help=_tx("real OpenFaaS/faasd gateway URL", zh="真实 OpenFaaS/faasd gateway URL", de="echte OpenFaaS/faasd Gateway-URL", es="URL gateway OpenFaaS/faasd real"))
+    faas_openfaas_gateway_smoke.add_argument("--username", default="admin", help=_tx("OpenFaaS basic auth username", zh="OpenFaaS basic auth 用户名", de="OpenFaaS Basic-Auth Benutzername", es="usuario basic auth OpenFaaS"))
+    faas_openfaas_gateway_smoke.add_argument("--password-env", help=_tx("environment variable containing OpenFaaS password", zh="包含 OpenFaaS 密码的环境变量", de="Umgebungsvariable mit OpenFaaS-Passwort", es="variable de entorno con password OpenFaaS"))
+    faas_openfaas_gateway_smoke.add_argument("--password-file", help=_tx("file containing OpenFaaS password", zh="包含 OpenFaaS 密码的文件", de="Datei mit OpenFaaS-Passwort", es="archivo con password OpenFaaS"))
+    faas_openfaas_gateway_smoke.add_argument("--base-url", default=None, help=_tx("backend base URL used by faas smoke", zh="faas smoke 使用的后端 base URL", de="Backend-Basis-URL fuer FaaS-Smoke", es="URL base backend para faas smoke"))
+    faas_openfaas_gateway_smoke.add_argument("--bundle-base-url", required=True, help=_tx("backend base URL visible from OpenFaaS runtime containers", zh="OpenFaaS runtime 容器可访问的后端 base URL", de="Backend-Basis-URL sichtbar fuer OpenFaaS-Runtime-Container", es="URL base backend visible desde runtimes OpenFaaS"))
+    faas_openfaas_gateway_smoke.add_argument("--runtime-image", help=_tx("runtime image to deploy; defaults to configured FAAS_OPENFAAS_RUNTIME_IMAGE", zh="要部署的 runtime 镜像；默认使用已配置 FAAS_OPENFAAS_RUNTIME_IMAGE", de="zu deployendes Runtime-Image; Standard ist FAAS_OPENFAAS_RUNTIME_IMAGE", es="imagen runtime a desplegar; por defecto FAAS_OPENFAAS_RUNTIME_IMAGE"))
+    faas_openfaas_gateway_smoke.add_argument("--user-id", default="openfaas-gateway-smoke", help=_tx("test owner user id", zh="测试 owner user id", de="Test-Owner-User-ID", es="user id owner de prueba"))
+    faas_openfaas_gateway_smoke.add_argument("--service-id", default=f"openfaas-gateway-smoke-{int(time.time())}", help=_tx("test service id", zh="测试服务 ID", de="Test-Service-ID", es="service id de prueba"))
+    faas_openfaas_gateway_smoke.add_argument("--pull-stack", action="store_true", help=_tx("pull backend/FaaS stack images while redeploying", zh="重部署时拉取 backend/FaaS 栈镜像", de="Backend/FaaS-Stack-Images beim Redeploy pullen", es="hacer pull de imagenes backend/FaaS al redesplegar"))
+    faas_openfaas_gateway_smoke.set_defaults(func=cmd_faas)
     faas_ai_action_smoke = faas_sub.add_parser("ai-action-smoke", help=_tx("simulate Agent FaaS artifacts and resolve them through the deployed backend", zh="模拟 Agent FaaS 产物并通过已部署后端解析部署", de="Agent-FaaS-Artefakte simulieren und im deployten Backend aufloesen", es="simular artefactos FaaS de Agent y resolverlos en backend desplegado"), usage=_tx("myapp-ctl faas ai-action-smoke [options]", zh="myapp-ctl faas ai-action-smoke [选项]", de="myapp-ctl faas ai-action-smoke [Optionen]", es="myapp-ctl faas ai-action-smoke [opciones]"))
     faas_ai_action_smoke.add_argument("--base-url", default="http://127.0.0.1:5566", help=_tx("backend base URL used for invocation", zh="调用生成服务使用的后端 base URL", de="Backend-Basis-URL fuer Invocation", es="URL base backend para invocacion"))
     faas_ai_action_smoke.add_argument("--user-id", default="ai-action-smoke-user", help=_tx("test owner user id", zh="测试 owner user id", de="Test-Owner-User-ID", es="user id owner de prueba"))

@@ -233,6 +233,10 @@ myapp-ctl faas smoke
 myapp-ctl faas ai-action-smoke
 myapp-ctl faas openfaas-runtime-smoke --pull-image
 myapp-ctl faas openfaas-backend-smoke --yes
+OPENFAAS_PASSWORD=<password> myapp-ctl faas openfaas-gateway-smoke --yes \
+  --gateway http://<real-faasd-gateway>:8080 \
+  --bundle-base-url https://<backend-domain> \
+  --password-env OPENFAAS_PASSWORD
 python3 backend/test_faas_store_controls.py
 python3 backend/test_faas_invoke_routes.py
 python3 backend/test_faas_ai_session_owner.py
@@ -300,6 +304,10 @@ Minimum verification:
   `client_actions.json` artifacts an Agent would write, resolves
   `server_deploy_faas_service` through `ai_session._resolve_server_upload_actions`,
   invokes the generated service, and cleans it up.
+- `myapp-ctl faas openfaas-gateway-smoke --yes --gateway <real-gateway>
+  --bundle-base-url <backend-url>` passes against a real external faasd/OpenFaaS
+  gateway. This temporarily switches the deployed backend to the real gateway,
+  runs the public FaaS smoke test, then restores the previous `faas.env`.
 - In `openfaas` mode, OpenFaaS lists the generated function and invocation via
   `/api/faas/invoke/<service_id>/...` reaches the generic runtime image.
 - `/api/faas/runtime_bundle/<service_id>` rejects missing or wrong runtime
@@ -311,6 +319,6 @@ Minimum verification:
   failed.
 - Existing JSON app generation still works.
 
-Do not mark this feature complete until the `openfaas` mode is proven against a
-real faasd/OpenFaaS gateway on 77 and the deploy path is documented with the
-observed commands.
+Do not mark this feature complete until `openfaas-gateway-smoke` is proven
+against a real external faasd/OpenFaaS gateway and the deploy path is documented
+with the observed commands.
