@@ -125,6 +125,39 @@ CREATE TABLE IF NOT EXISTS package_install_events (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- User-generated backend services for JSON-APPs.
+-- Code is stored outside the app database under FAAS_CODE_ROOT and mirrored to
+-- an operator-managed Git repository. Agent containers never receive the Git or
+-- OpenFaaS credentials.
+CREATE TABLE IF NOT EXISTS faas_services (
+    service_id      TEXT PRIMARY KEY,
+    owner_user_id   TEXT NOT NULL,
+    service_slug    TEXT NOT NULL,
+    function_name   TEXT NOT NULL UNIQUE,
+    status          TEXT NOT NULL DEFAULT 'draft'
+                    CHECK (status IN ('draft', 'deploying', 'ready', 'failed', 'disabled')),
+    active_commit   TEXT NOT NULL DEFAULT '',
+    active_path     TEXT NOT NULL DEFAULT '',
+    public_base_url TEXT NOT NULL DEFAULT '',
+    routes          JSONB NOT NULL DEFAULT '[]'::jsonb,
+    meta_json       JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS faas_deployments (
+    deployment_id   TEXT PRIMARY KEY,
+    service_id      TEXT NOT NULL REFERENCES faas_services(service_id) ON DELETE CASCADE,
+    owner_user_id   TEXT NOT NULL,
+    commit_sha      TEXT NOT NULL DEFAULT '',
+    status          TEXT NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'success', 'failed')),
+    error           TEXT NOT NULL DEFAULT '',
+    bundle_summary  JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    finished_at     TIMESTAMPTZ
+);
+
 -- Indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_app_registry_type ON app_registry(type);
 CREATE INDEX IF NOT EXISTS idx_app_registry_is_public ON app_registry(is_public);
@@ -141,3 +174,6 @@ CREATE INDEX IF NOT EXISTS idx_package_install_events_created_at ON package_inst
 CREATE UNIQUE INDEX IF NOT EXISTS idx_package_install_events_legacy_key
     ON package_install_events(legacy_key)
     WHERE legacy_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_faas_services_owner ON faas_services(owner_user_id);
+CREATE INDEX IF NOT EXISTS idx_faas_services_status ON faas_services(status);
+CREATE INDEX IF NOT EXISTS idx_faas_deployments_service_created ON faas_deployments(service_id, created_at DESC);

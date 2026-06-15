@@ -27,6 +27,7 @@ import store
 import im
 import im_media
 import ai_summary
+import faas
 from bytedance_asr_routes import register_asr_routes
 
 # 配置日志
@@ -97,6 +98,30 @@ def create_app():
     app.add_url_rule("/api/ai/upload_url", methods=["GET"], view_func=store.get_ai_upload_url)
     # Registry 富化用的单次结构化摘要（内部接口，registry enrich worker 调，REGISTRY_ADMIN_TOKEN 鉴权）
     app.add_url_rule("/api/ai/summarize", methods=["POST"], view_func=ai_summary.summarize_endpoint)
+
+    # 用户生成后端服务：FaaS 控制面。当前 FaaS invoke 暂不强制鉴权；
+    # 管理接口在 FAAS_REQUIRE_AUTH=0 时也允许测试用 user_id 参数，后续可收紧。
+    app.add_url_rule("/api/faas/health", methods=["GET"], view_func=faas.health)
+    app.add_url_rule("/api/faas/services", methods=["GET"], view_func=faas.list_user_services)
+    app.add_url_rule("/api/faas/services", methods=["POST"], view_func=faas.deploy_service)
+    app.add_url_rule("/api/faas/services/<service_id>", methods=["GET"], view_func=faas.get_user_service)
+    app.add_url_rule("/api/faas/services/<service_id>", methods=["DELETE"], view_func=faas.disable_user_service)
+    app.add_url_rule(
+        "/api/faas/runtime_bundle/<service_id>",
+        methods=["GET"],
+        view_func=faas.runtime_bundle,
+    )
+    app.add_url_rule(
+        "/api/faas/invoke/<service_id>",
+        defaults={"route_path": ""},
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        view_func=faas.invoke_service,
+    )
+    app.add_url_rule(
+        "/api/faas/invoke/<service_id>/<path:route_path>",
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        view_func=faas.invoke_service,
+    )
 
     # 注册 Store 路由
     app.add_url_rule("/api/store/apps", methods=["GET"], view_func=store.store_apps)

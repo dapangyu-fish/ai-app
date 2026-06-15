@@ -60,6 +60,9 @@ URLs through `myapp-ctl domain set ...` or by generating the correct
 - IM: OpenIM compose group
 - Public ingress: optional Docker-managed `edge-nginx`
 - AI execution: agent-node plus isolated Ubuntu agent runtime containers
+- AI-generated backend services: FaaS control path and code repository under
+  `/mnt/myapp/faas` (see
+  [../../docs/faas-backend-generation.md](../../docs/faas-backend-generation.md))
 
 The backend image is shared by `backend`, `ai-worker`, `registry`,
 `config-center`, and `user-center`. Agent execution is split into:
@@ -419,6 +422,27 @@ myapp-ctl deploy --group openim --pull
 myapp-ctl deploy --group agent --pull
 myapp-ctl deploy --group core --pull
 myapp-ctl deploy --group edge --pull
+myapp-ctl deploy --group faas --pull
+```
+
+The FaaS group updates the backend-owned FaaS control path. By default,
+`FAAS_DEPLOY_MODE=local-docker`: generated Flask services run in separate
+`myapp-faas-*` containers created by the backend, with generated code mounted
+read-only from the data root. `FAAS_DEPLOY_MODE=openfaas` is also supported:
+the backend deploys the generic `myapp-faas-runtime` image to OpenFaaS/faasd
+and the function runtime fetches its validated code bundle from the backend with
+`FAAS_RUNTIME_TOKEN`.
+
+Generated service smoke test:
+
+```bash
+python3 scripts/faas_smoke_test.py --base-url http://127.0.0.1:5566
+```
+
+Disable one generated service and free its active-service quota slot:
+
+```bash
+curl -X DELETE 'http://127.0.0.1:5566/api/faas/services/<service_id>?user_id=<user_id>'
 ```
 
 Restart without rebuilding:
@@ -438,6 +462,7 @@ Images:
 
 ```bash
 myapp-ctl image ls
+myapp-ctl image build faas-runtime --base
 myapp-ctl image build backend
 myapp-ctl image push backend
 myapp-ctl image pull backend
@@ -501,9 +526,9 @@ Image operations:
 
 ```bash
 myapp-ctl image ls
-myapp-ctl image build [all|backend|agent-node|agent-runtime] [--base]
-myapp-ctl image pull [all|backend|agent-node|agent-runtime] [--base]
-myapp-ctl image push [all|backend|agent-node|agent-runtime] [--base]
+myapp-ctl image build [all|backend|faas-runtime|agent-node|agent-runtime] [--base]
+myapp-ctl image pull [all|backend|faas-runtime|agent-node|agent-runtime] [--base]
+myapp-ctl image push [all|backend|faas-runtime|agent-node|agent-runtime] [--base]
 ```
 
 Agent operations:
@@ -583,6 +608,7 @@ Important paths:
 - `/mnt/myapp/static/{website,webapp}`
 - `/mnt/myapp/config-center/data`
 - `/mnt/myapp/agent-node/{state,workspaces,logs}`
+- `/mnt/myapp/faas/{code,logs,tmp}`
 - `/mnt/myapp/supabase-db/{data,config}`
 - `/mnt/myapp/supabase-storage/data`
 - `/mnt/myapp/openim-*`
@@ -619,6 +645,7 @@ Expected MyApp state:
 - `user-center`: running
 - `agent-node`: running, health `ok`
 - `agent-runtime`: image present
+- `faas-control`: running, health `ok`
 - `jsonapp-postgres`: running, health `healthy`
 - `ai-session-redis`: running, health `healthy`
 - `app-minio`: running
@@ -631,6 +658,8 @@ Provider API expectations:
 - `minimax`: configured when available, supports `claude` and `codex`
 - Backend API default gunicorn workers: `10`
 - Default agent-node local limits: `capacity=10`, `queue_max=100`
+- Default generated FaaS service limit: `FAAS_MAX_SERVICES_PER_USER=5`
+- Default generated FaaS runtime mode: `FAAS_DEPLOY_MODE=local-docker`
 - DeepSeek default worker limits: `20/100`
 - MiniMax default worker limits: `5/20`
 

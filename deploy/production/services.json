@@ -45,6 +45,28 @@
       "container": "myapp-user-center",
       "health": {"type": "http", "url": "http://127.0.0.1:5567/healthz"}
     },
+    "faas-control": {
+      "group": "faas",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "backend",
+      "container": "myapp-backend",
+      "health": {"type": "http", "url": "http://127.0.0.1:5566/api/faas/health"}
+    },
+    "faas-worker": {
+      "group": "faas",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "ai-worker",
+      "container": "myapp-ai-worker"
+    },
+    "faas-runtime": {
+      "group": "faas",
+      "kind": "image",
+      "image": "dapangyu/myapp-faas-runtime:agent-control-plane"
+    },
     "agent-node": {
       "group": "agent",
       "kind": "compose",

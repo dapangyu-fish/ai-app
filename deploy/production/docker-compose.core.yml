@@ -71,6 +71,8 @@ services:
         required: false
       - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/push.env
         required: false
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/faas.env
+        required: false
     environment:
       DB_HOST: jsonapp-postgres
       DB_PORT: "5432"
@@ -115,9 +117,27 @@ services:
       OPENIM_SECRET: "${OPENIM_SECRET:-}"
       OPENIM_WEBHOOK_SECRET: "${OPENIM_WEBHOOK_SECRET:-}"
       FLASK_SECRET_KEY: "${FLASK_SECRET_KEY:-}"
+      FAAS_CODE_ROOT: "${FAAS_CODE_ROOT:-/mnt/myapp/faas/code}"
+      FAAS_RUNTIME_TOKEN: "${FAAS_RUNTIME_TOKEN:-}"
+      FAAS_RUNTIME_BUNDLE_BASE_URL: "${FAAS_RUNTIME_BUNDLE_BASE_URL:-}"
+      FAAS_OPENFAAS_GATEWAY: "${FAAS_OPENFAAS_GATEWAY:-}"
+      FAAS_OPENFAAS_USERNAME: "${FAAS_OPENFAAS_USERNAME:-admin}"
+      FAAS_OPENFAAS_PASSWORD: "${FAAS_OPENFAAS_PASSWORD:-}"
+      FAAS_OPENFAAS_RUNTIME_IMAGE: "${FAAS_OPENFAAS_RUNTIME_IMAGE:-dapangyu/myapp-faas-runtime:agent-control-plane}"
+      FAAS_OPENFAAS_SCALE_ZERO: "${FAAS_OPENFAAS_SCALE_ZERO:-1}"
+      FAAS_OPENFAAS_MIN_REPLICAS: "${FAAS_OPENFAAS_MIN_REPLICAS:-0}"
+      FAAS_OPENFAAS_MAX_REPLICAS: "${FAAS_OPENFAAS_MAX_REPLICAS:-1}"
+      FAAS_OPENFAAS_READ_TIMEOUT: "${FAAS_OPENFAAS_READ_TIMEOUT:-60s}"
+      FAAS_OPENFAAS_WRITE_TIMEOUT: "${FAAS_OPENFAAS_WRITE_TIMEOUT:-60s}"
+      FAAS_LOCAL_DOCKER_IMAGE: "${FAAS_LOCAL_DOCKER_IMAGE:-dapangyu/myapp-faas-runtime:agent-control-plane}"
+      FAAS_LOCAL_DOCKER_NETWORK: "${FAAS_LOCAL_DOCKER_NETWORK:-myapp_default}"
+      FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT: "${FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT:-/mnt/myapp/faas/code}"
+      FAAS_LOCAL_DOCKER_HOST_CODE_ROOT: "${FAAS_LOCAL_DOCKER_HOST_CODE_ROOT:-${MYAPP_DATA_ROOT:-/mnt/myapp}/faas/code}"
       PORT: "5566"
     volumes:
       - ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/files:/etc/myapp/secret-files:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/faas:/mnt/myapp/faas
     ports:
       - "${BACKEND_PORT:-5566}:5566"
     healthcheck:
@@ -146,6 +166,8 @@ services:
       - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/ai-providers.env
         required: false
       - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/agent.env
+        required: false
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/faas.env
         required: false
     environment:
       DB_HOST: jsonapp-postgres
@@ -183,6 +205,25 @@ services:
       MINIO_SECURE: "false"
       MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY:-myappminio}"
       MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
+      FAAS_CODE_ROOT: "${FAAS_CODE_ROOT:-/mnt/myapp/faas/code}"
+      FAAS_RUNTIME_TOKEN: "${FAAS_RUNTIME_TOKEN:-}"
+      FAAS_RUNTIME_BUNDLE_BASE_URL: "${FAAS_RUNTIME_BUNDLE_BASE_URL:-}"
+      FAAS_OPENFAAS_GATEWAY: "${FAAS_OPENFAAS_GATEWAY:-}"
+      FAAS_OPENFAAS_USERNAME: "${FAAS_OPENFAAS_USERNAME:-admin}"
+      FAAS_OPENFAAS_PASSWORD: "${FAAS_OPENFAAS_PASSWORD:-}"
+      FAAS_OPENFAAS_RUNTIME_IMAGE: "${FAAS_OPENFAAS_RUNTIME_IMAGE:-dapangyu/myapp-faas-runtime:agent-control-plane}"
+      FAAS_OPENFAAS_SCALE_ZERO: "${FAAS_OPENFAAS_SCALE_ZERO:-1}"
+      FAAS_OPENFAAS_MIN_REPLICAS: "${FAAS_OPENFAAS_MIN_REPLICAS:-0}"
+      FAAS_OPENFAAS_MAX_REPLICAS: "${FAAS_OPENFAAS_MAX_REPLICAS:-1}"
+      FAAS_OPENFAAS_READ_TIMEOUT: "${FAAS_OPENFAAS_READ_TIMEOUT:-60s}"
+      FAAS_OPENFAAS_WRITE_TIMEOUT: "${FAAS_OPENFAAS_WRITE_TIMEOUT:-60s}"
+      FAAS_LOCAL_DOCKER_IMAGE: "${FAAS_LOCAL_DOCKER_IMAGE:-dapangyu/myapp-faas-runtime:agent-control-plane}"
+      FAAS_LOCAL_DOCKER_NETWORK: "${FAAS_LOCAL_DOCKER_NETWORK:-myapp_default}"
+      FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT: "${FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT:-/mnt/myapp/faas/code}"
+      FAAS_LOCAL_DOCKER_HOST_CODE_ROOT: "${FAAS_LOCAL_DOCKER_HOST_CODE_ROOT:-${MYAPP_DATA_ROOT:-/mnt/myapp}/faas/code}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/faas:/mnt/myapp/faas
 
   registry:
     image: "${MYAPP_BACKEND_IMAGE:-dapangyu/myapp-backend:agent-control-plane}"

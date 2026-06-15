@@ -24,9 +24,11 @@
   },
   "images": {
     "backend": "dapangyu/myapp-backend:agent-control-plane",
+    "faas_runtime": "dapangyu/myapp-faas-runtime:agent-control-plane",
     "agent_node": "dapangyu/myapp-agent-node:agent-control-plane",
     "agent_runtime": "dapangyu/myapp-agent-runtime:agent-control-plane",
     "backend_base": "dapangyu/myapp-backend-base:agent-control-plane",
+    "faas_runtime_base": "dapangyu/myapp-faas-runtime-base:agent-control-plane",
     "agent_node_base": "dapangyu/myapp-agent-node-base:agent-control-plane",
     "agent_runtime_base": "dapangyu/myapp-agent-runtime-base:agent-control-plane"
   },
@@ -35,6 +37,7 @@
     "registry": "http://127.0.0.1:3254",
     "oss": "http://127.0.0.1:9000",
     "config_center": "http://127.0.0.1:5000",
+    "openfaas": "http://127.0.0.1:5566",
     "agent_node": "http://agent-node:5590"
   }
 }

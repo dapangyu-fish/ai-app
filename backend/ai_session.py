@@ -182,6 +182,66 @@ def _prepare_worker_workspace(session_id: str, job_id: Optional[str]) -> str:
     return workspace
 
 
+def _faas_manifest_for_user(user_id: str) -> Optional[dict]:
+    if not _env_enabled("FAAS_ENABLED", "1"):
+        return None
+    try:
+        try:
+            from config import FAAS_MAX_SERVICES_PER_USER
+            from faas_store import list_services
+        except ModuleNotFoundError:
+            from backend.config import FAAS_MAX_SERVICES_PER_USER
+            from backend.faas_store import list_services
+        services = []
+        for item in list_services(user_id):
+            services.append({
+                "service_id": item.get("service_id"),
+                "slug": item.get("service_slug"),
+                "status": item.get("status"),
+                "routes": item.get("routes") or [],
+                "invoke_url": f"/api/faas/invoke/{item.get('service_id')}",
+                "active_commit": item.get("active_commit") or "",
+                "updated_at": str(item.get("updated_at") or ""),
+            })
+        return {
+            "version": 1,
+            "owner_user_id": user_id,
+            "max_services": FAAS_MAX_SERVICES_PER_USER,
+            "services": services,
+            "note": (
+                "This is a read-only manifest. To update an existing backend, "
+                "reuse its service_id in faas_bundle.json."
+            ),
+        }
+    except Exception as exc:
+        logger.warning("[FAAS] failed to build service manifest for user=%s: %s", user_id, exc)
+        return {
+            "version": 1,
+            "owner_user_id": user_id,
+            "services": [],
+            "error": str(exc)[-500:],
+        }
+
+
+def _faas_manifest_initial_file(user_id: str) -> Optional[dict]:
+    manifest = _faas_manifest_for_user(user_id)
+    if manifest is None:
+        return None
+    return {
+        "path": "faas_services.json",
+        "content": json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+    }
+
+
+def _write_faas_manifest(workspace: str, user_id: str) -> None:
+    item = _faas_manifest_initial_file(user_id)
+    if not item:
+        return
+    path = os.path.join(workspace, item["path"])
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(item["content"])
+
+
 # ────────────────────────────── Redis 单例 ──────────────────────────────
 
 _redis_client: Optional[redis.Redis] = None
@@ -559,6 +619,7 @@ _CLIENT_ACTION_URL_RE = re.compile(
     re.IGNORECASE,
 )
 _SERVER_UPLOAD_ACTION = "server_upload_app_json"
+_SERVER_FAAS_ACTION = "server_deploy_faas_service"
 _TEMP_JSON_BUCKET = os.environ.get("AI_CHAT_TEMP_JSON_BUCKET", "ai-chat-temp")
 _TEMP_JSON_EXPIRY_HOURS = int(os.environ.get("AI_CHAT_TEMP_JSON_EXPIRY_HOURS", "24"))
 
@@ -652,8 +713,54 @@ def _normalize_client_action(raw: Any, session_id: str) -> Optional[dict]:
             return None
         return {"type": _SERVER_UPLOAD_ACTION, "path": normalized}
 
+    if action_type == _SERVER_FAAS_ACTION:
+        path = str(raw.get("path") or "faas_bundle.json").strip() or "faas_bundle.json"
+        normalized = os.path.normpath(path).replace("\\", "/")
+        if normalized.startswith("../") or normalized == ".." or os.path.isabs(normalized):
+            _client_action_warning(session_id, "server_deploy_faas_service 路径非法", detail=raw)
+            return None
+        if not normalized.endswith(".json"):
+            _client_action_warning(session_id, "server_deploy_faas_service 只允许 JSON bundle", detail=raw)
+            return None
+        out = {"type": _SERVER_FAAS_ACTION, "path": normalized}
+        service_id = str(raw.get("service_id") or "").strip()
+        if service_id:
+            out["service_id"] = service_id[:96]
+        return out
+
     _client_action_warning(session_id, "未知 client action type", detail=raw)
     return None
+
+
+def _compact_client_actions(raw_actions: list, session_id: str) -> List[dict]:
+    wants_upload_current_app = False
+    last_json_app_ready: Optional[dict] = None
+    server_uploads: List[dict] = []
+    faas_deploys: List[dict] = []
+    for raw in raw_actions[:20]:
+        action = _normalize_client_action(raw, session_id)
+        if not action:
+            continue
+        if action["type"] == "request_upload_current_app":
+            wants_upload_current_app = True
+        elif action["type"] == "json_app_ready":
+            last_json_app_ready = action
+        elif action["type"] == _SERVER_UPLOAD_ACTION:
+            server_uploads.append(action)
+        elif action["type"] == _SERVER_FAAS_ACTION:
+            faas_deploys.append(action)
+
+    out: List[dict] = []
+    if wants_upload_current_app:
+        out.append({"type": "request_upload_current_app"})
+    if last_json_app_ready:
+        out.append(last_json_app_ready)
+    # One JSON app upload is the final app. FaaS bundles are independent, so
+    # keep a few in case a single generated app intentionally creates multiple
+    # tiny backend services. The backend-side per-user quota is still enforced.
+    out.extend(server_uploads[-1:])
+    out.extend(faas_deploys[-5:])
+    return out
 
 
 def _load_client_actions(workspace: Optional[str], session_id: str) -> List[dict]:
@@ -685,27 +792,7 @@ def _load_client_actions(workspace: Optional[str], session_id: str) -> List[dict
         _client_action_warning(session_id, "client_actions 不是数组", detail=payload)
         return []
 
-    wants_upload_current_app = False
-    last_json_app_ready: Optional[dict] = None
-    server_uploads: List[dict] = []
-    for raw in raw_actions[:20]:
-        action = _normalize_client_action(raw, session_id)
-        if not action:
-            continue
-        if action["type"] == "request_upload_current_app":
-            wants_upload_current_app = True
-        elif action["type"] == "json_app_ready":
-            last_json_app_ready = action
-        elif action["type"] == _SERVER_UPLOAD_ACTION:
-            server_uploads.append(action)
-
-    out: List[dict] = []
-    if wants_upload_current_app:
-        out.append({"type": "request_upload_current_app"})
-    if last_json_app_ready:
-        out.append(last_json_app_ready)
-    out.extend(server_uploads[-1:])
-    return out
+    return _compact_client_actions(raw_actions, session_id)
 
 
 def _artifact_from_local_workspace(workspace: Optional[str], relative_path: str, session_id: str) -> bytes:
@@ -820,6 +907,40 @@ def _resolve_server_upload_actions(
     resolved: List[dict] = []
     last_json_app_ready: Optional[dict] = None
     for action in actions:
+        if action.get("type") == _SERVER_FAAS_ACTION:
+            relative_path = str(action.get("path") or "faas_bundle.json")
+            try:
+                from faas_store import deploy_bundle, load_bundle_bytes
+            except ModuleNotFoundError:
+                from backend.faas_store import deploy_bundle, load_bundle_bytes
+            try:
+                raw = (
+                    _artifact_from_agent_node(agent_node_url, run_id, relative_path)
+                    if agent_node_url and run_id
+                    else _artifact_from_agent_pull(agent_pull_run_id, relative_path)
+                    if agent_pull_run_id
+                    else _artifact_from_local_workspace(workspace, relative_path, session_id)
+                )
+                bundle = load_bundle_bytes(raw)
+                owner_user_id = SessionStore().get_meta(session_id).get("user_id") or "user"
+                deploy_result = deploy_bundle(owner_user_id, bundle, source=f"ai-session:{session_id}")
+                resolved.append({
+                    "type": "faas_service_ready",
+                    "service_id": deploy_result.service_id,
+                    "function_name": deploy_result.function_name,
+                    "status": deploy_result.status,
+                    "commit_sha": deploy_result.commit_sha,
+                    "invoke_url": f"/api/faas/invoke/{deploy_result.service_id}",
+                    "routes": deploy_result.routes,
+                })
+            except Exception as exc:
+                logger.exception("[FAAS] deploy action failed sid=%s path=%s: %s", session_id, relative_path, exc)
+                resolved.append({
+                    "type": "faas_service_failed",
+                    "path": relative_path,
+                    "error": str(exc)[-1000:],
+                })
+            continue
         if action.get("type") != _SERVER_UPLOAD_ACTION:
             resolved.append(action)
             if action.get("type") == "json_app_ready":
@@ -839,7 +960,10 @@ def _resolve_server_upload_actions(
         url = _upload_temp_json_app(repaired)
         last_json_app_ready = {"type": "json_app_ready", "url": url}
         resolved.append(last_json_app_ready)
-    return [action for action in resolved if action.get("type") != _SERVER_UPLOAD_ACTION]
+    return [
+        action for action in resolved
+        if action.get("type") not in {_SERVER_UPLOAD_ACTION, _SERVER_FAAS_ACTION}
+    ]
 
 
 def _build_server_repair_request(
@@ -1597,6 +1721,30 @@ def _build_visual_review_prompt_note(*, workspace: Optional[str] = None) -> str:
     )
 
 
+def _build_faas_backend_prompt_note(*, workspace: Optional[str] = None) -> str:
+    if not _env_enabled("FAAS_ENABLED", "1"):
+        return ""
+    bundle_path = "$AI_APP_WORKSPACE/faas_bundle.json" if workspace else "faas_bundle.json"
+    return (
+        "\n\n可选后端能力（FaaS，只有用户明确需要后端接口/持久计算/服务端逻辑时才使用）："
+        f"\n- 你可以生成一个受限 Python/Flask 后端服务 bundle：`{bundle_path}`。"
+        "\n- Agent 不能也不需要操作 Git、Docker、OpenFaaS、faas-cli 或任何部署密钥；"
+        "后端会在 worker 结束后读取 bundle、校验、提交和部署。"
+        "\n- 工作区会提供只读 `faas_services.json`，列出当前用户已有 FaaS 服务、路由和调用地址；"
+        "如果本轮是在继续打磨已有后端，优先复用其中的 `service_id`，不要无意义创建新服务。"
+        "\n- 只允许 Python/Flask；bundle JSON 结构必须是："
+        "`{\"service\":{\"slug\":\"todo-api\",\"routes\":[{\"path\":\"/items\",\"methods\":[\"GET\",\"POST\"]}]},"
+        "\"files\":{\"app.py\":\"...Flask app code...\",\"requirements.txt\":\"flask==3.0.3\\n\"}}`。"
+        "\n- `app.py` 必须定义 Flask `app`，接口路径必须与 service.routes 保持一致；"
+        "不要读取环境变量、不要访问本机文件、不要启动额外 server、不要使用 subprocess/socket。"
+        "\n- JSON-APP 调用后端时先使用相对地址 `/api/faas/invoke/<service_id>/<route>`；"
+        "如果前端需要调用该服务，bundle.service.service_id 必须写一个稳定 kebab-case id，"
+        "例如 `todo-api`，不要省略。"
+        "\n- 如果生成了 FaaS bundle，必须在 `client_actions.json` 里追加 "
+        "`{\"type\":\"server_deploy_faas_service\",\"path\":\"faas_bundle.json\"}`。"
+    )
+
+
 def _build_pipeline_turn_note(generation_pipeline: str, *, workspace: Optional[str] = None) -> str:
     pipeline = normalize_generation_pipeline(generation_pipeline)
     if pipeline != "dart_to_json_v2":
@@ -1628,6 +1776,7 @@ def _build_user_turn_prompt(
             "不要写 /tmp/app.json 或 /tmp/generate_app.py。"
         )
     visual_review_note = _build_visual_review_prompt_note(workspace=workspace)
+    faas_backend_note = _build_faas_backend_prompt_note(workspace=workspace)
     pipeline = normalize_generation_pipeline(generation_pipeline)
     pipeline_note = _build_pipeline_turn_note(pipeline, workspace=workspace)
     prompt_reference = generation_prompt_reference(pipeline)
@@ -1651,6 +1800,7 @@ def _build_user_turn_prompt(
         "如果该提示词要求先分类、读取索引或按需阅读分层文档，每一轮都必须重新执行。"
         "不要遗忘工作目录、repair/validate、上传和 client_actions 结构化动作规则。"
         f"{visual_review_note}"
+        f"{faas_backend_note}"
         f"{final_protocol_note}"
     )
 
@@ -2549,6 +2699,7 @@ def _build_agent_node_payload(
         "system_prompt": sys_prompt if runner == "claude" and not resume_id else "",
         "env": dict(env),
         "codex": dict(codex),
+        "initial_files": [item for item in [_faas_manifest_initial_file(user_id or "user")] if item],
     }
 
 
@@ -3378,25 +3529,7 @@ def _run_agent_pull_worker(
                     else:
                         raw_actions = []
                     if isinstance(raw_actions, list):
-                        wants_upload_current_app = False
-                        last_json_app_ready: Optional[dict] = None
-                        server_uploads: List[dict] = []
-                        for raw_action in raw_actions[:20]:
-                            action = _normalize_client_action(raw_action, session_id)
-                            if not action:
-                                continue
-                            if action["type"] == "request_upload_current_app":
-                                wants_upload_current_app = True
-                            elif action["type"] == "json_app_ready":
-                                last_json_app_ready = action
-                            elif action["type"] == _SERVER_UPLOAD_ACTION:
-                                server_uploads.append(action)
-                        remote_client_actions = []
-                        if wants_upload_current_app:
-                            remote_client_actions.append({"type": "request_upload_current_app"})
-                        if last_json_app_ready:
-                            remote_client_actions.append(last_json_app_ready)
-                        remote_client_actions.extend(server_uploads[-1:])
+                        remote_client_actions = _compact_client_actions(raw_actions, session_id)
                 elif item_type == "stop":
                     returncode = item.get("returncode")
                     status = str(item.get("status") or "failed")
@@ -3737,25 +3870,7 @@ def _run_agent_node_worker(
                     else:
                         raw_actions = []
                     if isinstance(raw_actions, list):
-                        wants_upload_current_app = False
-                        last_json_app_ready: Optional[dict] = None
-                        server_uploads: List[dict] = []
-                        for raw_action in raw_actions[:20]:
-                            action = _normalize_client_action(raw_action, session_id)
-                            if not action:
-                                continue
-                            if action["type"] == "request_upload_current_app":
-                                wants_upload_current_app = True
-                            elif action["type"] == "json_app_ready":
-                                last_json_app_ready = action
-                            elif action["type"] == _SERVER_UPLOAD_ACTION:
-                                server_uploads.append(action)
-                        remote_client_actions = []
-                        if wants_upload_current_app:
-                            remote_client_actions.append({"type": "request_upload_current_app"})
-                        if last_json_app_ready:
-                            remote_client_actions.append(last_json_app_ready)
-                        remote_client_actions.extend(server_uploads[-1:])
+                        remote_client_actions = _compact_client_actions(raw_actions, session_id)
                 elif item_type == "stop":
                     returncode = item.get("returncode")
                     status = str(item.get("status") or "failed")
@@ -4005,6 +4120,8 @@ def _worker_main(session_id: str, last_msg: str, provider_id: Optional[str],
         agent = _agent_config(agent_id)
         runner = agent["id"]
         workspace = _prepare_worker_workspace(session_id, job_id)
+        meta_user_id = store.get_meta(session_id).get("user_id") or "user"
+        _write_faas_manifest(workspace, str(meta_user_id))
         env["AI_APP_WORKSPACE"] = workspace
         env["AI_APP_PROJECT_ROOT"] = PROJECT_ROOT
         parse_line = parse_cli_line

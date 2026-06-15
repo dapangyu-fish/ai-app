@@ -43,6 +43,9 @@ DATA_ROOT_DIRS = [
     "logs",
     "secrets.d/files/apns",
     "secrets.d/files/fcm",
+    "faas/code",
+    "faas/logs",
+    "faas/tmp",
     "backend",
     "ai-worker",
     "registry",
@@ -86,6 +89,7 @@ DATA_ROOT_DIRS = [
 
 DEPLOY_ORDER = [
     "agent-runtime",
+    "faas-runtime",
     "jsonapp-postgres",
     "ai-session-redis",
     "app-minio",
@@ -119,21 +123,25 @@ DEPLOY_ORDER = [
 ]
 IMAGE_TARGETS = {
     "agent-runtime": ("agent_runtime", "deploy/production/Dockerfile.agent-runtime"),
+    "faas-runtime": ("faas_runtime", "deploy/production/Dockerfile.faas-runtime"),
     "agent-node": ("agent_node", "deploy/production/Dockerfile.agent-node"),
     "backend": ("backend", "deploy/production/Dockerfile.backend"),
 }
 IMAGE_BASE_TARGETS = {
     "agent-runtime": ("agent_runtime_base", "deploy/production/Dockerfile.agent-runtime-base"),
+    "faas-runtime": ("faas_runtime_base", "deploy/production/Dockerfile.faas-runtime-base"),
     "agent-node": ("agent_node_base", "deploy/production/Dockerfile.agent-node-base"),
     "backend": ("backend_base", "deploy/production/Dockerfile.backend-base"),
 }
-BACKEND_IMAGE_SERVICES = {"backend", "ai-worker", "registry", "config-center", "user-center"}
+BACKEND_IMAGE_SERVICES = {"backend", "ai-worker", "registry", "config-center", "user-center", "faas-control", "faas-worker"}
+FAAS_IMAGE_SERVICES = {"faas-control", "faas-worker", "faas-runtime"}
 DEFAULT_NETWORKS = ["myapp_default", "myapp_agent_runtime"]
 COMPOSE_ENV_FILE_NAMES = [
     "backend.env",
     "supabase.env",
     "openim.env",
     "edge.env",
+    "faas.env",
     "ai-providers.env",
     "agent.env",
     "push.env",
@@ -152,6 +160,7 @@ EDGE_ROUTE_SPECS = [
     {"key": "registry", "label": "App registry", "kind": "proxy", "upstream": "http://registry:3254"},
     {"key": "config_center", "label": "Config Center", "kind": "proxy", "upstream": "http://config-center:5000"},
     {"key": "user_center", "label": "User Center", "kind": "proxy", "upstream": "http://user-center:5567"},
+    {"key": "openfaas", "label": "FaaS public invoke", "kind": "proxy", "upstream": "http://backend:5566"},
     {
         "key": "openim",
         "label": "OpenIM",
@@ -1313,6 +1322,8 @@ def _image_targets_for_names(names: list[str]) -> list[str]:
     targets: list[str] = []
     if "agent-runtime" in names:
         targets.append("agent-runtime")
+    if any(name in FAAS_IMAGE_SERVICES for name in names):
+        targets.append("faas-runtime")
     if "agent-node" in names:
         targets.append("agent-node")
     if any(name in BACKEND_IMAGE_SERVICES for name in names):
@@ -1998,6 +2009,7 @@ def cmd_uninstall(args) -> int:
         if spec.get("kind") == "docker":
             docker_names.append(spec.get("container") or name)
     docker_names.extend(name for name in _docker_container_names("myapp-agent-") if name != "myapp-agent-node")
+    docker_names.extend(_docker_container_names("myapp-faas-"))
     seen_containers: set[str] = set()
     for container in docker_names:
         if container in seen_containers:
@@ -3775,6 +3787,7 @@ def _persist_public_host_if_explicit(host: str | None, public_host: str) -> None
 
 _IMAGE_ENV_KEYS = {
     "MYAPP_BACKEND_IMAGE",
+    "MYAPP_FAAS_RUNTIME_IMAGE",
     "MYAPP_AGENT_NODE_IMAGE",
     "MYAPP_AGENT_RUNTIME_IMAGE",
 }
@@ -3786,6 +3799,13 @@ def _should_replace_env_value(group: str, key: str, current: str, *, force: bool
         return True
     if group == "backend" and key in _IMAGE_ENV_KEYS:
         return current.strip().startswith(_LEGACY_OFFICIAL_IMAGE_PREFIX)
+    if group == "faas" and key == "FAAS_LOCAL_DOCKER_IMAGE":
+        current_value = current.strip()
+        return (
+            current_value.startswith(_LEGACY_OFFICIAL_IMAGE_PREFIX)
+            or current_value == _configured_image("backend")
+            or current_value == "dapangyu/myapp-backend:agent-control-plane"
+        )
     return False
 
 
@@ -3828,6 +3848,7 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
 
     backend_defaults = {
         "MYAPP_BACKEND_IMAGE": _configured_image("backend"),
+        "MYAPP_FAAS_RUNTIME_IMAGE": _configured_image("faas-runtime"),
         "MYAPP_AGENT_NODE_IMAGE": _configured_image("agent-node"),
         "MYAPP_AGENT_RUNTIME_IMAGE": _configured_image("agent-runtime"),
         "MYAPP_DATA_ROOT": str(data_root),
@@ -4012,6 +4033,39 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "EDGE_NGINX_PROXY_SEND_TIMEOUT": "3600s",
         "EDGE_NGINX_PROXY_CONNECT_TIMEOUT": "60s",
     }
+    faas_defaults = {
+        "FAAS_ENABLED": "1",
+        "FAAS_REQUIRE_AUTH": "0",
+        "FAAS_CODE_ROOT": "/mnt/myapp/faas/code",
+        "FAAS_MAX_SERVICES_PER_USER": "5",
+        "FAAS_GIT_ENABLED": "1",
+        "FAAS_GIT_PUSH_ENABLED": "0",
+        "FAAS_GIT_REMOTE": "",
+        "FAAS_GIT_BRANCH": "main",
+        "FAAS_GIT_AUTHOR_NAME": "myapp-faas-bot",
+        "FAAS_GIT_AUTHOR_EMAIL": "myapp-faas-bot@localhost",
+        "FAAS_DEPLOY_MODE": "local-docker",
+        "FAAS_DEPLOY_SCRIPT": "",
+        "FAAS_OPENFAAS_GATEWAY": "",
+        "FAAS_OPENFAAS_USERNAME": "admin",
+        "FAAS_OPENFAAS_PASSWORD": "",
+        "FAAS_OPENFAAS_RUNTIME_IMAGE": _configured_image("faas-runtime"),
+        "FAAS_OPENFAAS_SCALE_ZERO": "1",
+        "FAAS_OPENFAAS_MIN_REPLICAS": "0",
+        "FAAS_OPENFAAS_MAX_REPLICAS": "1",
+        "FAAS_OPENFAAS_READ_TIMEOUT": "60s",
+        "FAAS_OPENFAAS_WRITE_TIMEOUT": "60s",
+        "FAAS_PUBLIC_BASE_URL": f"http://{public_host}:5566",
+        "FAAS_RUNTIME_BUNDLE_BASE_URL": f"http://{public_host}:5566",
+        "FAAS_RUNTIME_TOKEN": _rand_hex(32),
+        "FAAS_FUNCTION_PREFIX": "myapp",
+        "FAAS_LOCAL_DOCKER_IMAGE": _configured_image("faas-runtime"),
+        "FAAS_LOCAL_DOCKER_NETWORK": "myapp_default",
+        "FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT": "/mnt/myapp/faas/code",
+        "FAAS_LOCAL_DOCKER_HOST_CODE_ROOT": str(data_root / "faas" / "code"),
+        "FAAS_LOCAL_DOCKER_START_ON_DEPLOY": "1",
+        "FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS": "15",
+    }
 
     changed = {
         "backend": _merge_env_group("backend", backend_defaults, force=force),
@@ -4019,6 +4073,7 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "openim": _merge_env_group("openim", openim_defaults, force=force),
         "agent": _merge_env_group("agent", agent_defaults, force=force),
         "edge": _merge_env_group("edge", edge_defaults, force=force),
+        "faas": _merge_env_group("faas", faas_defaults, force=force),
         "config-center": _merge_env_group("config-center", config_center_defaults, force=force),
         "user-center": _merge_env_group("user-center", user_center_defaults, force=force),
     }
@@ -4626,6 +4681,7 @@ def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
         "APP_MINIO_PUBLIC_URL": urls["oss"],
         "APP_MINIO_CONSOLE_PUBLIC_URL": urls["oss_console"],
         "REGISTRY_PUBLIC_URL": urls["registry"],
+        "FAAS_PUBLIC_BASE_URL": urls["openfaas"],
     }
     supabase_values = {
         "API_EXTERNAL_URL": urls["auth"],
@@ -4635,6 +4691,10 @@ def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
     }
     user_center_values = {"USER_CENTER_COOKIE_SECURE": "true" if tls else "false"}
     openim_values = {"HOST_IP": hosts.get("openim", config["default_host"])}
+    faas_values = {
+        "FAAS_PUBLIC_BASE_URL": urls["openfaas"],
+        "FAAS_RUNTIME_BUNDLE_BASE_URL": urls["backend"],
+    }
     edge_values = {
         "MYAPP_DATA_ROOT": str(_data_root_from_cfg()),
         "EDGE_NGINX_HTTP_PORT": str(config["http_port"]),
@@ -4651,6 +4711,7 @@ def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
             ("supabase", supabase_values),
             ("openim", openim_values),
             ("user-center", user_center_values),
+            ("faas", faas_values),
             ("edge", edge_values),
         ):
             print(f"# would update {group}: " + ", ".join(sorted(values)))
@@ -4659,6 +4720,7 @@ def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
     _merge_env_group("supabase", supabase_values, force=True)
     _merge_env_group("openim", openim_values, force=True)
     _merge_env_group("user-center", user_center_values, force=True)
+    _merge_env_group("faas", faas_values, force=True)
     _merge_env_group("edge", edge_values, force=True)
 
 
@@ -6512,7 +6574,12 @@ def build_parser() -> argparse.ArgumentParser:
             default="all",
             choices=["all", *IMAGE_TARGETS.keys()],
             metavar="TARGET",
-            help=_tx("image target: all, agent-runtime, agent-node, backend", zh="镜像目标: all, agent-runtime, agent-node, backend", de="Image-Ziel: all, agent-runtime, agent-node, backend", es="destino de imagen: all, agent-runtime, agent-node, backend"),
+            help=_tx(
+                "image target: all, agent-runtime, faas-runtime, agent-node, backend",
+                zh="镜像目标: all, agent-runtime, faas-runtime, agent-node, backend",
+                de="Image-Ziel: all, agent-runtime, faas-runtime, agent-node, backend",
+                es="destino de imagen: all, agent-runtime, faas-runtime, agent-node, backend",
+            ),
         )
         image_action.add_argument("--dry-run", action="store_true")
         image_action.add_argument(
@@ -6534,9 +6601,14 @@ def build_parser() -> argparse.ArgumentParser:
     deploy.add_argument("targets", nargs="*", help=_tx("service/group names; omitted means all", zh="服务或分组名；省略表示全部", de="Dienst- oder Gruppennamen; ohne Angabe alle", es="nombres de servicio o grupo; omitido significa todos"))
     deploy.add_argument(
         "--group",
-        choices=["infra", "agent", "core", "openim", "supabase", "edge"],
+        choices=["infra", "agent", "core", "openim", "supabase", "edge", "faas"],
         metavar="GROUP",
-        help=_tx("service group: infra, agent, core, openim, supabase, edge", zh="服务分组: infra, agent, core, openim, supabase, edge", de="Dienstgruppe: infra, agent, core, openim, supabase, edge", es="grupo de servicios: infra, agent, core, openim, supabase, edge"),
+        help=_tx(
+            "service group: infra, agent, core, openim, supabase, edge, faas",
+            zh="服务分组: infra, agent, core, openim, supabase, edge, faas",
+            de="Dienstgruppe: infra, agent, core, openim, supabase, edge, faas",
+            es="grupo de servicios: infra, agent, core, openim, supabase, edge, faas",
+        ),
     )
     deploy.add_argument("--build", action="store_true", help=_tx("build required images from the local source tree before deploy", zh="部署前从本地源码构建所需镜像", de="benoetigte Images vor dem Deploy aus lokalem Quellcode bauen", es="construir imagenes necesarias desde el codigo local antes de desplegar"))
     deploy.add_argument("--pull", action="store_true", help=_tx("pull required images before deploy", zh="部署前拉取所需镜像", de="benoetigte Images vor dem Deploy laden", es="descargar imagenes necesarias antes de desplegar"))

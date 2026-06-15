@@ -85,6 +85,53 @@ if DEFAULT_PROVIDER not in AI_PROVIDERS or not AI_PROVIDERS[DEFAULT_PROVIDER].ge
 # 测试环境 docker compose 会注入 http://IP:port 覆盖；生产保持默认即可。
 REGISTRY_BASE_URL = os.environ.get("REGISTRY_BASE_URL", "https://myapp-registry.dapangyu.work")
 
+# User-generated FaaS backend code.
+#
+# The Agent never receives Git/OpenFaaS credentials. It can only produce a
+# structured bundle in its workspace. The backend validates that bundle, writes
+# it to FAAS_CODE_ROOT, optionally commits/pushes through host-local Git config,
+# and optionally calls a deploy script/OpenFaaS gateway owned by the backend.
+FAAS_ENABLED = os.environ.get("FAAS_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"}
+FAAS_REQUIRE_AUTH = os.environ.get("FAAS_REQUIRE_AUTH", "0").strip().lower() in {"1", "true", "yes", "on"}
+FAAS_CODE_ROOT = os.environ.get("FAAS_CODE_ROOT", "/mnt/myapp/faas/code")
+FAAS_MAX_SERVICES_PER_USER = _env_int("FAAS_MAX_SERVICES_PER_USER", 5)
+FAAS_GIT_ENABLED = os.environ.get("FAAS_GIT_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"}
+FAAS_GIT_PUSH_ENABLED = os.environ.get("FAAS_GIT_PUSH_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
+FAAS_GIT_REMOTE = os.environ.get("FAAS_GIT_REMOTE", "").strip()
+FAAS_GIT_BRANCH = os.environ.get("FAAS_GIT_BRANCH", "main").strip() or "main"
+FAAS_GIT_AUTHOR_NAME = os.environ.get("FAAS_GIT_AUTHOR_NAME", "myapp-faas-bot").strip() or "myapp-faas-bot"
+FAAS_GIT_AUTHOR_EMAIL = os.environ.get("FAAS_GIT_AUTHOR_EMAIL", "myapp-faas-bot@localhost").strip() or "myapp-faas-bot@localhost"
+FAAS_DEPLOY_MODE = os.environ.get("FAAS_DEPLOY_MODE", "metadata").strip().lower().replace("_", "-") or "metadata"
+FAAS_DEPLOY_SCRIPT = os.environ.get("FAAS_DEPLOY_SCRIPT", "").strip()
+FAAS_OPENFAAS_GATEWAY = os.environ.get("FAAS_OPENFAAS_GATEWAY", "").rstrip("/")
+FAAS_OPENFAAS_USERNAME = os.environ.get("FAAS_OPENFAAS_USERNAME", "admin").strip()
+FAAS_OPENFAAS_PASSWORD = os.environ.get("FAAS_OPENFAAS_PASSWORD", "").strip()
+FAAS_OPENFAAS_RUNTIME_IMAGE = os.environ.get(
+    "FAAS_OPENFAAS_RUNTIME_IMAGE",
+    os.environ.get("MYAPP_FAAS_RUNTIME_IMAGE", "dapangyu/myapp-faas-runtime:agent-control-plane"),
+).strip()
+FAAS_RUNTIME_BUNDLE_BASE_URL = os.environ.get("FAAS_RUNTIME_BUNDLE_BASE_URL", "").rstrip("/")
+FAAS_RUNTIME_TOKEN = os.environ.get("FAAS_RUNTIME_TOKEN", "").strip()
+FAAS_OPENFAAS_SCALE_ZERO = os.environ.get("FAAS_OPENFAAS_SCALE_ZERO", "1").strip().lower() in {"1", "true", "yes", "on"}
+FAAS_OPENFAAS_MIN_REPLICAS = _env_int("FAAS_OPENFAAS_MIN_REPLICAS", 0)
+FAAS_OPENFAAS_MAX_REPLICAS = _env_int("FAAS_OPENFAAS_MAX_REPLICAS", 1)
+FAAS_OPENFAAS_READ_TIMEOUT = os.environ.get("FAAS_OPENFAAS_READ_TIMEOUT", "60s").strip() or "60s"
+FAAS_OPENFAAS_WRITE_TIMEOUT = os.environ.get("FAAS_OPENFAAS_WRITE_TIMEOUT", "60s").strip() or "60s"
+FAAS_PUBLIC_BASE_URL = os.environ.get("FAAS_PUBLIC_BASE_URL", "").rstrip("/")
+FAAS_FUNCTION_PREFIX = os.environ.get("FAAS_FUNCTION_PREFIX", "myapp").strip().lower() or "myapp"
+FAAS_LOCAL_DOCKER_IMAGE = os.environ.get(
+    "FAAS_LOCAL_DOCKER_IMAGE",
+    os.environ.get("MYAPP_FAAS_RUNTIME_IMAGE", "dapangyu/myapp-faas-runtime:agent-control-plane"),
+).strip()
+FAAS_LOCAL_DOCKER_NETWORK = os.environ.get("FAAS_LOCAL_DOCKER_NETWORK", "myapp_default").strip() or "myapp_default"
+FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT = os.environ.get("FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT", "/mnt/myapp/faas/code").rstrip("/")
+FAAS_LOCAL_DOCKER_HOST_CODE_ROOT = os.environ.get("FAAS_LOCAL_DOCKER_HOST_CODE_ROOT", FAAS_CODE_ROOT).rstrip("/")
+FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS = _env_int("FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS", 15)
+FAAS_LOCAL_DOCKER_START_ON_DEPLOY = os.environ.get("FAAS_LOCAL_DOCKER_START_ON_DEPLOY", "1").strip().lower() in {"1", "true", "yes", "on"}
+FAAS_BUNDLE_MAX_BYTES = _env_int("FAAS_BUNDLE_MAX_BYTES", 512 * 1024)
+FAAS_FILE_MAX_BYTES = _env_int("FAAS_FILE_MAX_BYTES", 256 * 1024)
+FAAS_REQUIREMENTS_MAX_LINES = _env_int("FAAS_REQUIREMENTS_MAX_LINES", 40)
+
 # Registry Mirror —— 上游 registry 地址。空字符串表示不开 mirror（独立运行）。
 # 开启后：每 REGISTRY_MIRROR_SYNC_INTERVAL_SEC 秒拉一次上游 /mirror/manifest，
 # 合并到本地索引；客户端请求镜像版本的文件时按需代理到上游 /mirror/file 并缓存到本地 MinIO。

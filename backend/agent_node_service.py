@@ -1802,6 +1802,34 @@ def _pull_upload_artifact(run_id: str, relative_path: str = "app.json") -> None:
     _json_line(_run_log_path(run_id), {"type": "pull_artifact_missing", "path": relative_path, "ts": _now_ms()})
 
 
+def _client_action_artifact_paths(payload: object) -> list[str]:
+    if isinstance(payload, dict):
+        raw_actions = payload.get("client_actions")
+    elif isinstance(payload, list):
+        raw_actions = payload
+    else:
+        raw_actions = []
+    if not isinstance(raw_actions, list):
+        return []
+    paths: list[str] = []
+    for raw in raw_actions[:20]:
+        if not isinstance(raw, dict):
+            continue
+        action_type = str(raw.get("type") or "").strip()
+        if action_type == "server_upload_app_json":
+            path = str(raw.get("path") or "app.json").strip() or "app.json"
+        elif action_type == "server_deploy_faas_service":
+            path = str(raw.get("path") or "faas_bundle.json").strip() or "faas_bundle.json"
+        else:
+            continue
+        normalized = os.path.normpath(path).replace("\\", "/")
+        if normalized.startswith("../") or normalized == ".." or os.path.isabs(normalized):
+            continue
+        if normalized not in paths:
+            paths.append(normalized)
+    return paths
+
+
 def _pull_stream_run_events(run_id: str) -> None:
     log_path = _run_log_path(run_id)
     pos = 0
@@ -1810,6 +1838,7 @@ def _pull_stream_run_events(run_id: str) -> None:
     last_flush = time.time()
     last_heartbeat = time.time()
     stop_seen = False
+    artifact_paths: set[str] = {"app.json"}
     flush_interval = max(0.05, PULL_EVENT_FLUSH_LIVE_SECONDS)
     while True:
         if log_path.exists():
@@ -1832,8 +1861,11 @@ def _pull_stream_run_events(run_id: str) -> None:
                     except json.JSONDecodeError:
                         continue
                     if item.get("type") == "stop":
-                        _pull_upload_artifact(run_id, "app.json")
+                        for artifact_path in sorted(artifact_paths):
+                            _pull_upload_artifact(run_id, artifact_path)
                         stop_seen = True
+                    elif item.get("type") == "client_actions":
+                        artifact_paths.update(_client_action_artifact_paths(item.get("payload")))
                     batch.append(item)
         now = time.time()
         if batch and (stop_seen or len(batch) >= PULL_EVENT_BATCH_MAX or now - last_flush >= flush_interval):
