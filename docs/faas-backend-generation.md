@@ -230,6 +230,7 @@ myapp-ctl status faas-control faas-worker
 myapp-ctl log backend -n 200
 myapp-ctl log ai-worker -n 200
 myapp-ctl faas smoke
+myapp-ctl faas ai-action-smoke
 myapp-ctl faas openfaas-runtime-smoke --pull-image
 myapp-ctl faas openfaas-backend-smoke --yes
 python3 backend/test_faas_store_controls.py
@@ -294,6 +295,11 @@ Minimum verification:
   restarts the FaaS control services, runs the public FaaS smoke test through a
   local OpenFaaS-compatible gateway, then restores the previous `faas.env`. It
   does not pull stack images unless `--pull-stack` is supplied.
+- `myapp-ctl faas ai-action-smoke` passes. This copies a smoke script into the
+  deployed backend container, writes the same `faas_bundle.json` and
+  `client_actions.json` artifacts an Agent would write, resolves
+  `server_deploy_faas_service` through `ai_session._resolve_server_upload_actions`,
+  invokes the generated service, and cleans it up.
 - In `openfaas` mode, OpenFaaS lists the generated function and invocation via
   `/api/faas/invoke/<service_id>/...` reaches the generic runtime image.
 - `/api/faas/runtime_bundle/<service_id>` rejects missing or wrong runtime

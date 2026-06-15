@@ -5317,6 +5317,37 @@ def cmd_faas(args) -> int:
         if args.keep:
             cmd.append("--keep")
         return _run(cmd, capture=False).returncode
+    if args.faas_cmd == "ai-action-smoke":
+        script = _source_dir() / "scripts" / "faas_ai_action_smoke.py"
+        if not script.is_file():
+            print(f"faas AI action smoke script not found: {script}", file=sys.stderr)
+            return 1
+        container_path = f"/tmp/myapp-faas-ai-action-smoke-{os.getpid()}.py"
+        copy = _run(["docker", "cp", str(script), f"myapp-backend:{container_path}"])
+        if copy.returncode != 0:
+            print(f"failed to copy smoke script into myapp-backend: {(copy.stderr or copy.stdout).strip()}", file=sys.stderr)
+            return 1
+        cmd = [
+            "docker",
+            "exec",
+            "myapp-backend",
+            "python",
+            container_path,
+            "--base-url",
+            args.base_url or "http://127.0.0.1:5566",
+            "--user-id",
+            args.user_id,
+            "--session-id",
+            args.session_id,
+            "--service-id",
+            args.service_id,
+        ]
+        if args.no_cleanup:
+            cmd.append("--no-cleanup")
+        try:
+            return _run(cmd, capture=False).returncode
+        finally:
+            _run(["docker", "exec", "myapp-backend", "rm", "-f", container_path], capture=True)
     if args.faas_cmd == "mode":
         return _set_faas_mode(args)
     if args.faas_cmd == "git":
@@ -7159,6 +7190,13 @@ def build_parser() -> argparse.ArgumentParser:
     faas_openfaas_backend_smoke.add_argument("--pull-stack", action="store_true", help=_tx("pull backend/FaaS stack images while redeploying", zh="重部署时拉取 backend/FaaS 栈镜像", de="Backend/FaaS-Stack-Images beim Redeploy pullen", es="hacer pull de imagenes backend/FaaS al redesplegar"))
     faas_openfaas_backend_smoke.add_argument("--keep", action="store_true", help=_tx("keep test runtime containers after completion", zh="完成后保留测试 runtime 容器", de="Test-Runtime-Container nach Abschluss behalten", es="mantener contenedores runtime de prueba"))
     faas_openfaas_backend_smoke.set_defaults(func=cmd_faas)
+    faas_ai_action_smoke = faas_sub.add_parser("ai-action-smoke", help=_tx("simulate Agent FaaS artifacts and resolve them through the deployed backend", zh="模拟 Agent FaaS 产物并通过已部署后端解析部署", de="Agent-FaaS-Artefakte simulieren und im deployten Backend aufloesen", es="simular artefactos FaaS de Agent y resolverlos en backend desplegado"), usage=_tx("myapp-ctl faas ai-action-smoke [options]", zh="myapp-ctl faas ai-action-smoke [选项]", de="myapp-ctl faas ai-action-smoke [Optionen]", es="myapp-ctl faas ai-action-smoke [opciones]"))
+    faas_ai_action_smoke.add_argument("--base-url", default="http://127.0.0.1:5566", help=_tx("backend base URL used for invocation", zh="调用生成服务使用的后端 base URL", de="Backend-Basis-URL fuer Invocation", es="URL base backend para invocacion"))
+    faas_ai_action_smoke.add_argument("--user-id", default="ai-action-smoke-user", help=_tx("test owner user id", zh="测试 owner user id", de="Test-Owner-User-ID", es="user id owner de prueba"))
+    faas_ai_action_smoke.add_argument("--session-id", default="ai-action-smoke-session", help=_tx("test AI session id", zh="测试 AI session id", de="Test-AI-Session-ID", es="id de sesion AI de prueba"))
+    faas_ai_action_smoke.add_argument("--service-id", default=f"ai-action-smoke-{int(time.time())}", help=_tx("test service id", zh="测试服务 ID", de="Test-Service-ID", es="service id de prueba"))
+    faas_ai_action_smoke.add_argument("--no-cleanup", action="store_true", help=_tx("leave generated service in place", zh="保留生成服务不清理", de="generierten Dienst nicht bereinigen", es="no limpiar servicio generado"))
+    faas_ai_action_smoke.set_defaults(func=cmd_faas)
     faas_mode = faas_sub.add_parser("mode", help=_tx("configure generated FaaS deploy mode", zh="配置生成后端的 FaaS 部署模式", de="Deploy-Modus fuer generierte FaaS konfigurieren", es="configurar modo deploy FaaS generado"), usage=_tx("myapp-ctl faas mode <mode> [options]", zh="myapp-ctl faas mode <模式> [选项]", de="myapp-ctl faas mode <Modus> [Optionen]", es="myapp-ctl faas mode <modo> [opciones]"))
     faas_mode.add_argument("mode", choices=["local-docker", "openfaas", "metadata", "script"])
     faas_mode.add_argument("--gateway", help=_tx("OpenFaaS gateway URL for openfaas mode", zh="openfaas 模式的 OpenFaaS gateway URL", de="OpenFaaS-Gateway-URL fuer openfaas-Modus", es="URL gateway OpenFaaS para modo openfaas"))
