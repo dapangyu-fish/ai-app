@@ -292,7 +292,8 @@ Minimum verification:
 - `myapp-ctl faas openfaas-backend-smoke --yes` passes on a disposable/test
   host. This temporarily switches the deployed backend to `FAAS_DEPLOY_MODE=openfaas`,
   restarts the FaaS control services, runs the public FaaS smoke test through a
-  local OpenFaaS-compatible gateway, then restores the previous `faas.env`.
+  local OpenFaaS-compatible gateway, then restores the previous `faas.env`. It
+  does not pull stack images unless `--pull-stack` is supplied.
 - In `openfaas` mode, OpenFaaS lists the generated function and invocation via
   `/api/faas/invoke/<service_id>/...` reaches the generic runtime image.
 - `/api/faas/runtime_bundle/<service_id>` rejects missing or wrong runtime

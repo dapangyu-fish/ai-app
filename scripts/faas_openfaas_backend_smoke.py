@@ -57,8 +57,11 @@ def _write_file(path: Path, content: str) -> None:
     os.chmod(path, 0o600)
 
 
-def _deploy_faas_group() -> None:
-    _must_run(["myapp-ctl", "deploy", "--group", "faas", "--pull"], timeout=600)
+def _deploy_faas_group(*, pull: bool = False) -> None:
+    cmd = ["myapp-ctl", "deploy", "--group", "faas"]
+    if pull:
+        cmd.append("--pull")
+    _must_run(cmd, timeout=600)
 
 
 def main() -> int:
@@ -71,6 +74,7 @@ def main() -> int:
     parser.add_argument("--service-id", default=f"openfaas-backend-smoke-{int(time.time())}", help="test service id")
     parser.add_argument("--user-id", default="openfaas-backend-smoke", help="test owner user id")
     parser.add_argument("--pull-image", action="store_true", help="pull the runtime image before running")
+    parser.add_argument("--pull-stack", action="store_true", help="pull backend/FaaS stack images while redeploying")
     parser.add_argument("--keep", action="store_true", help="keep test runtime containers after completion")
     args = parser.parse_args()
 
@@ -116,7 +120,7 @@ def main() -> int:
             ],
             timeout=120,
         )
-        _deploy_faas_group()
+        _deploy_faas_group(pull=args.pull_stack)
         smoke = _must_run(
             [
                 "myapp-ctl",
@@ -140,7 +144,7 @@ def main() -> int:
             except FileNotFoundError:
                 pass
         try:
-            _deploy_faas_group()
+            _deploy_faas_group(pull=args.pull_stack)
             restored = True
         finally:
             gateway_state.cleanup()

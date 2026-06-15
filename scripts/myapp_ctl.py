@@ -5312,6 +5312,8 @@ def cmd_faas(args) -> int:
             cmd.append("--yes")
         if args.pull_image:
             cmd.append("--pull-image")
+        if args.pull_stack:
+            cmd.append("--pull-stack")
         if args.keep:
             cmd.append("--keep")
         return _run(cmd, capture=False).returncode
@@ -7154,6 +7156,7 @@ def build_parser() -> argparse.ArgumentParser:
     faas_openfaas_backend_smoke.add_argument("--user-id", default="openfaas-backend-smoke", help=_tx("test owner user id", zh="测试 owner user id", de="Test-Owner-User-ID", es="user id owner de prueba"))
     faas_openfaas_backend_smoke.add_argument("--service-id", default=f"openfaas-backend-smoke-{int(time.time())}", help=_tx("test service id", zh="测试服务 ID", de="Test-Service-ID", es="service id de prueba"))
     faas_openfaas_backend_smoke.add_argument("--pull-image", action="store_true", help=_tx("pull the runtime image before running", zh="运行前拉取 runtime 镜像", de="Runtime-Image vor Ausfuehrung pullen", es="hacer pull de la imagen runtime antes de ejecutar"))
+    faas_openfaas_backend_smoke.add_argument("--pull-stack", action="store_true", help=_tx("pull backend/FaaS stack images while redeploying", zh="重部署时拉取 backend/FaaS 栈镜像", de="Backend/FaaS-Stack-Images beim Redeploy pullen", es="hacer pull de imagenes backend/FaaS al redesplegar"))
     faas_openfaas_backend_smoke.add_argument("--keep", action="store_true", help=_tx("keep test runtime containers after completion", zh="完成后保留测试 runtime 容器", de="Test-Runtime-Container nach Abschluss behalten", es="mantener contenedores runtime de prueba"))
     faas_openfaas_backend_smoke.set_defaults(func=cmd_faas)
     faas_mode = faas_sub.add_parser("mode", help=_tx("configure generated FaaS deploy mode", zh="配置生成后端的 FaaS 部署模式", de="Deploy-Modus fuer generierte FaaS konfigurieren", es="configurar modo deploy FaaS generado"), usage=_tx("myapp-ctl faas mode <mode> [options]", zh="myapp-ctl faas mode <模式> [选项]", de="myapp-ctl faas mode <Modus> [Optionen]", es="myapp-ctl faas mode <modo> [opciones]"))
