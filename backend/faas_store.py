@@ -21,6 +21,7 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import quote
 
 import requests
 
@@ -735,6 +736,42 @@ def _openfaas_auth():
     return (FAAS_OPENFAAS_USERNAME or "admin", FAAS_OPENFAAS_PASSWORD)
 
 
+def _openfaas_function_exists(function_name: str) -> bool:
+    gateway = FAAS_OPENFAAS_GATEWAY.rstrip("/")
+    try:
+        resp = requests.get(
+            f"{gateway}/system/function/{quote(function_name, safe='')}",
+            auth=_openfaas_auth(),
+            timeout=(5, 30),
+        )
+    except requests.RequestException as exc:
+        raise FaaSError(f"OpenFaaS status request failed: {exc}") from exc
+    if resp.status_code == 200:
+        return True
+    if resp.status_code == 404:
+        return False
+    raise FaaSError(f"OpenFaaS status failed status={resp.status_code}: {resp.text[:1000]}")
+
+
+def _openfaas_deploy_request(method: str, payload: dict[str, Any]) -> requests.Response:
+    gateway = FAAS_OPENFAAS_GATEWAY.rstrip("/")
+    if method == "POST":
+        return requests.post(
+            f"{gateway}/system/functions",
+            json=payload,
+            auth=_openfaas_auth(),
+            timeout=(5, 60),
+        )
+    if method == "PUT":
+        return requests.put(
+            f"{gateway}/system/functions",
+            json=payload,
+            auth=_openfaas_auth(),
+            timeout=(5, 60),
+        )
+    raise ValueError(f"unsupported OpenFaaS deploy method: {method}")
+
+
 def _deploy_openfaas_function(*, function_name: str, service_id: str, commit_sha: str) -> str:
     gateway = FAAS_OPENFAAS_GATEWAY.rstrip("/")
     if not gateway:
@@ -777,18 +814,20 @@ def _deploy_openfaas_function(*, function_name: str, service_id: str, commit_sha
             "com.openfaas.timeouts.write": FAAS_OPENFAAS_WRITE_TIMEOUT,
         },
     }
+    method = "PUT" if _openfaas_function_exists(function_name) else "POST"
     try:
-        resp = requests.put(
-            f"{gateway}/system/functions",
-            json=payload,
-            auth=_openfaas_auth(),
-            timeout=(5, 60),
-        )
+        resp = _openfaas_deploy_request(method, payload)
+        if method == "PUT" and resp.status_code == 404:
+            method = "POST"
+            resp = _openfaas_deploy_request(method, payload)
+        elif method == "POST" and resp.status_code in {409}:
+            method = "PUT"
+            resp = _openfaas_deploy_request(method, payload)
     except requests.RequestException as exc:
         raise FaaSError(f"OpenFaaS deploy request failed: {exc}") from exc
     if resp.status_code not in {200, 201, 202}:
         raise FaaSError(f"OpenFaaS deploy failed status={resp.status_code}: {resp.text[:1000]}")
-    return f"openfaas function={function_name} image={FAAS_OPENFAAS_RUNTIME_IMAGE} status={resp.status_code}"
+    return f"openfaas method={method} function={function_name} image={FAAS_OPENFAAS_RUNTIME_IMAGE} status={resp.status_code}"
 
 
 def _delete_openfaas_function(function_name: str) -> str:
