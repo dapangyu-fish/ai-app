@@ -69,6 +69,11 @@ the frontend route is:
 /api/faas/invoke/<service_id>/<route>
 ```
 
+JSON-DSL HTTP builtins (`@http_get`, `@http_post`, `@http_put`,
+`@http_delete`, `@http_sse`) resolve `/...` relative URLs against the active
+MyApp backend URL, so generated apps should prefer the relative path above
+instead of hard-coding an environment-specific host.
+
 To disable a service and free one active-service quota slot:
 
 ```text
