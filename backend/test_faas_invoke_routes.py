@@ -80,7 +80,49 @@ def test_flask_style_route_patterns() -> None:
     assert faas._route_allowed(_service(routes), "/files", "GET")[0] is False
 
 
+def test_rejected_route_does_not_start_runtime() -> None:
+    class _Request:
+        method = "GET"
+        query_string = b""
+        headers = {}
+
+        @staticmethod
+        def get_data():
+            return b""
+
+    called = {"runtime": False}
+    old_request = faas.request
+    old_get_service = faas.get_service
+    old_ensure = faas.ensure_local_docker_runtime_for_service
+    old_mode = faas.FAAS_DEPLOY_MODE
+    try:
+        faas.request = _Request()
+        faas.FAAS_DEPLOY_MODE = "local-docker"
+        faas.get_service = lambda service_id: {
+            "service_id": service_id,
+            "status": "ready",
+            "routes": [{"path": "/hello", "methods": ["GET"]}],
+        }
+
+        def fail_if_called(service):
+            called["runtime"] = True
+            raise AssertionError("runtime should not start for a rejected route")
+
+        faas.ensure_local_docker_runtime_for_service = fail_if_called
+        body, status = faas.invoke_service("svc", "admin")
+    finally:
+        faas.request = old_request
+        faas.get_service = old_get_service
+        faas.ensure_local_docker_runtime_for_service = old_ensure
+        faas.FAAS_DEPLOY_MODE = old_mode
+
+    assert status == 404
+    assert body["code"] == "FAAS_ROUTE_NOT_ALLOWED"
+    assert called["runtime"] is False
+
+
 if __name__ == "__main__":
     test_route_allowlist_contract()
     test_flask_style_route_patterns()
+    test_rejected_route_does_not_start_runtime()
     print(json.dumps({"ok": True}, sort_keys=True))

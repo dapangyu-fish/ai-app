@@ -197,17 +197,22 @@ def _proxy_headers(upstream: requests.Response) -> list[tuple[str, str]]:
     return [(key, value) for key, value in upstream.headers.items() if key.lower() not in excluded]
 
 
-def _append_safe_route_path(upstream: str, route_path: str) -> str:
+def _safe_route_suffix(route_path: str) -> str:
     subpath = route_path.strip("/")
     if not subpath:
-        return upstream
+        return ""
     if "://" in subpath or subpath.startswith(("/", "\\")) or "\\" in subpath:
         raise ValueError("invalid FaaS route path")
     parts = [part for part in subpath.split("/") if part not in {"", ".", ".."}]
     if len(parts) != len([part for part in subpath.split("/") if part]):
         raise ValueError("invalid FaaS route path")
     encoded = "/".join(quote(part, safe="") for part in parts)
-    return upstream.rstrip("/") + "/" + encoded
+    return "/" + encoded
+
+
+def _append_safe_route_path(upstream: str, route_path: str) -> str:
+    suffix = _safe_route_suffix(route_path)
+    return upstream.rstrip("/") + suffix if suffix else upstream
 
 
 def _route_segments(path: str) -> list[str]:
@@ -270,6 +275,14 @@ def invoke_service(service_id: str, route_path: str = ""):
             409,
             code="FAAS_NOT_READY",
         )
+    try:
+        safe_route_suffix = _safe_route_suffix(route_path)
+    except ValueError as exc:
+        return _json_error(str(exc), 400, code="FAAS_ROUTE_INVALID")
+    allowed, status, message = _route_allowed(service, route_path, request.method)
+    if not allowed:
+        return _json_error(message, status, code="FAAS_ROUTE_NOT_ALLOWED")
+
     mode = FAAS_DEPLOY_MODE
     gateway = FAAS_OPENFAAS_GATEWAY.rstrip("/")
     if mode in _LOCAL_DOCKER_MODES:
@@ -288,13 +301,8 @@ def invoke_service(service_id: str, route_path: str = ""):
             503,
             code="FAAS_GATEWAY_UNCONFIGURED",
         )
-    try:
-        upstream = _append_safe_route_path(upstream, route_path)
-    except ValueError as exc:
-        return _json_error(str(exc), 400, code="FAAS_ROUTE_INVALID")
-    allowed, status, message = _route_allowed(service, route_path, request.method)
-    if not allowed:
-        return _json_error(message, status, code="FAAS_ROUTE_NOT_ALLOWED")
+    if safe_route_suffix:
+        upstream = upstream.rstrip("/") + safe_route_suffix
     if request.query_string:
         upstream = f"{upstream}?{request.query_string.decode('utf-8', errors='replace')}"
 
