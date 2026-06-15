@@ -234,6 +234,8 @@ python3 backend/test_faas_store_controls.py
 python3 backend/test_faas_invoke_routes.py
 python3 backend/test_faas_ai_session_owner.py
 python3 backend/test_faas_git_store.py
+python3 backend/test_faas_runtime_bundle_endpoint.py
+python3 backend/test_faas_runtime_server_bundle.py
 python3 backend/test_faas_openfaas_gateway.py
 ```
 
@@ -273,6 +275,12 @@ Minimum verification:
 - `backend/test_faas_ai_session_owner.py` passes. This verifies FaaS deploy
   actions use the authenticated chat-session owner and can resolve agent-pull
   uploaded artifacts.
+- `backend/test_faas_runtime_bundle_endpoint.py` passes. This verifies runtime
+  bundle download is gated by the per-service runtime token before files are
+  loaded.
+- `backend/test_faas_runtime_server_bundle.py` passes. This verifies the generic
+  runtime sends its token while downloading the validated bundle and only
+  materializes allowed text files.
 - In `openfaas` mode, OpenFaaS lists the generated function and invocation via
   `/api/faas/invoke/<service_id>/...` reaches the generic runtime image.
 - `/api/faas/runtime_bundle/<service_id>` rejects missing or wrong runtime
