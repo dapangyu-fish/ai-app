@@ -445,7 +445,92 @@ def _validate_requirements(text: str) -> None:
             raise FaaSValidationError(f"dependency is not allowed yet: {name}")
 
 
-def _validate_python_ast(text: str) -> None:
+def _literal_string(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    return None
+
+
+def _literal_methods(node: ast.AST) -> set[str] | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return {node.value.strip().upper()}
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        out: set[str] = set()
+        for item in node.elts:
+            value = _literal_string(item)
+            if value is None:
+                return None
+            if value.strip():
+                out.add(value.strip().upper())
+        return out
+    return None
+
+
+def _extract_flask_routes(tree: ast.AST) -> dict[str, set[str]]:
+    routes: dict[str, set[str]] = {}
+    method_decorators = {
+        "get": "GET",
+        "post": "POST",
+        "put": "PUT",
+        "patch": "PATCH",
+        "delete": "DELETE",
+        "options": "OPTIONS",
+    }
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        for decorator in node.decorator_list:
+            if not isinstance(decorator, ast.Call):
+                continue
+            func = decorator.func
+            if not isinstance(func, ast.Attribute):
+                continue
+            value = func.value
+            if not isinstance(value, ast.Name) or value.id not in {"app", "application"}:
+                continue
+            decorator_name = func.attr
+            if decorator_name not in method_decorators and decorator_name != "route":
+                continue
+            if not decorator.args:
+                raise FaaSValidationError("Flask route decorator must include a literal path")
+            route_path = _literal_string(decorator.args[0])
+            if not route_path:
+                raise FaaSValidationError("Flask route path must be a string literal")
+            if not route_path.startswith("/"):
+                route_path = "/" + route_path
+            if decorator_name == "route":
+                methods: set[str] | None = None
+                for keyword in decorator.keywords:
+                    if keyword.arg == "methods":
+                        methods = _literal_methods(keyword.value)
+                        if methods is None:
+                            raise FaaSValidationError("Flask route methods must be a string literal list")
+                        break
+                if not methods:
+                    methods = {"GET"}
+            else:
+                methods = {method_decorators[decorator_name]}
+            routes.setdefault(route_path, set()).update(methods)
+    return routes
+
+
+def _validate_declared_routes_implemented(routes: list[dict[str, Any]], implemented: dict[str, set[str]]) -> None:
+    if not routes:
+        return
+    for route in routes:
+        path = str(route.get("path") or "/")
+        methods = {str(method).strip().upper() for method in (route.get("methods") or ["GET"])}
+        actual = implemented.get(path)
+        if actual is None:
+            raise FaaSValidationError(f"declared route is not implemented in app.py: {path}")
+        missing = sorted(methods - actual)
+        if missing:
+            raise FaaSValidationError(
+                f"declared route methods are not implemented in app.py: {path} {','.join(missing)}"
+            )
+
+
+def _validate_python_ast(text: str, *, routes: list[dict[str, Any]] | None = None) -> None:
     try:
         tree = ast.parse(text, filename="app.py")
     except SyntaxError as exc:
@@ -479,6 +564,7 @@ def _validate_python_ast(text: str) -> None:
             raise FaaSValidationError(f"dunder attribute is not allowed: {node.attr}")
     if not has_flask_app:
         raise FaaSValidationError("app.py must expose a Flask instance named app or application")
+    _validate_declared_routes_implemented(routes or [], _extract_flask_routes(tree))
 
 
 def _normalize_routes(raw: Any) -> list[dict[str, Any]]:
@@ -552,7 +638,7 @@ def validate_bundle(bundle: dict[str, Any], *, default_slug: str = "") -> dict[s
         _validate_requirements(normalized_files["requirements.txt"])
     else:
         normalized_files["requirements.txt"] = "flask==3.0.3\n"
-    _validate_python_ast(normalized_files["app.py"])
+    _validate_python_ast(normalized_files["app.py"], routes=routes)
 
     service_json = {
         "service_id": service_id,

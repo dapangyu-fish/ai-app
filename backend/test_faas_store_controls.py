@@ -207,6 +207,86 @@ def test_validation_rejects_dangerous_python_and_dependencies() -> None:
         raise AssertionError("unsupported dependency was accepted")
 
 
+def test_validation_requires_declared_routes_to_match_flask_decorators() -> None:
+    valid = faas_store.validate_bundle(
+        {
+            "service": {
+                "service_id": "route-api",
+                "slug": "route-api",
+                "routes": [
+                    {"path": "/items", "methods": ["GET", "POST"]},
+                    {"path": "/items/<item_id>", "methods": ["DELETE"]},
+                ],
+            },
+            "files": {
+                "app.py": (
+                    "from flask import Flask, jsonify\n"
+                    "app = Flask(__name__)\n"
+                    "@app.route('/items', methods=['GET', 'POST'])\n"
+                    "def items():\n"
+                    "    return jsonify(ok=True)\n"
+                    "@app.delete('/items/<item_id>')\n"
+                    "def delete_item(item_id):\n"
+                    "    return jsonify(ok=True)\n"
+                ),
+            },
+        }
+    )
+    assert valid["routes"][0]["path"] == "/items"
+
+    try:
+        faas_store.validate_bundle(_bundle("missing-route"))
+    except faas_store.FaaSValidationError as exc:
+        raise AssertionError(f"default bundle should still be valid: {exc}") from exc
+
+    try:
+        faas_store.validate_bundle(
+            {
+                "service": {
+                    "service_id": "not-implemented-api",
+                    "routes": [{"path": "/items", "methods": ["GET"]}],
+                },
+                "files": {
+                    "app.py": (
+                        "from flask import Flask, jsonify\n"
+                        "app = Flask(__name__)\n"
+                        "@app.get('/other')\n"
+                        "def other():\n"
+                        "    return jsonify(ok=True)\n"
+                    ),
+                },
+            }
+        )
+    except faas_store.FaaSValidationError as exc:
+        assert "declared route is not implemented" in str(exc)
+    else:
+        raise AssertionError("bundle with an unimplemented declared route was accepted")
+
+    try:
+        faas_store.validate_bundle(
+            {
+                "service": {
+                    "service_id": "missing-method-api",
+                    "routes": [{"path": "/items", "methods": ["GET", "POST"]}],
+                },
+                "files": {
+                    "app.py": (
+                        "from flask import Flask, jsonify\n"
+                        "app = Flask(__name__)\n"
+                        "@app.get('/items')\n"
+                        "def items():\n"
+                        "    return jsonify(ok=True)\n"
+                    ),
+                },
+            }
+        )
+    except faas_store.FaaSValidationError as exc:
+        assert "declared route methods are not implemented" in str(exc)
+        assert "POST" in str(exc)
+    else:
+        raise AssertionError("bundle with an unimplemented declared method was accepted")
+
+
 def test_deploy_quota_conflict_disable_and_runtime_bundle() -> None:
     with tempfile.TemporaryDirectory(prefix="myapp-faas-store-") as raw:
         faas_store.FAAS_CODE_ROOT = raw
@@ -285,6 +365,7 @@ def test_openfaas_deploy_records_gateway_metadata() -> None:
 
 if __name__ == "__main__":
     test_validation_rejects_dangerous_python_and_dependencies()
+    test_validation_requires_declared_routes_to_match_flask_decorators()
     test_deploy_quota_conflict_disable_and_runtime_bundle()
     test_openfaas_deploy_records_gateway_metadata()
     print(json.dumps({"ok": True}, sort_keys=True))

@@ -1738,6 +1738,8 @@ def _build_faas_backend_prompt_note(*, workspace: Optional[str] = None) -> str:
         "`{\"service\":{\"slug\":\"todo-api\",\"routes\":[{\"path\":\"/items\",\"methods\":[\"GET\",\"POST\"]}]},"
         "\"files\":{\"app.py\":\"...Flask app code...\",\"requirements.txt\":\"flask==3.0.3\\n\"}}`。"
         "\n- `app.py` 必须定义 Flask `app`，接口路径必须与 service.routes 保持一致；"
+        "后端会静态校验每个 `service.routes` 路径/方法都能在 `@app.get/post/put/patch/delete/options(...)` "
+        "或 `@app.route(..., methods=[...])` 中找到；"
         "后端代理会强制校验 `service.routes` 中声明的 path/method，JSON-APP 调用未声明路径会得到 404，"
         "调用未声明 method 会得到 405；因此前端会调用的每个接口都必须在 routes 中逐一声明。"
         "动态路径可使用 Flask 风格如 `/items/<item_id>` 或 `/files/<path:tail>`。"

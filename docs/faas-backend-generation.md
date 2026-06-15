@@ -49,6 +49,12 @@ The invoke proxy enforces `service.routes`: calls to undeclared paths return
 will call must be declared in the bundle, including dynamic Flask-style routes
 such as `/items/<item_id>` or `/files/<path:tail>`.
 
+The validator also checks that every declared `service.routes` path/method is
+implemented in `app.py` through a literal Flask decorator:
+`@app.get/post/put/patch/delete/options(...)` or
+`@app.route(..., methods=[...])`. A bundle that declares `/items` `POST` but
+only implements `@app.get('/items')` is rejected before deployment.
+
 ## Bundle Shape
 
 ```json
@@ -301,7 +307,8 @@ Minimum verification:
   to Agent runtime.
 - `backend/test_faas_store_controls.py` passes. This verifies restricted bundle
   validation, per-user active service limits, cross-user `service_id`
-  conflicts, disabling services, and runtime bundle materialization.
+  conflicts, declared Flask route coverage, disabling services, and runtime
+  bundle materialization.
 - `backend/test_faas_invoke_routes.py` passes. This verifies the invoke proxy
   only forwards routes and methods declared by the generated service contract
   while keeping empty-route legacy services compatible, and verifies
