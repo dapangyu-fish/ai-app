@@ -218,6 +218,7 @@ myapp-ctl status faas-control faas-worker
 myapp-ctl log backend -n 200
 myapp-ctl log ai-worker -n 200
 myapp-ctl faas smoke
+python3 backend/test_faas_openfaas_gateway.py
 ```
 
 `faas-control` and `faas-worker` are service-inventory aliases for the existing
@@ -241,6 +242,9 @@ Minimum verification:
 - `scripts/faas_smoke_test.py` can deploy, invoke, and disable a test service.
 - In `local-docker` mode, invoking `/api/faas/invoke/<service_id>/...` starts or
   reuses the corresponding `myapp-faas-*` runtime container.
+- `backend/test_faas_openfaas_gateway.py` passes. This verifies the backend
+  OpenFaaS adapter against an HTTP fake gateway and checks create/update/delete
+  method selection and runtime payload shape.
 - In `openfaas` mode, OpenFaaS lists the generated function and invocation via
   `/api/faas/invoke/<service_id>/...` reaches the generic runtime image.
 - `/api/faas/runtime_bundle/<service_id>` rejects missing or wrong runtime
