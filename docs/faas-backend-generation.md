@@ -231,6 +231,7 @@ myapp-ctl log backend -n 200
 myapp-ctl log ai-worker -n 200
 myapp-ctl faas smoke
 myapp-ctl faas openfaas-runtime-smoke --pull-image
+myapp-ctl faas openfaas-backend-smoke --yes
 python3 backend/test_faas_store_controls.py
 python3 backend/test_faas_invoke_routes.py
 python3 backend/test_faas_ai_session_owner.py
@@ -288,6 +289,10 @@ Minimum verification:
   runtime downloads its bundle with the per-service token, invokes the function,
   updates it, and deletes it. This is a runtime contract test, not a substitute
   for a real faasd/OpenFaaS gateway test.
+- `myapp-ctl faas openfaas-backend-smoke --yes` passes on a disposable/test
+  host. This temporarily switches the deployed backend to `FAAS_DEPLOY_MODE=openfaas`,
+  restarts the FaaS control services, runs the public FaaS smoke test through a
+  local OpenFaaS-compatible gateway, then restores the previous `faas.env`.
 - In `openfaas` mode, OpenFaaS lists the generated function and invocation via
   `/api/faas/invoke/<service_id>/...` reaches the generic runtime image.
 - `/api/faas/runtime_bundle/<service_id>` rejects missing or wrong runtime

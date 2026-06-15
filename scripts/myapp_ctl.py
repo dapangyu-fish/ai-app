@@ -5285,6 +5285,36 @@ def cmd_faas(args) -> int:
         if args.keep:
             cmd.append("--keep")
         return _run(cmd, capture=False).returncode
+    if args.faas_cmd == "openfaas-backend-smoke":
+        script = _source_dir() / "scripts" / "faas_openfaas_backend_smoke.py"
+        if not script.is_file():
+            print(f"faas OpenFaaS backend smoke script not found: {script}", file=sys.stderr)
+            return 1
+        configured = _parse_env(_secret_path("faas"))
+        runtime_image = args.runtime_image or configured.get("FAAS_OPENFAAS_RUNTIME_IMAGE") or _configured_image("faas-runtime")
+        cmd = [
+            sys.executable,
+            str(script),
+            "--runtime-image",
+            runtime_image,
+            "--base-url",
+            args.base_url or _backend_base_url(None),
+            "--network",
+            args.network,
+            "--bundle-base-url",
+            args.bundle_base_url,
+            "--user-id",
+            args.user_id,
+            "--service-id",
+            args.service_id,
+        ]
+        if args.yes:
+            cmd.append("--yes")
+        if args.pull_image:
+            cmd.append("--pull-image")
+        if args.keep:
+            cmd.append("--keep")
+        return _run(cmd, capture=False).returncode
     if args.faas_cmd == "mode":
         return _set_faas_mode(args)
     if args.faas_cmd == "git":
@@ -7115,6 +7145,17 @@ def build_parser() -> argparse.ArgumentParser:
     faas_openfaas_runtime_smoke.add_argument("--pull-image", action="store_true", help=_tx("pull the runtime image before running", zh="运行前拉取 runtime 镜像", de="Runtime-Image vor Ausfuehrung pullen", es="hacer pull de la imagen runtime antes de ejecutar"))
     faas_openfaas_runtime_smoke.add_argument("--keep", action="store_true", help=_tx("keep test containers after completion", zh="完成后保留测试容器", de="Test-Container nach Abschluss behalten", es="mantener contenedores de prueba al finalizar"))
     faas_openfaas_runtime_smoke.set_defaults(func=cmd_faas)
+    faas_openfaas_backend_smoke = faas_sub.add_parser("openfaas-backend-smoke", help=_tx("temporarily switch deployed backend to openfaas mode and run a smoke test", zh="临时切换已部署后端到 openfaas 模式并运行冒烟测试", de="Backend temporaer in openfaas-Modus schalten und Smoke-Test ausfuehren", es="cambiar temporalmente backend a modo openfaas y ejecutar smoke"), usage=_tx("myapp-ctl faas openfaas-backend-smoke --yes [options]", zh="myapp-ctl faas openfaas-backend-smoke --yes [选项]", de="myapp-ctl faas openfaas-backend-smoke --yes [Optionen]", es="myapp-ctl faas openfaas-backend-smoke --yes [opciones]"))
+    faas_openfaas_backend_smoke.add_argument("--yes", action="store_true", help=_tx("confirm temporary config switch and backend restart", zh="确认临时切换配置并重启后端", de="temporaere Konfigurationsaenderung und Backend-Neustart bestaetigen", es="confirmar cambio temporal y reinicio backend"))
+    faas_openfaas_backend_smoke.add_argument("--base-url", default=None, help=_tx("backend base URL used by faas smoke", zh="faas smoke 使用的后端 base URL", de="Backend-Basis-URL fuer FaaS-Smoke", es="URL base backend para faas smoke"))
+    faas_openfaas_backend_smoke.add_argument("--runtime-image", help=_tx("runtime image to start; defaults to configured FAAS_OPENFAAS_RUNTIME_IMAGE", zh="要启动的 runtime 镜像；默认使用已配置 FAAS_OPENFAAS_RUNTIME_IMAGE", de="zu startendes Runtime-Image; Standard ist FAAS_OPENFAAS_RUNTIME_IMAGE", es="imagen runtime a iniciar; por defecto FAAS_OPENFAAS_RUNTIME_IMAGE"))
+    faas_openfaas_backend_smoke.add_argument("--network", default="myapp_default", help=_tx("Docker network shared by backend and runtime containers", zh="backend 和 runtime 容器共享的 Docker 网络", de="Docker-Netzwerk fuer Backend und Runtime-Container", es="red Docker compartida por backend y runtimes"))
+    faas_openfaas_backend_smoke.add_argument("--bundle-base-url", default="http://backend:5566", help=_tx("bundle base URL visible from runtime containers", zh="runtime 容器可见的 bundle base URL", de="Bundle-Basis-URL sichtbar fuer Runtime-Container", es="URL base bundle visible desde runtimes"))
+    faas_openfaas_backend_smoke.add_argument("--user-id", default="openfaas-backend-smoke", help=_tx("test owner user id", zh="测试 owner user id", de="Test-Owner-User-ID", es="user id owner de prueba"))
+    faas_openfaas_backend_smoke.add_argument("--service-id", default=f"openfaas-backend-smoke-{int(time.time())}", help=_tx("test service id", zh="测试服务 ID", de="Test-Service-ID", es="service id de prueba"))
+    faas_openfaas_backend_smoke.add_argument("--pull-image", action="store_true", help=_tx("pull the runtime image before running", zh="运行前拉取 runtime 镜像", de="Runtime-Image vor Ausfuehrung pullen", es="hacer pull de la imagen runtime antes de ejecutar"))
+    faas_openfaas_backend_smoke.add_argument("--keep", action="store_true", help=_tx("keep test runtime containers after completion", zh="完成后保留测试 runtime 容器", de="Test-Runtime-Container nach Abschluss behalten", es="mantener contenedores runtime de prueba"))
+    faas_openfaas_backend_smoke.set_defaults(func=cmd_faas)
     faas_mode = faas_sub.add_parser("mode", help=_tx("configure generated FaaS deploy mode", zh="配置生成后端的 FaaS 部署模式", de="Deploy-Modus fuer generierte FaaS konfigurieren", es="configurar modo deploy FaaS generado"), usage=_tx("myapp-ctl faas mode <mode> [options]", zh="myapp-ctl faas mode <模式> [选项]", de="myapp-ctl faas mode <Modus> [Optionen]", es="myapp-ctl faas mode <modo> [opciones]"))
     faas_mode.add_argument("mode", choices=["local-docker", "openfaas", "metadata", "script"])
     faas_mode.add_argument("--gateway", help=_tx("OpenFaaS gateway URL for openfaas mode", zh="openfaas 模式的 OpenFaaS gateway URL", de="OpenFaaS-Gateway-URL fuer openfaas-Modus", es="URL gateway OpenFaaS para modo openfaas"))

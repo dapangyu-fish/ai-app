@@ -181,8 +181,9 @@ def _bundle_handler(state: _BundleState):
 
 
 class _GatewayState:
-    def __init__(self, *, keep: bool = False) -> None:
+    def __init__(self, *, keep: bool = False, network: str = "") -> None:
         self.keep = keep
+        self.network = network
         self.functions: dict[str, dict[str, Any]] = {}
         self.containers: dict[str, str] = {}
         self.calls: list[tuple[str, str, dict | None]] = []
@@ -236,6 +237,8 @@ def _start_runtime_container(function_name: str, payload: dict[str, Any], state:
         "-p",
         "127.0.0.1::8080",
     ]
+    if state.network:
+        cmd.extend(["--network", state.network])
     for key, value in env_vars.items():
         cmd.extend(["-e", f"{key}={value}"])
     cmd.append(image)
