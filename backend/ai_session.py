@@ -1743,6 +1743,7 @@ def _build_faas_backend_prompt_note(*, workspace: Optional[str] = None) -> str:
         "`app.py` 顶层只允许 imports、`app = Flask(__name__)`/`application = Flask(...)`、"
         "literal 常量/列表/字典、路由函数和可选 `if __name__ == '__main__': app.run()`；"
         "不要在顶层执行循环、网络/文件 IO、后台线程或任意函数调用；"
+        "函数默认参数、类型注解和装饰器也不能调用运行时代码，装饰器只能使用 literal Flask route；"
         "后端代理会强制校验 `service.routes` 中声明的 path/method，JSON-APP 调用未声明路径会得到 404，"
         "调用未声明 method 会得到 405；因此前端会调用的每个接口都必须在 routes 中逐一声明。"
         "动态路径可使用 Flask 风格如 `/items/<item_id>` 或 `/files/<path:tail>`。"

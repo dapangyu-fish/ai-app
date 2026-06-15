@@ -61,7 +61,10 @@ At top level it may contain imports, `app = Flask(__name__)` or
 route functions, and an optional `if __name__ == '__main__': app.run()` guard.
 Top-level loops, file/network IO, background threads, and arbitrary function
 calls are rejected so generated code cannot hang or perform side effects while
-the runtime imports the module.
+the runtime imports the module. Function default arguments, annotations, and
+decorators are also import-time code: defaults must be literals, annotations
+must not call runtime code, and decorators must be literal Flask route
+decorators.
 
 ## Bundle Shape
 

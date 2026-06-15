@@ -362,6 +362,66 @@ def test_validation_restricts_top_level_runtime_shape() -> None:
     else:
         raise AssertionError("bundle with top-level call assignment was accepted")
 
+    try:
+        faas_store.validate_bundle(
+            _bundle(
+                "constructor-call",
+                app_py=(
+                    "import time\n"
+                    "from flask import Flask, jsonify\n"
+                    "app = Flask(time.sleep(1))\n"
+                    "@app.get('/hello')\n"
+                    "def hello():\n"
+                    "    return jsonify(ok=True)\n"
+                ),
+            )
+        )
+    except faas_store.FaaSValidationError as exc:
+        assert "Flask" in str(exc)
+    else:
+        raise AssertionError("bundle with side-effecting Flask constructor was accepted")
+
+    try:
+        faas_store.validate_bundle(
+            _bundle(
+                "decorator-call",
+                app_py=(
+                    "import time\n"
+                    "from flask import Flask, jsonify\n"
+                    "app = Flask(__name__)\n"
+                    "@time.sleep(1)\n"
+                    "def bad():\n"
+                    "    return None\n"
+                    "@app.get('/hello')\n"
+                    "def hello():\n"
+                    "    return jsonify(ok=True)\n"
+                ),
+            )
+        )
+    except faas_store.FaaSValidationError as exc:
+        assert "decorators" in str(exc)
+    else:
+        raise AssertionError("bundle with side-effecting decorator was accepted")
+
+    try:
+        faas_store.validate_bundle(
+            _bundle(
+                "default-call",
+                app_py=(
+                    "import time\n"
+                    "from flask import Flask, jsonify\n"
+                    "app = Flask(__name__)\n"
+                    "@app.get('/hello')\n"
+                    "def hello(seed=time.sleep(1)):\n"
+                    "    return jsonify(ok=True)\n"
+                ),
+            )
+        )
+    except faas_store.FaaSValidationError as exc:
+        assert "default arguments" in str(exc)
+    else:
+        raise AssertionError("bundle with side-effecting default argument was accepted")
+
 
 def test_deploy_quota_conflict_disable_and_runtime_bundle() -> None:
     with tempfile.TemporaryDirectory(prefix="myapp-faas-store-") as raw:

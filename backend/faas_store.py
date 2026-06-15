@@ -177,6 +177,14 @@ _FORBIDDEN_NAMES = {
     "__subclasses__",
 }
 _LOCAL_DOCKER_MODES = {"local-docker", "docker", "docker-local"}
+_FLASK_METHOD_DECORATORS = {
+    "get": "GET",
+    "post": "POST",
+    "put": "PUT",
+    "patch": "PATCH",
+    "delete": "DELETE",
+    "options": "OPTIONS",
+}
 
 
 def ensure_tables() -> None:
@@ -481,15 +489,24 @@ def _is_literal_value(node: ast.AST) -> bool:
     return False
 
 
+def _is_safe_flask_constructor_arg(node: ast.AST) -> bool:
+    return _is_literal_value(node) or (isinstance(node, ast.Name) and node.id == "__name__")
+
+
 def _is_flask_constructor(node: ast.AST) -> bool:
     if not isinstance(node, ast.Call):
         return False
     func = node.func
+    is_flask = False
     if isinstance(func, ast.Name):
-        return func.id == "Flask"
-    if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
-        return func.value.id == "flask" and func.attr == "Flask"
-    return False
+        is_flask = func.id == "Flask"
+    elif isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
+        is_flask = func.value.id == "flask" and func.attr == "Flask"
+    if not is_flask:
+        return False
+    return all(_is_safe_flask_constructor_arg(arg) for arg in node.args) and all(
+        _is_safe_flask_constructor_arg(keyword.value) for keyword in node.keywords
+    )
 
 
 def _is_app_target(node: ast.AST) -> bool:
@@ -522,10 +539,66 @@ def _is_main_guard(node: ast.AST) -> bool:
     )
 
 
+def _validate_safe_route_decorator(decorator: ast.AST) -> bool:
+    if not isinstance(decorator, ast.Call):
+        return False
+    func = decorator.func
+    if not isinstance(func, ast.Attribute):
+        return False
+    value = func.value
+    if not isinstance(value, ast.Name) or value.id not in {"app", "application"}:
+        return False
+    decorator_name = func.attr
+    if decorator_name not in _FLASK_METHOD_DECORATORS and decorator_name != "route":
+        return False
+    if not decorator.args:
+        raise FaaSValidationError("Flask route decorator must include a literal path")
+    if _literal_string(decorator.args[0]) is None:
+        raise FaaSValidationError("Flask route path must be a string literal")
+    for extra_arg in decorator.args[1:]:
+        if not _is_literal_value(extra_arg):
+            raise FaaSValidationError("Flask route decorator arguments must be literal values")
+    for keyword in decorator.keywords:
+        if keyword.arg == "methods":
+            if _literal_methods(keyword.value) is None:
+                raise FaaSValidationError("Flask route methods must be a string literal list")
+            continue
+        if not _is_literal_value(keyword.value):
+            raise FaaSValidationError("Flask route decorator keyword arguments must be literal values")
+    return True
+
+
+def _annotation_is_safe(node: ast.AST | None) -> bool:
+    if node is None:
+        return True
+    return not any(isinstance(child, ast.Call) for child in ast.walk(node))
+
+
+def _validate_top_level_function_shape(node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
+    for decorator in node.decorator_list:
+        if not _validate_safe_route_decorator(decorator):
+            raise FaaSValidationError("function decorators must be literal Flask route decorators")
+    for default in [*node.args.defaults, *[item for item in node.args.kw_defaults if item is not None]]:
+        if not _is_literal_value(default):
+            raise FaaSValidationError("function default arguments must be literal values")
+    if not _annotation_is_safe(node.returns):
+        raise FaaSValidationError("function annotations must not call runtime code")
+    for arg in [*node.args.posonlyargs, *node.args.args, *node.args.kwonlyargs]:
+        if not _annotation_is_safe(arg.annotation):
+            raise FaaSValidationError("function annotations must not call runtime code")
+    if node.args.vararg and not _annotation_is_safe(node.args.vararg.annotation):
+        raise FaaSValidationError("function annotations must not call runtime code")
+    if node.args.kwarg and not _annotation_is_safe(node.args.kwarg.annotation):
+        raise FaaSValidationError("function annotations must not call runtime code")
+
+
 def _validate_top_level_shape(tree: ast.Module) -> bool:
     has_flask_app = False
     for node in tree.body:
-        if isinstance(node, (ast.Import, ast.ImportFrom, ast.FunctionDef, ast.AsyncFunctionDef)):
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            continue
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            _validate_top_level_function_shape(node)
             continue
         if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):
             continue
@@ -556,14 +629,6 @@ def _validate_top_level_shape(tree: ast.Module) -> bool:
 
 def _extract_flask_routes(tree: ast.AST) -> dict[str, set[str]]:
     routes: dict[str, set[str]] = {}
-    method_decorators = {
-        "get": "GET",
-        "post": "POST",
-        "put": "PUT",
-        "patch": "PATCH",
-        "delete": "DELETE",
-        "options": "OPTIONS",
-    }
     for node in ast.walk(tree):
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
@@ -577,7 +642,7 @@ def _extract_flask_routes(tree: ast.AST) -> dict[str, set[str]]:
             if not isinstance(value, ast.Name) or value.id not in {"app", "application"}:
                 continue
             decorator_name = func.attr
-            if decorator_name not in method_decorators and decorator_name != "route":
+            if decorator_name not in _FLASK_METHOD_DECORATORS and decorator_name != "route":
                 continue
             if not decorator.args:
                 raise FaaSValidationError("Flask route decorator must include a literal path")
@@ -597,7 +662,7 @@ def _extract_flask_routes(tree: ast.AST) -> dict[str, set[str]]:
                 if not methods:
                     methods = {"GET"}
             else:
-                methods = {method_decorators[decorator_name]}
+                methods = {_FLASK_METHOD_DECORATORS[decorator_name]}
             routes.setdefault(route_path, set()).update(methods)
     return routes
 
