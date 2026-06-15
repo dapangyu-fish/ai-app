@@ -55,6 +55,14 @@ implemented in `app.py` through a literal Flask decorator:
 `@app.route(..., methods=[...])`. A bundle that declares `/items` `POST` but
 only implements `@app.get('/items')` is rejected before deployment.
 
+`app.py` is intentionally restricted to a statically verifiable module shape.
+At top level it may contain imports, `app = Flask(__name__)` or
+`application = Flask(...)`, literal constants/lists/dicts for small seed state,
+route functions, and an optional `if __name__ == '__main__': app.run()` guard.
+Top-level loops, file/network IO, background threads, and arbitrary function
+calls are rejected so generated code cannot hang or perform side effects while
+the runtime imports the module.
+
 ## Bundle Shape
 
 ```json
@@ -307,8 +315,8 @@ Minimum verification:
   to Agent runtime.
 - `backend/test_faas_store_controls.py` passes. This verifies restricted bundle
   validation, per-user active service limits, cross-user `service_id`
-  conflicts, declared Flask route coverage, disabling services, and runtime
-  bundle materialization.
+  conflicts, declared Flask route coverage, restricted top-level module shape,
+  disabling services, and runtime bundle materialization.
 - `backend/test_faas_invoke_routes.py` passes. This verifies the invoke proxy
   only forwards routes and methods declared by the generated service contract
   while keeping empty-route legacy services compatible, and verifies

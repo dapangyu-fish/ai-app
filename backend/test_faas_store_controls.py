@@ -287,6 +287,82 @@ def test_validation_requires_declared_routes_to_match_flask_decorators() -> None
         raise AssertionError("bundle with an unimplemented declared method was accepted")
 
 
+def test_validation_restricts_top_level_runtime_shape() -> None:
+    seeded = faas_store.validate_bundle(
+        _bundle(
+            "seeded-state-api",
+            app_py=(
+                "from flask import Flask, jsonify\n"
+                "app = Flask(__name__)\n"
+                "ITEMS = [{'id': 1, 'title': 'demo'}]\n"
+                "@app.get('/hello')\n"
+                "def hello():\n"
+                "    return jsonify(items=ITEMS)\n"
+                "if __name__ == '__main__':\n"
+                "    app.run()\n"
+            ),
+        )
+    )
+    assert seeded["service_id"] == "seeded-state-api"
+
+    try:
+        faas_store.validate_bundle(
+            _bundle(
+                "fake-flask-app",
+                app_py=(
+                    "from flask import jsonify\n"
+                    "app = object()\n"
+                    "@app.get('/hello')\n"
+                    "def hello():\n"
+                    "    return jsonify(ok=True)\n"
+                ),
+            )
+        )
+    except faas_store.FaaSValidationError as exc:
+        assert "Flask" in str(exc)
+    else:
+        raise AssertionError("bundle with fake Flask app was accepted")
+
+    try:
+        faas_store.validate_bundle(
+            _bundle(
+                "top-level-loop",
+                app_py=(
+                    "from flask import Flask, jsonify\n"
+                    "app = Flask(__name__)\n"
+                    "while True:\n"
+                    "    pass\n"
+                    "@app.get('/hello')\n"
+                    "def hello():\n"
+                    "    return jsonify(ok=True)\n"
+                ),
+            )
+        )
+    except faas_store.FaaSValidationError as exc:
+        assert "top-level code is restricted" in str(exc)
+    else:
+        raise AssertionError("bundle with top-level loop was accepted")
+
+    try:
+        faas_store.validate_bundle(
+            _bundle(
+                "top-level-call",
+                app_py=(
+                    "from flask import Flask, jsonify\n"
+                    "app = Flask(__name__)\n"
+                    "ITEMS = list()\n"
+                    "@app.get('/hello')\n"
+                    "def hello():\n"
+                    "    return jsonify(items=ITEMS)\n"
+                ),
+            )
+        )
+    except faas_store.FaaSValidationError as exc:
+        assert "top-level code is restricted" in str(exc)
+    else:
+        raise AssertionError("bundle with top-level call assignment was accepted")
+
+
 def test_deploy_quota_conflict_disable_and_runtime_bundle() -> None:
     with tempfile.TemporaryDirectory(prefix="myapp-faas-store-") as raw:
         faas_store.FAAS_CODE_ROOT = raw
@@ -366,6 +442,7 @@ def test_openfaas_deploy_records_gateway_metadata() -> None:
 if __name__ == "__main__":
     test_validation_rejects_dangerous_python_and_dependencies()
     test_validation_requires_declared_routes_to_match_flask_decorators()
+    test_validation_restricts_top_level_runtime_shape()
     test_deploy_quota_conflict_disable_and_runtime_bundle()
     test_openfaas_deploy_records_gateway_metadata()
     print(json.dumps({"ok": True}, sort_keys=True))

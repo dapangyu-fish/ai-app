@@ -466,6 +466,94 @@ def _literal_methods(node: ast.AST) -> set[str] | None:
     return None
 
 
+def _is_literal_value(node: ast.AST) -> bool:
+    if isinstance(node, ast.Constant):
+        return True
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub, ast.Not)):
+        return _is_literal_value(node.operand)
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        return all(_is_literal_value(item) for item in node.elts)
+    if isinstance(node, ast.Dict):
+        return all(
+            (key is None or _is_literal_value(key)) and _is_literal_value(value)
+            for key, value in zip(node.keys, node.values)
+        )
+    return False
+
+
+def _is_flask_constructor(node: ast.AST) -> bool:
+    if not isinstance(node, ast.Call):
+        return False
+    func = node.func
+    if isinstance(func, ast.Name):
+        return func.id == "Flask"
+    if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
+        return func.value.id == "flask" and func.attr == "Flask"
+    return False
+
+
+def _is_app_target(node: ast.AST) -> bool:
+    return isinstance(node, ast.Name) and node.id in {"app", "application"}
+
+
+def _is_name_target(node: ast.AST) -> bool:
+    if isinstance(node, ast.Name):
+        return True
+    if isinstance(node, (ast.Tuple, ast.List)):
+        return all(_is_name_target(item) for item in node.elts)
+    return False
+
+
+def _is_main_guard(node: ast.AST) -> bool:
+    if not isinstance(node, ast.If):
+        return False
+    test = node.test
+    if not isinstance(test, ast.Compare) or len(test.ops) != 1 or len(test.comparators) != 1:
+        return False
+    if not isinstance(test.ops[0], ast.Eq):
+        return False
+    left = test.left
+    right = test.comparators[0]
+    return (
+        isinstance(left, ast.Name)
+        and left.id == "__name__"
+        and isinstance(right, ast.Constant)
+        and right.value == "__main__"
+    )
+
+
+def _validate_top_level_shape(tree: ast.Module) -> bool:
+    has_flask_app = False
+    for node in tree.body:
+        if isinstance(node, (ast.Import, ast.ImportFrom, ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):
+            continue
+        if isinstance(node, ast.Assign):
+            if any(_is_app_target(target) for target in node.targets):
+                if not _is_flask_constructor(node.value):
+                    raise FaaSValidationError("app.py must initialize app/application with Flask(...)")
+                has_flask_app = True
+                continue
+            if all(_is_name_target(target) for target in node.targets) and _is_literal_value(node.value):
+                continue
+        if isinstance(node, ast.AnnAssign):
+            if _is_app_target(node.target):
+                if not _is_flask_constructor(node.value):
+                    raise FaaSValidationError("app.py must initialize app/application with Flask(...)")
+                has_flask_app = True
+                continue
+            if _is_name_target(node.target) and (node.value is None or _is_literal_value(node.value)):
+                continue
+        if _is_main_guard(node):
+            continue
+        raise FaaSValidationError(
+            "app.py top-level code is restricted to imports, Flask app initialization, "
+            "literal constants, route functions, and an optional __main__ guard"
+        )
+    return has_flask_app
+
+
 def _extract_flask_routes(tree: ast.AST) -> dict[str, set[str]]:
     routes: dict[str, set[str]] = {}
     method_decorators = {
@@ -535,7 +623,7 @@ def _validate_python_ast(text: str, *, routes: list[dict[str, Any]] | None = Non
         tree = ast.parse(text, filename="app.py")
     except SyntaxError as exc:
         raise FaaSValidationError(f"app.py syntax error: {exc}") from exc
-    has_flask_app = False
+    has_flask_app = _validate_top_level_shape(tree)
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
@@ -551,13 +639,6 @@ def _validate_python_ast(text: str, *, routes: list[dict[str, Any]] | None = Non
             name = target.id if isinstance(target, ast.Name) else ""
             if name in _FORBIDDEN_CALLS:
                 raise FaaSValidationError(f"call is not allowed: {name}")
-        elif isinstance(node, ast.Assign):
-            for target in node.targets:
-                if isinstance(target, ast.Name) and target.id in {"app", "application"}:
-                    has_flask_app = True
-        elif isinstance(node, ast.AnnAssign):
-            if isinstance(node.target, ast.Name) and node.target.id in {"app", "application"}:
-                has_flask_app = True
         elif isinstance(node, ast.Name) and node.id in _FORBIDDEN_NAMES:
             raise FaaSValidationError(f"name is not allowed: {node.id}")
         elif isinstance(node, ast.Attribute) and node.attr.startswith("__"):
