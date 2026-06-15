@@ -118,6 +118,11 @@ def main() -> int:
     if invalid.status_code != 400:
         raise RuntimeError(f"absolute route path was not rejected: {invalid.status_code} {invalid.text[:300]}")
 
+    undeclared = requests.get(f"{base}/api/faas/invoke/{args.service_id}/admin")
+    print("undeclared_route_status:", undeclared.status_code)
+    if undeclared.status_code != 404:
+        raise RuntimeError(f"undeclared route was not rejected: {undeclared.status_code} {undeclared.text[:300]}")
+
     if not args.no_cleanup:
         cleanup_url = f"{base}/api/faas/services/{args.service_id}"
         cleanup_params = {} if args.token else {"user_id": args.user_id}

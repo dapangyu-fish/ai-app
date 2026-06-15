@@ -210,6 +210,56 @@ def _append_safe_route_path(upstream: str, route_path: str) -> str:
     return upstream.rstrip("/") + "/" + encoded
 
 
+def _route_segments(path: str) -> list[str]:
+    value = str(path or "").strip()
+    if not value.startswith("/"):
+        value = "/" + value
+    return [part for part in value.strip("/").split("/") if part]
+
+
+def _route_pattern_matches(pattern: str, actual: str) -> bool:
+    pattern_parts = _route_segments(pattern)
+    actual_parts = _route_segments(actual)
+    i = 0
+    j = 0
+    while i < len(pattern_parts) and j < len(actual_parts):
+        part = pattern_parts[i]
+        if part.startswith("<") and part.endswith(">"):
+            inner = part[1:-1]
+            if inner.startswith("path:"):
+                return j < len(actual_parts)
+            i += 1
+            j += 1
+            continue
+        if part != actual_parts[j]:
+            return False
+        i += 1
+        j += 1
+    return i == len(pattern_parts) and j == len(actual_parts)
+
+
+def _route_allowed(service: dict, route_path: str, method: str) -> tuple[bool, int, str]:
+    routes = service.get("routes") or []
+    if not routes:
+        return True, 200, ""
+    path = "/" + route_path.strip("/") if route_path.strip("/") else "/"
+    requested_method = str(method or "GET").upper()
+    path_seen = False
+    for item in routes:
+        if not isinstance(item, dict):
+            continue
+        pattern = str(item.get("path") or "/")
+        if not _route_pattern_matches(pattern, path):
+            continue
+        path_seen = True
+        methods = {str(value).strip().upper() for value in (item.get("methods") or ["GET"])}
+        if requested_method in methods or (requested_method == "HEAD" and "GET" in methods):
+            return True, 200, ""
+    if path_seen:
+        return False, 405, "method is not allowed for this FaaS route"
+    return False, 404, "route is not declared by this FaaS service"
+
+
 def invoke_service(service_id: str, route_path: str = ""):
     service = get_service(service_id)
     if not service:
@@ -242,6 +292,9 @@ def invoke_service(service_id: str, route_path: str = ""):
         upstream = _append_safe_route_path(upstream, route_path)
     except ValueError as exc:
         return _json_error(str(exc), 400, code="FAAS_ROUTE_INVALID")
+    allowed, status, message = _route_allowed(service, route_path, request.method)
+    if not allowed:
+        return _json_error(message, status, code="FAAS_ROUTE_NOT_ALLOWED")
     if request.query_string:
         upstream = f"{upstream}?{request.query_string.decode('utf-8', errors='replace')}"
 

@@ -226,6 +226,7 @@ myapp-ctl log backend -n 200
 myapp-ctl log ai-worker -n 200
 myapp-ctl faas smoke
 python3 backend/test_faas_store_controls.py
+python3 backend/test_faas_invoke_routes.py
 python3 backend/test_faas_ai_session_owner.py
 python3 backend/test_faas_git_store.py
 python3 backend/test_faas_openfaas_gateway.py
@@ -261,6 +262,9 @@ Minimum verification:
 - `backend/test_faas_store_controls.py` passes. This verifies restricted bundle
   validation, per-user active service limits, cross-user `service_id`
   conflicts, disabling services, and runtime bundle materialization.
+- `backend/test_faas_invoke_routes.py` passes. This verifies the invoke proxy
+  only forwards routes and methods declared by the generated service contract
+  while keeping empty-route legacy services compatible.
 - `backend/test_faas_ai_session_owner.py` passes. This verifies FaaS deploy
   actions use the authenticated chat-session owner and can resolve agent-pull
   uploaded artifacts.
