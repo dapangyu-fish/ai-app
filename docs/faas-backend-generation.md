@@ -230,6 +230,7 @@ myapp-ctl status faas-control faas-worker
 myapp-ctl log backend -n 200
 myapp-ctl log ai-worker -n 200
 myapp-ctl faas smoke
+myapp-ctl faas openfaas-runtime-smoke --pull-image
 python3 backend/test_faas_store_controls.py
 python3 backend/test_faas_invoke_routes.py
 python3 backend/test_faas_ai_session_owner.py
@@ -281,6 +282,12 @@ Minimum verification:
 - `backend/test_faas_runtime_server_bundle.py` passes. This verifies the generic
   runtime sends its token while downloading the validated bundle and only
   materializes allowed text files.
+- `myapp-ctl faas openfaas-runtime-smoke` passes. This starts a local
+  OpenFaaS-compatible test gateway backed by Docker, deploys the generic
+  runtime image with the same payload shape used for OpenFaaS, verifies the
+  runtime downloads its bundle with the per-service token, invokes the function,
+  updates it, and deletes it. This is a runtime contract test, not a substitute
+  for a real faasd/OpenFaaS gateway test.
 - In `openfaas` mode, OpenFaaS lists the generated function and invocation via
   `/api/faas/invoke/<service_id>/...` reaches the generic runtime image.
 - `/api/faas/runtime_bundle/<service_id>` rejects missing or wrong runtime

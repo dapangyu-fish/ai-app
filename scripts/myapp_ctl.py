@@ -5268,6 +5268,23 @@ def cmd_faas(args) -> int:
         if args.no_cleanup:
             cmd.append("--no-cleanup")
         return _run(cmd, capture=False).returncode
+    if args.faas_cmd == "openfaas-runtime-smoke":
+        script = _source_dir() / "scripts" / "faas_openfaas_runtime_compat_test.py"
+        if not script.is_file():
+            print(f"faas OpenFaaS runtime smoke script not found: {script}", file=sys.stderr)
+            return 1
+        configured = _parse_env(_secret_path("faas"))
+        runtime_image = args.runtime_image or configured.get("FAAS_OPENFAAS_RUNTIME_IMAGE") or _configured_image("faas-runtime")
+        cmd = [sys.executable, str(script), "--runtime-image", runtime_image]
+        if args.service_id:
+            cmd.extend(["--service-id", args.service_id])
+        if args.function_name:
+            cmd.extend(["--function-name", args.function_name])
+        if args.pull_image:
+            cmd.append("--pull-image")
+        if args.keep:
+            cmd.append("--keep")
+        return _run(cmd, capture=False).returncode
     if args.faas_cmd == "mode":
         return _set_faas_mode(args)
     if args.faas_cmd == "git":
@@ -7091,6 +7108,13 @@ def build_parser() -> argparse.ArgumentParser:
     faas_smoke.add_argument("--service-id", help=_tx("explicit smoke service id", zh="指定冒烟服务 ID", de="explizite Smoke-Service-ID", es="service id smoke explicito"))
     faas_smoke.add_argument("--no-cleanup", action="store_true", help=_tx("leave the smoke service in place", zh="保留冒烟服务不清理", de="Smoke-Dienst nicht bereinigen", es="no limpiar servicio smoke"))
     faas_smoke.set_defaults(func=cmd_faas)
+    faas_openfaas_runtime_smoke = faas_sub.add_parser("openfaas-runtime-smoke", help=_tx("verify OpenFaaS runtime payloads with a local Docker compatibility gateway", zh="用本地 Docker 兼容网关验证 OpenFaaS runtime payload", de="OpenFaaS-Runtime-Payloads mit lokalem Docker-Kompatibilitaetsgateway pruefen", es="verificar payloads runtime OpenFaaS con gateway compatible Docker local"), usage=_tx("myapp-ctl faas openfaas-runtime-smoke [options]", zh="myapp-ctl faas openfaas-runtime-smoke [选项]", de="myapp-ctl faas openfaas-runtime-smoke [Optionen]", es="myapp-ctl faas openfaas-runtime-smoke [opciones]"))
+    faas_openfaas_runtime_smoke.add_argument("--runtime-image", help=_tx("runtime image to start; defaults to configured FAAS_OPENFAAS_RUNTIME_IMAGE", zh="要启动的 runtime 镜像；默认使用已配置 FAAS_OPENFAAS_RUNTIME_IMAGE", de="zu startendes Runtime-Image; Standard ist FAAS_OPENFAAS_RUNTIME_IMAGE", es="imagen runtime a iniciar; por defecto FAAS_OPENFAAS_RUNTIME_IMAGE"))
+    faas_openfaas_runtime_smoke.add_argument("--service-id", help=_tx("explicit test service id", zh="指定测试服务 ID", de="explizite Test-Service-ID", es="service id de prueba explicito"))
+    faas_openfaas_runtime_smoke.add_argument("--function-name", help=_tx("explicit test function name", zh="指定测试函数名", de="expliziter Test-Funktionsname", es="nombre de funcion de prueba explicito"))
+    faas_openfaas_runtime_smoke.add_argument("--pull-image", action="store_true", help=_tx("pull the runtime image before running", zh="运行前拉取 runtime 镜像", de="Runtime-Image vor Ausfuehrung pullen", es="hacer pull de la imagen runtime antes de ejecutar"))
+    faas_openfaas_runtime_smoke.add_argument("--keep", action="store_true", help=_tx("keep test containers after completion", zh="完成后保留测试容器", de="Test-Container nach Abschluss behalten", es="mantener contenedores de prueba al finalizar"))
+    faas_openfaas_runtime_smoke.set_defaults(func=cmd_faas)
     faas_mode = faas_sub.add_parser("mode", help=_tx("configure generated FaaS deploy mode", zh="配置生成后端的 FaaS 部署模式", de="Deploy-Modus fuer generierte FaaS konfigurieren", es="configurar modo deploy FaaS generado"), usage=_tx("myapp-ctl faas mode <mode> [options]", zh="myapp-ctl faas mode <模式> [选项]", de="myapp-ctl faas mode <Modus> [Optionen]", es="myapp-ctl faas mode <modo> [opciones]"))
     faas_mode.add_argument("mode", choices=["local-docker", "openfaas", "metadata", "script"])
     faas_mode.add_argument("--gateway", help=_tx("OpenFaaS gateway URL for openfaas mode", zh="openfaas 模式的 OpenFaaS gateway URL", de="OpenFaaS-Gateway-URL fuer openfaas-Modus", es="URL gateway OpenFaaS para modo openfaas"))
