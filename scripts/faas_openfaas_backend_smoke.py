@@ -4,7 +4,7 @@
 This starts a local OpenFaaS-compatible gateway, switches the deployed backend
 to openfaas mode, runs the public FaaS smoke test, and restores the previous
 FaaS configuration. It is intentionally opt-in because it restarts backend and
-ai-worker through `myapp-ctl deploy --group faas --pull`.
+ai-worker through `myapp-ctl deploy --group faas`.
 """
 
 from __future__ import annotations
@@ -17,6 +17,8 @@ import shutil
 import subprocess
 import sys
 import time
+
+import requests
 
 from faas_openfaas_runtime_compat_test import _GatewayState, _close, _docker, _gateway_handler, _run, _serve
 
@@ -64,6 +66,37 @@ def _deploy_faas_group(*, pull: bool = False) -> None:
     _must_run(cmd, timeout=600)
 
 
+def _env_value(raw: str, key: str) -> str:
+    prefix = f"{key}="
+    for line in raw.splitlines():
+        if not line.startswith(prefix):
+            continue
+        value = line[len(prefix):].strip()
+        if len(value) >= 2 and value[0] == value[-1] == '"':
+            return value[1:-1]
+        return value
+    return ""
+
+
+def _wait_faas_health(base_url: str, *, expected_mode: str = "", timeout: float = 90.0) -> dict:
+    url = f"{base_url.rstrip('/')}/api/faas/health"
+    deadline = time.time() + timeout
+    last = ""
+    while time.time() < deadline:
+        try:
+            resp = requests.get(url, timeout=2.0)
+            last = f"status={resp.status_code} body={resp.text[:300]}"
+            if resp.status_code == 200:
+                data = resp.json()
+                mode = str(data.get("deploy_mode") or "")
+                if data.get("ok") and (not expected_mode or mode == expected_mode):
+                    return data
+        except Exception as exc:
+            last = str(exc)
+        time.sleep(0.5)
+    raise RuntimeError(f"backend FaaS health did not become ready: {last}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run backend OpenFaaS-mode smoke with a temporary compatibility gateway.")
     parser.add_argument("--yes", action="store_true", help="confirm temporary backend FaaS mode switch and restart")
@@ -87,6 +120,7 @@ def main() -> int:
 
     faas_env = Path("/etc/myapp/secrets.d/faas.env")
     original = _read_file(faas_env)
+    original_mode = _env_value(original, "FAAS_DEPLOY_MODE") or ""
     backup = faas_env.with_suffix(f".env.bak-openfaas-smoke-{int(time.time())}")
     if original:
         _write_file(backup, original)
@@ -121,6 +155,7 @@ def main() -> int:
             timeout=120,
         )
         _deploy_faas_group(pull=args.pull_stack)
+        _wait_faas_health(args.base_url, expected_mode="openfaas")
         smoke = _must_run(
             [
                 "myapp-ctl",
@@ -145,6 +180,7 @@ def main() -> int:
                 pass
         try:
             _deploy_faas_group(pull=args.pull_stack)
+            _wait_faas_health(args.base_url, expected_mode=original_mode)
             restored = True
         finally:
             gateway_state.cleanup()
