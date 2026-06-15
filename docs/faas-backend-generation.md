@@ -233,6 +233,10 @@ myapp-ctl faas smoke
 myapp-ctl faas ai-action-smoke
 myapp-ctl faas openfaas-runtime-smoke --pull-image
 myapp-ctl faas openfaas-backend-smoke --yes
+OPENFAAS_PASSWORD=<password> myapp-ctl faas openfaas-gateway-check \
+  --gateway http://<real-faasd-gateway>:8080 \
+  --bundle-base-url https://<backend-domain> \
+  --password-env OPENFAAS_PASSWORD
 OPENFAAS_PASSWORD=<password> myapp-ctl faas openfaas-gateway-smoke --yes \
   --gateway http://<real-faasd-gateway>:8080 \
   --bundle-base-url https://<backend-domain> \
@@ -244,6 +248,7 @@ python3 backend/test_faas_git_store.py
 python3 backend/test_faas_runtime_bundle_endpoint.py
 python3 backend/test_faas_runtime_server_bundle.py
 python3 backend/test_faas_openfaas_gateway.py
+python3 backend/test_faas_openfaas_gateway_check.py
 ```
 
 `faas-control` and `faas-worker` are service-inventory aliases for the existing
@@ -308,6 +313,11 @@ Minimum verification:
   --bundle-base-url <backend-url>` passes against a real external faasd/OpenFaaS
   gateway. This temporarily switches the deployed backend to the real gateway,
   runs the public FaaS smoke test, then restores the previous `faas.env`.
+- `myapp-ctl faas openfaas-gateway-check --gateway <real-gateway>
+  --bundle-base-url <backend-url>` passes before the destructive gateway smoke.
+  This does not change backend configuration; it checks gateway health,
+  `/system/functions` authentication, and backend FaaS health reachability from
+  the operator host.
 - In `openfaas` mode, OpenFaaS lists the generated function and invocation via
   `/api/faas/invoke/<service_id>/...` reaches the generic runtime image.
 - `/api/faas/runtime_bundle/<service_id>` rejects missing or wrong runtime
