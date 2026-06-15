@@ -155,8 +155,63 @@ def test_faas_prompt_note_mentions_route_enforcement() -> None:
     assert "server_deploy_faas_service" in note
 
 
+def test_faas_manifest_initial_file_lists_user_services() -> None:
+    fake_faas_store = types.ModuleType("faas_store")
+    fake_faas_store.FAAS_MAX_SERVICES_PER_USER = 5
+    fake_faas_store.list_services = lambda user_id: [
+        {
+            "service_id": "todo-api",
+            "service_slug": "todo-api",
+            "status": "ready",
+            "routes": [{"path": "/items", "methods": ["GET", "POST"]}],
+            "active_commit": "abc123",
+            "updated_at": "updated",
+        }
+    ]
+    sys.modules["faas_store"] = fake_faas_store
+
+    with tempfile.TemporaryDirectory(prefix="myapp-faas-manifest-") as raw:
+        ai_session._write_faas_manifest(raw, "auth-user-789")
+        manifest = json.loads((Path(raw) / "faas_services.json").read_text(encoding="utf-8"))
+
+    assert manifest["owner_user_id"] == "auth-user-789"
+    assert manifest["max_services"] == 5
+    assert manifest["services"] == [
+        {
+            "service_id": "todo-api",
+            "slug": "todo-api",
+            "status": "ready",
+            "routes": [{"path": "/items", "methods": ["GET", "POST"]}],
+            "invoke_url": "/api/faas/invoke/todo-api",
+            "active_commit": "abc123",
+            "updated_at": "updated",
+        }
+    ]
+    assert "reuse its service_id" in manifest["note"]
+
+
+def test_client_action_compaction_keeps_app_upload_and_faas_deploys() -> None:
+    actions = ai_session._compact_client_actions(
+        [
+            {"type": "server_deploy_faas_service", "path": "first_bundle.json"},
+            {"type": "server_upload_app_json", "path": "draft.json"},
+            {"type": "server_upload_app_json", "path": "app.json"},
+            {"type": "server_deploy_faas_service", "path": "faas_bundle.json"},
+        ],
+        "session-compact",
+    )
+
+    assert actions == [
+        {"type": "server_upload_app_json", "path": "app.json"},
+        {"type": "server_deploy_faas_service", "path": "first_bundle.json"},
+        {"type": "server_deploy_faas_service", "path": "faas_bundle.json"},
+    ]
+
+
 if __name__ == "__main__":
     test_faas_action_owner_comes_from_authenticated_session()
     test_faas_action_can_deploy_agent_pull_artifact()
     test_faas_prompt_note_mentions_route_enforcement()
+    test_faas_manifest_initial_file_lists_user_services()
+    test_client_action_compaction_keeps_app_upload_and_faas_deploys()
     print(json.dumps({"ok": True}, sort_keys=True))
