@@ -4094,6 +4094,8 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "FAAS_GIT_BRANCH": "main",
         "FAAS_GIT_AUTHOR_NAME": "myapp-faas-bot",
         "FAAS_GIT_AUTHOR_EMAIL": "myapp-faas-bot@localhost",
+        "FAAS_GIT_SSH_KEY_PATH": "",
+        "FAAS_GIT_KNOWN_HOSTS_PATH": "",
         "FAAS_DEPLOY_MODE": "local-docker",
         "FAAS_DEPLOY_SCRIPT": "",
         "FAAS_OPENFAAS_GATEWAY": "",
@@ -5128,6 +5130,74 @@ def _set_faas_mode(args) -> int:
     return 0
 
 
+def _copy_faas_secret_file(source: str, target_name: str, *, mode: int) -> str:
+    src = Path(source).expanduser()
+    if not src.is_file():
+        raise FileNotFoundError(f"secret file not found: {src}")
+    dest_dir = _secret_dir() / "files"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / target_name
+    shutil.copyfile(src, dest)
+    os.chmod(dest, mode)
+    return f"/etc/myapp/secret-files/{target_name}"
+
+
+def _set_faas_git(args) -> int:
+    env_path = _secret_path("faas")
+    data = _parse_env(env_path)
+    if args.enable:
+        data["FAAS_GIT_ENABLED"] = "1"
+    if args.disable:
+        data["FAAS_GIT_ENABLED"] = "0"
+    if args.push:
+        data["FAAS_GIT_PUSH_ENABLED"] = "1"
+    if args.no_push:
+        data["FAAS_GIT_PUSH_ENABLED"] = "0"
+    if args.remote is not None:
+        data["FAAS_GIT_REMOTE"] = args.remote.strip()
+    if args.clear_remote:
+        data["FAAS_GIT_REMOTE"] = ""
+        data["FAAS_GIT_PUSH_ENABLED"] = "0"
+    if args.branch:
+        data["FAAS_GIT_BRANCH"] = args.branch.strip()
+    if args.author_name:
+        data["FAAS_GIT_AUTHOR_NAME"] = args.author_name.strip()
+    if args.author_email:
+        data["FAAS_GIT_AUTHOR_EMAIL"] = args.author_email.strip()
+    try:
+        if args.ssh_key_file:
+            data["FAAS_GIT_SSH_KEY_PATH"] = _copy_faas_secret_file(
+                args.ssh_key_file,
+                "faas_git_ssh_key",
+                mode=0o600,
+            )
+        if args.known_hosts_file:
+            data["FAAS_GIT_KNOWN_HOSTS_PATH"] = _copy_faas_secret_file(
+                args.known_hosts_file,
+                "faas_git_known_hosts",
+                mode=0o644,
+            )
+    except OSError as exc:
+        print(f"failed to copy FaaS Git secret file: {exc}", file=sys.stderr)
+        return 1
+    if args.ssh_key_path:
+        data["FAAS_GIT_SSH_KEY_PATH"] = args.ssh_key_path.strip()
+    if args.known_hosts_path:
+        data["FAAS_GIT_KNOWN_HOSTS_PATH"] = args.known_hosts_path.strip()
+    if args.clear_ssh:
+        data["FAAS_GIT_SSH_KEY_PATH"] = ""
+        data["FAAS_GIT_KNOWN_HOSTS_PATH"] = ""
+    if data.get("FAAS_GIT_PUSH_ENABLED") == "1" and not data.get("FAAS_GIT_REMOTE"):
+        print("FAAS_GIT_REMOTE is required when Git push is enabled", file=sys.stderr)
+        return 2
+    _write_env(env_path, data)
+    _sync_runtime_secrets_from_host_config(_data_root_from_cfg())
+    _safe_write_default_config_snapshot()
+    print("updated faas git config")
+    print("run: myapp-ctl deploy --group faas --pull")
+    return 0
+
+
 def cmd_faas(args) -> int:
     base_url = _backend_base_url(getattr(args, "base_url", None))
     token = _faas_token_arg(args)
@@ -5200,6 +5270,8 @@ def cmd_faas(args) -> int:
         return _run(cmd, capture=False).returncode
     if args.faas_cmd == "mode":
         return _set_faas_mode(args)
+    if args.faas_cmd == "git":
+        return _set_faas_git(args)
     if args.faas_cmd == "config":
         data = _parse_env(_secret_path("faas"))
         if args.json:
@@ -7036,6 +7108,24 @@ def build_parser() -> argparse.ArgumentParser:
     faas_mode.add_argument("--min-replicas", type=int, help=_tx("OpenFaaS min replicas label", zh="OpenFaaS 最小副本 label", de="OpenFaaS min replicas Label", es="label replicas min OpenFaaS"))
     faas_mode.add_argument("--max-replicas", type=int, help=_tx("OpenFaaS max replicas label", zh="OpenFaaS 最大副本 label", de="OpenFaaS max replicas Label", es="label replicas max OpenFaaS"))
     faas_mode.set_defaults(func=cmd_faas)
+    faas_git = faas_sub.add_parser("git", help=_tx("configure backend-owned FaaS Git storage", zh="配置后端托管的 FaaS Git 存储", de="Backend-eigenen FaaS-Git-Speicher konfigurieren", es="configurar almacenamiento Git FaaS del backend"), usage=_tx("myapp-ctl faas git [options]", zh="myapp-ctl faas git [选项]", de="myapp-ctl faas git [Optionen]", es="myapp-ctl faas git [opciones]"))
+    git_enable = faas_git.add_mutually_exclusive_group()
+    git_enable.add_argument("--enable", action="store_true", help=_tx("enable Git commits for generated services", zh="启用生成服务的 Git commit", de="Git-Commits fuer generierte Dienste aktivieren", es="activar commits Git para servicios generados"))
+    git_enable.add_argument("--disable", action="store_true", help=_tx("disable Git commits for generated services", zh="禁用生成服务的 Git commit", de="Git-Commits fuer generierte Dienste deaktivieren", es="desactivar commits Git para servicios generados"))
+    git_push = faas_git.add_mutually_exclusive_group()
+    git_push.add_argument("--push", action="store_true", help=_tx("push commits to the configured remote", zh="将 commit 推送到已配置 remote", de="Commits zum konfigurierten Remote pushen", es="enviar commits al remote configurado"))
+    git_push.add_argument("--no-push", action="store_true", help=_tx("commit locally but do not push", zh="只本地 commit，不推送", de="lokal committen, nicht pushen", es="commit local sin push"))
+    faas_git.add_argument("--remote", help=_tx("Git remote URL; may be SSH or HTTPS token URL", zh="Git remote URL；可用 SSH 或 HTTPS token URL", de="Git-Remote-URL; SSH oder HTTPS-Token-URL", es="URL remote Git; SSH o URL HTTPS con token"))
+    faas_git.add_argument("--clear-remote", action="store_true", help=_tx("clear Git remote and disable push", zh="清空 Git remote 并禁用 push", de="Git-Remote leeren und Push deaktivieren", es="limpiar remote Git y desactivar push"))
+    faas_git.add_argument("--branch", help=_tx("Git branch for backend-owned commits", zh="后端托管 commit 使用的 Git 分支", de="Git-Branch fuer Backend-Commits", es="rama Git para commits del backend"))
+    faas_git.add_argument("--author-name", help=_tx("Git author/committer name", zh="Git 作者/提交者名称", de="Git Autor/Committer Name", es="nombre autor/committer Git"))
+    faas_git.add_argument("--author-email", help=_tx("Git author/committer email", zh="Git 作者/提交者邮箱", de="Git Autor/Committer E-Mail", es="email autor/committer Git"))
+    faas_git.add_argument("--ssh-key-file", help=_tx("host private key file to copy into MyApp secret-files", zh="复制到 MyApp secret-files 的宿主机私钥文件", de="Host-Private-Key-Datei in MyApp secret-files kopieren", es="archivo de clave privada del host para copiar a secret-files"))
+    faas_git.add_argument("--known-hosts-file", help=_tx("host known_hosts file to copy into MyApp secret-files", zh="复制到 MyApp secret-files 的宿主机 known_hosts 文件", de="Host-known_hosts-Datei in MyApp secret-files kopieren", es="archivo known_hosts del host para copiar a secret-files"))
+    faas_git.add_argument("--ssh-key-path", help=_tx("container path of the Git SSH key", zh="Git SSH key 的容器内路径", de="Container-Pfad des Git-SSH-Keys", es="ruta de contenedor de la clave SSH Git"))
+    faas_git.add_argument("--known-hosts-path", help=_tx("container path of Git known_hosts", zh="Git known_hosts 的容器内路径", de="Container-Pfad fuer Git known_hosts", es="ruta de contenedor de Git known_hosts"))
+    faas_git.add_argument("--clear-ssh", action="store_true", help=_tx("clear configured Git SSH key paths", zh="清空已配置的 Git SSH key 路径", de="konfigurierte Git-SSH-Key-Pfade leeren", es="limpiar rutas de clave SSH Git configuradas"))
+    faas_git.set_defaults(func=cmd_faas)
     faas_config = faas_sub.add_parser("config", help=_tx("show generated FaaS host config", zh="查看生成 FaaS 主机配置", de="generierte FaaS-Host-Konfiguration anzeigen", es="mostrar config host FaaS generada"), usage=_tx("myapp-ctl faas config [options]", zh="myapp-ctl faas config [选项]", de="myapp-ctl faas config [Optionen]", es="myapp-ctl faas config [opciones]"))
     faas_config.add_argument("--json", action="store_true")
     faas_config.add_argument("--show-secrets", action="store_true", help=_tx("show raw secret values", zh="显示原始密钥值", de="echte Secret-Werte anzeigen", es="mostrar valores secretos reales"))

@@ -114,6 +114,10 @@ users/9a/eb/9aebdab8-3318-4dfa-99ff-54973bd28cf4/services/todo-api/
 - Agent runtime does not receive OpenFaaS admin credentials.
 - Agent runtime does not receive Docker registry credentials.
 - Agent runtime does not write the durable code repository.
+- Optional Git push is configured only on the backend host through
+  `myapp-ctl faas git`. Deploy keys live under MyApp secret-files and are
+  mounted read-only into backend containers; they are never mounted into Agent
+  runtime containers.
 - The backend validates and writes only files under the current user's service
   path.
 - Static validation currently blocks dangerous imports/calls and restricts
@@ -212,6 +216,9 @@ myapp-ctl faas mode script --deploy-script /opt/myapp/faas/deploy-service.sh
 myapp-ctl faas mode openfaas --gateway http://<openfaas-gateway>:8080 \
   --bundle-base-url https://<backend-domain> \
   --password-env OPENFAAS_PASSWORD
+myapp-ctl faas git --enable --remote git@github.com:<org>/<repo>.git \
+  --branch main --push --ssh-key-file /root/.ssh/myapp-faas-deploy-key \
+  --known-hosts-file /root/.ssh/known_hosts
 myapp-ctl image build faas-runtime --base
 myapp-ctl deploy --group faas --build
 myapp-ctl status faas-control faas-worker
@@ -245,6 +252,9 @@ Minimum verification:
 - `backend/test_faas_openfaas_gateway.py` passes. This verifies the backend
   OpenFaaS adapter against an HTTP fake gateway and checks create/update/delete
   method selection and runtime payload shape.
+- `backend/test_faas_git_store.py` passes. This verifies backend-owned Git
+  commit and push behavior against a local bare remote without exposing any key
+  to Agent runtime.
 - In `openfaas` mode, OpenFaaS lists the generated function and invocation via
   `/api/faas/invoke/<service_id>/...` reaches the generic runtime image.
 - `/api/faas/runtime_bundle/<service_id>` rejects missing or wrong runtime

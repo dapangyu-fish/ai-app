@@ -223,6 +223,7 @@ services:
       FAAS_LOCAL_DOCKER_HOST_CODE_ROOT: "${FAAS_LOCAL_DOCKER_HOST_CODE_ROOT:-${MYAPP_DATA_ROOT:-/mnt/myapp}/faas/code}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/files:/etc/myapp/secret-files:ro
       - ${MYAPP_DATA_ROOT:-/mnt/myapp}/faas:/mnt/myapp/faas
 
   registry:

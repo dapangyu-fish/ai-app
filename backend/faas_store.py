@@ -13,6 +13,7 @@ import hmac
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import threading
@@ -40,6 +41,8 @@ try:
         FAAS_GIT_ENABLED,
         FAAS_GIT_PUSH_ENABLED,
         FAAS_GIT_REMOTE,
+        FAAS_GIT_KNOWN_HOSTS_PATH,
+        FAAS_GIT_SSH_KEY_PATH,
         FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT,
         FAAS_LOCAL_DOCKER_HOST_CODE_ROOT,
         FAAS_LOCAL_DOCKER_IMAGE,
@@ -77,6 +80,8 @@ except ModuleNotFoundError:
         FAAS_GIT_ENABLED,
         FAAS_GIT_PUSH_ENABLED,
         FAAS_GIT_REMOTE,
+        FAAS_GIT_KNOWN_HOSTS_PATH,
+        FAAS_GIT_SSH_KEY_PATH,
         FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT,
         FAAS_LOCAL_DOCKER_HOST_CODE_ROOT,
         FAAS_LOCAL_DOCKER_IMAGE,
@@ -550,6 +555,24 @@ def _run_git(args: list[str], *, cwd: Path, check: bool = False) -> subprocess.C
         "GIT_COMMITTER_NAME": FAAS_GIT_AUTHOR_NAME,
         "GIT_COMMITTER_EMAIL": FAAS_GIT_AUTHOR_EMAIL,
     })
+    if FAAS_GIT_SSH_KEY_PATH:
+        ssh_parts = [
+            "ssh",
+            "-i",
+            FAAS_GIT_SSH_KEY_PATH,
+            "-o",
+            "IdentitiesOnly=yes",
+        ]
+        if FAAS_GIT_KNOWN_HOSTS_PATH:
+            ssh_parts.extend([
+                "-o",
+                f"UserKnownHostsFile={FAAS_GIT_KNOWN_HOSTS_PATH}",
+                "-o",
+                "StrictHostKeyChecking=yes",
+            ])
+        else:
+            ssh_parts.extend(["-o", "StrictHostKeyChecking=accept-new"])
+        env["GIT_SSH_COMMAND"] = " ".join(shlex.quote(part) for part in ssh_parts)
     proc = subprocess.run(
         ["git", *args],
         cwd=str(cwd),

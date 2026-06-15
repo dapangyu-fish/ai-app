@@ -459,6 +459,18 @@ myapp-ctl faas mode openfaas --gateway http://<openfaas-gateway>:8080 \
 myapp-ctl deploy --group faas --pull
 ```
 
+Configure backend-owned Git storage for generated service code:
+
+```bash
+myapp-ctl faas git --enable --remote git@github.com:<org>/<repo>.git \
+  --branch main --push --ssh-key-file /root/.ssh/myapp-faas-deploy-key \
+  --known-hosts-file /root/.ssh/known_hosts
+myapp-ctl deploy --group faas --pull
+```
+
+The deploy key is copied into MyApp secret-files and mounted read-only into the
+backend containers. Agent runtime containers do not receive this key.
+
 Restart without rebuilding:
 
 ```bash
