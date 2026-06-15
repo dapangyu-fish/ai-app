@@ -225,6 +225,9 @@ myapp-ctl status faas-control faas-worker
 myapp-ctl log backend -n 200
 myapp-ctl log ai-worker -n 200
 myapp-ctl faas smoke
+python3 backend/test_faas_store_controls.py
+python3 backend/test_faas_ai_session_owner.py
+python3 backend/test_faas_git_store.py
 python3 backend/test_faas_openfaas_gateway.py
 ```
 
@@ -255,6 +258,12 @@ Minimum verification:
 - `backend/test_faas_git_store.py` passes. This verifies backend-owned Git
   commit and push behavior against a local bare remote without exposing any key
   to Agent runtime.
+- `backend/test_faas_store_controls.py` passes. This verifies restricted bundle
+  validation, per-user active service limits, cross-user `service_id`
+  conflicts, disabling services, and runtime bundle materialization.
+- `backend/test_faas_ai_session_owner.py` passes. This verifies FaaS deploy
+  actions use the authenticated chat-session owner and can resolve agent-pull
+  uploaded artifacts.
 - In `openfaas` mode, OpenFaaS lists the generated function and invocation via
   `/api/faas/invoke/<service_id>/...` reaches the generic runtime image.
 - `/api/faas/runtime_bundle/<service_id>` rejects missing or wrong runtime

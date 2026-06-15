@@ -1,0 +1,252 @@
+#!/usr/bin/env python3
+"""Core FaaS store controls that do not require Docker or OpenFaaS."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+import tempfile
+import types
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+_config = types.ModuleType("config")
+for _name, _value in {
+    "FAAS_BUNDLE_MAX_BYTES": 512 * 1024,
+    "FAAS_CODE_ROOT": "/tmp/myapp-faas-store-controls",
+    "FAAS_DEPLOY_MODE": "metadata",
+    "FAAS_DEPLOY_SCRIPT": "",
+    "FAAS_ENABLED": True,
+    "FAAS_FILE_MAX_BYTES": 256 * 1024,
+    "FAAS_FUNCTION_PREFIX": "myapp",
+    "FAAS_GIT_AUTHOR_EMAIL": "myapp-faas-bot@localhost",
+    "FAAS_GIT_AUTHOR_NAME": "myapp-faas-bot",
+    "FAAS_GIT_BRANCH": "main",
+    "FAAS_GIT_ENABLED": False,
+    "FAAS_GIT_PUSH_ENABLED": False,
+    "FAAS_GIT_REMOTE": "",
+    "FAAS_GIT_SSH_KEY_PATH": "",
+    "FAAS_GIT_KNOWN_HOSTS_PATH": "",
+    "FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT": "/mnt/myapp/faas/code",
+    "FAAS_LOCAL_DOCKER_HOST_CODE_ROOT": "/mnt/myapp/faas/code",
+    "FAAS_LOCAL_DOCKER_IMAGE": "example/faas-runtime:test",
+    "FAAS_LOCAL_DOCKER_NETWORK": "myapp_default",
+    "FAAS_LOCAL_DOCKER_START_ON_DEPLOY": False,
+    "FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS": 15,
+    "FAAS_MAX_SERVICES_PER_USER": 2,
+    "FAAS_OPENFAAS_GATEWAY": "",
+    "FAAS_OPENFAAS_MAX_REPLICAS": 1,
+    "FAAS_OPENFAAS_MIN_REPLICAS": 0,
+    "FAAS_OPENFAAS_PASSWORD": "",
+    "FAAS_OPENFAAS_READ_TIMEOUT": "60s",
+    "FAAS_OPENFAAS_RUNTIME_IMAGE": "example/faas-runtime:test",
+    "FAAS_OPENFAAS_SCALE_ZERO": True,
+    "FAAS_OPENFAAS_USERNAME": "admin",
+    "FAAS_OPENFAAS_WRITE_TIMEOUT": "60s",
+    "FAAS_PUBLIC_BASE_URL": "https://backend.example",
+    "FAAS_REQUIREMENTS_MAX_LINES": 40,
+    "FAAS_RUNTIME_BUNDLE_BASE_URL": "https://backend.example",
+    "FAAS_RUNTIME_TOKEN": "runtime-master-token",
+}.items():
+    setattr(_config, _name, _value)
+sys.modules["config"] = _config
+
+
+class _MemoryFaaSDB:
+    def __init__(self) -> None:
+        self.services: dict[str, dict] = {}
+        self.deployments: dict[str, dict] = {}
+
+    def execute(self, sql: str, params=None):
+        params = list(params or [])
+        normalized = " ".join(sql.lower().split())
+        if normalized.startswith("create ") or normalized.startswith("alter ") or normalized.startswith("create index"):
+            return None
+        if "insert into faas_services" in normalized:
+            (
+                service_id,
+                owner_user_id,
+                service_slug,
+                function_name,
+                active_path,
+                public_base_url,
+                routes_json,
+                meta_json,
+            ) = params
+            existing = self.services.get(service_id, {})
+            created_at = existing.get("created_at", "created")
+            self.services[service_id] = {
+                **existing,
+                "service_id": service_id,
+                "owner_user_id": owner_user_id,
+                "service_slug": service_slug,
+                "function_name": existing.get("function_name") or function_name,
+                "status": "deploying",
+                "active_commit": existing.get("active_commit", ""),
+                "active_path": active_path,
+                "public_base_url": public_base_url,
+                "routes": json.loads(routes_json),
+                "meta_json": json.loads(meta_json),
+                "created_at": created_at,
+                "updated_at": "updated",
+            }
+            return None
+        if "insert into faas_deployments" in normalized:
+            deployment_id, service_id, owner_user_id, summary_json = params
+            self.deployments[deployment_id] = {
+                "deployment_id": deployment_id,
+                "service_id": service_id,
+                "owner_user_id": owner_user_id,
+                "commit_sha": "",
+                "status": "pending",
+                "error": "",
+                "bundle_summary": json.loads(summary_json),
+            }
+            return None
+        if "update faas_services set status = %s, active_commit" in normalized:
+            status, commit_sha, active_path, public_base_url, service_id = params
+            self.services[service_id].update({
+                "status": status,
+                "active_commit": commit_sha,
+                "active_path": active_path,
+                "public_base_url": public_base_url,
+                "updated_at": "updated",
+            })
+            return None
+        if "update faas_deployments set status = 'success'" in normalized:
+            commit_sha, deploy_output_json, deployment_id = params
+            self.deployments[deployment_id].update({
+                "status": "success",
+                "commit_sha": commit_sha,
+                "bundle_summary": {
+                    **self.deployments[deployment_id]["bundle_summary"],
+                    **json.loads(deploy_output_json),
+                },
+                "finished_at": "finished",
+            })
+            return None
+        if "update faas_services set status = 'failed'" in normalized:
+            service_id = params[0]
+            self.services[service_id]["status"] = "failed"
+            return None
+        if "update faas_deployments set status = 'failed'" in normalized:
+            error, deployment_id = params
+            self.deployments[deployment_id].update({"status": "failed", "error": error})
+            return None
+        if "update faas_services set status = 'disabled'" in normalized:
+            service_id = params[0]
+            self.services[service_id]["status"] = "disabled"
+            return None
+        raise AssertionError(f"unhandled db_execute SQL: {sql}")
+
+    def query(self, sql: str, params=None, fetch_one: bool = False, fetch_all: bool = False):
+        params = list(params or [])
+        normalized = " ".join(sql.lower().split())
+        if "select count(*) as count from faas_services" in normalized:
+            owner_user_id = params[0]
+            count = sum(
+                1
+                for row in self.services.values()
+                if row["owner_user_id"] == owner_user_id and row["status"] != "disabled"
+            )
+            return {"count": count}
+        if "from faas_services where service_id = %s" in normalized:
+            row = self.services.get(params[0])
+            return dict(row) if row else None
+        if "from faas_services where owner_user_id = %s" in normalized:
+            owner_user_id = params[0]
+            include_disabled = "status <> 'disabled'" not in normalized
+            rows = [
+                dict(row)
+                for row in self.services.values()
+                if row["owner_user_id"] == owner_user_id
+                and (include_disabled or row["status"] != "disabled")
+            ]
+            return rows
+        raise AssertionError(f"unhandled db_query SQL: {sql}")
+
+
+_db = _MemoryFaaSDB()
+_database = types.ModuleType("database")
+_database.db_execute = _db.execute
+_database.db_query = _db.query
+sys.modules["database"] = _database
+
+import faas_store  # noqa: E402
+
+
+def _bundle(service_id: str, *, app_py: str | None = None, requirements: str = "flask==3.0.3\n") -> dict:
+    return {
+        "service": {
+            "service_id": service_id,
+            "slug": service_id,
+            "routes": [{"path": "/hello", "methods": ["GET"]}],
+        },
+        "files": {
+            "app.py": app_py
+            or "from flask import Flask, jsonify\napp = Flask(__name__)\n@app.get('/hello')\ndef hello():\n    return jsonify(ok=True)\n",
+            "requirements.txt": requirements,
+        },
+    }
+
+
+def test_validation_rejects_dangerous_python_and_dependencies() -> None:
+    try:
+        faas_store.validate_bundle(_bundle("bad-import", app_py="import os\nfrom flask import Flask\napp = Flask(__name__)\n"))
+    except faas_store.FaaSValidationError as exc:
+        assert "import is not allowed" in str(exc)
+    else:
+        raise AssertionError("dangerous import was accepted")
+
+    try:
+        faas_store.validate_bundle(_bundle("bad-dependency", requirements="flask==3.0.3\nrequests==2.32.0\n"))
+    except faas_store.FaaSValidationError as exc:
+        assert "dependency is not allowed" in str(exc)
+    else:
+        raise AssertionError("unsupported dependency was accepted")
+
+
+def test_deploy_quota_conflict_disable_and_runtime_bundle() -> None:
+    with tempfile.TemporaryDirectory(prefix="myapp-faas-store-") as raw:
+        faas_store.FAAS_CODE_ROOT = raw
+        faas_store.FAAS_DEPLOY_MODE = "metadata"
+        faas_store.FAAS_GIT_ENABLED = False
+        faas_store.FAAS_MAX_SERVICES_PER_USER = 2
+        _db.services.clear()
+        _db.deployments.clear()
+
+        first = faas_store.deploy_bundle("user-a", _bundle("notes-api"), source="test")
+        second = faas_store.deploy_bundle("user-a", _bundle("todo-api"), source="test")
+        assert first.status == "ready"
+        assert second.status == "ready"
+
+        try:
+            faas_store.deploy_bundle("user-a", _bundle("third-api"), source="test")
+        except faas_store.FaaSValidationError as exc:
+            assert "service limit exceeded" in str(exc)
+        else:
+            raise AssertionError("third active service was accepted")
+
+        try:
+            faas_store.deploy_bundle("user-b", _bundle("notes-api"), source="test")
+        except faas_store.FaaSValidationError as exc:
+            assert "already belongs to another user" in str(exc)
+        else:
+            raise AssertionError("cross-user service_id conflict was accepted")
+
+        runtime_bundle = faas_store.runtime_bundle_for_service("notes-api")
+        assert runtime_bundle["service"]["service_id"] == "notes-api"
+        assert "app.py" in runtime_bundle["files"]
+        assert runtime_bundle["files"]["service.json"].strip().startswith("{")
+
+        disabled = faas_store.disable_service("user-a", "notes-api")
+        assert disabled["status"] == "disabled"
+        replacement = faas_store.deploy_bundle("user-a", _bundle("third-api"), source="test")
+        assert replacement.status == "ready"
+
+
+if __name__ == "__main__":
+    test_validation_rejects_dangerous_python_and_dependencies()
+    test_deploy_quota_conflict_disable_and_runtime_bundle()
+    print(json.dumps({"ok": True}, sort_keys=True))

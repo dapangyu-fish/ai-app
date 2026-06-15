@@ -101,6 +101,52 @@ def test_faas_action_owner_comes_from_authenticated_session() -> None:
     }]
 
 
+def test_faas_action_can_deploy_agent_pull_artifact() -> None:
+    calls: list[dict] = []
+
+    fake_faas_store = types.ModuleType("faas_store")
+    fake_faas_store.load_bundle_bytes = lambda raw: json.loads(raw.decode("utf-8"))
+
+    def deploy_bundle(owner_user_id: str, bundle: dict, *, source: str):
+        calls.append({"owner_user_id": owner_user_id, "bundle": bundle, "source": source})
+        return _DeployResult()
+
+    fake_faas_store.deploy_bundle = deploy_bundle
+    sys.modules["faas_store"] = fake_faas_store
+
+    original_artifact_from_agent_pull = ai_session._artifact_from_agent_pull
+    ai_session._artifact_from_agent_pull = lambda run_id, path: json.dumps({
+        "service_id": "notes-api",
+        "files": {"app.py": "print('ok')"},
+        "run_id": run_id,
+        "path": path,
+    }).encode("utf-8")
+    try:
+        actions = ai_session._resolve_server_upload_actions(
+            [{"type": "server_deploy_faas_service", "path": "faas_bundle.json"}],
+            "session-456",
+            workspace=None,
+            agent_pull_run_id="pull-run-1",
+            owner_user_id="auth-user-456",
+        )
+    finally:
+        ai_session._artifact_from_agent_pull = original_artifact_from_agent_pull
+
+    assert calls == [{
+        "owner_user_id": "auth-user-456",
+        "bundle": {
+            "service_id": "notes-api",
+            "files": {"app.py": "print('ok')"},
+            "run_id": "pull-run-1",
+            "path": "faas_bundle.json",
+        },
+        "source": "ai-session:session-456",
+    }]
+    assert actions[0]["type"] == "faas_service_ready"
+    assert actions[0]["invoke_url"] == "/api/faas/invoke/notes-api"
+
+
 if __name__ == "__main__":
     test_faas_action_owner_comes_from_authenticated_session()
+    test_faas_action_can_deploy_agent_pull_artifact()
     print(json.dumps({"ok": True}, sort_keys=True))
