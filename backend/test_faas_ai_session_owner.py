@@ -204,6 +204,7 @@ def test_faas_prompt_note_mentions_route_enforcement() -> None:
 def test_faas_manifest_initial_file_lists_user_services() -> None:
     fake_faas_store = types.ModuleType("faas_store")
     fake_faas_store.FAAS_MAX_SERVICES_PER_USER = 5
+    fake_faas_store.read_service_source = lambda *a, **k: {"app.py": "from flask import Flask\napp = Flask(__name__)\n"}
     fake_faas_store.list_services = lambda user_id: [
         {
             "service_id": "todo-api",
@@ -231,6 +232,7 @@ def test_faas_manifest_initial_file_lists_user_services() -> None:
             "invoke_url": "/api/faas/invoke/todo-api",
             "active_commit": "abc123",
             "updated_at": "updated",
+            "source": {"app.py": "from flask import Flask\napp = Flask(__name__)\n"},
         }
     ]
     assert "reuse its service_id" in manifest["note"]

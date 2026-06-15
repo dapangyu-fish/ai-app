@@ -188,20 +188,28 @@ service and fall back to the current global `FAAS_OPENFAAS_GATEWAY`. This keeps
 the current single-gateway behavior unchanged while leaving a migration path for
 multiple single-node faasd gateways and backend-side routing later.
 
-Important deployment constraint: the OpenFaaS Edge/faasd prerequisites state
-that faasd must not be co-located with Docker because both use containerd,
-iptables, and CNI. Since the current MyApp stack is Docker Compose based, the
-safe production shape is:
+Deployment shapes — **faasd CAN co-locate with Docker** (empirically proven
+2026-06-15 on Ubuntu 24.04): faasd and Docker share the one **system**
+containerd (`/run/containerd/containerd.sock`) through separate containerd
+**namespaces** (Docker uses `moby`, faasd uses `openfaas` + `openfaas-fn`); there
+is no second competing containerd. Bridges/subnets do not overlap (docker0
+172.17/16, openfaas0 10.62/16), and modern Docker (Engine 28+) keeps the iptables
+`FORWARD` policy off the DROP path via a dedicated `DOCKER-FORWARD` chain. So
+either shape works:
 
 ```text
-MyApp backend host/container  ->  external OpenFaaS/faasd gateway host
+all-in-one:  MyApp backend + Docker Compose stack + faasd  (one host)  [current prod]
+split:       MyApp backend host   ->   separate faasd/OpenFaaS gateway host
 ```
 
-On a MyApp Docker host such as the current 77 test machine, use
-`FAAS_DEPLOY_MODE=local-docker` for full backend-generation validation, or use
-`FAAS_DEPLOY_MODE=openfaas` only against an external gateway. Do not install
-faasd on the same host that is running the MyApp Docker Compose stack unless
-that host is being repurposed exclusively for faasd.
+The **current production deployment is all-in-one on host 77**:
+`FAAS_DEPLOY_MODE=openfaas` pointing at the *local* faasd gateway (host IP
+`:8080`). To install faasd co-located: install faasd but **skip its own
+containerd install** (reuse the system containerd Docker already runs); drop any
+conflicting faasd host-port mapping (e.g. prometheus `127.0.0.1:9090`); and if
+the host `FORWARD` policy is `DROP`, add explicit `openfaas0` FORWARD `ACCEPT`
+rules. `FAAS_DEPLOY_MODE=local-docker` remains available for running generated
+services as per-service Docker containers without faasd.
 
 Required OpenFaaS mode settings:
 
@@ -215,21 +223,22 @@ FAAS_RUNTIME_BUNDLE_BASE_URL=https://<backend-domain>
 FAAS_RUNTIME_TOKEN=<random-secret>
 ```
 
-External faasd host bring-up checklist:
+faasd host bring-up checklist (dedicated host OR co-located with Docker):
 
-1. Use a dedicated host that is not running the MyApp Docker Compose stack.
-2. Run `myapp-ctl faas faasd-host-preflight --expect-empty-ports` on the
-   candidate host before installing faasd. This command is intentionally
-   read-only and fails if Docker is running, because Docker and faasd both use
-   containerd, iptables, and CNI.
-3. Install faasd following the OpenFaaS Edge/faasd documentation, keep the
-   gateway reachable from the MyApp backend host, and record the generated
+1. Run `myapp-ctl faas faasd-host-preflight --expect-empty-ports` on the
+   candidate host. It is read-only and only **warns** (not fails) if Docker is
+   running — co-location is supported via shared containerd namespaces.
+2. Install faasd. **When co-locating with Docker**: skip faasd's own containerd
+   install (reuse the system containerd), drop conflicting host-port mappings
+   (e.g. prometheus `127.0.0.1:9090`), and add `openfaas0` FORWARD `ACCEPT` rules
+   if the host `FORWARD` policy is `DROP`. Keep the gateway reachable from the
+   MyApp backend (local `host:8080` when co-located) and record the generated
    gateway password outside Git.
-4. Ensure the faasd host can pull `FAAS_OPENFAAS_RUNTIME_IMAGE`.
-5. Ensure the faasd function runtime can reach
+3. Ensure the faasd host can pull `FAAS_OPENFAAS_RUNTIME_IMAGE`.
+4. Ensure the faasd function runtime can reach
    `FAAS_RUNTIME_BUNDLE_BASE_URL/api/faas/runtime_bundle/<service_id>`.
-6. Run `myapp-ctl faas openfaas-gateway-check` before changing backend mode.
-7. Run `myapp-ctl faas openfaas-gateway-smoke --yes` on a disposable/test
+5. Run `myapp-ctl faas openfaas-gateway-check` before changing backend mode.
+6. Run `myapp-ctl faas openfaas-gateway-smoke --yes` on a disposable/test
    environment before promoting the gateway.
 
 ## myapp-ctl
@@ -363,10 +372,10 @@ Minimum verification:
 - `myapp-ctl faas ai-action-smoke --include-invalid` passes. This also checks
   that an Agent-uploaded bundle with import-time side effects is rejected as a
   `faas_service_failed` action instead of creating a runnable service.
-- `myapp-ctl faas faasd-host-preflight --expect-empty-ports` fails on the
-  current 77 Docker Compose host with `docker-colocation` as the blocking
-  check. This is expected and confirms 77 should not host real faasd while it is
-  running the MyApp Docker stack.
+- `myapp-ctl faas faasd-host-preflight --expect-empty-ports` only **warns** on a
+  Docker Compose host via the non-blocking `docker-colocation` check. Co-location
+  is supported (faasd and Docker share the system containerd via namespaces), and
+  77 in fact runs faasd co-located with the MyApp Docker stack in production.
 - `myapp-ctl faas openfaas-gateway-smoke --yes --gateway <real-gateway>
   --bundle-base-url <backend-url>` passes against a real external faasd/OpenFaaS
   gateway. This temporarily switches the deployed backend to the real gateway,
@@ -387,6 +396,64 @@ Minimum verification:
   failed.
 - Existing JSON app generation still works.
 
-Do not mark this feature complete until `openfaas-gateway-smoke` is proven
-against a real external faasd/OpenFaaS gateway and the deploy path is documented
-with the observed commands.
+## Executed production deployment (2026-06-15) — all-in-one on 77, real faasd PROVEN
+
+The real-gateway gate is satisfied and the deployment is **all-in-one on a single
+host**. The live `myapp-ctl faas smoke` (and `openfaas-gateway-smoke`) pass
+against the local faasd gateway, with generated code pushed to GitHub and served
+from the git-pulled checkout.
+
+- **77.237.233.229** = MyApp backend + the full Docker Compose stack + **faasd
+  0.19.7, all co-located on one host**. `FAAS_DEPLOY_MODE=openfaas` points at the
+  *local* faasd gateway (host IP `:8080`). faasd shares Docker's system containerd
+  via namespaces (Docker `moby`, faasd `openfaas`/`openfaas-fn`) — no second
+  containerd. The isolated git push worker runs in `ai-worker`; functions pull the
+  runtime image from Docker Hub
+  (`dapangyufish/myapp-faas-runtime:agent-control-plane`).
+- **103.233.254.179** = **decommissioned.** It served as a transitional dedicated
+  faasd node before co-location was proven; faasd there is stopped/disabled.
+
+Co-located faasd install on 77 (the pattern):
+- Install faasd but **skip its own containerd** (reuse the system containerd).
+- Drop the faasd prometheus `127.0.0.1:9090` host-port mapping (conflicts on 77).
+- 77's `FORWARD` policy is `DROP`, so add `iptables -I FORWARD -i openfaas0 -j
+  ACCEPT` and `iptables -I FORWARD -o openfaas0 -j ACCEPT`.
+- No registry/mirror needed: 77 reaches Docker Hub + ghcr directly.
+
+Two runtime realities handled (apply to any faasd node):
+
+1. **Cold-start race.** faasd CE has a no-op Health handler and reports a function
+   ready as soon as its task runs (before the runtime is listening), so the first
+   scale-from-zero invoke could hit connection-refused. Handled at two layers: the
+   runtime (`faas_runtime_server.py`) listens immediately and blocks the first
+   request until the generated app loads; the invoke proxy (`faas.py`) retries on
+   gateway cold-start markers (safe — the request never reached the app).
+2. **Image distribution behind a firewalled node** (used for 103, kept for
+   reference): if a faasd node cannot reach Docker Hub, run a local `registry:2`
+   as a faasd compose service on `127.0.0.1:5000` (faasd pulls it over plain-http
+   via `WithPlainHTTP(MatchLocalhost)`), push the runtime image there, and rewrite
+   the core image refs to `docker.m.daocloud.io`/`ghcr.m.daocloud.io` mirrors in
+   `/var/lib/faasd/docker-compose.yaml`.
+
+Strict git-source-of-truth (LIVE): the isolated push worker
+(`backend/faas_push_worker.py`, default-on via `FAAS_GIT_ASYNC_PUSH`) commits the
+user subtree and pushes to `myapp-faas-services`; a serve checkout
+(`FAAS_BUNDLE_SERVE_ROOT`) pulls from GitHub and the runtime bundle is served from
+that git checkout (not the local write). The backend image installs
+`openssh-client` so the worker can push over SSH. The agent receives existing
+services WITH source in `faas_services.json` to append routes without consuming a
+new quota slot.
+
+Observed passing command (live, all-in-one on 77):
+
+```bash
+OPENFAAS_PASSWORD=<pw> myapp-ctl faas openfaas-gateway-smoke --yes \
+  --gateway http://77.237.233.229:8080 \
+  --bundle-base-url http://77.237.233.229:5566 \
+  --runtime-image dapangyufish/myapp-faas-runtime:agent-control-plane \
+  --password-env OPENFAAS_PASSWORD
+# -> {"ok": true, ..., "restored": true}
+```
+
+`myapp-ctl faas node ls/status` reports the local 77 faasd node (gateway health,
+auth, live function count).

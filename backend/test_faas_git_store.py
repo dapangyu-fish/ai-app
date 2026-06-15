@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 _config = types.ModuleType("config")
 for _name, _value in {
     "FAAS_BUNDLE_MAX_BYTES": 512 * 1024,
+    "FAAS_BUNDLE_SERVE_ROOT": "",
     "FAAS_CODE_ROOT": "/tmp/myapp-faas-test",
     "FAAS_DEPLOY_MODE": "metadata",
     "FAAS_DEPLOY_SCRIPT": "",
@@ -33,6 +34,7 @@ for _name, _value in {
     "FAAS_GIT_REMOTE": "",
     "FAAS_GIT_SSH_KEY_PATH": "",
     "FAAS_GIT_KNOWN_HOSTS_PATH": "",
+    "FAAS_GIT_ASYNC_PUSH": False,
     "FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT": "/mnt/myapp/faas/code",
     "FAAS_LOCAL_DOCKER_HOST_CODE_ROOT": "/mnt/myapp/faas/code",
     "FAAS_LOCAL_DOCKER_IMAGE": "example/faas-runtime:test",
@@ -41,6 +43,8 @@ for _name, _value in {
     "FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS": 15,
     "FAAS_MAX_SERVICES_PER_USER": 5,
     "FAAS_OPENFAAS_GATEWAY": "",
+    "FAAS_DEFAULT_NODE_ID": "",
+    "FAAS_OPENFAAS_NODES": {},
     "FAAS_OPENFAAS_MAX_REPLICAS": 1,
     "FAAS_OPENFAAS_MIN_REPLICAS": 0,
     "FAAS_OPENFAAS_PASSWORD": "",

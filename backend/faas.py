@@ -9,6 +9,7 @@ client-supplied user_id.
 from __future__ import annotations
 
 import hmac
+import time
 from urllib.parse import quote
 
 import requests
@@ -326,17 +327,38 @@ def invoke_service(service_id: str, route_path: str = ""):
         for key, value in request.headers.items()
         if key.lower() not in sensitive_request_headers
     }
-    try:
-        resp = requests.request(
-            request.method,
-            upstream,
-            headers=headers,
-            data=request.get_data(),
-            stream=True,
-            timeout=(5, 60),
-        )
-    except requests.RequestException as exc:
-        return _json_error(str(exc), 502, code="FAAS_INVOKE_FAILED")
+    request_body = request.get_data()
+    # Tolerate faasd/OpenFaaS scale-from-zero cold starts: faasd reports a
+    # function "ready" as soon as its container task runs, before the runtime is
+    # listening, so the first proxy can fail with a gateway-level 5xx
+    # ("Can't reach service" / connection refused). The request never reached the
+    # generated app, so retrying is safe for any HTTP method.
+    _cold_markers = ("can't reach service", "cannot reach", "no endpoints available", "connection refused")
+    max_attempts = 5
+    resp = None
+    for attempt in range(max_attempts):
+        try:
+            resp = requests.request(
+                request.method,
+                upstream,
+                headers=headers,
+                data=request_body,
+                stream=True,
+                timeout=(5, 65),
+            )
+        except requests.RequestException as exc:
+            if attempt < max_attempts - 1:
+                time.sleep(1.2)
+                continue
+            return _json_error(str(exc), 502, code="FAAS_INVOKE_FAILED")
+        if resp.status_code >= 500 and attempt < max_attempts - 1:
+            peek = resp.content
+            resp.close()
+            if any(marker in peek.decode("utf-8", "replace").lower() for marker in _cold_markers):
+                time.sleep(1.2)
+                continue
+            return Response(peek, status=resp.status_code, headers=_proxy_headers(resp))
+        break
 
     def generate():
         try:

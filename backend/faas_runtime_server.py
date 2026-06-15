@@ -14,6 +14,7 @@ import os
 import re
 import sys
 import tempfile
+import threading
 from pathlib import Path
 
 import requests
@@ -103,16 +104,57 @@ def _download_runtime_bundle(service_id: str) -> Path | None:
     return _write_runtime_bundle(bundle, service_id)
 
 
+_RUNTIME_READY = threading.Event()
+_RUNTIME_STATE: dict = {"app": None, "error": ""}
+
+
+def _load_runtime(service_id: str, raw_service_dir: str) -> None:
+    try:
+        service_dir = _download_runtime_bundle(service_id)
+        if service_dir is None:
+            if not raw_service_dir:
+                raise RuntimeError("MYAPP_FAAS_SERVICE_DIR is required")
+            service_dir = Path(raw_service_dir).resolve()
+        _RUNTIME_STATE["app"] = _attach_health(_load_generated_app(service_dir), service_id)
+    except Exception as exc:  # noqa: BLE001 - surfaced via the health endpoint / 503
+        _RUNTIME_STATE["error"] = str(exc)
+    finally:
+        _RUNTIME_READY.set()
+
+
+def _runtime_dispatcher(environ, start_response):
+    path = environ.get("PATH_INFO", "")
+    if path == "/__myapp_faas_health":
+        if _RUNTIME_STATE["app"] is not None:
+            start_response("200 OK", [("Content-Type", "application/json")])
+            return [b'{"ok": true}']
+        if _RUNTIME_READY.is_set():
+            start_response("500 Internal Server Error", [("Content-Type", "application/json")])
+            return [json.dumps({"ok": False, "error": _RUNTIME_STATE["error"]}).encode("utf-8")]
+        start_response("503 Service Unavailable", [("Content-Type", "application/json")])
+        return [b'{"ok": false, "loading": true}']
+    # Block the first cold request until the generated app finishes loading (or
+    # fails), so faasd's task-running readiness never proxies into an app that is
+    # not yet listening (which previously returned connection-refused).
+    _RUNTIME_READY.wait(timeout=60)
+    app = _RUNTIME_STATE["app"]
+    if app is None:
+        start_response("503 Service Unavailable", [("Content-Type", "application/json")])
+        return [json.dumps({"ok": False, "error": _RUNTIME_STATE["error"] or "runtime not ready"}).encode("utf-8")]
+    return app.wsgi_app(environ, start_response)
+
+
 def main() -> int:
     service_id = os.environ.get("MYAPP_FAAS_SERVICE_ID", "").strip()
-    service_dir = _download_runtime_bundle(service_id)
     raw_service_dir = os.environ.get("MYAPP_FAAS_SERVICE_DIR", "").strip()
-    if service_dir is None and not raw_service_dir:
-        raise RuntimeError("MYAPP_FAAS_SERVICE_DIR is required")
-    if service_dir is None:
-        service_dir = Path(raw_service_dir).resolve()
-    app = _attach_health(_load_generated_app(service_dir), service_id)
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "8080")), threaded=True)
+    port = int(os.environ.get("PORT", "8080"))
+    # Listen immediately; load the generated app in the background. A scale-from-
+    # zero invoke then blocks briefly instead of hitting connection-refused.
+    threading.Thread(target=_load_runtime, args=(service_id, raw_service_dir), daemon=True).start()
+    from werkzeug.serving import make_server
+
+    server = make_server("0.0.0.0", port, _runtime_dispatcher, threaded=True)
+    server.serve_forever()
     return 0
 
 

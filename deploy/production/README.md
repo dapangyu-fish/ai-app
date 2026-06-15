@@ -457,9 +457,14 @@ the candidate gateway host:
 myapp-ctl faas faasd-host-preflight --expect-empty-ports
 ```
 
-This must be a dedicated host without Docker. faasd and Docker both use
-containerd, iptables, and CNI, so a MyApp Docker Compose host should stay in
-`local-docker` mode or point at an external gateway.
+faasd can run on a dedicated host OR **co-located with Docker on the same host**
+(empirically proven). The preflight's `docker-colocation` check is a non-blocking
+warning: faasd and Docker share the one system containerd via separate namespaces
+(Docker `moby`, faasd `openfaas`/`openfaas-fn`); subnets don't overlap (docker0
+172.17/16, openfaas0 10.62/16). When co-locating, install faasd skipping its own
+containerd (reuse the system one), drop conflicting host-port mappings, and add
+`openfaas0` FORWARD ACCEPT rules if the host `FORWARD` policy is `DROP`. The
+current production deployment is all-in-one on host 77.
 
 List or disable generated services. Disabled services are hidden unless `--all`
 is passed:

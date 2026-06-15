@@ -58,6 +58,8 @@ def _install_backend_stubs(runtime_image: str, bundle_base_url: str, runtime_tok
         "FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS": 15,
         "FAAS_MAX_SERVICES_PER_USER": 5,
         "FAAS_OPENFAAS_GATEWAY": "",
+        "FAAS_DEFAULT_NODE_ID": "",
+        "FAAS_OPENFAAS_NODES": {},
         "FAAS_OPENFAAS_MAX_REPLICAS": 1,
         "FAAS_OPENFAAS_MIN_REPLICAS": 0,
         "FAAS_OPENFAAS_PASSWORD": "",

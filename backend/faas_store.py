@@ -29,6 +29,7 @@ import requests
 try:
     from config import (
         FAAS_BUNDLE_MAX_BYTES,
+        FAAS_BUNDLE_SERVE_ROOT,
         FAAS_CODE_ROOT,
         FAAS_DEPLOY_MODE,
         FAAS_DEPLOY_SCRIPT,
@@ -37,6 +38,7 @@ try:
         FAAS_FUNCTION_PREFIX,
         FAAS_GIT_AUTHOR_EMAIL,
         FAAS_GIT_AUTHOR_NAME,
+        FAAS_GIT_ASYNC_PUSH,
         FAAS_GIT_BRANCH,
         FAAS_GIT_ENABLED,
         FAAS_GIT_PUSH_ENABLED,
@@ -50,8 +52,10 @@ try:
         FAAS_LOCAL_DOCKER_START_ON_DEPLOY,
         FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS,
         FAAS_MAX_SERVICES_PER_USER,
+        FAAS_DEFAULT_NODE_ID,
         FAAS_OPENFAAS_GATEWAY,
         FAAS_OPENFAAS_MAX_REPLICAS,
+        FAAS_OPENFAAS_NODES,
         FAAS_OPENFAAS_MIN_REPLICAS,
         FAAS_OPENFAAS_PASSWORD,
         FAAS_OPENFAAS_READ_TIMEOUT,
@@ -68,6 +72,7 @@ try:
 except ModuleNotFoundError:
     from backend.config import (
         FAAS_BUNDLE_MAX_BYTES,
+        FAAS_BUNDLE_SERVE_ROOT,
         FAAS_CODE_ROOT,
         FAAS_DEPLOY_MODE,
         FAAS_DEPLOY_SCRIPT,
@@ -76,6 +81,7 @@ except ModuleNotFoundError:
         FAAS_FUNCTION_PREFIX,
         FAAS_GIT_AUTHOR_EMAIL,
         FAAS_GIT_AUTHOR_NAME,
+        FAAS_GIT_ASYNC_PUSH,
         FAAS_GIT_BRANCH,
         FAAS_GIT_ENABLED,
         FAAS_GIT_PUSH_ENABLED,
@@ -89,8 +95,10 @@ except ModuleNotFoundError:
         FAAS_LOCAL_DOCKER_START_ON_DEPLOY,
         FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS,
         FAAS_MAX_SERVICES_PER_USER,
+        FAAS_DEFAULT_NODE_ID,
         FAAS_OPENFAAS_GATEWAY,
         FAAS_OPENFAAS_MAX_REPLICAS,
+        FAAS_OPENFAAS_NODES,
         FAAS_OPENFAAS_MIN_REPLICAS,
         FAAS_OPENFAAS_PASSWORD,
         FAAS_OPENFAAS_READ_TIMEOUT,
@@ -258,12 +266,15 @@ def _safe_id(value: str, fallback: str) -> str:
 
 
 def _uid_shard(user_id: str) -> Path:
+    # Repo-layout contract (see myapp-faas-services/LAYOUT.md):
+    #   <uid[0:2]>/<uid[2:4]>/<uid>/<service_id>/
+    # uid is path-sanitized; non-path-safe ids fall back to a deterministic hash.
     raw = str(user_id or "").strip()
     digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
     compact = re.sub(r"[^A-Za-z0-9-]+", "", raw) or digest
     a = compact[:2].lower() if len(compact) >= 2 else digest[:2]
     b = compact[2:4].lower() if len(compact) >= 4 else digest[2:4]
-    return Path("users") / a / b / compact
+    return Path(a) / b / compact
 
 
 def user_code_root(user_id: str) -> Path:
@@ -271,7 +282,7 @@ def user_code_root(user_id: str) -> Path:
 
 
 def service_code_root(user_id: str, service_id: str) -> Path:
-    return user_code_root(user_id) / "services" / _safe_id(service_id, "service")
+    return user_code_root(user_id) / _safe_id(service_id, "service")
 
 
 def _function_name(user_id: str, service_id: str) -> str:
@@ -329,6 +340,10 @@ def _current_deploy_meta() -> dict[str, Any]:
                 "bundle_base_url": FAAS_RUNTIME_BUNDLE_BASE_URL or FAAS_PUBLIC_BASE_URL,
             }
         )
+        # Pin the service to a faas-node when multi-node routing is configured; the
+        # invoke proxy resolves node_id -> gateway URL via FAAS_OPENFAAS_NODES.
+        if FAAS_DEFAULT_NODE_ID:
+            meta["node_id"] = FAAS_DEFAULT_NODE_ID
     elif mode in _LOCAL_DOCKER_MODES:
         meta.update(
             {
@@ -349,9 +364,24 @@ def _meta_with_current_deploy(bundle_meta: Any) -> dict[str, Any]:
 
 
 def openfaas_gateway_for_service(service: dict[str, Any] | None) -> str:
+    """Resolve which faasd gateway a service is invoked through.
+
+    Priority: meta_json.deploy.node_id (resolved via FAAS_OPENFAAS_NODES) ->
+    the service's pinned meta_json.deploy.openfaas_gateway -> the global
+    FAAS_OPENFAAS_GATEWAY. A node_id that is set but absent from the registry is a
+    misconfiguration we surface loudly rather than silently routing to the wrong
+    (or global) node."""
     if service:
         meta = _json_object(service.get("meta_json"))
         deploy = _json_object(meta.get("deploy"))
+        node_id = str(deploy.get("node_id") or "").strip()
+        if node_id:
+            url = FAAS_OPENFAAS_NODES.get(node_id)
+            if not url:
+                raise FaaSError(
+                    f"faas node '{node_id}' for this service is not in FAAS_OPENFAAS_NODES"
+                )
+            return str(url).strip().rstrip("/")
         gateway = str(deploy.get("openfaas_gateway") or "").strip().rstrip("/")
         if gateway:
             return gateway
@@ -392,6 +422,17 @@ def get_service(service_id: str) -> dict[str, Any] | None:
     )
 
 
+def _pull_bundle_serve_root() -> None:
+    """Reconcile the strict bundle-serving checkout from GitHub (fetch + hard reset)."""
+    if not FAAS_BUNDLE_SERVE_ROOT:
+        return
+    serve_root = Path(FAAS_BUNDLE_SERVE_ROOT)
+    if not (serve_root / ".git").exists():
+        return
+    _run_git(["fetch", "origin", FAAS_GIT_BRANCH], cwd=serve_root)
+    _run_git(["reset", "--hard", f"origin/{FAAS_GIT_BRANCH}"], cwd=serve_root, check=True)
+
+
 def runtime_bundle_for_service(service_id: str) -> dict[str, Any]:
     service = get_service(service_id)
     if not service:
@@ -399,7 +440,27 @@ def runtime_bundle_for_service(service_id: str) -> dict[str, Any]:
     active_path = str(service.get("active_path") or "").strip()
     if not active_path:
         raise FaaSValidationError("service has no active code path")
-    root = Path(active_path)
+    if FAAS_BUNDLE_SERVE_ROOT:
+        # Strict source-of-truth: serve from the GitHub-pulled checkout, so the
+        # code that runs provably came from git rather than a backend-local write.
+        try:
+            rel = Path(active_path).resolve().relative_to(Path(FAAS_CODE_ROOT).resolve())
+        except ValueError as exc:
+            raise FaaSValidationError("service path is outside the FaaS code root") from exc
+        root = Path(FAAS_BUNDLE_SERVE_ROOT) / rel
+        # Reconcile from git, retrying briefly so a just-deployed service whose
+        # async push is still in flight resolves once its commit lands. A transient
+        # pull failure must not break an in-flight runtime fetch.
+        for _attempt in range(6):
+            try:
+                _pull_bundle_serve_root()
+            except Exception:
+                pass
+            if (root / "app.py").is_file():
+                break
+            time.sleep(2)
+    else:
+        root = Path(active_path)
     if not root.is_dir():
         raise FaaSValidationError("service code path is missing")
     files: dict[str, str] = {}
@@ -421,6 +482,34 @@ def runtime_bundle_for_service(service_id: str) -> dict[str, Any]:
         },
         "files": files,
     }
+
+
+def read_service_source(
+    service_id: str,
+    *,
+    names: tuple[str, ...] = ("app.py", "requirements.txt"),
+    max_bytes: int = 60_000,
+) -> dict[str, str]:
+    """Best-effort read of an existing service's source so the generator can
+    APPEND routes to it instead of regenerating from route descriptions. Returns
+    {} if the service or its code is unavailable."""
+    service = get_service(service_id)
+    if not service:
+        return {}
+    active_path = str(service.get("active_path") or "").strip()
+    if not active_path:
+        return {}
+    root = Path(active_path)
+    out: dict[str, str] = {}
+    for name in names:
+        candidate = root / name
+        try:
+            if candidate.is_file():
+                text = candidate.read_text(encoding="utf-8")
+                out[name] = text if len(text.encode("utf-8")) <= max_bytes else text[:max_bytes] + "\n# ...truncated...\n"
+        except Exception:
+            continue
+    return out
 
 
 def runtime_token_for_service(service_id: str) -> str:
@@ -1326,7 +1415,25 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
         )
         try:
             _write_service_files(root, normalized["files"])
-            commit_sha = _git_commit_service(repo_root, service_rel, service_id)
+            if FAAS_GIT_ENABLED and FAAS_GIT_ASYNC_PUSH:
+                # Hand the commit+push to the isolated worker (outside the request
+                # path). The runtime still gets code from the local write above /
+                # the runtime-bundle endpoint, so the deploy does not block on git.
+                try:
+                    from faas_push_worker import enqueue_push_job, ensure_tables as _ensure_push_tables
+                except ModuleNotFoundError:
+                    from backend.faas_push_worker import enqueue_push_job, ensure_tables as _ensure_push_tables
+                _ensure_push_tables()
+                enqueue_push_job(
+                    owner_user_id,
+                    service_id,
+                    str(service_rel),
+                    normalized["files"],
+                    f"deploy faas service {service_id}",
+                )
+                commit_sha = ""
+            else:
+                commit_sha = _git_commit_service(repo_root, service_rel, service_id)
             status, deploy_output = _deploy_service(
                 root,
                 function_name=function_name,

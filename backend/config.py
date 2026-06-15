@@ -3,6 +3,7 @@
 配置模块 - 所有配置常量和环境变量
 """
 
+import json
 import os
 import shutil
 from dotenv import load_dotenv
@@ -103,9 +104,40 @@ FAAS_GIT_AUTHOR_NAME = os.environ.get("FAAS_GIT_AUTHOR_NAME", "myapp-faas-bot").
 FAAS_GIT_AUTHOR_EMAIL = os.environ.get("FAAS_GIT_AUTHOR_EMAIL", "myapp-faas-bot@localhost").strip() or "myapp-faas-bot@localhost"
 FAAS_GIT_SSH_KEY_PATH = os.environ.get("FAAS_GIT_SSH_KEY_PATH", "").strip()
 FAAS_GIT_KNOWN_HOSTS_PATH = os.environ.get("FAAS_GIT_KNOWN_HOSTS_PATH", "").strip()
+# Commit/push generated code through an isolated worker (outside the request path
+# and outside Agent containers) instead of in-process during deploy.
+FAAS_GIT_ASYNC_PUSH = os.environ.get("FAAS_GIT_ASYNC_PUSH", "1").strip().lower() in {"1", "true", "yes", "on"}
+# Strict git source-of-truth: when set, the runtime bundle is served from this
+# GitHub-pulled checkout (reconciled from FAAS_GIT_REMOTE) instead of the local
+# write tree, so served code provably comes from git, not a backend-local write.
+FAAS_BUNDLE_SERVE_ROOT = os.environ.get("FAAS_BUNDLE_SERVE_ROOT", "").rstrip("/")
 FAAS_DEPLOY_MODE = os.environ.get("FAAS_DEPLOY_MODE", "metadata").strip().lower().replace("_", "-") or "metadata"
 FAAS_DEPLOY_SCRIPT = os.environ.get("FAAS_DEPLOY_SCRIPT", "").strip()
 FAAS_OPENFAAS_GATEWAY = os.environ.get("FAAS_OPENFAAS_GATEWAY", "").rstrip("/")
+
+
+def _parse_faas_nodes(raw: str) -> dict:
+    """Parse FAAS_OPENFAAS_NODES (JSON {node_id: gateway_url}) for multi-node routing.
+
+    We run single-node faasd per server (not the paid cluster). With more than one
+    faas-node server, each service pins its node in meta_json.deploy.node_id and the
+    backend proxies to that node's gateway. An empty/invalid map => single global
+    gateway (FAAS_OPENFAAS_GATEWAY)."""
+    raw = (raw or "").strip()
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except (json.JSONDecodeError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {str(k): str(v).rstrip("/") for k, v in data.items() if str(k) and str(v)}
+
+
+# node_id -> gateway URL registry; FAAS_DEFAULT_NODE_ID is stamped onto new deploys.
+FAAS_OPENFAAS_NODES = _parse_faas_nodes(os.environ.get("FAAS_OPENFAAS_NODES", ""))
+FAAS_DEFAULT_NODE_ID = os.environ.get("FAAS_DEFAULT_NODE_ID", "").strip()
 FAAS_OPENFAAS_USERNAME = os.environ.get("FAAS_OPENFAAS_USERNAME", "admin").strip()
 FAAS_OPENFAAS_PASSWORD = os.environ.get("FAAS_OPENFAAS_PASSWORD", "").strip()
 FAAS_OPENFAAS_RUNTIME_IMAGE = os.environ.get(

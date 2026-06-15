@@ -188,20 +188,24 @@ def _faas_manifest_for_user(user_id: str) -> Optional[dict]:
     try:
         try:
             from config import FAAS_MAX_SERVICES_PER_USER
-            from faas_store import list_services
+            from faas_store import list_services, read_service_source
         except ModuleNotFoundError:
             from backend.config import FAAS_MAX_SERVICES_PER_USER
-            from backend.faas_store import list_services
+            from backend.faas_store import list_services, read_service_source
         services = []
         for item in list_services(user_id):
+            service_id = str(item.get("service_id") or "")
             services.append({
-                "service_id": item.get("service_id"),
+                "service_id": service_id,
                 "slug": item.get("service_slug"),
                 "status": item.get("status"),
                 "routes": item.get("routes") or [],
-                "invoke_url": f"/api/faas/invoke/{item.get('service_id')}",
+                "invoke_url": f"/api/faas/invoke/{service_id}",
                 "active_commit": item.get("active_commit") or "",
                 "updated_at": str(item.get("updated_at") or ""),
+                # Existing source so the generator can APPEND routes to a service
+                # while preserving its current handlers (reuse the same service_id).
+                "source": read_service_source(service_id),
             })
         return {
             "version": 1,
@@ -209,9 +213,13 @@ def _faas_manifest_for_user(user_id: str) -> Optional[dict]:
             "max_services": FAAS_MAX_SERVICES_PER_USER,
             "services": services,
             "note": (
-                "This is a read-only manifest. To update an existing backend, "
-                "reuse its service_id in faas_bundle.json. The invoke proxy "
-                "enforces the listed routes and methods."
+                "This is a read-only manifest. To APPEND endpoints to an existing "
+                "backend, reuse its service_id in faas_bundle.json and include ALL "
+                "of its existing routes plus the new ones, basing app.py on the "
+                "service's `source` field so current handlers are preserved "
+                "(appending does NOT consume a new service slot). Create a NEW "
+                "service_id only for an unrelated backend, and only while under "
+                "max_services. The invoke proxy enforces the listed routes/methods."
             ),
         }
     except Exception as exc:
@@ -1743,8 +1751,10 @@ def _build_faas_backend_prompt_note(*, workspace: Optional[str] = None) -> str:
         f"\n- 你可以生成一个受限 Python/Flask 后端服务 bundle：`{bundle_path}`。"
         "\n- Agent 不能也不需要操作 Git、Docker、OpenFaaS、faas-cli 或任何部署密钥；"
         "后端会在 worker 结束后读取 bundle、校验、提交和部署。"
-        "\n- 工作区会提供只读 `faas_services.json`，列出当前用户已有 FaaS 服务、路由和调用地址；"
-        "如果本轮是在继续打磨已有后端，优先复用其中的 `service_id`，不要无意义创建新服务。"
+        "\n- 工作区会提供只读 `faas_services.json`，列出当前用户已有 FaaS 服务、路由、调用地址以及每个服务的现有源码 `source`；"
+        "如果本轮是在给已有后端追加接口，请复用其 `service_id`，基于 `source` 里的 `app.py` 续写、"
+        "并在 routes 中同时保留原有路由和新增路由（追加不占用新的服务配额）；"
+        "只有当确实是无关的新后端、且未超过 `max_services` 时才创建新的 `service_id`。"
         "\n- 只允许 Python/Flask；bundle JSON 结构必须是："
         "`{\"service\":{\"slug\":\"todo-api\",\"routes\":[{\"path\":\"/items\",\"methods\":[\"GET\",\"POST\"]}]},"
         "\"files\":{\"app.py\":\"...Flask app code...\",\"requirements.txt\":\"flask==3.0.3\\n\"}}`。"
@@ -4659,6 +4669,30 @@ def _provider_ids_for_scheduler() -> list[Optional[str]]:
     return provider_ids or [_normalize_provider_id(DEFAULT_PROVIDER)]
 
 
+def _maybe_start_faas_push_worker() -> None:
+    """Start the isolated FaaS git push worker as a daemon thread in this host.
+
+    The worker commits/pushes generated code to the shared myapp-faas-services
+    repo outside the request path; the deploy SSH key is only available here, not
+    in Agent containers.
+    """
+    try:
+        from config import FAAS_ENABLED, FAAS_GIT_ASYNC_PUSH, FAAS_GIT_ENABLED
+    except ModuleNotFoundError:
+        from backend.config import FAAS_ENABLED, FAAS_GIT_ASYNC_PUSH, FAAS_GIT_ENABLED
+    if not (FAAS_ENABLED and FAAS_GIT_ENABLED and FAAS_GIT_ASYNC_PUSH):
+        return
+    try:
+        try:
+            from faas_push_worker import run_push_worker_loop
+        except ModuleNotFoundError:
+            from backend.faas_push_worker import run_push_worker_loop
+        threading.Thread(target=run_push_worker_loop, name="faas-push-worker", daemon=True).start()
+        logger.info("[WORKER_DAEMON] started faas git push worker")
+    except Exception as exc:  # noqa: BLE001 - never block the AI worker on this
+        logger.warning("[WORKER_DAEMON] faas push worker not started: %s", exc)
+
+
 def run_worker_daemon() -> None:
     """独立 AI worker daemon 入口。
 
@@ -4677,6 +4711,7 @@ def run_worker_daemon() -> None:
         AI_WORKER_QUEUE_MAX,
         AI_PROVIDER_WORKER_LIMITS,
     )
+    _maybe_start_faas_push_worker()
     provider_ids = _provider_ids_for_scheduler()
     provider_index = 0
     while True:

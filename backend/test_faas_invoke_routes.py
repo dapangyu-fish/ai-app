@@ -34,6 +34,8 @@ _config = types.ModuleType("config")
 for _name, _value in {
     "FAAS_DEPLOY_MODE": "metadata",
     "FAAS_OPENFAAS_GATEWAY": "",
+    "FAAS_DEFAULT_NODE_ID": "",
+    "FAAS_OPENFAAS_NODES": {},
     "FAAS_REQUIRE_AUTH": False,
     "FAAS_RUNTIME_TOKEN": "runtime-master-token",
 }.items():

@@ -179,7 +179,9 @@ authoritative deployment guide.
 
 The project is now closer to a small app platform than a single Flutter demo.
 The Flutter client is a compiled runtime; JSON-APPs, components, assets, IM,
-and AI generation are all served by the backend stack.
+AI generation, and **AI-generated FaaS backends** are all served by the backend
+stack — which can run all-in-one on a single host (backend + Docker Compose stack
++ co-located faasd sharing one containerd).
 
 ```mermaid
 flowchart TB
@@ -216,6 +218,17 @@ flowchart TB
   Builtins --> IM["OpenIM<br/>native SDK or Web WASM bridge"]
   IM --> Push["backend IM webhook<br/>APNs / FCM / GeTui"]
 
+  Actions -->|faas_bundle.json| FaaSDeploy["backend faas_store<br/>validate + deploy"]
+  FaaSDeploy --> PushWorker["isolated git push worker<br/>(ai-worker, scoped deploy key)"]
+  PushWorker --> FaaSRepo["GitHub myapp-faas-services<br/>(source of truth)"]
+  FaaSRepo --> ServeCheckout["serve checkout<br/>(git pull)"]
+  FaaSDeploy --> Faasd["co-located faasd<br/>(shares Docker's containerd)"]
+  Faasd --> FaaSFn["generic runtime<br/>Python/Flask function"]
+  ServeCheckout --> FaaSBundle["/api/faas/runtime_bundle"]
+  FaaSFn --> FaaSBundle
+  Client --> FaaSInvoke["/api/faas/invoke<br/>route-enforced proxy"]
+  FaaSInvoke --> Faasd
+
   Client --> Config["Config Center<br/>/api/v1/public"]
   Client --> Auth["Backend Auth -> Supabase Auth"]
   UserCenter["User Center"] --> Supabase["Supabase Admin API"]
@@ -228,6 +241,7 @@ flowchart TB
 | Backend API | `backend/app.py`, `backend/claude_chat.py` | Flask API for auth-gated AI chat, SSE streaming, media upload, push, provider config, and client-facing backend endpoints |
 | AI Queue / Sessions | `backend/ai_session.py` + Redis | Durable-ish AI task metadata, bounded worker queue, resumable SSE event stream, abort/retry status |
 | AI Worker Pool | `backend/ai_worker_daemon.py`, `backend/ai_session.py`, `backend/agent_node_service.py`, `deploy/production/agent_runner.py` | Moves accepted jobs through Redis, defaults to pull-mode agent-node execution, and can also run direct agent-node or local CLI paths depending on `AI_WORKER_EXECUTION_BACKEND` |
+| FaaS Backends | `backend/faas.py`, `backend/faas_store.py`, `backend/faas_push_worker.py`, `backend/faas_runtime_server.py` | AI-generated Python/Flask backends: strict bundle validation, isolated git push worker → `myapp-faas-services` (GitHub source of truth), co-located faasd runtime (or `local-docker`), route-enforced `/api/faas/invoke` proxy, per-user quota + create-vs-append |
 | Registry | `backend/registry_server.py` | Package registry for JSON-APPs/components: `_index.json` + MinIO package files are the runtime resolve source; Postgres `registry_packages` is the market/detail/enrichment/social index |
 | Object Storage | MinIO / OSS | Public JSON packages under `json-component`, app media, asset packs under `json-app-assets`, and temporary AI-generated JSON URLs |
 | OpenIM | `backend/openim/` | IM backend bridge. Native clients use OpenIM Flutter/native SDK; Web uses the WASM SDK bridge |
@@ -373,7 +387,8 @@ licensed by their authors unless they explicitly say otherwise.
 - [ ] Prompt system v2: split the long app-generation prompt into core rules + task cards, and move JSON validation into tooling
 - [ ] More agent runtime adapters beyond the current Claude/Codex execution paths
 - [ ] Audio support for JSON-APPs (recording, playback, upload, and reusable audio UI/actions)
-- [ ] FaaS support: let AI conversations create small backend functions for complex apps, with resource limits, deployment isolation, and self-hosting controls
+- [x] FaaS support: AI conversations create Python/Flask backend functions, served by co-located faasd (all-in-one, sharing Docker's containerd) with strict bundle validation, GitHub source-of-truth (`myapp-faas-services`), an isolated git push worker, per-user quota + create-vs-append, and a route-enforced invoke proxy
+- [ ] FaaS scale-out: multi-node faasd + backend secondary routing (horizontal scale) and user-private faas nodes (reusing the agent-node registry pattern)
 - [ ] Mario JSON demo parity: finish Koopa spawn/movement/rendering parity against the original `flutter_game` reference before treating that demo as fully complete
 - [ ] DSL v4 (stabilize breaking-change window)
 - [ ] More tests around the interpreter

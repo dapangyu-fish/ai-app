@@ -7,6 +7,12 @@ ARG MYAPP_BUILD_VERSION=unknown
 ENV MYAPP_BUILD_COMMIT=${MYAPP_BUILD_COMMIT} \
     MYAPP_BUILD_VERSION=${MYAPP_BUILD_VERSION}
 
+# The isolated FaaS git push worker pushes generated code over SSH; the base
+# image ships git but not an ssh client.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY backend/ /app/backend/

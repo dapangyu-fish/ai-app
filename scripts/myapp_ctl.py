@@ -160,7 +160,7 @@ EDGE_ROUTE_SPECS = [
     {"key": "registry", "label": "App registry", "kind": "proxy", "upstream": "http://registry:3254"},
     {"key": "config_center", "label": "Config Center", "kind": "proxy", "upstream": "http://config-center:5000"},
     {"key": "user_center", "label": "User Center", "kind": "proxy", "upstream": "http://user-center:5567"},
-    {"key": "openfaas", "label": "FaaS public invoke", "kind": "proxy", "upstream": "http://backend:5566"},
+    {"key": "openfaas", "label": "FaaS node (direct invoke)", "kind": "faasd", "upstream": "http://172.18.0.1:8731"},
     {
         "key": "openim",
         "label": "OpenIM",
@@ -4620,6 +4620,31 @@ def _edge_route_body(spec: dict) -> str:
     root {root};
     try_files $uri $uri/ /index.html;
   }}"""
+    if kind == "faasd":
+        # Direct public entry to a single-node faasd gateway (mode-b). Only the
+        # function-invoke surface is exposed; the faasd admin API (/system/) is
+        # denied so the public domain cannot deploy/delete/scale functions.
+        up = str(spec["upstream"]).rstrip("/")
+        return f"""
+  location = /healthz {{
+    proxy_pass {up};
+  }}
+  location /function/ {{
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_pass {up};
+  }}
+  location /system/ {{
+    return 403;
+  }}
+  location / {{
+    return 404;
+  }}"""
     if kind == "openim":
         return (
             _edge_proxy_location(str(spec["ws_upstream"]), strip_prefix="ws")
@@ -4733,7 +4758,7 @@ def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
         "APP_MINIO_PUBLIC_URL": urls["oss"],
         "APP_MINIO_CONSOLE_PUBLIC_URL": urls["oss_console"],
         "REGISTRY_PUBLIC_URL": urls["registry"],
-        "FAAS_PUBLIC_BASE_URL": urls["openfaas"],
+        "FAAS_PUBLIC_BASE_URL": urls["backend"],
     }
     supabase_values = {
         "API_EXTERNAL_URL": urls["auth"],
@@ -4744,7 +4769,7 @@ def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
     user_center_values = {"USER_CENTER_COOKIE_SECURE": "true" if tls else "false"}
     openim_values = {"HOST_IP": hosts.get("openim", config["default_host"])}
     faas_values = {
-        "FAAS_PUBLIC_BASE_URL": urls["openfaas"],
+        "FAAS_PUBLIC_BASE_URL": urls["backend"],
         "FAAS_RUNTIME_BUNDLE_BASE_URL": urls["backend"],
     }
     edge_values = {
@@ -5104,11 +5129,24 @@ def _cmd_faasd_host_preflight(args) -> int:
             docker_detail = "docker daemon is reachable"
         else:
             docker_detail = (proc.stderr or proc.stdout or "docker installed but daemon is not reachable").strip().splitlines()[0]
-    docker_allowed = bool(getattr(args, "allow_docker", False))
+    # Co-location with Docker is supported and proven: faasd and Docker share the
+    # one system containerd via separate namespaces (Docker 'moby', faasd
+    # 'openfaas'/'openfaas-fn'). So Docker being present is a heads-up, not a
+    # blocker. Install faasd skipping its own containerd (reuse the system one),
+    # and add openfaas0 FORWARD ACCEPT rules if the host FORWARD policy is DROP.
+    if docker_running:
+        colocation_detail = (
+            "docker running — co-location OK: faasd shares the system containerd "
+            "via separate namespaces; install faasd reusing it, add openfaas0 "
+            "FORWARD ACCEPT if FORWARD policy is DROP"
+        )
+    else:
+        colocation_detail = docker_detail
     add_check(
         "docker-colocation",
-        (not docker_running) or docker_allowed,
-        docker_detail + (" (allowed by --allow-docker)" if docker_running and docker_allowed else ""),
+        True,
+        colocation_detail,
+        required=False,
     )
 
     containerd_bin = shutil.which("containerd")
@@ -5161,7 +5199,8 @@ def _cmd_faasd_host_preflight(args) -> int:
         )
         if not ok:
             print(
-                "faasd host preflight failed; use a dedicated host without Docker for real faasd/OpenFaaS gateway testing",
+                "faasd host preflight failed; fix the required checks above. "
+                "(Docker co-location is supported and is only a warning.)",
                 file=sys.stderr,
             )
     return 0 if ok else 1
@@ -5298,7 +5337,104 @@ def _set_faas_git(args) -> int:
     return 0
 
 
+def _faas_gateway_creds(args) -> tuple[str, str, str, str]:
+    data = _parse_env(_secret_path("faas"))
+    gateway = (getattr(args, "gateway", None) or data.get("FAAS_OPENFAAS_GATEWAY", "")).strip().rstrip("/")
+    username = (getattr(args, "username", None) or data.get("FAAS_OPENFAAS_USERNAME", "admin")).strip() or "admin"
+    if getattr(args, "password_file", None):
+        password = Path(args.password_file).expanduser().read_text(encoding="utf-8").strip()
+    elif getattr(args, "password_env", None):
+        password = os.environ.get(args.password_env, "").strip()
+    else:
+        password = data.get("FAAS_OPENFAAS_PASSWORD", "").strip()
+    mode = (data.get("FAAS_DEPLOY_MODE", "") or "").strip()
+    return gateway, username, password, mode
+
+
+def _faas_gateway_get(gateway: str, path: str, *, username: str = "", password: str = "", timeout: int = 8) -> tuple[int, str]:
+    import base64
+    import urllib.error
+    import urllib.request
+
+    req = urllib.request.Request(f"{gateway}{path}")
+    if username and password:
+        token = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
+        req.add_header("Authorization", f"Basic {token}")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.getcode(), resp.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as exc:
+        return exc.code, ""
+    except Exception:
+        return 0, ""
+
+
+def _cmd_faas_node(args) -> int:
+    from urllib.parse import urlparse
+
+    node_cmd = getattr(args, "faas_node_cmd", None) or "ls"
+    gateway, username, password, mode = _faas_gateway_creds(args)
+    as_json = bool(getattr(args, "json", False))
+    if not gateway:
+        note = f"no faasd/openfaas node configured (deploy_mode={mode or 'unset'})"
+        print(json.dumps({"nodes": [], "note": note}, ensure_ascii=False, indent=2) if as_json else note)
+        return 0
+
+    health_http, _ = _faas_gateway_get(gateway, "/healthz", timeout=6)
+    fn_http, fn_body = _faas_gateway_get(gateway, "/system/functions", username=username, password=password, timeout=8)
+    fn_names: list[str] = []
+    fn_count: object = "-"
+    if fn_http == 200 and fn_body:
+        try:
+            arr = json.loads(fn_body)
+            if isinstance(arr, list):
+                fn_count = len(arr)
+                fn_names = [str(item.get("name", "")) for item in arr if isinstance(item, dict)]
+        except json.JSONDecodeError:
+            pass
+    host = urlparse(gateway).hostname or gateway
+    online = health_http == 200
+    auth_ok = fn_http == 200
+    node = {
+        "name": host, "gateway": gateway,
+        "status": "online" if online else "down",
+        "auth": "ok" if auth_ok else "fail",
+        "functions": fn_count, "deploy_mode": mode or "-",
+        "health_http": health_http, "functions_http": fn_http,
+    }
+    if as_json:
+        payload = {"nodes": [node]}
+        if node_cmd == "status":
+            payload["functions_list"] = fn_names
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return 0 if online else 1
+    if node_cmd == "status":
+        rows = [
+            {"key": "node", "value": host},
+            {"key": "gateway", "value": gateway},
+            {"key": "status", "value": node["status"]},
+            {"key": "health_http", "value": health_http},
+            {"key": "auth", "value": node["auth"] if auth_ok else f"fail (http={fn_http})"},
+            {"key": "functions", "value": fn_count},
+            {"key": "deploy_mode", "value": mode or "-"},
+        ]
+        _print_table(rows, [("key", "KEY"), ("value", "VALUE")])
+        if fn_names:
+            print("functions:")
+            for name in fn_names:
+                print(f"  - {name}")
+        return 0 if online else 1
+    _print_table(
+        [{"name": host, "status": node["status"], "auth": node["auth"],
+          "functions": fn_count, "mode": mode or "-", "gateway": gateway}],
+        [("name", "NAME"), ("status", "STATUS"), ("auth", "AUTH"), ("functions", "FUNCTIONS"), ("mode", "MODE"), ("gateway", "GATEWAY")],
+    )
+    return 0 if online else 1
+
+
 def cmd_faas(args) -> int:
+    if getattr(args, "faas_cmd", None) == "node":
+        return _cmd_faas_node(args)
     base_url = _backend_base_url(getattr(args, "base_url", None))
     token = _faas_token_arg(args)
     if args.faas_cmd == "health":
@@ -5530,6 +5666,40 @@ def cmd_faas(args) -> int:
             cmd.append("--no-cleanup")
         if args.include_invalid:
             cmd.append("--include-invalid")
+        try:
+            return _run(cmd, capture=False).returncode
+        finally:
+            _run(["docker", "exec", "myapp-backend", "rm", "-f", container_path], capture=True)
+    if args.faas_cmd == "e2e":
+        script = _source_dir() / "scripts" / "faas_e2e_test.py"
+        if not script.is_file():
+            print(f"faas e2e test script not found: {script}", file=sys.stderr)
+            return 1
+        container_path = f"/tmp/myapp-faas-e2e-{os.getpid()}.py"
+        copy = _run(["docker", "cp", str(script), f"myapp-backend:{container_path}"])
+        if copy.returncode != 0:
+            print(f"failed to copy e2e script into myapp-backend: {(copy.stderr or copy.stdout).strip()}", file=sys.stderr)
+            return 1
+        # Runs inside myapp-backend so it inherits SUPABASE_* env and reaches 127.0.0.1:5566.
+        cmd = [
+            "docker", "exec", "myapp-backend", "python", container_path,
+            "--base-url", args.base_url or "http://127.0.0.1:5566",
+            "--provider", args.provider,
+            "--agent", args.agent,
+            "--timeout", str(args.timeout),
+        ]
+        if args.email:
+            cmd.extend(["--email", args.email])
+        if args.password:
+            cmd.extend(["--password", args.password])
+        if args.with_update:
+            cmd.append("--with-update")
+        if args.faas_domain:
+            cmd.extend(["--faas-domain", args.faas_domain])
+        if args.function_name:
+            cmd.extend(["--function-name", args.function_name])
+        if args.keep:
+            cmd.append("--keep")
         try:
             return _run(cmd, capture=False).returncode
         finally:
@@ -7398,7 +7568,7 @@ def build_parser() -> argparse.ArgumentParser:
     faas_openfaas_gateway_check.add_argument("--json", action="store_true")
     faas_openfaas_gateway_check.set_defaults(func=cmd_faas)
     faas_faasd_host_preflight = faas_sub.add_parser("faasd-host-preflight", help=_tx("check whether this host is safe for dedicated faasd installation", zh="检查本机是否适合专用 faasd 安装", de="pruefen, ob dieser Host fuer eine dedizierte faasd-Installation geeignet ist", es="comprobar si este host es apto para instalacion faasd dedicada"), usage=_tx("myapp-ctl faas faasd-host-preflight [options]", zh="myapp-ctl faas faasd-host-preflight [选项]", de="myapp-ctl faas faasd-host-preflight [Optionen]", es="myapp-ctl faas faasd-host-preflight [opciones]"))
-    faas_faasd_host_preflight.add_argument("--allow-docker", action="store_true", help=_tx("do not fail when Docker is running; for diagnostics only", zh="Docker 正在运行时也不失败；仅用于诊断", de="bei laufendem Docker nicht fehlschlagen; nur Diagnose", es="no fallar si Docker esta en ejecucion; solo diagnostico"))
+    faas_faasd_host_preflight.add_argument("--allow-docker", action="store_true", help=_tx("deprecated: Docker co-location is now supported, so this is a no-op", zh="已废弃：现已支持与 Docker 共存，此项无效", de="veraltet: Docker-Koexistenz wird jetzt unterstuetzt, ohne Wirkung", es="obsoleto: la co-ubicacion con Docker ahora es compatible; sin efecto"))
     faas_faasd_host_preflight.add_argument("--expect-empty-ports", action="store_true", help=_tx("fail if ports 8080/8081 are already listening", zh="8080/8081 已监听时失败", de="fehlschlagen, wenn Ports 8080/8081 bereits lauschen", es="fallar si puertos 8080/8081 ya escuchan"))
     faas_faasd_host_preflight.add_argument("--expect-installed", action="store_true", help=_tx("require faasd and faasd-provider systemd services to be active", zh="要求 faasd 和 faasd-provider systemd 服务处于 active", de="faasd und faasd-provider systemd-Dienste muessen aktiv sein", es="requerir servicios systemd faasd y faasd-provider activos"))
     faas_faasd_host_preflight.add_argument("--json", action="store_true")
@@ -7421,6 +7591,18 @@ def build_parser() -> argparse.ArgumentParser:
     faas_ai_action_smoke.add_argument("--no-cleanup", action="store_true", help=_tx("leave generated service in place", zh="保留生成服务不清理", de="generierten Dienst nicht bereinigen", es="no limpiar servicio generado"))
     faas_ai_action_smoke.add_argument("--include-invalid", action="store_true", help=_tx("also verify invalid generated FaaS bundles fail", zh="同时验证非法生成 FaaS bundle 会失败", de="auch pruefen, dass ungueltige generierte FaaS-Bundles fehlschlagen", es="tambien verificar que bundles FaaS invalidos fallen"))
     faas_ai_action_smoke.set_defaults(func=cmd_faas)
+    faas_e2e = faas_sub.add_parser("e2e", help=_tx("simulated end-to-end test: real AI generation -> deploy -> invoke", zh="模拟端到端测试：真实 AI 生成 -> 部署 -> 调用", de="simulierter End-to-End-Test: echte KI-Generierung -> Deploy -> Aufruf", es="prueba end-to-end simulada: generacion IA real -> deploy -> invocacion"), usage=_tx("myapp-ctl faas e2e [options]", zh="myapp-ctl faas e2e [选项]", de="myapp-ctl faas e2e [Optionen]", es="myapp-ctl faas e2e [opciones]"))
+    faas_e2e.add_argument("--base-url", default=None, help=_tx("backend base URL (default in-container 127.0.0.1:5566)", zh="后端 base URL（默认容器内 127.0.0.1:5566）", de="Backend-Basis-URL (Standard im Container 127.0.0.1:5566)", es="URL base backend (por defecto en contenedor 127.0.0.1:5566)"))
+    faas_e2e.add_argument("--provider", default="minimax", help=_tx("AI provider id used for generation", zh="生成使用的 AI 供应商 id", de="KI-Anbieter-ID fuer die Generierung", es="id del proveedor IA para la generacion"))
+    faas_e2e.add_argument("--agent", default="claude", help=_tx("agent id used for generation", zh="生成使用的 agent id", de="Agent-ID fuer die Generierung", es="id del agente para la generacion"))
+    faas_e2e.add_argument("--timeout", type=int, default=900, help=_tx("max seconds to wait per generation", zh="每次生成等待的最大秒数", de="maximale Wartezeit pro Generierung in Sekunden", es="segundos maximos de espera por generacion"))
+    faas_e2e.add_argument("--with-update", action="store_true", help=_tx("also run the update path (second generation)", zh="同时跑更新路径（第二次生成）", de="auch den Update-Pfad ausfuehren (zweite Generierung)", es="ejecutar tambien la ruta de actualizacion (segunda generacion)"))
+    faas_e2e.add_argument("--faas-domain", default="", help=_tx("enable direct mode-b invoke via this faasd node domain", zh="启用经该 faasd 节点域名的直连 mode-b 调用", de="Direkt-Invoke (Modus b) ueber diese faasd-Node-Domain aktivieren", es="activar invocacion directa modo-b via este dominio de nodo faasd"))
+    faas_e2e.add_argument("--function-name", default="", help=_tx("faasd function name for mode-b direct invoke", zh="mode-b 直连使用的 faasd 函数名", de="faasd-Funktionsname fuer Modus-b-Direktaufruf", es="nombre de funcion faasd para invocacion directa modo-b"))
+    faas_e2e.add_argument("--email", default="", help=_tx("test user email (default fixed faas-e2e@e2e.local)", zh="测试用户邮箱（默认固定 faas-e2e@e2e.local）", de="Test-Benutzer-E-Mail (Standard faas-e2e@e2e.local)", es="email de usuario de prueba (por defecto faas-e2e@e2e.local)"))
+    faas_e2e.add_argument("--password", default="", help=_tx("test user password (default fixed)", zh="测试用户密码（默认固定）", de="Test-Benutzer-Passwort (Standard fest)", es="password de usuario de prueba (fijo por defecto)"))
+    faas_e2e.add_argument("--keep", action="store_true", help=_tx("do not delete the generated service", zh="不删除生成的服务", de="generierten Dienst nicht loeschen", es="no eliminar el servicio generado"))
+    faas_e2e.set_defaults(func=cmd_faas)
     faas_mode = faas_sub.add_parser("mode", help=_tx("configure generated FaaS deploy mode", zh="配置生成后端的 FaaS 部署模式", de="Deploy-Modus fuer generierte FaaS konfigurieren", es="configurar modo deploy FaaS generado"), usage=_tx("myapp-ctl faas mode <mode> [options]", zh="myapp-ctl faas mode <模式> [选项]", de="myapp-ctl faas mode <Modus> [Optionen]", es="myapp-ctl faas mode <modo> [opciones]"))
     faas_mode.add_argument("mode", choices=["local-docker", "openfaas", "metadata", "script"])
     faas_mode.add_argument("--gateway", help=_tx("OpenFaaS gateway URL for openfaas mode", zh="openfaas 模式的 OpenFaaS gateway URL", de="OpenFaaS-Gateway-URL fuer openfaas-Modus", es="URL gateway OpenFaaS para modo openfaas"))
@@ -7460,6 +7642,23 @@ def build_parser() -> argparse.ArgumentParser:
     faas_config.add_argument("--json", action="store_true")
     faas_config.add_argument("--show-secrets", action="store_true", help=_tx("show raw secret values", zh="显示原始密钥值", de="echte Secret-Werte anzeigen", es="mostrar valores secretos reales"))
     faas_config.set_defaults(func=cmd_faas)
+    faas_node = faas_sub.add_parser("node", help=_tx("inspect the faasd/openfaas node(s) backing generated FaaS", zh="查看承载 FaaS 的 faasd/openfaas 节点", de="faasd/openfaas-Node(s) fuer generierte FaaS anzeigen", es="inspeccionar nodo(s) faasd/openfaas de FaaS"), usage=_tx("myapp-ctl faas node <ls|status> [options]", zh="myapp-ctl faas node <ls|status> [选项]", de="myapp-ctl faas node <ls|status> [Optionen]", es="myapp-ctl faas node <ls|status> [opciones]"))
+    faas_node_sub = _add_subcommands(faas_node, "faas_node_cmd", required=False)
+    faas_node.set_defaults(func=cmd_faas, faas_node_cmd=None)
+
+    def _faas_node_opts(p):
+        p.add_argument("--gateway", help=_tx("override faasd/openfaas gateway URL", zh="覆盖 faasd/openfaas 网关 URL", de="faasd/openfaas-Gateway-URL ueberschreiben", es="anular URL de gateway faasd/openfaas"))
+        p.add_argument("--username", help=_tx("gateway basic-auth username (default admin)", zh="网关 basic-auth 用户名(默认 admin)", de="Gateway-Basic-Auth-Benutzer (Standard admin)", es="usuario basic-auth del gateway (admin)"))
+        p.add_argument("--password-env", help=_tx("env var holding gateway password", zh="存放网关密码的环境变量", de="Umgebungsvariable mit Gateway-Passwort", es="variable de entorno con contrasena del gateway"))
+        p.add_argument("--password-file", help=_tx("file holding gateway password", zh="存放网关密码的文件", de="Datei mit Gateway-Passwort", es="archivo con contrasena del gateway"))
+        p.add_argument("--json", action="store_true")
+
+    faas_node_ls = faas_node_sub.add_parser("ls", help=_tx("list faas node(s) and health", zh="列出 faas 节点及健康状态", de="faas-Node(s) und Health auflisten", es="listar nodo(s) faas y salud"), usage=_tx("myapp-ctl faas node ls [options]", zh="myapp-ctl faas node ls [选项]", de="myapp-ctl faas node ls [Optionen]", es="myapp-ctl faas node ls [opciones]"))
+    _faas_node_opts(faas_node_ls)
+    faas_node_ls.set_defaults(func=cmd_faas)
+    faas_node_status = faas_node_sub.add_parser("status", help=_tx("show detailed faas node status", zh="显示 faas 节点详细状态", de="detaillierten faas-Node-Status anzeigen", es="mostrar estado detallado del nodo faas"), usage=_tx("myapp-ctl faas node status [options]", zh="myapp-ctl faas node status [选项]", de="myapp-ctl faas node status [Optionen]", es="myapp-ctl faas node status [opciones]"))
+    _faas_node_opts(faas_node_status)
+    faas_node_status.set_defaults(func=cmd_faas)
     client_env = sub.add_parser("client-env", help=_tx("generate client Service Environment import JSON and QR", zh="生成客户端服务环境导入 JSON 和二维码", de="Client-Service-Environment JSON und QR erzeugen", es="generar JSON y QR de entorno de servicio del cliente"), usage=_tx("myapp-ctl client-env [options]", zh="myapp-ctl client-env [选项]", de="myapp-ctl client-env [Optionen]", es="myapp-ctl client-env [opciones]"))
     client_env.add_argument("--host", help=_tx("public host/IP to use in generated URLs", zh="生成 URL 使用的公网域名或 IP", de="oeffentlicher Host/IP fuer generierte URLs", es="host/IP publico para URLs generadas"))
     client_env.add_argument("--name", help=_tx("environment name shown in the client", zh="客户端显示的环境名称", de="im Client angezeigter Umgebungsname", es="nombre de entorno mostrado en el cliente"))
