@@ -442,12 +442,24 @@ Generated service smoke test:
 myapp-ctl faas health
 myapp-ctl faas smoke
 myapp-ctl faas git-backend-smoke --yes
+myapp-ctl faas ai-action-smoke --include-invalid
 ```
 
 `git-backend-smoke` uses a temporary local bare Git remote under the shared
 FaaS data root. It verifies that the deployed backend, not the Agent runtime,
 can commit and push generated service code, then restores the previous FaaS
 configuration.
+
+Before using a real faasd/OpenFaaS gateway, run the read-only host preflight on
+the candidate gateway host:
+
+```bash
+myapp-ctl faas faasd-host-preflight --expect-empty-ports
+```
+
+This must be a dedicated host without Docker. faasd and Docker both use
+containerd, iptables, and CNI, so a MyApp Docker Compose host should stay in
+`local-docker` mode or point at an external gateway.
 
 List or disable generated services. Disabled services are hidden unless `--all`
 is passed:
@@ -466,6 +478,14 @@ myapp-ctl faas mode openfaas --gateway http://<openfaas-gateway>:8080 \
   --bundle-base-url https://<backend-domain> \
   --password-env OPENFAAS_PASSWORD
 myapp-ctl deploy --group faas --pull
+OPENFAAS_PASSWORD=<password> myapp-ctl faas openfaas-gateway-check \
+  --gateway http://<openfaas-gateway>:8080 \
+  --bundle-base-url https://<backend-domain> \
+  --password-env OPENFAAS_PASSWORD
+OPENFAAS_PASSWORD=<password> myapp-ctl faas openfaas-gateway-smoke --yes \
+  --gateway http://<openfaas-gateway>:8080 \
+  --bundle-base-url https://<backend-domain> \
+  --password-env OPENFAAS_PASSWORD
 ```
 
 Configure backend-owned Git storage for generated service code:

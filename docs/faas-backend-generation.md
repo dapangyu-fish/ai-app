@@ -218,14 +218,18 @@ FAAS_RUNTIME_TOKEN=<random-secret>
 External faasd host bring-up checklist:
 
 1. Use a dedicated host that is not running the MyApp Docker Compose stack.
-2. Install faasd following the OpenFaaS Edge/faasd documentation, keep the
+2. Run `myapp-ctl faas faasd-host-preflight --expect-empty-ports` on the
+   candidate host before installing faasd. This command is intentionally
+   read-only and fails if Docker is running, because Docker and faasd both use
+   containerd, iptables, and CNI.
+3. Install faasd following the OpenFaaS Edge/faasd documentation, keep the
    gateway reachable from the MyApp backend host, and record the generated
    gateway password outside Git.
-3. Ensure the faasd host can pull `FAAS_OPENFAAS_RUNTIME_IMAGE`.
-4. Ensure the faasd function runtime can reach
+4. Ensure the faasd host can pull `FAAS_OPENFAAS_RUNTIME_IMAGE`.
+5. Ensure the faasd function runtime can reach
    `FAAS_RUNTIME_BUNDLE_BASE_URL/api/faas/runtime_bundle/<service_id>`.
-5. Run `myapp-ctl faas openfaas-gateway-check` before changing backend mode.
-6. Run `myapp-ctl faas openfaas-gateway-smoke --yes` on a disposable/test
+6. Run `myapp-ctl faas openfaas-gateway-check` before changing backend mode.
+7. Run `myapp-ctl faas openfaas-gateway-smoke --yes` on a disposable/test
    environment before promoting the gateway.
 
 ## myapp-ctl
@@ -271,6 +275,7 @@ myapp-ctl faas smoke
 myapp-ctl faas git-backend-smoke --yes
 myapp-ctl faas ai-action-smoke
 myapp-ctl faas ai-action-smoke --include-invalid
+myapp-ctl faas faasd-host-preflight --expect-empty-ports
 myapp-ctl faas openfaas-runtime-smoke --pull-image
 myapp-ctl faas openfaas-backend-smoke --yes
 OPENFAAS_PASSWORD=<password> myapp-ctl faas openfaas-gateway-check \
@@ -358,6 +363,10 @@ Minimum verification:
 - `myapp-ctl faas ai-action-smoke --include-invalid` passes. This also checks
   that an Agent-uploaded bundle with import-time side effects is rejected as a
   `faas_service_failed` action instead of creating a runnable service.
+- `myapp-ctl faas faasd-host-preflight --expect-empty-ports` fails on the
+  current 77 Docker Compose host with `docker-colocation` as the blocking
+  check. This is expected and confirms 77 should not host real faasd while it is
+  running the MyApp Docker stack.
 - `myapp-ctl faas openfaas-gateway-smoke --yes --gateway <real-gateway>
   --bundle-base-url <backend-url>` passes against a real external faasd/OpenFaaS
   gateway. This temporarily switches the deployed backend to the real gateway,

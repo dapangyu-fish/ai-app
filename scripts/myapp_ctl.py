@@ -5067,6 +5067,106 @@ def _read_optional_secret_arg(*, env_name: str = "", file_path: str = "") -> str
     return ""
 
 
+def _cmd_faasd_host_preflight(args) -> int:
+    rows: list[dict[str, object]] = []
+
+    def add_check(name: str, ok: bool, detail: str, *, required: bool = True) -> None:
+        rows.append({"check": name, "ok": ok, "required": required, "detail": detail})
+
+    machine = os.uname().machine.lower()
+    add_check(
+        "cpu-arch",
+        machine in {"x86_64", "amd64", "aarch64", "arm64"},
+        machine or "unknown",
+    )
+
+    add_check(
+        "root-user",
+        os.geteuid() == 0,
+        f"uid={os.geteuid()}",
+        required=False,
+    )
+
+    systemd_ok = Path("/run/systemd/system").exists() and shutil.which("systemctl") is not None
+    add_check(
+        "systemd",
+        systemd_ok,
+        "available" if systemd_ok else "missing /run/systemd/system or systemctl",
+    )
+
+    docker_bin = shutil.which("docker")
+    docker_running = False
+    docker_detail = "not installed"
+    if docker_bin:
+        proc = _run(["docker", "info"])
+        docker_running = proc.returncode == 0
+        if docker_running:
+            docker_detail = "docker daemon is reachable"
+        else:
+            docker_detail = (proc.stderr or proc.stdout or "docker installed but daemon is not reachable").strip().splitlines()[0]
+    docker_allowed = bool(getattr(args, "allow_docker", False))
+    add_check(
+        "docker-colocation",
+        (not docker_running) or docker_allowed,
+        docker_detail + (" (allowed by --allow-docker)" if docker_running and docker_allowed else ""),
+    )
+
+    containerd_bin = shutil.which("containerd")
+    add_check(
+        "containerd-command",
+        containerd_bin is not None,
+        containerd_bin or "containerd not found before faasd install",
+        required=False,
+    )
+
+    for binary in ["curl", "git", "iptables"]:
+        path = shutil.which(binary)
+        add_check(f"command-{binary}", path is not None, path or f"{binary} not found", required=binary != "git")
+
+    port_proc = _run(["sh", "-lc", "ss -lnt 2>/dev/null | awk 'NR>1 {print $4}' | grep -E ':(8080|8081)$' || true"])
+    occupied_ports = [line.strip() for line in (port_proc.stdout or "").splitlines() if line.strip()]
+    expect_empty_ports = bool(getattr(args, "expect_empty_ports", False))
+    add_check(
+        "ports-8080-8081",
+        not occupied_ports if expect_empty_ports else True,
+        ", ".join(occupied_ports) if occupied_ports else "free",
+        required=expect_empty_ports,
+    )
+
+    faasd_active = False
+    if shutil.which("systemctl"):
+        proc = _run(["systemctl", "is-active", "faasd", "faasd-provider"])
+        states = [line.strip() for line in (proc.stdout or "").splitlines() if line.strip()]
+        faasd_active = bool(states) and all(state == "active" for state in states)
+        add_check(
+            "faasd-services",
+            faasd_active if getattr(args, "expect_installed", False) else True,
+            ", ".join(states) if states else "not installed or inactive",
+            required=bool(getattr(args, "expect_installed", False)),
+        )
+
+    ok = all(bool(row["ok"]) for row in rows if bool(row["required"]))
+    payload = {"ok": ok, "checks": rows}
+    if args.json:
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    else:
+        _print_table(
+            rows,
+            [
+                ("check", "CHECK"),
+                ("ok", "OK"),
+                ("required", "REQUIRED"),
+                ("detail", "DETAIL"),
+            ],
+        )
+        if not ok:
+            print(
+                "faasd host preflight failed; use a dedicated host without Docker for real faasd/OpenFaaS gateway testing",
+                file=sys.stderr,
+            )
+    return 0 if ok else 1
+
+
 def _set_faas_mode(args) -> int:
     env_path = _secret_path("faas")
     data = _parse_env(env_path)
@@ -5373,6 +5473,8 @@ def cmd_faas(args) -> int:
         if args.json:
             cmd.append("--json")
         return _run(cmd, capture=False).returncode
+    if args.faas_cmd == "faasd-host-preflight":
+        return _cmd_faasd_host_preflight(args)
     if args.faas_cmd == "git-backend-smoke":
         script = _source_dir() / "scripts" / "faas_git_backend_smoke.py"
         if not script.is_file():
@@ -7295,6 +7397,12 @@ def build_parser() -> argparse.ArgumentParser:
     faas_openfaas_gateway_check.add_argument("--bundle-base-url", required=True, help=_tx("backend base URL intended for runtime bundle fetches", zh="runtime 拉取 bundle 使用的后端 base URL", de="Backend-Basis-URL fuer Runtime-Bundle-Fetch", es="URL base backend para descarga de bundle runtime"))
     faas_openfaas_gateway_check.add_argument("--json", action="store_true")
     faas_openfaas_gateway_check.set_defaults(func=cmd_faas)
+    faas_faasd_host_preflight = faas_sub.add_parser("faasd-host-preflight", help=_tx("check whether this host is safe for dedicated faasd installation", zh="检查本机是否适合专用 faasd 安装", de="pruefen, ob dieser Host fuer eine dedizierte faasd-Installation geeignet ist", es="comprobar si este host es apto para instalacion faasd dedicada"), usage=_tx("myapp-ctl faas faasd-host-preflight [options]", zh="myapp-ctl faas faasd-host-preflight [选项]", de="myapp-ctl faas faasd-host-preflight [Optionen]", es="myapp-ctl faas faasd-host-preflight [opciones]"))
+    faas_faasd_host_preflight.add_argument("--allow-docker", action="store_true", help=_tx("do not fail when Docker is running; for diagnostics only", zh="Docker 正在运行时也不失败；仅用于诊断", de="bei laufendem Docker nicht fehlschlagen; nur Diagnose", es="no fallar si Docker esta en ejecucion; solo diagnostico"))
+    faas_faasd_host_preflight.add_argument("--expect-empty-ports", action="store_true", help=_tx("fail if ports 8080/8081 are already listening", zh="8080/8081 已监听时失败", de="fehlschlagen, wenn Ports 8080/8081 bereits lauschen", es="fallar si puertos 8080/8081 ya escuchan"))
+    faas_faasd_host_preflight.add_argument("--expect-installed", action="store_true", help=_tx("require faasd and faasd-provider systemd services to be active", zh="要求 faasd 和 faasd-provider systemd 服务处于 active", de="faasd und faasd-provider systemd-Dienste muessen aktiv sein", es="requerir servicios systemd faasd y faasd-provider activos"))
+    faas_faasd_host_preflight.add_argument("--json", action="store_true")
+    faas_faasd_host_preflight.set_defaults(func=cmd_faas)
     faas_git_backend_smoke = faas_sub.add_parser("git-backend-smoke", help=_tx("temporarily verify backend-owned FaaS Git push through HTTP API", zh="临时验证后端托管的 FaaS Git push HTTP 链路", de="Backend-eigenen FaaS-Git-Push ueber HTTP-API temporaer pruefen", es="verificar temporalmente push Git FaaS del backend via API HTTP"), usage=_tx("myapp-ctl faas git-backend-smoke --yes [options]", zh="myapp-ctl faas git-backend-smoke --yes [选项]", de="myapp-ctl faas git-backend-smoke --yes [Optionen]", es="myapp-ctl faas git-backend-smoke --yes [opciones]"))
     faas_git_backend_smoke.add_argument("--yes", action="store_true", help=_tx("confirm temporary config switch and backend restart", zh="确认临时切换配置并重启后端", de="temporaere Konfigurationsaenderung und Backend-Neustart bestaetigen", es="confirmar cambio temporal y reinicio backend"))
     faas_git_backend_smoke.add_argument("--base-url", default=None, help=_tx("backend base URL used by faas smoke", zh="faas smoke 使用的后端 base URL", de="Backend-Basis-URL fuer FaaS-Smoke", es="URL base backend para faas smoke"))
