@@ -5373,6 +5373,32 @@ def cmd_faas(args) -> int:
         if args.json:
             cmd.append("--json")
         return _run(cmd, capture=False).returncode
+    if args.faas_cmd == "git-backend-smoke":
+        script = _source_dir() / "scripts" / "faas_git_backend_smoke.py"
+        if not script.is_file():
+            print(f"faas Git backend smoke script not found: {script}", file=sys.stderr)
+            return 1
+        cmd = [
+            sys.executable,
+            str(script),
+            "--base-url",
+            args.base_url or _backend_base_url(None),
+            "--work-root",
+            args.work_root,
+            "--branch",
+            args.branch,
+            "--user-id",
+            args.user_id,
+            "--service-id",
+            args.service_id,
+        ]
+        if args.yes:
+            cmd.append("--yes")
+        if args.pull_stack:
+            cmd.append("--pull-stack")
+        if args.keep:
+            cmd.append("--keep")
+        return _run(cmd, capture=False).returncode
     if args.faas_cmd == "ai-action-smoke":
         script = _source_dir() / "scripts" / "faas_ai_action_smoke.py"
         if not script.is_file():
@@ -7269,6 +7295,16 @@ def build_parser() -> argparse.ArgumentParser:
     faas_openfaas_gateway_check.add_argument("--bundle-base-url", required=True, help=_tx("backend base URL intended for runtime bundle fetches", zh="runtime 拉取 bundle 使用的后端 base URL", de="Backend-Basis-URL fuer Runtime-Bundle-Fetch", es="URL base backend para descarga de bundle runtime"))
     faas_openfaas_gateway_check.add_argument("--json", action="store_true")
     faas_openfaas_gateway_check.set_defaults(func=cmd_faas)
+    faas_git_backend_smoke = faas_sub.add_parser("git-backend-smoke", help=_tx("temporarily verify backend-owned FaaS Git push through HTTP API", zh="临时验证后端托管的 FaaS Git push HTTP 链路", de="Backend-eigenen FaaS-Git-Push ueber HTTP-API temporaer pruefen", es="verificar temporalmente push Git FaaS del backend via API HTTP"), usage=_tx("myapp-ctl faas git-backend-smoke --yes [options]", zh="myapp-ctl faas git-backend-smoke --yes [选项]", de="myapp-ctl faas git-backend-smoke --yes [Optionen]", es="myapp-ctl faas git-backend-smoke --yes [opciones]"))
+    faas_git_backend_smoke.add_argument("--yes", action="store_true", help=_tx("confirm temporary config switch and backend restart", zh="确认临时切换配置并重启后端", de="temporaere Konfigurationsaenderung und Backend-Neustart bestaetigen", es="confirmar cambio temporal y reinicio backend"))
+    faas_git_backend_smoke.add_argument("--base-url", default=None, help=_tx("backend base URL used by faas smoke", zh="faas smoke 使用的后端 base URL", de="Backend-Basis-URL fuer FaaS-Smoke", es="URL base backend para faas smoke"))
+    faas_git_backend_smoke.add_argument("--work-root", default="/mnt/myapp/faas/tmp", help=_tx("shared temp root visible from host and backend container", zh="宿主机和 backend 容器都可见的临时目录", de="gemeinsames Temp-Verzeichnis fuer Host und Backend-Container", es="raiz temporal compartida visible por host y contenedor backend"))
+    faas_git_backend_smoke.add_argument("--branch", default="main", help=_tx("temporary bare Git remote branch", zh="临时 bare Git remote 分支", de="Branch des temporaeren Bare-Git-Remotes", es="rama del remote Git bare temporal"))
+    faas_git_backend_smoke.add_argument("--user-id", default="git-backend-smoke-user", help=_tx("test owner user id", zh="测试 owner user id", de="Test-Owner-User-ID", es="user id owner de prueba"))
+    faas_git_backend_smoke.add_argument("--service-id", default=f"git-backend-smoke-{int(time.time())}", help=_tx("test service id", zh="测试服务 ID", de="Test-Service-ID", es="service id de prueba"))
+    faas_git_backend_smoke.add_argument("--pull-stack", action="store_true", help=_tx("pull backend/FaaS stack images while redeploying", zh="重部署时拉取 backend/FaaS 栈镜像", de="Backend/FaaS-Stack-Images beim Redeploy pullen", es="hacer pull de imagenes backend/FaaS al redesplegar"))
+    faas_git_backend_smoke.add_argument("--keep", action="store_true", help=_tx("keep temporary Git remote and generated service", zh="保留临时 Git remote 和生成服务", de="temporaeres Git-Remote und generierten Dienst behalten", es="mantener remote Git temporal y servicio generado"))
+    faas_git_backend_smoke.set_defaults(func=cmd_faas)
     faas_ai_action_smoke = faas_sub.add_parser("ai-action-smoke", help=_tx("simulate Agent FaaS artifacts and resolve them through the deployed backend", zh="模拟 Agent FaaS 产物并通过已部署后端解析部署", de="Agent-FaaS-Artefakte simulieren und im deployten Backend aufloesen", es="simular artefactos FaaS de Agent y resolverlos en backend desplegado"), usage=_tx("myapp-ctl faas ai-action-smoke [options]", zh="myapp-ctl faas ai-action-smoke [选项]", de="myapp-ctl faas ai-action-smoke [Optionen]", es="myapp-ctl faas ai-action-smoke [opciones]"))
     faas_ai_action_smoke.add_argument("--base-url", default="http://127.0.0.1:5566", help=_tx("backend base URL used for invocation", zh="调用生成服务使用的后端 base URL", de="Backend-Basis-URL fuer Invocation", es="URL base backend para invocacion"))
     faas_ai_action_smoke.add_argument("--user-id", default="ai-action-smoke-user", help=_tx("test owner user id", zh="测试 owner user id", de="Test-Owner-User-ID", es="user id owner de prueba"))

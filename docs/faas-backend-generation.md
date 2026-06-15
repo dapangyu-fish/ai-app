@@ -268,6 +268,7 @@ myapp-ctl status faas-control faas-worker
 myapp-ctl log backend -n 200
 myapp-ctl log ai-worker -n 200
 myapp-ctl faas smoke
+myapp-ctl faas git-backend-smoke --yes
 myapp-ctl faas ai-action-smoke
 myapp-ctl faas ai-action-smoke --include-invalid
 myapp-ctl faas openfaas-runtime-smoke --pull-image
@@ -317,6 +318,10 @@ Minimum verification:
 - `backend/test_faas_git_store.py` passes. This verifies backend-owned Git
   commit and push behavior against a local bare remote without exposing any key
   to Agent runtime.
+- `myapp-ctl faas git-backend-smoke --yes` passes. This temporarily switches
+  the deployed backend to `metadata` deploy mode with Git push enabled, deploys
+  two versions of one service through `/api/faas/services`, verifies both
+  commits reached a local bare remote, then restores the previous `faas.env`.
 - `backend/test_faas_store_controls.py` passes. This verifies restricted bundle
   validation, per-user active service limits, cross-user `service_id`
   conflicts, declared Flask route coverage, restricted top-level module shape,

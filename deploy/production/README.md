@@ -441,7 +441,13 @@ Generated service smoke test:
 ```bash
 myapp-ctl faas health
 myapp-ctl faas smoke
+myapp-ctl faas git-backend-smoke --yes
 ```
+
+`git-backend-smoke` uses a temporary local bare Git remote under the shared
+FaaS data root. It verifies that the deployed backend, not the Agent runtime,
+can commit and push generated service code, then restores the previous FaaS
+configuration.
 
 List or disable generated services. Disabled services are hidden unless `--all`
 is passed:
