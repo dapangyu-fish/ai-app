@@ -269,6 +269,7 @@ myapp-ctl log backend -n 200
 myapp-ctl log ai-worker -n 200
 myapp-ctl faas smoke
 myapp-ctl faas ai-action-smoke
+myapp-ctl faas ai-action-smoke --include-invalid
 myapp-ctl faas openfaas-runtime-smoke --pull-image
 myapp-ctl faas openfaas-backend-smoke --yes
 OPENFAAS_PASSWORD=<password> myapp-ctl faas openfaas-gateway-check \
@@ -349,6 +350,9 @@ Minimum verification:
   `client_actions.json` artifacts an Agent would write, resolves
   `server_deploy_faas_service` through `ai_session._resolve_server_upload_actions`,
   invokes the generated service, and cleans it up.
+- `myapp-ctl faas ai-action-smoke --include-invalid` passes. This also checks
+  that an Agent-uploaded bundle with import-time side effects is rejected as a
+  `faas_service_failed` action instead of creating a runnable service.
 - `myapp-ctl faas openfaas-gateway-smoke --yes --gateway <real-gateway>
   --bundle-base-url <backend-url>` passes against a real external faasd/OpenFaaS
   gateway. This temporarily switches the deployed backend to the real gateway,

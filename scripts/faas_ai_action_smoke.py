@@ -45,11 +45,54 @@ def hello():
     }
 
 
+def _invalid_bundle(service_id: str) -> dict[str, Any]:
+    app_py = """import time
+from flask import Flask, jsonify
+
+app = Flask(__name__)
+
+@app.get("/hello")
+def hello(seed=time.sleep(1)):
+    return jsonify({"ok": True})
+"""
+    return {
+        "service": {
+            "service_id": service_id,
+            "slug": "ai-action-invalid-smoke",
+            "routes": [
+                {"path": "/hello", "methods": ["GET"], "description": "invalid import-time side effect"},
+            ],
+        },
+        "files": {
+            "app.py": app_py,
+            "requirements.txt": "flask==3.0.3\n",
+        },
+    }
+
+
 def _request(method: str, url: str, **kwargs: Any) -> requests.Response:
     resp = requests.request(method, url, timeout=60, **kwargs)
     if resp.status_code >= 400:
         raise RuntimeError(f"{method} {url} failed {resp.status_code}: {resp.text[:1000]}")
     return resp
+
+
+def _resolve_bundle_action(ai_session, *, bundle: dict[str, Any], session_id: str, owner_user_id: str) -> list[dict]:
+    with tempfile.TemporaryDirectory(prefix="myapp-faas-ai-action-") as raw:
+        workspace = Path(raw)
+        bundle_path = workspace / "faas_bundle.json"
+        action_path = workspace / "client_actions.json"
+        bundle_path.write_text(json.dumps(bundle, ensure_ascii=False), encoding="utf-8")
+        action_path.write_text(
+            json.dumps([{"type": "server_deploy_faas_service", "path": "faas_bundle.json"}], ensure_ascii=False),
+            encoding="utf-8",
+        )
+        return ai_session._resolve_server_upload_actions(
+            json.loads(action_path.read_text(encoding="utf-8")),
+            session_id,
+            workspace=str(workspace),
+            owner_user_id=owner_user_id,
+        )
 
 
 def main() -> int:
@@ -59,6 +102,7 @@ def main() -> int:
     parser.add_argument("--session-id", default="ai-action-smoke-session", help="test session id")
     parser.add_argument("--service-id", default="ai-action-smoke-api", help="test service id")
     parser.add_argument("--no-cleanup", action="store_true", help="leave generated service in place")
+    parser.add_argument("--include-invalid", action="store_true", help="also verify an invalid generated bundle fails")
     args = parser.parse_args()
 
     backend_dir = Path(__file__).resolve().parent
@@ -71,22 +115,30 @@ def main() -> int:
     from database import db_execute  # noqa: WPS433
     from faas_store import disable_service, service_code_root  # noqa: WPS433
 
-    service_root = service_code_root(args.user_id, args.service_id)
-    with tempfile.TemporaryDirectory(prefix="myapp-faas-ai-action-") as raw:
-        workspace = Path(raw)
-        bundle_path = workspace / "faas_bundle.json"
-        action_path = workspace / "client_actions.json"
-        bundle_path.write_text(json.dumps(_bundle(args.service_id), ensure_ascii=False), encoding="utf-8")
-        action_path.write_text(
-            json.dumps([{"type": "server_deploy_faas_service", "path": "faas_bundle.json"}], ensure_ascii=False),
-            encoding="utf-8",
-        )
-        actions = ai_session._resolve_server_upload_actions(
-            json.loads(action_path.read_text(encoding="utf-8")),
-            args.session_id,
-            workspace=str(workspace),
+    invalid_actions = None
+    if args.include_invalid:
+        invalid_service_id = f"{args.service_id}-invalid"
+        invalid_actions = _resolve_bundle_action(
+            ai_session,
+            bundle=_invalid_bundle(invalid_service_id),
+            session_id=f"{args.session_id}-invalid",
             owner_user_id=args.user_id,
         )
+        invalid_ready = [item for item in invalid_actions if item.get("type") == "faas_service_ready"]
+        invalid_failed = [item for item in invalid_actions if item.get("type") == "faas_service_failed"]
+        if invalid_ready or not invalid_failed:
+            raise RuntimeError(f"invalid FaaS AI action did not fail as expected: {invalid_actions}")
+        error_text = str(invalid_failed[0].get("error") or "")
+        if "default arguments" not in error_text:
+            raise RuntimeError(f"invalid FaaS AI action failed for an unexpected reason: {invalid_actions}")
+
+    service_root = service_code_root(args.user_id, args.service_id)
+    actions = _resolve_bundle_action(
+        ai_session,
+        bundle=_bundle(args.service_id),
+        session_id=args.session_id,
+        owner_user_id=args.user_id,
+    )
 
     ready = [item for item in actions if item.get("type") == "faas_service_ready"]
     failed = [item for item in actions if item.get("type") == "faas_service_failed"]
@@ -109,6 +161,7 @@ def main() -> int:
             "ok": True,
             "actions": actions,
             "invoke": invoke,
+            "invalid_actions": invalid_actions,
             "cleanup_status": cleanup.get("status") if isinstance(cleanup, dict) else None,
             "service_id": args.service_id,
             "user_id": args.user_id,

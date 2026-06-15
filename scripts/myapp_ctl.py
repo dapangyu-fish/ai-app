@@ -5400,6 +5400,8 @@ def cmd_faas(args) -> int:
         ]
         if args.no_cleanup:
             cmd.append("--no-cleanup")
+        if args.include_invalid:
+            cmd.append("--include-invalid")
         try:
             return _run(cmd, capture=False).returncode
         finally:
@@ -7273,6 +7275,7 @@ def build_parser() -> argparse.ArgumentParser:
     faas_ai_action_smoke.add_argument("--session-id", default="ai-action-smoke-session", help=_tx("test AI session id", zh="测试 AI session id", de="Test-AI-Session-ID", es="id de sesion AI de prueba"))
     faas_ai_action_smoke.add_argument("--service-id", default=f"ai-action-smoke-{int(time.time())}", help=_tx("test service id", zh="测试服务 ID", de="Test-Service-ID", es="service id de prueba"))
     faas_ai_action_smoke.add_argument("--no-cleanup", action="store_true", help=_tx("leave generated service in place", zh="保留生成服务不清理", de="generierten Dienst nicht bereinigen", es="no limpiar servicio generado"))
+    faas_ai_action_smoke.add_argument("--include-invalid", action="store_true", help=_tx("also verify invalid generated FaaS bundles fail", zh="同时验证非法生成 FaaS bundle 会失败", de="auch pruefen, dass ungueltige generierte FaaS-Bundles fehlschlagen", es="tambien verificar que bundles FaaS invalidos fallen"))
     faas_ai_action_smoke.set_defaults(func=cmd_faas)
     faas_mode = faas_sub.add_parser("mode", help=_tx("configure generated FaaS deploy mode", zh="配置生成后端的 FaaS 部署模式", de="Deploy-Modus fuer generierte FaaS konfigurieren", es="configurar modo deploy FaaS generado"), usage=_tx("myapp-ctl faas mode <mode> [options]", zh="myapp-ctl faas mode <模式> [选项]", de="myapp-ctl faas mode <Modus> [Optionen]", es="myapp-ctl faas mode <modo> [opciones]"))
     faas_mode.add_argument("mode", choices=["local-docker", "openfaas", "metadata", "script"])
