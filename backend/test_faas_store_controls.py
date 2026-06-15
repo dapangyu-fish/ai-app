@@ -206,6 +206,25 @@ def test_validation_rejects_dangerous_python_and_dependencies() -> None:
     else:
         raise AssertionError("unsupported dependency was accepted")
 
+    valid = faas_store.validate_bundle(
+        _bundle(
+            "allowed-pydantic-api",
+            requirements="flask==3.0.3\npydantic==2.8.2\n",
+            app_py=(
+                "from __future__ import annotations\n"
+                "from flask import Flask, jsonify\n"
+                "from pydantic import BaseModel\n"
+                "app = Flask(__name__)\n"
+                "class Item(BaseModel):\n"
+                "    title: str\n"
+                "@app.get('/hello')\n"
+                "def hello():\n"
+                "    return jsonify(title=Item(title='demo').title)\n"
+            ),
+        )
+    )
+    assert valid["service_id"] == "allowed-pydantic-api"
+
 
 def test_validation_requires_declared_routes_to_match_flask_decorators() -> None:
     valid = faas_store.validate_bundle(
@@ -285,6 +304,52 @@ def test_validation_requires_declared_routes_to_match_flask_decorators() -> None
         assert "POST" in str(exc)
     else:
         raise AssertionError("bundle with an unimplemented declared method was accepted")
+
+
+def test_validation_rejects_reserved_runtime_routes() -> None:
+    try:
+        faas_store.validate_bundle(
+            {
+                "service": {
+                    "service_id": "reserved-declared-api",
+                    "routes": [{"path": "/__myapp_faas_health", "methods": ["GET"]}],
+                },
+                "files": {
+                    "app.py": (
+                        "from flask import Flask, jsonify\n"
+                        "app = Flask(__name__)\n"
+                        "@app.get('/__myapp_faas_health')\n"
+                        "def health():\n"
+                        "    return jsonify(ok=True)\n"
+                    ),
+                },
+            }
+        )
+    except faas_store.FaaSValidationError as exc:
+        assert "reserved" in str(exc)
+    else:
+        raise AssertionError("bundle declaring the runtime health route was accepted")
+
+    try:
+        faas_store.validate_bundle(
+            _bundle(
+                "reserved-implemented-api",
+                app_py=(
+                    "from flask import Flask, jsonify\n"
+                    "app = Flask(__name__)\n"
+                    "@app.get('/hello')\n"
+                    "def hello():\n"
+                    "    return jsonify(ok=True)\n"
+                    "@app.get('/__myapp_faas_health')\n"
+                    "def health():\n"
+                    "    return jsonify(ok=True)\n"
+                ),
+            )
+        )
+    except faas_store.FaaSValidationError as exc:
+        assert "reserved" in str(exc)
+    else:
+        raise AssertionError("bundle implementing the runtime health route was accepted")
 
 
 def test_validation_restricts_top_level_runtime_shape() -> None:
@@ -422,6 +487,50 @@ def test_validation_restricts_top_level_runtime_shape() -> None:
     else:
         raise AssertionError("bundle with side-effecting default argument was accepted")
 
+    try:
+        faas_store.validate_bundle(
+            _bundle(
+                "class-decorator-call",
+                app_py=(
+                    "from flask import Flask, jsonify\n"
+                    "app = Flask(__name__)\n"
+                    "def decorate(cls):\n"
+                    "    return cls\n"
+                    "@decorate\n"
+                    "class Item:\n"
+                    "    title: str\n"
+                    "@app.get('/hello')\n"
+                    "def hello():\n"
+                    "    return jsonify(ok=True)\n"
+                ),
+            )
+        )
+    except faas_store.FaaSValidationError as exc:
+        assert "class decorators" in str(exc)
+    else:
+        raise AssertionError("bundle with class decorator was accepted")
+
+    try:
+        faas_store.validate_bundle(
+            _bundle(
+                "class-base-call",
+                app_py=(
+                    "import time\n"
+                    "from flask import Flask, jsonify\n"
+                    "app = Flask(__name__)\n"
+                    "class Item(time.sleep(1)):\n"
+                    "    title: str\n"
+                    "@app.get('/hello')\n"
+                    "def hello():\n"
+                    "    return jsonify(ok=True)\n"
+                ),
+            )
+        )
+    except faas_store.FaaSValidationError as exc:
+        assert "class bases" in str(exc) or "import is not allowed" in str(exc)
+    else:
+        raise AssertionError("bundle with side-effecting class base was accepted")
+
 
 def test_deploy_quota_conflict_disable_and_runtime_bundle() -> None:
     with tempfile.TemporaryDirectory(prefix="myapp-faas-store-") as raw:
@@ -502,6 +611,7 @@ def test_openfaas_deploy_records_gateway_metadata() -> None:
 if __name__ == "__main__":
     test_validation_rejects_dangerous_python_and_dependencies()
     test_validation_requires_declared_routes_to_match_flask_decorators()
+    test_validation_rejects_reserved_runtime_routes()
     test_validation_restricts_top_level_runtime_shape()
     test_deploy_quota_conflict_disable_and_runtime_bundle()
     test_openfaas_deploy_records_gateway_metadata()

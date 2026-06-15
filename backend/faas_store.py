@@ -142,6 +142,7 @@ _ALLOWED_PREFIXES = (
     "tests/",
 )
 _ALLOWED_IMPORT_ROOTS = {
+    "__future__",
     "base64",
     "collections",
     "dateutil",
@@ -154,6 +155,7 @@ _ALLOWED_IMPORT_ROOTS = {
     "itertools",
     "json",
     "math",
+    "pydantic",
     "random",
     "re",
     "statistics",
@@ -177,6 +179,9 @@ _FORBIDDEN_NAMES = {
     "__subclasses__",
 }
 _LOCAL_DOCKER_MODES = {"local-docker", "docker", "docker-local"}
+_RESERVED_ROUTE_PATHS = {
+    "/__myapp_faas_health",
+}
 _FLASK_METHOD_DECORATORS = {
     "get": "GET",
     "post": "POST",
@@ -592,6 +597,32 @@ def _validate_top_level_function_shape(node: ast.FunctionDef | ast.AsyncFunction
         raise FaaSValidationError("function annotations must not call runtime code")
 
 
+def _validate_top_level_class_shape(node: ast.ClassDef) -> None:
+    if node.decorator_list:
+        raise FaaSValidationError("class decorators are not allowed in FaaS app.py")
+    if any(isinstance(child, ast.Call) for base in [*node.bases, *[kw.value for kw in node.keywords]] for child in ast.walk(base)):
+        raise FaaSValidationError("class bases must not call runtime code")
+    for item in node.body:
+        if isinstance(item, ast.Pass):
+            continue
+        if isinstance(item, ast.Expr) and isinstance(item.value, ast.Constant):
+            continue
+        if isinstance(item, ast.AnnAssign):
+            if not _is_name_target(item.target):
+                raise FaaSValidationError("class fields must use simple names")
+            if not _annotation_is_safe(item.annotation):
+                raise FaaSValidationError("class annotations must not call runtime code")
+            if item.value is not None and not _is_literal_value(item.value):
+                raise FaaSValidationError("class field defaults must be literal values")
+            continue
+        if isinstance(item, ast.Assign):
+            if all(_is_name_target(target) for target in item.targets) and _is_literal_value(item.value):
+                continue
+        raise FaaSValidationError(
+            "classes in FaaS app.py are restricted to simple model fields and literal defaults"
+        )
+
+
 def _validate_top_level_shape(tree: ast.Module) -> bool:
     has_flask_app = False
     for node in tree.body:
@@ -599,6 +630,9 @@ def _validate_top_level_shape(tree: ast.Module) -> bool:
             continue
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             _validate_top_level_function_shape(node)
+            continue
+        if isinstance(node, ast.ClassDef):
+            _validate_top_level_class_shape(node)
             continue
         if isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant):
             continue
@@ -651,6 +685,8 @@ def _extract_flask_routes(tree: ast.AST) -> dict[str, set[str]]:
                 raise FaaSValidationError("Flask route path must be a string literal")
             if not route_path.startswith("/"):
                 route_path = "/" + route_path
+            if route_path in _RESERVED_ROUTE_PATHS:
+                raise FaaSValidationError(f"route path is reserved by MyApp FaaS runtime: {route_path}")
             if decorator_name == "route":
                 methods: set[str] | None = None
                 for keyword in decorator.keywords:
@@ -725,6 +761,8 @@ def _normalize_routes(raw: Any) -> list[dict[str, Any]]:
         path = str(item.get("path") or "/").strip()
         if not path.startswith("/"):
             path = "/" + path
+        if path in _RESERVED_ROUTE_PATHS:
+            raise FaaSValidationError(f"route path is reserved by MyApp FaaS runtime: {path}")
         if ".." in path or len(path) > 160:
             raise FaaSValidationError(f"invalid route path: {path}")
         methods_raw = item.get("methods") or item.get("method") or ["GET"]
