@@ -23,6 +23,7 @@ class ChatEvent {
   final String? failedJsonUrl; // 下载失败的 JSON URL
   final String? statusMessage; // 动态状态文案（思考中/阅读文件/写入代码/上传...）
   final String? pendingJsonUrl; // 待用户确认下载的 JSON URL（不自动下载）
+  final String? systemMessage; // 后端结构化动作产生的系统提示
   // worker 真死了（探活确认 process_alive=false），UI 应弹重试按钮
   // retryUserMessage 是上一条用户消息，UI 拿来调 retryLastTurn() 时备用（也可以从 service 里读）
   final bool needsRetry;
@@ -39,6 +40,7 @@ class ChatEvent {
     this.failedJsonUrl,
     this.statusMessage,
     this.pendingJsonUrl,
+    this.systemMessage,
     this.needsRetry = false,
     this.retryUserMessage,
   });
@@ -78,6 +80,13 @@ class ResumeCompleted extends ResumeResult {
       }
     }
     return null;
+  }
+
+  List<String> get systemMessages {
+    return clientActions
+        .map(AiChatService.systemMessageFromClientAction)
+        .whereType<String>()
+        .toList(growable: false);
   }
 
   const ResumeCompleted({
@@ -278,8 +287,35 @@ class AiChatService {
         final url = action['url'] as String? ?? '';
         if (url.isEmpty) return null;
         return ChatEvent(pendingJsonUrl: url);
+      case 'faas_service_ready':
+      case 'faas_service_failed':
+        final message = systemMessageFromClientAction(action);
+        if (message == null || message.isEmpty) return null;
+        return ChatEvent(systemMessage: message);
     }
     debugPrint('[AI_CHAT] 忽略未知 client_action: $action');
+    return null;
+  }
+
+  static String? systemMessageFromClientAction(Map<String, dynamic> action) {
+    final type = action['type'] as String? ?? '';
+    if (type == 'faas_service_ready') {
+      final serviceId = (action['service_id'] ?? '').toString().trim();
+      final invokeUrl = (action['invoke_url'] ?? '').toString().trim();
+      if (serviceId.isEmpty) return null;
+      if (invokeUrl.isNotEmpty) {
+        return '后端服务已部署：$serviceId\n调用地址：$invokeUrl';
+      }
+      return '后端服务已部署：$serviceId';
+    }
+    if (type == 'faas_service_failed') {
+      final path = (action['path'] ?? 'faas_bundle.json').toString().trim();
+      final error = (action['error'] ?? '').toString().trim();
+      if (error.isNotEmpty) {
+        return '后端服务部署失败：$path\n$error';
+      }
+      return '后端服务部署失败：$path';
+    }
     return null;
   }
 

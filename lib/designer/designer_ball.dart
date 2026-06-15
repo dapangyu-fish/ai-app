@@ -1348,6 +1348,7 @@ class _DesignerBallState extends State<DesignerBall>
     String? pendingFailedJsonUrl;
     String? pendingFailedJsonError;
     String? pendingJsonUrl;
+    final pendingSystemMessages = <String>[];
 
     _streamSub = stream.listen(
       (event) {
@@ -1449,6 +1450,10 @@ class _DesignerBallState extends State<DesignerBall>
           pendingJsonUrl = event.pendingJsonUrl;
           return;
         }
+        if (event.systemMessage != null && event.systemMessage!.isNotEmpty) {
+          pendingSystemMessages.add(event.systemMessage!);
+          return;
+        }
 
         if (event.thinking != null) {
           // 思考过程 → 只更新最后一条消息（如果是空的或思考消息）
@@ -1538,13 +1543,15 @@ class _DesignerBallState extends State<DesignerBall>
             failedJsonUrl: pendingFailedJsonUrl,
             failedJsonError: pendingFailedJsonError,
             jsonApp: pendingJsonApp,
+            systemMessages: pendingSystemMessages,
           );
         });
         final hasFinalAction =
             pendingRequestAction != null ||
             pendingJsonUrl != null ||
             pendingFailedJsonUrl != null ||
-            pendingJsonApp != null;
+            pendingJsonApp != null ||
+            pendingSystemMessages.isNotEmpty;
         if (hasFinalAction) {
           _stopSessionReconcileTimer();
         } else {
@@ -1624,6 +1631,7 @@ class _DesignerBallState extends State<DesignerBall>
           :final assistantText,
           :final jsonUrl,
           :final requestAction,
+          :final systemMessages,
         ):
           setState(() {
             _isThinking = false;
@@ -1634,6 +1642,7 @@ class _DesignerBallState extends State<DesignerBall>
             _appendFinalActionMessages(
               requestAction: requestAction,
               jsonUrl: jsonUrl,
+              systemMessages: systemMessages,
             );
           });
           _scrollToBottom();
@@ -1731,6 +1740,7 @@ class _DesignerBallState extends State<DesignerBall>
     String? action,
     String? jsonUrl,
     String? failedJsonUrl,
+    String? content,
   }) {
     final start = _lastUserMessageIndex() + 1;
     for (var i = _messages.length - 1; i >= start; i--) {
@@ -1746,6 +1756,10 @@ class _DesignerBallState extends State<DesignerBall>
       }
       if (failedJsonUrl != null && m.failedJsonUrl == failedJsonUrl) {
         _messages.removeAt(i);
+        continue;
+      }
+      if (content != null && m.content == content) {
+        _messages.removeAt(i);
       }
     }
   }
@@ -1756,6 +1770,7 @@ class _DesignerBallState extends State<DesignerBall>
     String? failedJsonUrl,
     String? failedJsonError,
     Map<String, dynamic>? jsonApp,
+    List<String> systemMessages = const [],
   }) {
     // 各按钮独立共存；重新恢复/重连同一轮时，先移除本轮旧位置的动作消息，
     // 再按固定顺序追加到最后，避免下载提示夹在 assistant 文本中间。
@@ -1793,6 +1808,12 @@ class _DesignerBallState extends State<DesignerBall>
       _messages.add(
         ChatMessage(role: 'system', content: '🚀 点击试运行', jsonApp: jsonApp),
       );
+    }
+    for (final message in systemMessages) {
+      final content = message.trim();
+      if (content.isEmpty) continue;
+      _removeCurrentTurnSystemMessage(content: content);
+      _messages.add(ChatMessage(role: 'system', content: content));
     }
   }
 
