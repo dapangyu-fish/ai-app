@@ -59,6 +59,10 @@ def _write_file(path: Path, content: str) -> None:
     os.chmod(path, 0o600)
 
 
+def _faas_env_path() -> Path:
+    return Path(os.environ.get("MYAPP_FAAS_ENV_PATH", "/etc/myapp/secrets.d/faas.env")).expanduser()
+
+
 def _deploy_faas_group(*, pull: bool = False) -> None:
     cmd = ["myapp-ctl", "deploy", "--group", "faas"]
     if pull:
@@ -118,7 +122,7 @@ def main() -> int:
     if not shutil.which("docker"):
         raise RuntimeError("docker CLI is required on PATH")
 
-    faas_env = Path("/etc/myapp/secrets.d/faas.env")
+    faas_env = _faas_env_path()
     original = _read_file(faas_env)
     original_mode = _env_value(original, "FAAS_DEPLOY_MODE") or ""
     backup = faas_env.with_suffix(f".env.bak-openfaas-smoke-{int(time.time())}")

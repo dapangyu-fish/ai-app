@@ -15,6 +15,7 @@ import time
 from faas_openfaas_backend_smoke import (
     _deploy_faas_group,
     _env_value,
+    _faas_env_path,
     _must_run,
     _read_file,
     _wait_faas_health,
@@ -47,7 +48,7 @@ def main() -> int:
     if not shutil.which("myapp-ctl"):
         raise RuntimeError("myapp-ctl is required on PATH")
 
-    faas_env = Path("/etc/myapp/secrets.d/faas.env")
+    faas_env = _faas_env_path()
     original = _read_file(faas_env)
     original_mode = _env_value(original, "FAAS_DEPLOY_MODE") or ""
     backup = faas_env.with_suffix(f".env.bak-openfaas-real-smoke-{int(time.time())}")
