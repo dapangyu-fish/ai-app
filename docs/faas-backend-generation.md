@@ -197,17 +197,22 @@ Useful commands:
 
 ```bash
 myapp-ctl secret init-stack
-myapp-ctl secret get faas FAAS_CODE_ROOT --show
-myapp-ctl secret get faas FAAS_DEPLOY_MODE --show
-myapp-ctl secret set faas FAAS_DEPLOY_MODE=local-docker
-myapp-ctl secret set faas FAAS_DEPLOY_MODE=script FAAS_DEPLOY_SCRIPT=/opt/myapp/faas/deploy-service.sh
-myapp-ctl secret set faas FAAS_DEPLOY_MODE=openfaas FAAS_OPENFAAS_GATEWAY=http://127.0.0.1:8080
+myapp-ctl faas config
+myapp-ctl faas health
+myapp-ctl faas ls --user-id <user-id>
+myapp-ctl faas ls --user-id <user-id> --all
+myapp-ctl faas disable <service-id> --user-id <user-id>
+myapp-ctl faas mode local-docker
+myapp-ctl faas mode script --deploy-script /opt/myapp/faas/deploy-service.sh
+myapp-ctl faas mode openfaas --gateway http://<openfaas-gateway>:8080 \
+  --bundle-base-url https://<backend-domain> \
+  --password-env OPENFAAS_PASSWORD
 myapp-ctl image build faas-runtime --base
 myapp-ctl deploy --group faas --build
 myapp-ctl status faas-control faas-worker
 myapp-ctl log backend -n 200
 myapp-ctl log ai-worker -n 200
-python3 scripts/faas_smoke_test.py --base-url http://127.0.0.1:5566
+myapp-ctl faas smoke
 ```
 
 `faas-control` and `faas-worker` are service-inventory aliases for the existing

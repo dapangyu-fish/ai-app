@@ -436,13 +436,27 @@ and the function runtime fetches its validated code bundle from the backend with
 Generated service smoke test:
 
 ```bash
-python3 scripts/faas_smoke_test.py --base-url http://127.0.0.1:5566
+myapp-ctl faas health
+myapp-ctl faas smoke
 ```
 
-Disable one generated service and free its active-service quota slot:
+List or disable generated services. Disabled services are hidden unless `--all`
+is passed:
 
 ```bash
-curl -X DELETE 'http://127.0.0.1:5566/api/faas/services/<service_id>?user_id=<user_id>'
+myapp-ctl faas ls --user-id <user_id>
+myapp-ctl faas ls --user-id <user_id> --all
+myapp-ctl faas disable <service_id> --user-id <user_id>
+```
+
+Switch runtime mode:
+
+```bash
+myapp-ctl faas mode local-docker
+myapp-ctl faas mode openfaas --gateway http://<openfaas-gateway>:8080 \
+  --bundle-base-url https://<backend-domain> \
+  --password-env OPENFAAS_PASSWORD
+myapp-ctl deploy --group faas --pull
 ```
 
 Restart without rebuilding:

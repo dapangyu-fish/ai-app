@@ -286,15 +286,17 @@ def _count_user_services(user_id: str) -> int:
     return int(row["count"] if row else 0)
 
 
-def list_services(user_id: str) -> list[dict[str, Any]]:
+def list_services(user_id: str, *, include_disabled: bool = False) -> list[dict[str, Any]]:
     ensure_tables()
+    disabled_clause = "" if include_disabled else "AND status <> 'disabled'"
     rows = db_query(
-        """
+        f"""
         SELECT service_id, owner_user_id, service_slug, function_name, status,
                active_commit, active_path, public_base_url, routes, meta_json,
                created_at, updated_at
         FROM faas_services
         WHERE owner_user_id = %s
+          {disabled_clause}
         ORDER BY updated_at DESC
         """,
         [user_id],

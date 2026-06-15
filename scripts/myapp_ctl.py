@@ -27,7 +27,7 @@ import sys
 import threading
 import time
 from pathlib import Path
-from urllib.parse import quote, urlparse
+from urllib.parse import quote, urlencode, urlparse
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -1259,6 +1259,41 @@ def _http_json(url: str, *, token: str = "", timeout: float = 3.0) -> dict | Non
             return json.loads(resp.read().decode("utf-8", errors="replace"))
     except (HTTPError, URLError, OSError, json.JSONDecodeError, ValueError):
         return None
+
+
+def _http_request_json(
+    url: str,
+    *,
+    method: str = "GET",
+    payload: dict | None = None,
+    token: str = "",
+    timeout: float = 30.0,
+) -> tuple[int, dict | None, str]:
+    headers = {"User-Agent": "myapp-ctl/1"}
+    body = None
+    if payload is not None:
+        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = Request(url, data=body, headers=headers, method=method.upper())
+    try:
+        with urlopen(req, timeout=timeout) as resp:
+            text = resp.read().decode("utf-8", errors="replace")
+            try:
+                data = json.loads(text) if text else None
+            except json.JSONDecodeError:
+                data = None
+            return int(getattr(resp, "status", 0) or 0), data, text
+    except HTTPError as exc:
+        text = exc.read().decode("utf-8", errors="replace")
+        try:
+            data = json.loads(text) if text else None
+        except json.JSONDecodeError:
+            data = None
+        return int(exc.code), data, text
+    except (URLError, OSError, ValueError) as exc:
+        return 0, None, str(exc)
 
 
 def _image_exists(image: str) -> bool:
@@ -3744,6 +3779,21 @@ def _public_host(explicit: str | None = None) -> str:
     return "127.0.0.1"
 
 
+def _backend_base_url(explicit: str | None = None) -> str:
+    if explicit:
+        return explicit.rstrip("/")
+    backend_env = _parse_env(_secret_path("backend"))
+    for candidate in (
+        backend_env.get("BACKEND_PUBLIC_URL"),
+        _cfg().get("domains", {}).get("backend"),
+    ):
+        text = str(candidate or "").strip()
+        if text:
+            return text.rstrip("/")
+    port = backend_env.get("BACKEND_PORT") or "5566"
+    return f"http://127.0.0.1:{port}"
+
+
 def _agent_node_default_display_host(explicit: str | None = None) -> str:
     if explicit:
         return explicit
@@ -4970,6 +5020,195 @@ def cmd_client_env(args) -> int:
     print(_t("copy_json"))
     print(body)
     return 0
+
+
+def _print_faas_health(data: dict, *, as_json: bool = False) -> int:
+    if as_json:
+        print(json.dumps(data, ensure_ascii=False))
+        return 0
+    rows = [
+        {"key": "ok", "value": data.get("ok")},
+        {"key": "deploy_mode", "value": data.get("deploy_mode")},
+        {"key": "auth_required", "value": data.get("auth_required")},
+        {"key": "openfaas_gateway", "value": data.get("openfaas_gateway") or "-"},
+        {"key": "openfaas_gateway_ok", "value": data.get("openfaas_gateway_ok")},
+        {"key": "tables", "value": data.get("tables")},
+    ]
+    _print_table(rows, [("key", "KEY"), ("value", "VALUE")])
+    return 0 if data.get("ok") else 1
+
+
+def _faas_token_arg(args) -> str:
+    if getattr(args, "token", ""):
+        return args.token
+    token_env = getattr(args, "token_env", "") or ""
+    return os.environ.get(token_env, "").strip() if token_env else ""
+
+
+def _faas_user_query(args) -> str:
+    params = {}
+    user_id = getattr(args, "user_id", "") or ""
+    if user_id:
+        params["user_id"] = user_id
+    if getattr(args, "all", False):
+        params["include_disabled"] = "1"
+    if not params:
+        return ""
+    return "?" + urlencode(params)
+
+
+def _read_optional_secret_arg(*, env_name: str = "", file_path: str = "") -> str:
+    if env_name:
+        return os.environ.get(env_name, "").strip()
+    if file_path:
+        return Path(file_path).expanduser().read_text(encoding="utf-8").strip()
+    return ""
+
+
+def _set_faas_mode(args) -> int:
+    env_path = _secret_path("faas")
+    data = _parse_env(env_path)
+    mode = str(args.mode or "").strip().lower().replace("_", "-")
+    data["FAAS_DEPLOY_MODE"] = mode
+    if args.max_services is not None:
+        data["FAAS_MAX_SERVICES_PER_USER"] = str(max(1, int(args.max_services)))
+    if args.public_base_url:
+        data["FAAS_PUBLIC_BASE_URL"] = args.public_base_url.rstrip("/")
+    if args.bundle_base_url:
+        data["FAAS_RUNTIME_BUNDLE_BASE_URL"] = args.bundle_base_url.rstrip("/")
+    if args.runtime_image:
+        data["FAAS_OPENFAAS_RUNTIME_IMAGE"] = args.runtime_image
+        data["FAAS_LOCAL_DOCKER_IMAGE"] = args.runtime_image if mode in {"local-docker", "docker", "docker-local"} else data.get("FAAS_LOCAL_DOCKER_IMAGE", "")
+    if mode == "local-docker":
+        data.setdefault("FAAS_LOCAL_DOCKER_IMAGE", _configured_image("faas-runtime"))
+        data.setdefault("FAAS_LOCAL_DOCKER_NETWORK", "myapp_default")
+        data.setdefault("FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT", "/mnt/myapp/faas/code")
+        data.setdefault("FAAS_LOCAL_DOCKER_HOST_CODE_ROOT", str(_data_root_from_cfg() / "faas" / "code"))
+    if mode == "script":
+        if args.deploy_script:
+            data["FAAS_DEPLOY_SCRIPT"] = args.deploy_script
+        if not data.get("FAAS_DEPLOY_SCRIPT"):
+            print("FAAS_DEPLOY_SCRIPT is required for script mode", file=sys.stderr)
+            return 2
+    if mode == "openfaas":
+        if args.gateway:
+            data["FAAS_OPENFAAS_GATEWAY"] = args.gateway.rstrip("/")
+        if args.username:
+            data["FAAS_OPENFAAS_USERNAME"] = args.username
+        password = _read_optional_secret_arg(
+            env_name=args.password_env or "",
+            file_path=args.password_file or "",
+        )
+        if password:
+            data["FAAS_OPENFAAS_PASSWORD"] = password
+        if args.scale_zero is not None:
+            data["FAAS_OPENFAAS_SCALE_ZERO"] = "1" if args.scale_zero else "0"
+        if args.min_replicas is not None:
+            data["FAAS_OPENFAAS_MIN_REPLICAS"] = str(max(0, int(args.min_replicas)))
+        if args.max_replicas is not None:
+            data["FAAS_OPENFAAS_MAX_REPLICAS"] = str(max(1, int(args.max_replicas)))
+        data.setdefault("FAAS_OPENFAAS_RUNTIME_IMAGE", _configured_image("faas-runtime"))
+        if not data.get("FAAS_OPENFAAS_GATEWAY"):
+            print("FAAS_OPENFAAS_GATEWAY is required for openfaas mode; pass --gateway", file=sys.stderr)
+            return 2
+        if not data.get("FAAS_RUNTIME_BUNDLE_BASE_URL"):
+            data["FAAS_RUNTIME_BUNDLE_BASE_URL"] = _backend_base_url(None)
+        if not data.get("FAAS_RUNTIME_TOKEN"):
+            data["FAAS_RUNTIME_TOKEN"] = _rand_hex(32)
+    if mode == "metadata":
+        pass
+    if mode not in {"local-docker", "docker", "docker-local", "openfaas", "script", "metadata"}:
+        print(f"unsupported FaaS mode: {mode}", file=sys.stderr)
+        return 2
+    _write_env(env_path, data)
+    _sync_runtime_secrets_from_host_config(_data_root_from_cfg())
+    _safe_write_default_config_snapshot()
+    print(f"updated faas mode: {mode}")
+    print("run: myapp-ctl deploy --group faas --pull")
+    return 0
+
+
+def cmd_faas(args) -> int:
+    base_url = _backend_base_url(getattr(args, "base_url", None))
+    token = _faas_token_arg(args)
+    if args.faas_cmd == "health":
+        status, data, text = _http_request_json(f"{base_url}/api/faas/health", token=token, timeout=8)
+        if not data:
+            print(f"faas health failed: {status or '-'} {text[:500]}", file=sys.stderr)
+            return 1
+        return _print_faas_health(data, as_json=args.json)
+    if args.faas_cmd == "ls":
+        status, data, text = _http_request_json(
+            f"{base_url}/api/faas/services{_faas_user_query(args)}",
+            token=token,
+            timeout=15,
+        )
+        if not data:
+            print(f"faas ls failed: {status or '-'} {text[:500]}", file=sys.stderr)
+            return 1
+        services = data.get("services", []) if isinstance(data, dict) else []
+        if args.json:
+            print(json.dumps(data, ensure_ascii=False))
+            return 0
+        rows = []
+        for item in services:
+            routes = item.get("routes") or []
+            rows.append({
+                "service_id": item.get("service_id", "-"),
+                "status": item.get("status", "-"),
+                "slug": item.get("service_slug", "-"),
+                "routes": len(routes) if isinstance(routes, list) else "-",
+                "function": item.get("function_name", "-"),
+                "updated": item.get("updated_at", "-"),
+            })
+        print(f"faas services: {len(rows)}")
+        _print_table(rows, [
+            ("service_id", "SERVICE"),
+            ("status", "STATUS"),
+            ("slug", "SLUG"),
+            ("routes", "ROUTES"),
+            ("function", "FUNCTION"),
+            ("updated", "UPDATED"),
+        ])
+        return 0
+    if args.faas_cmd == "disable":
+        status, data, text = _http_request_json(
+            f"{base_url}/api/faas/services/{quote(args.service_id, safe='')}{_faas_user_query(args)}",
+            method="DELETE",
+            token=token,
+            timeout=30,
+        )
+        if status >= 400 or not data:
+            print(f"faas disable failed: {status or '-'} {text[:500]}", file=sys.stderr)
+            return 1
+        print(json.dumps(data, ensure_ascii=False) if args.json else f"disabled faas service: {args.service_id}")
+        return 0
+    if args.faas_cmd == "smoke":
+        script = _source_dir() / "scripts" / "faas_smoke_test.py"
+        if not script.is_file():
+            print(f"faas smoke script not found: {script}", file=sys.stderr)
+            return 1
+        cmd = [sys.executable, str(script), "--base-url", base_url]
+        if args.user_id:
+            cmd.extend(["--user-id", args.user_id])
+        if args.service_id:
+            cmd.extend(["--service-id", args.service_id])
+        if token:
+            cmd.extend(["--token", token])
+        if args.no_cleanup:
+            cmd.append("--no-cleanup")
+        return _run(cmd, capture=False).returncode
+    if args.faas_cmd == "mode":
+        return _set_faas_mode(args)
+    if args.faas_cmd == "config":
+        data = _parse_env(_secret_path("faas"))
+        if args.json:
+            print(json.dumps(data if args.show_secrets else {k: _redact(v) for k, v in data.items()}, ensure_ascii=False))
+            return 0
+        rows = [{"key": key, "value": value if args.show_secrets else _redact(value)} for key, value in sorted(data.items())]
+        _print_table(rows, [("key", "KEY"), ("value", "VALUE")])
+        return 0
+    return 2
 
 
 def _emit_client_env_summary(*, host: str | None = None, name: str | None = None, terminal_qr: bool = True) -> None:
@@ -6756,6 +6995,51 @@ def build_parser() -> argparse.ArgumentParser:
     ingress_render.set_defaults(func=cmd_ingress)
     ingress_sub.add_parser("reload", help=_tx("render and reload the running edge-nginx container", zh="渲染并重载运行中的 edge-nginx 容器", de="rendern und laufenden edge-nginx Container neu laden", es="renderizar y recargar contenedor edge-nginx"), usage="myapp-ctl ingress reload").set_defaults(func=cmd_ingress)
     ingress_sub.add_parser("status", help=_tx("show effective ingress config", zh="查看当前入口配置", de="effektive Ingress-Konfiguration anzeigen", es="mostrar config efectiva de ingress"), usage="myapp-ctl ingress status").set_defaults(func=cmd_ingress)
+    faas = sub.add_parser("faas", help=_tx("manage generated FaaS backends", zh="管理 AI 生成的 FaaS 后端", de="generierte FaaS-Backends verwalten", es="gestionar backends FaaS generados"), usage=_tx("myapp-ctl faas <command> [args]", zh="myapp-ctl faas <命令> [参数]", de="myapp-ctl faas <Befehl> [Argumente]", es="myapp-ctl faas <comando> [args]"))
+    faas_sub = _add_subcommands(faas, "faas_cmd")
+    faas_parent = argparse.ArgumentParser(add_help=False)
+    faas_parent.add_argument("--base-url", help=_tx("backend base URL; defaults to configured backend", zh="后端基础 URL；默认使用已配置 backend", de="Backend-Basis-URL; Standard aus Konfiguration", es="URL base backend; por defecto configurado"))
+    faas_parent.add_argument("--token", help=_tx("optional backend bearer token", zh="可选后端 Bearer token", de="optionales Backend-Bearer-Token", es="token bearer backend opcional"))
+    faas_parent.add_argument("--token-env", default="MYAPP_AUTH_TOKEN", help=_tx("environment variable containing the backend bearer token", zh="包含后端 Bearer token 的环境变量", de="Umgebungsvariable mit Backend-Bearer-Token", es="variable de entorno con token bearer backend"))
+    faas_health = faas_sub.add_parser("health", parents=[faas_parent], help=_tx("check FaaS control-plane health", zh="检查 FaaS 控制面健康", de="FaaS-Control-Plane Health pruefen", es="comprobar salud del control-plane FaaS"), usage=_tx("myapp-ctl faas health [options]", zh="myapp-ctl faas health [选项]", de="myapp-ctl faas health [Optionen]", es="myapp-ctl faas health [opciones]"))
+    faas_health.add_argument("--json", action="store_true")
+    faas_health.set_defaults(func=cmd_faas)
+    faas_ls = faas_sub.add_parser("ls", parents=[faas_parent], help=_tx("list generated FaaS services", zh="列出生成的 FaaS 服务", de="generierte FaaS-Dienste auflisten", es="listar servicios FaaS generados"), usage=_tx("myapp-ctl faas ls [options]", zh="myapp-ctl faas ls [选项]", de="myapp-ctl faas ls [Optionen]", es="myapp-ctl faas ls [opciones]"))
+    faas_ls.add_argument("--user-id", help=_tx("test-mode owner user id when auth is disabled", zh="鉴权关闭时使用的测试 owner user id", de="Test-Owner-User-ID wenn Auth deaktiviert ist", es="user id owner de prueba cuando auth esta desactivada"))
+    faas_ls.add_argument("--all", action="store_true", help=_tx("include disabled services", zh="包含已禁用服务", de="deaktivierte Dienste einschliessen", es="incluir servicios desactivados"))
+    faas_ls.add_argument("--json", action="store_true")
+    faas_ls.set_defaults(func=cmd_faas)
+    faas_disable = faas_sub.add_parser("disable", parents=[faas_parent], help=_tx("disable one generated FaaS service", zh="禁用一个生成的 FaaS 服务", de="einen generierten FaaS-Dienst deaktivieren", es="desactivar un servicio FaaS generado"), usage=_tx("myapp-ctl faas disable <service-id> [options]", zh="myapp-ctl faas disable <服务ID> [选项]", de="myapp-ctl faas disable <Service-ID> [Optionen]", es="myapp-ctl faas disable <service-id> [opciones]"))
+    faas_disable.add_argument("service_id")
+    faas_disable.add_argument("--user-id", help=_tx("test-mode owner user id when auth is disabled", zh="鉴权关闭时使用的测试 owner user id", de="Test-Owner-User-ID wenn Auth deaktiviert ist", es="user id owner de prueba cuando auth esta desactivada"))
+    faas_disable.add_argument("--json", action="store_true")
+    faas_disable.set_defaults(func=cmd_faas)
+    faas_smoke = faas_sub.add_parser("smoke", parents=[faas_parent], help=_tx("deploy, invoke, and clean up a generated FaaS smoke service", zh="部署、调用并清理一个 FaaS 冒烟服务", de="FaaS-Smoke-Dienst deployen, aufrufen und bereinigen", es="desplegar, invocar y limpiar servicio FaaS smoke"), usage=_tx("myapp-ctl faas smoke [options]", zh="myapp-ctl faas smoke [选项]", de="myapp-ctl faas smoke [Optionen]", es="myapp-ctl faas smoke [opciones]"))
+    faas_smoke.add_argument("--user-id", help=_tx("test-mode owner user id when auth is disabled", zh="鉴权关闭时使用的测试 owner user id", de="Test-Owner-User-ID wenn Auth deaktiviert ist", es="user id owner de prueba cuando auth esta desactivada"))
+    faas_smoke.add_argument("--service-id", help=_tx("explicit smoke service id", zh="指定冒烟服务 ID", de="explizite Smoke-Service-ID", es="service id smoke explicito"))
+    faas_smoke.add_argument("--no-cleanup", action="store_true", help=_tx("leave the smoke service in place", zh="保留冒烟服务不清理", de="Smoke-Dienst nicht bereinigen", es="no limpiar servicio smoke"))
+    faas_smoke.set_defaults(func=cmd_faas)
+    faas_mode = faas_sub.add_parser("mode", help=_tx("configure generated FaaS deploy mode", zh="配置生成后端的 FaaS 部署模式", de="Deploy-Modus fuer generierte FaaS konfigurieren", es="configurar modo deploy FaaS generado"), usage=_tx("myapp-ctl faas mode <mode> [options]", zh="myapp-ctl faas mode <模式> [选项]", de="myapp-ctl faas mode <Modus> [Optionen]", es="myapp-ctl faas mode <modo> [opciones]"))
+    faas_mode.add_argument("mode", choices=["local-docker", "openfaas", "metadata", "script"])
+    faas_mode.add_argument("--gateway", help=_tx("OpenFaaS gateway URL for openfaas mode", zh="openfaas 模式的 OpenFaaS gateway URL", de="OpenFaaS-Gateway-URL fuer openfaas-Modus", es="URL gateway OpenFaaS para modo openfaas"))
+    faas_mode.add_argument("--username", help=_tx("OpenFaaS basic auth username", zh="OpenFaaS basic auth 用户名", de="OpenFaaS Basic-Auth Benutzername", es="usuario basic auth OpenFaaS"))
+    faas_mode.add_argument("--password-env", help=_tx("environment variable containing OpenFaaS password", zh="包含 OpenFaaS 密码的环境变量", de="Umgebungsvariable mit OpenFaaS-Passwort", es="variable de entorno con password OpenFaaS"))
+    faas_mode.add_argument("--password-file", help=_tx("file containing OpenFaaS password", zh="包含 OpenFaaS 密码的文件", de="Datei mit OpenFaaS-Passwort", es="archivo con password OpenFaaS"))
+    faas_mode.add_argument("--runtime-image", help=_tx("runtime image used by local-docker/openfaas", zh="local-docker/openfaas 使用的 runtime 镜像", de="Runtime-Image fuer local-docker/openfaas", es="imagen runtime usada por local-docker/openfaas"))
+    faas_mode.add_argument("--bundle-base-url", help=_tx("backend base URL used by OpenFaaS runtimes to fetch bundles", zh="OpenFaaS runtime 拉取 bundle 的后端 base URL", de="Backend-Basis-URL fuer Bundle-Fetch durch OpenFaaS-Runtimes", es="URL base backend para que runtimes OpenFaaS descarguen bundles"))
+    faas_mode.add_argument("--public-base-url", help=_tx("public base URL returned for generated FaaS invoke paths", zh="生成 FaaS 调用路径返回的 public base URL", de="oeffentliche Basis-URL fuer generierte FaaS-Aufrufe", es="URL base publica para invocaciones FaaS"))
+    faas_mode.add_argument("--deploy-script", help=_tx("deploy script path for script mode", zh="script 模式部署脚本路径", de="Deploy-Script-Pfad fuer script-Modus", es="ruta script deploy para modo script"))
+    faas_mode.add_argument("--max-services", type=int, help=_tx("per-user active service limit", zh="每用户活跃服务数量上限", de="aktive Dienste pro Benutzer", es="limite de servicios activos por usuario"))
+    scale_group = faas_mode.add_mutually_exclusive_group()
+    scale_group.add_argument("--scale-zero", dest="scale_zero", action="store_true", default=None, help=_tx("enable OpenFaaS scale-to-zero labels", zh="启用 OpenFaaS scale-to-zero label", de="OpenFaaS Scale-to-zero Labels aktivieren", es="activar labels scale-to-zero de OpenFaaS"))
+    scale_group.add_argument("--no-scale-zero", dest="scale_zero", action="store_false", help=_tx("disable OpenFaaS scale-to-zero labels", zh="禁用 OpenFaaS scale-to-zero label", de="OpenFaaS Scale-to-zero Labels deaktivieren", es="desactivar labels scale-to-zero de OpenFaaS"))
+    faas_mode.add_argument("--min-replicas", type=int, help=_tx("OpenFaaS min replicas label", zh="OpenFaaS 最小副本 label", de="OpenFaaS min replicas Label", es="label replicas min OpenFaaS"))
+    faas_mode.add_argument("--max-replicas", type=int, help=_tx("OpenFaaS max replicas label", zh="OpenFaaS 最大副本 label", de="OpenFaaS max replicas Label", es="label replicas max OpenFaaS"))
+    faas_mode.set_defaults(func=cmd_faas)
+    faas_config = faas_sub.add_parser("config", help=_tx("show generated FaaS host config", zh="查看生成 FaaS 主机配置", de="generierte FaaS-Host-Konfiguration anzeigen", es="mostrar config host FaaS generada"), usage=_tx("myapp-ctl faas config [options]", zh="myapp-ctl faas config [选项]", de="myapp-ctl faas config [Optionen]", es="myapp-ctl faas config [opciones]"))
+    faas_config.add_argument("--json", action="store_true")
+    faas_config.add_argument("--show-secrets", action="store_true", help=_tx("show raw secret values", zh="显示原始密钥值", de="echte Secret-Werte anzeigen", es="mostrar valores secretos reales"))
+    faas_config.set_defaults(func=cmd_faas)
     client_env = sub.add_parser("client-env", help=_tx("generate client Service Environment import JSON and QR", zh="生成客户端服务环境导入 JSON 和二维码", de="Client-Service-Environment JSON und QR erzeugen", es="generar JSON y QR de entorno de servicio del cliente"), usage=_tx("myapp-ctl client-env [options]", zh="myapp-ctl client-env [选项]", de="myapp-ctl client-env [Optionen]", es="myapp-ctl client-env [opciones]"))
     client_env.add_argument("--host", help=_tx("public host/IP to use in generated URLs", zh="生成 URL 使用的公网域名或 IP", de="oeffentlicher Host/IP fuer generierte URLs", es="host/IP publico para URLs generadas"))
     client_env.add_argument("--name", help=_tx("environment name shown in the client", zh="客户端显示的环境名称", de="im Client angezeigter Umgebungsname", es="nombre de entorno mostrado en el cliente"))

@@ -78,8 +78,9 @@ def list_user_services():
     user_id = _request_user_id()
     if not user_id:
         return _json_error("user_id is required", 401 if FAAS_REQUIRE_AUTH else 400, code="FAAS_USER_REQUIRED")
+    include_disabled = str(request.args.get("include_disabled") or request.args.get("all") or "").strip().lower() in {"1", "true", "yes", "on"}
     try:
-        return jsonify({"services": list_services(user_id)})
+        return jsonify({"services": list_services(user_id, include_disabled=include_disabled)})
     except Exception as exc:
         return _json_error(str(exc), 500)
 
