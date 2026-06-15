@@ -912,9 +912,12 @@ def _resolve_server_upload_actions(
         if action.get("type") == _SERVER_FAAS_ACTION:
             relative_path = str(action.get("path") or "faas_bundle.json")
             try:
-                from faas_store import deploy_bundle, load_bundle_bytes
+                import faas_store as faas_store_module
             except ModuleNotFoundError:
-                from backend.faas_store import deploy_bundle, load_bundle_bytes
+                import backend.faas_store as faas_store_module
+            deploy_bundle = faas_store_module.deploy_bundle
+            load_bundle_bytes = faas_store_module.load_bundle_bytes
+            validation_error_type = getattr(faas_store_module, "FaaSValidationError", None)
             try:
                 raw = (
                     _artifact_from_agent_node(agent_node_url, run_id, relative_path)
@@ -936,7 +939,15 @@ def _resolve_server_upload_actions(
                     "routes": deploy_result.routes,
                 })
             except Exception as exc:
-                logger.exception("[FAAS] deploy action failed sid=%s path=%s: %s", session_id, relative_path, exc)
+                if validation_error_type and isinstance(exc, validation_error_type):
+                    logger.warning(
+                        "[FAAS] deploy action validation failed sid=%s path=%s: %s",
+                        session_id,
+                        relative_path,
+                        exc,
+                    )
+                else:
+                    logger.exception("[FAAS] deploy action failed sid=%s path=%s: %s", session_id, relative_path, exc)
                 resolved.append({
                     "type": "faas_service_failed",
                     "path": relative_path,

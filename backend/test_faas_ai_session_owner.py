@@ -146,6 +146,52 @@ def test_faas_action_can_deploy_agent_pull_artifact() -> None:
     assert actions[0]["invoke_url"] == "/api/faas/invoke/notes-api"
 
 
+def test_faas_validation_failure_returns_failed_action_without_exception_log() -> None:
+    class FaaSValidationError(RuntimeError):
+        pass
+
+    fake_faas_store = types.ModuleType("faas_store")
+    fake_faas_store.FaaSValidationError = FaaSValidationError
+    fake_faas_store.load_bundle_bytes = lambda raw: json.loads(raw.decode("utf-8"))
+
+    def deploy_bundle(owner_user_id: str, bundle: dict, *, source: str):
+        raise FaaSValidationError("function default arguments must be literal values")
+
+    fake_faas_store.deploy_bundle = deploy_bundle
+    sys.modules["faas_store"] = fake_faas_store
+
+    exception_calls: list[tuple] = []
+    warning_calls: list[tuple] = []
+    original_exception = ai_session.logger.exception
+    original_warning = ai_session.logger.warning
+    ai_session.logger.exception = lambda *args, **kwargs: exception_calls.append((args, kwargs))
+    ai_session.logger.warning = lambda *args, **kwargs: warning_calls.append((args, kwargs))
+    try:
+        with tempfile.TemporaryDirectory(prefix="myapp-faas-validation-failed-") as raw:
+            workspace = Path(raw)
+            (workspace / "faas_bundle.json").write_text(
+                json.dumps({"service_id": "bad-api", "files": {"app.py": "bad"}}),
+                encoding="utf-8",
+            )
+            actions = ai_session._resolve_server_upload_actions(
+                [{"type": "server_deploy_faas_service", "path": "faas_bundle.json"}],
+                "session-validation",
+                workspace=str(workspace),
+                owner_user_id="auth-user-validation",
+            )
+    finally:
+        ai_session.logger.exception = original_exception
+        ai_session.logger.warning = original_warning
+
+    assert actions == [{
+        "type": "faas_service_failed",
+        "path": "faas_bundle.json",
+        "error": "function default arguments must be literal values",
+    }]
+    assert warning_calls
+    assert exception_calls == []
+
+
 def test_faas_prompt_note_mentions_route_enforcement() -> None:
     note = ai_session._build_faas_backend_prompt_note(workspace="/tmp/workspace")
     assert "service.routes" in note
@@ -211,6 +257,7 @@ def test_client_action_compaction_keeps_app_upload_and_faas_deploys() -> None:
 if __name__ == "__main__":
     test_faas_action_owner_comes_from_authenticated_session()
     test_faas_action_can_deploy_agent_pull_artifact()
+    test_faas_validation_failure_returns_failed_action_without_exception_log()
     test_faas_prompt_note_mentions_route_enforcement()
     test_faas_manifest_initial_file_lists_user_services()
     test_client_action_compaction_keeps_app_upload_and_faas_deploys()
