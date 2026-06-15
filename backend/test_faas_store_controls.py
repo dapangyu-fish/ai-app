@@ -246,7 +246,45 @@ def test_deploy_quota_conflict_disable_and_runtime_bundle() -> None:
         assert replacement.status == "ready"
 
 
+def test_openfaas_deploy_records_gateway_metadata() -> None:
+    with tempfile.TemporaryDirectory(prefix="myapp-faas-store-openfaas-") as raw:
+        old_root = faas_store.FAAS_CODE_ROOT
+        old_mode = faas_store.FAAS_DEPLOY_MODE
+        old_gateway = faas_store.FAAS_OPENFAAS_GATEWAY
+        old_image = faas_store.FAAS_OPENFAAS_RUNTIME_IMAGE
+        old_bundle_base = faas_store.FAAS_RUNTIME_BUNDLE_BASE_URL
+        old_deploy = faas_store._deploy_openfaas_function
+        try:
+            faas_store.FAAS_CODE_ROOT = raw
+            faas_store.FAAS_DEPLOY_MODE = "openfaas"
+            faas_store.FAAS_OPENFAAS_GATEWAY = "http://openfaas-a:8080"
+            faas_store.FAAS_OPENFAAS_RUNTIME_IMAGE = "example/faas-runtime:openfaas"
+            faas_store.FAAS_RUNTIME_BUNDLE_BASE_URL = "https://backend.example"
+            faas_store._deploy_openfaas_function = (
+                lambda *, function_name, service_id, commit_sha: "openfaas method=POST status=202"
+            )
+            _db.services.clear()
+            _db.deployments.clear()
+
+            result = faas_store.deploy_bundle("user-openfaas", _bundle("api-openfaas"), source="test")
+        finally:
+            faas_store.FAAS_CODE_ROOT = old_root
+            faas_store.FAAS_DEPLOY_MODE = old_mode
+            faas_store.FAAS_OPENFAAS_GATEWAY = old_gateway
+            faas_store.FAAS_OPENFAAS_RUNTIME_IMAGE = old_image
+            faas_store.FAAS_RUNTIME_BUNDLE_BASE_URL = old_bundle_base
+            faas_store._deploy_openfaas_function = old_deploy
+
+    assert result.status == "ready"
+    deploy_meta = _db.services["api-openfaas"]["meta_json"]["deploy"]
+    assert deploy_meta["mode"] == "openfaas"
+    assert deploy_meta["openfaas_gateway"] == "http://openfaas-a:8080"
+    assert deploy_meta["runtime_image"] == "example/faas-runtime:openfaas"
+    assert deploy_meta["bundle_base_url"] == "https://backend.example"
+
+
 if __name__ == "__main__":
     test_validation_rejects_dangerous_python_and_dependencies()
     test_deploy_quota_conflict_disable_and_runtime_bundle()
+    test_openfaas_deploy_records_gateway_metadata()
     print(json.dumps({"ok": True}, sort_keys=True))

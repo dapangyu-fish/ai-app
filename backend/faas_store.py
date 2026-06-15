@@ -292,6 +292,59 @@ def _count_user_services(user_id: str) -> int:
     return int(row["count"] if row else 0)
 
 
+def _json_object(value: Any) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return dict(value)
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return {}
+        if isinstance(parsed, dict):
+            return dict(parsed)
+    return {}
+
+
+def _current_deploy_meta() -> dict[str, Any]:
+    mode = str(FAAS_DEPLOY_MODE or "").strip()
+    meta: dict[str, Any] = {"mode": mode}
+    if mode == "openfaas":
+        meta.update(
+            {
+                "openfaas_gateway": str(FAAS_OPENFAAS_GATEWAY or "").rstrip("/"),
+                "runtime_image": FAAS_OPENFAAS_RUNTIME_IMAGE,
+                "bundle_base_url": FAAS_RUNTIME_BUNDLE_BASE_URL or FAAS_PUBLIC_BASE_URL,
+            }
+        )
+    elif mode in _LOCAL_DOCKER_MODES:
+        meta.update(
+            {
+                "runtime_image": FAAS_LOCAL_DOCKER_IMAGE,
+                "network": FAAS_LOCAL_DOCKER_NETWORK,
+                "start_on_deploy": FAAS_LOCAL_DOCKER_START_ON_DEPLOY,
+            }
+        )
+    return meta
+
+
+def _meta_with_current_deploy(bundle_meta: Any) -> dict[str, Any]:
+    meta = _json_object(bundle_meta)
+    deploy = _json_object(meta.get("deploy"))
+    deploy.update(_current_deploy_meta())
+    meta["deploy"] = deploy
+    return meta
+
+
+def openfaas_gateway_for_service(service: dict[str, Any] | None) -> str:
+    if service:
+        meta = _json_object(service.get("meta_json"))
+        deploy = _json_object(meta.get("deploy"))
+        gateway = str(deploy.get("openfaas_gateway") or "").strip().rstrip("/")
+        if gateway:
+            return gateway
+    return str(FAAS_OPENFAAS_GATEWAY or "").strip().rstrip("/")
+
+
 def list_services(user_id: str, *, include_disabled: bool = False) -> list[dict[str, Any]]:
     ensure_tables()
     disabled_clause = "" if include_disabled else "AND status <> 'disabled'"
@@ -759,8 +812,10 @@ def _openfaas_auth():
     return (FAAS_OPENFAAS_USERNAME or "admin", FAAS_OPENFAAS_PASSWORD)
 
 
-def _openfaas_function_exists(function_name: str) -> bool:
-    gateway = FAAS_OPENFAAS_GATEWAY.rstrip("/")
+def _openfaas_function_exists(function_name: str, *, gateway: str | None = None) -> bool:
+    gateway = str(gateway or FAAS_OPENFAAS_GATEWAY or "").rstrip("/")
+    if not gateway:
+        raise FaaSError("FAAS_OPENFAAS_GATEWAY is required for FAAS_DEPLOY_MODE=openfaas")
     try:
         resp = requests.get(
             f"{gateway}/system/function/{quote(function_name, safe='')}",
@@ -776,8 +831,10 @@ def _openfaas_function_exists(function_name: str) -> bool:
     raise FaaSError(f"OpenFaaS status failed status={resp.status_code}: {resp.text[:1000]}")
 
 
-def _openfaas_deploy_request(method: str, payload: dict[str, Any]) -> requests.Response:
-    gateway = FAAS_OPENFAAS_GATEWAY.rstrip("/")
+def _openfaas_deploy_request(method: str, payload: dict[str, Any], *, gateway: str | None = None) -> requests.Response:
+    gateway = str(gateway or FAAS_OPENFAAS_GATEWAY or "").rstrip("/")
+    if not gateway:
+        raise FaaSError("FAAS_OPENFAAS_GATEWAY is required for FAAS_DEPLOY_MODE=openfaas")
     if method == "POST":
         return requests.post(
             f"{gateway}/system/functions",
@@ -796,7 +853,7 @@ def _openfaas_deploy_request(method: str, payload: dict[str, Any]) -> requests.R
 
 
 def _deploy_openfaas_function(*, function_name: str, service_id: str, commit_sha: str) -> str:
-    gateway = FAAS_OPENFAAS_GATEWAY.rstrip("/")
+    gateway = str(FAAS_OPENFAAS_GATEWAY or "").rstrip("/")
     if not gateway:
         raise FaaSError("FAAS_OPENFAAS_GATEWAY is required for FAAS_DEPLOY_MODE=openfaas")
     if not FAAS_OPENFAAS_RUNTIME_IMAGE:
@@ -837,15 +894,15 @@ def _deploy_openfaas_function(*, function_name: str, service_id: str, commit_sha
             "com.openfaas.timeouts.write": FAAS_OPENFAAS_WRITE_TIMEOUT,
         },
     }
-    method = "PUT" if _openfaas_function_exists(function_name) else "POST"
+    method = "PUT" if _openfaas_function_exists(function_name, gateway=gateway) else "POST"
     try:
-        resp = _openfaas_deploy_request(method, payload)
+        resp = _openfaas_deploy_request(method, payload, gateway=gateway)
         if method == "PUT" and resp.status_code == 404:
             method = "POST"
-            resp = _openfaas_deploy_request(method, payload)
+            resp = _openfaas_deploy_request(method, payload, gateway=gateway)
         elif method == "POST" and resp.status_code in {409}:
             method = "PUT"
-            resp = _openfaas_deploy_request(method, payload)
+            resp = _openfaas_deploy_request(method, payload, gateway=gateway)
     except requests.RequestException as exc:
         raise FaaSError(f"OpenFaaS deploy request failed: {exc}") from exc
     if resp.status_code not in {200, 201, 202}:
@@ -853,8 +910,8 @@ def _deploy_openfaas_function(*, function_name: str, service_id: str, commit_sha
     return f"openfaas method={method} function={function_name} image={FAAS_OPENFAAS_RUNTIME_IMAGE} status={resp.status_code}"
 
 
-def _delete_openfaas_function(function_name: str) -> str:
-    gateway = FAAS_OPENFAAS_GATEWAY.rstrip("/")
+def _delete_openfaas_function(function_name: str, *, gateway: str | None = None) -> str:
+    gateway = str(gateway or FAAS_OPENFAAS_GATEWAY or "").rstrip("/")
     if not gateway:
         return ""
     try:
@@ -919,9 +976,10 @@ def disable_service(owner_user_id: str, service_id: str) -> dict[str, Any]:
                 _remove_local_docker_runtime(function_name)
             except FaaSError as exc:
                 warnings.append(str(exc))
-        if FAAS_OPENFAAS_GATEWAY and FAAS_DEPLOY_MODE == "openfaas":
+        openfaas_gateway = openfaas_gateway_for_service(service)
+        if openfaas_gateway and FAAS_DEPLOY_MODE == "openfaas":
             try:
-                _delete_openfaas_function(function_name)
+                _delete_openfaas_function(function_name, gateway=openfaas_gateway)
             except FaaSError as exc:
                 warnings.append(str(exc))
     db_execute(
@@ -953,6 +1011,7 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
         service_rel = root.relative_to(repo_root)
         deployment_id = f"dep-{uuid.uuid4().hex}"
         routes = normalized["routes"]
+        meta_json = _meta_with_current_deploy(normalized["meta"])
         summary = {
             "source": source,
             "service_slug": normalized["service_slug"],
@@ -984,7 +1043,7 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
                 str(root),
                 FAAS_PUBLIC_BASE_URL or FAAS_OPENFAAS_GATEWAY,
                 json.dumps(routes, ensure_ascii=False),
-                json.dumps(normalized["meta"], ensure_ascii=False),
+                json.dumps(meta_json, ensure_ascii=False),
             ],
         )
         db_execute(

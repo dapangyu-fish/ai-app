@@ -41,6 +41,7 @@ faas_store.ensure_tables = lambda *args, **kwargs: None
 faas_store.get_service = lambda *args, **kwargs: None
 faas_store.list_services = lambda *args, **kwargs: []
 faas_store.load_bundle_bytes = lambda *args, **kwargs: {}
+faas_store.openfaas_gateway_for_service = lambda service: _config.FAAS_OPENFAAS_GATEWAY.rstrip("/")
 faas_store.runtime_bundle_for_service = lambda *args, **kwargs: {}
 faas_store.runtime_token_for_service = lambda *args, **kwargs: "expected-runtime-token"
 sys.modules["faas_store"] = faas_store

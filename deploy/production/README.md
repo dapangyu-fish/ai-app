@@ -431,7 +431,10 @@ The FaaS group updates the backend-owned FaaS control path. By default,
 read-only from the data root. `FAAS_DEPLOY_MODE=openfaas` is also supported:
 the backend deploys the generic `myapp-faas-runtime` image to OpenFaaS/faasd
 and the function runtime fetches its validated code bundle from the backend with
-`FAAS_RUNTIME_TOKEN`.
+`FAAS_RUNTIME_TOKEN`. Successful deployments record the target gateway in the
+service metadata. While the current CLI configures one active gateway per
+backend, invoke and disable operations in `openfaas` mode prefer the
+service-recorded gateway and fall back to the current global gateway.
 
 Generated service smoke test:
 

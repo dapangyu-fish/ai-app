@@ -27,6 +27,7 @@ try:
         get_service,
         list_services,
         load_bundle_bytes,
+        openfaas_gateway_for_service,
         runtime_bundle_for_service,
         runtime_token_for_service,
     )
@@ -43,6 +44,7 @@ except ModuleNotFoundError:
         get_service,
         list_services,
         load_bundle_bytes,
+        openfaas_gateway_for_service,
         runtime_bundle_for_service,
         runtime_token_for_service,
     )
@@ -284,23 +286,27 @@ def invoke_service(service_id: str, route_path: str = ""):
         return _json_error(message, status, code="FAAS_ROUTE_NOT_ALLOWED")
 
     mode = FAAS_DEPLOY_MODE
-    gateway = FAAS_OPENFAAS_GATEWAY.rstrip("/")
     if mode in _LOCAL_DOCKER_MODES:
         try:
             upstream = ensure_local_docker_runtime_for_service(service)
         except FaaSError as exc:
             return _json_error(str(exc), 502, code="FAAS_INVOKE_FAILED")
-    elif gateway:
+    else:
+        gateway = (
+            openfaas_gateway_for_service(service)
+            if mode == "openfaas"
+            else FAAS_OPENFAAS_GATEWAY.rstrip("/")
+        )
+        if not gateway:
+            return _json_error(
+                "FaaS gateway is not configured and local runtime mode is disabled",
+                503,
+                code="FAAS_GATEWAY_UNCONFIGURED",
+            )
         function_name = str(service.get("function_name") or "").strip()
         if not function_name:
             return _json_error("service function name is missing", 500, code="FAAS_MISCONFIGURED")
         upstream = f"{gateway}/function/{quote(function_name)}"
-    else:
-        return _json_error(
-            "FaaS gateway is not configured and local runtime mode is disabled",
-            503,
-            code="FAAS_GATEWAY_UNCONFIGURED",
-        )
     if safe_route_suffix:
         upstream = upstream.rstrip("/") + safe_route_suffix
     if request.query_string:

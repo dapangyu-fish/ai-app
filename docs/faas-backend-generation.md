@@ -163,6 +163,14 @@ The runtime image does not contain user code. Instead, it starts with
 loads `app.py`. This avoids per-user Docker image builds and keeps registry and
 OpenFaaS credentials outside Agent containers.
 
+On every successful deployment the backend records non-secret deployment
+metadata under `faas_services.meta_json.deploy`, including the deploy mode,
+OpenFaaS gateway, runtime image, and bundle base URL. In `openfaas` mode,
+invocation and disable/delete operations prefer the gateway recorded on the
+service and fall back to the current global `FAAS_OPENFAAS_GATEWAY`. This keeps
+the current single-gateway behavior unchanged while leaving a migration path for
+multiple single-node faasd gateways and backend-side routing later.
+
 Important deployment constraint: the OpenFaaS Edge/faasd prerequisites state
 that faasd must not be co-located with Docker because both use containerd,
 iptables, and CNI. Since the current MyApp stack is Docker Compose based, the
@@ -189,6 +197,19 @@ FAAS_OPENFAAS_RUNTIME_IMAGE=dapangyu/myapp-faas-runtime:agent-control-plane
 FAAS_RUNTIME_BUNDLE_BASE_URL=https://<backend-domain>
 FAAS_RUNTIME_TOKEN=<random-secret>
 ```
+
+External faasd host bring-up checklist:
+
+1. Use a dedicated host that is not running the MyApp Docker Compose stack.
+2. Install faasd following the OpenFaaS Edge/faasd documentation, keep the
+   gateway reachable from the MyApp backend host, and record the generated
+   gateway password outside Git.
+3. Ensure the faasd host can pull `FAAS_OPENFAAS_RUNTIME_IMAGE`.
+4. Ensure the faasd function runtime can reach
+   `FAAS_RUNTIME_BUNDLE_BASE_URL/api/faas/runtime_bundle/<service_id>`.
+5. Run `myapp-ctl faas openfaas-gateway-check` before changing backend mode.
+6. Run `myapp-ctl faas openfaas-gateway-smoke --yes` on a disposable/test
+   environment before promoting the gateway.
 
 ## myapp-ctl
 
@@ -283,7 +304,8 @@ Minimum verification:
   conflicts, disabling services, and runtime bundle materialization.
 - `backend/test_faas_invoke_routes.py` passes. This verifies the invoke proxy
   only forwards routes and methods declared by the generated service contract
-  while keeping empty-route legacy services compatible.
+  while keeping empty-route legacy services compatible, and verifies
+  service-recorded OpenFaaS gateways take precedence in `openfaas` mode.
 - `backend/test_faas_ai_session_owner.py` passes. This verifies FaaS deploy
   actions use the authenticated chat-session owner and can resolve agent-pull
   uploaded artifacts.
