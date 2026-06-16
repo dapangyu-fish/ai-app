@@ -433,11 +433,26 @@ def get_service(service_id: str) -> dict[str, Any] | None:
 
 
 def _pull_bundle_serve_root() -> None:
-    """Reconcile the strict bundle-serving checkout from GitHub (fetch + hard reset)."""
+    """Reconcile the strict bundle-serving checkout from GitHub (fetch + hard reset).
+
+    Self-heals: if the serve root is missing or is not a git checkout (e.g. wiped
+    or lost), re-clone it from the remote instead of silently serving nothing and
+    returning 404 for every bundle.
+    """
     if not FAAS_BUNDLE_SERVE_ROOT:
         return
     serve_root = Path(FAAS_BUNDLE_SERVE_ROOT)
     if not (serve_root / ".git").exists():
+        if not FAAS_GIT_REMOTE:
+            return
+        if serve_root.exists():
+            shutil.rmtree(serve_root, ignore_errors=True)
+        serve_root.parent.mkdir(parents=True, exist_ok=True)
+        _run_git(
+            ["clone", "--branch", FAAS_GIT_BRANCH, FAAS_GIT_REMOTE, str(serve_root)],
+            cwd=serve_root.parent,
+            check=True,
+        )
         return
     _run_git(["fetch", "origin", FAAS_GIT_BRANCH], cwd=serve_root)
     _run_git(["reset", "--hard", f"origin/{FAAS_GIT_BRANCH}"], cwd=serve_root, check=True)
