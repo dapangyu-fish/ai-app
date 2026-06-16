@@ -17,6 +17,8 @@ WORKDIR /app
 
 COPY backend/ /app/backend/
 COPY lib/json_ui/widgets/icon_registry.dart /app/lib/json_ui/widgets/icon_registry.dart
+# validate_json_app 用它建 widget 类型白名单（拦 AI 自造的 row/column/flex/text_input）
+COPY lib/json_ui/widget_builder.dart /app/lib/json_ui/widget_builder.dart
 COPY config_center/ /app/config_center/
 COPY user_center/ /app/user_center/
 
