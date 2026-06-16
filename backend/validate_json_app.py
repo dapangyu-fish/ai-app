@@ -12,6 +12,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -408,6 +409,14 @@ class Validator:
         self.findings.append(Finding("WARN", path, message))
 
     def validate(self) -> int:
+        if not self.registered_widget_types:
+            # 既没解析到 _builders，也没能力清单 → 类型检查被禁用。显眼报出来，
+            # 别让"悄悄失效"发生（参见 widget_capabilities.json 漂移守卫）。
+            self.warn(
+                "$",
+                "widget type check DISABLED: neither lib/json_ui/widget_builder.dart "
+                "nor backend/generated/widget_capabilities.json could be loaded",
+            )
         self._validate_root()
         self._walk(self.root, "$", in_game_logic=False)
         self._validate_scroll_contract()
@@ -523,13 +532,16 @@ class Validator:
 
             for key in node.keys():
                 if key in FORBIDDEN_UI_KEYS and not self._is_allowed_non_ui_key(node, key):
-                    self.error(self._path(path, key), f"unsupported web/CSS-like field: {key}")
+                    # 框架忽略这些 CSS-ism 字段（不读取、不渲染、不崩溃）。WARN 而非 ERROR：
+                    # 即便框架以后支持了它，过时清单也只产一条无害 WARN，绝不误拦合法 app。
+                    self.warn(self._path(path, key), f"web/CSS-like field ignored by client: {key}")
 
             for key in NUMERIC_SCALAR_KEYS:
                 if key in node and not self._is_number_or_expression(node[key]):
                     if key in {"margin", "padding"} and self._is_edge_insets(node[key]):
                         continue
-                    self.error(self._path(path, key), f"{key} must be a number, not {type(node[key]).__name__}")
+                    # 框架对非数字标量是 tryParse→默认值（容忍，不崩溃），降 WARN 保证不误拦。
+                    self.warn(self._path(path, key), f"{key} should be a number, not {type(node[key]).__name__}")
 
             if "shrinkWrap" in node and not isinstance(node.get("shrinkWrap"), bool):
                 self.error(self._path(path, "shrinkWrap"), "shrinkWrap must be a boolean")
@@ -544,10 +556,10 @@ class Validator:
             if isinstance(style, dict):
                 for key in UNSUPPORTED_STYLE_KEYS:
                     if key in style:
-                        self.error(self._path(self._path(path, "style"), key), f"style.{key} is unsupported; use widget-level spacing or spacer")
+                        self.warn(self._path(self._path(path, "style"), key), f"style.{key} is unsupported (ignored by client); use widget-level spacing or spacer")
                 for key in NUMERIC_SCALAR_KEYS:
                     if key in style and not self._is_number_or_expression(style[key]):
-                        self.error(self._path(self._path(path, "style"), key), f"style.{key} must be a number, not {type(style[key]).__name__}")
+                        self.warn(self._path(self._path(path, "style"), key), f"style.{key} should be a number, not {type(style[key]).__name__}")
 
         if node_type == "list" and isinstance(node.get("source"), dict):
             self.error(self._path(path, "source"), "list.source must be a string interpolation, not jsonlogic")
@@ -836,9 +848,18 @@ class Validator:
 
     @staticmethod
     def _is_widget_slot_path(path: str) -> bool:
-        # 只有 children[]/child 槽位里的节点才是"被 buildWidget 渲染的 widget"。
+        # 只有这些槽位里的节点才是"被 buildWidget 渲染的 widget"：
+        #   .children[N] / .child   通用子控件
+        #   .item_template          list/grid 行模板
+        #   .tabs[N].content        tab_view 页签内容——渲染惰性（非当前 tab 不挂载），
+        #                           单次渲染发现不了未知类型，静态遍历必须盖到（实测 initial=0）
         # position:{type:flex}、action:{type:call} 等 type 字段不是 widget，排除。
-        return path.endswith(".child") or bool(re.search(r"\.children\[\d+\]$", path))
+        return (
+            path.endswith(".child")
+            or path.endswith(".item_template")
+            or bool(re.search(r"\.children\[\d+\]$", path))
+            or bool(re.search(r"\.tabs\[\d+\]\.content$", path))
+        )
 
     @staticmethod
     def _is_app_bar_path(path: str) -> bool:
@@ -1152,14 +1173,14 @@ class Validator:
                 if not self._is_presentation_slot(node, key):
                     continue
                 if self._is_raw_jsonlogic(value):
-                    self.error(
+                    self.warn(
                         self._path(path, key),
-                        "presentation text must be a string or string interpolation, not raw jsonlogic; use e.g. \"Score: {{ params.score }}\"",
+                        "presentation text should be a string or string interpolation, not raw jsonlogic; use e.g. \"Score: {{ params.score }}\"",
                     )
                 elif isinstance(value, (dict, list)):
-                    self.error(
+                    self.warn(
                         self._path(path, key),
-                        "presentation text must be a string or string interpolation, not a structured value; compute state first and display \"{{ global.someLabel }}\"",
+                        "presentation text should be a string or string interpolation, not a structured value; compute state first and display \"{{ global.someLabel }}\"",
                     )
 
     @staticmethod
@@ -2059,6 +2080,26 @@ def validate_json_content(
     return validator.findings
 
 
+@lru_cache(maxsize=1)
+def load_capabilities_manifest() -> dict:
+    """读取由 flutter test 从真实框架注册表导出的能力清单（types/icons/算子）。
+
+    test/widget_capabilities_drift_test.dart 用真实 _builders / IconRegistry /
+    jl.add 生成 backend/generated/widget_capabilities.json 并断言它不漂移。校验器把
+    它当"权威 floor"：即便实时 .dart 正则解析失败/格式变动，清单仍兜底，检查不至于
+    悄悄失效。文件缺失/损坏则返回空（优雅降级）。
+    """
+    repo = Path(__file__).resolve().parents[1]
+    path = repo / "backend/generated/widget_capabilities.json"
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def load_builtin_calls() -> set[str]:
     repo = Path(__file__).resolve().parents[1]
     calls: set[str] = set(DEFAULT_BUILTIN_CALLS)
@@ -2075,42 +2116,61 @@ def load_builtin_calls() -> set[str]:
 def load_allowed_icon_names() -> set[str]:
     repo = Path(__file__).resolve().parents[1]
     names: set[str] = set(DEFAULT_ICON_NAMES)
+    names |= set(load_capabilities_manifest().get("icons", []))  # 能力清单 floor
     path = repo / "lib/json_ui/widgets/icon_registry.dart"
-    if not path.exists():
-        return names
-    pattern = re.compile(r"'([a-z][a-z0-9_]*)'\s*:\s*Icons\.")
-    for match in pattern.finditer(path.read_text(encoding="utf-8")):
-        names.add(match.group(1))
+    if path.exists():
+        pattern = re.compile(r"'([a-z][a-z0-9_]*)'\s*:\s*Icons\.")
+        for match in pattern.finditer(path.read_text(encoding="utf-8")):
+            names.add(match.group(1))
     return names
 
 
 def load_registered_widget_types() -> set[str]:
-    """从客户端 widget_builder.dart 的 _builders map 抽取已注册的 widget 类型。
+    """已注册 widget 类型：实时解析 _builders（自动跟随框架）∪ 能力清单 floor。
 
-    渲染端是唯一真相源：不在 _builders 里的 type，客户端会渲染成红色"未知类型"
-    错误框（元素缺失）。这里把同一份集合喂给 validator，让 AI 自创的控件类型
-    （如 row/column/flex/text_input）在生成阶段就被 ERROR 拦下、被迫改对，而不是
-    靠客户端加别名兜底。解析失败/文件缺失返回空集，调用方据此跳过（宁漏检不误报）。
+    渲染端是唯一真相源：不在 _builders 里的 type 会渲染成红色"未知类型"框（元素缺失）。
+    优先解析实时 widget_builder.dart（auto-follow 框架新增），再并上 flutter test 导出的
+    能力清单（防止正则因格式变动悄悄失效、与框架漂移）。两者皆空才返回空集，调用方据此
+    跳过类型检查（宁漏检不误报）。
     """
+    types: set[str] = set(load_capabilities_manifest().get("widget_types", []))
     repo = Path(__file__).resolve().parents[1]
     path = repo / "lib/json_ui/widget_builder.dart"
-    if not path.exists():
-        return set()
-    text = path.read_text(encoding="utf-8")
-    match = re.search(r"_builders\s*=\s*\{", text)
-    if not match:
-        return set()
-    depth, i = 1, match.end()
-    start = match.end()
-    while i < len(text) and depth > 0:
-        ch = text[i]
-        if ch == "{":
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-        i += 1
-    block = text[start : i - 1]
-    return {m.group(1) for m in re.finditer(r"'([a-z][a-z0-9_]*)'\s*:", block)}
+    if path.exists():
+        text = path.read_text(encoding="utf-8")
+        match = re.search(r"_builders\s*=\s*\{", text)
+        if match:
+            depth, i = 1, match.end()
+            start = match.end()
+            while i < len(text) and depth > 0:
+                ch = text[i]
+                if ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                i += 1
+            block = text[start : i - 1]
+            types |= {m.group(1) for m in re.finditer(r"'([a-z][a-z0-9_]*)'\s*:", block)}
+    return types
+
+
+def load_jsonlogic_custom_ops() -> set[str]:
+    """框架在 interpreter.dart 用 jl.add('name', …) 注册的自定义 jsonlogic 算子。
+
+    这些算子（clamp/sqrt/lerp/str_split…）以前在 JSONLOGIC_SINGLE_KEYS 里硬编码，
+    已与框架漂移（漏了 14 个）。改为解析真实源码 ∪ 能力清单 floor，永久消除漂移。
+    """
+    ops: set[str] = set(load_capabilities_manifest().get("jsonlogic_custom_ops", []))
+    repo = Path(__file__).resolve().parents[1]
+    path = repo / "lib/json_ui/interpreter.dart"
+    if path.exists():
+        ops |= set(re.findall(r"jl\.add\('([^']+)'", path.read_text(encoding="utf-8")))
+    return ops
+
+
+# 标准算子（jsonlogic 包内置）∪ 框架真实注册的自定义算子。模块加载时就地合并，消除
+# JSONLOGIC_SINGLE_KEYS 与框架的漂移（如 clamp/sqrt/lerp 以前不被识别为合法表达式）。
+JSONLOGIC_SINGLE_KEYS |= load_jsonlogic_custom_ops()
 
 
 def main(argv: list[str]) -> int:

@@ -166,6 +166,13 @@ class JsonWidgetBuilder {
     'overlay_spawner': JsonOverlaySpawnerWidget(),
   };
 
+  /// 已注册的 widget 类型集合（`_builders` 的 key）。
+  ///
+  /// 渲染端是唯一真相源：不在 `_builders` 里的 type 会被渲染成红色"未知类型"框。
+  /// 这个公开访问器让校验器 / 能力清单导出能拿到真实集合，不必再去 regex 解析本文件
+  /// （避免格式变动导致解析悄悄失效、与框架漂移）。
+  static Set<String> get registeredWidgetTypes => _builders.keys.toSet();
+
   /// 根据 JSON 配置构建对应的 Flutter Widget
   Widget build(
     BuildContext context,

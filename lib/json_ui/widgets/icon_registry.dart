@@ -3,6 +3,10 @@
 import 'package:flutter/material.dart';
 
 class IconRegistry {
+  /// 已注册的图标名集合（`_icons` 的 key）。供校验器 / 能力清单导出枚举真实集合，
+  /// 不必再 regex 解析本文件。未知静态图标名会显示红色问号并触发 validator ERROR。
+  static Set<String> get registeredNames => _icons.keys.toSet();
+
   static final Map<String, IconData> _icons = {
     // 导航
     'home': Icons.home,
