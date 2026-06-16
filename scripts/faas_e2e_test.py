@@ -78,16 +78,24 @@ def _user_id_from_token(supabase_url: str, anon_key: str, token: str) -> str:
 
 # ----------------------------------------------------------------------- generation
 
+# Prompt tuned from observed generation variance (service_id/error-handling/route
+# description drifted run-to-run): pin the service_id (also avoids the global-PK
+# collision across runs), state the input/error contract explicitly, and require a
+# route description. Keep the JSON-APP minimal so generation stays fast and focused.
+GEN_SERVICE_ID = "faas-e2e-sum"
 GEN_PROMPT = (
-    "请帮我做一个带后端的小应用。后端请用 Python/Flask 生成一个 FaaS 服务（写入 faas_bundle.json），"
-    "提供一个接口：POST /sum，请求体 JSON {\"a\": 数字, \"b\": 数字}，返回 JSON {\"result\": a+b}。"
-    "service.routes 必须声明 /sum 的 POST 方法，并由对应的 @app.post(\"/sum\") 实现。"
-    "同时生成一个简单的 JSON-APP 页面，通过 /api/faas/invoke/<service_id>/sum 调用该后端。"
+    "请帮我做一个带后端的小应用。后端用 Python/Flask 生成一个 FaaS 服务（写入 faas_bundle.json），严格满足："
+    f"\n- service_id 固定命名为 \"{GEN_SERVICE_ID}\"（务必用这个名字，不要自创其它名字）。"
+    "\n- 提供接口 POST /sum：请求体 JSON {\"a\": 数字, \"b\": 数字}，正常返回 JSON {\"result\": a+b}；"
+    "当 a 或 b 缺失或不是数字时，返回 HTTP 400 和 {\"error\": \"a and b must be numbers\"}。"
+    "\n- service.routes 必须声明 /sum 的 POST 方法并带一句简短 description，"
+    "且由对应的 @app.post(\"/sum\") 实现。"
+    f"\n- 再生成一个尽量简单的 JSON-APP 页面，通过相对地址 /api/faas/invoke/{GEN_SERVICE_ID}/sum 调用该后端。"
 )
 
 UPDATE_PROMPT = (
-    "请复用同一个后端服务（相同 service_id），把 /sum 接口改成同时返回字段 by=\"v2\"，"
-    "即返回 JSON {\"result\": a+b, \"by\": \"v2\"}，service.routes 保持声明 /sum 的 POST。"
+    f"请复用同一个后端服务（service_id 仍为 \"{GEN_SERVICE_ID}\"），把 /sum 接口改成同时返回字段 by=\"v2\"，"
+    "即返回 JSON {\"result\": a+b, \"by\": \"v2\"}；service.routes 保持声明 /sum 的 POST（带 description）。"
 )
 
 
@@ -258,6 +266,15 @@ def main() -> int:
         step("negative_undeclared_route", status=neg.status_code, enforced=(neg.status_code == 404))
         if neg.status_code != 404:
             _log(f"WARN: undeclared route returned {neg.status_code}, expected 404 (allowlist may be empty)")
+
+    # 4c) soft checks for the tuned prompt's contract (warn, don't fail — the chain is
+    # what must pass; these measure whether the prompt pinned the generated details).
+    if service_id != GEN_SERVICE_ID:
+        _log(f"WARN: service_id={service_id!r} != pinned {GEN_SERVICE_ID!r} (prompt pin not honored)")
+    bad = invoke_proxy(args.base_url, service_id, route_path, "POST", token, json={"a": "x", "b": 3})
+    step("bad_input_contract", status=bad.status_code, returns_400=(bad.status_code == 400))
+    if bad.status_code != 400:
+        _log(f"WARN: bad input returned {bad.status_code}, expected 400 per contract")
 
     # 5) update path (optional)
     update_info = None
