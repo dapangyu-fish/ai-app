@@ -904,6 +904,39 @@ def _upload_temp_json_app(data: bytes) -> str:
     )
 
 
+_FAAS_INVOKE_ID_RE = re.compile(r'(/api/faas/invoke/)([^/"\'\s\?\\]+)')
+
+
+def _rewrite_faas_invoke_service_id(data: bytes, deployed: List[tuple]) -> bytes:
+    """把 JSON-APP 里 `/api/faas/invoke/<x>/...` 的 `<x>` 改写成真实部署的 service_id。
+
+    AI 常用 slug（或自造名）当 invoke id，而后端为保证全局唯一会生成 `svc-<hex>`，
+    两者对不上 → 客户端调一个不存在的服务 → 404。后端在部署后已知真实 id，这里统一兜底：
+    - 本轮只部署了 1 个服务（最常见）：所有 invoke id 一律改成它；
+    - 多个服务：按 slug / 显式 id 别名映射改写，未命中的保持原样。
+    """
+    if not deployed:
+        return data
+    try:
+        text = data.decode("utf-8")
+    except Exception:
+        return data
+    if "/api/faas/invoke/" not in text:
+        return data
+    if len(deployed) == 1:
+        only_id = deployed[0][1]
+        return _FAAS_INVOKE_ID_RE.sub(
+            lambda m: m.group(1) + only_id, text
+        ).encode("utf-8")
+    alias_map: dict = {}
+    for aliases, service_id in deployed:
+        for alias in aliases:
+            alias_map[alias] = service_id
+    return _FAAS_INVOKE_ID_RE.sub(
+        lambda m: m.group(1) + alias_map.get(m.group(2), m.group(2)), text
+    ).encode("utf-8")
+
+
 def _resolve_server_upload_actions(
     actions: List[dict],
     session_id: str,
@@ -916,6 +949,7 @@ def _resolve_server_upload_actions(
 ) -> List[dict]:
     resolved: List[dict] = []
     last_json_app_ready: Optional[dict] = None
+    deployed_faas: List[tuple] = []  # [(aliases:set, real_service_id)] 供 app.json 改写
     for action in actions:
         if action.get("type") == _SERVER_FAAS_ACTION:
             relative_path = str(action.get("path") or "faas_bundle.json")
@@ -946,6 +980,16 @@ def _resolve_server_upload_actions(
                     "invoke_url": f"/api/faas/invoke/{deploy_result.service_id}",
                     "routes": deploy_result.routes,
                 })
+                # 记录 AI 给这个服务起的别名（slug / 显式 service_id），稍后把 JSON-APP
+                # 里指向别名的 invoke 地址改写成真实 service_id。
+                _svc_block = bundle.get("service") if isinstance(bundle.get("service"), dict) else {}
+                _aliases = set()
+                for _src in (_svc_block, bundle):
+                    for _key in ("slug", "service_id"):
+                        _alias = str((_src or {}).get(_key) or "").strip()
+                        if _alias and _alias != deploy_result.service_id:
+                            _aliases.add(_alias)
+                deployed_faas.append((_aliases, deploy_result.service_id))
             except Exception as exc:
                 if validation_error_type and isinstance(exc, validation_error_type):
                     logger.warning(
@@ -978,6 +1022,7 @@ def _resolve_server_upload_actions(
             else _artifact_from_local_workspace(workspace, relative_path, session_id)
         )
         repaired = _repair_validate_json_bytes(raw, session_id)
+        repaired = _rewrite_faas_invoke_service_id(repaired, deployed_faas)
         url = _upload_temp_json_app(repaired)
         last_json_app_ready = {"type": "json_app_ready", "url": url}
         resolved.append(last_json_app_ready)

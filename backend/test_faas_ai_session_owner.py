@@ -256,6 +256,39 @@ def test_client_action_compaction_keeps_app_upload_and_faas_deploys() -> None:
     ]
 
 
+def test_rewrite_faas_invoke_service_id_uses_real_id() -> None:
+    app = (
+        b'{"u1":"/api/faas/invoke/todo-api/todos",'
+        b'"u2":"/api/faas/invoke/todo-api/todos/{{ global.id }}"}'
+    )
+    out = ai_session._rewrite_faas_invoke_service_id(
+        app, [({"todo-api"}, "svc-abc123")]
+    ).decode()
+    assert "/api/faas/invoke/svc-abc123/todos" in out
+    assert "todo-api" not in out
+    assert "{{ global.id }}" in out  # 模板原样保留
+    # 幂等：已是真实 id 不再变
+    assert (
+        ai_session._rewrite_faas_invoke_service_id(
+            out.encode(), [({"todo-api"}, "svc-abc123")]
+        ).decode()
+        == out
+    )
+    # 单服务：AI 用任何别的名字也兜得住（全部改成唯一的真实 id）
+    out2 = ai_session._rewrite_faas_invoke_service_id(
+        b'{"u":"/api/faas/invoke/whatever-name/x"}', [(set(), "svc-only")]
+    ).decode()
+    assert "/api/faas/invoke/svc-only/x" in out2
+    # 多服务：按别名映射，未命中保持原样
+    out3 = ai_session._rewrite_faas_invoke_service_id(
+        b'{"a":"/api/faas/invoke/todo-api/x","b":"/api/faas/invoke/note-api/y"}',
+        [({"todo-api"}, "svc-a"), ({"note-api"}, "svc-b")],
+    ).decode()
+    assert "/api/faas/invoke/svc-a/x" in out3 and "/api/faas/invoke/svc-b/y" in out3
+    # 无部署：原样返回
+    assert ai_session._rewrite_faas_invoke_service_id(app, []) == app
+
+
 if __name__ == "__main__":
     test_faas_action_owner_comes_from_authenticated_session()
     test_faas_action_can_deploy_agent_pull_artifact()
@@ -263,4 +296,5 @@ if __name__ == "__main__":
     test_faas_prompt_note_mentions_route_enforcement()
     test_faas_manifest_initial_file_lists_user_services()
     test_client_action_compaction_keeps_app_upload_and_faas_deploys()
+    test_rewrite_faas_invoke_service_id_uses_real_id()
     print(json.dumps({"ok": True}, sort_keys=True))
