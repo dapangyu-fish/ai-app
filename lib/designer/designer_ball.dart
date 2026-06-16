@@ -219,6 +219,7 @@ class _DesignerBallState extends State<DesignerBall>
       if (mounted) setState(() {}); // 触发一次 rebuild 让 _asrMode getter 拿到新值
     });
     AsrModePrefs.notifier.addListener(_onAsrModeChanged);
+    AiChatService.agentRoutingRevision.addListener(_onAgentScopeChanged);
     // 加载 AI 对话 session，加载完之后异步检查上一轮有没有未完成 / 已完成的任务
     // 不 await，不阻塞 UI 启动
     _chatService.loadSession().then((_) async {
@@ -249,6 +250,17 @@ class _DesignerBallState extends State<DesignerBall>
     debugPrint(
       '[DesignerBall] ASR mode changed -> ${AsrModePrefs.notifier.value.name}',
     );
+  }
+
+  /// 设置页切换 平台/私有 agent node → 悬浮球立即重建字幕选择器（之前要等下一次自发
+  /// setState 才同步）。switchAgentScope 已拉好新 scope 的 providers，这里只需把未提交的
+  /// 活跃会话收敛到新 scope 再 rebuild。
+  void _onAgentScopeChanged() {
+    if (!mounted) return;
+    unawaited(() async {
+      await _chatService.reconcileActiveScopeIfUnlocked();
+      if (mounted) setState(() {});
+    }());
   }
 
   /// 初始化豆包ASR连接
@@ -424,6 +436,7 @@ class _DesignerBallState extends State<DesignerBall>
     _speech?.stop();
     _scrollController.dispose();
     AsrModePrefs.notifier.removeListener(_onAsrModeChanged);
+    AiChatService.agentRoutingRevision.removeListener(_onAgentScopeChanged);
     AuthService.authNotifier.removeListener(_onAuthChanged);
     appLifecycleEvent.removeListener(_onAppLifecycleChanged);
     super.dispose();

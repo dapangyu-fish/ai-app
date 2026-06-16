@@ -246,8 +246,13 @@ class _ChatOverlayState extends State<ChatOverlay> {
   }
 
   String _agentLabelForProvider(AiProvider provider) {
-    final agentId = provider.id == widget.selectedProviderId
-        ? widget.selectedAgentId
+    // 对话的 agent 是会话级单一运行时：凡是支持它的 provider 都显示这个 agent，
+    // 而不是各 provider 各自记忆的默认（否则选了 deepseek+codex 后 minimax 仍显示 claude）。
+    final selectedAgentId = widget.selectedAgentId;
+    final agentId =
+        (selectedAgentId.isNotEmpty &&
+            _providerSupportsAgent(provider, selectedAgentId))
+        ? selectedAgentId
         : AiChatService.selectedAgentForProvider(provider.id);
     for (final agent in widget.agents) {
       if (agent.id == agentId) return agent.name;
@@ -1526,9 +1531,14 @@ class _AiProviderDropdownPanel extends StatelessWidget {
           final selected = provider.id == selectedProviderId;
           final expanded = expandedProviderId == provider.id;
           final providerAgents = agentsForProvider(provider);
+          // 展开某个 provider 的 agent 列表时，凡支持本次对话 agent 的都高亮该 agent，
+          // 与行内 chip 标签保持一致（会话级单一 agent）。
           final providerAgentId = selected
               ? selectedAgentId
-              : AiChatService.selectedAgentForProvider(provider.id);
+              : (selectedAgentId.isNotEmpty &&
+                        providerSupportsSelectedAgent(provider)
+                    ? selectedAgentId
+                    : AiChatService.selectedAgentForProvider(provider.id));
           final enabled =
               selected ||
               !agentLocked ||

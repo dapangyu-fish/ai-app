@@ -380,6 +380,18 @@ class AiChatService {
     await prefs.setString(_agentScopeKey, _selectedAgentScope);
   }
 
+  /// 平台/私有 agent node 切换的全局信号。常驻的悬浮球(DesignerBall)永不重新 initState，
+  /// 监听它即可在设置页改完 scope 后立刻重建字幕选择器(对齐 AsrModePrefs.notifier 的修法)。
+  /// 用自增 revision 而非 scope 字符串：保证即使 scope 没变(仅 providers 刷新)也能通知。
+  static final ValueNotifier<int> agentRoutingRevision = ValueNotifier<int>(0);
+
+  /// 设置页切换 scope 的统一入口：写 scope → 拉新 scope 的 providers → 通知监听者。
+  static Future<void> switchAgentScope(String scope) async {
+    await setAgentScope(scope);
+    await fetchProviders(agentScope: _selectedAgentScope);
+    agentRoutingRevision.value = agentRoutingRevision.value + 1;
+  }
+
   static Future<void> setAgent(String agentId) async {
     await setAgentForProvider(_selectedProvider, agentId);
   }
@@ -661,6 +673,28 @@ class AiChatService {
     await _syncDefaultsFromActive();
     await _persistSessions();
     return true;
+  }
+
+  /// 全局 scope 切换后调用：把"未提交"的活跃会话迁到新 scope，并把 provider/agent
+  /// 收敛到新 scope 下合法取值。已提交（进行中）的会话保持不动——不能中途换节点。
+  /// 需先 fetchProviders(新 scope) 让 [_providers] 是新列表，再调用本方法。
+  Future<void> reconcileActiveScopeIfUnlocked() async {
+    final active = _active;
+    if (active == null) return;
+    if (activeAgentLocked) return;
+    active.agentScope = _selectedAgentScope;
+    final providerIds = _providers.map((p) => p.id).toSet();
+    if (_providers.isNotEmpty && !providerIds.contains(active.providerId)) {
+      active.providerId =
+          (_selectedProvider.isNotEmpty &&
+              providerIds.contains(_selectedProvider))
+          ? _selectedProvider
+          : _providers.first.id;
+    }
+    active.agentId = selectedAgentForProvider(active.providerId);
+    active.updatedAt = DateTime.now().millisecondsSinceEpoch;
+    await _syncDefaultsFromActive();
+    await _persistSessions();
   }
 
   /// 当前所有 session（含未提交的内存占位），按 updatedAt 倒序

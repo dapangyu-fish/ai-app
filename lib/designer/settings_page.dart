@@ -78,10 +78,11 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _selectAgentScope(String scope) async {
-    await AiChatService.setAgentScope(scope);
+    // switchAgentScope 内部已：写 scope + 拉新 scope 的 providers + 发全局通知
+    // （DesignerBall 监听后会立刻重建字幕选择器，不再延迟同步）。
+    await AiChatService.switchAgentScope(scope);
     if (!mounted) return;
     setState(() => _agentScope = AiChatService.selectedAgentScope);
-    await _fetchProviders();
   }
 
   String _privateAgentText({
