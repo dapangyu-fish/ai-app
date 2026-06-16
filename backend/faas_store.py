@@ -1238,6 +1238,8 @@ def _deploy_openfaas_function(*, function_name: str, service_id: str, commit_sha
     if FAAS_OPENFAAS_SCALE_ZERO:
         labels.update({
             "com.openfaas.scale.zero": "true",
+            # Idle duration before scaling a function to zero (default 10 minutes).
+            "com.openfaas.scale.zero.duration": (os.environ.get("FAAS_OPENFAAS_SCALE_ZERO_DURATION", "").strip() or "10m"),
             "com.openfaas.scale.min": str(max(0, FAAS_OPENFAAS_MIN_REPLICAS)),
             "com.openfaas.scale.max": str(max(1, FAAS_OPENFAAS_MAX_REPLICAS)),
         })

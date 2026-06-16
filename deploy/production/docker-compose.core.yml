@@ -125,6 +125,7 @@ services:
       FAAS_OPENFAAS_PASSWORD: "${FAAS_OPENFAAS_PASSWORD:-}"
       FAAS_OPENFAAS_RUNTIME_IMAGE: "${FAAS_OPENFAAS_RUNTIME_IMAGE:-dapangyu/myapp-faas-runtime:agent-control-plane}"
       FAAS_OPENFAAS_SCALE_ZERO: "${FAAS_OPENFAAS_SCALE_ZERO:-1}"
+      FAAS_OPENFAAS_SCALE_ZERO_DURATION: "${FAAS_OPENFAAS_SCALE_ZERO_DURATION:-10m}"
       FAAS_OPENFAAS_MIN_REPLICAS: "${FAAS_OPENFAAS_MIN_REPLICAS:-0}"
       FAAS_OPENFAAS_MAX_REPLICAS: "${FAAS_OPENFAAS_MAX_REPLICAS:-1}"
       FAAS_OPENFAAS_READ_TIMEOUT: "${FAAS_OPENFAAS_READ_TIMEOUT:-60s}"
@@ -213,6 +214,7 @@ services:
       FAAS_OPENFAAS_PASSWORD: "${FAAS_OPENFAAS_PASSWORD:-}"
       FAAS_OPENFAAS_RUNTIME_IMAGE: "${FAAS_OPENFAAS_RUNTIME_IMAGE:-dapangyu/myapp-faas-runtime:agent-control-plane}"
       FAAS_OPENFAAS_SCALE_ZERO: "${FAAS_OPENFAAS_SCALE_ZERO:-1}"
+      FAAS_OPENFAAS_SCALE_ZERO_DURATION: "${FAAS_OPENFAAS_SCALE_ZERO_DURATION:-10m}"
       FAAS_OPENFAAS_MIN_REPLICAS: "${FAAS_OPENFAAS_MIN_REPLICAS:-0}"
       FAAS_OPENFAAS_MAX_REPLICAS: "${FAAS_OPENFAAS_MAX_REPLICAS:-1}"
       FAAS_OPENFAAS_READ_TIMEOUT: "${FAAS_OPENFAAS_READ_TIMEOUT:-60s}"
@@ -223,6 +225,31 @@ services:
       FAAS_LOCAL_DOCKER_HOST_CODE_ROOT: "${FAAS_LOCAL_DOCKER_HOST_CODE_ROOT:-${MYAPP_DATA_ROOT:-/mnt/myapp}/faas/code}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/files:/etc/myapp/secret-files:ro
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/faas:/mnt/myapp/faas
+
+  faas-push-worker:
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyu/myapp-backend:agent-control-plane}"
+    container_name: myapp-faas-push-worker
+    restart: unless-stopped
+    depends_on:
+      jsonapp-postgres:
+        condition: service_healthy
+    working_dir: /app/backend
+    command: ["python", "faas_push_worker.py"]
+    env_file:
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
+        required: false
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/faas.env
+        required: false
+    environment:
+      DB_HOST: jsonapp-postgres
+      DB_PORT: "5432"
+      DB_NAME: "${JSONAPP_DB_NAME:-jsonapp}"
+      DB_USER: "${JSONAPP_DB_USER:-jsonapp}"
+      DB_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
+      FAAS_CODE_ROOT: "${FAAS_CODE_ROOT:-/mnt/myapp/faas/code}"
+    volumes:
       - ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/files:/etc/myapp/secret-files:ro
       - ${MYAPP_DATA_ROOT:-/mnt/myapp}/faas:/mnt/myapp/faas
 

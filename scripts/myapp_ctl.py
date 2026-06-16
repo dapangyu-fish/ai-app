@@ -117,6 +117,7 @@ DEPLOY_ORDER = [
     "registry",
     "backend",
     "ai-worker",
+    "faas-push-worker",
     "config-center",
     "user-center",
     "edge-nginx",
@@ -133,7 +134,7 @@ IMAGE_BASE_TARGETS = {
     "agent-node": ("agent_node_base", "deploy/production/Dockerfile.agent-node-base"),
     "backend": ("backend_base", "deploy/production/Dockerfile.backend-base"),
 }
-BACKEND_IMAGE_SERVICES = {"backend", "ai-worker", "registry", "config-center", "user-center", "faas-control", "faas-worker"}
+BACKEND_IMAGE_SERVICES = {"backend", "ai-worker", "registry", "config-center", "user-center", "faas-control", "faas-worker", "faas-push-worker"}
 FAAS_IMAGE_SERVICES = {"faas-control", "faas-worker", "faas-runtime"}
 DEFAULT_NETWORKS = ["myapp_default", "myapp_agent_runtime"]
 COMPOSE_ENV_FILE_NAMES = [
@@ -2358,23 +2359,40 @@ def _sync_runtime_secrets_from_host_config(data_root: Path | None = None) -> Non
     src_files = source / _SETUP_SECRET_FILE_HOST_DIR
     dst_files = target / _SETUP_SECRET_FILE_HOST_DIR
     if src_files.exists():
-        if dst_files.exists():
-            shutil.rmtree(dst_files)
-        shutil.copytree(src_files, dst_files)
-        for root, dirs, files in os.walk(dst_files):
-            for dirname in dirs:
-                try:
-                    os.chmod(Path(root) / dirname, 0o700)
-                except OSError:
-                    pass
-            for filename in files:
-                try:
-                    os.chmod(Path(root) / filename, 0o600)
-                except OSError:
-                    pass
+        # Sync in-place. NEVER rmtree/replace dst_files itself: bind mounts into
+        # running containers (/etc/myapp/secret-files) pin the directory inode, so
+        # replacing it makes the container see an empty dir until it is recreated
+        # (this is what stranded the FaaS git deploy key after a sync).
+        dst_files.mkdir(parents=True, exist_ok=True)
         os.chmod(dst_files, 0o700)
+        kept = set()
+        for src_child in src_files.rglob("*"):
+            rel = src_child.relative_to(src_files)
+            dst_child = dst_files / rel
+            if src_child.is_dir():
+                dst_child.mkdir(parents=True, exist_ok=True)
+                try:
+                    os.chmod(dst_child, 0o700)
+                except OSError:
+                    pass
+            elif src_child.is_file():
+                kept.add(rel)
+                _copy_file_secure(src_child, dst_child, mode=0o600)
+        for dst_child in list(dst_files.rglob("*")):
+            if dst_child.is_file() and dst_child.relative_to(dst_files) not in kept:
+                try:
+                    dst_child.unlink()
+                except OSError:
+                    pass
     elif dst_files.exists():
-        shutil.rmtree(dst_files)
+        for dst_child in list(dst_files.iterdir()):
+            if dst_child.is_dir():
+                shutil.rmtree(dst_child)
+            else:
+                try:
+                    dst_child.unlink()
+                except OSError:
+                    pass
 
 
 def _decode_env_value(value: str) -> str:

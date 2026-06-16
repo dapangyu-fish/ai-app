@@ -18,6 +18,14 @@
       "compose_service": "ai-worker",
       "container": "myapp-ai-worker"
     },
+    "faas-push-worker": {
+      "group": "faas",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "faas-push-worker",
+      "container": "myapp-faas-push-worker"
+    },
     "registry": {
       "group": "core",
       "kind": "compose",
