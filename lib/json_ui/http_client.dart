@@ -117,6 +117,64 @@ class DslHttpClient {
     }
   }
 
+  /// HTTP PATCH（部分更新）
+  Future<Map<String, dynamic>> patch(
+    String url, {
+    dynamic body,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        _resolveUrl(url),
+        data: body,
+        options: Options(headers: headers, contentType: 'application/json'),
+      );
+      return _buildResult(response);
+    } on DioException catch (e) {
+      return _buildError(e);
+    } catch (e) {
+      return {'status': -1, 'data': null, 'headers': {}, 'error': e.toString()};
+    }
+  }
+
+  /// HTTP HEAD（只取状态码 + 响应头，无 body；常用于存在性/鉴权探测）
+  Future<Map<String, dynamic>> head(
+    String url, {
+    Map<String, dynamic>? queryParams,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final response = await _dio.head(
+        _resolveUrl(url),
+        queryParameters: queryParams,
+        options: Options(headers: headers),
+      );
+      return _buildResult(response);
+    } on DioException catch (e) {
+      return _buildError(e);
+    } catch (e) {
+      return {'status': -1, 'data': null, 'headers': {}, 'error': e.toString()};
+    }
+  }
+
+  /// HTTP OPTIONS（探测允许的方法 / CORS 预检，取状态码 + 响应头）
+  Future<Map<String, dynamic>> options(
+    String url, {
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final response = await _dio.request(
+        _resolveUrl(url),
+        options: Options(method: 'OPTIONS', headers: headers),
+      );
+      return _buildResult(response);
+    } on DioException catch (e) {
+      return _buildError(e);
+    } catch (e) {
+      return {'status': -1, 'data': null, 'headers': {}, 'error': e.toString()};
+    }
+  }
+
   /// HTTP Server-Sent Events stream.
   ///
   /// Returns a summary map and invokes [onEvent] for each parsed SSE event.

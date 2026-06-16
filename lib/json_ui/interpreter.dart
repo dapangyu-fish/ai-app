@@ -1553,6 +1553,12 @@ class JsonInterpreter extends ChangeNotifier {
         return await _builtinHttpPut(resolvedArgs);
       case '@http_delete':
         return await _builtinHttpDelete(resolvedArgs);
+      case '@http_patch':
+        return await _builtinHttpPatch(resolvedArgs);
+      case '@http_head':
+        return await _builtinHttpHead(resolvedArgs);
+      case '@http_options':
+        return await _builtinHttpOptions(resolvedArgs);
       case '@http_sse':
         return await _builtinHttpSse(args, resolvedArgs);
 
@@ -2972,6 +2978,32 @@ class JsonInterpreter extends ChangeNotifier {
     final url = args['url']?.toString() ?? '';
     final headers = _toStringMap(args['headers']);
     return await _httpClient.delete(url, headers: headers);
+  }
+
+  Future<Map<String, dynamic>> _builtinHttpPatch(
+    Map<String, dynamic> args,
+  ) async {
+    final url = args['url']?.toString() ?? '';
+    final body = _evaluateExpression(args['body']);
+    final headers = _toStringMap(args['headers']);
+    return await _httpClient.patch(url, body: body, headers: headers);
+  }
+
+  Future<Map<String, dynamic>> _builtinHttpHead(
+    Map<String, dynamic> args,
+  ) async {
+    final url = args['url']?.toString() ?? '';
+    final query = args['query'] as Map<String, dynamic>?;
+    final headers = _toStringMap(args['headers']);
+    return await _httpClient.head(url, queryParams: query, headers: headers);
+  }
+
+  Future<Map<String, dynamic>> _builtinHttpOptions(
+    Map<String, dynamic> args,
+  ) async {
+    final url = args['url']?.toString() ?? '';
+    final headers = _toStringMap(args['headers']);
+    return await _httpClient.options(url, headers: headers);
   }
 
   Future<Map<String, dynamic>> _builtinHttpSse(

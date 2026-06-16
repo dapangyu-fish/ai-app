@@ -396,14 +396,17 @@ Agent 一个中立关卡节奏骨架：安全开场、首次接敌、掩体交�
 
 ### 4.3 HTTP 请求
 
-`@http_get` / `@http_post` / `@http_put` / `@http_delete` 返回 `{ "status": int, "data": dynamic, "headers": {}, "error": String? }`。`@http_sse` 返回 `{ "status": int, "events": [], "done": bool, "error": String? }`，并可在流式过程中触发回调。
+`@http_get` / `@http_post` / `@http_put` / `@http_delete` / `@http_patch` / `@http_head` / `@http_options` 返回 `{ "status": int, "data": dynamic, "headers": {}, "error": String? }`（`@http_head` / `@http_options` 无响应体，`data` 为空，靠 `status` / `headers` 判断）。`@http_sse` 返回 `{ "status": int, "events": [], "done": bool, "error": String? }`，并可在流式过程中触发回调。
 
 | 函数 | 参数 | 说明 |
 |------|------|------|
 | `@http_get` | `{ "url": "...", "query": {...}, "headers": {...} }` | GET 请求 |
 | `@http_post` | `{ "url": "...", "body": {...}, "headers": {...}, "content_type": "application/json" }` | POST 请求 |
-| `@http_put` | `{ "url": "...", "body": {...}, "headers": {...} }` | PUT 请求 |
+| `@http_put` | `{ "url": "...", "body": {...}, "headers": {...} }` | PUT 请求（整体替换） |
+| `@http_patch` | `{ "url": "...", "body": {...}, "headers": {...} }` | PATCH 请求（部分更新） |
 | `@http_delete` | `{ "url": "...", "headers": {...} }` | DELETE 请求 |
+| `@http_head` | `{ "url": "...", "query": {...}, "headers": {...} }` | HEAD 请求（只取 `status` / `headers`，无 body；存在性/鉴权探测） |
+| `@http_options` | `{ "url": "...", "headers": {...} }` | OPTIONS 请求（探测允许的方法 / CORS） |
 | `@http_sse` | `{ "url": "...", "method": "POST", "body": {...}, "headers": {...}, "bind": "global.stream", "onEvent": [...] }` | Server-Sent Events。每个事件形如 `{raw,event,id,data,json,done,delta}`；`delta` 自动兼容 OpenAI Chat Completions / Responses 常见文本增量。Web 端走浏览器兼容桥，若目标服务未配 CORS 仍会被浏览器拦截 |
 
 **示例**：
