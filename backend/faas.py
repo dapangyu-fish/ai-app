@@ -78,10 +78,20 @@ def _json_error(message: str, status: int, *, code: str = "FAAS_ERROR") -> tuple
 
 
 def list_user_services():
+    include_disabled = str(request.args.get("include_disabled") or request.args.get("all") or "").strip().lower() in {"1", "true", "yes", "on"}
+    all_users = str(request.args.get("all_users") or "").strip().lower() in {"1", "true", "yes", "on"}
+    if all_users:
+        # Host/operator view: list every owner's services. Admin-only when auth is
+        # enforced; an auth-disabled host deployment uses it from the operator CLI.
+        if FAAS_REQUIRE_AUTH:
+            return _json_error("all_users listing is admin-only", 403, code="FAAS_FORBIDDEN")
+        try:
+            return jsonify({"services": list_services("", include_disabled=include_disabled, all_services=True)})
+        except Exception as exc:
+            return _json_error(str(exc), 500)
     user_id = _request_user_id()
     if not user_id:
         return _json_error("user_id is required", 401 if FAAS_REQUIRE_AUTH else 400, code="FAAS_USER_REQUIRED")
-    include_disabled = str(request.args.get("include_disabled") or request.args.get("all") or "").strip().lower() in {"1", "true", "yes", "on"}
     try:
         return jsonify({"services": list_services(user_id, include_disabled=include_disabled)})
     except Exception as exc:

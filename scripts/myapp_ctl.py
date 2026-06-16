@@ -5452,8 +5452,14 @@ def cmd_faas(args) -> int:
             return 1
         return _print_faas_health(data, as_json=args.json)
     if args.faas_cmd == "ls":
+        # Default (no --user-id) lists ALL services on this host (operator view);
+        # --user-id scopes to one owner. --all also includes disabled services.
+        user_id = (getattr(args, "user_id", "") or "").strip()
+        params = [f"user_id={quote(user_id, safe='')}"] if user_id else ["all_users=1"]
+        if getattr(args, "all", False):
+            params.append("include_disabled=1")
         status, data, text = _http_request_json(
-            f"{base_url}/api/faas/services{_faas_user_query(args)}",
+            f"{base_url}/api/faas/services?{'&'.join(params)}",
             token=token,
             timeout=15,
         )
@@ -5461,28 +5467,45 @@ def cmd_faas(args) -> int:
             print(f"faas ls failed: {status or '-'} {text[:500]}", file=sys.stderr)
             return 1
         services = data.get("services", []) if isinstance(data, dict) else []
+        # Instances/replicas per function from the faasd/openfaas gateway.
+        replicas: dict[str, object] = {}
+        try:
+            gateway, gw_user, gw_pass, _mode = _faas_gateway_creds(args)
+            if gateway:
+                fn_http, fn_body = _faas_gateway_get(gateway, "/system/functions", username=gw_user, password=gw_pass, timeout=8)
+                if fn_http == 200 and fn_body:
+                    for fn in json.loads(fn_body):
+                        if isinstance(fn, dict) and fn.get("name"):
+                            rep = fn.get("replicas")
+                            if rep is None:
+                                rep = fn.get("availableReplicas")
+                            replicas[str(fn["name"])] = rep if rep is not None else 1
+        except Exception:
+            replicas = {}
         if args.json:
             print(json.dumps(data, ensure_ascii=False))
             return 0
         rows = []
         for item in services:
             routes = item.get("routes") or []
+            fn = item.get("function_name", "-")
             rows.append({
                 "service_id": item.get("service_id", "-"),
+                "owner": (str(item.get("owner_user_id", "") or "-"))[:13],
                 "status": item.get("status", "-"),
-                "slug": item.get("service_slug", "-"),
+                "inst": replicas.get(fn, "-") if replicas else "?",
                 "routes": len(routes) if isinstance(routes, list) else "-",
-                "function": item.get("function_name", "-"),
-                "updated": item.get("updated_at", "-"),
+                "function": fn,
             })
-        print(f"faas services: {len(rows)}")
+        scope = f"owner {user_id[:13]}" if user_id else "all owners on this host"
+        print(f"faas services: {len(rows)}  ({scope})")
         _print_table(rows, [
             ("service_id", "SERVICE"),
+            ("owner", "OWNER"),
             ("status", "STATUS"),
-            ("slug", "SLUG"),
+            ("inst", "INST"),
             ("routes", "ROUTES"),
             ("function", "FUNCTION"),
-            ("updated", "UPDATED"),
         ])
         return 0
     if args.faas_cmd == "disable":

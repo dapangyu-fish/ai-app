@@ -388,22 +388,32 @@ def openfaas_gateway_for_service(service: dict[str, Any] | None) -> str:
     return str(FAAS_OPENFAAS_GATEWAY or "").strip().rstrip("/")
 
 
-def list_services(user_id: str, *, include_disabled: bool = False) -> list[dict[str, Any]]:
+def list_services(
+    user_id: str,
+    *,
+    include_disabled: bool = False,
+    all_services: bool = False,
+) -> list[dict[str, Any]]:
     ensure_tables()
     disabled_clause = "" if include_disabled else "AND status <> 'disabled'"
-    rows = db_query(
-        f"""
-        SELECT service_id, owner_user_id, service_slug, function_name, status,
-               active_commit, active_path, public_base_url, routes, meta_json,
-               created_at, updated_at
-        FROM faas_services
-        WHERE owner_user_id = %s
-          {disabled_clause}
-        ORDER BY updated_at DESC
-        """,
-        [user_id],
-        fetch_all=True,
+    cols = (
+        "service_id, owner_user_id, service_slug, function_name, status, "
+        "active_commit, active_path, public_base_url, routes, meta_json, "
+        "created_at, updated_at"
     )
+    if all_services:
+        # Host/operator view: every owner's services (no owner filter).
+        rows = db_query(
+            f"SELECT {cols} FROM faas_services WHERE TRUE {disabled_clause} ORDER BY updated_at DESC",
+            [],
+            fetch_all=True,
+        )
+    else:
+        rows = db_query(
+            f"SELECT {cols} FROM faas_services WHERE owner_user_id = %s {disabled_clause} ORDER BY updated_at DESC",
+            [user_id],
+            fetch_all=True,
+        )
     return rows or []
 
 
