@@ -455,6 +455,8 @@ _MESSAGES = {
   image ls|build|pull|push      管理 Docker 镜像
   agent ls                      查看当前机器正在运行的 Agent
   agent-node ls|status|register 管理集群 Agent 物理节点
+  faas ls|node|disable|mode     管理 AI 生成的 FaaS 后端（服务 / 节点）
+  ingress <命令>                管理 Docker 化 edge-nginx 入口
   uninstall --yes               停止部署；保留配置和 data root 数据
 
 示例:
@@ -493,6 +495,8 @@ Images and agents:
   image ls|build|pull|push      Manage Docker images
   agent ls                      Inspect running agents on this host
   agent-node ls|status|register Manage cluster agent hosts
+  faas ls|node|disable|mode     Manage generated FaaS backends (services / nodes)
+  ingress <command>             Manage Docker-based edge-nginx ingress
   uninstall --yes               Stop deployment; preserve config and data root
 
 Examples:
@@ -531,6 +535,8 @@ Images und Agents:
   image ls|build|pull|push      Docker-Images verwalten
   agent ls                      Laufende Agents auf diesem Host anzeigen
   agent-node ls|status|register Cluster-Agent-Hosts verwalten
+  faas ls|node|disable|mode     Generierte FaaS-Backends verwalten (Dienste / Nodes)
+  ingress <Befehl>              Docker-basiertes edge-nginx Ingress verwalten
   uninstall --yes               Deployment stoppen; Konfiguration und data root behalten
 
 Beispiele:
@@ -569,6 +575,8 @@ Imagenes y agentes:
   image ls|build|pull|push      Gestiona imagenes Docker
   agent ls                      Consulta agents activos en este host
   agent-node ls|status|register Gestiona hosts agent del cluster
+  faas ls|node|disable|mode     Gestiona backends FaaS generados (servicios / nodos)
+  ingress <comando>             Gestiona ingress edge-nginx basado en Docker
   uninstall --yes               Detiene el despliegue; conserva configuracion y data root
 
 Ejemplos:
