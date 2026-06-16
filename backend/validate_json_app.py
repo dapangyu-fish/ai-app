@@ -393,6 +393,7 @@ class Validator:
         self.root = root
         self.builtin_calls = builtin_calls
         self.allowed_icon_names = load_allowed_icon_names()
+        self.registered_widget_types = load_registered_widget_types()
         self.findings: list[Finding] = []
         self.dependencies: set[str] = set()
         self.self_package_names: set[str] = set()
@@ -495,6 +496,24 @@ class Validator:
 
         if self._is_ui_path(path):
             self._validate_icon_fields(node, path)
+
+            # widget 类型必须在客户端 _builders 里注册，否则渲染成"未知类型"错误框。
+            # game 逻辑里的 entity 类型走另一套校验，这里排除（in_game_logic）。
+            if (
+                not in_game_logic
+                and self._is_widget_slot_path(path)
+                and isinstance(node_type, str)
+                and node_type
+                and self.registered_widget_types
+                and node_type not in self.registered_widget_types
+            ):
+                self.error(
+                    self._path(path, "type"),
+                    f"unknown widget type: {node_type!r}; only types registered in "
+                    "lib/json_ui/widget_builder.dart _builders render. "
+                    "Use container with layout:row/column (not row/column/flex), "
+                    "input (not text_input), etc.",
+                )
 
             if "children" in node and not isinstance(node.get("children"), list):
                 self.error(
@@ -814,6 +833,12 @@ class Validator:
     @staticmethod
     def _is_ui_path(path: str) -> bool:
         return path == "$.ui" or path.startswith("$.ui.")
+
+    @staticmethod
+    def _is_widget_slot_path(path: str) -> bool:
+        # 只有 children[]/child 槽位里的节点才是"被 buildWidget 渲染的 widget"。
+        # position:{type:flex}、action:{type:call} 等 type 字段不是 widget，排除。
+        return path.endswith(".child") or bool(re.search(r"\.children\[\d+\]$", path))
 
     @staticmethod
     def _is_app_bar_path(path: str) -> bool:
@@ -2057,6 +2082,35 @@ def load_allowed_icon_names() -> set[str]:
     for match in pattern.finditer(path.read_text(encoding="utf-8")):
         names.add(match.group(1))
     return names
+
+
+def load_registered_widget_types() -> set[str]:
+    """从客户端 widget_builder.dart 的 _builders map 抽取已注册的 widget 类型。
+
+    渲染端是唯一真相源：不在 _builders 里的 type，客户端会渲染成红色"未知类型"
+    错误框（元素缺失）。这里把同一份集合喂给 validator，让 AI 自创的控件类型
+    （如 row/column/flex/text_input）在生成阶段就被 ERROR 拦下、被迫改对，而不是
+    靠客户端加别名兜底。解析失败/文件缺失返回空集，调用方据此跳过（宁漏检不误报）。
+    """
+    repo = Path(__file__).resolve().parents[1]
+    path = repo / "lib/json_ui/widget_builder.dart"
+    if not path.exists():
+        return set()
+    text = path.read_text(encoding="utf-8")
+    match = re.search(r"_builders\s*=\s*\{", text)
+    if not match:
+        return set()
+    depth, i = 1, match.end()
+    start = match.end()
+    while i < len(text) and depth > 0:
+        ch = text[i]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+        i += 1
+    block = text[start : i - 1]
+    return {m.group(1) for m in re.finditer(r"'([a-z][a-z0-9_]*)'\s*:", block)}
 
 
 def main(argv: list[str]) -> int:

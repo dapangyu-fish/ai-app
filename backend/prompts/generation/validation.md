@@ -84,11 +84,15 @@ python3 backend/validate_json_app.py "$TMPFILE"
 如果不确定某个组件或 action 是否存在：
 
 - action 查 `lib/json_ui/interpreter.dart` 中 `case '@xxx':`
-- widget 查 `lib/json_ui/widget_builder.dart` 中 `_builders`
+- widget 查 `lib/json_ui/widget_builder.dart` 中 `_builders`；不在 `_builders` 里的
+  控件类型会被 validator 判 `ERROR`（客户端会渲染成红色"未知类型"框、元素缺失）。
 - widget 字段查 `lib/json_ui/widgets/` 下对应 Dart 文件
 - 图标名查 `lib/json_ui/widgets/icon_registry.dart`；未知静态图标会显示红色问号并触发 validator `ERROR`。
 
-不要自创函数、属性或控件类型。
+不要自创函数、属性或控件类型。**特别注意常见误用**（这些类型客户端不存在）：
+- 行/列布局用 `{"type":"container","layout":"row"|"column"}`，**不要**写 `row`/`column`/`flex`；
+- 文本输入用 `input`，**不要**写 `text_input`；
+- 比例布局用 `expanded` / `flexible`，**不要**写 `flex`。
 
 ## 上传
 
