@@ -8,6 +8,8 @@ and streams the container output back as JSONL events.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
 import os
 import re
@@ -372,23 +374,18 @@ def _issue_proxy_token(run_id: str, upstream_base_url: str, upstream_token: str,
 
 
 def _issue_faas_proxy_token(run_id: str, owner_user_id: str) -> str:
-    """Per-run, owner-scoped token for the in-run FaaS deploy/invoke proxy.
+    """Stateless per-run, owner-scoped token for the in-run FaaS deploy/invoke proxy.
 
-    Stored alongside provider proxy tokens (same lock / TTL cleanup / revoke) but
-    tagged kind="faas"; carries only the run's owner so the node can forward a
-    deploy to the backend scoped to that owner. The runtime never sees a user
-    token or the node token.
+    HMAC-signed `owner.expiry.sig` instead of an in-memory entry, so it stays valid
+    for the WHOLE generation regardless of run length, repair re-launches, token
+    revocation timing, or an agent-node restart — the earlier in-memory version
+    404/401'd mid-run once the issuing entry was gone. Carries only the run's owner;
+    the runtime never sees a user token or NODE_TOKEN.
     """
-    token = secrets.token_urlsafe(32)
-    with _PROXY_LOCK:
-        _PROXY_TOKENS[token] = {
-            "kind": "faas",
-            "run_id": run_id,
-            "owner_user_id": owner_user_id,
-            "created_at": time.time(),
-            "expires_at": time.time() + PROVIDER_PROXY_TOKEN_TTL_SECONDS,
-        }
-    return token
+    exp = str(int(time.time()) + PROVIDER_PROXY_TOKEN_TTL_SECONDS)
+    msg = f"{owner_user_id}.{exp}"
+    sig = hmac.new(NODE_TOKEN.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).hexdigest()[:40]
+    return f"{msg}.{sig}"
 
 
 def _provider_prefix(provider_id: str) -> str:
@@ -691,8 +688,8 @@ def _prepare_provider_proxy(payload: dict) -> list[str]:
 
     owner_user_id = str(payload.get("owner_user_id") or "").strip()
     if owner_user_id:
+        # stateless signed token — no entry to revoke, no in-memory lifetime
         faas_token = _issue_faas_proxy_token(run_id, owner_user_id)
-        issued.append(faas_token)
         env["MYAPP_FAAS_PROXY_URL"] = f"{PROVIDER_PROXY_BASE_URL}/faas/{faas_token}"
 
     payload["env"] = env
@@ -1159,12 +1156,22 @@ def _proxy_lookup(token: str) -> Optional[dict]:
 
 
 def _faas_proxy_lookup(token: str) -> Optional[dict]:
-    _cleanup_proxy_tokens()
-    with _PROXY_LOCK:
-        data = _PROXY_TOKENS.get(token)
-        if not data or data.get("kind") != "faas":
+    """Verify the stateless HMAC faas token and return its owner (no store lookup)."""
+    if not NODE_TOKEN:
+        return None
+    try:
+        owner, exp, sig = token.rsplit(".", 2)
+    except ValueError:
+        return None
+    expected = hmac.new(NODE_TOKEN.encode("utf-8"), f"{owner}.{exp}".encode("utf-8"), hashlib.sha256).hexdigest()[:40]
+    if not hmac.compare_digest(sig, expected):
+        return None
+    try:
+        if int(exp) < int(time.time()):
             return None
-        return dict(data)
+    except ValueError:
+        return None
+    return {"owner_user_id": owner}
 
 
 def _upstream_headers(proxy_token: str, upstream_token: str) -> dict:
