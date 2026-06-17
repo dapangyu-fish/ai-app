@@ -1,0 +1,55 @@
+{
+  "service": {
+    "slug": "https-test-lab",
+    "routes": [
+      {
+        "path": "/ping",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/echo",
+        "methods": [
+          "GET",
+          "POST"
+        ]
+      },
+      {
+        "path": "/items/<item_id>",
+        "methods": [
+          "PUT",
+          "DELETE"
+        ]
+      },
+      {
+        "path": "/headers",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/stream",
+        "methods": [
+          "GET"
+        ]
+      },
+      {
+        "path": "/auth/verify",
+        "methods": [
+          "POST"
+        ]
+      },
+      {
+        "path": "/status/<int:code>",
+        "methods": [
+          "GET"
+        ]
+      }
+    ]
+  },
+  "files": {
+    "app.py": "\"\"\"HTTPS 连通性测试后端（FaaS 参考样板 / e2e 测试床）。\n\n这是配套 JSON-APP「HTTPS 测试台」(templates/https_test_lab.json) 的 FaaS 后端。\n每个路由对应客户端里的一个测试用例，覆盖 GET / POST / PUT / DELETE / SSE /\n带 token 的真实 Supabase 鉴权 / 任意状态码。响应全部是内存里 mock 的，不连数据库\n（faasd CE 的函数无持久卷、无 DB），只有 /auth/verify 会真实出网调用 Supabase。\n\n约束（见 backend/faas_store.py 校验器）：\n- 顶层只允许 imports、`app = Flask(__name__)`、字面量常量、（路由及辅助）函数、\n  可选 `__main__` guard；顶层不得有任何函数调用 / IO / 循环。\n- 允许的 import 根：__future__ base64 collections dateutil datetime decimal flask\n  functools hashlib hmac itertools json math pydantic random re statistics string\n  time typing urllib uuid。（urllib 是为本样板的真实 Supabase 调用新加的。）\n- 方法装饰器只有 @app.get/post/put/patch/delete；其它方法用 @app.route(methods=[...])。\n- /__myapp_faas_health 由运行时自动提供，不要自己写。\n\"\"\"\nfrom __future__ import annotations\n\nimport json\nimport urllib.error\nimport urllib.request\nfrom datetime import datetime, timezone\n\nfrom flask import Flask, Response, jsonify, request\n\napp = Flask(__name__)\n\nSERVICE_NAME = \"https-test-lab\"\n\n# Supabase (GoTrue) 鉴权端点 + 公开 anon key。anon key 是设计上可公开的客户端密钥，\n# 可以安全地写进 app.py。真正敏感的 service_role / JWT secret 绝不在这里出现。\nSUPABASE_URL = \"https://myapp-pre-de-auth.dapangyu.work\"\nSUPABASE_ANON_KEY = (\n    \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.\"\n    \"eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxMTU5MjgzLCJleHAiOjE5Mzg4MzkyODN9.\"\n    \"rIOJUpfSYV9p6h2LrklvfHdXcUZUUKdGY-yhClkOvhA\"\n)\n\n\ndef _now_iso() -> str:\n    return datetime.now(timezone.utc).strftime(\"%Y-%m-%dT%H:%M:%SZ\")\n\n\ndef _verify_supabase_token(token: str):\n    \"\"\"真实调用 Supabase GoTrue 的 GET /auth/v1/user 校验用户 JWT。\n\n    返回 (http_status, user_dict_or_None)。status==0 表示根本没连上 Supabase。\n    \"\"\"\n    req = urllib.request.Request(\n        SUPABASE_URL + \"/auth/v1/user\",\n        headers={\n            \"apikey\": SUPABASE_ANON_KEY,\n            \"Authorization\": \"Bearer \" + token,\n            \"Accept\": \"application/json\",\n        },\n        method=\"GET\",\n    )\n    try:\n        with urllib.request.urlopen(req, timeout=8) as resp:\n            raw = resp.read().decode(\"utf-8\", errors=\"replace\")\n            return resp.status, json.loads(raw)\n    except urllib.error.HTTPError as exc:\n        # token 无效时 GoTrue 返回 401/403 —— 这是「真实鉴权」的预期失败路径\n        return exc.code, None\n    except Exception:\n        return 0, None\n\n\n@app.get(\"/ping\")\ndef ping():\n    \"\"\"最基础的 GET 存活探针。\"\"\"\n    return jsonify(\n        ok=True,\n        service=SERVICE_NAME,\n        method=\"GET\",\n        time=_now_iso(),\n        message=\"pong\",\n    )\n\n\n@app.get(\"/echo\")\ndef echo_get():\n    \"\"\"回显 query 参数，验证 GET + 查询字符串透传。\"\"\"\n    return jsonify(\n        ok=True,\n        method=\"GET\",\n        query={key: value for key, value in request.args.items()},\n        time=_now_iso(),\n    )\n\n\n@app.post(\"/echo\")\ndef echo_post():\n    \"\"\"回显 JSON body，验证 POST + 请求体透传。\"\"\"\n    body = request.get_json(silent=True)\n    if body is None:\n        body = {}\n    keys = list(body.keys()) if isinstance(body, dict) else []\n    return jsonify(\n        ok=True,\n        method=\"POST\",\n        received=body,\n        field_count=len(keys),\n        time=_now_iso(),\n    ), 201\n\n\n@app.put(\"/items/<item_id>\")\ndef update_item(item_id):\n    \"\"\"按 id 更新一条 mock 资源，验证 PUT + 动态路径段。\"\"\"\n    body = request.get_json(silent=True) or {}\n    return jsonify(\n        ok=True,\n        method=\"PUT\",\n        id=item_id,\n        updated_fields=list(body.keys()) if isinstance(body, dict) else [],\n        item={\"id\": item_id, **(body if isinstance(body, dict) else {})},\n        time=_now_iso(),\n    )\n\n\n@app.delete(\"/items/<item_id>\")\ndef delete_item(item_id):\n    \"\"\"按 id 删除一条 mock 资源，验证 DELETE + 动态路径段。\"\"\"\n    return jsonify(ok=True, method=\"DELETE\", id=item_id, deleted=True, time=_now_iso())\n\n\n@app.get(\"/headers\")\ndef show_headers():\n    \"\"\"回显函数实际收到的请求头。\n\n    用来直观看到 invoke 代理会剥掉哪些头：客户端发的 Authorization / Cookie\n    到不了这里（被代理过滤），而自定义头（如 X-User-Token）能透传过来。\n    \"\"\"\n    received = {key: value for key, value in request.headers.items()}\n    return jsonify(\n        ok=True,\n        method=\"GET\",\n        received_headers=received,\n        has_authorization=\"Authorization\" in received,\n        has_x_user_token=\"X-User-Token\" in received,\n        note=\"Authorization/Cookie 会被 invoke 代理剥离；自定义头可透传\",\n        time=_now_iso(),\n    )\n\n\n@app.get(\"/stream\")\ndef stream():\n    \"\"\"SSE 流式响应，验证 text/event-stream 透传与客户端逐帧解析。\n\n    连续推送 5 个 tick 事件再发一个 done。不 sleep（避免冷启动叠加超时），\n    重点是验证 content-type 与 data: 帧能否一路传到客户端。\n    \"\"\"\n\n    def generate():\n        for index in range(1, 6):\n            payload = json.dumps({\"tick\": index, \"service\": SERVICE_NAME})\n            yield \"event: tick\\n\"\n            yield \"data: \" + payload + \"\\n\\n\"\n        yield \"event: done\\n\"\n        yield \"data: \" + json.dumps({\"ok\": True, \"total\": 5}) + \"\\n\\n\"\n\n    return Response(generate(), mimetype=\"text/event-stream\")\n\n\n@app.post(\"/auth/verify\")\ndef auth_verify():\n    \"\"\"带 token 的真实鉴权用例。\n\n    客户端用 JSON 层的 @get_auth_token 拿到用户 token，放进自定义头 X-User-Token\n    （Authorization 会被代理剥掉，所以必须用自定义头或 body）。本函数把它转成\n    Bearer，真实调用 Supabase /auth/v1/user 验证，并回传裁决结果。\n    \"\"\"\n    token = (request.headers.get(\"X-User-Token\") or \"\").strip()\n    if not token:\n        body = request.get_json(silent=True) or {}\n        token = str(body.get(\"token\") or \"\").strip()\n    if not token:\n        return jsonify(\n            ok=False,\n            authenticated=False,\n            reason=\"缺少用户 token（请用 X-User-Token 头或 body.token 传入）\",\n            time=_now_iso(),\n        ), 400\n\n    status, user = _verify_supabase_token(token)\n    if status == 200 and isinstance(user, dict):\n        return jsonify(\n            ok=True,\n            authenticated=True,\n            supabase_status=status,\n            user={\n                \"id\": user.get(\"id\"),\n                \"email\": user.get(\"email\"),\n                \"role\": user.get(\"role\"),\n            },\n            time=_now_iso(),\n        )\n    if status == 0:\n        return jsonify(\n            ok=False,\n            authenticated=False,\n            supabase_status=0,\n            reason=\"无法连接 Supabase\",\n            time=_now_iso(),\n        ), 502\n    return jsonify(\n        ok=True,\n        authenticated=False,\n        supabase_status=status,\n        reason=\"Supabase 拒绝了该 token\",\n        time=_now_iso(),\n    )\n\n\n@app.get(\"/status/<int:code>\")\ndef force_status(code):\n    \"\"\"按需返回任意状态码，验证客户端的错误/非 2xx 处理路径。\"\"\"\n    safe_code = code if 200 <= code <= 599 else 400\n    return jsonify(ok=safe_code < 400, requested_status=safe_code, time=_now_iso()), safe_code\n\n\nif __name__ == \"__main__\":\n    app.run(host=\"0.0.0.0\", port=8080)\n",
+    "requirements.txt": "flask==3.0.3\n"
+  }
+}
