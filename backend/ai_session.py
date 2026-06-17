@@ -1819,6 +1819,12 @@ def _build_faas_backend_prompt_note(*, workspace: Optional[str] = None) -> str:
     bundle_path = "$AI_APP_WORKSPACE/faas_bundle.json" if workspace else "faas_bundle.json"
     return (
         "\n\n可选后端能力（FaaS，只有用户明确需要后端接口/持久计算/服务端逻辑时才使用）："
+        "\n- **【强制·先做这步】一旦你判断本次需要后端能力，在写任何 bundle / app.py / JSON-APP 之前，"
+        "必须先在当前 shell 运行 `cat docs/faas-jsonapp-generation-playbook.md` 通读这份标准生成方法，"
+        "并严格照它执行。** 它讲清了全套正确路径：何时建后端、用 `faas` 调用库 + `app` 命名空间"
+        "（绝不在 JSON-APP 写死域名/URL）、`app.py` 受限写法、本轮内部署自测拿真实 service_id、"
+        "用 `@faas.*` 接线、校验发布；范本是已上线全绿的「FaaS 测试台」。跳过这份方法是带 faas 后端的"
+        "JSON-APP 生成失败的主因——务必先读再动手。"
         f"\n- 你可以生成一个受限 Python/Flask 后端服务 bundle：`{bundle_path}`。"
         "\n- 你在本轮内自己完成部署、自测、接好前端（见下方后端工作流）；不要操作 Git/Docker/OpenFaaS/密钥，"
         "脚本会安全地代你调用后端部署。"
