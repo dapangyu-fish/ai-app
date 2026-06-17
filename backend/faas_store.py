@@ -775,6 +775,28 @@ def _validate_top_level_shape(tree: ast.Module) -> bool:
     return has_flask_app
 
 
+def _canonical_route_path(path: str) -> str:
+    """Canonicalize a Flask route path for declared-vs-implemented comparison.
+
+    Path params are matched by shape, ignoring the variable name and any Flask
+    converter, so ``/items/<item_id>``, ``/items/<int:item_id>`` and
+    ``/items/<id>`` are treated as the same route. A ``<path:...>`` catch-all
+    stays distinct from a single-segment param because it consumes multiple
+    segments. This mirrors the runtime invoke matcher
+    (``faas._route_pattern_matches``) so the deploy gate never rejects a declared
+    route that app.py will in fact serve only because the param name or converter
+    differs between the declaration and the decorator.
+    """
+    parts = []
+    for seg in path.strip("/").split("/"):
+        if seg.startswith("<") and seg.endswith(">"):
+            inner = seg[1:-1]
+            parts.append("<path>" if inner.startswith("path:") else "<var>")
+        else:
+            parts.append(seg)
+    return "/" + "/".join(parts)
+
+
 def _extract_flask_routes(tree: ast.AST) -> dict[str, set[str]]:
     routes: dict[str, set[str]] = {}
     for node in ast.walk(tree):
@@ -813,7 +835,7 @@ def _extract_flask_routes(tree: ast.AST) -> dict[str, set[str]]:
                     methods = {"GET"}
             else:
                 methods = {_FLASK_METHOD_DECORATORS[decorator_name]}
-            routes.setdefault(route_path, set()).update(methods)
+            routes.setdefault(_canonical_route_path(route_path), set()).update(methods)
     return routes
 
 
@@ -823,7 +845,7 @@ def _validate_declared_routes_implemented(routes: list[dict[str, Any]], implemen
     for route in routes:
         path = str(route.get("path") or "/")
         methods = {str(method).strip().upper() for method in (route.get("methods") or ["GET"])}
-        actual = implemented.get(path)
+        actual = implemented.get(_canonical_route_path(path))
         if actual is None:
             raise FaaSValidationError(f"declared route is not implemented in app.py: {path}")
         missing = sorted(methods - actual)

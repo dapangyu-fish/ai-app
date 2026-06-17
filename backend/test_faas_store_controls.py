@@ -309,6 +309,38 @@ def test_validation_requires_declared_routes_to_match_flask_decorators() -> None
     else:
         raise AssertionError("bundle with an unimplemented declared method was accepted")
 
+    # path-param routes are matched by shape: a Flask converter (<int:item_id>)
+    # or a renamed param (<id>) in app.py must NOT read as "not implemented",
+    # mirroring the runtime invoke matcher. Methods union across decorators.
+    try:
+        param_ok = faas_store.validate_bundle(
+            {
+                "service": {
+                    "service_id": "param-route-api",
+                    "routes": [
+                        {"path": "/items/<item_id>", "methods": ["GET", "PUT", "DELETE"]},
+                    ],
+                },
+                "files": {
+                    "app.py": (
+                        "from flask import Flask, jsonify\n"
+                        "app = Flask(__name__)\n"
+                        "@app.route('/items/<int:item_id>', methods=['GET', 'PUT'])\n"
+                        "def item(item_id):\n"
+                        "    return jsonify(id=item_id)\n"
+                        "@app.delete('/items/<id>')\n"
+                        "def remove(id):\n"
+                        "    return jsonify(ok=True)\n"
+                    ),
+                },
+            }
+        )
+    except faas_store.FaaSValidationError as exc:
+        raise AssertionError(
+            f"declared /items/<item_id> should be satisfied by a converter/renamed param: {exc}"
+        ) from exc
+    assert param_ok["routes"][0]["path"] == "/items/<item_id>"
+
 
 def test_validation_rejects_reserved_runtime_routes() -> None:
     try:
