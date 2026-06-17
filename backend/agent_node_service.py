@@ -1552,6 +1552,16 @@ def _create_local_run(data: dict) -> str:
         _write_initial_files(paths["workspace"], data.get("initial_files"))
         _apply_local_provider(payload)
         proxy_tokens = _prepare_provider_proxy(payload)
+        # Also drop the faas proxy URL into the workspace so faas_deploy.sh works
+        # even when the agent runs it in a stripped-env shell (env -i / fresh
+        # shell): the in-container env IS set, but some agents lose it on Bash
+        # tool calls, which left MYAPP_FAAS_PROXY_URL "not set" and blocked deploy.
+        _faas_proxy_url = str((payload.get("env") or {}).get("MYAPP_FAAS_PROXY_URL") or "").strip()
+        if _faas_proxy_url:
+            try:
+                (paths["workspace"] / ".faas_proxy_url").write_text(_faas_proxy_url + "\n", encoding="utf-8")
+            except OSError:
+                pass
     except ValueError as exc:
         raise ValueError(str(exc))
     redactions = _secret_redactions(payload)

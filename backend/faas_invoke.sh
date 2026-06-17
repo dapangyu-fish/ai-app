@@ -20,6 +20,9 @@ if [ -z "$SID" ] || [ -z "$ROUTE" ]; then
 fi
 
 BASE="${MYAPP_FAAS_PROXY_URL:-}"
+if [ -z "$BASE" ] && [ -n "${AI_APP_WORKSPACE:-}" ] && [ -f "$AI_APP_WORKSPACE/.faas_proxy_url" ]; then
+  BASE="$(head -n1 "$AI_APP_WORKSPACE/.faas_proxy_url" 2>/dev/null)"
+fi
 if [ -z "$BASE" ]; then
   echo "MYAPP_FAAS_PROXY_URL is not set; in-run FaaS invoke is unavailable in this environment" >&2
   exit 2
