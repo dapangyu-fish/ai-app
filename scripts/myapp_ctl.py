@@ -2998,6 +2998,60 @@ def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, s
     return provider_id, data
 
 
+def _prompt_volcengine_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
+    """火山引擎 (Volcengine) — an AGGREGATION platform, so you pick a model and the
+    provider id becomes ``volcengine-<model>`` (the selector then shows e.g.
+    ``volcengine-glm-latest`` / ``volcengine-doubao``). Add it again for another
+    model. One ARK key serves all three agents; the three wire formats are all
+    native (no relay):
+      claude   -> {base}/api/coding        (Anthropic /v1/messages)
+      codex    -> {base}/api/coding/v3     (Responses API, DIRECT — like minimax)
+      opencode -> {base}/api/coding/v3     (OpenAI-compatible /chat/completions)
+    """
+    model = _prompt_line("volcengine model (e.g. glm-latest, doubao-seed-1-6)", required=True).strip()
+    provider_id = f"volcengine-{_normalize_provider_id(model)}"
+    prefix = _provider_prefix(provider_id)
+    token = _prompt_line(
+        f"{provider_id} Volcengine ARK API key (ark-...)",
+        default=existing.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""),
+        required=True,
+        secret=True,
+    )
+    anthropic_base = "https://ark.cn-beijing.volces.com/api/coding"
+    openai_base = "https://ark.cn-beijing.volces.com/api/coding/v3"
+    data = _base_provider_env(
+        prefix=prefix,
+        name=provider_id,
+        description=f"Volcengine (火山引擎) aggregated provider — {model}",
+        base_url=anthropic_base,
+        token=token,
+        model=model,
+    )
+    data.update(
+        {
+            f"{prefix}_SUPPORTED_AGENTS": existing.get(f"{prefix}_SUPPORTED_AGENTS", "claude,codex,opencode"),
+            f"{prefix}_AI_WORKER_MAX_CONCURRENCY": existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "10"),
+            f"{prefix}_AI_WORKER_QUEUE_MAX": existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "50"),
+            # codex: volcengine /api/coding/v3 speaks the Responses API natively -> DIRECT, no relay
+            f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", "volcengine-coding-plan"),
+            f"{prefix}_CODEX_BASE_URL": existing.get(f"{prefix}_CODEX_BASE_URL", openai_base),
+            f"{prefix}_CODEX_MODEL": existing.get(f"{prefix}_CODEX_MODEL", model),
+            f"{prefix}_CODEX_ENV_KEY": existing.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
+            f"{prefix}_CODEX_WIRE_API": existing.get(f"{prefix}_CODEX_WIRE_API", "responses"),
+            f"{prefix}_CODEX_UPSTREAM_WIRE_API": existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", ""),
+            f"{prefix}_CODEX_RELAY": existing.get(f"{prefix}_CODEX_RELAY", ""),
+            f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "262144"),
+            # opencode: OpenAI-compatible
+            f"{prefix}_OPENCODE_PROVIDER_NAME": existing.get(f"{prefix}_OPENCODE_PROVIDER_NAME", "volcengine"),
+            f"{prefix}_OPENCODE_BASE_URL": existing.get(f"{prefix}_OPENCODE_BASE_URL", openai_base),
+            f"{prefix}_OPENCODE_MODEL": existing.get(f"{prefix}_OPENCODE_MODEL", model),
+            f"{prefix}_OPENCODE_ENV_KEY": existing.get(f"{prefix}_OPENCODE_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
+            f"{prefix}_OPENCODE_PROVIDER_NPM": existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", "@ai-sdk/openai-compatible"),
+        }
+    )
+    return provider_id, data
+
+
 def _native_codex_default_user_spec(codex_home: str) -> str:
     try:
         stat_result = Path(codex_home).stat()
@@ -3250,8 +3304,9 @@ def _setup_ai_providers(*, force: bool = False, path: Path | None = None, title:
     while True:
         print("  1) deepseek")
         print("  2) minimax")
-        print("  3) native-codex")
-        print("  4) custom")
+        print("  3) volcengine  (火山引擎; aggregator — pick a model, adds volcengine-<model>)")
+        print("  4) native-codex")
+        print("  5) custom")
         choice = _prompt_line("select provider", default="1" if not provider_ids else "n")
         if choice.lower() in {"n", "next", "done", "q", "quit"} and provider_ids:
             break
@@ -3259,9 +3314,11 @@ def _setup_ai_providers(*, force: bool = False, path: Path | None = None, title:
             provider_id, values = _prompt_deepseek_provider(existing)
         elif choice == "2" or choice.lower() == "minimax":
             provider_id, values = _prompt_minimax_provider(existing)
-        elif choice == "3" or choice.lower() in {"native-codex", "native_codex", "codex-native"}:
+        elif choice == "3" or choice.lower() in {"volcengine", "volc", "huoshan", "ark"}:
+            provider_id, values = _prompt_volcengine_provider(existing)
+        elif choice == "4" or choice.lower() in {"native-codex", "native_codex", "codex-native"}:
             provider_id, values = _prompt_native_codex_provider(existing)
-        elif choice == "4" or choice.lower() in {"custom", "other"}:
+        elif choice == "5" or choice.lower() in {"custom", "other"}:
             provider_id, values = _prompt_custom_provider(existing)
         else:
             print("unknown provider choice", file=sys.stderr)
