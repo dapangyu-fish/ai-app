@@ -152,6 +152,10 @@ FAAS_OPENFAAS_MAX_REPLICAS = _env_int("FAAS_OPENFAAS_MAX_REPLICAS", 1)
 FAAS_OPENFAAS_READ_TIMEOUT = os.environ.get("FAAS_OPENFAAS_READ_TIMEOUT", "60s").strip() or "60s"
 FAAS_OPENFAAS_WRITE_TIMEOUT = os.environ.get("FAAS_OPENFAAS_WRITE_TIMEOUT", "60s").strip() or "60s"
 FAAS_PUBLIC_BASE_URL = os.environ.get("FAAS_PUBLIC_BASE_URL", "").rstrip("/")
+# Public domain of the faasd node for direct /function/<fn> invokes. Synced from
+# cfg.domains.openfaas by `myapp-ctl ingress render` and injected into every FaaS
+# function as MYAPP_CFG_FAAS_PUBLIC_BASE_URL so generated code never hardcodes it.
+FAAS_NODE_PUBLIC_URL = os.environ.get("FAAS_NODE_PUBLIC_URL", "").rstrip("/")
 FAAS_FUNCTION_PREFIX = os.environ.get("FAAS_FUNCTION_PREFIX", "myapp").strip().lower() or "myapp"
 FAAS_LOCAL_DOCKER_IMAGE = os.environ.get(
     "FAAS_LOCAL_DOCKER_IMAGE",

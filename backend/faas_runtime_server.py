@@ -26,6 +26,26 @@ _ALLOWED_FILES = {"app.py", "requirements.txt", "service.json", "README.md"}
 _ALLOWED_PREFIXES = ("tests/",)
 
 
+def _inject_platform_config(app: Flask) -> None:
+    """Bridge backend-injected ``MYAPP_CFG_*`` env vars into ``app.config["MYAPP"]``.
+
+    The backend injects public, non-secret platform config (Supabase URL + anon
+    key, backend base URL, faasd public URL) as ``MYAPP_CFG_*`` env vars on every
+    function. The generated ``app.py`` cannot import ``os`` (validator), so the
+    runtime — which runs with full Python — copies them into the app config under
+    a single ``MYAPP`` dict (lowercased, prefix stripped). Generated code reads
+    ``current_app.config["MYAPP"]["supabase_url"]`` and builds URLs from config
+    instead of hardcoding domains. Only the ``MYAPP_CFG_`` prefix is exposed;
+    internal vars (``MYAPP_FAAS_RUNTIME_TOKEN`` / ``MYAPP_FAAS_BUNDLE_URL``) keep
+    the ``MYAPP_FAAS_`` prefix and are never bridged.
+    """
+    platform = {}
+    for key, value in os.environ.items():
+        if key.startswith("MYAPP_CFG_") and value:
+            platform[key[len("MYAPP_CFG_"):].lower()] = value
+    app.config["MYAPP"] = platform
+
+
 def _load_generated_app(service_dir: Path):
     app_py = service_dir / "app.py"
     if not app_py.is_file():
@@ -48,6 +68,7 @@ def _load_generated_app(service_dir: Path):
     app = getattr(module, "app", None) or getattr(module, "application", None)
     if not isinstance(app, Flask):
         raise RuntimeError("generated app.py must expose a Flask instance named app or application")
+    _inject_platform_config(app)
     return app
 
 

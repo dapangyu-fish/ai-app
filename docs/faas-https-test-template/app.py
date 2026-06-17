@@ -21,35 +21,44 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 
-from flask import Flask, Response, jsonify, request
+from flask import Flask, Response, current_app, jsonify, request
 
 app = Flask(__name__)
 
 SERVICE_NAME = "https-test-lab"
 
-# Supabase (GoTrue) 鉴权端点 + 公开 anon key。anon key 是设计上可公开的客户端密钥，
-# 可以安全地写进 app.py。真正敏感的 service_role / JWT secret 绝不在这里出现。
-SUPABASE_URL = "https://myapp-pre-de-auth.dapangyu.work"
-SUPABASE_ANON_KEY = (
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
-    "eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzgxMTU5MjgzLCJleHAiOjE5Mzg4MzkyODN9."
-    "rIOJUpfSYV9p6h2LrklvfHdXcUZUUKdGY-yhClkOvhA"
-)
+# 注意：Supabase 地址与 anon key 不再写死。它们由后端按部署环境注入，运行时桥接到
+# current_app.config["MYAPP"]（见 _platform_cfg）。换域名/换环境只需重部署，不改代码。
 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _platform_cfg():
+    """运行时注入的平台公开配置：current_app.config["MYAPP"]。
+
+    键来自后端注入的 MYAPP_CFG_*：supabase_url / supabase_anon_key /
+    backend_base_url / faas_public_base_url。需要 app/请求上下文（路由内调用即可）。
+    """
+    return current_app.config.get("MYAPP", {})
+
+
 def _verify_supabase_token(token: str):
     """真实调用 Supabase GoTrue 的 GET /auth/v1/user 校验用户 JWT。
 
-    返回 (http_status, user_dict_or_None)。status==0 表示根本没连上 Supabase。
+    Supabase 地址与 anon key 从注入的平台配置读取，不写死。
+    返回 (http_status, user_dict_or_None)。status==0 没连上；status==-1 缺配置。
     """
+    cfg = _platform_cfg()
+    supabase_url = (cfg.get("supabase_url") or "").rstrip("/")
+    anon_key = cfg.get("supabase_anon_key") or ""
+    if not supabase_url or not anon_key:
+        return -1, None
     req = urllib.request.Request(
-        SUPABASE_URL + "/auth/v1/user",
+        supabase_url + "/auth/v1/user",
         headers={
-            "apikey": SUPABASE_ANON_KEY,
+            "apikey": anon_key,
             "Authorization": "Bearer " + token,
             "Accept": "application/json",
         },
@@ -68,13 +77,14 @@ def _verify_supabase_token(token: str):
 
 @app.get("/ping")
 def ping():
-    """最基础的 GET 存活探针。"""
+    """最基础的 GET 存活探针。config_keys 展示运行时注入了哪些平台配置（只列键，不泄值）。"""
     return jsonify(
         ok=True,
         service=SERVICE_NAME,
         method="GET",
         time=_now_iso(),
         message="pong",
+        config_keys=sorted(_platform_cfg().keys()),
     )
 
 
@@ -184,6 +194,13 @@ def auth_verify():
         ), 400
 
     status, user = _verify_supabase_token(token)
+    if status == -1:
+        return jsonify(
+            ok=False,
+            authenticated=False,
+            reason="平台配置缺失（MYAPP_CFG_SUPABASE_* 未注入到运行时）",
+            time=_now_iso(),
+        ), 503
     if status == 200 and isinstance(user, dict):
         return jsonify(
             ok=True,

@@ -63,10 +63,13 @@ try:
         FAAS_OPENFAAS_SCALE_ZERO,
         FAAS_OPENFAAS_USERNAME,
         FAAS_OPENFAAS_WRITE_TIMEOUT,
+        FAAS_NODE_PUBLIC_URL,
         FAAS_PUBLIC_BASE_URL,
         FAAS_REQUIREMENTS_MAX_LINES,
         FAAS_RUNTIME_BUNDLE_BASE_URL,
         FAAS_RUNTIME_TOKEN,
+        SUPABASE_ANON_KEY,
+        SUPABASE_URL,
     )
     from database import db_execute, db_query
 except ModuleNotFoundError:
@@ -106,10 +109,13 @@ except ModuleNotFoundError:
         FAAS_OPENFAAS_SCALE_ZERO,
         FAAS_OPENFAAS_USERNAME,
         FAAS_OPENFAAS_WRITE_TIMEOUT,
+        FAAS_NODE_PUBLIC_URL,
         FAAS_PUBLIC_BASE_URL,
         FAAS_REQUIREMENTS_MAX_LINES,
         FAAS_RUNTIME_BUNDLE_BASE_URL,
         FAAS_RUNTIME_TOKEN,
+        SUPABASE_ANON_KEY,
+        SUPABASE_URL,
     )
     from backend.database import db_execute, db_query
 
@@ -1170,6 +1176,7 @@ def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: s
                 "MYAPP_FAAS_FUNCTION_NAME": function_name,
                 "MYAPP_FAAS_COMMIT": commit_sha,
                 "PYTHONUNBUFFERED": "1",
+                **_platform_runtime_env(),
             },
             labels={
                 "myapp.component": "faas-runtime",
@@ -1227,6 +1234,27 @@ def _runtime_bundle_url(service_id: str) -> str:
     if not base:
         raise FaaSError("FAAS_RUNTIME_BUNDLE_BASE_URL or FAAS_PUBLIC_BASE_URL is required for OpenFaaS runtime")
     return f"{base.rstrip('/')}/api/faas/runtime_bundle/{service_id}"
+
+
+def _platform_runtime_env() -> dict[str, str]:
+    """Public, NON-SECRET platform config injected into every FaaS function.
+
+    The runtime (faas_runtime_server.py) bridges these MYAPP_CFG_* env vars into
+    the generated app's ``app.config["MYAPP"]``; user code reads
+    ``current_app.config["MYAPP"]["supabase_url"]`` etc. and builds URLs from
+    config instead of hardcoding domains — so changing a domain is a redeploy,
+    not a code edit. Only public/non-secret values go here (the anon key is a
+    public client key); NEVER inject service-role keys, the runtime token, or the
+    bundle URL. Empty values are dropped so a missing config key is absent rather
+    than an empty string.
+    """
+    values = {
+        "MYAPP_CFG_SUPABASE_URL": (SUPABASE_URL or "").rstrip("/"),
+        "MYAPP_CFG_SUPABASE_ANON_KEY": SUPABASE_ANON_KEY or "",
+        "MYAPP_CFG_BACKEND_BASE_URL": (FAAS_PUBLIC_BASE_URL or "").rstrip("/"),
+        "MYAPP_CFG_FAAS_PUBLIC_BASE_URL": (FAAS_NODE_PUBLIC_URL or "").rstrip("/"),
+    }
+    return {key: value for key, value in values.items() if value}
 
 
 def _openfaas_auth():
@@ -1309,6 +1337,7 @@ def _deploy_openfaas_function(*, function_name: str, service_id: str, commit_sha
             "MYAPP_FAAS_BUNDLE_URL": _runtime_bundle_url(service_id),
             "MYAPP_FAAS_RUNTIME_TOKEN": runtime_token,
             "PYTHONUNBUFFERED": "1",
+            **_platform_runtime_env(),
         },
         "labels": labels,
         "annotations": {

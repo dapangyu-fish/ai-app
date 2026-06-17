@@ -4845,6 +4845,9 @@ def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
     faas_values = {
         "FAAS_PUBLIC_BASE_URL": urls["backend"],
         "FAAS_RUNTIME_BUNDLE_BASE_URL": urls["backend"],
+        # faasd direct-invoke domain (cfg.domains.openfaas) -> backend env, so the
+        # backend injects it into every function as MYAPP_CFG_FAAS_PUBLIC_BASE_URL.
+        "FAAS_NODE_PUBLIC_URL": urls.get("openfaas", ""),
     }
     edge_values = {
         "MYAPP_DATA_ROOT": str(_data_root_from_cfg()),

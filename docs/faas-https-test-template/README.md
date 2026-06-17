@@ -68,6 +68,7 @@ deploy 前 `validate_bundle` 会用 AST 校验 `app.py`：
 - **顶层只允许**：`import`、`app = Flask(__name__)`、字面量常量、（路由及辅助）函数、可选 `if __name__=="__main__"`。顶层**不得有任何函数调用 / 网络/文件 IO / 循环 / 线程**。
 - **import 白名单（根模块）**：`__future__ base64 collections dateutil datetime decimal flask functools hashlib hmac itertools json math pydantic random re statistics string time urllib uuid`。
   - ⚠️ **没有 `requests` / `http` / `socket` / `os`**。要出网只能用 **`urllib`**（stdlib，已在白名单）。`urllib` 是为本样板真调 Supabase 才加进白名单的（commit `99dc936`）。
+  - 不能 `import os` 读环境 → 平台公开配置（Supabase 地址/anon key 等）经 `current_app.config["MYAPP"]` 注入，**不要写死域名**，见 §6.5。
 - **方法装饰器只有** `@app.get/post/put/patch/delete`。`@app.head/@app.options` 不存在，会在 import 即崩 503；OPTIONS/HEAD 必须用 `@app.route(path, methods=[...])`。
 - **`service.routes` 声明必须与 `@app.xxx` 装饰器逐一对齐**（按路径形状，`<int:id>`/`<id>` 视为同一段）。前端会调用的每个 path+method 都要在 routes 里声明，否则 invoke 代理返回 404（未声明路径）/405（未声明方法）。
 - 健康检查 `/__myapp_faas_health` 由运行时自动提供，**不要自己写**。
@@ -90,19 +91,24 @@ faasd 社区版只有 gateway + queue-worker，**没有 idler/autoscaler**，`co
 from __future__ import annotations
 import json, urllib.error, urllib.request
 from datetime import datetime, timezone
-from flask import Flask, Response, jsonify, request
+from flask import Flask, Response, current_app, jsonify, request
 
 app = Flask(__name__)
 
-# 顶层只放字面量常量。anon key 是设计上可公开的客户端密钥，可写进源码；
-# service_role / JWT secret 绝不能出现在这里。
-SUPABASE_URL = "https://myapp-pre-de-auth.dapangyu.work"
-SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...."  # 公开
+# Supabase 地址 / anon key 不写死：由后端按环境注入，运行时桥接到 current_app.config["MYAPP"]。
+# 换域名/换环境只重部署，不改代码。（注入的都是公开值；service_role 等密钥绝不会出现。）
+def _platform_cfg():
+    return current_app.config.get("MYAPP", {})        # supabase_url / supabase_anon_key / backend_base_url / faas_public_base_url
 
 def _verify_supabase_token(token):           # 顶层辅助函数（无装饰器，合法）
+    cfg = _platform_cfg()                    # 需 app/请求上下文 —— 路由内调用即满足
+    supa = (cfg.get("supabase_url") or "").rstrip("/")
+    anon = cfg.get("supabase_anon_key") or ""
+    if not supa or not anon:
+        return -1, None                      # -1 = 平台配置未注入
     req = urllib.request.Request(
-        SUPABASE_URL + "/auth/v1/user",
-        headers={"apikey": SUPABASE_ANON_KEY, "Authorization": "Bearer " + token},
+        supa + "/auth/v1/user",
+        headers={"apikey": anon, "Authorization": "Bearer " + token},
         method="GET")
     try:
         with urllib.request.urlopen(req, timeout=8) as resp:
@@ -118,6 +124,8 @@ def auth_verify():
     if not token:
         return jsonify(ok=False, authenticated=False, reason="缺少 token"), 400
     status, user = _verify_supabase_token(token)
+    if status == -1:
+        return jsonify(ok=False, authenticated=False, reason="平台配置缺失"), 503
     if status == 200 and isinstance(user, dict):
         return jsonify(ok=True, authenticated=True, supabase_status=200,
                        user={"id": user.get("id"), "email": user.get("email"), "role": user.get("role")})
@@ -126,7 +134,9 @@ def auth_verify():
     return jsonify(ok=True, authenticated=False, supabase_status=status, reason="Supabase 拒绝了该 token")
 ```
 
-为什么 `urllib.request.urlopen(...)` 能过校验：校验器只拦 `ast.Name` 形态的禁用调用（裸 `open/eval/exec/...`）；`urlopen` 是 `urllib.request` 上的 **Attribute 调用**，不匹配禁用集；`urllib` 根模块已在 import 白名单。
+两个关键点：
+- **不写死域名**：平台把公开配置（`supabase_url`/`supabase_anon_key`/`backend_base_url`/`faas_public_base_url`）注入到运行时，用户代码经 `current_app.config["MYAPP"]` 读。后端在 `faas_store.py` 的 `envVars` 注入 `MYAPP_CFG_*`，运行时 `faas_runtime_server.py` 把它们桥接进 `app.config["MYAPP"]`（用户代码不能 import `os`，所以由运行时代读 env）。换域名 = 改 `myapp-ctl` 配置后重部署，不动函数源码。见 §6.5。
+- **校验为什么放行 `urlopen`**：校验器只拦 `ast.Name` 形态的禁用调用（裸 `open/eval/exec/...`）；`urlopen` 是 `urllib.request` 上的 **Attribute 调用**，不匹配禁用集；`urllib` 根模块在白名单。
 
 ---
 
@@ -218,6 +228,28 @@ REGISTRY_URL=http://localhost:3254 python3 publish_one.py https_test_lab.json   
 ⚠️ **跨机拓扑（决定 faasBase 形态）**：faas 服务只在 **77**，而这台 registry/backend（老生产机）**没有 faas**（`/api/faas/invoke` → 404）。所以发布版的 `faasBase` 用**指向 77 的绝对地址** `https://myapp-pre-de-backend.dapangyu.work/api/faas/invoke/svc-77be07ffad7b`（`build_jsonapp.py <svc> <backend_base>` 第二参数生成），这样无论客户端 backendUrl 指向哪，faas 调用都打到 77。若发布到「自带该 faas 服务」的 backend，可改回相对地址。
 
 ⚠️ **鉴权用例的跨环境前提**：`@get_auth_token` 拿的是客户端当前登录态的 token。77 的 Supabase 是 `myapp-pre-de-auth.dapangyu.work`，老生产机是 `myapp-auth.dapangyu.work`（**不同项目**）。所以鉴权 happy-path（`authenticated:true`）要求客户端登录在 **77 的 Supabase**；若登录在老生产机，该用例仍会真实往返 Supabase 但被拒（`authenticated:false`，依然证明前后端连通）。其余 8 个用例与登录态无关，任何客户端都能跑通。
+
+### 6.5 平台配置自动注入（让函数不写死域名）
+
+faas 函数不能 `import os`（校验器禁），所以平台公开配置经一条「env → app.config」桥接喂给用户代码，整条链路：
+
+```
+myapp-ctl ingress render
+  └ 写 faas.env: FAAS_NODE_PUBLIC_URL = cfg.domains.openfaas（faasd 主域名）
+                 FAAS_PUBLIC_BASE_URL = backend 公网；SUPABASE_URL/ANON_KEY 已在 backend env
+        │
+backend  faas_store.py `_platform_runtime_env()`  → 注入每个 faasd 函数的 envVars：
+  MYAPP_CFG_SUPABASE_URL / MYAPP_CFG_SUPABASE_ANON_KEY / MYAPP_CFG_BACKEND_BASE_URL / MYAPP_CFG_FAAS_PUBLIC_BASE_URL
+        │  （只注公开值；service_role / runtime_token / bundle_url 绝不注入）
+runtime  faas_runtime_server.py `_inject_platform_config(app)`  → app.config["MYAPP"] = {supabase_url, supabase_anon_key, …}
+        │
+用户 app.py：  current_app.config["MYAPP"]["supabase_url"]      （不能 import os，由运行时代读 env）
+```
+
+- **访问路径（确认）**：JSON-APP 默认走【后端代理】`/api/faas/invoke/<svc>/<route>`（路由强制 + 剥头 + 冷启动重试），不是直连 faasd。faasd 直连域名（`MYAPP_CFG_FAAS_PUBLIC_BASE_URL`）是旁路，注入它是为了函数间直连 / 函数自知公网地址。
+- **安全边界**：只桥 `MYAPP_CFG_` 前缀；内部密钥用 `MYAPP_FAAS_` 前缀（`MYAPP_FAAS_RUNTIME_TOKEN` / `MYAPP_FAAS_BUNDLE_URL`），永不进 `app.config`。
+- **换域名**：改 `myapp-ctl domain set openfaas/...` + `ingress render` 重写 env，再重部署函数即可，**不动任何函数源码**。
+- **验证**：`GET /ping` 的 `config_keys` 字段会列出实际注入了哪些键（只列键不泄值）。
 
 ---
 
