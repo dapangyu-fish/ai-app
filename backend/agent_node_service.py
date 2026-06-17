@@ -172,7 +172,7 @@ def _auth_ok() -> bool:
 
 @APP.before_request
 def _require_auth():
-    if request.path == "/health" or request.path.startswith("/proxy/"):
+    if request.path == "/health" or request.path.startswith("/proxy/") or request.path.startswith("/faas/"):
         return None
     if not _auth_ok():
         return jsonify({"error": "unauthorized"}), 401
@@ -365,6 +365,26 @@ def _issue_proxy_token(run_id: str, upstream_base_url: str, upstream_token: str,
             "agent_id": agent_id,
             "upstream_base_url": upstream_base_url.rstrip("/"),
             "upstream_token": upstream_token,
+            "created_at": time.time(),
+            "expires_at": time.time() + PROVIDER_PROXY_TOKEN_TTL_SECONDS,
+        }
+    return token
+
+
+def _issue_faas_proxy_token(run_id: str, owner_user_id: str) -> str:
+    """Per-run, owner-scoped token for the in-run FaaS deploy/invoke proxy.
+
+    Stored alongside provider proxy tokens (same lock / TTL cleanup / revoke) but
+    tagged kind="faas"; carries only the run's owner so the node can forward a
+    deploy to the backend scoped to that owner. The runtime never sees a user
+    token or the node token.
+    """
+    token = secrets.token_urlsafe(32)
+    with _PROXY_LOCK:
+        _PROXY_TOKENS[token] = {
+            "kind": "faas",
+            "run_id": run_id,
+            "owner_user_id": owner_user_id,
             "created_at": time.time(),
             "expires_at": time.time() + PROVIDER_PROXY_TOKEN_TTL_SECONDS,
         }
@@ -668,6 +688,12 @@ def _prepare_provider_proxy(payload: dict) -> list[str]:
         if codex.get("opencode_base_url"):
             codex["opencode_base_url"] = f"{PROVIDER_PROXY_BASE_URL}/proxy/{token}"
         env[codex_env_key] = token
+
+    owner_user_id = str(payload.get("owner_user_id") or "").strip()
+    if owner_user_id:
+        faas_token = _issue_faas_proxy_token(run_id, owner_user_id)
+        issued.append(faas_token)
+        env["MYAPP_FAAS_PROXY_URL"] = f"{PROVIDER_PROXY_BASE_URL}/faas/{faas_token}"
 
     payload["env"] = env
     payload["codex"] = codex
@@ -1127,7 +1153,16 @@ def _proxy_lookup(token: str) -> Optional[dict]:
     _cleanup_proxy_tokens()
     with _PROXY_LOCK:
         data = _PROXY_TOKENS.get(token)
-        if not data:
+        if not data or data.get("kind") == "faas":
+            return None
+        return dict(data)
+
+
+def _faas_proxy_lookup(token: str) -> Optional[dict]:
+    _cleanup_proxy_tokens()
+    with _PROXY_LOCK:
+        data = _PROXY_TOKENS.get(token)
+        if not data or data.get("kind") != "faas":
             return None
         return dict(data)
 
@@ -1353,6 +1388,44 @@ def _minimax_opencode_stream_response(
     )
 
 
+@APP.route("/faas/<token>/<path:subpath>", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+def faas_proxy(token: str, subpath: str):
+    """Per-run, owner-scoped proxy for in-run FaaS deploy/invoke.
+
+    The runtime calls this with only a short-lived run token; the node injects the
+    trusted agent-node token + the run's owner and forwards to the backend FaaS
+    API, so the agent can deploy and self-test without ever holding a user token.
+    """
+    entry = _faas_proxy_lookup(token)
+    if not entry:
+        return jsonify({"error": "faas proxy token expired or invalid"}), 401
+    if not PULL_BACKEND_URL:
+        return jsonify({"error": "faas proxy backend url not configured"}), 502
+    upstream_url = urljoin(f"{PULL_BACKEND_URL}/api/faas/", subpath)
+    if request.query_string:
+        upstream_url = f"{upstream_url}?{request.query_string.decode('utf-8', errors='replace')}"
+    headers = {
+        "X-MyApp-Agent-Node-Token": NODE_TOKEN,
+        "X-MyApp-Owner-User-Id": str(entry.get("owner_user_id") or ""),
+    }
+    content_type = request.headers.get("Content-Type")
+    if content_type:
+        headers["Content-Type"] = content_type
+    try:
+        upstream = requests.request(
+            request.method,
+            upstream_url,
+            headers=headers,
+            data=request.get_data(),
+            timeout=(PROVIDER_PROXY_CONNECT_TIMEOUT_SECONDS, 180),
+        )
+    except requests.RequestException as exc:
+        return jsonify({"error": "faas proxy upstream request failed", "detail": str(exc)}), 502
+    excluded = {"content-encoding", "transfer-encoding", "connection", "content-length"}
+    out_headers = [(k, v) for k, v in upstream.headers.items() if k.lower() not in excluded]
+    return Response(upstream.content, status=upstream.status_code, headers=out_headers)
+
+
 @APP.route("/proxy/<token>", defaults={"subpath": ""}, methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
 @APP.route("/proxy/<token>/<path:subpath>", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
 def provider_proxy(token: str, subpath: str):
@@ -1454,6 +1527,8 @@ def _create_local_run(data: dict) -> str:
         "session_id": session_id,
         "job_id": job_id,
         "user_id": user_id,
+        # raw owner id (the path-safe user_id above can mangle it) for the faas proxy
+        "owner_user_id": str(data.get("user_id") or "").strip(),
         "provider_id": str(data.get("provider_id") or ""),
         "agent_id": str(data.get("agent_id") or "claude"),
         "resume_id": str(data.get("resume_id") or ""),

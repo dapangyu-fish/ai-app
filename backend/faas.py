@@ -17,7 +17,7 @@ from flask import Response, jsonify, request, stream_with_context
 
 try:
     from auth import verify_access_token
-    from config import FAAS_DEPLOY_MODE, FAAS_OPENFAAS_GATEWAY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
+    from config import AGENT_NODE_TOKEN, FAAS_DEPLOY_MODE, FAAS_OPENFAAS_GATEWAY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
     from faas_store import (
         FaaSError,
         FaaSValidationError,
@@ -34,7 +34,7 @@ try:
     )
 except ModuleNotFoundError:
     from backend.auth import verify_access_token
-    from backend.config import FAAS_DEPLOY_MODE, FAAS_OPENFAAS_GATEWAY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
+    from backend.config import AGENT_NODE_TOKEN, FAAS_DEPLOY_MODE, FAAS_OPENFAAS_GATEWAY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
     from backend.faas_store import (
         FaaSError,
         FaaSValidationError,
@@ -55,6 +55,16 @@ _LOCAL_DOCKER_MODES = {"local-docker", "docker", "docker-local"}
 
 
 def _request_user_id() -> str | None:
+    # Trusted internal call: the agent-node faas proxy (and co-located local
+    # agents) authenticate with the shared AGENT_NODE_TOKEN and pass the run's
+    # owner explicitly, so an in-run deploy is scoped to the right owner without
+    # ever handing the agent a user access token. Owner is a header so it works
+    # even when the body is the octet-stream bundle.
+    node_token = request.headers.get("X-MyApp-Agent-Node-Token", "")
+    if node_token and AGENT_NODE_TOKEN and hmac.compare_digest(node_token, AGENT_NODE_TOKEN):
+        owner = str(request.headers.get("X-MyApp-Owner-User-Id", "") or "").strip()
+        if owner:
+            return owner
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Bearer "):
         user = verify_access_token(auth[7:])
