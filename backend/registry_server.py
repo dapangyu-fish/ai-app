@@ -76,6 +76,33 @@ minio_client = Minio(
     secure=MINIO_SECURE,
 )
 
+
+def _ensure_buckets():
+    """确保 registry 用到的 MinIO 桶存在且 public-read（幂等）。
+
+    全新 all-in-one 部署里这些桶从未被创建过（没人发布过组件），_save_index /
+    mirror 同步首次写入时就会 NoSuchBucket，普通 publish 也一样会炸。registry
+    必须保证自己的存储桶存在，并设 public-read（与既有 json-component/models
+    约定一致），客户端才能凭 MINIO_PUBLIC_URL 直链下载包文件。
+    """
+    for bucket in (BUCKET_COMPONENT, BUCKET_APP):
+        try:
+            if not minio_client.bucket_exists(bucket):
+                minio_client.make_bucket(bucket)
+                print(f"[Registry] 建桶 {bucket}")
+            policy = {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": {"AWS": ["*"]},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{bucket}/*"],
+                }],
+            }
+            minio_client.set_bucket_policy(bucket, json.dumps(policy))
+        except Exception as e:  # 不让建桶失败拖垮启动；下次启动/发布会重试
+            print(f"[Registry] WARN ensure bucket {bucket} 失败: {e}")
+
 # ═══════════════════════════════════════════════════════════
 # 工具函数
 # ═══════════════════════════════════════════════════════════
@@ -1506,6 +1533,7 @@ def _maybe_start_enrich_worker():
 
 
 # gunicorn 不走 __main__，import 时就把后台线程起起来（advisory lock 保证多 worker 只一个干活）
+_ensure_buckets()
 _maybe_start_mirror_sync()
 _maybe_start_enrich_worker()
 
