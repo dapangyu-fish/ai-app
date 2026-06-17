@@ -15,7 +15,7 @@
   },
   "global": {
     "variables": {
-      "faasBase": "/api/faas/invoke/svc-77be07ffad7b",
+      "faasBase": "https://myapp-pre-de-backend.dapangyu.work/api/faas/invoke/svc-77be07ffad7b",
       "userToken": null,
       "_sseRet": null,
       "resPing": null,
@@ -252,7 +252,7 @@
           },
           {
             "type": "text",
-            "value": "后端服务: /api/faas/invoke/svc-77be07ffad7b",
+            "value": "后端服务: https://myapp-pre-de-backend.dapangyu.work/api/faas/invoke/svc-77be07ffad7b",
             "style": {
               "fontSize": 11,
               "color": "#999999"

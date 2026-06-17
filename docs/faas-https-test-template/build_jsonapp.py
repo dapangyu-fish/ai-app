@@ -5,12 +5,19 @@ Building the DSL programmatically guarantees valid JSON and keeps the 9 test
 cases (one faas route each) consistent. The faas service_id is a placeholder
 (__SVC__) in global.faasBase; the deploy step rewrites it to the real svc-<hex>.
 
-Run:  python3 docs/faas-https-test-template/build_jsonapp.py [real_service_id]
+Run:  python3 docs/faas-https-test-template/build_jsonapp.py [service_id] [backend_base]
+  - service_id  : real svc-<hex> (default placeholder __SVC__)
+  - backend_base: 若给出（如 https://myapp-pre-de-backend.dapangyu.work），faasBase 用
+                  指向该后端的【绝对地址】；不给则用相对地址（由客户端 backendUrl 前缀）。
+                  本样板的 faas 服务只部署在 77，发布到「无 faas 的」registry/backend
+                  时必须用绝对地址指向 77，否则 invoke 会 404。
 """
 import json
 import sys
 
 SVC = sys.argv[1] if len(sys.argv) > 1 else "__SVC__"
+BACKEND_BASE = sys.argv[2].rstrip("/") if len(sys.argv) > 2 else ""
+FAAS_BASE = "%s/api/faas/invoke/%s" % (BACKEND_BASE, SVC) if BACKEND_BASE else "/api/faas/invoke/%s" % SVC
 
 # ---- the 9 test cases: each maps to exactly one faas route ----------------
 # logic = the @global.<fn> body (steps); display = result rows on the detail screen.
@@ -100,7 +107,7 @@ CASES = [
 ]
 
 # ---- global.variables -----------------------------------------------------
-variables = {"faasBase": "/api/faas/invoke/%s" % SVC, "userToken": None, "_sseRet": None}
+variables = {"faasBase": FAAS_BASE, "userToken": None, "_sseRet": None}
 for c in CASES:
     variables[c["var"]] = None
 
@@ -118,7 +125,7 @@ for c in CASES:
 home_children = [
     {"type": "text", "value": "HTTPS 测试台", "style": {"fontSize": 24, "fontWeight": "bold"}},
     {"type": "text", "value": "每个入口 = 一个 faas 端到端用例。点进去运行，看真实 HTTP 状态码与响应体。", "style": {"fontSize": 13, "color": "#666666"}},
-    {"type": "text", "value": "后端服务: /api/faas/invoke/%s" % SVC, "style": {"fontSize": 11, "color": "#999999"}},
+    {"type": "text", "value": "后端服务: %s" % FAAS_BASE, "style": {"fontSize": 11, "color": "#999999"}},
     {"type": "divider"},
 ]
 for c in CASES:

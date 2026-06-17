@@ -9,6 +9,7 @@
 - FaaS 服务 `svc-77be07ffad7b`（status: ready，7 条路由）
 - JSON-APP `templates/https_test_lab.json`（`validate_json_app` 干净通过）
 - 部署后单测 `smoke_test.py` **11/11 PASS**（含真实 Supabase 鉴权拒绝+接受双向）
+- 已发布到 canonical registry `myapp-registry.dapangyu.work`：`official` 包 `https_test_lab` v1.0.0（faasBase 用指向 77 的绝对地址，见 §6.4）
 
 ---
 
@@ -204,6 +205,20 @@ PY
 ### 6.3 框架前置改动
 真调 Supabase 需要函数能出网，而 import 白名单原本无任何网络库。已加 `urllib`（`backend/faas_store.py` `_ALLOWED_IMPORT_ROOTS`，commit `99dc936`），并重建 `dapangyu/myapp-backend:agent-control-plane` 推 DockerHub、77 `myapp-ctl deploy --pull backend` 重建生效。**校验器在 backend 进程内，改白名单必须重建 backend 镜像才生效。**
 
+### 6.4 发布到 Registry（市场）
+本样板已发布到 canonical registry `myapp-registry.dapangyu.work`（= 老生产机 `myapp-backend.dapangyu.work`，**supervisor 部署，非 docker**；`registry_server:app` 跑在 `:3254`，repo 在 `/root/ai-app`，venv `/opt/ai-app-venv`）：
+
+```bash
+# 官方包（meta.name 无命名空间）需 admin token：registry 用 token==REGISTRY_ADMIN_TOKEN 判 admin
+export REGISTRY_ADMIN_TOKEN="$(grep ^REGISTRY_ADMIN_TOKEN= /etc/ai-app/backend.env | cut -d= -f2-)"
+REGISTRY_URL=http://localhost:3254 python3 publish_one.py https_test_lab.json   # POST {json_content,force_update} -> /publish
+```
+发布结果：`official` 包 `https_test_lab` v1.0.0，`download_url` 落对象存储；`GET /package/https_test_lab` 可解析。
+
+⚠️ **跨机拓扑（决定 faasBase 形态）**：faas 服务只在 **77**，而这台 registry/backend（老生产机）**没有 faas**（`/api/faas/invoke` → 404）。所以发布版的 `faasBase` 用**指向 77 的绝对地址** `https://myapp-pre-de-backend.dapangyu.work/api/faas/invoke/svc-77be07ffad7b`（`build_jsonapp.py <svc> <backend_base>` 第二参数生成），这样无论客户端 backendUrl 指向哪，faas 调用都打到 77。若发布到「自带该 faas 服务」的 backend，可改回相对地址。
+
+⚠️ **鉴权用例的跨环境前提**：`@get_auth_token` 拿的是客户端当前登录态的 token。77 的 Supabase 是 `myapp-pre-de-auth.dapangyu.work`，老生产机是 `myapp-auth.dapangyu.work`（**不同项目**）。所以鉴权 happy-path（`authenticated:true`）要求客户端登录在 **77 的 Supabase**；若登录在老生产机，该用例仍会真实往返 Supabase 但被拒（`authenticated:false`，依然证明前后端连通）。其余 8 个用例与登录态无关，任何客户端都能跑通。
+
 ---
 
 ## 7. 部署后单测 / 冒烟
@@ -247,4 +262,5 @@ docker exec myapp-backend python3 /tmp/smoke_test.py svc-77be07ffad7b
 | `build_jsonapp.py` | JSON-APP 生成器（参数化 service_id） |
 | `../../templates/https_test_lab.json` | 生成出的 JSON-APP（已接真实 `svc-77be07ffad7b`） |
 | `smoke_test.py` | 部署后断言式单测（11 项） |
+| `publish_one.py` | 发布单个 JSON-APP 到 Registry（`/publish`，admin token） |
 | `README.md` | 本文 |
