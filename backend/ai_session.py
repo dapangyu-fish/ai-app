@@ -953,69 +953,11 @@ def _resolve_server_upload_actions(
     deployed_faas: List[tuple] = []  # [(aliases:set, real_service_id)] 供 app.json 改写
     for action in actions:
         if action.get("type") == _SERVER_FAAS_ACTION:
-            relative_path = str(action.get("path") or "faas_bundle.json")
-            try:
-                import faas_store as faas_store_module
-            except ModuleNotFoundError:
-                import backend.faas_store as faas_store_module
-            deploy_bundle = faas_store_module.deploy_bundle
-            load_bundle_bytes = faas_store_module.load_bundle_bytes
-            validation_error_type = getattr(faas_store_module, "FaaSValidationError", None)
-            try:
-                raw = (
-                    _artifact_from_agent_node(agent_node_url, run_id, relative_path)
-                    if agent_node_url and run_id
-                    else _artifact_from_agent_pull(agent_pull_run_id, relative_path)
-                    if agent_pull_run_id
-                    else _artifact_from_local_workspace(workspace, relative_path, session_id)
-                )
-                bundle = load_bundle_bytes(raw)
-                resolved_owner_user_id = owner_user_id or SessionStore().get_meta(session_id).get("user_id") or "user"
-                deploy_result = deploy_bundle(resolved_owner_user_id, bundle, source=f"ai-session:{session_id}")
-                resolved.append({
-                    "type": "faas_service_ready",
-                    "service_id": deploy_result.service_id,
-                    "function_name": deploy_result.function_name,
-                    "status": deploy_result.status,
-                    "commit_sha": deploy_result.commit_sha,
-                    "invoke_url": f"/api/faas/invoke/{deploy_result.service_id}",
-                    "routes": deploy_result.routes,
-                })
-                # 记录 AI 给这个服务起的别名（slug / 显式 service_id），稍后把 JSON-APP
-                # 里指向别名的 invoke 地址改写成真实 service_id。
-                _svc_block = bundle.get("service") if isinstance(bundle.get("service"), dict) else {}
-                _aliases = set()
-                for _src in (_svc_block, bundle):
-                    for _key in ("slug", "service_id"):
-                        _alias = str((_src or {}).get(_key) or "").strip()
-                        if _alias and _alias != deploy_result.service_id:
-                            _aliases.add(_alias)
-                deployed_faas.append((_aliases, deploy_result.service_id))
-            except Exception as exc:
-                is_validation = bool(validation_error_type and isinstance(exc, validation_error_type))
-                if is_validation:
-                    logger.warning(
-                        "[FAAS] deploy action validation failed sid=%s path=%s: %s",
-                        session_id,
-                        relative_path,
-                        exc,
-                    )
-                    # Feed deterministic, AI-fixable bundle errors (declared route
-                    # not implemented, forbidden import, bad shape...) into the
-                    # server-side repair loop so the agent fixes faas_bundle.json
-                    # and the worker redeploys, bounded by AI_SERVER_REPAIR_MAX_ATTEMPTS.
-                    # Infra failures (gateway/push) are NOT repairable, so they fall
-                    # through to faas_service_failed. The non-repair caller (4506)
-                    # leaves allow_faas_repair False and keeps the old behavior.
-                    if allow_faas_repair:
-                        raise ServerUploadValidationError(_SERVER_FAAS_ACTION, str(exc)) from exc
-                else:
-                    logger.exception("[FAAS] deploy action failed sid=%s path=%s: %s", session_id, relative_path, exc)
-                resolved.append({
-                    "type": "faas_service_failed",
-                    "path": relative_path,
-                    "error": str(exc)[-1000:],
-                })
+            # Deprecated: FaaS deploy is now agent-driven IN-RUN via
+            # backend/faas_deploy.sh — the agent gets the real service_id, self-tests,
+            # wires the JSON-APP itself, then uploads. Drop any stray legacy deploy
+            # action so we never double-deploy. (Full removal of this path + the
+            # service_id rewrite is a follow-up cleanup once the new flow is verified.)
             continue
         if action.get("type") != _SERVER_UPLOAD_ACTION:
             resolved.append(action)
@@ -1878,8 +1820,8 @@ def _build_faas_backend_prompt_note(*, workspace: Optional[str] = None) -> str:
     return (
         "\n\n可选后端能力（FaaS，只有用户明确需要后端接口/持久计算/服务端逻辑时才使用）："
         f"\n- 你可以生成一个受限 Python/Flask 后端服务 bundle：`{bundle_path}`。"
-        "\n- Agent 不能也不需要操作 Git、Docker、OpenFaaS、faas-cli 或任何部署密钥；"
-        "后端会在 worker 结束后读取 bundle、校验、提交和部署。"
+        "\n- 你在本轮内自己完成部署、自测、接好前端（见下方后端工作流）；不要操作 Git/Docker/OpenFaaS/密钥，"
+        "脚本会安全地代你调用后端部署。"
         "\n- 工作区会提供只读 `faas_services.json`，列出当前用户已有 FaaS 服务、路由、调用地址以及每个服务的现有源码 `source`；"
         "如果本轮是在给已有后端追加接口，请复用其 `service_id`，基于 `source` 里的 `app.py` 续写、"
         "并在 routes 中同时保留原有路由和新增路由（追加不占用新的服务配额）；"
@@ -1900,11 +1842,19 @@ def _build_faas_backend_prompt_note(*, workspace: Optional[str] = None) -> str:
         "调用未声明 method 会得到 405；因此前端会调用的每个接口都必须在 routes 中逐一声明。"
         "动态路径可使用 Flask 风格如 `/items/<item_id>` 或 `/files/<path:tail>`。"
         "不要读取环境变量、不要访问本机文件、不要启动额外 server、不要使用 subprocess/socket。"
-        "\n- JSON-APP 调用后端时先使用相对地址 `/api/faas/invoke/<service_id>/<route>`；"
-        "如果前端需要调用该服务，bundle.service.service_id 必须写一个稳定 kebab-case id，"
-        "例如 `todo-api`，不要省略。"
-        "\n- 如果生成了 FaaS bundle，必须在 `client_actions.json` 里追加 "
-        "`{\"type\":\"server_deploy_faas_service\",\"path\":\"faas_bundle.json\"}`。"
+        "\n\n后端工作流（生成 bundle 后必须严格按序执行，绝不能只写动作让服务端代劳）："
+        f"\n1) 部署：`bash backend/faas_deploy.sh {bundle_path}`，"
+        "再读 `$AI_APP_WORKSPACE/faas_deploy_result.json`：成功含真实 `service_id` 和 `routes`，失败含 `error`。"
+        "\n2) 失败 → 按 `error` 最小化修 `faas_bundle.json` → 重跑第 1 步（最多 5 次）。"
+        "\n3) 成功 → 自测：`bash backend/faas_invoke.sh <真实service_id> <route> [METHOD] [json体]` "
+        "逐条验证关键接口返回 200 且结构符合预期（至少测一次集合 GET 和一次写操作）。"
+        "\n4) 自测不通过 → 修 `app.py`/bundle → 回第 1 步。"
+        "\n5) 自测通过 → 用第 1 步拿到的【真实 service_id】把 JSON-APP 里所有后端调用写成相对地址 "
+        "`/api/faas/invoke/<真实service_id>/<route>`（客户端会自动拼后端域名）；"
+        "严禁让用户手动填写后端 URL/接口地址，也不要用 slug 占位——必须是真实 service_id。"
+        "\n6) 未声明的 path 会 404、未声明的 method 会 405，所以前端会调用的每个接口都要在 routes 里逐一声明。"
+        "\n7) 最后 `python3 backend/repair_json_app.py` + `python3 backend/validate_json_app.py`，"
+        "再 `bash backend/upload_with_signature.sh \"$AI_APP_WORKSPACE/app.json\"` 上传。"
     ) + _FAAS_GEN_EXAMPLE
 
 
