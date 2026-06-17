@@ -8,15 +8,18 @@
       "en": "FaaS Test Lab",
       "default": "FaaS Test Lab"
     },
-    "version": "1.1.0",
+    "version": "1.2.0",
     "type": "app",
-    "description": "FaaS 端到端连通性测试台（i18n）：GET/POST/PUT/DELETE/SSE/真实 Supabase 鉴权/任意状态码。",
+    "description": "FaaS 端到端连通性测试台（i18n + faas lib）：GET/POST/PUT/DELETE/SSE/真实 Supabase 鉴权/任意状态码。",
     "author": "claude"
+  },
+  "dependencies": {
+    "faas": "^1.0.0"
   },
   "global": {
     "variables": {
       "locale": "zh",
-      "faasBase": "/api/faas/invoke/svc-77be07ffad7b",
+      "faasService": "svc-77be07ffad7b",
       "userToken": null,
       "_sseRet": null,
       "resPing": null,
@@ -31,14 +34,15 @@
     },
     "computed": {},
     "functions": {
-      "runPing": {
+      "run_ping": {
         "params": [],
         "description": "run ping (GET /ping)",
         "logic": [
           {
-            "call": "@http_get",
+            "call": "@faas.get",
             "args": {
-              "url": "{{ global.faasBase }}/ping"
+              "serviceId": "{{ global.faasService }}",
+              "route": "/ping"
             },
             "assign": "global.resPing"
           },
@@ -49,18 +53,15 @@
           }
         ]
       },
-      "runEchoGet": {
+      "run_echo_get": {
         "params": [],
-        "description": "run echo_get (GET /echo)",
+        "description": "run echo_get (GET /echo?from=faas-test-lab&n=1)",
         "logic": [
           {
-            "call": "@http_get",
+            "call": "@faas.get",
             "args": {
-              "url": "{{ global.faasBase }}/echo",
-              "query": {
-                "from": "faas-test-lab",
-                "n": "1"
-              }
+              "serviceId": "{{ global.faasService }}",
+              "route": "/echo?from=faas-test-lab&n=1"
             },
             "assign": "global.resEchoGet"
           },
@@ -71,14 +72,15 @@
           }
         ]
       },
-      "runEchoPost": {
+      "run_echo_post": {
         "params": [],
         "description": "run echo_post (POST /echo)",
         "logic": [
           {
-            "call": "@http_post",
+            "call": "@faas.post",
             "args": {
-              "url": "{{ global.faasBase }}/echo",
+              "serviceId": "{{ global.faasService }}",
+              "route": "/echo",
               "body": {
                 "hello": "world",
                 "n": 42
@@ -93,14 +95,15 @@
           }
         ]
       },
-      "runPut": {
+      "run_put": {
         "params": [],
         "description": "run put (PUT /items/42)",
         "logic": [
           {
-            "call": "@http_put",
+            "call": "@faas.put",
             "args": {
-              "url": "{{ global.faasBase }}/items/42",
+              "serviceId": "{{ global.faasService }}",
+              "route": "/items/42",
               "body": {
                 "name": "updated",
                 "price": 9.9
@@ -115,14 +118,15 @@
           }
         ]
       },
-      "runDelete": {
+      "run_delete": {
         "params": [],
         "description": "run delete (DELETE /items/42)",
         "logic": [
           {
-            "call": "@http_delete",
+            "call": "@faas.del",
             "args": {
-              "url": "{{ global.faasBase }}/items/42"
+              "serviceId": "{{ global.faasService }}",
+              "route": "/items/42"
             },
             "assign": "global.resDelete"
           },
@@ -133,14 +137,15 @@
           }
         ]
       },
-      "runHeaders": {
+      "run_headers": {
         "params": [],
         "description": "run headers (GET /headers)",
         "logic": [
           {
-            "call": "@http_get",
+            "call": "@faas.get",
             "args": {
-              "url": "{{ global.faasBase }}/headers",
+              "serviceId": "{{ global.faasService }}",
+              "route": "/headers",
               "headers": {
                 "X-User-Token": "demo-token-123",
                 "X-Demo": "hello",
@@ -156,14 +161,15 @@
           }
         ]
       },
-      "runStream": {
+      "run_stream": {
         "params": [],
         "description": "run stream (GET /stream)",
         "logic": [
           {
-            "call": "@http_sse",
+            "call": "@faas.sse",
             "args": {
-              "url": "{{ global.faasBase }}/stream",
+              "serviceId": "{{ global.faasService }}",
+              "route": "/stream",
               "method": "GET",
               "bind": "global.resStream"
             },
@@ -176,7 +182,7 @@
           }
         ]
       },
-      "runAuth": {
+      "run_auth": {
         "params": [],
         "description": "run auth (POST /auth/verify)",
         "logic": [
@@ -187,13 +193,14 @@
             }
           },
           {
-            "call": "@http_post",
+            "call": "@faas.post",
             "args": {
-              "url": "{{ global.faasBase }}/auth/verify",
+              "serviceId": "{{ global.faasService }}",
+              "route": "/auth/verify",
+              "body": {},
               "headers": {
                 "X-User-Token": "{{ global.userToken }}"
-              },
-              "body": {}
+              }
             },
             "assign": "global.resAuth"
           },
@@ -204,14 +211,15 @@
           }
         ]
       },
-      "runStatus": {
+      "run_status": {
         "params": [],
         "description": "run status (GET /status/418)",
         "logic": [
           {
-            "call": "@http_get",
+            "call": "@faas.get",
             "args": {
-              "url": "{{ global.faasBase }}/status/418"
+              "serviceId": "{{ global.faasService }}",
+              "route": "/status/418"
             },
             "assign": "global.resStatus"
           },
@@ -270,7 +278,7 @@
           },
           "stream": {
             "title": "GET /stream（SSE）",
-            "desc": "text/event-stream 流式响应：后端推 5 个 tick + 1 个 done，客户端用 @http_sse 累加 events。",
+            "desc": "text/event-stream 流式响应：后端推 5 个 tick + 1 个 done，客户端经 @faas.sse 累加 events。",
             "row0": "SSE 状态",
             "row1": "收到的事件",
             "row2": "错误"
@@ -347,7 +355,7 @@
           },
           "stream": {
             "title": "GET /stream (SSE)",
-            "desc": "text/event-stream streaming: the backend pushes 5 ticks + 1 done; the client accumulates events via @http_sse.",
+            "desc": "text/event-stream streaming: the backend pushes 5 ticks + 1 done; the client accumulates events via @faas.sse.",
             "row0": "SSE status",
             "row1": "Received events",
             "row2": "Error"
@@ -436,7 +444,7 @@
           },
           {
             "type": "text",
-            "value": "{{ t('app.backend_label') }}: {{ global.faasBase }}",
+            "value": "{{ t('app.backend_label') }}: {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}",
             "style": {
               "fontSize": 11,
               "color": "#999999"
@@ -561,7 +569,7 @@
           },
           {
             "type": "text",
-            "value": "{{ t('action.call') }}: GET {{ global.faasBase }}/ping",
+            "value": "{{ t('action.call') }}: GET {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/ping",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -575,7 +583,7 @@
             "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
-              "call": "@global.runPing",
+              "call": "@global.run_ping",
               "args": {}
             }
           },
@@ -665,7 +673,7 @@
           },
           {
             "type": "text",
-            "value": "{{ t('action.call') }}: GET {{ global.faasBase }}/echo",
+            "value": "{{ t('action.call') }}: GET {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/echo?from=faas-test-lab&n=1",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -679,7 +687,7 @@
             "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
-              "call": "@global.runEchoGet",
+              "call": "@global.run_echo_get",
               "args": {}
             }
           },
@@ -769,7 +777,7 @@
           },
           {
             "type": "text",
-            "value": "{{ t('action.call') }}: POST {{ global.faasBase }}/echo",
+            "value": "{{ t('action.call') }}: POST {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/echo",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -783,7 +791,7 @@
             "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
-              "call": "@global.runEchoPost",
+              "call": "@global.run_echo_post",
               "args": {}
             }
           },
@@ -873,7 +881,7 @@
           },
           {
             "type": "text",
-            "value": "{{ t('action.call') }}: PUT {{ global.faasBase }}/items/42",
+            "value": "{{ t('action.call') }}: PUT {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/items/42",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -887,7 +895,7 @@
             "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
-              "call": "@global.runPut",
+              "call": "@global.run_put",
               "args": {}
             }
           },
@@ -977,7 +985,7 @@
           },
           {
             "type": "text",
-            "value": "{{ t('action.call') }}: DELETE {{ global.faasBase }}/items/42",
+            "value": "{{ t('action.call') }}: DELETE {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/items/42",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -991,7 +999,7 @@
             "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
-              "call": "@global.runDelete",
+              "call": "@global.run_delete",
               "args": {}
             }
           },
@@ -1081,7 +1089,7 @@
           },
           {
             "type": "text",
-            "value": "{{ t('action.call') }}: GET {{ global.faasBase }}/headers",
+            "value": "{{ t('action.call') }}: GET {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/headers",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -1095,7 +1103,7 @@
             "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
-              "call": "@global.runHeaders",
+              "call": "@global.run_headers",
               "args": {}
             }
           },
@@ -1185,7 +1193,7 @@
           },
           {
             "type": "text",
-            "value": "{{ t('action.call') }}: GET {{ global.faasBase }}/stream",
+            "value": "{{ t('action.call') }}: GET {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/stream",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -1199,7 +1207,7 @@
             "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
-              "call": "@global.runStream",
+              "call": "@global.run_stream",
               "args": {}
             }
           },
@@ -1289,7 +1297,7 @@
           },
           {
             "type": "text",
-            "value": "{{ t('action.call') }}: POST {{ global.faasBase }}/auth/verify",
+            "value": "{{ t('action.call') }}: POST {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/auth/verify",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -1303,7 +1311,7 @@
             "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
-              "call": "@global.runAuth",
+              "call": "@global.run_auth",
               "args": {}
             }
           },
@@ -1393,7 +1401,7 @@
           },
           {
             "type": "text",
-            "value": "{{ t('action.call') }}: GET {{ global.faasBase }}/status/418",
+            "value": "{{ t('action.call') }}: GET {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/status/418",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -1407,7 +1415,7 @@
             "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
-              "call": "@global.runStatus",
+              "call": "@global.run_status",
               "args": {}
             }
           },

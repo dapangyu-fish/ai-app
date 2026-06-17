@@ -1,0 +1,116 @@
+{
+  "dsl": "3.3",
+  "appid": "5f3a1c20-9b6d-4e88-a1f2-0c7d9e4b6a01",
+  "meta": {
+    "name": "faas",
+    "displayName": {"zh": "FaaS 调用库", "en": "FaaS invoke lib", "default": "FaaS invoke lib"},
+    "version": "1.0.0",
+    "type": "library",
+    "description": "FaaS 调用助手：从 {{ app.backendUrl }} 拼出完整 invoke URL 再调用通用 http builtin。把『打哪个后端』留在 JSON 层，http 层只认完整 URL。",
+    "author": "claude",
+    "exports": ["url", "get", "post", "put", "del", "sse"]
+  },
+  "global": {
+    "variables": {
+      "_r": null
+    },
+    "functions": {
+      "url": {
+        "params": ["serviceId", "route"],
+        "description": "拼出完整 invoke URL：{{ app.backendUrl }}/api/faas/invoke/<serviceId><route>。route 以 / 开头，如 /ping。",
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._r",
+              "value": "{{ app.backendUrl }}/api/faas/invoke/{{ params.serviceId }}{{ params.route }}"
+            }
+          },
+          {"expression": {"var": "global._r"}}
+        ]
+      },
+      "get": {
+        "params": ["serviceId", "route", "headers"],
+        "description": "GET 一个 faas 路由。返回 http 信封 {status,data,headers,error}。",
+        "logic": [
+          {
+            "call": "@http_get",
+            "args": {
+              "url": "{{ app.backendUrl }}/api/faas/invoke/{{ params.serviceId }}{{ params.route }}",
+              "headers": "{{ params.headers }}"
+            },
+            "assign": "global._r"
+          },
+          {"expression": {"var": "global._r"}}
+        ]
+      },
+      "post": {
+        "params": ["serviceId", "route", "body", "headers"],
+        "description": "POST 一个 faas 路由（JSON body）。",
+        "logic": [
+          {
+            "call": "@http_post",
+            "args": {
+              "url": "{{ app.backendUrl }}/api/faas/invoke/{{ params.serviceId }}{{ params.route }}",
+              "body": "{{ params.body }}",
+              "headers": "{{ params.headers }}"
+            },
+            "assign": "global._r"
+          },
+          {"expression": {"var": "global._r"}}
+        ]
+      },
+      "put": {
+        "params": ["serviceId", "route", "body", "headers"],
+        "description": "PUT 一个 faas 路由（JSON body）。",
+        "logic": [
+          {
+            "call": "@http_put",
+            "args": {
+              "url": "{{ app.backendUrl }}/api/faas/invoke/{{ params.serviceId }}{{ params.route }}",
+              "body": "{{ params.body }}",
+              "headers": "{{ params.headers }}"
+            },
+            "assign": "global._r"
+          },
+          {"expression": {"var": "global._r"}}
+        ]
+      },
+      "del": {
+        "params": ["serviceId", "route", "headers"],
+        "description": "DELETE 一个 faas 路由。",
+        "logic": [
+          {
+            "call": "@http_delete",
+            "args": {
+              "url": "{{ app.backendUrl }}/api/faas/invoke/{{ params.serviceId }}{{ params.route }}",
+              "headers": "{{ params.headers }}"
+            },
+            "assign": "global._r"
+          },
+          {"expression": {"var": "global._r"}}
+        ]
+      },
+      "sse": {
+        "params": ["serviceId", "route", "method", "bind"],
+        "description": "SSE 调用一个 faas 路由。method 默认 GET；bind 是接收累加结果的变量路径。",
+        "logic": [
+          {
+            "call": "@http_sse",
+            "args": {
+              "url": "{{ app.backendUrl }}/api/faas/invoke/{{ params.serviceId }}{{ params.route }}",
+              "method": "{{ params.method }}",
+              "bind": "{{ params.bind }}"
+            },
+            "assign": "global._r"
+          },
+          {"expression": {"var": "global._r"}}
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": []
+  }
+}

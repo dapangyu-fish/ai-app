@@ -23,6 +23,7 @@ import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
 import 'builtins/launcher_bridges.dart';
 import '../auth/auth_service.dart';
+import '../config/app_config.dart';
 import '../designer/app_storage.dart';
 import '../im/im_service.dart';
 import 'drift_database.dart';
@@ -396,6 +397,18 @@ class JsonInterpreter extends ChangeNotifier {
 
   /// 每次求值前，将当前状态组装为 jsonlogic 的 data 参数
   /// global.computed.* 会被即时求值，作为 global 名空间下的"派生字段"暴露
+  /// 只读平台地址命名空间。JSON 用 `{{ app.backendUrl }}` / `{"var": "app.supabaseUrl"}`
+  /// 读取当前环境的服务地址（值取自 [AppConfig]，跟随环境切换）。都是非密钥的公开
+  /// 地址。这样 JSON-APP 不必写死域名；"拼后端地址"这种平台业务可以留在 JSON 层
+  /// （如 faas lib），通用 http builtin 只认完整 URL，不再替调用方猜后端。
+  Map<String, dynamic> _appContext() => {
+        'backendUrl': AppConfig.backendUrl,
+        'supabaseUrl': AppConfig.supabaseUrl,
+        'registryUrl': AppConfig.registryUrl,
+        'minioUrl': AppConfig.minioUrl,
+        'imApiUrl': AppConfig.imApiUrl,
+      };
+
   Map<String, dynamic> _buildDataContext() {
     Map<String, dynamic> globalView = _variables;
     final computed = (_config['global'] as Map<String, dynamic>?)?['computed'];
@@ -422,6 +435,7 @@ class JsonInterpreter extends ChangeNotifier {
       'loop': _loopContextStack.isNotEmpty ? _loopContextStack.last : {},
       'params': _paramsStack.isNotEmpty ? _paramsStack.last : {},
       'event': _eventContextStack.isNotEmpty ? _eventContextStack.last : {},
+      'app': _appContext(),
     };
   }
 
@@ -737,6 +751,11 @@ class JsonInterpreter extends ChangeNotifier {
     // 兼容旧格式：去掉 $. 前缀
     if (path.startsWith(r'$.')) {
       path = path.substring(2);
+    }
+
+    if (path.startsWith('app.')) {
+      // 只读平台地址命名空间，见 [_appContext]。
+      return _getNestedValue(_appContext(), path.substring(4));
     }
 
     if (path.startsWith('loop.')) {

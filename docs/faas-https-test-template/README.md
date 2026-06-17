@@ -1,7 +1,8 @@
 # FaaS 测试台 / FaaS Test Lab — 前后端连体调参考样板
 
-> JSON-APP 名为「FaaS 测试台 / FaaS Test Lab」，支持 zh/en i18n（`global.i18n` + `{{ t('a.b') }}`，首页「中/EN」按钮 `@set_locale` 切换）。`faasBase` 默认用**相对地址**（`/api/faas/invoke/<svc>`，由客户端 `AppConfig.backendUrl` 前缀，**无硬编码域名**）；仅当发布到不自带该服务的 backend 时才用绝对地址（见 §6.4）。
-> （目录名 `faas-https-test-template/` 与 faas 服务 slug `https-test-lab`/`svc-77be07ffad7b` 是稳定标识符，不随显示名改。）
+> JSON-APP 名为「FaaS 测试台 / FaaS Test Lab」，支持 zh/en i18n（`global.i18n` + `{{ t('a.b') }}`，首页「中/EN」按钮 `@set_locale` 切换）。
+> **干净分层（v1.2.0，见 §5.1）**：框架暴露只读 `app` 命名空间（`{{ app.backendUrl }}` 等，取自 `AppConfig`）；`faas` JSON lib（`templates/lib_faas.json`，作为 `dependencies` 声明）用 `{{ app.backendUrl }}` 拼出完整 invoke URL 再调**通用 http builtin**；本 app 只 `@faas.get/post/put/del/sse(serviceId, route, …)`——**无硬编码域名、无相对地址魔法**。
+> （目录名 `faas-https-test-template/` 与 faas 服务 slug `https-test-lab`/`svc-77be07ffad7b` 是稳定标识符，不随显示名改。`app` 命名空间是客户端 Dart 改动，**需重编客户端**才生效。）
 
 > 一套**可直接复用**的「JSON-APP（前端） + FaaS（Python/Flask 后端）」端到端样板，专门用来验证客户端与生成式后端之间的 HTTPS 连通性。它本身就是一个测试 App：首页列出一串入口，每个入口点进去 = 跑一个 faas 路由的端到端用例，看真实 HTTP 状态码与响应体。
 >
@@ -178,6 +179,27 @@ DSL 关键写法（**踩过的坑都在这**）：
 - **页面**：`ui.screens` 是数组，每屏 `{id, title, layout, padding, scrollable, children}`；首页用 9 个按钮 `action:{type:navigate, screen:case_xxx}` 跳到各用例详情屏。
 
 ---
+
+### 5.1 干净分层：app 命名空间 + faas lib（v1.2.0，替代相对地址魔法）
+
+之前（v1.1.0）用相对地址 `/api/faas/invoke/...`，靠 `DslHttpClient._resolveUrl` 自动前缀 `AppConfig.backendUrl`。这是**分层污染**——通用 HTTP 客户端不该知道"后端在哪"。v1.2.0 改成：
+
+```
+框架  interpreter._appContext()  → 暴露只读 app 命名空间（getVariable('app.x') + _buildDataContext()['app']，模板与 jsonlogic 都可读）
+   {{ app.backendUrl }} / app.{supabaseUrl,registryUrl,minioUrl,imApiUrl}   （取自 AppConfig，跟随环境切换）
+        │
+faas JSON lib  templates/lib_faas.json （消费方 dependencies: {"faas": "^1.0.0"}）
+   export get/post/put/del/sse/url；内部 {{ app.backendUrl }}/api/faas/invoke/<sid><route> 拼完整 URL
+        │  调
+通用 http builtin  @http_get/post/…  —— 只认完整 URL（有 scheme → _resolveUrl 原样放行，不再猜后端）
+```
+
+- JSON-APP 写 `@faas.get('svc-77be07ffad7b','/ping')`，**不再写任何 URL/域名**。
+- 框架改动在客户端 Dart（`lib/json_ui/interpreter.dart`）：`flutter analyze` 干净、单测 `test/json_ui/app_namespace_test.dart` 通过；**但要重编客户端才生效**（旧客户端 `{{ app.backendUrl }}` 为 null）。
+- `_resolveUrl` 的相对地址自动前缀**保留作向后兼容**（存量 app 都靠它），新写法走 `app.backendUrl` + faas lib。
+- 访问路径仍是后端代理 `/api/faas/invoke/<svc>/<route>`（见 §6.5）。
+
+> §6.4 的相对/绝对 faasBase 讨论是 v1.1.0 的历史；v1.2.0 起不再有 faasBase 变量，URL 由 `app.backendUrl`（客户端当前环境）驱动，跨机拓扑的 Supabase 注意点仍适用。
 
 ## 6. 部署流程与预期结果
 
