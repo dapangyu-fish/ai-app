@@ -1,4 +1,7 @@
-# HTTPS 测试台 — FaaS 前后端连体调参考样板
+# FaaS 测试台 / FaaS Test Lab — 前后端连体调参考样板
+
+> JSON-APP 名为「FaaS 测试台 / FaaS Test Lab」，支持 zh/en i18n（`global.i18n` + `{{ t('a.b') }}`，首页「中/EN」按钮 `@set_locale` 切换）。`faasBase` 默认用**相对地址**（`/api/faas/invoke/<svc>`，由客户端 `AppConfig.backendUrl` 前缀，**无硬编码域名**）；仅当发布到不自带该服务的 backend 时才用绝对地址（见 §6.4）。
+> （目录名 `faas-https-test-template/` 与 faas 服务 slug `https-test-lab`/`svc-77be07ffad7b` 是稳定标识符，不随显示名改。）
 
 > 一套**可直接复用**的「JSON-APP（前端） + FaaS（Python/Flask 后端）」端到端样板，专门用来验证客户端与生成式后端之间的 HTTPS 连通性。它本身就是一个测试 App：首页列出一串入口，每个入口点进去 = 跑一个 faas 路由的端到端用例，看真实 HTTP 状态码与响应体。
 >
@@ -9,7 +12,7 @@
 - FaaS 服务 `svc-77be07ffad7b`（status: ready，7 条路由）
 - JSON-APP `templates/https_test_lab.json`（`validate_json_app` 干净通过）
 - 部署后单测 `smoke_test.py` **11/11 PASS**（含真实 Supabase 鉴权拒绝+接受双向）
-- 已发布到 canonical registry `myapp-registry.dapangyu.work`：`official` 包 `https_test_lab` v1.0.0（faasBase 用指向 77 的绝对地址，见 §6.4）
+- canonical registry `myapp-registry.dapangyu.work` 上有 `official` 包 `https_test_lab`（v1.0.0 旧版：HTTPS 命名、绝对 faasBase）。当前源模版为 v1.1.0（FaaS 改名 + zh/en i18n + 相对 faasBase 去硬编码），见 §6.4
 
 ---
 
@@ -152,6 +155,7 @@ python3 docs/faas-https-test-template/build_jsonapp.py <service_id>
 DSL 关键写法（**踩过的坑都在这**）：
 
 - **`global.faasBase` 收口 service_id**：`"faasBase": "/api/faas/invoke/svc-77be07ffad7b"`，所有调用写 `"{{ global.faasBase }}/ping"`。换服务只改一处。相对地址由客户端 `DslHttpClient._resolveUrl` 自动前缀 `AppConfig.backendUrl`。
+- **i18n**：`global.i18n = {"zh": {...}, "en": {...}}`（嵌套点路径），UI 文案写 `"{{ t('case.ping.title') }}"`；locale 取 `global.variables.locale`（默认 `zh`），首页「中/EN」按钮 `{"call": "@set_locale", "args": {"value": "en"}}` 切换。缺键回退 key 本身（便于调试）。`build_jsonapp.py` 程序化生成保证 zh/en 同步。
 - **用户函数调用必须带 `@global.` 前缀**：按钮 `action: {"call": "@global.runPing", "args": {}}`。
   - ⚠️ 写成 `"@runPing"`（无前缀）会被解释器当未知内置 → **静默 `return null` 无动作**（点了没反应的经典坑）。`@global.` 之后才路由到 `global.functions.runPing`。
   - `action` 可省略 `"type":"call"`（`type` 缺省即 `call`）；导航用 `{"type":"navigate","screen":"case_ping"}`，返回用 `{"type":"back"}`。
@@ -225,7 +229,9 @@ REGISTRY_URL=http://localhost:3254 python3 publish_one.py https_test_lab.json   
 ```
 发布结果：`official` 包 `https_test_lab` v1.0.0，`download_url` 落对象存储；`GET /package/https_test_lab` 可解析。
 
-⚠️ **跨机拓扑（决定 faasBase 形态）**：faas 服务只在 **77**，而这台 registry/backend（老生产机）**没有 faas**（`/api/faas/invoke` → 404）。所以发布版的 `faasBase` 用**指向 77 的绝对地址** `https://myapp-pre-de-backend.dapangyu.work/api/faas/invoke/svc-77be07ffad7b`（`build_jsonapp.py <svc> <backend_base>` 第二参数生成），这样无论客户端 backendUrl 指向哪，faas 调用都打到 77。若发布到「自带该 faas 服务」的 backend，可改回相对地址。
+⚠️ **跨机拓扑（决定 faasBase 形态）**：faas 服务只在 **77**，而这台 registry/backend（老生产机）**没有 faas**（`/api/faas/invoke` → 404）。两种选择：
+- **相对地址（默认，无硬编码域名）**：`"/api/faas/invoke/svc-77be07ffad7b"`，由客户端 `AppConfig.backendUrl` 前缀。当客户端 backendUrl 指向「自带该服务」的 backend（如 77）时直接可用、且鉴权用客户端同环境 Supabase——这是源模版的形态（`build_jsonapp.py <svc>`）。
+- **绝对地址（指向 77，works-anywhere 但写死域名）**：`"https://myapp-pre-de-backend.dapangyu.work/api/faas/invoke/svc-77be07ffad7b"`（`build_jsonapp.py <svc> https://myapp-pre-de-backend.dapangyu.work`）。无论客户端指向哪都打到 77，但 anti-hardcode 角度不理想，且鉴权 happy-path 要求客户端登录在 77 的 Supabase。
 
 ⚠️ **鉴权用例的跨环境前提**：`@get_auth_token` 拿的是客户端当前登录态的 token。77 的 Supabase 是 `myapp-pre-de-auth.dapangyu.work`，老生产机是 `myapp-auth.dapangyu.work`（**不同项目**）。所以鉴权 happy-path（`authenticated:true`）要求客户端登录在 **77 的 Supabase**；若登录在老生产机，该用例仍会真实往返 Supabase 但被拒（`authenticated:false`，依然证明前后端连通）。其余 8 个用例与登录态无关，任何客户端都能跑通。
 

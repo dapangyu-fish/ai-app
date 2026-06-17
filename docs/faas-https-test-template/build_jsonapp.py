@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""Generate templates/https_test_lab.json — the HTTPS 测试台 JSON-APP.
+"""Generate templates/https_test_lab.json — the FaaS 测试台 / FaaS Test Lab JSON-APP.
 
-Building the DSL programmatically guarantees valid JSON and keeps the 9 test
-cases (one faas route each) consistent. The faas service_id is a placeholder
-(__SVC__) in global.faasBase; the deploy step rewrites it to the real svc-<hex>.
+Building the DSL programmatically guarantees valid JSON, keeps the 9 test cases
+(one faas route each) consistent, and keeps zh/en i18n in lockstep.
 
-Run:  python3 docs/faas-https-test-template/build_jsonapp.py [service_id] [backend_base]
-  - service_id  : real svc-<hex> (default placeholder __SVC__)
-  - backend_base: 若给出（如 https://myapp-pre-de-backend.dapangyu.work），faasBase 用
-                  指向该后端的【绝对地址】；不给则用相对地址（由客户端 backendUrl 前缀）。
-                  本样板的 faas 服务只部署在 77，发布到「无 faas 的」registry/backend
-                  时必须用绝对地址指向 77，否则 invoke 会 404。
+i18n: global.i18n = {locale: {nested keys}}; UI strings use {{ t('a.b') }};
+locale = global.variables.locale (default zh), toggled by @set_locale.
+
+faasBase: relative by default (/api/faas/invoke/<svc>, resolved against the
+client's AppConfig.backendUrl — NO hardcoded domain). Pass backend_base only when
+publishing to a registry/backend that does NOT host the service, so the app must
+reach a specific backend (then faasBase becomes an absolute URL to it).
+
+Run:  python3 build_jsonapp.py [service_id] [backend_base]
 """
 import json
 import sys
@@ -19,153 +21,194 @@ SVC = sys.argv[1] if len(sys.argv) > 1 else "__SVC__"
 BACKEND_BASE = sys.argv[2].rstrip("/") if len(sys.argv) > 2 else ""
 FAAS_BASE = "%s/api/faas/invoke/%s" % (BACKEND_BASE, SVC) if BACKEND_BASE else "/api/faas/invoke/%s" % SVC
 
-# ---- the 9 test cases: each maps to exactly one faas route ----------------
-# logic = the @global.<fn> body (steps); display = result rows on the detail screen.
+# ---- common UI strings (zh / en) ------------------------------------------
+COMMON = {
+    "app": {
+        "title": {"zh": "FaaS 测试台", "en": "FaaS Test Lab"},
+        "subtitle": {
+            "zh": "每个入口 = 一个 FaaS 端到端用例。点进去运行，看真实 HTTP 状态码与响应体。",
+            "en": "Each entry is one FaaS end-to-end test case. Tap to run and see the real HTTP status and response.",
+        },
+        "backend_label": {"zh": "后端服务", "en": "Backend"},
+    },
+    "action": {
+        "run": {"zh": "▶ 运行测试", "en": "▶ Run test"},
+        "back": {"zh": "← 返回列表", "en": "← Back"},
+        "call": {"zh": "调用", "en": "Call"},
+    },
+}
+
+# ---- the 9 test cases: each maps to exactly one faas route -----------------
+# title/desc/rows carry zh+en; logic = the @global.<fn> body.
+ROW_HTTP = {"zh": "HTTP 状态码", "en": "HTTP status"}
+ROW_ERR = {"zh": "错误", "en": "Error"}
 CASES = [
     {
-        "id": "ping", "verb": "GET", "route": "/ping",
-        "title": "GET /ping", "desc": "最基础的存活探针：客户端 GET 一个 faas 路由，期望 200 + {ok:true, message:'pong'}。",
-        "fn": "runPing", "var": "resPing",
-        "logic": [
-            {"call": "@http_get", "args": {"url": "{{ global.faasBase }}/ping"}, "assign": "global.resPing"},
-        ],
-        "rows": [("HTTP 状态码", "{{ global.resPing.status }}"), ("响应体", "{{ global.resPing.data }}"), ("错误", "{{ global.resPing.error }}")],
+        "id": "ping", "verb": "GET", "route": "/ping", "fn": "runPing", "var": "resPing",
+        "title": {"zh": "GET /ping", "en": "GET /ping"},
+        "desc": {"zh": "最基础的存活探针：GET 一个 FaaS 路由，期望 200 + {ok:true, message:'pong'}。",
+                 "en": "Basic liveness probe: GET a FaaS route, expect 200 + {ok:true, message:'pong'}."},
+        "logic": [{"call": "@http_get", "args": {"url": "{{ global.faasBase }}/ping"}, "assign": "global.resPing"}],
+        "rows": [(ROW_HTTP, "{{ global.resPing.status }}"),
+                 ({"zh": "响应体", "en": "Response body"}, "{{ global.resPing.data }}"),
+                 (ROW_ERR, "{{ global.resPing.error }}")],
     },
     {
-        "id": "echo_get", "verb": "GET", "route": "/echo",
-        "title": "GET /echo?from=...", "desc": "GET + query 参数透传：后端把收到的 query 原样回显。",
-        "fn": "runEchoGet", "var": "resEchoGet",
-        "logic": [
-            {"call": "@http_get", "args": {"url": "{{ global.faasBase }}/echo", "query": {"from": "https-test-lab", "n": "1"}}, "assign": "global.resEchoGet"},
-        ],
-        "rows": [("HTTP 状态码", "{{ global.resEchoGet.status }}"), ("回显 query", "{{ global.resEchoGet.data }}"), ("错误", "{{ global.resEchoGet.error }}")],
+        "id": "echo_get", "verb": "GET", "route": "/echo", "fn": "runEchoGet", "var": "resEchoGet",
+        "title": {"zh": "GET /echo?from=…", "en": "GET /echo?from=…"},
+        "desc": {"zh": "GET + query 参数透传：后端把收到的 query 原样回显。",
+                 "en": "GET with query passthrough: the backend echoes the received query."},
+        "logic": [{"call": "@http_get", "args": {"url": "{{ global.faasBase }}/echo", "query": {"from": "faas-test-lab", "n": "1"}}, "assign": "global.resEchoGet"}],
+        "rows": [(ROW_HTTP, "{{ global.resEchoGet.status }}"),
+                 ({"zh": "回显 query", "en": "Echoed query"}, "{{ global.resEchoGet.data }}"),
+                 (ROW_ERR, "{{ global.resEchoGet.error }}")],
     },
     {
-        "id": "echo_post", "verb": "POST", "route": "/echo",
-        "title": "POST /echo", "desc": "POST + JSON body 透传：后端回显请求体并返回 201。",
-        "fn": "runEchoPost", "var": "resEchoPost",
-        "logic": [
-            {"call": "@http_post", "args": {"url": "{{ global.faasBase }}/echo", "body": {"hello": "world", "n": 42}}, "assign": "global.resEchoPost"},
-        ],
-        "rows": [("HTTP 状态码", "{{ global.resEchoPost.status }}"), ("回显 body", "{{ global.resEchoPost.data }}"), ("错误", "{{ global.resEchoPost.error }}")],
+        "id": "echo_post", "verb": "POST", "route": "/echo", "fn": "runEchoPost", "var": "resEchoPost",
+        "title": {"zh": "POST /echo", "en": "POST /echo"},
+        "desc": {"zh": "POST + JSON body 透传：后端回显请求体并返回 201。",
+                 "en": "POST with JSON body: the backend echoes the body and returns 201."},
+        "logic": [{"call": "@http_post", "args": {"url": "{{ global.faasBase }}/echo", "body": {"hello": "world", "n": 42}}, "assign": "global.resEchoPost"}],
+        "rows": [(ROW_HTTP, "{{ global.resEchoPost.status }}"),
+                 ({"zh": "回显 body", "en": "Echoed body"}, "{{ global.resEchoPost.data }}"),
+                 (ROW_ERR, "{{ global.resEchoPost.error }}")],
     },
     {
-        "id": "put", "verb": "PUT", "route": "/items/<id>",
-        "title": "PUT /items/42", "desc": "PUT + 动态路径段 + body：更新一条 mock 资源。",
-        "fn": "runPut", "var": "resPut",
-        "logic": [
-            {"call": "@http_put", "args": {"url": "{{ global.faasBase }}/items/42", "body": {"name": "updated", "price": 9.9}}, "assign": "global.resPut"},
-        ],
-        "rows": [("HTTP 状态码", "{{ global.resPut.status }}"), ("更新结果", "{{ global.resPut.data }}"), ("错误", "{{ global.resPut.error }}")],
+        "id": "put", "verb": "PUT", "route": "/items/42", "fn": "runPut", "var": "resPut",
+        "title": {"zh": "PUT /items/42", "en": "PUT /items/42"},
+        "desc": {"zh": "PUT + 动态路径段 + body：更新一条 mock 资源。",
+                 "en": "PUT with a dynamic path segment + body: update a mock resource."},
+        "logic": [{"call": "@http_put", "args": {"url": "{{ global.faasBase }}/items/42", "body": {"name": "updated", "price": 9.9}}, "assign": "global.resPut"}],
+        "rows": [(ROW_HTTP, "{{ global.resPut.status }}"),
+                 ({"zh": "更新结果", "en": "Update result"}, "{{ global.resPut.data }}"),
+                 (ROW_ERR, "{{ global.resPut.error }}")],
     },
     {
-        "id": "delete", "verb": "DELETE", "route": "/items/<id>",
-        "title": "DELETE /items/42", "desc": "DELETE + 动态路径段：删除一条 mock 资源。",
-        "fn": "runDelete", "var": "resDelete",
-        "logic": [
-            {"call": "@http_delete", "args": {"url": "{{ global.faasBase }}/items/42"}, "assign": "global.resDelete"},
-        ],
-        "rows": [("HTTP 状态码", "{{ global.resDelete.status }}"), ("删除结果", "{{ global.resDelete.data }}"), ("错误", "{{ global.resDelete.error }}")],
+        "id": "delete", "verb": "DELETE", "route": "/items/42", "fn": "runDelete", "var": "resDelete",
+        "title": {"zh": "DELETE /items/42", "en": "DELETE /items/42"},
+        "desc": {"zh": "DELETE + 动态路径段：删除一条 mock 资源。",
+                 "en": "DELETE with a dynamic path segment: delete a mock resource."},
+        "logic": [{"call": "@http_delete", "args": {"url": "{{ global.faasBase }}/items/42"}, "assign": "global.resDelete"}],
+        "rows": [(ROW_HTTP, "{{ global.resDelete.status }}"),
+                 ({"zh": "删除结果", "en": "Delete result"}, "{{ global.resDelete.data }}"),
+                 (ROW_ERR, "{{ global.resDelete.error }}")],
     },
     {
-        "id": "headers", "verb": "GET", "route": "/headers",
-        "title": "GET /headers（看代理剥头）", "desc": "后端回显它实际收到的请求头。可看到 invoke 代理剥掉了 Authorization/Cookie，而自定义头 X-User-Token / X-Demo 能透传。",
-        "fn": "runHeaders", "var": "resHeaders",
-        "logic": [
-            {"call": "@http_get", "args": {"url": "{{ global.faasBase }}/headers", "headers": {"X-User-Token": "demo-token-123", "X-Demo": "hello", "Authorization": "Bearer should-be-stripped"}}, "assign": "global.resHeaders"},
-        ],
-        "rows": [("HTTP 状态码", "{{ global.resHeaders.status }}"), ("后端收到的头", "{{ global.resHeaders.data }}"), ("错误", "{{ global.resHeaders.error }}")],
+        "id": "headers", "verb": "GET", "route": "/headers", "fn": "runHeaders", "var": "resHeaders",
+        "title": {"zh": "GET /headers（看代理剥头）", "en": "GET /headers (proxy header strip)"},
+        "desc": {"zh": "后端回显它实际收到的请求头。可看到 invoke 代理剥掉了 Authorization/Cookie，自定义头 X-User-Token / X-Demo 能透传。",
+                 "en": "The backend echoes the headers it received. The invoke proxy strips Authorization/Cookie; custom headers (X-User-Token / X-Demo) pass through."},
+        "logic": [{"call": "@http_get", "args": {"url": "{{ global.faasBase }}/headers", "headers": {"X-User-Token": "demo-token-123", "X-Demo": "hello", "Authorization": "Bearer should-be-stripped"}}, "assign": "global.resHeaders"}],
+        "rows": [(ROW_HTTP, "{{ global.resHeaders.status }}"),
+                 ({"zh": "后端收到的头", "en": "Received headers"}, "{{ global.resHeaders.data }}"),
+                 (ROW_ERR, "{{ global.resHeaders.error }}")],
     },
     {
-        "id": "stream", "verb": "GET(SSE)", "route": "/stream",
-        "title": "GET /stream（SSE）", "desc": "text/event-stream 流式响应：后端推 5 个 tick + 1 个 done，客户端用 @http_sse 累加 events。",
-        "fn": "runStream", "var": "resStream",
-        "logic": [
-            {"call": "@http_sse", "args": {"url": "{{ global.faasBase }}/stream", "method": "GET", "bind": "global.resStream"}, "assign": "global._sseRet"},
-        ],
-        "rows": [("SSE 状态", "{{ global.resStream.status }}"), ("收到的事件", "{{ global.resStream.events }}"), ("错误", "{{ global.resStream.error }}")],
+        "id": "stream", "verb": "GET", "route": "/stream", "fn": "runStream", "var": "resStream",
+        "title": {"zh": "GET /stream（SSE）", "en": "GET /stream (SSE)"},
+        "desc": {"zh": "text/event-stream 流式响应：后端推 5 个 tick + 1 个 done，客户端用 @http_sse 累加 events。",
+                 "en": "text/event-stream streaming: the backend pushes 5 ticks + 1 done; the client accumulates events via @http_sse."},
+        "logic": [{"call": "@http_sse", "args": {"url": "{{ global.faasBase }}/stream", "method": "GET", "bind": "global.resStream"}, "assign": "global._sseRet"}],
+        "rows": [({"zh": "SSE 状态", "en": "SSE status"}, "{{ global.resStream.status }}"),
+                 ({"zh": "收到的事件", "en": "Received events"}, "{{ global.resStream.events }}"),
+                 (ROW_ERR, "{{ global.resStream.error }}")],
     },
     {
-        "id": "auth", "verb": "POST", "route": "/auth/verify",
-        "title": "POST /auth/verify（真实 Supabase 鉴权）", "desc": "客户端用 @get_auth_token 拿当前用户 token，放进自定义头 X-User-Token 传给后端；后端真实调用 Supabase /auth/v1/user 验证并回传裁决。",
-        "fn": "runAuth", "var": "resAuth",
+        "id": "auth", "verb": "POST", "route": "/auth/verify", "fn": "runAuth", "var": "resAuth",
+        "title": {"zh": "POST /auth/verify（真实 Supabase 鉴权）", "en": "POST /auth/verify (real Supabase auth)"},
+        "desc": {"zh": "客户端用 @get_auth_token 拿当前用户 token，放进自定义头 X-User-Token 传给后端；后端真实调用 Supabase /auth/v1/user 验证并回传裁决。",
+                 "en": "The client gets the user token via @get_auth_token and passes it in the X-User-Token header; the backend really calls Supabase /auth/v1/user and returns the verdict."},
         "logic": [
             {"call": "@get_auth_token", "args": {"bind": "global.userToken"}},
             {"call": "@http_post", "args": {"url": "{{ global.faasBase }}/auth/verify", "headers": {"X-User-Token": "{{ global.userToken }}"}, "body": {}}, "assign": "global.resAuth"},
         ],
-        "rows": [("HTTP 状态码", "{{ global.resAuth.status }}"), ("鉴权结果", "{{ global.resAuth.data }}"), ("错误", "{{ global.resAuth.error }}")],
+        "rows": [(ROW_HTTP, "{{ global.resAuth.status }}"),
+                 ({"zh": "鉴权结果", "en": "Auth result"}, "{{ global.resAuth.data }}"),
+                 (ROW_ERR, "{{ global.resAuth.error }}")],
     },
     {
-        "id": "status", "verb": "GET", "route": "/status/<code>",
-        "title": "GET /status/418", "desc": "让后端返回任意状态码（418），验证客户端对非 2xx 响应的处理。",
-        "fn": "runStatus", "var": "resStatus",
-        "logic": [
-            {"call": "@http_get", "args": {"url": "{{ global.faasBase }}/status/418"}, "assign": "global.resStatus"},
-        ],
-        "rows": [("HTTP 状态码", "{{ global.resStatus.status }}"), ("响应体", "{{ global.resStatus.data }}"), ("错误", "{{ global.resStatus.error }}")],
+        "id": "status", "verb": "GET", "route": "/status/418", "fn": "runStatus", "var": "resStatus",
+        "title": {"zh": "GET /status/418", "en": "GET /status/418"},
+        "desc": {"zh": "让后端返回任意状态码（418），验证客户端对非 2xx 响应的处理。",
+                 "en": "Make the backend return an arbitrary status (418) to test client handling of non-2xx responses."},
+        "logic": [{"call": "@http_get", "args": {"url": "{{ global.faasBase }}/status/418"}, "assign": "global.resStatus"}],
+        "rows": [(ROW_HTTP, "{{ global.resStatus.status }}"),
+                 ({"zh": "响应体", "en": "Response body"}, "{{ global.resStatus.data }}"),
+                 (ROW_ERR, "{{ global.resStatus.error }}")],
     },
 ]
 
-# ---- global.variables -----------------------------------------------------
-variables = {"faasBase": FAAS_BASE, "userToken": None, "_sseRet": None}
+# ---- build global.i18n = {zh:{...}, en:{...}} ------------------------------
+i18n = {"zh": {"case": {}}, "en": {"case": {}}}
+for section, entries in COMMON.items():
+    for key, langs in entries.items():
+        for lang in ("zh", "en"):
+            i18n[lang].setdefault(section, {})[key] = langs[lang]
 for c in CASES:
-    variables[c["var"]] = None
+    for lang in ("zh", "en"):
+        node = {"title": c["title"][lang], "desc": c["desc"][lang]}
+        for idx, (label, _tmpl) in enumerate(c["rows"]):
+            node["row%d" % idx] = label[lang]
+        i18n[lang]["case"][c["id"]] = node
 
-# ---- global.functions (each called as @global.<fn>) -----------------------
+# ---- global.variables + functions -----------------------------------------
+variables = {"locale": "zh", "faasBase": FAAS_BASE, "userToken": None, "_sseRet": None}
 functions = {}
 for c in CASES:
+    variables[c["var"]] = None
     functions[c["fn"]] = {
         "params": [],
-        "description": "运行测试用例 %s (%s %s)" % (c["id"], c["verb"], c["route"]),
+        "description": "run %s (%s %s)" % (c["id"], c["verb"], c["route"]),
         "logic": c["logic"] + [{"expression": {"var": "global.%s" % c["var"]}}],
     }
 
 # ---- ui.screens -----------------------------------------------------------
-# home: a header + one nav button per case
 home_children = [
-    {"type": "text", "value": "HTTPS 测试台", "style": {"fontSize": 24, "fontWeight": "bold"}},
-    {"type": "text", "value": "每个入口 = 一个 faas 端到端用例。点进去运行，看真实 HTTP 状态码与响应体。", "style": {"fontSize": 13, "color": "#666666"}},
-    {"type": "text", "value": "后端服务: %s" % FAAS_BASE, "style": {"fontSize": 11, "color": "#999999"}},
+    {"type": "container", "layout": "row", "children": [
+        {"type": "text", "value": "{{ t('app.title') }}", "style": {"fontSize": 24, "fontWeight": "bold"}},
+        {"type": "button", "label": "中", "variant": "text", "action": {"call": "@set_locale", "args": {"value": "zh"}}},
+        {"type": "button", "label": "EN", "variant": "text", "action": {"call": "@set_locale", "args": {"value": "en"}}},
+    ]},
+    {"type": "text", "value": "{{ t('app.subtitle') }}", "style": {"fontSize": 13, "color": "#666666"}},
+    {"type": "text", "value": "{{ t('app.backend_label') }}: {{ global.faasBase }}", "style": {"fontSize": 11, "color": "#999999"}},
     {"type": "divider"},
 ]
 for c in CASES:
     home_children.append({
         "type": "button",
-        "label": "%s · %s" % (c["verb"], c["title"]),
+        "label": "%s · {{ t('case.%s.title') }}" % (c["verb"], c["id"]),
         "variant": "outlined",
         "action": {"type": "navigate", "screen": "case_%s" % c["id"]},
     })
+screens = [{"id": "home", "title": "{{ t('app.title') }}", "layout": "column", "padding": 16, "scrollable": True, "children": home_children}]
 
-screens = [{"id": "home", "title": "HTTPS 测试台", "layout": "column", "padding": 16, "scrollable": True, "children": home_children}]
-
-# one detail screen per case
 for c in CASES:
     children = [
-        {"type": "button", "label": "← 返回列表", "variant": "text", "action": {"type": "back"}},
-        {"type": "text", "value": c["title"], "style": {"fontSize": 20, "fontWeight": "bold"}},
-        {"type": "text", "value": c["desc"], "style": {"fontSize": 13, "color": "#666666"}},
-        {"type": "text", "value": "调用: %s {{ global.faasBase }}%s" % (c["verb"], c["route"]), "style": {"fontSize": 12, "color": "#999999"}},
+        {"type": "button", "label": "{{ t('action.back') }}", "variant": "text", "action": {"type": "back"}},
+        {"type": "text", "value": "{{ t('case.%s.title') }}" % c["id"], "style": {"fontSize": 20, "fontWeight": "bold"}},
+        {"type": "text", "value": "{{ t('case.%s.desc') }}" % c["id"], "style": {"fontSize": 13, "color": "#666666"}},
+        {"type": "text", "value": "{{ t('action.call') }}: %s {{ global.faasBase }}%s" % (c["verb"], c["route"]), "style": {"fontSize": 12, "color": "#999999"}},
         {"type": "divider"},
-        {"type": "button", "label": "▶ 运行测试", "variant": "filled", "action": {"call": "@global.%s" % c["fn"], "args": {}}},
+        {"type": "button", "label": "{{ t('action.run') }}", "variant": "filled", "action": {"call": "@global.%s" % c["fn"], "args": {}}},
         {"type": "divider"},
     ]
-    for label, tmpl in c["rows"]:
-        children.append({"type": "text", "value": "%s:" % label, "style": {"fontSize": 13, "fontWeight": "bold"}})
+    for idx, (_label, tmpl) in enumerate(c["rows"]):
+        children.append({"type": "text", "value": "{{ t('case.%s.row%d') }}:" % (c["id"], idx), "style": {"fontSize": 13, "fontWeight": "bold"}})
         children.append({"type": "text", "value": tmpl, "style": {"fontSize": 12, "color": "#333333"}})
-    screens.append({"id": "case_%s" % c["id"], "title": c["title"], "layout": "column", "padding": 16, "scrollable": True, "children": children})
+    screens.append({"id": "case_%s" % c["id"], "title": "{{ t('case.%s.title') }}" % c["id"], "layout": "column", "padding": 16, "scrollable": True, "children": children})
 
 app = {
     "dsl": "3.3",
     "appid": "7c9e6f10-2a3b-4c5d-8e9f-0a1b2c3d4e5f",
     "meta": {
         "name": "https_test_lab",
-        "displayName": {"zh": "HTTPS 测试台", "en": "HTTPS Test Lab", "default": "HTTPS Test Lab"},
-        "version": "1.0.0",
+        "displayName": {"zh": "FaaS 测试台", "en": "FaaS Test Lab", "default": "FaaS Test Lab"},
+        "version": "1.1.0",
         "type": "app",
-        "description": "FaaS HTTPS 连通性端到端测试台：GET/POST/PUT/DELETE/SSE/真实 Supabase 鉴权/任意状态码。",
+        "description": "FaaS 端到端连通性测试台（i18n）：GET/POST/PUT/DELETE/SSE/真实 Supabase 鉴权/任意状态码。",
         "author": "claude",
     },
-    "global": {"variables": variables, "computed": {}, "functions": functions, "i18n": {}},
+    "global": {"variables": variables, "computed": {}, "functions": functions, "i18n": i18n},
     "steps": [],
     "ui": {"screens": screens},
 }
@@ -173,4 +216,5 @@ app = {
 out = "templates/https_test_lab.json"
 with open(out, "w", encoding="utf-8") as f:
     json.dump(app, f, ensure_ascii=False, indent=2)
-print("wrote %s  (%d screens, %d functions, svc=%s)" % (out, len(screens), len(functions), SVC))
+print("wrote %s  (%d screens, %d functions, locales=%s, svc=%s, faasBase=%s)"
+      % (out, len(screens), len(functions), list(i18n.keys()), SVC, "relative" if not BACKEND_BASE else "absolute"))

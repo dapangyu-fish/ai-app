@@ -4,18 +4,19 @@
   "meta": {
     "name": "https_test_lab",
     "displayName": {
-      "zh": "HTTPS 测试台",
-      "en": "HTTPS Test Lab",
-      "default": "HTTPS Test Lab"
+      "zh": "FaaS 测试台",
+      "en": "FaaS Test Lab",
+      "default": "FaaS Test Lab"
     },
-    "version": "1.0.0",
+    "version": "1.1.0",
     "type": "app",
-    "description": "FaaS HTTPS 连通性端到端测试台：GET/POST/PUT/DELETE/SSE/真实 Supabase 鉴权/任意状态码。",
+    "description": "FaaS 端到端连通性测试台（i18n）：GET/POST/PUT/DELETE/SSE/真实 Supabase 鉴权/任意状态码。",
     "author": "claude"
   },
   "global": {
     "variables": {
-      "faasBase": "https://myapp-pre-de-backend.dapangyu.work/api/faas/invoke/svc-77be07ffad7b",
+      "locale": "zh",
+      "faasBase": "/api/faas/invoke/svc-77be07ffad7b",
       "userToken": null,
       "_sseRet": null,
       "resPing": null,
@@ -32,7 +33,7 @@
     "functions": {
       "runPing": {
         "params": [],
-        "description": "运行测试用例 ping (GET /ping)",
+        "description": "run ping (GET /ping)",
         "logic": [
           {
             "call": "@http_get",
@@ -50,14 +51,14 @@
       },
       "runEchoGet": {
         "params": [],
-        "description": "运行测试用例 echo_get (GET /echo)",
+        "description": "run echo_get (GET /echo)",
         "logic": [
           {
             "call": "@http_get",
             "args": {
               "url": "{{ global.faasBase }}/echo",
               "query": {
-                "from": "https-test-lab",
+                "from": "faas-test-lab",
                 "n": "1"
               }
             },
@@ -72,7 +73,7 @@
       },
       "runEchoPost": {
         "params": [],
-        "description": "运行测试用例 echo_post (POST /echo)",
+        "description": "run echo_post (POST /echo)",
         "logic": [
           {
             "call": "@http_post",
@@ -94,7 +95,7 @@
       },
       "runPut": {
         "params": [],
-        "description": "运行测试用例 put (PUT /items/<id>)",
+        "description": "run put (PUT /items/42)",
         "logic": [
           {
             "call": "@http_put",
@@ -116,7 +117,7 @@
       },
       "runDelete": {
         "params": [],
-        "description": "运行测试用例 delete (DELETE /items/<id>)",
+        "description": "run delete (DELETE /items/42)",
         "logic": [
           {
             "call": "@http_delete",
@@ -134,7 +135,7 @@
       },
       "runHeaders": {
         "params": [],
-        "description": "运行测试用例 headers (GET /headers)",
+        "description": "run headers (GET /headers)",
         "logic": [
           {
             "call": "@http_get",
@@ -157,7 +158,7 @@
       },
       "runStream": {
         "params": [],
-        "description": "运行测试用例 stream (GET(SSE) /stream)",
+        "description": "run stream (GET /stream)",
         "logic": [
           {
             "call": "@http_sse",
@@ -177,7 +178,7 @@
       },
       "runAuth": {
         "params": [],
-        "description": "运行测试用例 auth (POST /auth/verify)",
+        "description": "run auth (POST /auth/verify)",
         "logic": [
           {
             "call": "@get_auth_token",
@@ -205,7 +206,7 @@
       },
       "runStatus": {
         "params": [],
-        "description": "运行测试用例 status (GET /status/<code>)",
+        "description": "run status (GET /status/418)",
         "logic": [
           {
             "call": "@http_get",
@@ -222,29 +223,212 @@
         ]
       }
     },
-    "i18n": {}
+    "i18n": {
+      "zh": {
+        "case": {
+          "ping": {
+            "title": "GET /ping",
+            "desc": "最基础的存活探针：GET 一个 FaaS 路由，期望 200 + {ok:true, message:'pong'}。",
+            "row0": "HTTP 状态码",
+            "row1": "响应体",
+            "row2": "错误"
+          },
+          "echo_get": {
+            "title": "GET /echo?from=…",
+            "desc": "GET + query 参数透传：后端把收到的 query 原样回显。",
+            "row0": "HTTP 状态码",
+            "row1": "回显 query",
+            "row2": "错误"
+          },
+          "echo_post": {
+            "title": "POST /echo",
+            "desc": "POST + JSON body 透传：后端回显请求体并返回 201。",
+            "row0": "HTTP 状态码",
+            "row1": "回显 body",
+            "row2": "错误"
+          },
+          "put": {
+            "title": "PUT /items/42",
+            "desc": "PUT + 动态路径段 + body：更新一条 mock 资源。",
+            "row0": "HTTP 状态码",
+            "row1": "更新结果",
+            "row2": "错误"
+          },
+          "delete": {
+            "title": "DELETE /items/42",
+            "desc": "DELETE + 动态路径段：删除一条 mock 资源。",
+            "row0": "HTTP 状态码",
+            "row1": "删除结果",
+            "row2": "错误"
+          },
+          "headers": {
+            "title": "GET /headers（看代理剥头）",
+            "desc": "后端回显它实际收到的请求头。可看到 invoke 代理剥掉了 Authorization/Cookie，自定义头 X-User-Token / X-Demo 能透传。",
+            "row0": "HTTP 状态码",
+            "row1": "后端收到的头",
+            "row2": "错误"
+          },
+          "stream": {
+            "title": "GET /stream（SSE）",
+            "desc": "text/event-stream 流式响应：后端推 5 个 tick + 1 个 done，客户端用 @http_sse 累加 events。",
+            "row0": "SSE 状态",
+            "row1": "收到的事件",
+            "row2": "错误"
+          },
+          "auth": {
+            "title": "POST /auth/verify（真实 Supabase 鉴权）",
+            "desc": "客户端用 @get_auth_token 拿当前用户 token，放进自定义头 X-User-Token 传给后端；后端真实调用 Supabase /auth/v1/user 验证并回传裁决。",
+            "row0": "HTTP 状态码",
+            "row1": "鉴权结果",
+            "row2": "错误"
+          },
+          "status": {
+            "title": "GET /status/418",
+            "desc": "让后端返回任意状态码（418），验证客户端对非 2xx 响应的处理。",
+            "row0": "HTTP 状态码",
+            "row1": "响应体",
+            "row2": "错误"
+          }
+        },
+        "app": {
+          "title": "FaaS 测试台",
+          "subtitle": "每个入口 = 一个 FaaS 端到端用例。点进去运行，看真实 HTTP 状态码与响应体。",
+          "backend_label": "后端服务"
+        },
+        "action": {
+          "run": "▶ 运行测试",
+          "back": "← 返回列表",
+          "call": "调用"
+        }
+      },
+      "en": {
+        "case": {
+          "ping": {
+            "title": "GET /ping",
+            "desc": "Basic liveness probe: GET a FaaS route, expect 200 + {ok:true, message:'pong'}.",
+            "row0": "HTTP status",
+            "row1": "Response body",
+            "row2": "Error"
+          },
+          "echo_get": {
+            "title": "GET /echo?from=…",
+            "desc": "GET with query passthrough: the backend echoes the received query.",
+            "row0": "HTTP status",
+            "row1": "Echoed query",
+            "row2": "Error"
+          },
+          "echo_post": {
+            "title": "POST /echo",
+            "desc": "POST with JSON body: the backend echoes the body and returns 201.",
+            "row0": "HTTP status",
+            "row1": "Echoed body",
+            "row2": "Error"
+          },
+          "put": {
+            "title": "PUT /items/42",
+            "desc": "PUT with a dynamic path segment + body: update a mock resource.",
+            "row0": "HTTP status",
+            "row1": "Update result",
+            "row2": "Error"
+          },
+          "delete": {
+            "title": "DELETE /items/42",
+            "desc": "DELETE with a dynamic path segment: delete a mock resource.",
+            "row0": "HTTP status",
+            "row1": "Delete result",
+            "row2": "Error"
+          },
+          "headers": {
+            "title": "GET /headers (proxy header strip)",
+            "desc": "The backend echoes the headers it received. The invoke proxy strips Authorization/Cookie; custom headers (X-User-Token / X-Demo) pass through.",
+            "row0": "HTTP status",
+            "row1": "Received headers",
+            "row2": "Error"
+          },
+          "stream": {
+            "title": "GET /stream (SSE)",
+            "desc": "text/event-stream streaming: the backend pushes 5 ticks + 1 done; the client accumulates events via @http_sse.",
+            "row0": "SSE status",
+            "row1": "Received events",
+            "row2": "Error"
+          },
+          "auth": {
+            "title": "POST /auth/verify (real Supabase auth)",
+            "desc": "The client gets the user token via @get_auth_token and passes it in the X-User-Token header; the backend really calls Supabase /auth/v1/user and returns the verdict.",
+            "row0": "HTTP status",
+            "row1": "Auth result",
+            "row2": "Error"
+          },
+          "status": {
+            "title": "GET /status/418",
+            "desc": "Make the backend return an arbitrary status (418) to test client handling of non-2xx responses.",
+            "row0": "HTTP status",
+            "row1": "Response body",
+            "row2": "Error"
+          }
+        },
+        "app": {
+          "title": "FaaS Test Lab",
+          "subtitle": "Each entry is one FaaS end-to-end test case. Tap to run and see the real HTTP status and response.",
+          "backend_label": "Backend"
+        },
+        "action": {
+          "run": "▶ Run test",
+          "back": "← Back",
+          "call": "Call"
+        }
+      }
+    }
   },
   "steps": [],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "HTTPS 测试台",
+        "title": "{{ t('app.title') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
-            "type": "text",
-            "value": "HTTPS 测试台",
-            "style": {
-              "fontSize": 24,
-              "fontWeight": "bold"
-            }
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "text",
+                "value": "{{ t('app.title') }}",
+                "style": {
+                  "fontSize": 24,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "button",
+                "label": "中",
+                "variant": "text",
+                "action": {
+                  "call": "@set_locale",
+                  "args": {
+                    "value": "zh"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "EN",
+                "variant": "text",
+                "action": {
+                  "call": "@set_locale",
+                  "args": {
+                    "value": "en"
+                  }
+                }
+              }
+            ]
           },
           {
             "type": "text",
-            "value": "每个入口 = 一个 faas 端到端用例。点进去运行，看真实 HTTP 状态码与响应体。",
+            "value": "{{ t('app.subtitle') }}",
             "style": {
               "fontSize": 13,
               "color": "#666666"
@@ -252,7 +436,7 @@
           },
           {
             "type": "text",
-            "value": "后端服务: https://myapp-pre-de-backend.dapangyu.work/api/faas/invoke/svc-77be07ffad7b",
+            "value": "{{ t('app.backend_label') }}: {{ global.faasBase }}",
             "style": {
               "fontSize": 11,
               "color": "#999999"
@@ -263,7 +447,7 @@
           },
           {
             "type": "button",
-            "label": "GET · GET /ping",
+            "label": "GET · {{ t('case.ping.title') }}",
             "variant": "outlined",
             "action": {
               "type": "navigate",
@@ -272,7 +456,7 @@
           },
           {
             "type": "button",
-            "label": "GET · GET /echo?from=...",
+            "label": "GET · {{ t('case.echo_get.title') }}",
             "variant": "outlined",
             "action": {
               "type": "navigate",
@@ -281,7 +465,7 @@
           },
           {
             "type": "button",
-            "label": "POST · POST /echo",
+            "label": "POST · {{ t('case.echo_post.title') }}",
             "variant": "outlined",
             "action": {
               "type": "navigate",
@@ -290,7 +474,7 @@
           },
           {
             "type": "button",
-            "label": "PUT · PUT /items/42",
+            "label": "PUT · {{ t('case.put.title') }}",
             "variant": "outlined",
             "action": {
               "type": "navigate",
@@ -299,7 +483,7 @@
           },
           {
             "type": "button",
-            "label": "DELETE · DELETE /items/42",
+            "label": "DELETE · {{ t('case.delete.title') }}",
             "variant": "outlined",
             "action": {
               "type": "navigate",
@@ -308,7 +492,7 @@
           },
           {
             "type": "button",
-            "label": "GET · GET /headers（看代理剥头）",
+            "label": "GET · {{ t('case.headers.title') }}",
             "variant": "outlined",
             "action": {
               "type": "navigate",
@@ -317,7 +501,7 @@
           },
           {
             "type": "button",
-            "label": "GET(SSE) · GET /stream（SSE）",
+            "label": "GET · {{ t('case.stream.title') }}",
             "variant": "outlined",
             "action": {
               "type": "navigate",
@@ -326,7 +510,7 @@
           },
           {
             "type": "button",
-            "label": "POST · POST /auth/verify（真实 Supabase 鉴权）",
+            "label": "POST · {{ t('case.auth.title') }}",
             "variant": "outlined",
             "action": {
               "type": "navigate",
@@ -335,7 +519,7 @@
           },
           {
             "type": "button",
-            "label": "GET · GET /status/418",
+            "label": "GET · {{ t('case.status.title') }}",
             "variant": "outlined",
             "action": {
               "type": "navigate",
@@ -346,14 +530,14 @@
       },
       {
         "id": "case_ping",
-        "title": "GET /ping",
+        "title": "{{ t('case.ping.title') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
             "type": "button",
-            "label": "← 返回列表",
+            "label": "{{ t('action.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -361,7 +545,7 @@
           },
           {
             "type": "text",
-            "value": "GET /ping",
+            "value": "{{ t('case.ping.title') }}",
             "style": {
               "fontSize": 20,
               "fontWeight": "bold"
@@ -369,7 +553,7 @@
           },
           {
             "type": "text",
-            "value": "最基础的存活探针：客户端 GET 一个 faas 路由，期望 200 + {ok:true, message:'pong'}。",
+            "value": "{{ t('case.ping.desc') }}",
             "style": {
               "fontSize": 13,
               "color": "#666666"
@@ -377,7 +561,7 @@
           },
           {
             "type": "text",
-            "value": "调用: GET {{ global.faasBase }}/ping",
+            "value": "{{ t('action.call') }}: GET {{ global.faasBase }}/ping",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -388,7 +572,7 @@
           },
           {
             "type": "button",
-            "label": "▶ 运行测试",
+            "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
               "call": "@global.runPing",
@@ -400,7 +584,7 @@
           },
           {
             "type": "text",
-            "value": "HTTP 状态码:",
+            "value": "{{ t('case.ping.row0') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -416,7 +600,7 @@
           },
           {
             "type": "text",
-            "value": "响应体:",
+            "value": "{{ t('case.ping.row1') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -432,7 +616,7 @@
           },
           {
             "type": "text",
-            "value": "错误:",
+            "value": "{{ t('case.ping.row2') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -450,14 +634,14 @@
       },
       {
         "id": "case_echo_get",
-        "title": "GET /echo?from=...",
+        "title": "{{ t('case.echo_get.title') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
             "type": "button",
-            "label": "← 返回列表",
+            "label": "{{ t('action.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -465,7 +649,7 @@
           },
           {
             "type": "text",
-            "value": "GET /echo?from=...",
+            "value": "{{ t('case.echo_get.title') }}",
             "style": {
               "fontSize": 20,
               "fontWeight": "bold"
@@ -473,7 +657,7 @@
           },
           {
             "type": "text",
-            "value": "GET + query 参数透传：后端把收到的 query 原样回显。",
+            "value": "{{ t('case.echo_get.desc') }}",
             "style": {
               "fontSize": 13,
               "color": "#666666"
@@ -481,7 +665,7 @@
           },
           {
             "type": "text",
-            "value": "调用: GET {{ global.faasBase }}/echo",
+            "value": "{{ t('action.call') }}: GET {{ global.faasBase }}/echo",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -492,7 +676,7 @@
           },
           {
             "type": "button",
-            "label": "▶ 运行测试",
+            "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
               "call": "@global.runEchoGet",
@@ -504,7 +688,7 @@
           },
           {
             "type": "text",
-            "value": "HTTP 状态码:",
+            "value": "{{ t('case.echo_get.row0') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -520,7 +704,7 @@
           },
           {
             "type": "text",
-            "value": "回显 query:",
+            "value": "{{ t('case.echo_get.row1') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -536,7 +720,7 @@
           },
           {
             "type": "text",
-            "value": "错误:",
+            "value": "{{ t('case.echo_get.row2') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -554,14 +738,14 @@
       },
       {
         "id": "case_echo_post",
-        "title": "POST /echo",
+        "title": "{{ t('case.echo_post.title') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
             "type": "button",
-            "label": "← 返回列表",
+            "label": "{{ t('action.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -569,7 +753,7 @@
           },
           {
             "type": "text",
-            "value": "POST /echo",
+            "value": "{{ t('case.echo_post.title') }}",
             "style": {
               "fontSize": 20,
               "fontWeight": "bold"
@@ -577,7 +761,7 @@
           },
           {
             "type": "text",
-            "value": "POST + JSON body 透传：后端回显请求体并返回 201。",
+            "value": "{{ t('case.echo_post.desc') }}",
             "style": {
               "fontSize": 13,
               "color": "#666666"
@@ -585,7 +769,7 @@
           },
           {
             "type": "text",
-            "value": "调用: POST {{ global.faasBase }}/echo",
+            "value": "{{ t('action.call') }}: POST {{ global.faasBase }}/echo",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -596,7 +780,7 @@
           },
           {
             "type": "button",
-            "label": "▶ 运行测试",
+            "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
               "call": "@global.runEchoPost",
@@ -608,7 +792,7 @@
           },
           {
             "type": "text",
-            "value": "HTTP 状态码:",
+            "value": "{{ t('case.echo_post.row0') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -624,7 +808,7 @@
           },
           {
             "type": "text",
-            "value": "回显 body:",
+            "value": "{{ t('case.echo_post.row1') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -640,7 +824,7 @@
           },
           {
             "type": "text",
-            "value": "错误:",
+            "value": "{{ t('case.echo_post.row2') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -658,14 +842,14 @@
       },
       {
         "id": "case_put",
-        "title": "PUT /items/42",
+        "title": "{{ t('case.put.title') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
             "type": "button",
-            "label": "← 返回列表",
+            "label": "{{ t('action.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -673,7 +857,7 @@
           },
           {
             "type": "text",
-            "value": "PUT /items/42",
+            "value": "{{ t('case.put.title') }}",
             "style": {
               "fontSize": 20,
               "fontWeight": "bold"
@@ -681,7 +865,7 @@
           },
           {
             "type": "text",
-            "value": "PUT + 动态路径段 + body：更新一条 mock 资源。",
+            "value": "{{ t('case.put.desc') }}",
             "style": {
               "fontSize": 13,
               "color": "#666666"
@@ -689,7 +873,7 @@
           },
           {
             "type": "text",
-            "value": "调用: PUT {{ global.faasBase }}/items/<id>",
+            "value": "{{ t('action.call') }}: PUT {{ global.faasBase }}/items/42",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -700,7 +884,7 @@
           },
           {
             "type": "button",
-            "label": "▶ 运行测试",
+            "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
               "call": "@global.runPut",
@@ -712,7 +896,7 @@
           },
           {
             "type": "text",
-            "value": "HTTP 状态码:",
+            "value": "{{ t('case.put.row0') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -728,7 +912,7 @@
           },
           {
             "type": "text",
-            "value": "更新结果:",
+            "value": "{{ t('case.put.row1') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -744,7 +928,7 @@
           },
           {
             "type": "text",
-            "value": "错误:",
+            "value": "{{ t('case.put.row2') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -762,14 +946,14 @@
       },
       {
         "id": "case_delete",
-        "title": "DELETE /items/42",
+        "title": "{{ t('case.delete.title') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
             "type": "button",
-            "label": "← 返回列表",
+            "label": "{{ t('action.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -777,7 +961,7 @@
           },
           {
             "type": "text",
-            "value": "DELETE /items/42",
+            "value": "{{ t('case.delete.title') }}",
             "style": {
               "fontSize": 20,
               "fontWeight": "bold"
@@ -785,7 +969,7 @@
           },
           {
             "type": "text",
-            "value": "DELETE + 动态路径段：删除一条 mock 资源。",
+            "value": "{{ t('case.delete.desc') }}",
             "style": {
               "fontSize": 13,
               "color": "#666666"
@@ -793,7 +977,7 @@
           },
           {
             "type": "text",
-            "value": "调用: DELETE {{ global.faasBase }}/items/<id>",
+            "value": "{{ t('action.call') }}: DELETE {{ global.faasBase }}/items/42",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -804,7 +988,7 @@
           },
           {
             "type": "button",
-            "label": "▶ 运行测试",
+            "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
               "call": "@global.runDelete",
@@ -816,7 +1000,7 @@
           },
           {
             "type": "text",
-            "value": "HTTP 状态码:",
+            "value": "{{ t('case.delete.row0') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -832,7 +1016,7 @@
           },
           {
             "type": "text",
-            "value": "删除结果:",
+            "value": "{{ t('case.delete.row1') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -848,7 +1032,7 @@
           },
           {
             "type": "text",
-            "value": "错误:",
+            "value": "{{ t('case.delete.row2') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -866,14 +1050,14 @@
       },
       {
         "id": "case_headers",
-        "title": "GET /headers（看代理剥头）",
+        "title": "{{ t('case.headers.title') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
             "type": "button",
-            "label": "← 返回列表",
+            "label": "{{ t('action.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -881,7 +1065,7 @@
           },
           {
             "type": "text",
-            "value": "GET /headers（看代理剥头）",
+            "value": "{{ t('case.headers.title') }}",
             "style": {
               "fontSize": 20,
               "fontWeight": "bold"
@@ -889,7 +1073,7 @@
           },
           {
             "type": "text",
-            "value": "后端回显它实际收到的请求头。可看到 invoke 代理剥掉了 Authorization/Cookie，而自定义头 X-User-Token / X-Demo 能透传。",
+            "value": "{{ t('case.headers.desc') }}",
             "style": {
               "fontSize": 13,
               "color": "#666666"
@@ -897,7 +1081,7 @@
           },
           {
             "type": "text",
-            "value": "调用: GET {{ global.faasBase }}/headers",
+            "value": "{{ t('action.call') }}: GET {{ global.faasBase }}/headers",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -908,7 +1092,7 @@
           },
           {
             "type": "button",
-            "label": "▶ 运行测试",
+            "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
               "call": "@global.runHeaders",
@@ -920,7 +1104,7 @@
           },
           {
             "type": "text",
-            "value": "HTTP 状态码:",
+            "value": "{{ t('case.headers.row0') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -936,7 +1120,7 @@
           },
           {
             "type": "text",
-            "value": "后端收到的头:",
+            "value": "{{ t('case.headers.row1') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -952,7 +1136,7 @@
           },
           {
             "type": "text",
-            "value": "错误:",
+            "value": "{{ t('case.headers.row2') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -970,14 +1154,14 @@
       },
       {
         "id": "case_stream",
-        "title": "GET /stream（SSE）",
+        "title": "{{ t('case.stream.title') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
             "type": "button",
-            "label": "← 返回列表",
+            "label": "{{ t('action.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -985,7 +1169,7 @@
           },
           {
             "type": "text",
-            "value": "GET /stream（SSE）",
+            "value": "{{ t('case.stream.title') }}",
             "style": {
               "fontSize": 20,
               "fontWeight": "bold"
@@ -993,7 +1177,7 @@
           },
           {
             "type": "text",
-            "value": "text/event-stream 流式响应：后端推 5 个 tick + 1 个 done，客户端用 @http_sse 累加 events。",
+            "value": "{{ t('case.stream.desc') }}",
             "style": {
               "fontSize": 13,
               "color": "#666666"
@@ -1001,7 +1185,7 @@
           },
           {
             "type": "text",
-            "value": "调用: GET(SSE) {{ global.faasBase }}/stream",
+            "value": "{{ t('action.call') }}: GET {{ global.faasBase }}/stream",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -1012,7 +1196,7 @@
           },
           {
             "type": "button",
-            "label": "▶ 运行测试",
+            "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
               "call": "@global.runStream",
@@ -1024,7 +1208,7 @@
           },
           {
             "type": "text",
-            "value": "SSE 状态:",
+            "value": "{{ t('case.stream.row0') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -1040,7 +1224,7 @@
           },
           {
             "type": "text",
-            "value": "收到的事件:",
+            "value": "{{ t('case.stream.row1') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -1056,7 +1240,7 @@
           },
           {
             "type": "text",
-            "value": "错误:",
+            "value": "{{ t('case.stream.row2') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -1074,14 +1258,14 @@
       },
       {
         "id": "case_auth",
-        "title": "POST /auth/verify（真实 Supabase 鉴权）",
+        "title": "{{ t('case.auth.title') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
             "type": "button",
-            "label": "← 返回列表",
+            "label": "{{ t('action.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -1089,7 +1273,7 @@
           },
           {
             "type": "text",
-            "value": "POST /auth/verify（真实 Supabase 鉴权）",
+            "value": "{{ t('case.auth.title') }}",
             "style": {
               "fontSize": 20,
               "fontWeight": "bold"
@@ -1097,7 +1281,7 @@
           },
           {
             "type": "text",
-            "value": "客户端用 @get_auth_token 拿当前用户 token，放进自定义头 X-User-Token 传给后端；后端真实调用 Supabase /auth/v1/user 验证并回传裁决。",
+            "value": "{{ t('case.auth.desc') }}",
             "style": {
               "fontSize": 13,
               "color": "#666666"
@@ -1105,7 +1289,7 @@
           },
           {
             "type": "text",
-            "value": "调用: POST {{ global.faasBase }}/auth/verify",
+            "value": "{{ t('action.call') }}: POST {{ global.faasBase }}/auth/verify",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -1116,7 +1300,7 @@
           },
           {
             "type": "button",
-            "label": "▶ 运行测试",
+            "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
               "call": "@global.runAuth",
@@ -1128,7 +1312,7 @@
           },
           {
             "type": "text",
-            "value": "HTTP 状态码:",
+            "value": "{{ t('case.auth.row0') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -1144,7 +1328,7 @@
           },
           {
             "type": "text",
-            "value": "鉴权结果:",
+            "value": "{{ t('case.auth.row1') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -1160,7 +1344,7 @@
           },
           {
             "type": "text",
-            "value": "错误:",
+            "value": "{{ t('case.auth.row2') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -1178,14 +1362,14 @@
       },
       {
         "id": "case_status",
-        "title": "GET /status/418",
+        "title": "{{ t('case.status.title') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
             "type": "button",
-            "label": "← 返回列表",
+            "label": "{{ t('action.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -1193,7 +1377,7 @@
           },
           {
             "type": "text",
-            "value": "GET /status/418",
+            "value": "{{ t('case.status.title') }}",
             "style": {
               "fontSize": 20,
               "fontWeight": "bold"
@@ -1201,7 +1385,7 @@
           },
           {
             "type": "text",
-            "value": "让后端返回任意状态码（418），验证客户端对非 2xx 响应的处理。",
+            "value": "{{ t('case.status.desc') }}",
             "style": {
               "fontSize": 13,
               "color": "#666666"
@@ -1209,7 +1393,7 @@
           },
           {
             "type": "text",
-            "value": "调用: GET {{ global.faasBase }}/status/<code>",
+            "value": "{{ t('action.call') }}: GET {{ global.faasBase }}/status/418",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -1220,7 +1404,7 @@
           },
           {
             "type": "button",
-            "label": "▶ 运行测试",
+            "label": "{{ t('action.run') }}",
             "variant": "filled",
             "action": {
               "call": "@global.runStatus",
@@ -1232,7 +1416,7 @@
           },
           {
             "type": "text",
-            "value": "HTTP 状态码:",
+            "value": "{{ t('case.status.row0') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -1248,7 +1432,7 @@
           },
           {
             "type": "text",
-            "value": "响应体:",
+            "value": "{{ t('case.status.row1') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
@@ -1264,7 +1448,7 @@
           },
           {
             "type": "text",
-            "value": "错误:",
+            "value": "{{ t('case.status.row2') }}:",
             "style": {
               "fontSize": 13,
               "fontWeight": "bold"
