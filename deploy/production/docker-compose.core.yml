@@ -280,6 +280,11 @@ services:
       MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
       REGISTRY_BASE_URL: "${REGISTRY_PUBLIC_URL:-http://127.0.0.1:3254}"
       REGISTRY_ADMIN_TOKEN: "${REGISTRY_ADMIN_TOKEN:-}"
+      # Registry Mirror —— 上游回源仓库。空=独立运行（默认）。配置后本实例每
+      # REGISTRY_MIRROR_SYNC_INTERVAL_SEC 秒同步上游 /mirror/manifest 索引，并按需
+      # 代理+缓存上游文件到本地 MinIO。用 `myapp-ctl registry upstream <url>` 配置。
+      REGISTRY_UPSTREAM: "${REGISTRY_UPSTREAM:-}"
+      REGISTRY_MIRROR_SYNC_INTERVAL_SEC: "${REGISTRY_MIRROR_SYNC_INTERVAL_SEC:-600}"
       FLASK_SECRET_KEY: "${FLASK_SECRET_KEY:-}"
     ports:
       - "${REGISTRY_PORT:-3254}:3254"

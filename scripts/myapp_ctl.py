@@ -451,6 +451,7 @@ _MESSAGES = {
   config view|export|import     查看、备份、恢复 ctl 配置
   config lang <zh|en|de|es>     切换 CLI 语言
   domain ls|set|rm              管理服务域名覆盖
+  registry upstream <url>       配置 App Registry 上游回源仓库
 
 镜像与 Agent:
   image ls|build|pull|push      管理 Docker 镜像
@@ -491,6 +492,7 @@ Configuration and secrets:
   config view|export|import     View, back up, or restore ctl config
   config lang <zh|en|de|es>     Change CLI language
   domain ls|set|rm              Manage service domain overrides
+  registry upstream <url>       Configure App Registry upstream mirror
 
 Images and agents:
   image ls|build|pull|push      Manage Docker images
@@ -531,6 +533,7 @@ Konfiguration und Secrets:
   config view|export|import     ctl-Konfiguration anzeigen/sichern/wiederherstellen
   config lang <zh|en|de|es>     CLI-Sprache wechseln
   domain ls|set|rm              Domain-Overrides verwalten
+  registry upstream <url>       App-Registry Upstream-Mirror konfigurieren
 
 Images und Agents:
   image ls|build|pull|push      Docker-Images verwalten
@@ -571,6 +574,7 @@ Configuracion y secretos:
   config view|export|import     Ver, respaldar o restaurar config de ctl
   config lang <zh|en|de|es>     Cambia el idioma del CLI
   domain ls|set|rm              Gestiona dominios de servicios
+  registry upstream <url>       Configurar mirror upstream de App Registry
 
 Imagenes y agentes:
   image ls|build|pull|push      Gestiona imagenes Docker
@@ -4446,6 +4450,50 @@ def cmd_secret(args) -> int:
     return 2
 
 
+def cmd_registry(args) -> int:
+    if args.registry_cmd == "upstream":
+        return _registry_upstream(args)
+    return 2
+
+
+def _registry_upstream(args) -> int:
+    # REGISTRY_UPSTREAM / REGISTRY_MIRROR_SYNC_INTERVAL_SEC live in the `backend`
+    # secret group: the registry compose service loads backend.env, and the
+    # deploy --env-file list feeds the ${REGISTRY_UPSTREAM} interpolation in the
+    # registry service environment block. Writing here covers both paths.
+    path = _secret_path("backend")
+    data = _parse_env(path)
+    if args.show:
+        upstream = data.get("REGISTRY_UPSTREAM", "").strip()
+        interval = data.get("REGISTRY_MIRROR_SYNC_INTERVAL_SEC", "").strip()
+        print(f"REGISTRY_UPSTREAM={upstream or '(unset — standalone)'}")
+        print(f"REGISTRY_MIRROR_SYNC_INTERVAL_SEC={interval or '600 (default)'}")
+        return 0
+    if args.clear:
+        removed = [k for k in ("REGISTRY_UPSTREAM", "REGISTRY_MIRROR_SYNC_INTERVAL_SEC") if k in data]
+        for key in removed:
+            data.pop(key, None)
+        _write_env(path, data)
+        print(f"cleared registry upstream ({', '.join(removed) or 'nothing was set'})")
+        print("apply with: myapp-ctl deploy --group core   (recreates registry as standalone)")
+        return 0
+    url = (args.url or "").strip().rstrip("/")
+    if not url:
+        print("usage: myapp-ctl registry upstream <url> [--sync-interval N] | --show | --clear", file=sys.stderr)
+        return 2
+    if not (url.startswith("http://") or url.startswith("https://")):
+        print(f"invalid upstream url (must start with http:// or https://): {url}", file=sys.stderr)
+        return 2
+    data["REGISTRY_UPSTREAM"] = url
+    if args.sync_interval is not None:
+        data["REGISTRY_MIRROR_SYNC_INTERVAL_SEC"] = str(max(30, int(args.sync_interval)))
+    _write_env(path, data)
+    interval = (data.get("REGISTRY_MIRROR_SYNC_INTERVAL_SEC") or "600").strip()
+    print(f"set REGISTRY_UPSTREAM={url} (index sync every {interval}s)")
+    print("apply with: myapp-ctl deploy --group core   (syncs env + recreates registry)")
+    return 0
+
+
 def cmd_domain(args) -> int:
     data = _cfg()
     domains = data.setdefault("domains", {})
@@ -7528,6 +7576,14 @@ def build_parser() -> argparse.ArgumentParser:
     domain_rm = domain_sub.add_parser("rm", help=_tx("remove a domain override", zh="移除域名覆盖", de="Domain-Override entfernen", es="eliminar override de dominio"), usage=_tx("myapp-ctl domain rm <name>", zh="myapp-ctl domain rm <名称>", de="myapp-ctl domain rm <Name>", es="myapp-ctl domain rm <nombre>"))
     domain_rm.add_argument("name")
     domain_rm.set_defaults(func=cmd_domain)
+    registry = sub.add_parser("registry", help=_tx("manage the App Registry service (upstream mirror)", zh="管理 App Registry 服务（上游回源）", de="App-Registry-Dienst verwalten (Upstream-Mirror)", es="gestionar el servicio App Registry (mirror upstream)"), usage=_tx("myapp-ctl registry <command> [args]", zh="myapp-ctl registry <命令> [参数]", de="myapp-ctl registry <Befehl> [Argumente]", es="myapp-ctl registry <comando> [args]"))
+    registry_sub = _add_subcommands(registry, "registry_cmd")
+    registry_upstream = registry_sub.add_parser("upstream", help=_tx("configure the upstream mirror registry", zh="配置上游回源仓库", de="Upstream-Mirror-Registry konfigurieren", es="configurar registry mirror upstream"), usage=_tx("myapp-ctl registry upstream [<url>] [--sync-interval N] [--show] [--clear]", zh="myapp-ctl registry upstream [<url>] [--sync-interval N] [--show] [--clear]", de="myapp-ctl registry upstream [<url>] [--sync-interval N] [--show] [--clear]", es="myapp-ctl registry upstream [<url>] [--sync-interval N] [--show] [--clear]"))
+    registry_upstream.add_argument("url", nargs="?", help=_tx("upstream registry base URL, e.g. https://myapp-registry.dapangyu.work", zh="上游 registry 基础 URL，例如 https://myapp-registry.dapangyu.work", de="Upstream-Registry-Basis-URL, z.B. https://myapp-registry.dapangyu.work", es="URL base del registry upstream, p.ej. https://myapp-registry.dapangyu.work"))
+    registry_upstream.add_argument("--sync-interval", type=int, help=_tx("index sync interval seconds (default 600)", zh="索引同步间隔秒数（默认 600）", de="Index-Sync-Intervall in Sekunden (Standard 600)", es="intervalo de sync de indice en segundos (def. 600)"))
+    registry_upstream.add_argument("--show", action="store_true", help=_tx("show current upstream config", zh="显示当前上游配置", de="aktuelle Upstream-Konfiguration anzeigen", es="mostrar config upstream actual"))
+    registry_upstream.add_argument("--clear", action="store_true", help=_tx("remove upstream config (run standalone)", zh="移除上游配置（独立运行）", de="Upstream-Konfiguration entfernen (eigenstaendig)", es="eliminar config upstream (independiente)"))
+    registry_upstream.set_defaults(func=cmd_registry)
     ingress = sub.add_parser("ingress", help=_tx("manage Docker-based edge-nginx ingress", zh="管理 Docker 化 edge-nginx 入口", de="Docker-basiertes edge-nginx Ingress verwalten", es="gestionar ingress edge-nginx basado en Docker"), usage=_tx("myapp-ctl ingress <command> [args]", zh="myapp-ctl ingress <命令> [参数]", de="myapp-ctl ingress <Befehl> [Argumente]", es="myapp-ctl ingress <comando> [args]"))
     ingress_sub = _add_subcommands(ingress, "ingress_cmd")
     ingress_setup = ingress_sub.add_parser("setup", help=_tx("configure domains, ports, and certificates", zh="配置域名、端口和证书", de="Domains, Ports und Zertifikate konfigurieren", es="configurar dominios, puertos y certificados"), usage=_tx("myapp-ctl ingress setup [options]", zh="myapp-ctl ingress setup [选项]", de="myapp-ctl ingress setup [Optionen]", es="myapp-ctl ingress setup [opciones]"))
