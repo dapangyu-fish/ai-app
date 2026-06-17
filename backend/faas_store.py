@@ -170,6 +170,7 @@ _ALLOWED_IMPORT_ROOTS = {
     "string",
     "time",
     "typing",
+    "urllib",
     "uuid",
 }
 _FORBIDDEN_CALLS = {
