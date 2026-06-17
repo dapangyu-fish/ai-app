@@ -485,6 +485,7 @@ def _emit_opencode_export(session_id: str, env: dict) -> None:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            errors="replace",
             timeout=float(os.environ.get("OPENCODE_EXPORT_TIMEOUT_SECONDS", "30")),
         )
     except subprocess.TimeoutExpired:
@@ -494,6 +495,21 @@ def _emit_opencode_export(session_id: str, env: dict) -> None:
                     "type": "opencode_export_error",
                     "sessionID": session_id,
                     "message": "OpenCode export timed out",
+                },
+                ensure_ascii=False,
+            ),
+            flush=True,
+        )
+        return
+    except Exception as exc:
+        # The transcript export is best-effort; a failure here must NOT fail the
+        # whole generation run (the app was already generated + uploaded).
+        print(
+            json.dumps(
+                {
+                    "type": "opencode_export_error",
+                    "sessionID": session_id,
+                    "message": f"OpenCode export failed: {exc}",
                 },
                 ensure_ascii=False,
             ),
