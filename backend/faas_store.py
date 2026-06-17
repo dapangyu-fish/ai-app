@@ -196,8 +196,14 @@ _FLASK_METHOD_DECORATORS = {
     "put": "PUT",
     "patch": "PATCH",
     "delete": "DELETE",
-    "options": "OPTIONS",
 }
+# Flask only ships get/post/put/patch/delete method shortcuts (2.0+). @app.head /
+# @app.options / @app.trace / @app.connect do NOT exist — using them raises
+# "'Flask' object has no attribute ..." at app.py import, so the whole function
+# 503s at runtime. The validator must reject them (it previously accepted
+# @app.options and shipped a backend that crashed) and steer the agent to
+# @app.route(path, methods=[...]).
+_INVALID_METHOD_DECORATORS = {"head", "options", "trace", "connect"}
 
 
 def ensure_tables() -> None:
@@ -668,6 +674,11 @@ def _validate_safe_route_decorator(decorator: ast.AST) -> bool:
     if not isinstance(value, ast.Name) or value.id not in {"app", "application"}:
         return False
     decorator_name = func.attr
+    if decorator_name in _INVALID_METHOD_DECORATORS:
+        raise FaaSValidationError(
+            f"Flask has no @app.{decorator_name} decorator; "
+            f'use @app.route(path, methods=["{decorator_name.upper()}"]) instead'
+        )
     if decorator_name not in _FLASK_METHOD_DECORATORS and decorator_name != "route":
         return False
     if not decorator.args:
@@ -812,6 +823,11 @@ def _extract_flask_routes(tree: ast.AST) -> dict[str, set[str]]:
             if not isinstance(value, ast.Name) or value.id not in {"app", "application"}:
                 continue
             decorator_name = func.attr
+            if decorator_name in _INVALID_METHOD_DECORATORS:
+                raise FaaSValidationError(
+                    f"Flask has no @app.{decorator_name} decorator; "
+                    f'use @app.route(path, methods=["{decorator_name.upper()}"]) instead'
+                )
             if decorator_name not in _FLASK_METHOD_DECORATORS and decorator_name != "route":
                 continue
             if not decorator.args:
@@ -911,7 +927,7 @@ def _normalize_routes(raw: Any) -> list[dict[str, Any]]:
         clean_methods = []
         for method in methods:
             value = str(method).strip().upper()
-            if value not in {"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}:
+            if value not in {"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"}:
                 raise FaaSValidationError(f"unsupported route method: {value}")
             if value not in clean_methods:
                 clean_methods.append(value)

@@ -341,6 +341,51 @@ def test_validation_requires_declared_routes_to_match_flask_decorators() -> None
         ) from exc
     assert param_ok["routes"][0]["path"] == "/items/<item_id>"
 
+    # @app.options / @app.head are NOT real Flask decorators (Flask only ships
+    # get/post/put/patch/delete); using them raises AttributeError at import and
+    # 503s every route. Reject with guidance instead of shipping a broken backend.
+    try:
+        faas_store.validate_bundle(
+            {
+                "service": {"service_id": "opt-shortcut-api",
+                            "routes": [{"path": "/caps", "methods": ["OPTIONS"]}]},
+                "files": {"app.py": (
+                    "from flask import Flask\n"
+                    "app = Flask(__name__)\n"
+                    "@app.options('/caps')\n"
+                    "def caps():\n"
+                    "    return ('', 204)\n"
+                )},
+            }
+        )
+    except faas_store.FaaSValidationError as exc:
+        assert "Flask has no @app.options" in str(exc)
+    else:
+        raise AssertionError("@app.options bundle was accepted but Flask has no such decorator")
+
+    # The correct OPTIONS form (@app.route methods=[...]) and HEAD as a method validate.
+    try:
+        opt_ok = faas_store.validate_bundle(
+            {
+                "service": {"service_id": "opt-route-api",
+                            "routes": [{"path": "/caps", "methods": ["OPTIONS"]},
+                                       {"path": "/h", "methods": ["GET", "HEAD"]}]},
+                "files": {"app.py": (
+                    "from flask import Flask, jsonify\n"
+                    "app = Flask(__name__)\n"
+                    "@app.route('/caps', methods=['OPTIONS'])\n"
+                    "def caps():\n"
+                    "    return ('', 204)\n"
+                    "@app.route('/h', methods=['GET', 'HEAD'])\n"
+                    "def h():\n"
+                    "    return jsonify(ok=True)\n"
+                )},
+            }
+        )
+    except faas_store.FaaSValidationError as exc:
+        raise AssertionError(f"OPTIONS via @app.route and HEAD method should validate: {exc}") from exc
+    assert {r["path"] for r in opt_ok["routes"]} == {"/caps", "/h"}
+
 
 def test_validation_rejects_reserved_runtime_routes() -> None:
     try:
