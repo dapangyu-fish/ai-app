@@ -8,13 +8,13 @@
       "en": "FaaS Test Lab",
       "default": "FaaS Test Lab"
     },
-    "version": "1.3.0",
+    "version": "1.4.0",
     "type": "app",
     "description": "FaaS 端到端连通性测试台（i18n + faas lib）：GET/POST/PUT/DELETE/SSE/真实 Supabase 鉴权/任意状态码。",
     "author": "claude"
   },
   "dependencies": {
-    "faas": "^1.0.1"
+    "faas": "^1.0.2"
   },
   "global": {
     "variables": {

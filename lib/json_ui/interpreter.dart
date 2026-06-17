@@ -1007,7 +1007,11 @@ class JsonInterpreter extends ChangeNotifier {
   /// 解析表达式，返回原始值（{{ path }} 返回实际类型，非字符串化）
   dynamic resolveExpression(dynamic raw) {
     if (raw is String) {
-      final regex = RegExp(r'^\{\{\s*(.+?)\s*\}\}$');
+      // 单一表达式 {{ x }} → 返回原始类型。这里用 `[^{}]` 而非 `.+?`：否则
+      // "{{ a }}/x/{{ b }}" 这种「以 {{ 开头、以 }} 结尾」的混合模板会被整体
+      // 误匹配成一个变量路径 → getVariable(垃圾路径) → null。混合 / 多表达式
+      // 模板要交给下面的 resolveTemplate 逐个插值。
+      final regex = RegExp(r'^\{\{\s*([^{}]+?)\s*\}\}$');
       final match = regex.firstMatch(raw);
       if (match != null) {
         final path = match.group(1)!;

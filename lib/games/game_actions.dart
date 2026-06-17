@@ -1647,7 +1647,9 @@ class GameActions {
     String text,
     Map<String, dynamic> context,
   ) {
-    final fullMatch = RegExp(r'^\s*\{\{\s*(.+?)\s*\}\}\s*$').firstMatch(text);
+    // `[^{}]` 而非 `.+?`：避免「{{ 开头 }} 结尾」的混合模板被整体误匹配成单变量
+    // → null。混合模板走下面的逐个插值。（同 interpreter.resolveExpression）
+    final fullMatch = RegExp(r'^\s*\{\{\s*([^{}]+?)\s*\}\}\s*$').firstMatch(text);
     if (fullMatch != null) {
       return _readTemplatePath(context, fullMatch.group(1)!.trim());
     }

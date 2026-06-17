@@ -224,7 +224,9 @@ class GameLogicEngine {
   /// - "abc {{ x }} def" → 返回 String
   /// - 其他无 {{ → 直通
   dynamic _resolveString(String s) {
-    final fullMatch = RegExp(r'^\s*\{\{\s*(.+?)\s*\}\}\s*$').firstMatch(s);
+    // `[^{}]` 而非 `.+?`：避免「{{ 开头 }} 结尾」的混合模板被整体误匹配成单变量
+    // → null。混合模板走下面的逐个插值。（同 interpreter.resolveExpression）
+    final fullMatch = RegExp(r'^\s*\{\{\s*([^{}]+?)\s*\}\}\s*$').firstMatch(s);
     if (fullMatch != null) {
       return getVariable(fullMatch.group(1)!);
     }

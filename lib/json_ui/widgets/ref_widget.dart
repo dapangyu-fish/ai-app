@@ -121,9 +121,10 @@ class JsonRefWidget extends JsonBaseWidget {
     JsonInterpreter interpreter,
   ) {
     if (node is String) {
-      // 完整匹配 {{ props.xxx }}
+      // 完整匹配 {{ props.xxx }}。`[^{}]` 而非 `.+?`：避免「{{ props.a }}/{{ props.b }}」
+      // 这种混合模板被整体误匹配 → 落到下面的逐个插值。（同 interpreter.resolveExpression）
       final exactMatch = RegExp(
-        r'^\{\{\s*props\.(.+?)\s*\}\}$',
+        r'^\{\{\s*props\.([^{}]+?)\s*\}\}$',
       ).firstMatch(node);
       if (exactMatch != null) {
         final key = exactMatch.group(1)!;
