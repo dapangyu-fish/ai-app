@@ -946,6 +946,7 @@ def _resolve_server_upload_actions(
     run_id: str = "",
     agent_pull_run_id: str = "",
     owner_user_id: str = "",
+    allow_faas_repair: bool = False,
 ) -> List[dict]:
     resolved: List[dict] = []
     last_json_app_ready: Optional[dict] = None
@@ -991,13 +992,23 @@ def _resolve_server_upload_actions(
                             _aliases.add(_alias)
                 deployed_faas.append((_aliases, deploy_result.service_id))
             except Exception as exc:
-                if validation_error_type and isinstance(exc, validation_error_type):
+                is_validation = bool(validation_error_type and isinstance(exc, validation_error_type))
+                if is_validation:
                     logger.warning(
                         "[FAAS] deploy action validation failed sid=%s path=%s: %s",
                         session_id,
                         relative_path,
                         exc,
                     )
+                    # Feed deterministic, AI-fixable bundle errors (declared route
+                    # not implemented, forbidden import, bad shape...) into the
+                    # server-side repair loop so the agent fixes faas_bundle.json
+                    # and the worker redeploys, bounded by AI_SERVER_REPAIR_MAX_ATTEMPTS.
+                    # Infra failures (gateway/push) are NOT repairable, so they fall
+                    # through to faas_service_failed. The non-repair caller (4506)
+                    # leaves allow_faas_repair False and keeps the old behavior.
+                    if allow_faas_repair:
+                        raise ServerUploadValidationError(_SERVER_FAAS_ACTION, str(exc)) from exc
                 else:
                     logger.exception("[FAAS] deploy action failed sid=%s path=%s: %s", session_id, relative_path, exc)
                 resolved.append({
@@ -1041,6 +1052,27 @@ def _build_server_repair_request(
     max_attempts: int,
 ) -> str:
     clipped_detail = detail[-6000:]
+    if script == _SERVER_FAAS_ACTION:
+        return (
+            "服务端部署后端服务（FaaS）失败，后端正在自动请求你修复 bundle。"
+            f"这是第 {attempt}/{max_attempts} 次自动修复。\n\n"
+            "约束：\n"
+            "- 只修复 `$AI_APP_WORKSPACE/faas_bundle.json`，不要重新设计应用，不要改变用户需求。\n"
+            "- 不要向用户追问，不要输出客户端协议标签。\n"
+            "- 让 `service.routes` 里声明的每个 path+method 都在 `app.py` 中实现："
+            "用 `@app.get/post/put/patch/delete/options(...)` 或 `@app.route(..., methods=[...])`，"
+            "路径形状要与声明一致（动态段如 `/items/<item_id>`，方法齐全）。\n"
+            "- `app.py` 顶层只允许 imports、`app = Flask(__name__)`、literal 常量、路由函数和可选 "
+            "`if __name__ == '__main__'` guard；不要顶层 IO/网络/线程，不要读环境变量或文件。\n"
+            "- 不要声明保留路径（健康检查等由运行时自动提供，声明会被拒绝）。\n"
+            "- 修复后必须保留 `client_actions.json` 里的 "
+            "`{\"type\":\"server_deploy_faas_service\",\"path\":\"faas_bundle.json\"}`，让后端重新部署。\n\n"
+            f"失败阶段：{script}\n"
+            "部署错误如下：\n"
+            "```text\n"
+            f"{clipped_detail}\n"
+            "```"
+        )
     return (
         "服务端上传前校验失败，后端正在自动请求你修复当前 JSON-APP。"
         f"这是第 {attempt}/{max_attempts} 次自动修复。\n\n"
@@ -1787,6 +1819,58 @@ def _build_visual_review_prompt_note(*, workspace: Optional[str] = None) -> str:
     )
 
 
+_FAAS_GEN_EXAMPLE = """
+
+下面是一份能通过服务端校验的最小参考骨架（声明与实现严格对齐，含集合与单条 CRUD）。
+照这个**结构**写你自己的接口，但要换成真实业务，不要照抄 notes：
+
+```json
+{"service":{"slug":"notes-api","routes":[
+  {"path":"/notes","methods":["GET","POST"]},
+  {"path":"/notes/<note_id>","methods":["GET","PUT","DELETE"]}
+]},"files":{"app.py":"<见下>","requirements.txt":"flask==3.0.3\\n"}}
+```
+
+```python
+from flask import Flask, jsonify, request
+app = Flask(__name__)
+_NOTES = {}
+_SEQ = {"n": 0}
+
+@app.get("/notes")
+def list_notes():
+    return jsonify(list(_NOTES.values()))
+
+@app.post("/notes")
+def create_note():
+    body = request.get_json(silent=True) or {}
+    _SEQ["n"] += 1
+    nid = str(_SEQ["n"])
+    _NOTES[nid] = {"id": nid, "text": body.get("text", "")}
+    return jsonify(_NOTES[nid]), 201
+
+@app.get("/notes/<note_id>")
+def get_note(note_id):
+    note = _NOTES.get(note_id)
+    return (jsonify(note), 200) if note else (jsonify(error="not found"), 404)
+
+@app.put("/notes/<note_id>")
+def update_note(note_id):
+    if note_id not in _NOTES:
+        return jsonify(error="not found"), 404
+    body = request.get_json(silent=True) or {}
+    _NOTES[note_id]["text"] = body.get("text", _NOTES[note_id]["text"])
+    return jsonify(_NOTES[note_id])
+
+@app.delete("/notes/<note_id>")
+def delete_note(note_id):
+    _NOTES.pop(note_id, None)
+    return jsonify(ok=True)
+```
+
+要点：`service.routes` 里每个 path+method 都和某个 `@app.xxx` 装饰器一一对应；动态段写成 `/notes/<note_id>` 且声明与实现一致；不要写健康检查（运行时自动提供）。"""
+
+
 def _build_faas_backend_prompt_note(*, workspace: Optional[str] = None) -> str:
     if not _env_enabled("FAAS_ENABLED", "1"):
         return ""
@@ -1819,7 +1903,7 @@ def _build_faas_backend_prompt_note(*, workspace: Optional[str] = None) -> str:
         "例如 `todo-api`，不要省略。"
         "\n- 如果生成了 FaaS bundle，必须在 `client_actions.json` 里追加 "
         "`{\"type\":\"server_deploy_faas_service\",\"path\":\"faas_bundle.json\"}`。"
-    )
+    ) + _FAAS_GEN_EXAMPLE
 
 
 def _build_pipeline_turn_note(generation_pipeline: str, *, workspace: Optional[str] = None) -> str:
@@ -3703,6 +3787,7 @@ def _run_agent_pull_worker(
                 workspace=None,
                 agent_pull_run_id=run_result.run_id,
                 owner_user_id=owner_user_id,
+                allow_faas_repair=True,
             )
             break
         except ServerUploadValidationError as exc:
@@ -4049,6 +4134,7 @@ def _run_agent_node_worker(
                 agent_node_url=agent_node_url,
                 run_id=run_result.run_id,
                 owner_user_id=owner_user_id,
+                allow_faas_repair=True,
             )
             break
         except ServerUploadValidationError as exc:
