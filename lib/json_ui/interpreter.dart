@@ -22,6 +22,7 @@ import 'dependency_loader.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
 import 'builtins/launcher_bridges.dart';
+import 'security/token_authorizer.dart';
 import '../auth/auth_service.dart';
 import '../config/app_config.dart';
 import '../designer/app_storage.dart';
@@ -40,6 +41,9 @@ class JsonInterpreter extends ChangeNotifier {
   late Map<String, dynamic> _functions;
   String _currentScreenId = '';
   String _appId = 'default';
+
+  /// 敏感能力授权器：JSON-APP 调 @get_auth_token / @get_user_info 时按 appId 弹窗授权。
+  final TokenAuthorizer _tokenAuthorizer = TokenAuthorizer();
 
   final List<Map<String, dynamic>> _loopContextStack = [];
   final List<Map<String, dynamic>> _paramsStack = [];
@@ -592,6 +596,9 @@ class JsonInterpreter extends ChangeNotifier {
     // 切 app 时清掉旧 IM 监听，避免老 app 的 inbox 还在写新 app 的 _variables
     _imInboxSub?.cancel();
     _imInboxSub = null;
+
+    // 新一次 app 运行：清掉「单次运行」授权（持久化的「始终允许」保留）。
+    _tokenAuthorizer.resetRunGrants();
 
     if (screens.isNotEmpty) {
       _currentScreenId =
@@ -2427,21 +2434,27 @@ class JsonInterpreter extends ChangeNotifier {
 
       // ── 用户信息 ──
       case '@get_user_info':
-        final userInfo = AuthService.currentUser != null
-            ? _normalizeUserInfo(
-                Map<String, dynamic>.from(AuthService.currentUser!),
-              )
-            : null;
+        if (AuthService.currentUser == null) return null;
+        if (!await _authorizeSensitive(SensitiveCapability.userInfo)) {
+          return null;
+        }
+        final userInfo = _normalizeUserInfo(
+          Map<String, dynamic>.from(AuthService.currentUser!),
+        );
         final bindPath = resolvedArgs['bind'] as String?;
-        if (bindPath != null && userInfo != null) {
+        if (bindPath != null) {
           setVariable(bindPath, userInfo);
         }
         return userInfo;
 
       case '@get_auth_token':
         final token = AuthService.token;
+        if (token == null) return null;
+        if (!await _authorizeSensitive(SensitiveCapability.authToken)) {
+          return null;
+        }
         final tokenBind = resolvedArgs['bind'] as String?;
-        if (tokenBind != null && token != null) {
+        if (tokenBind != null) {
           setVariable(tokenBind, token);
         }
         return token;
@@ -3281,6 +3294,19 @@ class JsonInterpreter extends ChangeNotifier {
         _activeToasts.remove(entry);
       }
     });
+  }
+
+  /// 框架层敏感能力授权：JSON-APP 读取登录凭证 / 账号信息前，按当前 appId 弹窗授权。
+  /// appId / 版本 / 名称都从 _config 实时读取，保证 @launch_app 嵌套 popState 后仍对应当前 app。
+  Future<bool> _authorizeSensitive(SensitiveCapability capability) {
+    final meta = _config['meta'] as Map<String, dynamic>?;
+    return _tokenAuthorizer.authorize(
+      appId: _appId,
+      appVersion: meta?['version']?.toString() ?? '',
+      appName: meta?['name']?.toString() ?? _appId,
+      capability: capability,
+      context: globalContext,
+    );
   }
 
   Future<bool> _showAlertDialog(String title, String message) async {
