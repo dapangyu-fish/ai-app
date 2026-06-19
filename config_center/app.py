@@ -37,6 +37,10 @@ from flask import (
 from flask_caching import Cache
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
+import requests  # present in the shared backend image (user_center uses it too)
+
+import dashboard_helpers as _dash  # pure, unit-tested data-shaping helpers
+
 # ── 启动期：读 env ──
 # supervisor 通过 environment= 注入 CONFIG_CENTER_ENV_PATH 指向 /etc/config-center/.env
 # 解析这个 .env 把里面 KEY=VALUE 全注入到 os.environ（已存在的不覆盖，让 shell env 优先）
@@ -87,6 +91,20 @@ APK_CHUNK_MAX_BYTES = int(
 APK_UPLOAD_TMP_DIR = os.environ.get(
     "APK_UPLOAD_TMP_DIR", "/var/lib/config-center/uploads"
 )
+
+# ── 统一管理后台 dashboard glue：上游服务地址/凭证（经 env_file backend.env 注入）──
+# 仅用于 dashboard 只读聚合 + 用户管理代理；凭证只在服务端使用，不下发浏览器。
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+BACKEND_URL = os.environ.get(
+    "BACKEND_URL", os.environ.get("CONFIG_CENTER_BACKEND_URL", "http://backend:5566")
+).rstrip("/")
+AGENT_NODE_TOKEN = os.environ.get("AGENT_NODE_REGISTRATION_TOKEN", "") or os.environ.get(
+    "AGENT_NODE_TOKEN", ""
+)
+FAAS_CAP_MIN = int(os.environ.get("FAAS_OPENFAAS_MIN_REPLICAS", "0") or "0")
+FAAS_CAP_MAX = int(os.environ.get("FAAS_OPENFAAS_MAX_REPLICAS", "1") or "1")
+DASH_HTTP_TIMEOUT = 12
 
 if not ADMIN_PASSWORD:
     raise RuntimeError(
@@ -979,6 +997,270 @@ def api_abort_apk_upload(upload_id: str):
         return _json_error("无权访问这个上传任务", 403)
     shutil.rmtree(_upload_dir(upload_id), ignore_errors=True)
     return jsonify({"ok": True})
+
+
+# ══════════════════════ 统一管理后台 Dashboard（SPA + 只读代理 + 用户管理）══════════════════════
+# 把用户管理 / FaaS / Agent 面板整合进 config-center。所有路由 require_user() 鉴权；
+# 上游服务凭证只在服务端使用。除用户管理（显式管理动作）外，FaaS/Agent 均只读代理现有 API，
+# 不改动 backend / 产品代码。
+
+def _dash_err(msg: str, code: int = 502):
+    return jsonify({"error": msg}), code
+
+
+def _sb_headers() -> dict:
+    return {
+        "apikey": SUPABASE_SERVICE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+        "Content-Type": "application/json",
+    }
+
+
+def _sb_ready() -> bool:
+    return bool(SUPABASE_URL and SUPABASE_SERVICE_KEY)
+
+
+def _sb_get_user(user_id: str):
+    r = requests.get(
+        f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        headers=_sb_headers(), timeout=DASH_HTTP_TIMEOUT,
+    )
+    if r.status_code == 404:
+        return None
+    r.raise_for_status()
+    return r.json()
+
+
+def _backend_get(path: str, headers: dict | None = None, params: dict | None = None):
+    r = requests.get(
+        f"{BACKEND_URL}{path}", headers=headers or {}, params=params or {},
+        timeout=DASH_HTTP_TIMEOUT,
+    )
+    r.raise_for_status()
+    return r.json()
+
+
+def _agent_headers() -> dict:
+    return {"Authorization": f"Bearer {AGENT_NODE_TOKEN}"} if AGENT_NODE_TOKEN else {}
+
+
+# ── SPA shell ──
+@app.route("/admin/dashboard", methods=["GET"])
+def admin_dashboard_spa():
+    require_user()
+    index = Path(__file__).parent / "static" / "dashboard" / "index.html"
+    if not index.is_file():
+        return Response(
+            "dashboard 未构建：请在 config_center/dashboard 下 `npm run build` 生成 static/dashboard/",
+            503, mimetype="text/plain; charset=utf-8",
+        )
+    return Response(index.read_text(encoding="utf-8"), mimetype="text/html")
+
+
+# ── Tab: 配置下发（进程内）──
+@app.route("/api/admin/dashboard/configs", methods=["GET"])
+def dash_configs():
+    require_user()
+    with db_conn() as conn:
+        cfg = [dict(r) for r in conn.execute("SELECT * FROM configs ORDER BY key").fetchall()]
+        audit = [dict(r) for r in conn.execute(
+            "SELECT * FROM audit_log ORDER BY ts DESC LIMIT 50").fetchall()]
+    for c in cfg:
+        c["display"] = display_value(c["value_type"], c["value"])
+    return jsonify({"configs": cfg, "audit": audit, "apk": _apk_release_state()})
+
+
+# ── Tab: 用户管理（代理 Supabase GoTrue Admin API）──
+@app.route("/api/admin/dashboard/users", methods=["GET"])
+def dash_users():
+    require_user()
+    if not _sb_ready():
+        return _dash_err("用户管理未配置（缺 SUPABASE_URL / SUPABASE_SERVICE_KEY）", 503)
+    page = request.args.get("page", "1")
+    per = request.args.get("per_page", "100")
+    try:
+        r = requests.get(
+            f"{SUPABASE_URL}/auth/v1/admin/users", headers=_sb_headers(),
+            params={"page": page, "per_page": per}, timeout=DASH_HTTP_TIMEOUT)
+        r.raise_for_status()
+    except requests.RequestException as e:
+        return _dash_err(f"Supabase 用户列表失败: {e}")
+    out = _dash.shape_users_page(r.json())
+    out["page"] = int(page)
+    return jsonify(out)
+
+
+@app.route("/api/admin/dashboard/users/create", methods=["POST"])
+def dash_users_create():
+    require_user()
+    if not _sb_ready():
+        return _dash_err("用户管理未配置", 503)
+    d = request.get_json(silent=True) or {}
+    email = (d.get("email") or "").strip()
+    password = d.get("password") or ""
+    role = d.get("role") or "user"
+    username = (d.get("username") or "").strip() or None
+    if not email or len(password) < 6:
+        return _dash_err("email 必填、密码至少 6 位", 400)
+    body = {"email": email, "password": password, "email_confirm": True,
+            "app_metadata": {"role": role}}
+    if username:
+        body["user_metadata"] = {"username": username}
+    try:
+        r = requests.post(f"{SUPABASE_URL}/auth/v1/admin/users", headers=_sb_headers(),
+                          json=body, timeout=DASH_HTTP_TIMEOUT)
+        r.raise_for_status()
+    except requests.RequestException as e:
+        return _dash_err(f"创建用户失败: {e}")
+    return jsonify({"ok": True, "user": _dash.shape_user(r.json())})
+
+
+@app.route("/api/admin/dashboard/users/<user_id>/role", methods=["POST"])
+def dash_users_role(user_id: str):
+    require_user()
+    if not _sb_ready():
+        return _dash_err("用户管理未配置", 503)
+    role = (request.get_json(silent=True) or {}).get("role")
+    if role not in ("user", "pro", "admin"):
+        return _dash_err("role 取值非法", 400)
+    try:
+        u = _sb_get_user(user_id)
+        if not u:
+            return _dash_err("用户不存在", 404)
+        new_meta = {**(u.get("app_metadata") or {}), "role": role}
+        r = requests.put(f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+                         headers=_sb_headers(), json={"app_metadata": new_meta},
+                         timeout=DASH_HTTP_TIMEOUT)
+        r.raise_for_status()
+    except requests.RequestException as e:
+        return _dash_err(f"改角色失败: {e}")
+    return jsonify({"ok": True, "user": _dash.shape_user(r.json())})
+
+
+@app.route("/api/admin/dashboard/users/<user_id>/ban", methods=["POST"])
+def dash_users_ban(user_id: str):
+    require_user()
+    if not _sb_ready():
+        return _dash_err("用户管理未配置", 503)
+    ban = bool((request.get_json(silent=True) or {}).get("ban"))
+    try:
+        r = requests.put(f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+                         headers=_sb_headers(),
+                         json={"ban_duration": "876000h" if ban else "none"},
+                         timeout=DASH_HTTP_TIMEOUT)
+        r.raise_for_status()
+    except requests.RequestException as e:
+        return _dash_err(f"封禁操作失败: {e}")
+    return jsonify({"ok": True, "user": _dash.shape_user(r.json())})
+
+
+@app.route("/api/admin/dashboard/users/<user_id>/confirm_email", methods=["POST"])
+def dash_users_confirm(user_id: str):
+    require_user()
+    if not _sb_ready():
+        return _dash_err("用户管理未配置", 503)
+    try:
+        r = requests.put(f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+                         headers=_sb_headers(), json={"email_confirm": True},
+                         timeout=DASH_HTTP_TIMEOUT)
+        r.raise_for_status()
+    except requests.RequestException as e:
+        return _dash_err(f"确认邮箱失败: {e}")
+    return jsonify({"ok": True})
+
+
+@app.route("/api/admin/dashboard/users/<user_id>/recovery", methods=["POST"])
+def dash_users_recovery(user_id: str):
+    require_user()
+    if not _sb_ready():
+        return _dash_err("用户管理未配置", 503)
+    try:
+        u = _sb_get_user(user_id)
+        if not u or not u.get("email"):
+            return _dash_err("用户不存在或无邮箱", 404)
+        r = requests.post(f"{SUPABASE_URL}/auth/v1/admin/generate_link",
+                          headers=_sb_headers(),
+                          json={"type": "recovery", "email": u["email"]},
+                          timeout=DASH_HTTP_TIMEOUT)
+        r.raise_for_status()
+    except requests.RequestException as e:
+        return _dash_err(f"发送重置邮件失败: {e}")
+    return jsonify({"ok": True})
+
+
+@app.route("/api/admin/dashboard/users/<user_id>/quota", methods=["POST"])
+def dash_users_quota(user_id: str):
+    require_user()
+    if not _sb_ready():
+        return _dash_err("用户管理未配置", 503)
+    raw = (request.get_json(silent=True) or {}).get("quota")
+    try:
+        u = _sb_get_user(user_id)
+        if not u:
+            return _dash_err("用户不存在", 404)
+        meta = dict(u.get("app_metadata") or {})
+        if raw in (None, "", "null"):
+            meta.pop("quota_limit_override", None)
+        else:
+            meta["quota_limit_override"] = int(raw)
+        r = requests.put(f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+                         headers=_sb_headers(), json={"app_metadata": meta},
+                         timeout=DASH_HTTP_TIMEOUT)
+        r.raise_for_status()
+    except (requests.RequestException, ValueError) as e:
+        return _dash_err(f"配额设置失败: {e}")
+    return jsonify({"ok": True, "user": _dash.shape_user(r.json())})
+
+
+# ── Tab: FaaS 服务（代理 backend，派生 启动时间/实例数/容量范围/当前容量）──
+@app.route("/api/admin/dashboard/faas", methods=["GET"])
+def dash_faas():
+    require_user()
+    try:
+        health = _backend_get("/api/faas/health")
+    except requests.RequestException:
+        health = {}
+    deploy_mode = (health.get("deploy_mode") if isinstance(health, dict) else None) or "local-docker"
+    try:
+        raw = _backend_get("/api/faas/services",
+                           params={"all_users": "1", "include_disabled": "1"})
+    except requests.RequestException as e:
+        return _dash_err(f"FaaS 列表失败: {e}")
+    services = raw.get("services", raw.get("items", raw)) if isinstance(raw, dict) else raw
+    if not isinstance(services, list):
+        services = []
+    views = [_dash.compute_faas_view(s, deploy_mode, FAAS_CAP_MIN, FAAS_CAP_MAX)
+             for s in services if isinstance(s, dict)]
+    return jsonify({
+        "services": views,
+        "overview": _dash.compute_faas_overview(views),
+        "deploy_mode": deploy_mode,
+        "health": health,
+    })
+
+
+# ── Tab: Agent 节点（代理 backend 聚合接口）──
+@app.route("/api/admin/dashboard/agents", methods=["GET"])
+def dash_agents():
+    require_user()
+    try:
+        data = _backend_get("/api/ai/agent_nodes", headers=_agent_headers(),
+                            params={"namespace": "all",
+                                    "probe": request.args.get("probe", "0")})
+    except requests.RequestException as e:
+        return _dash_err(f"Agent 列表失败: {e}")
+    return jsonify(_dash.shape_agents(data))
+
+
+@app.route("/api/admin/dashboard/agents/<node_id>", methods=["GET"])
+def dash_agent_detail(node_id: str):
+    require_user()
+    try:
+        data = _backend_get(f"/api/ai/agent_nodes/{node_id}", headers=_agent_headers(),
+                            params={"runs": "1"})
+    except requests.RequestException as e:
+        return _dash_err(f"Agent 详情失败: {e}")
+    return jsonify(data)
 
 
 def _flash(msg: str, kind: str = "ok"):

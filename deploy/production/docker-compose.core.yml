@@ -304,6 +304,10 @@ services:
     env_file:
       - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/config-center.env
         required: false
+      # 统一管理后台 dashboard glue：复用 backend 密钥（SUPABASE_* / AGENT_NODE_*）
+      # 供 config-center 只读代理 用户/FaaS/Agent 数据；不改 backend 逻辑。
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
+        required: false
     environment:
       ADMIN_USERNAME: "${CONFIG_CENTER_ADMIN_USERNAME:-admin}"
       ADMIN_PASSWORD: "${CONFIG_CENTER_ADMIN_PASSWORD:-}"
@@ -316,6 +320,7 @@ services:
       LISTEN_HOST: "0.0.0.0"
       LISTEN_PORT: "5000"
       DB_PATH: "/data/config.db"
+      BACKEND_URL: "${CONFIG_CENTER_BACKEND_URL:-http://backend:5566}"
     volumes:
       - ${MYAPP_DATA_ROOT:-/mnt/myapp}/config-center/data:/data
     ports:

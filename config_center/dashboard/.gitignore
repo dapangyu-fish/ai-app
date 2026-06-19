@@ -1,0 +1,6 @@
+# dashboard SPA source deps/build caches — never commit.
+# The SERVED build output lives in ../static/dashboard/ (committed) since host-77 has no Node.
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
