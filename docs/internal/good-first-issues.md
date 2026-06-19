@@ -46,3 +46,7 @@ Each is scoped to ~half a day and grounded in the roadmap (`README.md`) / `docs/
 ### Games
 
 16. 🟡 **Mario demo: Koopa spawn/movement/rendering parity** — finish parity vs the `flutter_game` reference. See `docs/GAME_PORTING_TASKLIST.md`.
+
+### Code health
+
+17. 🟢 **Burn down `flutter analyze` info lints** — CI currently runs `flutter analyze --no-fatal-infos`. Clear the ~30 pre-existing infos: `avoid_print` → `debugPrint` (`lib/config/app_config.dart`), `use_super_parameters`, `use_build_context_synchronously` (add proper `mounted` guards), and `deprecated_member_use` migrations (Radio → `RadioGroup`, `onReorder` → `onReorderItem`, form `value` → `initialValue`, `cacheExtent` → `scrollCacheExtent`). When clean, drop `--no-fatal-infos` to keep it clean. Tackle a few files per PR.
