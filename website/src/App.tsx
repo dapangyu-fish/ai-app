@@ -78,7 +78,7 @@ const copy = {
     docsLinks: [
       ['部署文档', '从 myapp-ctl 部署到客户端切换环境'],
       ['架构图', '理解运行时、AI Worker 与 Registry'],
-      ['源码开放计划', '当前先看站内部署和合规边界，GitHub 公开后补链接'],
+      ['运行时边界', '理解预编译能力集合与审核友好的合规边界'],
     ],
     videosTitle: '真实生成案例',
     videosSubtitle: '展示 AI 可以生成的不同应用形态：工具、游戏和社区页面，而不是同一套界面的换壳。',
@@ -159,7 +159,7 @@ const copy = {
     docsLinks: [
       ['Deployment docs', 'Deploy backend with myapp-ctl, then switch client environment'],
       ['Architecture diagram', 'Runtime, AI Worker and Registry in one view'],
-      ['Source availability', 'Use the docs now; GitHub link will be enabled when the repo is public'],
+      ['Runtime boundary', 'How the precompiled capability set and review-friendly boundary work'],
     ],
     videosTitle: 'Generated app examples',
     videosSubtitle: 'Three different app shapes show tools, games and community screens instead of one repeated shell.',
@@ -230,6 +230,18 @@ const copy = {
       '→ run on Web / iOS / Android',
     ],
     proofPoints: ['Nutzergenerierte App-Inhalte', 'KI-gestütztes Bauen und Iterieren', 'Ein Ökosystem für Web und Mobile'],
+    trustTitle: 'Vertrauensgrenze',
+    trustPoints: [
+      ['Deklaratives JSON', 'Die KI liefert keinen nativen Code und keine Binaries.'],
+      ['Self-hostable Backend', 'myapp-ctl deploy startet die Kernservices.'],
+      ['Cross-Client-Runtime', 'Flutter Web, iOS und Android teilen eine Capability-Schicht.'],
+    ],
+    docsTitle: 'Einstiegspunkte für Entwickler',
+    docsLinks: [
+      ['Deployment-Docs', 'Backend mit myapp-ctl deployen, dann Client-Umgebung wechseln'],
+      ['Architekturdiagramm', 'Runtime, AI Worker und Registry in einer Ansicht'],
+      ['Runtime-Grenze', 'Vorkompiliertes Capability-Set und die review-freundliche Grenze'],
+    ],
     videosTitle: 'Generierte App-Beispiele',
     videosSubtitle: 'Drei unterschiedliche App-Formen zeigen Tools, Games und Community-Screens statt einer wiederholten Hülle.',
     deployTitle: 'Private Backend-Bereitstellung und Client-Setup',
@@ -299,6 +311,18 @@ const copy = {
       '→ run on Web / iOS / Android',
     ],
     proofPoints: ['Contenido de apps generado por usuarios', 'Construcción e iteración asistidas por IA', 'Un ecosistema para Web y móvil'],
+    trustTitle: 'Límite de confianza',
+    trustPoints: [
+      ['JSON declarativo', 'La IA no envía código nativo ni binarios.'],
+      ['Backend autoalojable', 'myapp-ctl deploy levanta los servicios centrales.'],
+      ['Runtime multicliente', 'Flutter Web, iOS y Android comparten una capa de capacidades.'],
+    ],
+    docsTitle: 'Puntos de entrada para desarrolladores',
+    docsLinks: [
+      ['Docs de despliegue', 'Despliega el backend con myapp-ctl y cambia el entorno del cliente'],
+      ['Diagrama de arquitectura', 'Runtime, AI Worker y Registry en una vista'],
+      ['Límite del runtime', 'El set de capacidades precompilado y el límite apto para revisión'],
+    ],
     videosTitle: 'Ejemplos de apps generadas',
     videosSubtitle: 'Tres formas distintas muestran herramientas, juegos y pantallas de comunidad, no una misma carcasa repetida.',
     deployTitle: 'Backend privado y configuración del cliente',
@@ -1229,7 +1253,7 @@ function App() {
       : [
           [docsLabel, lang === 'de' ? 'Backend starten und Client verbinden' : 'Desplegar backend y conectar cliente'],
           [lang === 'de' ? 'Architekturdiagramm' : 'Diagrama de arquitectura', lang === 'de' ? 'Runtime, Worker und Registry' : 'Runtime, Worker y Registry'],
-          [lang === 'de' ? 'Quellcode' : 'Código fuente', lang === 'de' ? 'Docs jetzt, GitHub nach Veröffentlichung' : 'Docs ahora, GitHub cuando sea público'],
+          [lang === 'de' ? 'Runtime-Grenze' : 'Límite del runtime', lang === 'de' ? 'Vorkompiliertes Capability-Set und review-freundliche Grenze' : 'Set de capacidades precompilado y límite apto para revisión'],
         ];
   const showcaseCards = zh
     ? [
