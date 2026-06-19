@@ -359,7 +359,7 @@ You may:
 - Self-host the whole stack
 
 You may not:
-- Use the **"MyApp" name or logo** without permission (apply for a [trademark license](#))
+- Use the **"MyApp" name or logo** without permission (to request permission, [open an issue](https://github.com/dapangyu-fish/ai-app/issues))
 - Misrepresent the origin of the code
 
 Marketplace packages, uploaded assets, and user-created JSON apps are owned and
