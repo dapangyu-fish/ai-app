@@ -608,6 +608,14 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 包一份。原始字段名见 `AuthService.currentUser`：`id` / `username` / `email`
 / `avatar_url` / `role`。
 
+> ⚠️ **敏感能力授权（框架行为，契约）**：`@get_auth_token` 与 `@get_user_info`
+> 会把登录凭证 / 账号信息暴露给 JSON-APP，进而可能被发往第三方。框架在这两个
+> 调用点加了**按 appId 的授权弹窗**：用户可选「单次运行 / 始终允许 / 拒绝」，并可
+> 勾选「仅限当前版本」（不勾＝对该 app 所有版本生效）；「始终允许」后不再弹窗。
+> 因此 JSON-APP **必须把这两个调用当作可能返回 `null`** 来处理（用户拒绝、或无
+> UI 上下文可弹窗时返回 `null`，不写入 `bind`）。未登录时同样返回 `null`（不弹窗）。
+> 授权决策持久化在本地 `SharedPreferences`（key `json_app_sensitive_grants_v1`）。
+
 ### 4.13 其它内置函数索引（补充）
 
 本节记录近期框架层已经存在、但容易漏写到文档里的通用函数。详细参数以源码实现为准，JSON-APP 里应优先通过组件库封装复用。
