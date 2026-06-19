@@ -304,9 +304,11 @@ services:
     env_file:
       - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/config-center.env
         required: false
-      # 统一管理后台 dashboard glue：复用 backend 密钥（SUPABASE_* / AGENT_NODE_*）
-      # 供 config-center 只读代理 用户/FaaS/Agent 数据；不改 backend 逻辑。
+      # 统一管理后台 dashboard glue：复用已有密钥，供 config-center 只读代理
+      # 用户(SUPABASE_*, backend.env) / Agent(AGENT_NODE_*, agent.env)；不改 backend 逻辑。
       - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
+        required: false
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/agent.env
         required: false
     environment:
       ADMIN_USERNAME: "${CONFIG_CENTER_ADMIN_USERNAME:-admin}"
