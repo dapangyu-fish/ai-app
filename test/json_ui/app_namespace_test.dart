@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_application_1/json_ui/interpreter.dart';
-import 'package:flutter_application_1/config/app_config.dart';
+import 'package:myapp/json_ui/interpreter.dart';
+import 'package:myapp/config/app_config.dart';
 
 /// The framework exposes a read-only `app` namespace so JSON-APPs can read the
 /// current platform addresses (and build URLs explicitly) instead of relying on

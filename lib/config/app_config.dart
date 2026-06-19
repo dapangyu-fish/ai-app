@@ -4,7 +4,7 @@ import 'environment_service.dart';
 ///
 /// 使用方式：
 /// ```dart
-/// import 'package:flutter_application_1/config/app_config.dart';
+/// import 'package:myapp/config/app_config.dart';
 ///
 /// // 使用后端API地址
 /// final url = '${AppConfig.backendUrl}/api/ai/chat/start';

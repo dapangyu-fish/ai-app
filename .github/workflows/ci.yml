@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**", "chore/**", "fix/**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend compile & template validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Byte-compile backend (syntax)
+        run: python -m compileall -q backend user_center config_center
+      - name: Validate flagship JSON-DSL templates
+        run: |
+          set -e
+          for t in calculator demo_2048 demo_tetris demo_snake demo_im match3-pixel; do
+            echo "::group::validate $t"
+            python3 backend/validate_json_app.py "templates/$t.json"
+            echo "::endgroup::"
+          done
+          echo "All flagship templates validated."
+
+  flutter:
+    name: Flutter analyze & test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter --version
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test

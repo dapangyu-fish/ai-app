@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_application_1/designer/environment_page.dart';
-import 'package:flutter_application_1/designer/hidden_env_entry.dart';
+import 'package:myapp/designer/environment_page.dart';
+import 'package:myapp/designer/hidden_env_entry.dart';
 
 void main() {
   testWidgets('hidden environment entry replaces toast without layout errors', (

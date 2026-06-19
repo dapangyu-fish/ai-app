@@ -3,8 +3,8 @@
 // 返回 null，但同 scope 的 jsonlogic {"var": "loop.id"} 能读到。
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_application_1/games/flame_game_engine.dart';
-import 'package:flutter_application_1/json_ui/asset_manager.dart';
+import 'package:myapp/games/flame_game_engine.dart';
+import 'package:myapp/json_ui/asset_manager.dart';
 
 JsonAppAssetManager _testAssetManager() {
   return JsonAppAssetManager(

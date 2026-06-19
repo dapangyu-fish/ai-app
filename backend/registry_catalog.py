@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Registry 包富化目录 —— capture 解析 + tech_stack 映射 + registry_packages 表访问
 
-职责（见 LAUNCH_NOTES.md Part 8）：
+职责（见 docs/internal/LAUNCH_NOTES.md Part 8）：
   - capture：解析包 JSON 提 exports / dependencies / widgets_used / builtins_used，
     再确定性映射出 tech_stack。零 LLM。
   - DB 层：registry_packages 表的 upsert / 认领 / 写回。用裸 psycopg2，**不走

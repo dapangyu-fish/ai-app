@@ -6,6 +6,7 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
+[![CI](https://github.com/dapangyu-fish/ai-app/actions/workflows/ci.yml/badge.svg)](https://github.com/dapangyu-fish/ai-app/actions/workflows/ci.yml)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()
 
 > **Platform Status**: ✅ Production (iOS/Android/Web) • ⚠️ Experimental (macOS, core features only) • 🚧 Untested (Linux/Windows)
@@ -92,7 +93,7 @@ The full product usage guide is [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 ### Build the client from source (5 minutes)
 
 ```bash
-git clone <this-repository-url> ai-app
+git clone https://github.com/dapangyu-fish/ai-app.git
 cd ai-app
 flutter pub get
 flutter run -d <ios|android|chrome>

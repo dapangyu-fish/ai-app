@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:flutter_application_1/json_ui/interpreter.dart';
-import 'package:flutter_application_1/main.dart';
+import 'package:myapp/json_ui/interpreter.dart';
+import 'package:myapp/main.dart';
 
 void main() {
   testWidgets('JSON DSL App loads successfully', (WidgetTester tester) async {

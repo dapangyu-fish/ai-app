@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/dapangyu-fish/ai-app/blob/main/README.md
+    about: README, JSON-DSL.md (the DSL contract), and the docs/ map.
+  - name: Try it now (hosted Web client)
+    url: https://myapp-web.dapangyu.work/
+    about: Run AI-generated JSON Apps without installing anything.

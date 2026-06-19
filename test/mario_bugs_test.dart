@@ -5,10 +5,10 @@ import 'dart:typed_data';
 
 import 'package:flame/extensions.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_application_1/games/flame_game_engine.dart';
-import 'package:flutter_application_1/games/game_entity.dart';
-import 'package:flutter_application_1/games/tiled_map_entity.dart';
-import 'package:flutter_application_1/json_ui/asset_manager.dart';
+import 'package:myapp/games/flame_game_engine.dart';
+import 'package:myapp/games/game_entity.dart';
+import 'package:myapp/games/tiled_map_entity.dart';
+import 'package:myapp/json_ui/asset_manager.dart';
 
 const _localMarioTmxPath = '/tmp/flutter_game_ref/assets/tiles/mario.tmx';
 

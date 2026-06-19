@@ -14,8 +14,8 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:flutter_application_1/json_ui/widget_builder.dart';
-import 'package:flutter_application_1/json_ui/widgets/icon_registry.dart';
+import 'package:myapp/json_ui/widget_builder.dart';
+import 'package:myapp/json_ui/widgets/icon_registry.dart';
 
 const kManifestPath = 'backend/generated/widget_capabilities.json';
 const kRegen =

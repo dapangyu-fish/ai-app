@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_application_1/games/flame_game_engine.dart';
-import 'package:flutter_application_1/games/game_entity.dart';
-import 'package:flutter_application_1/games/tiled_map_entity.dart';
-import 'package:flutter_application_1/json_ui/asset_manager.dart';
+import 'package:myapp/games/flame_game_engine.dart';
+import 'package:myapp/games/game_entity.dart';
+import 'package:myapp/games/tiled_map_entity.dart';
+import 'package:myapp/json_ui/asset_manager.dart';
 
 JsonAppAssetManager _testAssetManager() {
   return JsonAppAssetManager(

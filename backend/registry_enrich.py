@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Registry enrich worker —— 后台给包补 AI summary
 
-并发模型（见 LAUNCH_NOTES Part 8）：
+并发模型（见 docs/internal/LAUNCH_NOTES.md Part 8）：
   - pg_try_advisory_lock 选主：gunicorn 多 worker 里只有 1 个真正跑 loop（拿不到锁的
     睡着重试，leader 挂了别人接管）→ 不会"大量并发轮询"
   - 那一个 loop 每 ENRICH_POLL_INTERVAL 秒认领 ENRICH_BATCH 行，**串行**调 backend

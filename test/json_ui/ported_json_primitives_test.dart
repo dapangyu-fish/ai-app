@@ -3,8 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_application_1/json_ui/interpreter.dart';
-import 'package:flutter_application_1/json_ui/widgets/screen_layout.dart';
+import 'package:myapp/json_ui/interpreter.dart';
+import 'package:myapp/json_ui/widgets/screen_layout.dart';
 
 void main() {
   final demoIndices = <int>[

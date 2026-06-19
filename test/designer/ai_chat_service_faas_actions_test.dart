@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_application_1/designer/ai_chat_service.dart';
+import 'package:myapp/designer/ai_chat_service.dart';
 
 void main() {
   test('FaaS client actions become visible system messages', () {
