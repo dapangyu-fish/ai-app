@@ -304,6 +304,8 @@ Drop this through the AI generation flow, or `flutter run` and pick the JSON fil
 - `@parallel` for concurrent steps
 - Templates `{{ path }}` resolve to original type (not stringified)
 - Hot-swap config from network / disk / registry
+- Flame 2D game engine (sprites, physics, Tiled maps)
+- Per-app authorization gate for sensitive capabilities (auth token, profile)
 
 ### Backend
 - Supabase auth integration
