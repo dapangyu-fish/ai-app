@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Users, ShieldCheck, Ban, MailWarning } from 'lucide-react';
 import { api } from '../api';
 import { useApi } from '../useApi';
 import { KPI, Badge, Loading, ErrorBanner, Empty, fmtTime } from '../ui';
@@ -64,10 +65,10 @@ export default function UsersTab({ toast }: { toast: (m: string, ok?: boolean) =
       </div>
 
       <div className="kpis">
-        <KPI label="本页用户" value={counts.total} tone="accent" />
-        <KPI label="管理员" value={counts.admin} />
-        <KPI label="已封禁" value={counts.banned} tone={counts.banned ? 'err' : undefined} />
-        <KPI label="未验证邮箱" value={counts.unconfirmed} tone={counts.unconfirmed ? 'warn' : undefined} />
+        <KPI label="本页用户" value={counts.total} tone="accent" icon={<Users />} />
+        <KPI label="管理员" value={counts.admin} icon={<ShieldCheck />} />
+        <KPI label="已封禁" value={counts.banned} tone={counts.banned ? 'err' : undefined} icon={<Ban />} />
+        <KPI label="未验证邮箱" value={counts.unconfirmed} tone={counts.unconfirmed ? 'warn' : undefined} icon={<MailWarning />} />
       </div>
 
       {showCreate && (
@@ -115,7 +116,7 @@ export default function UsersTab({ toast }: { toast: (m: string, ok?: boolean) =
                     {' '}<Badge tone={roleTone(u.role)}>{u.role}</Badge>
                   </td>
                   <td>
-                    {u.banned ? <Badge tone="err">已封禁</Badge> : <Badge tone="ok">正常</Badge>}{' '}
+                    {u.banned ? <Badge tone="err" dot>已封禁</Badge> : <Badge tone="ok" dot>正常</Badge>}{' '}
                     {u.email_confirmed ? <Badge tone="neutral">已验证</Badge> : <Badge tone="warn">未验证</Badge>}
                   </td>
                   <td className="mono">{u.quota_override ?? '默认'}</td>

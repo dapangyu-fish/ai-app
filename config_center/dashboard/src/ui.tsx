@@ -25,17 +25,25 @@ export function ago(v: number | string | null | undefined): string {
   return `${Math.floor(s / 86400)}天前`;
 }
 
-export function KPI({ label, value, tone }: { label: string; value: ReactNode; tone?: string }) {
+export function KPI({ label, value, tone, icon }: { label: string; value: ReactNode; tone?: string; icon?: ReactNode }) {
   return (
     <div className={`kpi ${tone ? `kpi-${tone}` : ''}`}>
-      <div className="kpi-value">{value}</div>
-      <div className="kpi-label">{label}</div>
+      {icon && <div className="kpi-icon">{icon}</div>}
+      <div className="kpi-body">
+        <div className="kpi-value">{value}</div>
+        <div className="kpi-label">{label}</div>
+      </div>
     </div>
   );
 }
 
-export function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: string }) {
-  return <span className={`badge badge-${tone}`}>{children}</span>;
+export function Badge({ children, tone = 'neutral', dot = false }: { children: ReactNode; tone?: string; dot?: boolean }) {
+  return (
+    <span className={`badge badge-${tone}`}>
+      {dot && <span className="dot" />}
+      {children}
+    </span>
+  );
 }
 
 export function Loading({ label = '加载中…' }: { label?: string }) {

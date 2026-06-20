@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SlidersHorizontal, PackageCheck, History } from 'lucide-react';
 import { api } from '../api';
 import { useApi } from '../useApi';
 import { KPI, Badge, Loading, ErrorBanner, Empty, fmtTime } from '../ui';
@@ -61,9 +62,9 @@ export default function ConfigTab({ toast }: { toast: (m: string, ok?: boolean) 
       </div>
 
       <div className="kpis">
-        <KPI label="配置项" value={data.configs.length} tone="accent" />
-        <KPI label="APK 发布" value={data.apk?.exists ? '已发布' : '未发布'} tone={data.apk?.exists ? 'ok' : 'warn'} />
-        <KPI label="审计记录" value={data.audit.length} />
+        <KPI label="配置项" value={data.configs.length} tone="accent" icon={<SlidersHorizontal />} />
+        <KPI label="APK 发布" value={data.apk?.exists ? '已发布' : '未发布'} tone={data.apk?.exists ? 'ok' : 'warn'} icon={<PackageCheck />} />
+        <KPI label="审计记录" value={data.audit.length} icon={<History />} />
       </div>
 
       {edit && (

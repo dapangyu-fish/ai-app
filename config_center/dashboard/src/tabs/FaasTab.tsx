@@ -1,11 +1,12 @@
+import { Boxes, Play, CircleSlash, Layers } from 'lucide-react';
 import { api } from '../api';
 import { useApi } from '../useApi';
 import { KPI, Badge, Loading, ErrorBanner, Empty, fmtTime } from '../ui';
 import type { FaasService } from '../types';
 
 function statusBadge(s: FaasService) {
-  if (s.running) return <Badge tone="ok">{s.status || 'running'}</Badge>;
-  return <Badge tone="err">{s.status || 'stopped'}</Badge>;
+  if (s.running) return <Badge tone="ok" dot>{s.status || 'running'}</Badge>;
+  return <Badge tone="err" dot>{s.status || 'stopped'}</Badge>;
 }
 
 export default function FaasTab() {
@@ -26,10 +27,10 @@ export default function FaasTab() {
       </div>
 
       <div className="kpis">
-        <KPI label="服务总数" value={overview.total} tone="accent" />
-        <KPI label="运行中" value={overview.running} tone="ok" />
-        <KPI label="已停止" value={overview.stopped} tone={overview.stopped ? 'warn' : undefined} />
-        <KPI label="实例总数" value={overview.total_instances} />
+        <KPI label="服务总数" value={overview.total} tone="accent" icon={<Boxes />} />
+        <KPI label="运行中" value={overview.running} tone="ok" icon={<Play />} />
+        <KPI label="已停止" value={overview.stopped} tone={overview.stopped ? 'warn' : undefined} icon={<CircleSlash />} />
+        <KPI label="实例总数" value={overview.total_instances} icon={<Layers />} />
       </div>
 
       {services.length === 0 ? (
@@ -80,8 +81,9 @@ export default function FaasTab() {
         </div>
       )}
       <p className="hint">
-        本机 FaaS 为 local-docker 单实例模式：实例数量/当前容量按服务状态推导（运行=1，停止=0），
-        容量范围取配置 {`{min..max}`}；启动时间为最近一次部署时间。
+        {deploy_mode === 'openfaas'
+          ? 'OpenFaaS 模式：实例数量/当前容量按服务运行状态展示，容量范围取配置 {min..max}；启动时间为最近一次部署时间。'
+          : 'local-docker 单实例模式：实例数量/当前容量按服务状态推导（运行=1，停止=0），容量范围取配置 {min..max}；启动时间为最近一次部署时间。'}
       </p>
     </div>
   );

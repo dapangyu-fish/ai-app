@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { Cpu, Wifi, PauseCircle, WifiOff, Activity, ListOrdered } from 'lucide-react';
 import { api } from '../api';
 import { useApi } from '../useApi';
 import { KPI, Badge, Loading, ErrorBanner, Empty, ago } from '../ui';
@@ -12,13 +13,13 @@ function statusTone(s?: string): string {
   return 'err';
 }
 
-const SUMMARY_CARDS: { key: string; label: string; tone?: string }[] = [
-  { key: 'total', label: '节点总数', tone: 'accent' },
-  { key: 'online', label: '在线', tone: 'ok' },
-  { key: 'paused', label: '暂停', tone: 'warn' },
-  { key: 'down', label: '离线', tone: 'err' },
-  { key: 'active_runs', label: '运行任务' },
-  { key: 'queued', label: '排队任务' },
+const SUMMARY_CARDS: { key: string; label: string; tone?: string; icon: ReactNode }[] = [
+  { key: 'total', label: '节点总数', tone: 'accent', icon: <Cpu /> },
+  { key: 'online', label: '在线', tone: 'ok', icon: <Wifi /> },
+  { key: 'paused', label: '暂停', tone: 'warn', icon: <PauseCircle /> },
+  { key: 'down', label: '离线', tone: 'err', icon: <WifiOff /> },
+  { key: 'active_runs', label: '运行任务', icon: <Activity /> },
+  { key: 'queued', label: '排队任务', icon: <ListOrdered /> },
 ];
 
 export default function AgentsTab() {
@@ -45,7 +46,7 @@ export default function AgentsTab() {
 
       <div className="kpis">
         {SUMMARY_CARDS.filter((c) => summary[c.key] !== undefined).map((c) => (
-          <KPI key={c.key} label={c.label} value={summary[c.key] ?? 0} tone={c.tone} />
+          <KPI key={c.key} label={c.label} value={summary[c.key] ?? 0} tone={c.tone} icon={c.icon} />
         ))}
       </div>
 
@@ -77,7 +78,7 @@ export default function AgentsTab() {
                   </td>
                   <td className="mono">{n.host || n.url || '—'}</td>
                   <td>{n.visibility ? <Badge tone={n.visibility === 'public' ? 'accent' : 'neutral'}>{n.visibility}</Badge> : '—'}</td>
-                  <td><Badge tone={statusTone(n.status)}>{n.status || 'unknown'}</Badge></td>
+                  <td><Badge tone={statusTone(n.status)} dot>{n.status || 'unknown'}</Badge></td>
                   <td>{n.health || '—'}</td>
                   <td className="num">{n.capacity ?? '—'}</td>
                   <td className="num">{n.queue_max ?? '—'}</td>
