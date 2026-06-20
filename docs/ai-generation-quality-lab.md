@@ -336,3 +336,17 @@ python3 scripts/ai_generation_quality_lab.py \
 ```
 
 Artifacts are written under `/tmp/ai-app-quality-lab/<round>/`.
+
+## Multi-provider optimization rounds (2026-06-21)
+
+Provider matrix run via `ai_generation_quality_lab.py` (v1 indexed, production-equivalent) on deepseek / minimax / glm(volcengine-glm-latest); rendered in Flutter Web on claude.dapangyu.work at 402x874; screenshots inspected visually.
+
+| Round | Case | Providers | Result |
+|---|---|---|---|
+| opt-1 | smart-home dashboard | deepseek, minimax, glm | all valid. Defects: minimax scenes=tall vertical list; deepseek leaked raw `light` + empty `当前场景:`; glm best (bottom nav + switches + real scene value). |
+| opt-2 | smart-home (after prompt edit) | deepseek, minimax | both fixed: compact scene chips, real toggle switches + status text, current-scene default value, bottom nav. Converged on glm quality. |
+| opt-3 | runner game | deepseek, minimax, glm | valid. Defects: emoji in title/HUD/game-over dialog (🏃💀💥🪙) + English leak (Pixel Runner / Tap to restart). |
+| opt-4 | runner game (after prompt edit) | deepseek, minimax | fixed: no emoji in chrome/HUD, all-Chinese copy (像素跑酷 / 本局结束). Minor residual: faint "Best" watermark. |
+| opt-5 | device-inspection (camera+QR, media_device) | deepseek, minimax, glm | valid. glm excellent (semantic metric cards, checklist, bottom nav). deepseek defect: summary cards rendered label+icon but no number, empty state dominated first screen → reinforced "summary cards must show 0/— values" rule. |
+
+Prompt changes this pass: `generation/native_app.md` (dashboard rules + 0-value summary cards), `generation/game.md` (HUD/text rules), and mirrored into v2 `pipelines/dart_to_json_v2/dart_generation.md`. No v3 restructure needed — incremental prompt edits produced measurable, cross-provider visual gains.
