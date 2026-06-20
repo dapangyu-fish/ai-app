@@ -83,6 +83,11 @@ objects_layer = tiled_objects_from_run_and_gun_plan(plan)
 - HUD 可以用短文字，但主要角色和道具必须像游戏资产，而不是聊天文本。
 - 背景层次要服务玩法：前景/中景/远景的速度、尺寸、颜色应有区分，且不要只是一堆无意义色块。
 
+## 文案与 HUD 规则
+
+- 游戏内所有用户可见文字必须是中文：标题、AppBar、得分/金币/最高分标签、暂停/失败/胜利弹窗、按钮（如"点击重新开始""重新开始""再来一局"）。不要出现 "Pixel Runner""Tap to restart""Game Over""Best" 等英文。
+- 标题栏、HUD、得分行、游戏结束/暂停弹窗里不要用 emoji 当图标（🏃💀💥🪙⭐ 等）。需要图标用 `icon`（名字取自 icon_registry.dart）或纯文字；金币/分数用数字 + 中文标签。emoji 仅在用户明确要求 emoji 风格时允许。
+
 ## 上传前额外自检
 
 除通用 validator 外，游戏还要检查：
