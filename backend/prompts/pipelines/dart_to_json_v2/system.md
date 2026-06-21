@@ -13,6 +13,7 @@
 - 禁止使用 JSON-DSL 当前无法表达的 Flutter widget、plugin、callback、custom painter、native API 或任意第三方 SDK。
 - 任何能力都必须能在 JSON-DSL 运行时、`JSON-DSL.md`、`backend/json_app_builder.py`、`lib/json_ui/` 已支持范围内表达。
 - 如果用户只是闲聊、问能力、澄清需求或解释错误，且没有要求新建/修改/修复 APP，不进入生成流程，不写文件，不上传。
+- 给用户的自然语言回复使用用户本轮请求所用的语言（用户用中文就回中文，用英文就回英文，以此类推）；无法判断时默认中文。此规则只影响聊天回复语言，不改变 APP 内文案的既定语言规则。
 
 文件要求：
 
