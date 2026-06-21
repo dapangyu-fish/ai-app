@@ -65,6 +65,25 @@ def _password(user_id: str) -> str:
     return secrets.token_hex(24)
 
 
+def _resolve_password(user_id: str, existing: Optional[dict[str, Any]]) -> str:
+    """Resolve a STABLE password so repeated provisioning converges.
+
+    With FAAS_USER_DB_SECRET set, the password is derived deterministically (no
+    storage needed). Otherwise reuse the password already stored in the mapping
+    row — critical because provisioning runs more than once per deploy (deploy +
+    migration), and a fresh random each time would leave the injected DSN out of
+    sync with the role's actual password.
+    """
+    if PW_SECRET:
+        return _password(user_id)
+    if existing and existing.get("dsn"):
+        from urllib.parse import unquote, urlsplit
+        pw = urlsplit(existing["dsn"]).password
+        if pw:
+            return unquote(pw)
+    return secrets.token_hex(24)
+
+
 def _dsn(role: str, password: str) -> str:
     from urllib.parse import quote
     return (
@@ -175,7 +194,7 @@ def provision_user_db(user_id: str) -> dict[str, Any]:
 
     role = role_name(user_id)
     schema = schema_name(user_id)
-    password = _password(user_id)
+    password = _resolve_password(user_id, get_user_db(user_id))
     # Identifiers are derived from a hash (^[su]_[0-9a-f]{16}$) so direct
     # interpolation is safe; the password is set via parameter.
     ud = _admin_conn(USER_DB_NAME)
