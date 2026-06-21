@@ -24,6 +24,20 @@ from flask import Flask, jsonify
 _SAFE_FILE_RE = re.compile(r"^[A-Za-z0-9_.\-/]+$")
 _ALLOWED_FILES = {"app.py", "requirements.txt", "service.json", "README.md"}
 _ALLOWED_PREFIXES = ("tests/",)
+# Keep in sync with faas_store._ALLOWED_EXTENSIONS: a service may ship multiple
+# modules/templates/data files, and the runtime must be able to write them all.
+_ALLOWED_EXTENSIONS = {
+    ".py",
+    ".txt",
+    ".json",
+    ".md",
+    ".html",
+    ".css",
+    ".js",
+    ".csv",
+    ".yaml",
+    ".yml",
+}
 
 
 def _inject_platform_config(app: Flask) -> None:
@@ -86,7 +100,18 @@ def _validate_bundle_path(path: str) -> str:
         raise RuntimeError(f"invalid bundle file path: {path}")
     if not _SAFE_FILE_RE.fullmatch(normalized):
         raise RuntimeError(f"unsupported bundle file path: {path}")
-    if normalized not in _ALLOWED_FILES and not any(normalized.startswith(prefix) for prefix in _ALLOWED_PREFIXES):
+    segments = normalized.split("/")
+    if len(segments) > 6:
+        raise RuntimeError(f"bundle file path is too deep: {normalized}")
+    for seg in segments:
+        if seg.startswith(".") or seg == "__pycache__":
+            raise RuntimeError(f"bundle file path segment is not allowed: {seg}")
+    if normalized in _ALLOWED_FILES:
+        return normalized
+    if any(normalized.startswith(prefix) for prefix in _ALLOWED_PREFIXES):
+        return normalized
+    ext = os.path.splitext(normalized)[1].lower()
+    if ext not in _ALLOWED_EXTENSIONS:
         raise RuntimeError(f"file is not allowed in runtime bundle: {normalized}")
     return normalized
 

@@ -107,6 +107,11 @@ def create_app():
     app.add_url_rule("/api/faas/services/<service_id>", methods=["GET"], view_func=faas.get_user_service)
     app.add_url_rule("/api/faas/services/<service_id>", methods=["DELETE"], view_func=faas.disable_user_service)
     app.add_url_rule(
+        "/api/faas/services/<service_id>/archive",
+        methods=["GET"],
+        view_func=faas.download_service_archive,
+    )
+    app.add_url_rule(
         "/api/faas/runtime_bundle/<service_id>",
         methods=["GET"],
         view_func=faas.runtime_bundle,

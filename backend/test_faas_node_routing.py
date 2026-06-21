@@ -52,9 +52,12 @@ for _name, _value in {
     "FAAS_OPENFAAS_USERNAME": "admin",
     "FAAS_OPENFAAS_WRITE_TIMEOUT": "60s",
     "FAAS_PUBLIC_BASE_URL": "https://backend.example",
+    "FAAS_NODE_PUBLIC_URL": "https://openfaas.example",
     "FAAS_REQUIREMENTS_MAX_LINES": 40,
     "FAAS_RUNTIME_BUNDLE_BASE_URL": "https://backend.example",
     "FAAS_RUNTIME_TOKEN": "runtime-master-token",
+    "SUPABASE_URL": "https://supabase.example",
+    "SUPABASE_ANON_KEY": "anon-key",
 }.items():
     setattr(_config, _name, _value)
 sys.modules["config"] = _config

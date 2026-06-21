@@ -1,11 +1,15 @@
 #!/bin/bash
 # Agent-driven FaaS deploy. Runs INSIDE the generation agent (like
-# upload_with_signature.sh). POSTs faas_bundle.json to the backend (via the
-# per-run agent-node faas proxy, or directly), and writes the REAL deploy result
-# — including the server-assigned service_id — to faas_deploy_result.json so the
-# agent can wire the JSON-APP to the real id, self-test, fix, and redeploy.
+# upload_with_signature.sh). Accepts EITHER:
+#   - a faas_bundle.json  (inline {service, files} bundle), uploaded as JSON; or
+#   - a service FOLDER    (multi-file): zipped root-relative and uploaded as
+#                         application/zip — the backend unzips, validates, updates
+#                         git, then deploys (the rest of the pipeline is unchanged).
+# Writes the REAL deploy result — including the server-assigned service_id — to
+# faas_deploy_result.json so the agent can wire the JSON-APP to the real id,
+# self-test, fix, and redeploy.
 #
-# Usage: faas_deploy.sh <faas_bundle.json>
+# Usage: faas_deploy.sh <faas_bundle.json | service_folder>
 #
 # Env (set by the agent-node when launching the runtime; direct/local fallback):
 #   MYAPP_FAAS_PROXY_URL  base for faas ops:
@@ -15,9 +19,9 @@
 #   MYAPP_FAAS_OWNER       (direct only) owner user id           -> X-MyApp-Owner-User-Id
 set -uo pipefail
 
-BUNDLE="${1:-}"
-if [ -z "$BUNDLE" ] || [ ! -f "$BUNDLE" ]; then
-  echo "usage: faas_deploy.sh <faas_bundle.json> (file not found: $BUNDLE)" >&2
+TARGET="${1:-}"
+if [ -z "$TARGET" ] || { [ ! -f "$TARGET" ] && [ ! -d "$TARGET" ]; }; then
+  echo "usage: faas_deploy.sh <faas_bundle.json | service_folder> (not found: $TARGET)" >&2
   exit 1
 fi
 
@@ -33,13 +37,45 @@ if [ -z "$BASE" ]; then
 fi
 BASE="${BASE%/}"
 
-HDRS=(-H "Content-Type: application/json")
-[ -n "${MYAPP_FAAS_NODE_TOKEN:-}" ] && HDRS+=(-H "X-MyApp-Agent-Node-Token: ${MYAPP_FAAS_NODE_TOKEN}")
-[ -n "${MYAPP_FAAS_OWNER:-}" ] && HDRS+=(-H "X-MyApp-Owner-User-Id: ${MYAPP_FAAS_OWNER}")
-
 OUT="${AI_APP_WORKSPACE:-.}/faas_deploy_result.json"
 RAW="$(mktemp)"
-HTTP="$(curl -s -m 150 -o "$RAW" -w "%{http_code}" -X POST "${HDRS[@]}" --data-binary @"$BUNDLE" "$BASE/services")"
+CLEAN_ZIP=""
+
+if [ -d "$TARGET" ]; then
+  # Zip the folder contents root-relative (app.py must be at the zip root).
+  UPLOAD="$(mktemp /tmp/faas-bundle.XXXXXX.zip)"
+  CLEAN_ZIP="$UPLOAD"
+  if ! python3 - "$TARGET" "$UPLOAD" <<'PY'
+import os, sys, zipfile
+root, out = sys.argv[1], sys.argv[2]
+skip_dirs = {"__pycache__", ".git"}
+with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
+    for base, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in skip_dirs and not d.startswith(".")]
+        for name in files:
+            if name.startswith("."):
+                continue
+            full = os.path.join(base, name)
+            rel = os.path.relpath(full, root).replace(os.sep, "/")
+            zf.write(full, rel)
+PY
+  then
+    echo "failed to zip service folder: $TARGET" >&2
+    rm -f "$RAW" "$CLEAN_ZIP"
+    exit 1
+  fi
+  CT="application/zip"
+else
+  UPLOAD="$TARGET"
+  CT="application/json"
+fi
+
+CURL_ARGS=(-s -m 150 -o "$RAW" -w "%{http_code}" -X POST -H "Content-Type: $CT")
+[ -n "${MYAPP_FAAS_NODE_TOKEN:-}" ] && CURL_ARGS+=(-H "X-MyApp-Agent-Node-Token: ${MYAPP_FAAS_NODE_TOKEN}")
+[ -n "${MYAPP_FAAS_OWNER:-}" ] && CURL_ARGS+=(-H "X-MyApp-Owner-User-Id: ${MYAPP_FAAS_OWNER}")
+CURL_ARGS+=(--data-binary @"$UPLOAD" "$BASE/services")
+HTTP="$(curl "${CURL_ARGS[@]}")"
+[ -n "$CLEAN_ZIP" ] && rm -f "$CLEAN_ZIP"
 
 python3 - "$RAW" "$HTTP" "$OUT" <<'PY'
 import json, sys
@@ -65,7 +101,7 @@ if res["ok"]:
     print(f"-> wrote {out}; now wire the JSON-APP invoke ids to '{res['service_id']}' and self-test with faas_invoke.sh")
 else:
     print(f"DEPLOY FAILED (http {code}): {res['error']}")
-    print(f"-> fix faas_bundle.json per the error above and re-run faas_deploy.sh")
+    print(f"-> fix the bundle/folder per the error above and re-run faas_deploy.sh")
 PY
 rm -f "$RAW"
 

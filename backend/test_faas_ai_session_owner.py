@@ -46,7 +46,11 @@ class _DeployResult:
     routes = [{"path": "/notes", "methods": ["GET"]}]
 
 
-def test_faas_action_owner_comes_from_authenticated_session() -> None:
+def test_server_deploy_faas_action_is_deprecated_and_dropped() -> None:
+    # FaaS deploy is now agent-driven IN-RUN via backend/faas_deploy.sh, so the
+    # legacy server_deploy_faas_service action is dropped during resolution: it
+    # must never trigger a server-side deploy nor emit a faas action (which also
+    # means a client-supplied user_id can never drive a deploy this way).
     calls: list[dict] = []
 
     fake_faas_store = types.ModuleType("faas_store")
@@ -59,137 +63,25 @@ def test_faas_action_owner_comes_from_authenticated_session() -> None:
     fake_faas_store.deploy_bundle = deploy_bundle
     sys.modules["faas_store"] = fake_faas_store
 
-    class _SessionStoreMustNotBeUsed:
-        def get_meta(self, session_id: str) -> dict:
-            raise AssertionError("owner_user_id should be supplied by the worker")
-
-    original_session_store = ai_session.SessionStore
-    ai_session.SessionStore = _SessionStoreMustNotBeUsed
-    try:
-        with tempfile.TemporaryDirectory(prefix="myapp-faas-owner-") as raw:
-            workspace = Path(raw)
-            (workspace / "faas_bundle.json").write_text(
-                json.dumps({"service_id": "notes-api", "files": {"app.py": "print('ok')"}}),
-                encoding="utf-8",
-            )
-            actions = ai_session._resolve_server_upload_actions(
-                [{
-                    "type": "server_deploy_faas_service",
-                    "path": "faas_bundle.json",
-                    "user_id": "attacker-controlled",
-                }],
-                "session-123",
-                workspace=str(workspace),
-                owner_user_id="auth-user-123",
-            )
-    finally:
-        ai_session.SessionStore = original_session_store
-
-    assert calls == [{
-        "owner_user_id": "auth-user-123",
-        "bundle": {"service_id": "notes-api", "files": {"app.py": "print('ok')"}},
-        "source": "ai-session:session-123",
-    }]
-    assert actions == [{
-        "type": "faas_service_ready",
-        "service_id": "notes-api",
-        "function_name": "myapp-notes-api",
-        "status": "ready",
-        "commit_sha": "abc123",
-        "invoke_url": "/api/faas/invoke/notes-api",
-        "routes": [{"path": "/notes", "methods": ["GET"]}],
-    }]
-
-
-def test_faas_action_can_deploy_agent_pull_artifact() -> None:
-    calls: list[dict] = []
-
-    fake_faas_store = types.ModuleType("faas_store")
-    fake_faas_store.load_bundle_bytes = lambda raw: json.loads(raw.decode("utf-8"))
-
-    def deploy_bundle(owner_user_id: str, bundle: dict, *, source: str):
-        calls.append({"owner_user_id": owner_user_id, "bundle": bundle, "source": source})
-        return _DeployResult()
-
-    fake_faas_store.deploy_bundle = deploy_bundle
-    sys.modules["faas_store"] = fake_faas_store
-
-    original_artifact_from_agent_pull = ai_session._artifact_from_agent_pull
-    ai_session._artifact_from_agent_pull = lambda run_id, path: json.dumps({
-        "service_id": "notes-api",
-        "files": {"app.py": "print('ok')"},
-        "run_id": run_id,
-        "path": path,
-    }).encode("utf-8")
-    try:
-        actions = ai_session._resolve_server_upload_actions(
-            [{"type": "server_deploy_faas_service", "path": "faas_bundle.json"}],
-            "session-456",
-            workspace=None,
-            agent_pull_run_id="pull-run-1",
-            owner_user_id="auth-user-456",
+    with tempfile.TemporaryDirectory(prefix="myapp-faas-owner-") as raw:
+        workspace = Path(raw)
+        (workspace / "faas_bundle.json").write_text(
+            json.dumps({"service_id": "notes-api", "files": {"app.py": "print('ok')"}}),
+            encoding="utf-8",
         )
-    finally:
-        ai_session._artifact_from_agent_pull = original_artifact_from_agent_pull
+        actions = ai_session._resolve_server_upload_actions(
+            [{
+                "type": "server_deploy_faas_service",
+                "path": "faas_bundle.json",
+                "user_id": "attacker-controlled",
+            }],
+            "session-123",
+            workspace=str(workspace),
+            owner_user_id="auth-user-123",
+        )
 
-    assert calls == [{
-        "owner_user_id": "auth-user-456",
-        "bundle": {
-            "service_id": "notes-api",
-            "files": {"app.py": "print('ok')"},
-            "run_id": "pull-run-1",
-            "path": "faas_bundle.json",
-        },
-        "source": "ai-session:session-456",
-    }]
-    assert actions[0]["type"] == "faas_service_ready"
-    assert actions[0]["invoke_url"] == "/api/faas/invoke/notes-api"
-
-
-def test_faas_validation_failure_returns_failed_action_without_exception_log() -> None:
-    class FaaSValidationError(RuntimeError):
-        pass
-
-    fake_faas_store = types.ModuleType("faas_store")
-    fake_faas_store.FaaSValidationError = FaaSValidationError
-    fake_faas_store.load_bundle_bytes = lambda raw: json.loads(raw.decode("utf-8"))
-
-    def deploy_bundle(owner_user_id: str, bundle: dict, *, source: str):
-        raise FaaSValidationError("function default arguments must be literal values")
-
-    fake_faas_store.deploy_bundle = deploy_bundle
-    sys.modules["faas_store"] = fake_faas_store
-
-    exception_calls: list[tuple] = []
-    warning_calls: list[tuple] = []
-    original_exception = ai_session.logger.exception
-    original_warning = ai_session.logger.warning
-    ai_session.logger.exception = lambda *args, **kwargs: exception_calls.append((args, kwargs))
-    ai_session.logger.warning = lambda *args, **kwargs: warning_calls.append((args, kwargs))
-    try:
-        with tempfile.TemporaryDirectory(prefix="myapp-faas-validation-failed-") as raw:
-            workspace = Path(raw)
-            (workspace / "faas_bundle.json").write_text(
-                json.dumps({"service_id": "bad-api", "files": {"app.py": "bad"}}),
-                encoding="utf-8",
-            )
-            actions = ai_session._resolve_server_upload_actions(
-                [{"type": "server_deploy_faas_service", "path": "faas_bundle.json"}],
-                "session-validation",
-                workspace=str(workspace),
-                owner_user_id="auth-user-validation",
-            )
-    finally:
-        ai_session.logger.exception = original_exception
-        ai_session.logger.warning = original_warning
-
-    assert actions == [{
-        "type": "faas_service_failed",
-        "path": "faas_bundle.json",
-        "error": "function default arguments must be literal values",
-    }]
-    assert warning_calls
-    assert exception_calls == []
+    assert calls == []
+    assert all(a.get("type") not in {"faas_service_ready", "faas_service_failed"} for a in actions)
 
 
 def test_faas_prompt_note_mentions_route_enforcement() -> None:
@@ -198,7 +90,8 @@ def test_faas_prompt_note_mentions_route_enforcement() -> None:
     assert "404" in note
     assert "405" in note
     assert "/items/<item_id>" in note
-    assert "server_deploy_faas_service" in note
+    assert "faas_deploy.sh" in note
+    assert "faas_pull.sh" in note
 
 
 def test_faas_manifest_initial_file_lists_user_services() -> None:
@@ -230,12 +123,14 @@ def test_faas_manifest_initial_file_lists_user_services() -> None:
             "status": "ready",
             "routes": [{"path": "/items", "methods": ["GET", "POST"]}],
             "invoke_url": "/api/faas/invoke/todo-api",
+            "archive_path": "services/todo-api/archive",
             "active_commit": "abc123",
             "updated_at": "updated",
             "source": {"app.py": "from flask import Flask\napp = Flask(__name__)\n"},
         }
     ]
     assert "reuse its service_id" in manifest["note"]
+    assert "faas_pull.sh" in manifest["note"]
 
 
 def test_client_action_compaction_keeps_app_upload_and_faas_deploys() -> None:
@@ -290,9 +185,7 @@ def test_rewrite_faas_invoke_service_id_uses_real_id() -> None:
 
 
 if __name__ == "__main__":
-    test_faas_action_owner_comes_from_authenticated_session()
-    test_faas_action_can_deploy_agent_pull_artifact()
-    test_faas_validation_failure_returns_failed_action_without_exception_log()
+    test_server_deploy_faas_action_is_deprecated_and_dropped()
     test_faas_prompt_note_mentions_route_enforcement()
     test_faas_manifest_initial_file_lists_user_services()
     test_client_action_compaction_keeps_app_upload_and_faas_deploys()

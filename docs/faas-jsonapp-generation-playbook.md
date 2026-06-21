@@ -132,15 +132,37 @@ def auth_verify():
 - 续写已有后端：复用其 `service_id`（放进 `service.service_id`），基于 `faas_services.json` 里的
   现有 `source` 续写，routes 保留旧+新。无关新后端才建新 `service_id`（别超 `max_services`）。
 
+### 4.1 多文件后端（一个服务多个文件）
+
+服务不必塞进单个 `app.py`。`files` 里除入口 `app.py`（必须暴露 Flask `app`）和 `requirements.txt` 外，
+还能放：
+
+- 多个 `.py` 模块/子包：`from helpers import calc`、`import lib.util`（自身模块可互相 import）；
+- `templates/`、以及 `.json/.txt/.csv/.md/.html/.css/.js` 数据/模板文件；单服务约 60 个文件上限。
+
+辅助模块可写正常的类/函数（不受 app.py 顶层声明式写法限制），但**所有 `.py` 都受同一能力沙箱**：
+只能 import 白名单标准库 + `flask`/`pydantic` + 本服务自己的模块，禁止 `os`/`subprocess`/`socket`/
+文件读写/`eval`/`exec`/`open`。出网仍只用 `urllib`。
+
+**改已有的多文件后端**：先把整份目录拉下来再改，别凭 `source` 里的单个 `app.py` 猜：
+
+```bash
+bash backend/faas_pull.sh <service_id>      # 解压到 $AI_APP_WORKSPACE/faas_pull/<service_id>/
+# 改/增该目录下任意文件，保持 service.json 的 routes 覆盖前端会用到的所有接口
+```
+
 ---
 
 ## 5. 部署 + 自测（**必须在本轮内自己完成，绝不能只写动作让服务端代劳**）
 
 部署所需环境变量已在你的运行环境里，**在当前 shell 直接运行**（不要 `env -i`/`sudo`/新 shell）：
 
-1. **部署**：`bash backend/faas_deploy.sh $AI_APP_WORKSPACE/faas_bundle.json`
+1. **部署**：
+   - 单文件/内联 bundle：`bash backend/faas_deploy.sh $AI_APP_WORKSPACE/faas_bundle.json`
+   - 多文件目录（来自 `faas_pull.sh` 或自己写的目录）：`bash backend/faas_deploy.sh <服务目录>`
+     （目录会被打包成 zip 上传，后端解压→校验→更新 git→部署，流程其余不变）
    → 读 `$AI_APP_WORKSPACE/faas_deploy_result.json`：成功含真实 `service_id`+`routes`，失败含 `error`。
-2. **失败** → 按 `error` 最小化修 bundle → 重跑第 1 步（≤5 次）。**绝不能编造 service_id。**
+2. **失败** → 按 `error` 最小化修 bundle/目录 → 重跑第 1 步（≤5 次）。**绝不能编造 service_id。**
 3. **成功 → 自测**：`bash backend/faas_invoke.sh <真实service_id> <route> [METHOD] [json体]`
    逐条验证关键接口 200 且结构符合预期（至少一次 GET、一次写操作）。
 

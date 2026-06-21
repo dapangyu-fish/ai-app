@@ -49,9 +49,12 @@ for _name, _value in {
     "FAAS_OPENFAAS_USERNAME": "admin",
     "FAAS_OPENFAAS_WRITE_TIMEOUT": "60s",
     "FAAS_PUBLIC_BASE_URL": "https://backend.example",
+    "FAAS_NODE_PUBLIC_URL": "https://openfaas.example",
     "FAAS_REQUIREMENTS_MAX_LINES": 40,
     "FAAS_RUNTIME_BUNDLE_BASE_URL": "https://backend.example",
     "FAAS_RUNTIME_TOKEN": "runtime-master-token",
+    "SUPABASE_URL": "https://supabase.example",
+    "SUPABASE_ANON_KEY": "anon-key",
 }.items():
     setattr(_config, _name, _value)
 sys.modules["config"] = _config
@@ -142,6 +145,13 @@ class _MemoryFaaSDB:
             service_id = params[0]
             self.services[service_id]["status"] = "disabled"
             return None
+        if normalized.startswith("delete from faas_services"):
+            service_id = params[0]
+            row = self.services.get(service_id)
+            # Mirror the WHERE ... AND status = 'deploying' guard.
+            if row and row.get("status") == "deploying":
+                self.services.pop(service_id, None)
+            return None
         raise AssertionError(f"unhandled db_execute SQL: {sql}")
 
     def query(self, sql: str, params=None, fetch_one: bool = False, fetch_all: bool = False):
@@ -152,7 +162,7 @@ class _MemoryFaaSDB:
             count = sum(
                 1
                 for row in self.services.values()
-                if row["owner_user_id"] == owner_user_id and row["status"] != "disabled"
+                if row["owner_user_id"] == owner_user_id and row["status"] not in ("disabled", "failed")
             )
             return {"count": count}
         if "from faas_services where service_id = %s" in normalized:
@@ -652,6 +662,209 @@ def test_deploy_quota_conflict_disable_and_runtime_bundle() -> None:
         assert replacement.status == "ready"
 
 
+def test_validation_supports_multi_file_service() -> None:
+    helper = (
+        "from datetime import datetime\n\n"
+        "class Clock:\n"
+        "    def now_iso(self) -> str:\n"
+        "        return datetime(2020, 1, 1).isoformat()\n\n"
+        "def greeting(name):\n"
+        "    return 'hi ' + name\n"
+    )
+    app_py = (
+        "from flask import Flask, jsonify\n"
+        "from helpers import Clock, greeting\n"
+        "from lib.util import VERSION\n"
+        "app = Flask(__name__)\n"
+        "@app.get('/hello')\n"
+        "def hello():\n"
+        "    return jsonify(msg=greeting('world'), at=Clock().now_iso(), v=VERSION)\n"
+    )
+    bundle = {
+        "service": {
+            "service_id": "multi-svc",
+            "slug": "multi-svc",
+            "routes": [{"path": "/hello", "methods": ["GET"]}],
+        },
+        "files": {
+            "app.py": app_py,
+            "helpers.py": helper,
+            "lib/util.py": "VERSION = '1.0.0'\n",
+            "templates/index.html": "<h1>hi</h1>\n",
+            "requirements.txt": "flask==3.0.3\n",
+        },
+    }
+    normalized = faas_store.validate_bundle(bundle)
+    for path in ("app.py", "helpers.py", "lib/util.py", "templates/index.html"):
+        assert path in normalized["files"], path
+
+
+def test_validation_sandbox_applies_to_helper_modules() -> None:
+    bundle = {
+        "service": {
+            "service_id": "bad-helper",
+            "slug": "bad-helper",
+            "routes": [{"path": "/hello", "methods": ["GET"]}],
+        },
+        "files": {
+            "app.py": (
+                "from flask import Flask, jsonify\nfrom helpers import x\n"
+                "app = Flask(__name__)\n@app.get('/hello')\ndef hello():\n    return jsonify(x=x)\n"
+            ),
+            "helpers.py": "import os\nx = os.getcwd()\n",
+            "requirements.txt": "flask==3.0.3\n",
+        },
+    }
+    try:
+        faas_store.validate_bundle(bundle)
+    except faas_store.FaaSValidationError as exc:
+        assert "import is not allowed" in str(exc) and "helpers.py" in str(exc)
+    else:
+        raise AssertionError("forbidden import in a helper module was accepted")
+
+
+def test_validation_rejects_disallowed_file_type() -> None:
+    bundle = {
+        "service": {
+            "service_id": "bad-file",
+            "slug": "bad-file",
+            "routes": [{"path": "/hello", "methods": ["GET"]}],
+        },
+        "files": {
+            "app.py": (
+                "from flask import Flask, jsonify\napp = Flask(__name__)\n"
+                "@app.get('/hello')\ndef hello():\n    return jsonify(ok=True)\n"
+            ),
+            "evil.sh": "rm -rf /\n",
+            "requirements.txt": "flask==3.0.3\n",
+        },
+    }
+    try:
+        faas_store.validate_bundle(bundle)
+    except faas_store.FaaSValidationError as exc:
+        assert "file type is not allowed" in str(exc)
+    else:
+        raise AssertionError("disallowed file type was accepted")
+
+
+def test_load_bundle_zip_roundtrip() -> None:
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr(
+            "app.py",
+            "from flask import Flask, jsonify\nfrom helpers import answer\n"
+            "app = Flask(__name__)\n@app.get('/hello')\ndef hello():\n    return jsonify(v=answer())\n",
+        )
+        zf.writestr("helpers.py", "def answer():\n    return 42\n")
+        zf.writestr(
+            "service.json",
+            json.dumps({"service_id": "zip-svc", "slug": "zip-svc", "routes": [{"path": "/hello", "methods": ["GET"]}]}),
+        )
+        zf.writestr("__MACOSX/._app.py", "junk")
+        zf.writestr(".DS_Store", "junk")
+    bundle = faas_store.load_bundle_zip(buf.getvalue())
+    assert "app.py" in bundle["files"] and "helpers.py" in bundle["files"]
+    assert "__MACOSX/._app.py" not in bundle["files"]
+    assert ".DS_Store" not in bundle["files"]
+    assert bundle["service"]["service_id"] == "zip-svc"
+    normalized = faas_store.validate_bundle(bundle)
+    assert normalized["service_id"] == "zip-svc"
+    assert "helpers.py" in normalized["files"]
+
+
+def test_build_service_archive_roundtrip() -> None:
+    import io
+    import zipfile
+
+    with tempfile.TemporaryDirectory(prefix="myapp-faas-arch-") as raw:
+        faas_store.FAAS_CODE_ROOT = raw
+        faas_store.FAAS_DEPLOY_MODE = "metadata"
+        faas_store.FAAS_GIT_ENABLED = False
+        faas_store.FAAS_BUNDLE_SERVE_ROOT = ""
+        faas_store.FAAS_MAX_SERVICES_PER_USER = 5
+        _db.services.clear()
+        _db.deployments.clear()
+
+        bundle = _bundle("arch-svc")
+        bundle["files"]["helpers.py"] = "def helper():\n    return 1\n"
+        faas_store.deploy_bundle("user-a", bundle, source="test")
+
+        data = faas_store.build_service_archive("arch-svc")
+        names = set(zipfile.ZipFile(io.BytesIO(data)).namelist())
+        assert {"app.py", "helpers.py", "service.json"} <= names
+
+        # The downloaded archive round-trips back through the upload path.
+        reloaded = faas_store.load_bundle_zip(data)
+        assert reloaded["service"]["service_id"] == "arch-svc"
+        assert "helpers.py" in reloaded["files"]
+
+
+def test_load_bundle_zip_strips_wrapper_dir() -> None:
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("zip-svc/app.py", "from flask import Flask\napp = Flask(__name__)\n")
+        zf.writestr("zip-svc/helpers.py", "x = 1\n")
+    bundle = faas_store.load_bundle_zip(buf.getvalue())
+    assert "app.py" in bundle["files"]
+    assert "helpers.py" in bundle["files"]
+
+
+def test_failed_new_deploy_does_not_consume_quota() -> None:
+    with tempfile.TemporaryDirectory(prefix="myapp-faas-store-fail-") as raw:
+        faas_store.FAAS_CODE_ROOT = raw
+        faas_store.FAAS_DEPLOY_MODE = "metadata"
+        faas_store.FAAS_GIT_ENABLED = False
+        faas_store.FAAS_MAX_SERVICES_PER_USER = 2
+        _db.services.clear()
+        _db.deployments.clear()
+
+        original_deploy = faas_store._deploy_service
+
+        def _boom(*args, **kwargs):
+            raise faas_store.FaaSError("deploy boom")
+
+        faas_store._deploy_service = _boom
+        try:
+            for i in range(3):
+                try:
+                    faas_store.deploy_bundle("user-a", _bundle(f"flaky-{i}"), source="test")
+                except faas_store.FaaSError as exc:
+                    assert "deploy boom" in str(exc)
+                else:
+                    raise AssertionError("expected deploy failure")
+            # Every failed brand-new deploy was removed, so none consumed a slot.
+            assert faas_store._count_user_services("user-a") == 0
+            assert "flaky-0" not in _db.services
+        finally:
+            faas_store._deploy_service = original_deploy
+
+        # Quota fully reclaimed: two real services still deploy under the limit of 2.
+        first = faas_store.deploy_bundle("user-a", _bundle("real-1"), source="test")
+        second = faas_store.deploy_bundle("user-a", _bundle("real-2"), source="test")
+        assert first.status == "ready"
+        assert second.status == "ready"
+
+        # A failed RE-deploy of an existing service keeps the row but marks it
+        # failed (so it no longer counts toward quota).
+        faas_store._deploy_service = _boom
+        try:
+            faas_store.deploy_bundle("user-a", _bundle("real-1"), source="test")
+        except faas_store.FaaSError:
+            pass
+        else:
+            raise AssertionError("expected re-deploy failure")
+        finally:
+            faas_store._deploy_service = original_deploy
+        assert _db.services["real-1"]["status"] == "failed"
+        assert faas_store._count_user_services("user-a") == 1
+
+
 def test_openfaas_deploy_records_gateway_metadata() -> None:
     with tempfile.TemporaryDirectory(prefix="myapp-faas-store-openfaas-") as raw:
         old_root = faas_store.FAAS_CODE_ROOT
@@ -694,6 +907,13 @@ if __name__ == "__main__":
     test_validation_requires_declared_routes_to_match_flask_decorators()
     test_validation_rejects_reserved_runtime_routes()
     test_validation_restricts_top_level_runtime_shape()
+    test_validation_supports_multi_file_service()
+    test_validation_sandbox_applies_to_helper_modules()
+    test_validation_rejects_disallowed_file_type()
+    test_load_bundle_zip_roundtrip()
+    test_build_service_archive_roundtrip()
+    test_load_bundle_zip_strips_wrapper_dir()
     test_deploy_quota_conflict_disable_and_runtime_bundle()
+    test_failed_new_deploy_does_not_consume_quota()
     test_openfaas_deploy_records_gateway_metadata()
     print(json.dumps({"ok": True}, sort_keys=True))

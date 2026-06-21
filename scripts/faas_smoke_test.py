@@ -76,18 +76,35 @@ def main() -> int:
     parser.add_argument("--user-id", default=f"faas-smoke-{secrets.token_hex(4)}", help="test user id")
     parser.add_argument("--service-id", default=f"smoke-api-{secrets.token_hex(4)}", help="test service id")
     parser.add_argument("--token", default="", help="optional backend bearer token")
+    parser.add_argument(
+        "--node-token",
+        default="",
+        help="agent-node token: deploy via the trusted owner path (X-MyApp-Owner-User-Id=--user-id)",
+    )
     parser.add_argument("--no-cleanup", action="store_true", help="leave the deployed service in place")
     args = parser.parse_args()
 
     base = args.base_url.rstrip("/")
     payload = _bundle(args.service_id)
+    # Deploy now requires a trusted owner (FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER): a
+    # Bearer token, or the agent-node token + owner header. The bare body user_id
+    # only works on a backend with that hardening disabled.
+    deploy_headers: dict[str, str] = {}
     if not args.token:
-        payload["user_id"] = args.user_id
+        if args.node_token:
+            deploy_headers = {
+                "X-MyApp-Agent-Node-Token": args.node_token,
+                "X-MyApp-Owner-User-Id": args.user_id,
+            }
+        else:
+            payload["user_id"] = args.user_id
 
     health = _request("GET", f"{base}/api/faas/health", token=args.token).json()
     print("health:", json.dumps(health, ensure_ascii=False))
 
-    deploy = _request("POST", f"{base}/api/faas/services", token=args.token, json=payload).json()
+    deploy = _request(
+        "POST", f"{base}/api/faas/services", token=args.token, headers=deploy_headers, json=payload
+    ).json()
     print("deploy:", json.dumps(deploy, ensure_ascii=False))
 
     invoke = _request(

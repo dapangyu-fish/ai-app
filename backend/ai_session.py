@@ -201,10 +201,12 @@ def _faas_manifest_for_user(user_id: str) -> Optional[dict]:
                 "status": item.get("status"),
                 "routes": item.get("routes") or [],
                 "invoke_url": f"/api/faas/invoke/{service_id}",
+                # Pull the WHOLE current service folder (zip) to edit any files; see note.
+                "archive_path": f"services/{service_id}/archive",
                 "active_commit": item.get("active_commit") or "",
                 "updated_at": str(item.get("updated_at") or ""),
-                # Existing source so the generator can APPEND routes to a service
-                # while preserving its current handlers (reuse the same service_id).
+                # app.py preview for a quick single-file append; for multi-file edits
+                # pull the archive instead of basing only on this.
                 "source": read_service_source(service_id),
             })
         return {
@@ -213,13 +215,18 @@ def _faas_manifest_for_user(user_id: str) -> Optional[dict]:
             "max_services": FAAS_MAX_SERVICES_PER_USER,
             "services": services,
             "note": (
-                "This is a read-only manifest. To APPEND endpoints to an existing "
-                "backend, reuse its service_id in faas_bundle.json and include ALL "
-                "of its existing routes plus the new ones, basing app.py on the "
-                "service's `source` field so current handlers are preserved "
-                "(appending does NOT consume a new service slot). Create a NEW "
-                "service_id only for an unrelated backend, and only while under "
-                "max_services. The invoke proxy enforces the listed routes/methods."
+                "Read-only manifest of your existing FaaS backends. To MODIFY one, "
+                "reuse its service_id (updates it IN PLACE and does NOT consume a new "
+                "slot). Two ways to edit: (1) single-file tweak — base app.py on the "
+                "service's `source` and redeploy a faas_bundle.json; (2) MULTI-FILE — "
+                "run `bash backend/faas_pull.sh <service_id>` to download and unzip the "
+                "entire current service folder, edit or add any files (app.py is the "
+                "entrypoint; helper .py modules, packages, templates/, and data files "
+                "are supported), then redeploy the folder with "
+                "`bash backend/faas_deploy.sh <folder>`. Always keep ALL existing routes "
+                "plus the new ones in service.json. Create a NEW service_id only for an "
+                "unrelated backend, and only while under max_services. The invoke proxy "
+                "enforces the routes/methods listed in service.json."
             ),
         }
     except Exception as exc:
@@ -1832,9 +1839,18 @@ def _build_faas_backend_prompt_note(*, workspace: Optional[str] = None) -> str:
         "如果本轮是在给已有后端追加接口，请复用其 `service_id`，基于 `source` 里的 `app.py` 续写、"
         "并在 routes 中同时保留原有路由和新增路由（追加不占用新的服务配额）；"
         "只有当确实是无关的新后端、且未超过 `max_services` 时才创建新的 `service_id`。"
-        "\n- 只允许 Python/Flask；bundle JSON 结构必须是："
+        "\n- 只允许 Python/Flask；最小 bundle JSON 结构是："
         "`{\"service\":{\"slug\":\"todo-api\",\"routes\":[{\"path\":\"/items\",\"methods\":[\"GET\",\"POST\"]}]},"
         "\"files\":{\"app.py\":\"...Flask app code...\",\"requirements.txt\":\"flask==3.0.3\\n\"}}`。"
+        "\n- 一个服务可以是多文件：`files` 里除 `app.py`（入口，必须暴露 Flask `app`）和 `requirements.txt` 外，"
+        "还可放多个 `.py` 模块/子包（`from helpers import ...`、`import lib.util`）、`templates/` 目录、"
+        "以及 `.json/.txt/.csv/.md/.html/.css/.js` 等数据/模板文件（单服务上限约 60 个文件）。"
+        "辅助模块可以写正常的类和函数（不受 app.py 顶层声明式写法限制），但**所有 .py 文件都受同一能力沙箱**："
+        "只能 import 白名单标准库 + flask/pydantic + 本服务自己的模块，禁止 os/subprocess/socket/文件读写/eval/exec/open。"
+        "\n- 修改已有后端（尤其多文件/较复杂的）流程：先 `bash backend/faas_pull.sh <service_id>` 把整份服务目录"
+        "拉下来解压到 `$AI_APP_WORKSPACE/faas_pull/<service_id>/`，按需改或新增任意文件，"
+        "再 `bash backend/faas_deploy.sh <该目录>` 整目录打包上传（后端会解压、校验、更新 git 后照常部署，复用 service_id 不占新配额）；"
+        "务必让 `service.json` 的 routes 覆盖前端会用到的全部接口（旧的＋新增的）。"
         "\n- `app.py` 必须定义 Flask `app`，接口路径必须与 service.routes 保持一致；"
         "后端会静态校验每个 `service.routes` 路径/方法都能在 `@app.get/post/put/patch/delete(...)` "
         "或 `@app.route(..., methods=[...])` 中找到；"

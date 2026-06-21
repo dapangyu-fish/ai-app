@@ -94,6 +94,14 @@ REGISTRY_BASE_URL = os.environ.get("REGISTRY_BASE_URL", "https://myapp-registry.
 # and optionally calls a deploy script/OpenFaaS gateway owned by the backend.
 FAAS_ENABLED = os.environ.get("FAAS_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"}
 FAAS_REQUIRE_AUTH = os.environ.get("FAAS_REQUIRE_AUTH", "0").strip().lower() in {"1", "true", "yes", "on"}
+# Even when FAAS_REQUIRE_AUTH is off (invoke stays open), a DEPLOY must be scoped
+# to a trusted owner — the agent-node token path or a verified Bearer token — so a
+# client cannot pass an arbitrary/rotating user_id to bypass the per-user service
+# quota. Real deploys always go through the agent-node (trusted), so this is safe
+# to default on.
+FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER = os.environ.get(
+    "FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER", "1"
+).strip().lower() in {"1", "true", "yes", "on"}
 FAAS_CODE_ROOT = os.environ.get("FAAS_CODE_ROOT", "/mnt/myapp/faas/code")
 FAAS_MAX_SERVICES_PER_USER = _env_int("FAAS_MAX_SERVICES_PER_USER", 5)
 FAAS_GIT_ENABLED = os.environ.get("FAAS_GIT_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"}

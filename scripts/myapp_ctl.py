@@ -5673,6 +5673,15 @@ def cmd_faas(args) -> int:
             cmd.extend(["--service-id", args.service_id])
         if token:
             cmd.extend(["--token", token])
+        else:
+            # Deploy now requires a trusted owner. With no bearer token, pass the
+            # host's agent-node token so smoke uses the trusted owner path instead
+            # of the (now-rejected) bare body user_id.
+            node_token = _parse_env(_secret_path("agent")).get("AGENT_NODE_TOKEN", "").strip()
+            if not node_token:
+                node_token = _parse_env(_secret_path("backend")).get("AGENT_NODE_TOKEN", "").strip()
+            if node_token:
+                cmd.extend(["--node-token", node_token])
         if args.no_cleanup:
             cmd.append("--no-cleanup")
         return _run(cmd, capture=False).returncode

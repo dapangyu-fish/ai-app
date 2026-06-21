@@ -17,10 +17,11 @@ from flask import Response, jsonify, request, stream_with_context
 
 try:
     from auth import verify_access_token
-    from config import AGENT_NODE_TOKEN, FAAS_DEPLOY_MODE, FAAS_OPENFAAS_GATEWAY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
+    from config import AGENT_NODE_TOKEN, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_OPENFAAS_GATEWAY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
     from faas_store import (
         FaaSError,
         FaaSValidationError,
+        build_service_archive,
         deploy_bundle,
         disable_service,
         ensure_local_docker_runtime_for_service,
@@ -28,13 +29,14 @@ try:
         get_service,
         list_services,
         load_bundle_bytes,
+        load_bundle_zip,
         openfaas_gateway_for_service,
         runtime_bundle_for_service,
         runtime_token_for_service,
     )
 except ModuleNotFoundError:
     from backend.auth import verify_access_token
-    from backend.config import AGENT_NODE_TOKEN, FAAS_DEPLOY_MODE, FAAS_OPENFAAS_GATEWAY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
+    from backend.config import AGENT_NODE_TOKEN, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_OPENFAAS_GATEWAY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
     from backend.faas_store import (
         FaaSError,
         FaaSValidationError,
@@ -45,6 +47,7 @@ except ModuleNotFoundError:
         get_service,
         list_services,
         load_bundle_bytes,
+        load_bundle_zip,
         openfaas_gateway_for_service,
         runtime_bundle_for_service,
         runtime_token_for_service,
@@ -54,7 +57,7 @@ except ModuleNotFoundError:
 _LOCAL_DOCKER_MODES = {"local-docker", "docker", "docker-local"}
 
 
-def _request_user_id() -> str | None:
+def _request_user_id(*, trusted_only: bool = False) -> str | None:
     # Trusted internal call: the agent-node faas proxy (and co-located local
     # agents) authenticate with the shared AGENT_NODE_TOKEN and pass the run's
     # owner explicitly, so an in-run deploy is scoped to the right owner without
@@ -73,6 +76,12 @@ def _request_user_id() -> str | None:
         if FAAS_REQUIRE_AUTH:
             return None
     if FAAS_REQUIRE_AUTH:
+        return None
+    if trusted_only:
+        # Mutations (deploy) must not trust a client-supplied identity even when
+        # auth is disabled — otherwise a caller could rotate user_id to mint a
+        # fresh per-user quota. Only the agent-node token / Bearer paths above
+        # count as a trusted owner.
         return None
     body = request.get_json(silent=True) if request.is_json else None
     if isinstance(body, dict):
@@ -118,6 +127,36 @@ def get_user_service(service_id: str):
     return jsonify({"service": service})
 
 
+def download_service_archive(service_id: str):
+    service = get_service(service_id)
+    if not service:
+        return _json_error("service not found", 404, code="FAAS_NOT_FOUND")
+    user_id = _request_user_id()
+    if FAAS_REQUIRE_AUTH and service.get("owner_user_id") != user_id:
+        return _json_error("forbidden", 403, code="FAAS_FORBIDDEN")
+    # Even without enforced auth, scope to the owner whenever an owner is known
+    # (the trusted agent-node/Bearer path supplies it) so one user's agent can
+    # never pull another user's service code.
+    if not FAAS_REQUIRE_AUTH and user_id and service.get("owner_user_id") != user_id:
+        return _json_error("forbidden", 403, code="FAAS_FORBIDDEN")
+    try:
+        data = build_service_archive(service_id)
+    except FaaSValidationError as exc:
+        return _json_error(str(exc), 404, code="FAAS_NOT_FOUND")
+    except Exception as exc:
+        return _json_error(str(exc), 500, code="FAAS_ARCHIVE_FAILED")
+    slug = str(service.get("service_slug") or service_id)
+    return Response(
+        data,
+        status=200,
+        headers={
+            "Content-Type": "application/zip",
+            "Content-Disposition": f'attachment; filename="{slug}.zip"',
+            "Content-Length": str(len(data)),
+        },
+    )
+
+
 def disable_user_service(service_id: str):
     user_id = _request_user_id()
     if not user_id:
@@ -134,11 +173,21 @@ def disable_user_service(service_id: str):
 
 
 def deploy_service():
-    user_id = _request_user_id()
+    user_id = _request_user_id(trusted_only=FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER)
     if not user_id:
+        if FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER and not FAAS_REQUIRE_AUTH:
+            return _json_error(
+                "deploy requires a trusted owner (agent-node token or Bearer auth)",
+                401,
+                code="FAAS_UNTRUSTED_OWNER",
+            )
         return _json_error("user_id is required", 401 if FAAS_REQUIRE_AUTH else 400, code="FAAS_USER_REQUIRED")
     try:
-        if request.mimetype == "application/octet-stream":
+        mimetype = (request.mimetype or "").lower()
+        if mimetype in {"application/zip", "application/x-zip-compressed", "application/x-zip"}:
+            # Multi-file archive upload: a zip of the whole svc folder.
+            bundle = load_bundle_zip(request.get_data())
+        elif mimetype == "application/octet-stream":
             bundle = load_bundle_bytes(request.get_data())
         else:
             bundle = request.get_json(silent=True) or {}

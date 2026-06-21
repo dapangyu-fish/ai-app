@@ -155,6 +155,23 @@ _ALLOWED_FILES = {
 _ALLOWED_PREFIXES = (
     "tests/",
 )
+# A FaaS service may now ship multiple files (modules, packages, templates,
+# static assets, data) so a service can be a real multi-file app rather than a
+# single app.py. Any path with one of these extensions is accepted (subject to
+# the path-safety + size + count limits); app.py stays the required entrypoint.
+_ALLOWED_EXTENSIONS = {
+    ".py",
+    ".txt",
+    ".json",
+    ".md",
+    ".html",
+    ".css",
+    ".js",
+    ".csv",
+    ".yaml",
+    ".yml",
+}
+_MAX_BUNDLE_FILES = 60
 _ALLOWED_IMPORT_ROOTS = {
     "__future__",
     "base64",
@@ -321,8 +338,12 @@ def _local_upstream_url(function_name: str) -> str:
 
 
 def _count_user_services(user_id: str) -> int:
+    # Count only services that actually occupy a slot. 'disabled' is an explicit
+    # delete; 'failed' is a deploy that never became live — neither should consume
+    # the user's quota (a brand-new failed deploy is also removed outright, see
+    # deploy_bundle), so a string of failed attempts can't lock a user out.
     row = db_query(
-        "SELECT COUNT(*) AS count FROM faas_services WHERE owner_user_id = %s AND status <> 'disabled'",
+        "SELECT COUNT(*) AS count FROM faas_services WHERE owner_user_id = %s AND status NOT IN ('disabled', 'failed')",
         [user_id],
         fetch_one=True,
     )
@@ -522,6 +543,22 @@ def runtime_bundle_for_service(service_id: str) -> dict[str, Any]:
     }
 
 
+def build_service_archive(service_id: str) -> bytes:
+    """Zip the service's entire current folder so the agent can pull it, edit any
+    files, and repack/upload (the download half of the multi-file edit flow).
+    Sourced from runtime_bundle_for_service so it is exactly the code that runs
+    (git-backed when FAAS_BUNDLE_SERVE_ROOT is set)."""
+    import io
+    import zipfile
+
+    bundle = runtime_bundle_for_service(service_id)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as archive:
+        for rel, content in sorted(bundle["files"].items()):
+            archive.writestr(rel, content)
+    return buf.getvalue()
+
+
 def read_service_source(
     service_id: str,
     *,
@@ -569,8 +606,19 @@ def _validate_file_path(path: str) -> str:
         raise FaaSValidationError(f"invalid file path: {path}")
     if not _SAFE_FILE_RE.fullmatch(normalized):
         raise FaaSValidationError(f"file path contains unsupported characters: {path}")
-    if normalized not in _ALLOWED_FILES and not any(normalized.startswith(prefix) for prefix in _ALLOWED_PREFIXES):
-        raise FaaSValidationError(f"file is not allowed in FaaS bundle: {normalized}")
+    segments = normalized.split("/")
+    if len(segments) > 6:
+        raise FaaSValidationError(f"file path is too deep: {normalized}")
+    for seg in segments:
+        if seg.startswith(".") or seg == "__pycache__":
+            raise FaaSValidationError(f"file path segment is not allowed: {seg}")
+    if normalized in _ALLOWED_FILES:
+        return normalized
+    if any(normalized.startswith(prefix) for prefix in _ALLOWED_PREFIXES):
+        return normalized
+    ext = os.path.splitext(normalized)[1].lower()
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise FaaSValidationError(f"file type is not allowed in FaaS bundle: {normalized}")
     return normalized
 
 
@@ -827,7 +875,10 @@ def _extract_flask_routes(tree: ast.AST) -> dict[str, set[str]]:
             if not isinstance(func, ast.Attribute):
                 continue
             value = func.value
-            if not isinstance(value, ast.Name) or value.id not in {"app", "application"}:
+            # Accept app/application AND blueprint-style objects (e.g. @bp.route,
+            # @api.get) so routes declared across modules in a multi-file service
+            # still satisfy the declared-vs-implemented gate.
+            if not isinstance(value, ast.Name):
                 continue
             decorator_name = func.attr
             if decorator_name in _INVALID_METHOD_DECORATORS:
@@ -878,34 +929,83 @@ def _validate_declared_routes_implemented(routes: list[dict[str, Any]], implemen
             )
 
 
-def _validate_python_ast(text: str, *, routes: list[dict[str, Any]] | None = None) -> None:
-    try:
-        tree = ast.parse(text, filename="app.py")
-    except SyntaxError as exc:
-        raise FaaSValidationError(f"app.py syntax error: {exc}") from exc
-    has_flask_app = _validate_top_level_shape(tree)
+def _local_module_roots(files: dict[str, str]) -> set[str]:
+    """Top-level importable names the bundle itself defines, so a multi-file
+    service can import its own sibling modules/packages (``from helpers import
+    x``, ``import lib.util``). app.py is the entrypoint, not an importable name."""
+    roots: set[str] = set()
+    for path in files:
+        if not path.endswith(".py"):
+            continue
+        head = path.split("/", 1)[0]
+        roots.add(head[:-3] if head == path else head)
+    roots.discard("app")
+    return {root for root in roots if root}
+
+
+def _check_safe_python(tree: ast.AST, *, filename: str, local_modules: set[str]) -> None:
+    """Capability sandbox enforced on EVERY .py file in a bundle: imports limited
+    to the stdlib/framework whitelist plus the bundle's own modules, and no
+    dangerous builtins (eval/exec/open/__import__), forbidden names, or dunder
+    attribute access. This is the real security boundary; it applies to helper
+    modules exactly as it does to app.py."""
+    allowed_imports = _ALLOWED_IMPORT_ROOTS | local_modules
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 root = alias.name.split(".", 1)[0]
-                if root not in _ALLOWED_IMPORT_ROOTS:
-                    raise FaaSValidationError(f"import is not allowed: {alias.name}")
+                if root not in allowed_imports:
+                    raise FaaSValidationError(f"import is not allowed ({filename}): {alias.name}")
         elif isinstance(node, ast.ImportFrom):
+            if node.level and node.level > 0:
+                continue  # relative import of a sibling module within this bundle
             root = (node.module or "").split(".", 1)[0]
-            if root not in _ALLOWED_IMPORT_ROOTS:
-                raise FaaSValidationError(f"import is not allowed: {node.module}")
+            if root and root not in allowed_imports:
+                raise FaaSValidationError(f"import is not allowed ({filename}): {node.module}")
         elif isinstance(node, ast.Call):
             target = node.func
             name = target.id if isinstance(target, ast.Name) else ""
             if name in _FORBIDDEN_CALLS:
-                raise FaaSValidationError(f"call is not allowed: {name}")
+                raise FaaSValidationError(f"call is not allowed ({filename}): {name}")
         elif isinstance(node, ast.Name) and node.id in _FORBIDDEN_NAMES:
-            raise FaaSValidationError(f"name is not allowed: {node.id}")
+            raise FaaSValidationError(f"name is not allowed ({filename}): {node.id}")
         elif isinstance(node, ast.Attribute) and node.attr.startswith("__"):
-            raise FaaSValidationError(f"dunder attribute is not allowed: {node.attr}")
-    if not has_flask_app:
+            raise FaaSValidationError(f"dunder attribute is not allowed ({filename}): {node.attr}")
+
+
+def _validate_app_py_shape(text: str) -> ast.AST:
+    """app.py-only: must be a declarative Flask entrypoint exposing app/application.
+    Helper modules are NOT shape-restricted (they can hold real classes/functions),
+    they only pass the capability sandbox above."""
+    try:
+        tree = ast.parse(text, filename="app.py")
+    except SyntaxError as exc:
+        raise FaaSValidationError(f"app.py syntax error: {exc}") from exc
+    if not _validate_top_level_shape(tree):
         raise FaaSValidationError("app.py must expose a Flask instance named app or application")
-    _validate_declared_routes_implemented(routes or [], _extract_flask_routes(tree))
+    return tree
+
+
+def _validate_bundle_python(files: dict[str, str], routes: list[dict[str, Any]]) -> None:
+    """Validate every .py file in a (possibly multi-file) bundle: app.py shape +
+    capability sandbox on all modules, with declared routes checked against the
+    decorators found across ALL modules (so blueprints in helper files count)."""
+    local_modules = _local_module_roots(files)
+    implemented: dict[str, set[str]] = {}
+    for path, content in files.items():
+        if not path.endswith(".py"):
+            continue
+        if path == "app.py":
+            tree = _validate_app_py_shape(content)
+        else:
+            try:
+                tree = ast.parse(content, filename=path)
+            except SyntaxError as exc:
+                raise FaaSValidationError(f"{path} syntax error: {exc}") from exc
+        _check_safe_python(tree, filename=path, local_modules=local_modules)
+        for route_path, methods in _extract_flask_routes(tree).items():
+            implemented.setdefault(route_path, set()).update(methods)
+    _validate_declared_routes_implemented(routes or [], implemented)
 
 
 def _normalize_routes(raw: Any) -> list[dict[str, Any]]:
@@ -966,6 +1066,8 @@ def validate_bundle(bundle: dict[str, Any], *, default_slug: str = "") -> dict[s
     files = bundle.get("files")
     if not isinstance(files, dict):
         raise FaaSValidationError("bundle.files must be an object")
+    if len(files) > _MAX_BUNDLE_FILES:
+        raise FaaSValidationError(f"too many files in bundle: {len(files)} (max {_MAX_BUNDLE_FILES})")
     normalized_files: dict[str, str] = {}
     for raw_path, raw_content in files.items():
         path = _validate_file_path(str(raw_path))
@@ -981,7 +1083,7 @@ def validate_bundle(bundle: dict[str, Any], *, default_slug: str = "") -> dict[s
         _validate_requirements(normalized_files["requirements.txt"])
     else:
         normalized_files["requirements.txt"] = "flask==3.0.3\n"
-    _validate_python_ast(normalized_files["app.py"], routes=routes)
+    _validate_bundle_python(normalized_files, routes)
 
     service_json = {
         "service_id": service_id,
@@ -1566,10 +1668,22 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
             )
         except Exception as exc:
             error = str(exc)[-4000:]
-            db_execute(
-                "UPDATE faas_services SET status = 'failed', updated_at = NOW() WHERE service_id = %s",
-                [service_id],
-            )
+            if existing is None:
+                # Brand-new service that never reached a live state: remove the row
+                # so a failed first deploy does not permanently consume the user's
+                # quota. The 'deploying' guard avoids racing a concurrent success.
+                db_execute(
+                    "DELETE FROM faas_services WHERE service_id = %s AND status = 'deploying'",
+                    [service_id],
+                )
+            else:
+                # Re-deploy of an existing service failed: keep the row but mark it
+                # failed (it no longer counts toward quota, and the operator can see
+                # the failure). The previously-running function may still be live.
+                db_execute(
+                    "UPDATE faas_services SET status = 'failed', updated_at = NOW() WHERE service_id = %s",
+                    [service_id],
+                )
             db_execute(
                 "UPDATE faas_deployments SET status = 'failed', error = %s, finished_at = NOW() WHERE deployment_id = %s",
                 [error, deployment_id],
@@ -1587,3 +1701,83 @@ def load_bundle_bytes(data: bytes) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise FaaSValidationError("FaaS bundle root must be an object")
     return payload
+
+
+def _strip_archive_root(files: dict[str, str]) -> dict[str, str]:
+    """Tolerate archives created with a single wrapping folder (``zip -r out svc/``
+    yields ``svc/app.py``): if app.py is not at the root but exactly one top-level
+    directory contains it, strip that prefix so the bundle is root-relative."""
+    if "app.py" in files:
+        return files
+    tops = {name.split("/", 1)[0] for name in files if "/" in name}
+    candidates = [top for top in tops if f"{top}/app.py" in files]
+    if len(candidates) != 1:
+        return files
+    prefix = candidates[0] + "/"
+    return {name[len(prefix):]: content for name, content in files.items() if name.startswith(prefix)}
+
+
+def load_bundle_zip(data: bytes) -> dict[str, Any]:
+    """Build a deploy bundle from a zip archive of a service folder.
+
+    This is the upload half of the multi-file edit flow: the agent pulls the
+    whole svc folder (see build_service_archive), edits any files, repacks, and
+    uploads the zip. The backend unpacks it here into the same {service, files}
+    shape that validate_bundle + deploy_bundle already consume, so the git +
+    deploy pipeline downstream is unchanged. Service metadata (service_id, slug,
+    routes) is read from the archive's service.json — reusing the same service_id
+    updates the existing service in place.
+    """
+    import io
+    import zipfile
+
+    if len(data) > FAAS_BUNDLE_MAX_BYTES:
+        raise FaaSValidationError(f"FaaS archive too large: {len(data)} bytes")
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(data))
+    except zipfile.BadZipFile as exc:
+        raise FaaSValidationError(f"invalid FaaS archive (not a zip): {exc}") from exc
+
+    files: dict[str, str] = {}
+    total = 0
+    infos = archive.infolist()
+    if len(infos) > _MAX_BUNDLE_FILES * 3:
+        raise FaaSValidationError(f"archive has too many entries: {len(infos)}")
+    for info in infos:
+        if info.is_dir():
+            continue
+        name = info.filename.replace("\\", "/").strip()
+        first = name.split("/", 1)[0]
+        base = name.rsplit("/", 1)[-1]
+        # Skip editor/OS cruft so a zip made on a laptop still validates.
+        if first in {"__MACOSX", "__pycache__"} or base in {".DS_Store", ""} or base.startswith("."):
+            continue
+        if info.file_size > FAAS_FILE_MAX_BYTES:
+            raise FaaSValidationError(f"file too large in archive: {name}")
+        total += info.file_size
+        if total > FAAS_BUNDLE_MAX_BYTES:
+            raise FaaSValidationError("archive contents too large")
+        raw = archive.read(info)
+        try:
+            files[name] = raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise FaaSValidationError(f"file is not utf-8 text: {name}") from exc
+
+    files = _strip_archive_root(files)
+    if "app.py" not in files:
+        raise FaaSValidationError("archive must contain app.py at its root")
+
+    service: dict[str, Any] = {}
+    raw_service_json = files.get("service.json")
+    if raw_service_json:
+        try:
+            parsed = json.loads(raw_service_json)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, dict):
+            service = {
+                "service_id": parsed.get("service_id"),
+                "slug": parsed.get("slug"),
+                "routes": parsed.get("routes") or [],
+            }
+    return {"service": service, "files": files}
