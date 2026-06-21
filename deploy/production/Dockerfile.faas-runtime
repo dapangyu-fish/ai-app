@@ -10,6 +10,9 @@ ENV MYAPP_BUILD_COMMIT=${MYAPP_BUILD_COMMIT} \
 WORKDIR /app
 
 COPY backend/faas_runtime_server.py /app/backend/faas_runtime_server.py
+# Scoped per-user DB helper, importable by generated app.py as `myapp_db`
+# (/app/backend is on sys.path[0] when the runtime script runs).
+COPY backend/faas_runtime_db.py /app/backend/myapp_db.py
 
 EXPOSE 8080
 

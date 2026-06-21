@@ -815,6 +815,41 @@ def test_load_bundle_zip_strips_wrapper_dir() -> None:
     assert "helpers.py" in bundle["files"]
 
 
+def test_validation_db_enabled_and_reserved_name() -> None:
+    app_py = (
+        "from flask import Flask, jsonify\nimport myapp_db\napp = Flask(__name__)\n"
+        "@app.get('/items')\ndef items():\n    return jsonify(myapp_db.query('select 1 as x'))\n"
+    )
+    bundle = {
+        "service": {"service_id": "db-svc", "slug": "db-svc", "routes": [{"path": "/items", "methods": ["GET"]}]},
+        "files": {
+            "app.py": app_py,
+            "schema.sql": "CREATE TABLE IF NOT EXISTS t(id int);\n",
+            "requirements.txt": "flask==3.0.3\n",
+        },
+    }
+    n = faas_store.validate_bundle(bundle)
+    assert n["db_enabled"] is True
+    assert "CREATE TABLE" in n["schema_sql"]
+    assert "schema.sql" in n["files"]
+
+    # A bundle may not ship myapp_db.py (would shadow the platform helper).
+    bad = {
+        "service": {"service_id": "x", "slug": "x", "routes": []},
+        "files": {
+            "app.py": "from flask import Flask\napp = Flask(__name__)\n",
+            "myapp_db.py": "x = 1\n",
+            "requirements.txt": "flask==3.0.3\n",
+        },
+    }
+    try:
+        faas_store.validate_bundle(bad)
+    except faas_store.FaaSValidationError as exc:
+        assert "reserved" in str(exc)
+    else:
+        raise AssertionError("reserved myapp_db.py was accepted")
+
+
 def test_failed_new_deploy_does_not_consume_quota() -> None:
     with tempfile.TemporaryDirectory(prefix="myapp-faas-store-fail-") as raw:
         faas_store.FAAS_CODE_ROOT = raw
@@ -880,7 +915,7 @@ def test_openfaas_deploy_records_gateway_metadata() -> None:
             faas_store.FAAS_OPENFAAS_RUNTIME_IMAGE = "example/faas-runtime:openfaas"
             faas_store.FAAS_RUNTIME_BUNDLE_BASE_URL = "https://backend.example"
             faas_store._deploy_openfaas_function = (
-                lambda *, function_name, service_id, commit_sha: "openfaas method=POST status=202"
+                lambda *, function_name, service_id, commit_sha, db_dsn="": "openfaas method=POST status=202"
             )
             _db.services.clear()
             _db.deployments.clear()
@@ -913,6 +948,7 @@ if __name__ == "__main__":
     test_load_bundle_zip_roundtrip()
     test_build_service_archive_roundtrip()
     test_load_bundle_zip_strips_wrapper_dir()
+    test_validation_db_enabled_and_reserved_name()
     test_deploy_quota_conflict_disable_and_runtime_bundle()
     test_failed_new_deploy_does_not_consume_quota()
     test_openfaas_deploy_records_gateway_metadata()

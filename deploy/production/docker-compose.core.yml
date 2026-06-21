@@ -12,6 +12,12 @@ services:
     volumes:
       - ${MYAPP_DATA_ROOT:-/mnt/myapp}/jsonapp-postgres/data:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      # Reachable from faasd-run functions (CNI) for the per-user database: bound
+      # to the docker bridge gateway IP only (NOT 0.0.0.0 — never public), same
+      # host address the openfaas gateway uses. Access is gated by per-user
+      # least-privilege roles. Override the bind IP per host via JSONAPP_PG_BIND_ADDR.
+      - "${JSONAPP_PG_BIND_ADDR:-172.18.0.1}:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s

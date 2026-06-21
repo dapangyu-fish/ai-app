@@ -37,6 +37,7 @@ _ALLOWED_EXTENSIONS = {
     ".csv",
     ".yaml",
     ".yml",
+    ".sql",
 }
 
 
@@ -106,6 +107,10 @@ def _validate_bundle_path(path: str) -> str:
     for seg in segments:
         if seg.startswith(".") or seg == "__pycache__":
             raise RuntimeError(f"bundle file path segment is not allowed: {seg}")
+    # Never let a bundle file shadow the platform's myapp_db helper (sys.path puts
+    # the service dir first).
+    if segments[-1] == "myapp_db.py":
+        raise RuntimeError("bundle file name is reserved by the platform: myapp_db.py")
     if normalized in _ALLOWED_FILES:
         return normalized
     if any(normalized.startswith(prefix) for prefix in _ALLOWED_PREFIXES):

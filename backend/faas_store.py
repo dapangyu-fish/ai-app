@@ -170,8 +170,14 @@ _ALLOWED_EXTENSIONS = {
     ".csv",
     ".yaml",
     ".yml",
+    ".sql",
 }
 _MAX_BUNDLE_FILES = 60
+# Name of the user's DDL/migration file (run into their schema on deploy).
+_SCHEMA_SQL_FILE = "schema.sql"
+# Filenames a user bundle may NOT ship — they would shadow platform-provided
+# runtime modules (myapp_db is the scoped DB helper baked into the image).
+_RESERVED_FILE_NAMES = {"myapp_db.py"}
 _ALLOWED_IMPORT_ROOTS = {
     "__future__",
     "base64",
@@ -195,6 +201,11 @@ _ALLOWED_IMPORT_ROOTS = {
     "typing",
     "urllib",
     "uuid",
+    # Platform-provided DB helper baked into the runtime image. It is the ONLY
+    # way generated code touches Postgres (it reads the scoped DSN from env, which
+    # generated code cannot — os is not importable). The DSN is least-privilege
+    # (own schema only), so this is safe to expose.
+    "myapp_db",
 }
 _FORBIDDEN_CALLS = {
     "__import__",
@@ -612,6 +623,8 @@ def _validate_file_path(path: str) -> str:
     for seg in segments:
         if seg.startswith(".") or seg == "__pycache__":
             raise FaaSValidationError(f"file path segment is not allowed: {seg}")
+    if segments[-1] in _RESERVED_FILE_NAMES:
+        raise FaaSValidationError(f"file name is reserved by the platform: {segments[-1]}")
     if normalized in _ALLOWED_FILES:
         return normalized
     if any(normalized.startswith(prefix) for prefix in _ALLOWED_PREFIXES):
@@ -1096,12 +1109,24 @@ def validate_bundle(bundle: dict[str, Any], *, default_slug: str = "") -> dict[s
     if "README.md" not in normalized_files:
         normalized_files["README.md"] = f"# {service_slug}\n\nGenerated MyApp FaaS service.\n"
 
+    # A service uses the per-user database if it ships a schema.sql, opts in via
+    # service.db, or imports the myapp_db helper in any module. That triggers
+    # provisioning + DSN injection at deploy time.
+    schema_sql = normalized_files.get(_SCHEMA_SQL_FILE, "")
+    uses_helper = any(
+        path.endswith(".py") and "myapp_db" in content
+        for path, content in normalized_files.items()
+    )
+    db_enabled = bool(schema_sql) or bool(raw_service.get("db")) or uses_helper
+
     return {
         "service_id": service_id,
         "service_slug": service_slug,
         "routes": routes,
         "files": normalized_files,
         "meta": raw_service.get("meta") if isinstance(raw_service.get("meta"), dict) else {},
+        "db_enabled": db_enabled,
+        "schema_sql": schema_sql,
     }
 
 
@@ -1255,7 +1280,7 @@ def _wait_local_docker_runtime(function_name: str) -> None:
     raise FaaSError(f"FaaS runtime did not become healthy: {last_error}")
 
 
-def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: str, commit_sha: str) -> str:
+def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: str, commit_sha: str, db_dsn: str = "") -> str:
     client = _docker_client()
     name = _local_container_name(function_name)
     container_code_root = Path(FAAS_CODE_ROOT).resolve()
@@ -1278,6 +1303,9 @@ def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: s
                 "MYAPP_FAAS_FUNCTION_NAME": function_name,
                 "MYAPP_FAAS_COMMIT": commit_sha,
                 "PYTHONUNBUFFERED": "1",
+                # Scoped per-user DB DSN (internal; read only by the myapp_db
+                # helper, never bridged into the public app config).
+                **({"MYAPP_DB_DSN": db_dsn} if db_dsn else {}),
                 **_platform_runtime_env(),
             },
             labels={
@@ -1405,7 +1433,7 @@ def _openfaas_deploy_request(method: str, payload: dict[str, Any], *, gateway: s
     raise ValueError(f"unsupported OpenFaaS deploy method: {method}")
 
 
-def _deploy_openfaas_function(*, function_name: str, service_id: str, commit_sha: str) -> str:
+def _deploy_openfaas_function(*, function_name: str, service_id: str, commit_sha: str, db_dsn: str = "") -> str:
     gateway = str(FAAS_OPENFAAS_GATEWAY or "").rstrip("/")
     if not gateway:
         raise FaaSError("FAAS_OPENFAAS_GATEWAY is required for FAAS_DEPLOY_MODE=openfaas")
@@ -1439,6 +1467,9 @@ def _deploy_openfaas_function(*, function_name: str, service_id: str, commit_sha
             "MYAPP_FAAS_BUNDLE_URL": _runtime_bundle_url(service_id),
             "MYAPP_FAAS_RUNTIME_TOKEN": runtime_token,
             "PYTHONUNBUFFERED": "1",
+            # Scoped per-user DB DSN (internal; read only by the myapp_db helper,
+            # never bridged into the public app config / MYAPP_CFG_*).
+            **({"MYAPP_DB_DSN": db_dsn} if db_dsn else {}),
             **_platform_runtime_env(),
         },
         "labels": labels,
@@ -1484,7 +1515,7 @@ def _delete_openfaas_function(function_name: str, *, gateway: str | None = None)
     raise FaaSError(f"OpenFaaS delete failed status={resp.status_code}: {resp.text[:1000]}")
 
 
-def _deploy_service(root: Path, *, function_name: str, service_id: str, commit_sha: str) -> tuple[str, str]:
+def _deploy_service(root: Path, *, function_name: str, service_id: str, commit_sha: str, db_dsn: str = "") -> tuple[str, str]:
     mode = FAAS_DEPLOY_MODE
     if mode in {"", "metadata", "none", "disabled"}:
         return "ready", ""
@@ -1495,6 +1526,7 @@ def _deploy_service(root: Path, *, function_name: str, service_id: str, commit_s
                 function_name=function_name,
                 service_id=service_id,
                 commit_sha=commit_sha,
+                db_dsn=db_dsn,
             )
         _remove_local_docker_runtime(function_name)
         return "ready", f"local-docker deferred upstream={_local_upstream_url(function_name)}"
@@ -1513,7 +1545,7 @@ def _deploy_service(root: Path, *, function_name: str, service_id: str, commit_s
             raise FaaSError((proc.stderr or proc.stdout or "FaaS deploy script failed").strip())
         return "ready", (proc.stdout or "").strip()[:2000]
     if mode == "openfaas":
-        return "ready", _deploy_openfaas_function(function_name=function_name, service_id=service_id, commit_sha=commit_sha)
+        return "ready", _deploy_openfaas_function(function_name=function_name, service_id=service_id, commit_sha=commit_sha, db_dsn=db_dsn)
     raise FaaSError(f"unsupported FaaS deploy mode: {mode}")
 
 
@@ -1612,6 +1644,19 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
         )
         try:
             _write_service_files(root, normalized["files"])
+            # Per-user database: provision the owner's schema+role (idempotent),
+            # run the declared schema.sql migration into it, and obtain the scoped
+            # DSN to inject into the runtime. Confined to the owner's own schema.
+            db_dsn = ""
+            if normalized.get("db_enabled"):
+                try:
+                    from faas_userdb import provision_user_db, run_user_migration
+                except ModuleNotFoundError:
+                    from backend.faas_userdb import provision_user_db, run_user_migration
+                db_info = provision_user_db(owner_user_id)
+                db_dsn = db_info["dsn"]
+                if normalized.get("schema_sql"):
+                    run_user_migration(owner_user_id, normalized["schema_sql"])
             if FAAS_GIT_ENABLED and FAAS_GIT_ASYNC_PUSH:
                 # Hand the commit+push to the isolated worker (outside the request
                 # path). The runtime still gets code from the local write above /
@@ -1636,6 +1681,7 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
                 function_name=function_name,
                 service_id=service_id,
                 commit_sha=commit_sha,
+                db_dsn=db_dsn,
             )
             db_execute(
                 """
