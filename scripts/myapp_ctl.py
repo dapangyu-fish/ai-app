@@ -5317,6 +5317,18 @@ def _cmd_faasd_host_preflight(args) -> int:
             required=bool(getattr(args, "expect_installed", False)),
         )
 
+        # Community faasd has no autoscaler, so the faasd-idler daemon provides
+        # scale-to-zero. Required only once faasd itself is up and we expect a
+        # fully installed host; otherwise it is informational.
+        idler_state = (_run(["systemctl", "is-active", "faasd-idler"]).stdout or "").strip() or "inactive"
+        expect_idler = bool(getattr(args, "expect_installed", False)) and faasd_active
+        add_check(
+            "faasd-idler",
+            (idler_state == "active") if expect_idler else True,
+            f"{idler_state} (scale-to-zero reaper)",
+            required=expect_idler,
+        )
+
     ok = all(bool(row["ok"]) for row in rows if bool(row["required"]))
     payload = {"ok": ok, "checks": rows}
     if args.json:
@@ -5605,7 +5617,10 @@ def cmd_faas(args) -> int:
                             rep = fn.get("replicas")
                             if rep is None:
                                 rep = fn.get("availableReplicas")
-                            replicas[str(fn["name"])] = rep if rep is not None else 1
+                            # faasd reports replicas=None for a function whose task
+                            # is stopped (scaled to zero). It is present in the list,
+                            # so None means 0 running instances, not "unknown" -> 1.
+                            replicas[str(fn["name"])] = rep if rep is not None else 0
         except Exception:
             replicas = {}
         if args.json:

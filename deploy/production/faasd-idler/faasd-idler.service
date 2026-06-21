@@ -1,0 +1,26 @@
+[Unit]
+Description=faasd idle-to-zero reaper (scale-to-zero for community faasd)
+Documentation=https://github.com/dapangyu-fish/ai-app
+After=faasd.service faasd-provider.service
+Wants=faasd-provider.service
+
+[Service]
+Type=simple
+# Idle window before a function is scaled to zero. Per-function override via the
+# com.openfaas.scale.zero.duration label still takes precedence.
+Environment=FAASD_IDLER_DEFAULT_IDLE_SECONDS=600
+Environment=FAASD_IDLER_POLL_SECONDS=60
+Environment=FAASD_IDLER_GATEWAY=http://172.18.0.1:8731
+Environment=FAASD_IDLER_NAMESPACE=openfaas-fn
+Environment=FAASD_IDLER_STATE=/var/lib/faasd-idler/state.json
+ExecStart=/usr/bin/env python3 /opt/faasd-idler/faasd_idler.py
+Restart=on-failure
+RestartSec=10
+# ctr (containerd) needs root; keep the rest of the surface small.
+User=root
+StateDirectory=faasd-idler
+NoNewPrivileges=yes
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target
