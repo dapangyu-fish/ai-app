@@ -240,6 +240,31 @@ def provision_user_db(user_id: str) -> dict[str, Any]:
     return {"user_id": user_id, "db_name": USER_DB_NAME, "schema_name": schema, "role_name": role, "dsn": dsn}
 
 
+def list_user_tables(user_id: str) -> list[str]:
+    """List the user's existing tables (read-only, best effort) so the agent can
+    see the current schema when modifying a DB-backed app. Returns [] if the user
+    has no DB yet or on any error."""
+    mapping = get_user_db(user_id)
+    if not mapping or not mapping.get("schema_name"):
+        return []
+    try:
+        ud = _admin_conn(USER_DB_NAME)
+    except Exception:
+        return []
+    try:
+        with ud.cursor() as cur:
+            cur.execute(
+                "SELECT table_name FROM information_schema.tables "
+                "WHERE table_schema = %s ORDER BY table_name",
+                [mapping["schema_name"]],
+            )
+            return [r[0] for r in cur.fetchall()]
+    except Exception:
+        return []
+    finally:
+        ud.close()
+
+
 def dsn_for_user(user_id: str, *, provision: bool = True) -> Optional[str]:
     existing = get_user_db(user_id)
     if existing and existing.get("dsn"):

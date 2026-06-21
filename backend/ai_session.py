@@ -209,11 +209,29 @@ def _faas_manifest_for_user(user_id: str) -> Optional[dict]:
                 # pull the archive instead of basing only on this.
                 "source": read_service_source(service_id),
             })
+        database = {
+            "available": _env_enabled("FAAS_USER_DB_ENABLED", "1"),
+            "helper": "myapp_db",
+            "how": "ship schema.sql (idempotent DDL) + import myapp_db in app.py; provisioned on deploy",
+            "provisioned": False,
+        }
+        try:
+            try:
+                from faas_userdb import get_user_db as _get_udb, list_user_tables as _list_tables
+            except ModuleNotFoundError:
+                from backend.faas_userdb import get_user_db as _get_udb, list_user_tables as _list_tables
+            udb = _get_udb(user_id)
+            if udb:
+                database.update({"provisioned": True, "schema": udb.get("schema_name"), "tables": _list_tables(user_id)})
+        except Exception as exc:  # noqa: BLE001 - manifest must not fail on DB introspection
+            logger.warning("[FAAS] user-db manifest introspection failed user=%s: %s", user_id, exc)
+
         return {
             "version": 1,
             "owner_user_id": user_id,
             "max_services": FAAS_MAX_SERVICES_PER_USER,
             "services": services,
+            "database": database,
             "note": (
                 "Read-only manifest of your existing FaaS backends. To MODIFY one, "
                 "reuse its service_id (updates it IN PLACE and does NOT consume a new "
@@ -1864,6 +1882,18 @@ def _build_faas_backend_prompt_note(*, workspace: Optional[str] = None) -> str:
         "调用未声明 method 会得到 405；因此前端会调用的每个接口都必须在 routes 中逐一声明。"
         "动态路径可使用 Flask 风格如 `/items/<item_id>` 或 `/files/<path:tail>`。"
         "不要读取环境变量、不要访问本机文件、不要启动额外 server、不要使用 subprocess/socket。"
+        "\n- 持久化数据（可选，需要存储/查询数据时才用）：本服务可拥有一块**自己的 Postgres 库**，"
+        "按 schema 隔离，只能访问自己的数据，别的用户/平台数据都碰不到。用法："
+        "\n  1) 写 `schema.sql` 用幂等 DDL 声明表（`CREATE TABLE IF NOT EXISTS ...`）；部署时后端会在你的 schema 里执行它，"
+        "**不要在 app.py 运行时建表/改表**。"
+        "\n  2) `app.py` 里 `import myapp_db`，用 `myapp_db.query(sql, params)` / `myapp_db.queryone(sql, params)` / "
+        "`myapp_db.execute(sql, params)` 读写，多语句事务用 `with myapp_db.tx() as cur: cur.execute(...)`。"
+        "\n  3) 值一律用 `%s` 占位 + 第二个参数传 list（如 `myapp_db.query('SELECT * FROM todos WHERE done=%s',[False])`），"
+        "**禁止用 f-string/格式化拼 SQL**（防注入）。"
+        "\n  4) search_path 已指向你的 schema，直接写表名即可（`FROM todos`），无需 schema 前缀；单条语句超时 5s。"
+        "\n  5) 不要 import psycopg2/os、不要读连接串——连接由 `myapp_db` 内部用注入的受限 DSN 完成；只有声明了 schema.sql "
+        "或 import 了 myapp_db 的服务才会被分配数据库。"
+        "\n  这块能力让 JSON-APP 能做真正有后端数据的应用（清单/订单/收藏/留言等 CRUD）。"
         "\n- 平台会把【公开】配置注入到运行时，通过 `current_app.config[\"MYAPP\"]` 读取（需在路由/请求上下文内）："
         "`supabase_url`、`supabase_anon_key`（公开 anon key）、`backend_base_url`、`faas_public_base_url`。"
         "**需要调用 Supabase 或回调平台时，从这里拼 URL，绝不要把域名/anon key 写死在 app.py**——换环境/换域名只重部署即可。"

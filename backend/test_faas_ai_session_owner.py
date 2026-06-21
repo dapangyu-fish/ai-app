@@ -92,6 +92,8 @@ def test_faas_prompt_note_mentions_route_enforcement() -> None:
     assert "/items/<item_id>" in note
     assert "faas_deploy.sh" in note
     assert "faas_pull.sh" in note
+    assert "myapp_db" in note
+    assert "schema.sql" in note
 
 
 def test_faas_manifest_initial_file_lists_user_services() -> None:

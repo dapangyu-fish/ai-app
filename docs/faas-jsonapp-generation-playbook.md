@@ -151,6 +151,43 @@ bash backend/faas_pull.sh <service_id>      # 解压到 $AI_APP_WORKSPACE/faas_p
 # 改/增该目录下任意文件，保持 service.json 的 routes 覆盖前端会用到的所有接口
 ```
 
+### 4.2 持久化数据：每个服务自带 Postgres（schema 隔离）
+
+需要存储/查询数据（清单、订单、收藏、留言、购物车…）时，本服务可拥有一块**自己的
+Postgres 库**，按 schema 隔离——只能读写自己的数据，碰不到别的用户或平台数据。
+
+1. **声明表**：在 bundle 里加 `schema.sql`，用幂等 DDL：
+
+   ```sql
+   CREATE TABLE IF NOT EXISTS listings (
+     id serial PRIMARY KEY,
+     title text NOT NULL,
+     price numeric NOT NULL DEFAULT 0,
+     created_at timestamptz NOT NULL DEFAULT now()
+   );
+   ```
+
+   部署时后端会在你的 schema 里执行它。**不要在 app.py 运行时建表/改表。**
+2. **读写**：`app.py` 里 `import myapp_db`：
+
+   ```python
+   import myapp_db
+   rows = myapp_db.query("SELECT id, title, price FROM listings ORDER BY id DESC LIMIT 50")
+   row  = myapp_db.queryone("INSERT INTO listings(title, price) VALUES (%s, %s) "
+                            "RETURNING id, title, price", [title, price])
+   n    = myapp_db.execute("DELETE FROM listings WHERE id = %s", [lid])
+   with myapp_db.tx() as cur:          # 多语句事务
+       cur.execute("UPDATE ...", [...])
+   ```
+3. **铁律**：值一律 `%s` 占位 + params（防注入，禁止 f-string 拼 SQL）；search_path 已指向你的
+   schema，直接写表名；不要 `import psycopg2/os`、不要碰连接串（连接由 myapp_db 内部完成）；
+   单条语句超时 5s。
+4. **改已有 DB 应用**：`faas_services.json` 的 `database` 块会列出你已有的 `schema` 和 `tables`；
+   续写时复用 service_id，schema.sql 用 `CREATE TABLE IF NOT EXISTS` + 需要时 `ALTER TABLE ... ADD
+   COLUMN IF NOT EXISTS`，保留旧表与数据。
+
+有了它，回家/二手/外卖这类「有真实后端数据」的应用就能用 JSON-APP + FaaS 实现。
+
 ---
 
 ## 5. 部署 + 自测（**必须在本轮内自己完成，绝不能只写动作让服务端代劳**）
