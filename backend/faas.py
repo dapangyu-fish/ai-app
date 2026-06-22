@@ -119,10 +119,14 @@ def list_user_services():
     include_disabled = str(request.args.get("include_disabled") or request.args.get("all") or "").strip().lower() in {"1", "true", "yes", "on"}
     all_users = str(request.args.get("all_users") or "").strip().lower() in {"1", "true", "yes", "on"}
     if all_users:
-        # Host/operator view: list every owner's services. Admin-only when auth is
-        # enforced; an auth-disabled host deployment uses it from the operator CLI.
-        if FAAS_REQUIRE_AUTH:
-            return _json_error("all_users listing is admin-only", 403, code="FAAS_FORBIDDEN")
+        # B0-G1 (R14): operator-only, FAIL-CLOSED. An anonymous ?all_users=1 was an
+        # enumeration oracle (every service_id + owner, feeding R12 container-name
+        # derivation). Require the trusted agent-node operator token regardless of
+        # FAAS_REQUIRE_AUTH — the operator CLI and dashboard both send this header.
+        node_token = request.headers.get("X-MyApp-Agent-Node-Token", "")
+        is_operator = bool(node_token and AGENT_NODE_TOKEN and hmac.compare_digest(node_token, AGENT_NODE_TOKEN))
+        if not is_operator:
+            return _json_error("all_users listing requires the agent-node operator token", 403, code="FAAS_FORBIDDEN")
         try:
             return jsonify({"services": _annotate_running(list_services("", include_disabled=include_disabled, all_services=True))})
         except Exception as exc:

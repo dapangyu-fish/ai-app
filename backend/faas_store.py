@@ -44,6 +44,7 @@ try:
         FAAS_GIT_REMOTE,
         FAAS_GIT_KNOWN_HOSTS_PATH,
         FAAS_GIT_SSH_KEY_PATH,
+        FAAS_INJECT_SUPABASE_ANON_KEY,
         FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT,
         FAAS_LOCAL_DOCKER_HOST_CODE_ROOT,
         FAAS_LOCAL_DOCKER_IMAGE,
@@ -79,6 +80,7 @@ except ModuleNotFoundError:
         FAAS_GIT_REMOTE,
         FAAS_GIT_KNOWN_HOSTS_PATH,
         FAAS_GIT_SSH_KEY_PATH,
+        FAAS_INJECT_SUPABASE_ANON_KEY,
         FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT,
         FAAS_LOCAL_DOCKER_HOST_CODE_ROOT,
         FAAS_LOCAL_DOCKER_IMAGE,
@@ -191,12 +193,63 @@ _FORBIDDEN_CALLS = {
     "exec",
     "input",
     "open",
+    # B0-G2 / R21: reflection primitives are the master key that turns a
+    # whitelist sandbox into RCE (e.g. getattr(random, "_" + "os") to reach the
+    # real os, or vars()/globals() to walk module internals). Banned outright —
+    # declarative CRUD code does not need them. NOTE: this AST sandbox is
+    # DEFENSE-IN-DEPTH, not the security boundary; the real isolation is "no
+    # secrets in the container + locked network" (design §0.0, goal B0-G2).
+    "getattr",
+    "setattr",
+    "delattr",
+    "vars",
+    "globals",
+    "locals",
+    "breakpoint",
 }
+# B0-G2 / R21: str.format()/%-style attribute traversal — e.g.
+# "{0.__class__.__init__.__globals__}".format(x) — performs attribute access
+# INSIDE the format string at runtime, so it never appears as an ast.Attribute
+# node and bypasses the dunder/private rules. Heuristic: reject string literals
+# whose format field does attribute access onto a private/dunder name. The
+# quote-exclusion ([^{}"']) avoids false-positiving JSON like {"__typename": 1}.
+_FORMAT_DUNDER_RE = re.compile(r"\{[^{}\"']*\._")
 _FORBIDDEN_NAMES = {
     "__builtins__",
     "__dict__",
     "__globals__",
     "__subclasses__",
+}
+# B0-G2 / R21: attribute names that re-expose os/process/FFI capability even when
+# imported indirectly through a whitelisted module (e.g. random._os.environ,
+# uuid.os, urllib.request.os.system). Blocked regardless of leading-underscore.
+# Combined with the leading-underscore rule below this closes the known
+# "single-underscore attribute" escape from the feasibility audit.
+_FORBIDDEN_ATTR_NAMES = {
+    "os",
+    "sys",
+    "subprocess",
+    "socket",
+    "ctypes",
+    "importlib",
+    "builtins",
+    "posix",
+    "nt",
+    "pty",
+    "signal",
+    "resource",
+    "multiprocessing",
+    "environ",
+    "popen",
+    "system",
+    "getenv",
+    "putenv",
+    "fork",
+    "execv",
+    "execve",
+    "execvp",
+    "spawnl",
+    "spawnv",
 }
 _LOCAL_DOCKER_MODES = {"local-docker", "docker", "docker-local"}
 _RESERVED_ROUTE_PATHS = {
@@ -1005,8 +1058,22 @@ def _check_safe_python(tree: ast.AST, *, filename: str, local_modules: set[str])
                 raise FaaSValidationError(f"call is not allowed ({filename}): {name}")
         elif isinstance(node, ast.Name) and node.id in _FORBIDDEN_NAMES:
             raise FaaSValidationError(f"name is not allowed ({filename}): {node.id}")
-        elif isinstance(node, ast.Attribute) and node.attr.startswith("__"):
-            raise FaaSValidationError(f"dunder attribute is not allowed ({filename}): {node.attr}")
+        elif isinstance(node, ast.Attribute):
+            attr = node.attr
+            # Block ALL leading-underscore attributes (covers dunder traversal like
+            # __class__/__bases__ AND the single-underscore escape random._os/uuid._os).
+            if attr.startswith("_"):
+                raise FaaSValidationError(f"private/dunder attribute is not allowed ({filename}): {attr}")
+            # Block os/process/FFI re-exposure even via public attribute names
+            # (e.g. urllib.request.os, uuid.os).
+            if attr in _FORBIDDEN_ATTR_NAMES:
+                raise FaaSValidationError(f"attribute is not allowed ({filename}): {attr}")
+        elif isinstance(node, ast.Constant) and isinstance(node.value, str):
+            # str.format()-based attribute traversal escape (see _FORMAT_DUNDER_RE).
+            if _FORMAT_DUNDER_RE.search(node.value):
+                raise FaaSValidationError(
+                    f"format-string attribute traversal is not allowed ({filename})"
+                )
 
 
 def _validate_app_py_shape(text: str) -> ast.AST:
@@ -1527,7 +1594,11 @@ def _platform_runtime_env() -> dict[str, str]:
     """
     values = {
         "MYAPP_CFG_SUPABASE_URL": (SUPABASE_URL or "").rstrip("/"),
-        "MYAPP_CFG_SUPABASE_ANON_KEY": SUPABASE_ANON_KEY or "",
+        # B0-G1 (R13): anon key is NOT injected by default. Although it is a public
+        # client key, pairing it with the function's egress lets owner code drive
+        # GoTrue's public auth surface (signup/recovery/OTP/anon-RLS). Opt in via
+        # FAAS_INJECT_SUPABASE_ANON_KEY=1 only for services that provably need it.
+        "MYAPP_CFG_SUPABASE_ANON_KEY": (SUPABASE_ANON_KEY or "") if FAAS_INJECT_SUPABASE_ANON_KEY else "",
         "MYAPP_CFG_BACKEND_BASE_URL": (FAAS_PUBLIC_BASE_URL or "").rstrip("/"),
         "MYAPP_CFG_FAAS_PUBLIC_BASE_URL": (FAAS_NODE_PUBLIC_URL or "").rstrip("/"),
     }

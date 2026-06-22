@@ -36,6 +36,7 @@ for _name, _value in {
     "FAAS_GIT_SSH_KEY_PATH": "",
     "FAAS_GIT_KNOWN_HOSTS_PATH": "",
     "FAAS_GIT_ASYNC_PUSH": False,
+    "FAAS_INJECT_SUPABASE_ANON_KEY": False,
     "FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT": "/mnt/myapp/faas/code",
     "FAAS_LOCAL_DOCKER_HOST_CODE_ROOT": "/mnt/myapp/faas/code",
     "FAAS_LOCAL_DOCKER_IMAGE": "example/faas-runtime:test",

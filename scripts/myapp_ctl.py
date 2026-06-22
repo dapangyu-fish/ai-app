@@ -1280,6 +1280,7 @@ def _http_request_json(
     payload: dict | None = None,
     token: str = "",
     timeout: float = 30.0,
+    extra_headers: dict | None = None,
 ) -> tuple[int, dict | None, str]:
     headers = {"User-Agent": "myapp-ctl/1"}
     body = None
@@ -1288,6 +1289,8 @@ def _http_request_json(
         headers["Content-Type"] = "application/json"
     if token:
         headers["Authorization"] = f"Bearer {token}"
+    if extra_headers:
+        headers.update({k: v for k, v in extra_headers.items() if v})
     req = Request(url, data=body, headers=headers, method=method.upper())
     try:
         with urlopen(req, timeout=timeout) as resp:
@@ -5303,10 +5306,22 @@ def cmd_faas(args) -> int:
         params = [f"user_id={quote(user_id, safe='')}"] if user_id else ["all_users=1"]
         if getattr(args, "all", False):
             params.append("include_disabled=1")
+        # B0-G1 (R14): all_users is now operator-only (fail-closed). Send the
+        # agent-node operator token so the host operator view keeps working.
+        op_headers = {}
+        if not user_id:
+            op_token = (
+                (os.environ.get("AGENT_NODE_TOKEN") or "").strip()
+                or _parse_env(_secret_path("agent")).get("AGENT_NODE_TOKEN", "").strip()
+                or _parse_env(_secret_path("backend")).get("AGENT_NODE_TOKEN", "").strip()
+            )
+            if op_token:
+                op_headers["X-MyApp-Agent-Node-Token"] = op_token
         status, data, text = _http_request_json(
             f"{base_url}/api/faas/services?{'&'.join(params)}",
             token=token,
             timeout=15,
+            extra_headers=op_headers,
         )
         if not data:
             print(f"faas ls failed: {status or '-'} {text[:500]}", file=sys.stderr)

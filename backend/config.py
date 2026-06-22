@@ -102,6 +102,13 @@ FAAS_REQUIRE_AUTH = os.environ.get("FAAS_REQUIRE_AUTH", "0").strip().lower() in 
 FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER = os.environ.get(
     "FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER", "1"
 ).strip().lower() in {"1", "true", "yes", "on"}
+# B0-G1 (R13): do NOT inject the Supabase anon key into every FaaS container by
+# default. Owner code + an open egress could otherwise drive GoTrue's public auth
+# surface (signup/recovery/OTP/anon-RLS). Functions that genuinely need it must be
+# opted in explicitly. Default OFF (no anon key in the container).
+FAAS_INJECT_SUPABASE_ANON_KEY = os.environ.get(
+    "FAAS_INJECT_SUPABASE_ANON_KEY", "0"
+).strip().lower() in {"1", "true", "yes", "on"}
 FAAS_CODE_ROOT = os.environ.get("FAAS_CODE_ROOT", "/mnt/myapp/faas/code")
 FAAS_MAX_SERVICES_PER_USER = _env_int("FAAS_MAX_SERVICES_PER_USER", 5)
 FAAS_GIT_ENABLED = os.environ.get("FAAS_GIT_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"}

@@ -1230,8 +1230,12 @@ def dash_faas():
     # a confident-looking default the admin might act on.
     deploy_mode = ((health.get("deploy_mode") if isinstance(health, dict) else None) or "local-docker") if health else "unknown"
     try:
+        # B0-G1 (R14): all_users is operator-only (fail-closed) — send the
+        # agent-node operator token so the dashboard list keeps working.
+        op_headers = {"X-MyApp-Agent-Node-Token": FAAS_NODE_TOKEN} if FAAS_NODE_TOKEN else {}
         raw = _backend_get("/api/faas/services",
-                           params={"all_users": "1", "include_disabled": "1"})
+                           params={"all_users": "1", "include_disabled": "1"},
+                           headers=op_headers)
     except requests.RequestException as e:
         return _dash_err(f"FaaS 列表失败: {e}")
     services = raw.get("services", raw.get("items", raw)) if isinstance(raw, dict) else raw
