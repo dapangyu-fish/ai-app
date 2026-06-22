@@ -52,9 +52,20 @@ class _DB:
             self.maint[(app_id, user_id)] = {"app_id": app_id, "user_id": user_id,
                                              "added_by": added_by, "created_at": "c"}
             return None
-        if n.startswith("delete from faas_app_maintainers"):
+        if n.startswith("delete from faas_app_maintainers where app_id = %s and user_id"):
             app_id, user_id = params
             self.maint.pop((app_id, user_id), None)
+            return None
+        if n.startswith("delete from faas_app_maintainers where app_id = %s"):
+            for k in [k for k in self.maint if k[0] == params[0]]:
+                self.maint.pop(k, None)
+            return None
+        if n.startswith("delete from faas_app_consumer_grants where app_id = %s"):
+            for k in [k for k in self.grants if k[0] == params[0]]:
+                self.grants.pop(k, None)
+            return None
+        if n.startswith("delete from faas_applications where app_id = %s"):
+            self.apps.pop(params[0], None)
             return None
         if "insert into faas_audit_log" in n:
             self.audit.append({"action": params[0], "service_id": params[1], "app_id": params[2],
@@ -169,6 +180,33 @@ def test_maintainer_can_grant():
     F.add_maintainer("owner1", "appM", "mGrant")
     F.grant_consumer("mGrant", "appM", "cUser2")  # maintainer may grant
     assert F.is_consumer_granted("appM", "cUser2")
+
+
+def test_delete_application_owner_only_and_cleans_up():
+    app_id = F._default_app_id("ownerD")  # 'appd-ownerD' → tenant 'ownerD'
+    F.ensure_application(app_id, "ownerD")
+    F.add_maintainer("ownerD", app_id, "m1")
+    F.grant_consumer("ownerD", app_id, "c1")
+    dropped = []
+    fake_udb = types.ModuleType("faas_userdb")
+    fake_udb.drop_user_db = lambda t: dropped.append(t)
+    sys.modules["faas_userdb"] = fake_udb
+    orig = F.delete_service
+    F.delete_service = lambda o, s: None
+    try:
+        try:
+            F.delete_application("intruder", app_id)
+            raise AssertionError("non-owner deleted app")
+        except FaaSValidationError:
+            pass
+        F.delete_application("ownerD", app_id)
+    finally:
+        F.delete_service = orig
+        sys.modules.pop("faas_userdb", None)
+    assert F.get_application(app_id) is None
+    assert dropped == ["ownerD"], dropped  # default app → owner tenant dropped
+    assert not F.is_maintainer(app_id, "m1")
+    assert not F.is_consumer_granted(app_id, "c1")
 
 
 def test_audit_log_records_and_lists():

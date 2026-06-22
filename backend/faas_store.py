@@ -734,6 +734,41 @@ def list_user_applications(owner_user_id: str) -> list[dict[str, Any]]:
     return rows or []
 
 
+def delete_application(owner_user_id: str, app_id: str) -> dict[str, Any]:
+    """B3-G5: explicit app teardown — delete all its services, DROP its DB tenant
+    (schema+roles), and remove grants/maintainers/app row. Owner-only. Per-app
+    schema (B2-G3) means this never touches another app's data."""
+    ensure_tables()
+    owner_user_id = str(owner_user_id or "").strip()
+    app = get_application(app_id)
+    if not app or app.get("owner_user_id") != owner_user_id:
+        raise FaaSValidationError("application not found")
+    rows = db_query("SELECT service_id FROM faas_services WHERE app_id = %s", [app_id], fetch_all=True) or []
+    removed = []
+    for r in rows:
+        try:
+            delete_service(owner_user_id, r["service_id"])
+            removed.append(r["service_id"])
+        except Exception:
+            pass
+    # Drop the app's DB tenant (schema + roles + mapping).
+    tenant = _db_tenant_key(app_id, owner_user_id)
+    try:
+        try:
+            from faas_userdb import drop_user_db
+        except ModuleNotFoundError:
+            from backend.faas_userdb import drop_user_db
+        drop_user_db(tenant)
+    except Exception:
+        pass
+    db_execute("DELETE FROM faas_app_consumer_grants WHERE app_id = %s", [app_id])
+    db_execute("DELETE FROM faas_app_maintainers WHERE app_id = %s", [app_id])
+    db_execute("DELETE FROM faas_applications WHERE app_id = %s", [app_id])
+    audit_log("delete_application", app_id=app_id, owner_user_id=owner_user_id,
+              acting_user=owner_user_id, via="store", detail=f"services={len(removed)}")
+    return {"app_id": app_id, "services_removed": removed}
+
+
 def set_application_policy(owner_user_id: str, app_id: str, access_policy: str) -> dict[str, Any]:
     """Owner-only: move the app up/down the D3 access ladder. Ownership enforced."""
     ensure_tables()

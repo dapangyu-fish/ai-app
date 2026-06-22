@@ -337,6 +337,40 @@ def list_user_tables(user_id: str) -> list[str]:
         ud.close()
 
 
+def drop_user_db(tenant: str) -> None:
+    """B3-G5: tear down a tenant's schema + roles + mapping row (app deletion /
+    erasure). Idempotent; runs as the provisioning admin."""
+    tenant = str(tenant or "").strip()
+    if not tenant:
+        return
+    s, u, o = schema_name(tenant), role_name(tenant), owner_role_name(tenant)
+    try:
+        ud = _admin_conn(USER_DB_NAME)
+    except Exception:
+        ud = None
+    if ud is not None:
+        try:
+            ud.autocommit = True
+            with ud.cursor() as cur:
+                cur.execute(f'DROP SCHEMA IF EXISTS "{s}" CASCADE')
+                for role in (u, o):
+                    try:
+                        cur.execute(f'DROP OWNED BY "{role}"')
+                    except Exception:
+                        pass
+                    try:
+                        cur.execute(f'DROP ROLE IF EXISTS "{role}"')
+                    except Exception:
+                        pass
+        finally:
+            ud.close()
+    try:
+        from database import db_execute
+    except ModuleNotFoundError:
+        from backend.database import db_execute
+    db_execute("DELETE FROM faas_user_databases WHERE user_id = %s", [tenant])
+
+
 def dsn_for_user(user_id: str, *, provision: bool = True) -> Optional[str]:
     existing = get_user_db(user_id)
     if existing:
