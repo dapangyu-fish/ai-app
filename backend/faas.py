@@ -547,10 +547,11 @@ def set_my_application_policy(app_id):
 def add_my_maintainer(app_id):
     uid = _request_user_id()
     body = request.get_json(silent=True) or {}
+    target = str(body.get("target_user_id") or body.get("member_user_id") or "")
     try:
-        r = add_maintainer(uid, app_id, str(body.get("user_id") or ""))
+        r = add_maintainer(uid, app_id, target)
         audit_log("add_maintainer", app_id=app_id, owner_user_id=uid, acting_user=uid,
-                  via=_auth_via(), detail=str(body.get("user_id") or ""))
+                  via=_auth_via(), detail=target)
         return jsonify({"ok": True, **r})
     except FaaSValidationError as exc:
         return _json_error(str(exc), 400, code="FAAS_VALIDATION_FAILED")
@@ -570,10 +571,11 @@ def remove_my_maintainer(app_id, user_id):
 def grant_my_consumer(app_id):
     uid = _request_user_id()
     body = request.get_json(silent=True) or {}
+    target = str(body.get("target_user_id") or body.get("consumer_user_id") or "")
     try:
-        r = grant_consumer(uid, app_id, str(body.get("user_id") or ""))
+        r = grant_consumer(uid, app_id, target)
         audit_log("grant", app_id=app_id, owner_user_id=uid, acting_user=uid,
-                  via=_auth_via(), detail=str(body.get("user_id") or ""))
+                  via=_auth_via(), detail=target)
         return jsonify({"ok": True, **r})
     except FaaSValidationError as exc:
         return _json_error(str(exc), 400, code="FAAS_VALIDATION_FAILED")
