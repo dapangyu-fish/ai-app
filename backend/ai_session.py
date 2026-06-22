@@ -1669,12 +1669,15 @@ def _run_redis_job(job: _WorkerJob) -> None:
     def heartbeat_loop() -> None:
         while not stop_heartbeat.wait(_WORKER_HEARTBEAT_SECONDS):
             try:
-                # If the session was aborted, stop renewing the lease and release it
-                # now, so a force_restart can take over even while this worker is
-                # still blocked in a long agent-node read. The stale worker's later
-                # set_status calls are no-ops because active_job_id will have changed.
-                if store.is_aborted(job.session_id):
-                    logger.info(f"[WORKER_QUEUE] heartbeat 检测到 abort，释放 running lease sid={job.session_id}")
+                # If THIS job was aborted, stop renewing the lease and release it now,
+                # so a force_restart can take over even while this worker is still
+                # blocked in a long agent-node read. Gate on active_job_id == this job:
+                # a stale session abort flag, or a job already replaced by a newer one,
+                # must NOT free a lease that now belongs to the newer job. (The lease is
+                # session-keyed; only the current owner may release it.)
+                cur = store.get_meta(job.session_id)
+                if cur and cur.get("active_job_id") == job.job_id and store.is_aborted(job.session_id):
+                    logger.info(f"[WORKER_QUEUE] heartbeat 检测到 abort，释放 running lease sid={job.session_id} job={job.job_id}")
                     _complete_running(job.session_id, job.provider_id)
                     return
                 _refresh_running_lease(job.session_id, job.provider_id)
@@ -1753,7 +1756,12 @@ def _run_redis_job(job: _WorkerJob) -> None:
             )
     finally:
         stop_heartbeat.set()
-        _complete_running(job.session_id, job.provider_id)
+        # Only release the lease if this job still owns the session. A force_restart
+        # (after this worker released the lease early on abort) may have handed the
+        # session to a newer job — we must not clobber that newer job's lease.
+        cur = store.get_meta(job.session_id)
+        if not cur or cur.get("active_job_id") in (None, "", job.job_id):
+            _complete_running(job.session_id, job.provider_id)
 
 
 def _env_enabled(name: str, default: str = "0") -> bool:
@@ -3067,6 +3075,37 @@ _AGENT_PULL_RUN_TERMINAL = {
 AGENT_PULL_RUN_STALE_SECONDS = max(120, int(os.environ.get("AGENT_PULL_RUN_STALE_SECONDS", "900")))
 
 
+def _agent_pull_job_metas(run_ids: list) -> dict:
+    """Pipelined hgetall of many job-meta hashes (one round-trip, not N)."""
+    out: dict = {}
+    if not run_ids:
+        return out
+    try:
+        pipe = get_redis().pipeline()
+        for rid in run_ids:
+            pipe.hgetall(_agent_pull_job_key(rid))
+        results = pipe.execute()
+    except redis.exceptions.RedisError:
+        return {rid: {} for rid in run_ids}
+    for rid, raw in zip(run_ids, results):
+        meta = {}
+        for k, v in (raw or {}).items():
+            kk = k.decode("utf-8", errors="replace") if isinstance(k, bytes) else str(k)
+            vv = v.decode("utf-8", errors="replace") if isinstance(v, bytes) else str(v)
+            meta[kk] = vv
+        out[rid] = meta
+    return out
+
+
+def _agent_pull_run_is_dead(meta: dict, now_ms: int, stale_ms: int) -> bool:
+    if not meta:
+        return True
+    if str(meta.get("status") or "").strip().lower() in _AGENT_PULL_RUN_TERMINAL:
+        return True
+    last_seen = _agent_pull_meta_int(meta, "last_seen_at")
+    return bool(last_seen and (now_ms - last_seen) > stale_ms)
+
+
 def agent_pull_live_running_count(node_id: str) -> int:
     """Reconciled count of runs ACTUALLY still running on a pull node.
 
@@ -3074,39 +3113,49 @@ def agent_pull_live_running_count(node_id: str) -> int:
     the happy path (stop event / idle release). Worker crash, node death, or a dropped
     srem leak a phantom run until the 24h TTL. This reads the set, drops any member
     whose job is terminal / has no meta / is stale, and returns the live count — so the
-    displayed number self-heals instead of over-counting.
+    displayed number self-heals instead of over-counting. Stale (last_seen-based)
+    candidates are re-read right before removal so a run that emitted an event during
+    the scan is not falsely reaped.
     """
     node = (node_id or "").strip()
     if not node:
         return 0
     key = _agent_pull_node_running_key(node)
     try:
-        members = get_redis().smembers(key)
+        raw_members = get_redis().smembers(key)
     except redis.exceptions.RedisError:
+        return 0
+    members = [m.decode() if isinstance(m, bytes) else str(m) for m in (raw_members or [])]
+    if not members:
         return 0
     now_ms = int(time.time() * 1000)
     stale_ms = AGENT_PULL_RUN_STALE_SECONDS * 1000
+    metas = _agent_pull_job_metas(members)
     live = 0
     dead: list = []
-    for raw in members or []:
-        run_id = raw.decode() if isinstance(raw, bytes) else str(raw)
-        meta = _agent_pull_job_meta(run_id)
-        if not meta:
+    stale_candidates: list = []
+    for run_id in members:
+        meta = metas.get(run_id) or {}
+        # terminal / no-meta are definitively dead; last_seen staleness is re-checked
+        # below to avoid a scan-vs-event race.
+        if not meta or str(meta.get("status") or "").strip().lower() in _AGENT_PULL_RUN_TERMINAL:
             dead.append(run_id)
-            continue
-        status = str(meta.get("status") or "").strip().lower()
-        if status in _AGENT_PULL_RUN_TERMINAL:
-            dead.append(run_id)
-            continue
-        last_seen = _agent_pull_meta_int(meta, "last_seen_at")
-        if last_seen and (now_ms - last_seen) > stale_ms:
-            dead.append(run_id)
-            continue
-        live += 1
+        elif _agent_pull_run_is_dead(meta, now_ms, stale_ms):
+            stale_candidates.append(run_id)
+        else:
+            live += 1
+    if stale_candidates:
+        fresh = _agent_pull_job_metas(stale_candidates)
+        now2 = int(time.time() * 1000)
+        for run_id in stale_candidates:
+            if _agent_pull_run_is_dead(fresh.get(run_id) or {}, now2, stale_ms):
+                dead.append(run_id)
+            else:
+                live += 1  # emitted an event during the scan → still alive
     if dead:
         try:
             get_redis().srem(key, *dead)
-            logger.info("[AGENT_PULL] reconciled %d stale run(s) off node=%s", len(dead), node)
+            logger.info("[AGENT_PULL] reconciled %d dead run(s) off node=%s", len(dead), node)
         except redis.exceptions.RedisError as exc:
             logger.warning("[AGENT_PULL] reconcile srem failed node=%s: %s", node, exc)
     return live

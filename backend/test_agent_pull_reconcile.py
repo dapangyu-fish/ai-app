@@ -48,10 +48,26 @@ RUNS = {
 LIVE_EXPECTED = {"run-live", "run-assigned-fresh"}
 
 
+class _FakePipe:
+    def __init__(self, redis):
+        self.r = redis
+        self.ops = []
+
+    def hgetall(self, key):
+        self.ops.append(key)
+        return self
+
+    def execute(self):
+        return [self.r.hgetall(k) for k in self.ops]
+
+
 class _FakeRedis:
     def __init__(self):
         self.members = {r.encode() for r in RUNS}
         self.sremmed = []
+
+    def pipeline(self):
+        return _FakePipe(self)
 
     def smembers(self, key):
         return set(self.members)

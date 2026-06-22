@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import logging
 import re
 import secrets
 import shlex
@@ -25,7 +26,9 @@ from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from config import AGENT_NODE_REGISTRATION_TOKEN, AGENT_NODE_TOKEN
 import auth
 import agent_node_registry
-from ai_session import get_redis
+from ai_session import get_redis, agent_pull_live_running_count
+
+logger = logging.getLogger("agent_nodes")
 
 
 _PRIVATE_JOIN_TOKEN_SALT = "myapp-private-agent-join"
@@ -337,9 +340,9 @@ def _probe_agent_node(row: dict) -> dict:
     node_id = str(row.get("node_id") or "")
     if url.startswith("pull://"):
         try:
-            from ai_session import agent_pull_live_running_count
             active_runs = int(agent_pull_live_running_count(node_id))
-        except Exception:
+        except Exception as exc:
+            logger.warning("[AGENT_NODE] live running count failed node=%s: %s", node_id, exc)
             active_runs = 0
         return {
             "reachable": True,
