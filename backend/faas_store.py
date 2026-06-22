@@ -313,6 +313,42 @@ def ensure_tables() -> None:
         "CREATE INDEX IF NOT EXISTS idx_faas_deployments_service_created "
         "ON faas_deployments(service_id, created_at DESC)"
     )
+    # B1-G1: Application = the governance unit grouping {json-app, faas service(s),
+    # db, owner, access_policy}. access_policy is the D3 ladder; default owner-only
+    # (most-closed) — the Owner opens it up via the client management UI (B3-G8).
+    db_execute(
+        """
+        CREATE TABLE IF NOT EXISTS faas_applications (
+            app_id TEXT PRIMARY KEY,
+            owner_user_id TEXT NOT NULL,
+            appid TEXT NOT NULL DEFAULT '',
+            name TEXT NOT NULL DEFAULT '',
+            access_policy TEXT NOT NULL DEFAULT 'owner-only'
+                CHECK (access_policy IN ('owner-only', 'allowlist', 'install-required', 'public')),
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """
+    )
+    db_execute("CREATE INDEX IF NOT EXISTS idx_faas_applications_owner ON faas_applications(owner_user_id)")
+    db_execute("CREATE INDEX IF NOT EXISTS idx_faas_applications_appid ON faas_applications(appid)")
+    # B1-G1: bind each service to its application (additive; nullable→'' default so
+    # existing rows migrate cleanly, then backfilled below to a per-owner default app).
+    db_execute("ALTER TABLE faas_services ADD COLUMN IF NOT EXISTS app_id TEXT NOT NULL DEFAULT ''")
+    db_execute("CREATE INDEX IF NOT EXISTS idx_faas_services_app ON faas_services(app_id)")
+    # Backfill: every existing service without an app gets a per-owner default app
+    # (app_id = 'appd-<owner>'). Idempotent — after the first run the WHERE matches
+    # nothing. (Per-app schema migration is B2-G3; here we only establish the model.)
+    db_execute(
+        """
+        INSERT INTO faas_applications (app_id, owner_user_id, name)
+        SELECT DISTINCT 'appd-' || owner_user_id, owner_user_id, 'default'
+        FROM faas_services
+        WHERE app_id IS NULL OR app_id = ''
+        ON CONFLICT (app_id) DO NOTHING
+        """
+    )
+    db_execute("UPDATE faas_services SET app_id = 'appd-' || owner_user_id WHERE app_id IS NULL OR app_id = ''")
 
 
 def _service_lock(service_id: str) -> threading.Lock:
@@ -518,7 +554,7 @@ def list_services(
     ensure_tables()
     disabled_clause = "" if include_disabled else "AND status <> 'disabled'"
     cols = (
-        "service_id, owner_user_id, service_slug, function_name, status, "
+        "service_id, owner_user_id, app_id, service_slug, function_name, status, "
         "active_commit, active_path, public_base_url, routes, meta_json, "
         "created_at, updated_at"
     )
@@ -542,7 +578,7 @@ def get_service(service_id: str) -> dict[str, Any] | None:
     ensure_tables()
     return db_query(
         """
-        SELECT service_id, owner_user_id, service_slug, function_name, status,
+        SELECT service_id, owner_user_id, app_id, service_slug, function_name, status,
                active_commit, active_path, public_base_url, routes, meta_json,
                created_at, updated_at
         FROM faas_services
@@ -551,6 +587,104 @@ def get_service(service_id: str) -> dict[str, Any] | None:
         [service_id],
         fetch_one=True,
     )
+
+
+# ── B1-G1: Application entity (governance unit grouping services + db + policy) ──
+
+_VALID_ACCESS_POLICIES = {"owner-only", "allowlist", "install-required", "public"}
+
+
+def _default_app_id(owner_user_id: str) -> str:
+    """Per-owner default application id. Until the JSON-App declares its own app
+    (and per-app schema lands in B2-G3), an owner's services group under one
+    default app — which is 1:1 with the current per-user DB schema."""
+    return "appd-" + str(owner_user_id or "").strip()
+
+
+def ensure_application(
+    app_id: str,
+    owner_user_id: str,
+    *,
+    appid: str = "",
+    name: str = "",
+    access_policy: str = "owner-only",
+) -> dict[str, Any]:
+    """Idempotently create (or fetch) an application. Never reassigns owner: if the
+    app already exists under a different owner this raises (an app_id is owned)."""
+    ensure_tables()
+    app_id = str(app_id or "").strip()
+    owner_user_id = str(owner_user_id or "").strip()
+    if not app_id or not owner_user_id:
+        raise FaaSValidationError("app_id and owner_user_id are required")
+    if access_policy not in _VALID_ACCESS_POLICIES:
+        raise FaaSValidationError(f"invalid access_policy: {access_policy}")
+    existing = get_application(app_id)
+    if existing:
+        if existing.get("owner_user_id") != owner_user_id:
+            raise FaaSValidationError("app_id already belongs to another user")
+        return existing
+    db_execute(
+        """
+        INSERT INTO faas_applications (app_id, owner_user_id, appid, name, access_policy)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (app_id) DO NOTHING
+        """,
+        [app_id, owner_user_id, str(appid or ""), str(name or ""), access_policy],
+    )
+    return get_application(app_id) or {
+        "app_id": app_id,
+        "owner_user_id": owner_user_id,
+        "appid": appid,
+        "name": name,
+        "access_policy": access_policy,
+    }
+
+
+def get_application(app_id: str) -> dict[str, Any] | None:
+    ensure_tables()
+    return db_query(
+        "SELECT app_id, owner_user_id, appid, name, access_policy, created_at, updated_at "
+        "FROM faas_applications WHERE app_id = %s",
+        [str(app_id or "").strip()],
+        fetch_one=True,
+    )
+
+
+def list_user_applications(owner_user_id: str) -> list[dict[str, Any]]:
+    ensure_tables()
+    rows = db_query(
+        "SELECT app_id, owner_user_id, appid, name, access_policy, created_at, updated_at "
+        "FROM faas_applications WHERE owner_user_id = %s ORDER BY created_at DESC",
+        [str(owner_user_id or "").strip()],
+        fetch_all=True,
+    )
+    return rows or []
+
+
+def set_application_policy(owner_user_id: str, app_id: str, access_policy: str) -> dict[str, Any]:
+    """Owner-only: move the app up/down the D3 access ladder. Ownership enforced."""
+    ensure_tables()
+    if access_policy not in _VALID_ACCESS_POLICIES:
+        raise FaaSValidationError(f"invalid access_policy: {access_policy}")
+    app = get_application(app_id)
+    if not app or app.get("owner_user_id") != str(owner_user_id or "").strip():
+        raise FaaSValidationError("application not found")
+    db_execute(
+        "UPDATE faas_applications SET access_policy = %s, updated_at = NOW() WHERE app_id = %s",
+        [access_policy, app_id],
+    )
+    return get_application(app_id) or app
+
+
+def _resolve_app_id(owner_user_id: str, meta: dict[str, Any]) -> tuple[str, str]:
+    """Pick the application a deploy binds to. A bundle may declare meta.app_id (or
+    carry meta.appid for JSON-App binding); otherwise it falls under the owner's
+    default app. Returns (app_id, appid)."""
+    meta = meta if isinstance(meta, dict) else {}
+    declared = str(meta.get("app_id") or "").strip()
+    appid = str(meta.get("appid") or "").strip()
+    app_id = declared or _default_app_id(owner_user_id)
+    return app_id, appid
 
 
 def _pull_bundle_serve_root() -> None:
@@ -1735,6 +1869,13 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
         deployment_id = f"dep-{uuid.uuid4().hex}"
         routes = normalized["routes"]
         meta_json = _meta_with_current_deploy(normalized["meta"])
+        # B1-G1: bind the service to its application (default per-owner app unless
+        # the bundle declares meta.app_id). On redeploy, keep the existing binding.
+        app_id = existing.get("app_id") if (existing and existing.get("app_id")) else None
+        if not app_id:
+            app_id, app_appid = _resolve_app_id(owner_user_id, normalized["meta"])
+            ensure_application(app_id, owner_user_id, appid=app_appid,
+                               name=normalized.get("service_slug", ""))
         summary = {
             "source": source,
             "service_slug": normalized["service_slug"],
@@ -1744,10 +1885,10 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
         db_execute(
             """
             INSERT INTO faas_services (
-                service_id, owner_user_id, service_slug, function_name, status,
+                service_id, owner_user_id, app_id, service_slug, function_name, status,
                 active_path, public_base_url, routes, meta_json
             )
-            VALUES (%s, %s, %s, %s, 'deploying', %s, %s, %s::jsonb, %s::jsonb)
+            VALUES (%s, %s, %s, %s, %s, 'deploying', %s, %s, %s::jsonb, %s::jsonb)
             ON CONFLICT (service_id)
             DO UPDATE SET
                 service_slug = EXCLUDED.service_slug,
@@ -1761,6 +1902,7 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
             [
                 service_id,
                 owner_user_id,
+                app_id,
                 normalized["service_slug"],
                 function_name,
                 str(root),

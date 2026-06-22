@@ -54,16 +54,40 @@ class _MemoryFaaSDB:
     def __init__(self) -> None:
         self.services: dict[str, dict] = {}
         self.deployments: dict[str, dict] = {}
+        self.applications: dict[str, dict] = {}
 
     def execute(self, sql: str, params=None):
         params = list(params or [])
         normalized = " ".join(sql.lower().split())
         if normalized.startswith("create ") or normalized.startswith("alter ") or normalized.startswith("create index"):
             return None
+        # B1-G1 applications: ensure_application inserts 5 params; the ensure_tables
+        # backfill (INSERT ... SELECT DISTINCT) carries none → no-op.
+        if "insert into faas_applications" in normalized:
+            if len(params) >= 5:
+                app_id, owner_user_id, appid, name, access_policy = params[:5]
+                self.applications.setdefault(app_id, {
+                    "app_id": app_id,
+                    "owner_user_id": owner_user_id,
+                    "appid": appid,
+                    "name": name,
+                    "access_policy": access_policy,
+                    "created_at": "created",
+                    "updated_at": "updated",
+                })
+            return None
+        if normalized.startswith("update faas_services set app_id"):
+            return None  # backfill no-op (deploy sets app_id explicitly)
+        if normalized.startswith("update faas_applications set access_policy"):
+            access_policy, app_id = params
+            if app_id in self.applications:
+                self.applications[app_id]["access_policy"] = access_policy
+            return None
         if "insert into faas_services" in normalized:
             (
                 service_id,
                 owner_user_id,
+                app_id,
                 service_slug,
                 function_name,
                 active_path,
@@ -77,6 +101,7 @@ class _MemoryFaaSDB:
                 **existing,
                 "service_id": service_id,
                 "owner_user_id": owner_user_id,
+                "app_id": app_id,
                 "service_slug": service_slug,
                 "function_name": existing.get("function_name") or function_name,
                 "status": "deploying",
@@ -147,6 +172,11 @@ class _MemoryFaaSDB:
     def query(self, sql: str, params=None, fetch_one: bool = False, fetch_all: bool = False):
         params = list(params or [])
         normalized = " ".join(sql.lower().split())
+        if "from faas_applications where app_id = %s" in normalized:
+            row = self.applications.get(params[0])
+            return dict(row) if row else None
+        if "from faas_applications where owner_user_id = %s" in normalized:
+            return [dict(r) for r in self.applications.values() if r["owner_user_id"] == params[0]]
         if "select count(*) as count from faas_services" in normalized:
             owner_user_id = params[0]
             count = sum(
