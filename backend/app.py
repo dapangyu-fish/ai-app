@@ -104,6 +104,16 @@ def create_app():
     app.add_url_rule("/api/faas/health", methods=["GET"], view_func=faas.health)
     # B3-G1: backend-mediated data-access gateway for FaaS functions (myapp_data).
     app.add_url_rule("/api/faas/data", methods=["POST"], view_func=faas.faas_data_gateway)
+    # B3-G8: owner-scoped Application management API (consumed by the client UI).
+    app.add_url_rule("/api/faas/apps", methods=["GET"], view_func=faas.list_my_applications)
+    app.add_url_rule("/api/faas/apps/<app_id>", methods=["GET"], view_func=faas.get_my_application)
+    app.add_url_rule("/api/faas/apps/<app_id>", methods=["DELETE"], view_func=faas.delete_my_application)
+    app.add_url_rule("/api/faas/apps/<app_id>/policy", methods=["POST"], view_func=faas.set_my_application_policy)
+    app.add_url_rule("/api/faas/apps/<app_id>/maintainers", methods=["POST"], view_func=faas.add_my_maintainer)
+    app.add_url_rule("/api/faas/apps/<app_id>/maintainers/<user_id>", methods=["DELETE"], view_func=faas.remove_my_maintainer)
+    app.add_url_rule("/api/faas/apps/<app_id>/grants", methods=["POST"], view_func=faas.grant_my_consumer)
+    app.add_url_rule("/api/faas/apps/<app_id>/grants/<user_id>", methods=["DELETE"], view_func=faas.revoke_my_consumer)
+    app.add_url_rule("/api/faas/audit", methods=["GET"], view_func=faas.list_my_audit)
     app.add_url_rule("/api/faas/services", methods=["GET"], view_func=faas.list_user_services)
     app.add_url_rule("/api/faas/services", methods=["POST"], view_func=faas.deploy_service)
     app.add_url_rule("/api/faas/services/<service_id>", methods=["GET"], view_func=faas.get_user_service)

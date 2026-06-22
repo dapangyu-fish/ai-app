@@ -25,6 +25,16 @@ try:
         FaaSError,
         FaaSValidationError,
         audit_log,
+        add_maintainer,
+        delete_application,
+        grant_consumer,
+        list_audit_log,
+        list_consumers,
+        list_maintainers,
+        list_user_applications,
+        remove_maintainer,
+        revoke_consumer,
+        set_application_policy,
         build_service_archive,
         can_manage_service,
         _db_tenant_key,
@@ -52,6 +62,16 @@ except ModuleNotFoundError:
         FaaSError,
         FaaSValidationError,
         audit_log,
+        add_maintainer,
+        delete_application,
+        grant_consumer,
+        list_audit_log,
+        list_consumers,
+        list_maintainers,
+        list_user_applications,
+        remove_maintainer,
+        revoke_consumer,
+        set_application_policy,
         can_manage_service,
         _db_tenant_key,
         deploy_bundle,
@@ -478,6 +498,113 @@ def faas_data_gateway():
     except Exception as exc:
         return _json_error(str(exc), 500, code="FAAS_DATA_FAILED")
     return jsonify({"ok": True, "result": result})
+
+
+# ── B3-G8: owner-scoped Application management API (consumed by the client UI) ──
+
+def list_my_applications():
+    uid = _request_user_id()
+    if not uid:
+        return _json_error("user_id is required", 401 if FAAS_REQUIRE_AUTH else 400, code="FAAS_USER_REQUIRED")
+    try:
+        return jsonify({"applications": list_user_applications(uid)})
+    except Exception as exc:
+        return _json_error(str(exc), 500)
+
+
+def get_my_application(app_id):
+    uid = _request_user_id()
+    app = get_application(app_id)
+    if not app or app.get("owner_user_id") != uid:
+        return _json_error("application not found", 404, code="FAAS_NOT_FOUND")
+    svcs = [s for s in (list_services(uid, include_disabled=True) or []) if s.get("app_id") == app_id]
+    _annotate_running(svcs)
+    storage = 0
+    try:
+        from faas_userdb import schema_storage_bytes
+        storage = schema_storage_bytes(_db_tenant_key(app_id, uid))
+    except Exception:
+        storage = 0
+    return jsonify({
+        "application": app, "services": svcs,
+        "maintainers": list_maintainers(app_id), "consumers": list_consumers(app_id),
+        "storage_bytes": storage,
+    })
+
+
+def set_my_application_policy(app_id):
+    uid = _request_user_id()
+    body = request.get_json(silent=True) or {}
+    try:
+        app = set_application_policy(uid, app_id, str(body.get("access_policy") or ""))
+        audit_log("set_policy", app_id=app_id, owner_user_id=uid, acting_user=uid,
+                  via=_auth_via(), detail=str(body.get("access_policy") or ""))
+        return jsonify({"ok": True, "application": app})
+    except FaaSValidationError as exc:
+        return _json_error(str(exc), 400, code="FAAS_VALIDATION_FAILED")
+
+
+def add_my_maintainer(app_id):
+    uid = _request_user_id()
+    body = request.get_json(silent=True) or {}
+    try:
+        r = add_maintainer(uid, app_id, str(body.get("user_id") or ""))
+        audit_log("add_maintainer", app_id=app_id, owner_user_id=uid, acting_user=uid,
+                  via=_auth_via(), detail=str(body.get("user_id") or ""))
+        return jsonify({"ok": True, **r})
+    except FaaSValidationError as exc:
+        return _json_error(str(exc), 400, code="FAAS_VALIDATION_FAILED")
+
+
+def remove_my_maintainer(app_id, user_id):
+    uid = _request_user_id()
+    try:
+        remove_maintainer(uid, app_id, user_id)
+        audit_log("remove_maintainer", app_id=app_id, owner_user_id=uid, acting_user=uid,
+                  via=_auth_via(), detail=user_id)
+        return jsonify({"ok": True})
+    except FaaSValidationError as exc:
+        return _json_error(str(exc), 404, code="FAAS_NOT_FOUND")
+
+
+def grant_my_consumer(app_id):
+    uid = _request_user_id()
+    body = request.get_json(silent=True) or {}
+    try:
+        r = grant_consumer(uid, app_id, str(body.get("user_id") or ""))
+        audit_log("grant", app_id=app_id, owner_user_id=uid, acting_user=uid,
+                  via=_auth_via(), detail=str(body.get("user_id") or ""))
+        return jsonify({"ok": True, **r})
+    except FaaSValidationError as exc:
+        return _json_error(str(exc), 400, code="FAAS_VALIDATION_FAILED")
+
+
+def revoke_my_consumer(app_id, user_id):
+    uid = _request_user_id()
+    try:
+        revoke_consumer(uid, app_id, user_id)
+        audit_log("revoke", app_id=app_id, owner_user_id=uid, acting_user=uid, via=_auth_via(), detail=user_id)
+        return jsonify({"ok": True})
+    except FaaSValidationError as exc:
+        return _json_error(str(exc), 404, code="FAAS_NOT_FOUND")
+
+
+def delete_my_application(app_id):
+    uid = _request_user_id()
+    try:
+        return jsonify({"ok": True, **delete_application(uid, app_id)})
+    except FaaSValidationError as exc:
+        return _json_error(str(exc), 404, code="FAAS_NOT_FOUND")
+
+
+def list_my_audit():
+    uid = _request_user_id()
+    if not uid:
+        return _json_error("user_id is required", 401 if FAAS_REQUIRE_AUTH else 400, code="FAAS_USER_REQUIRED")
+    try:
+        return jsonify({"audit": list_audit_log(owner_user_id=uid, limit=int(request.args.get("limit") or 100))})
+    except Exception as exc:
+        return _json_error(str(exc), 500)
 
 
 def health():
