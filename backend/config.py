@@ -98,6 +98,10 @@ REGISTRY_BASE_URL = os.environ.get("REGISTRY_BASE_URL", "https://myapp-registry.
 # starts the self-managed Docker FaaS container for the service.
 FAAS_ENABLED = os.environ.get("FAAS_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"}
 FAAS_REQUIRE_AUTH = os.environ.get("FAAS_REQUIRE_AUTH", "0").strip().lower() in {"1", "true", "yes", "on"}
+# B3-G3: enforce the per-app access_policy ladder (owner-only/allowlist/install-
+# required/public) on invoke, fail-closed + per-call live grant. Default OFF so
+# existing open invoke isn't broken; flip on per-deployment once apps set policies.
+FAAS_ENFORCE_ACCESS_POLICY = os.environ.get("FAAS_ENFORCE_ACCESS_POLICY", "0").strip().lower() in {"1", "true", "yes", "on"}
 # Even when FAAS_REQUIRE_AUTH is off (invoke stays open), a DEPLOY must be scoped
 # to a trusted owner — the agent-node token path or a verified Bearer token — so a
 # client cannot pass an arbitrary/rotating user_id to bypass the per-user service

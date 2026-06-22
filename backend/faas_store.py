@@ -347,6 +347,20 @@ def ensure_tables() -> None:
         )
         """
     )
+    # B3-G3: per-app CONSUMER grants (server-verified — NOT the anonymous-writable
+    # registry install telemetry). revoked_at set => revoked (checked live per call).
+    db_execute(
+        """
+        CREATE TABLE IF NOT EXISTS faas_app_consumer_grants (
+            app_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            granted_by TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            revoked_at TIMESTAMPTZ,
+            PRIMARY KEY (app_id, user_id)
+        )
+        """
+    )
     # B1-G1: bind each service to its application (additive; nullable→'' default so
     # existing rows migrate cleanly, then backfilled below to a per-owner default app).
     db_execute("ALTER TABLE faas_services ADD COLUMN IF NOT EXISTS app_id TEXT NOT NULL DEFAULT ''")
@@ -746,6 +760,67 @@ def remove_maintainer(owner_user_id: str, app_id: str, user_id: str) -> None:
         "DELETE FROM faas_app_maintainers WHERE app_id = %s AND user_id = %s",
         [app_id, str(user_id or "").strip()],
     )
+
+
+# ── B3-G3: per-app consumer access grants (server-verified) ──
+
+def grant_consumer(owner_user_id: str, app_id: str, user_id: str) -> dict[str, Any]:
+    """Owner/maintainer grants a consumer access to an app (for allowlist/
+    install-required policies). Ownership/maintainer enforced."""
+    ensure_tables()
+    app = get_application(app_id)
+    owner_user_id = str(owner_user_id or "").strip()
+    if not app or (app.get("owner_user_id") != owner_user_id and not is_maintainer(app_id, owner_user_id)):
+        raise FaaSValidationError("application not found")
+    user_id = str(user_id or "").strip()
+    if not user_id:
+        raise FaaSValidationError("user_id is required")
+    db_execute(
+        "INSERT INTO faas_app_consumer_grants (app_id, user_id, granted_by, revoked_at) "
+        "VALUES (%s, %s, %s, NULL) "
+        "ON CONFLICT (app_id, user_id) DO UPDATE SET revoked_at = NULL, granted_by = EXCLUDED.granted_by",
+        [app_id, user_id, owner_user_id],
+    )
+    return {"app_id": app_id, "user_id": user_id}
+
+
+def revoke_consumer(owner_user_id: str, app_id: str, user_id: str) -> None:
+    """Owner/maintainer revokes a consumer's access (takes effect on the next call)."""
+    ensure_tables()
+    app = get_application(app_id)
+    owner_user_id = str(owner_user_id or "").strip()
+    if not app or (app.get("owner_user_id") != owner_user_id and not is_maintainer(app_id, owner_user_id)):
+        raise FaaSValidationError("application not found")
+    db_execute(
+        "UPDATE faas_app_consumer_grants SET revoked_at = NOW() WHERE app_id = %s AND user_id = %s",
+        [app_id, str(user_id or "").strip()],
+    )
+
+
+def is_consumer_granted(app_id: str, user_id: str) -> bool:
+    """Live grant check (per invoke) — a revoked grant returns False immediately."""
+    app_id = str(app_id or "").strip()
+    user_id = str(user_id or "").strip()
+    if not app_id or not user_id:
+        return False
+    row = db_query(
+        "SELECT 1 AS ok FROM faas_app_consumer_grants "
+        "WHERE app_id = %s AND user_id = %s AND revoked_at IS NULL",
+        [app_id, user_id],
+        fetch_one=True,
+    )
+    return bool(row)
+
+
+def list_consumers(app_id: str) -> list[dict[str, Any]]:
+    ensure_tables()
+    rows = db_query(
+        "SELECT app_id, user_id, granted_by, created_at, revoked_at FROM faas_app_consumer_grants "
+        "WHERE app_id = %s AND revoked_at IS NULL ORDER BY created_at",
+        [str(app_id or "").strip()],
+        fetch_all=True,
+    )
+    return rows or []
 
 
 def can_manage_service(acting_user: str, service: dict[str, Any]) -> bool:

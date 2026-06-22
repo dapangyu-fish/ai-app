@@ -57,7 +57,7 @@ for _name, _value in {
     "AGENT_NODE_TOKEN": "node-tok", "FAAS_DEPLOY_MODE": "metadata",
     "FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER": True, "FAAS_REQUIRE_AUTH": False,
     "FAAS_RUNTIME_TOKEN": "rt", "FAAS_CALLER_PSEUDONYM_SECRET": "server-secret-xyz",
-    "SUPABASE_JWT_SECRET": "",
+    "SUPABASE_JWT_SECRET": "", "FAAS_ENFORCE_ACCESS_POLICY": False,
     "FAAS_BUNDLE_MAX_BYTES": 512 * 1024, "FAAS_BUNDLE_SERVE_ROOT": "",
     "FAAS_CODE_ROOT": "/tmp/x", "FAAS_DEPLOY_SCRIPT": "", "FAAS_ENABLED": True,
     "FAAS_FILE_MAX_BYTES": 256 * 1024, "FAAS_FUNCTION_PREFIX": "myapp",
@@ -143,6 +143,35 @@ def test_runtime_helper_reads_injected_header():
     _with_headers({})
     assert myapp_auth.current_user() is None
     assert myapp_auth.is_authenticated() is False
+
+
+def test_access_policy_enforcement_matrix():
+    # B3-G3: drive _access_denied_reason with controlled app policy + grant/owner.
+    svc = {"owner_user_id": "ownerO", "app_id": "appP"}
+    faas.can_manage_service = lambda uid, s: uid == s.get("owner_user_id")
+    faas.is_consumer_granted = lambda app_id, uid: uid == "grantedUser"
+
+    # enforcement OFF → always allowed
+    faas.FAAS_ENFORCE_ACCESS_POLICY = False
+    faas.get_application = lambda a: {"app_id": a, "access_policy": "owner-only"}
+    assert faas._access_denied_reason(svc, None) is None
+
+    faas.FAAS_ENFORCE_ACCESS_POLICY = True
+    # owner-only: owner allowed, stranger + anon denied
+    faas.get_application = lambda a: {"app_id": a, "access_policy": "owner-only"}
+    assert faas._access_denied_reason(svc, "ownerO") is None
+    assert faas._access_denied_reason(svc, "stranger") is not None
+    assert faas._access_denied_reason(svc, None) is not None
+    # public: any authed allowed, anon denied
+    faas.get_application = lambda a: {"app_id": a, "access_policy": "public"}
+    assert faas._access_denied_reason(svc, "anyone") is None
+    assert faas._access_denied_reason(svc, None) is not None
+    # install-required: only granted consumer (or owner) allowed
+    faas.get_application = lambda a: {"app_id": a, "access_policy": "install-required"}
+    assert faas._access_denied_reason(svc, "grantedUser") is None
+    assert faas._access_denied_reason(svc, "ownerO") is None
+    assert faas._access_denied_reason(svc, "ungranted") is not None
+    faas.FAAS_ENFORCE_ACCESS_POLICY = False  # reset
 
 
 if __name__ == "__main__":

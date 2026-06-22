@@ -18,14 +18,17 @@ from flask import Response, jsonify, request, stream_with_context
 
 try:
     from auth import verify_access_token
-    from config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
+    from config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_ENFORCE_ACCESS_POLICY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
     from faas_store import (
         FaaSError,
         FaaSValidationError,
         build_service_archive,
+        can_manage_service,
         deploy_bundle,
         disable_service,
         delete_service,
+        get_application,
+        is_consumer_granted,
         running_replica_counts,
         ensure_local_docker_runtime_for_service,
         ensure_tables,
@@ -40,13 +43,16 @@ try:
     )
 except ModuleNotFoundError:
     from backend.auth import verify_access_token
-    from backend.config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
+    from backend.config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_ENFORCE_ACCESS_POLICY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
     from backend.faas_store import (
         FaaSError,
         FaaSValidationError,
+        can_manage_service,
         deploy_bundle,
         disable_service,
         delete_service,
+        get_application,
+        is_consumer_granted,
         running_replica_counts,
         ensure_local_docker_runtime_for_service,
         ensure_tables,
@@ -176,6 +182,27 @@ def _build_proxy_headers(pseudonym: str) -> dict[str, str]:
         out["X-MyApp-Caller-Pseudonym"] = pseudonym
         out["X-MyApp-Caller-Authed"] = "1"
     return out
+
+
+def _access_denied_reason(service: dict, caller_uid: str | None) -> str | None:
+    """B3-G3: per-call, fail-closed access_policy enforcement. Returns a denial
+    reason if the caller may NOT invoke this service, else None. No-op unless
+    FAAS_ENFORCE_ACCESS_POLICY is on (rollout gate). Owner/maintainer always pass;
+    allowlist/install-required need a live (non-revoked) grant; public needs auth;
+    owner-only denies everyone else."""
+    if not FAAS_ENFORCE_ACCESS_POLICY:
+        return None
+    app = get_application(service.get("app_id", "")) or {}
+    policy = (app.get("access_policy") or "owner-only").strip()
+    if policy == "public":
+        return None if caller_uid else "authentication required"
+    if not caller_uid:
+        return "authentication required"
+    if can_manage_service(caller_uid, service):
+        return None
+    if policy in ("allowlist", "install-required"):
+        return None if is_consumer_granted(service.get("app_id", ""), caller_uid) else "not authorized for this app"
+    return "this service is private (owner-only)"
 
 
 def _annotate_running(services: list) -> list:
@@ -472,6 +499,14 @@ def invoke_service(service_id: str, route_path: str = ""):
     if not allowed:
         return _json_error(message, status, code="FAAS_ROUTE_NOT_ALLOWED")
 
+    # B3-G3: enforce the app access_policy BEFORE waking the container (fail-closed,
+    # per call). _uid is the verified caller (reused below for the pseudonym).
+    _auth = request.headers.get("Authorization", "")
+    _uid = _verify_caller_uid(_auth[7:]) if _auth.startswith("Bearer ") else None
+    _deny = _access_denied_reason(service, _uid)
+    if _deny:
+        return _json_error(_deny, 403, code="FAAS_ACCESS_DENIED")
+
     mode = service_deploy_mode(service)
     if mode not in _LOCAL_DOCKER_MODES:
         return _json_error(
@@ -488,12 +523,10 @@ def invoke_service(service_id: str, route_path: str = ""):
     if request.query_string:
         upstream = f"{upstream}?{request.query_string.decode('utf-8', errors='replace')}"
 
-    # B1-G2: derive a trusted, app-scoped caller pseudonym from the verified JWT
-    # (if present) and inject it; prefix-strip all client x-myapp-*/auth so identity
-    # cannot be forged through the proxy and no raw token reaches the function.
+    # B1-G2: inject the trusted, app-scoped caller pseudonym (from the verified JWT,
+    # _uid resolved above); prefix-strip all client x-myapp-*/auth so identity cannot
+    # be forged through the proxy and no raw token reaches the function.
     # (Sibling-container direct-connect forgery is closed by network isolation, B2-G2.)
-    _auth = request.headers.get("Authorization", "")
-    _uid = _verify_caller_uid(_auth[7:]) if _auth.startswith("Bearer ") else None
     _pseudonym = _caller_pseudonym(service.get("app_id", ""), _uid) if _uid else ""
     headers = _build_proxy_headers(_pseudonym)
     request_body = request.get_data()

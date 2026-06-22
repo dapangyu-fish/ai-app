@@ -34,6 +34,7 @@ class _DB:
     def __init__(self):
         self.apps = {}
         self.maint = {}  # (app_id,user_id) -> row
+        self.grants = {}  # (app_id,user_id) -> revoked(bool)
 
     def execute(self, sql, params=None):
         params = list(params or [])
@@ -54,6 +55,15 @@ class _DB:
             app_id, user_id = params
             self.maint.pop((app_id, user_id), None)
             return None
+        if "insert into faas_app_consumer_grants" in n:
+            app_id, user_id = params[0], params[1]
+            self.grants[(app_id, user_id)] = False  # not revoked
+            return None
+        if n.startswith("update faas_app_consumer_grants set revoked_at"):
+            app_id, user_id = params
+            if (app_id, user_id) in self.grants:
+                self.grants[(app_id, user_id)] = True  # revoked
+            return None
         return None
 
     def query(self, sql, params=None, fetch_one=False, fetch_all=False):
@@ -65,6 +75,9 @@ class _DB:
             return {"ok": 1} if (params[0], params[1]) in self.maint else None
         if "from faas_app_maintainers where app_id = %s" in n:
             return [dict(v) for (a, u), v in self.maint.items() if a == params[0]]
+        if "from faas_app_consumer_grants where app_id = %s and user_id = %s and revoked_at is null" in n:
+            k = (params[0], params[1])
+            return {"ok": 1} if (k in self.grants and not self.grants[k]) else None
         return [] if fetch_all else None
 
 
@@ -123,6 +136,29 @@ def test_can_manage_service_owner_maintainer_stranger():
     assert F.can_manage_service("mUser3", svc) is True       # maintainer
     assert F.can_manage_service("stranger", svc) is False    # neither
     assert F.can_manage_service("", svc) is False
+
+
+def test_consumer_grant_revoke_live():
+    setup_app()
+    # owner-only enforcement on grant
+    try:
+        F.grant_consumer("intruder", "appM", "cUser")
+        raise AssertionError("non-owner granted access")
+    except FaaSValidationError:
+        pass
+    assert not F.is_consumer_granted("appM", "cUser")
+    F.grant_consumer("owner1", "appM", "cUser")
+    assert F.is_consumer_granted("appM", "cUser") is True
+    # revoke takes effect immediately (live check)
+    F.revoke_consumer("owner1", "appM", "cUser")
+    assert F.is_consumer_granted("appM", "cUser") is False
+
+
+def test_maintainer_can_grant():
+    setup_app()
+    F.add_maintainer("owner1", "appM", "mGrant")
+    F.grant_consumer("mGrant", "appM", "cUser2")  # maintainer may grant
+    assert F.is_consumer_granted("appM", "cUser2")
 
 
 def test_db_tenant_key_per_app():
