@@ -1,6 +1,6 @@
 # Goal — FaaS 访问架构加固 + 端到端「自动生成带后端应用」真实测试
 
-> ⚠️ **运行时已更新(2026-06):FaaS 默认运行时已从 OpenFaaS/faasd 迁移到自研 Docker FaaS**(`FAAS_DEPLOY_MODE=local-docker`:容器即服务,控制面自管 部署/路由/冷唤醒/scale-to-zero/扩缩容,无 OpenFaaS CE 的 15 函数上限)。faasd/OpenFaaS 仅作为可选 legacy 模式保留。当前运行时与运维以 `docs/faas-docker-runtime.md` 为准;本文档中涉及 faasd/OpenFaaS 安装与网关的部分按 legacy 看待。
+> 📦 **归档说明(2026-06):OpenFaaS/faasd 已被彻底移除**，唯一运行时为自研 Docker FaaS(详见 `docs/faas-docker-runtime.md`)。本文档仅作历史记录保留。
 
 Date: 2026-06-16
 Branch: `feat/agent-control-plane`

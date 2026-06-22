@@ -13,10 +13,10 @@ services:
       - ${MYAPP_DATA_ROOT:-/mnt/myapp}/jsonapp-postgres/data:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     ports:
-      # Reachable from faasd-run functions (CNI) for the per-user database: bound
-      # to the docker bridge gateway IP only (NOT 0.0.0.0 — never public), same
-      # host address the openfaas gateway uses. Access is gated by per-user
-      # least-privilege roles. Override the bind IP per host via JSONAPP_PG_BIND_ADDR.
+      # Reachable from FaaS service containers for the per-user database: bound
+      # to the docker bridge gateway IP only (NOT 0.0.0.0 — never public). Access
+      # is gated by per-user least-privilege roles. Override the bind IP per host
+      # via JSONAPP_PG_BIND_ADDR.
       - "${JSONAPP_PG_BIND_ADDR:-172.18.0.1}:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
@@ -126,16 +126,6 @@ services:
       FAAS_CODE_ROOT: "${FAAS_CODE_ROOT:-/mnt/myapp/faas/code}"
       FAAS_RUNTIME_TOKEN: "${FAAS_RUNTIME_TOKEN:-}"
       FAAS_RUNTIME_BUNDLE_BASE_URL: "${FAAS_RUNTIME_BUNDLE_BASE_URL:-}"
-      FAAS_OPENFAAS_GATEWAY: "${FAAS_OPENFAAS_GATEWAY:-}"
-      FAAS_OPENFAAS_USERNAME: "${FAAS_OPENFAAS_USERNAME:-admin}"
-      FAAS_OPENFAAS_PASSWORD: "${FAAS_OPENFAAS_PASSWORD:-}"
-      FAAS_OPENFAAS_RUNTIME_IMAGE: "${FAAS_OPENFAAS_RUNTIME_IMAGE:-dapangyu/myapp-faas-runtime:agent-control-plane}"
-      FAAS_OPENFAAS_SCALE_ZERO: "${FAAS_OPENFAAS_SCALE_ZERO:-1}"
-      FAAS_OPENFAAS_SCALE_ZERO_DURATION: "${FAAS_OPENFAAS_SCALE_ZERO_DURATION:-10m}"
-      FAAS_OPENFAAS_MIN_REPLICAS: "${FAAS_OPENFAAS_MIN_REPLICAS:-0}"
-      FAAS_OPENFAAS_MAX_REPLICAS: "${FAAS_OPENFAAS_MAX_REPLICAS:-1}"
-      FAAS_OPENFAAS_READ_TIMEOUT: "${FAAS_OPENFAAS_READ_TIMEOUT:-60s}"
-      FAAS_OPENFAAS_WRITE_TIMEOUT: "${FAAS_OPENFAAS_WRITE_TIMEOUT:-60s}"
       FAAS_LOCAL_DOCKER_IMAGE: "${FAAS_LOCAL_DOCKER_IMAGE:-dapangyu/myapp-faas-runtime:agent-control-plane}"
       FAAS_LOCAL_DOCKER_NETWORK: "${FAAS_LOCAL_DOCKER_NETWORK:-myapp_default}"
       FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT: "${FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT:-/mnt/myapp/faas/code}"
@@ -215,16 +205,6 @@ services:
       FAAS_CODE_ROOT: "${FAAS_CODE_ROOT:-/mnt/myapp/faas/code}"
       FAAS_RUNTIME_TOKEN: "${FAAS_RUNTIME_TOKEN:-}"
       FAAS_RUNTIME_BUNDLE_BASE_URL: "${FAAS_RUNTIME_BUNDLE_BASE_URL:-}"
-      FAAS_OPENFAAS_GATEWAY: "${FAAS_OPENFAAS_GATEWAY:-}"
-      FAAS_OPENFAAS_USERNAME: "${FAAS_OPENFAAS_USERNAME:-admin}"
-      FAAS_OPENFAAS_PASSWORD: "${FAAS_OPENFAAS_PASSWORD:-}"
-      FAAS_OPENFAAS_RUNTIME_IMAGE: "${FAAS_OPENFAAS_RUNTIME_IMAGE:-dapangyu/myapp-faas-runtime:agent-control-plane}"
-      FAAS_OPENFAAS_SCALE_ZERO: "${FAAS_OPENFAAS_SCALE_ZERO:-1}"
-      FAAS_OPENFAAS_SCALE_ZERO_DURATION: "${FAAS_OPENFAAS_SCALE_ZERO_DURATION:-10m}"
-      FAAS_OPENFAAS_MIN_REPLICAS: "${FAAS_OPENFAAS_MIN_REPLICAS:-0}"
-      FAAS_OPENFAAS_MAX_REPLICAS: "${FAAS_OPENFAAS_MAX_REPLICAS:-1}"
-      FAAS_OPENFAAS_READ_TIMEOUT: "${FAAS_OPENFAAS_READ_TIMEOUT:-60s}"
-      FAAS_OPENFAAS_WRITE_TIMEOUT: "${FAAS_OPENFAAS_WRITE_TIMEOUT:-60s}"
       FAAS_LOCAL_DOCKER_IMAGE: "${FAAS_LOCAL_DOCKER_IMAGE:-dapangyu/myapp-faas-runtime:agent-control-plane}"
       FAAS_LOCAL_DOCKER_NETWORK: "${FAAS_LOCAL_DOCKER_NETWORK:-myapp_default}"
       FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT: "${FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT:-/mnt/myapp/faas/code}"

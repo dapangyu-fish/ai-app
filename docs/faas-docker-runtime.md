@@ -1,14 +1,9 @@
-# Self-managed Docker FaaS (faasd replacement)
+# Self-managed Docker FaaS
 
-OpenFaaS Community Edition caps at **15 functions** (EULA), which blocks a
-multi-user FaaS ecosystem. We replace faasd/OpenFaaS with a self-managed Docker
-runtime: each service is a Docker container, the control plane owns the full
-lifecycle (deploy, route, cold-wake, scale-to-zero), and there is **no
+This is the authoritative FaaS runtime doc. The FaaS runtime is a self-managed
+Docker runtime: each service is a Docker container, the control plane owns the
+full lifecycle (deploy, route, cold-wake, scale-to-zero), and there is **no
 function-count cap** (Docker manages arbitrarily many services).
-
-Switch a host: `myapp-ctl faas mode local-docker` (sets FAAS_DEPLOY_MODE +
-runtime image + network + code root + scale-to-zero knobs), then
-`myapp-ctl deploy backend --build`.
 
 ## How it works
 
@@ -27,16 +22,12 @@ runtime image + network + code root + scale-to-zero knobs), then
   and waits for `/__myapp_faas_health`; if it is absent it recreates it,
   re-injecting the owner's scoped DSN. ~1–2s cold start.
 - **Scale-to-zero**: every invoke touches `FAAS_DOCKER_STATE_DIR/<service_id>`.
-  `faas_docker_reaper.py` (started from app.py in docker mode, flock-guarded so
-  one worker reaps) stops containers idle past `FAAS_DOCKER_IDLE_SECONDS`
-  (default 600s). The next invoke cold-wakes them. Stopped containers keep their
-  definition (no slot cost).
-- **Per-service routing** (`service_deploy_mode`): each service records its
-  deploy mode in `meta_json.deploy.mode`; invoke + disable honor it, so
-  faasd-era services keep routing to faasd while new services use Docker — a
-  non-disruptive migration.
+  `faas_docker_reaper.py` (started from app.py, flock-guarded so one worker
+  reaps) stops containers idle past `FAAS_DOCKER_IDLE_SECONDS` (default 600s).
+  The next invoke cold-wakes them. Stopped containers keep their definition (no
+  slot cost).
 
-## Config (faas.env, managed by `myapp-ctl faas mode local-docker`)
+## Config (faas.env)
 
 - `FAAS_DEPLOY_MODE=local-docker`
 - `FAAS_LOCAL_DOCKER_IMAGE`, `FAAS_LOCAL_DOCKER_NETWORK=myapp_default`
@@ -52,9 +43,3 @@ The backend needs the Docker socket (mounted) and the `docker` Python lib
 - routing/invoke ✅; **16 services / 18 containers running at once (>15, no cap)** ✅;
 - scale-to-zero (reaper stops idle containers) + cold-wake (re-invoke starts,
   ~1.4s) ✅; DB-backed service (schema.sql + myapp_db) CRUD ✅.
-
-## Migration / decommission
-
-Switching the mode routes NEW services to Docker; existing faasd services keep
-working via per-service routing. To fully decommission faasd: redeploy remaining
-services (they pick up docker mode) or let them expire, then stop faasd.

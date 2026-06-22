@@ -161,7 +161,6 @@ EDGE_ROUTE_SPECS = [
     {"key": "registry", "label": "App registry", "kind": "proxy", "upstream": "http://registry:3254"},
     {"key": "config_center", "label": "Config Center", "kind": "proxy", "upstream": "http://config-center:5000"},
     {"key": "user_center", "label": "User Center", "kind": "proxy", "upstream": "http://user-center:5567"},
-    {"key": "openfaas", "label": "FaaS node (direct invoke)", "kind": "faasd", "upstream": "http://172.18.0.1:8731"},
     {
         "key": "openim",
         "label": "OpenIM",
@@ -4185,15 +4184,6 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "FAAS_GIT_KNOWN_HOSTS_PATH": "",
         "FAAS_DEPLOY_MODE": "local-docker",
         "FAAS_DEPLOY_SCRIPT": "",
-        "FAAS_OPENFAAS_GATEWAY": "",
-        "FAAS_OPENFAAS_USERNAME": "admin",
-        "FAAS_OPENFAAS_PASSWORD": "",
-        "FAAS_OPENFAAS_RUNTIME_IMAGE": _configured_image("faas-runtime"),
-        "FAAS_OPENFAAS_SCALE_ZERO": "1",
-        "FAAS_OPENFAAS_MIN_REPLICAS": "0",
-        "FAAS_OPENFAAS_MAX_REPLICAS": "1",
-        "FAAS_OPENFAAS_READ_TIMEOUT": "60s",
-        "FAAS_OPENFAAS_WRITE_TIMEOUT": "60s",
         "FAAS_PUBLIC_BASE_URL": f"http://{public_host}:5566",
         "FAAS_RUNTIME_BUNDLE_BASE_URL": f"http://{public_host}:5566",
         "FAAS_RUNTIME_TOKEN": _rand_hex(32),
@@ -4751,31 +4741,6 @@ def _edge_route_body(spec: dict) -> str:
     root {root};
     try_files $uri $uri/ /index.html;
   }}"""
-    if kind == "faasd":
-        # Direct public entry to a single-node faasd gateway (mode-b). Only the
-        # function-invoke surface is exposed; the faasd admin API (/system/) is
-        # denied so the public domain cannot deploy/delete/scale functions.
-        up = str(spec["upstream"]).rstrip("/")
-        return f"""
-  location = /healthz {{
-    proxy_pass {up};
-  }}
-  location /function/ {{
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_buffering off;
-    proxy_request_buffering off;
-    proxy_pass {up};
-  }}
-  location /system/ {{
-    return 403;
-  }}
-  location / {{
-    return 404;
-  }}"""
     if kind == "openim":
         return (
             _edge_proxy_location(str(spec["ws_upstream"]), strip_prefix="ws")
@@ -4902,9 +4867,6 @@ def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
     faas_values = {
         "FAAS_PUBLIC_BASE_URL": urls["backend"],
         "FAAS_RUNTIME_BUNDLE_BASE_URL": urls["backend"],
-        # faasd direct-invoke domain (cfg.domains.openfaas) -> backend env, so the
-        # backend injects it into every function as MYAPP_CFG_FAAS_PUBLIC_BASE_URL.
-        "FAAS_NODE_PUBLIC_URL": urls.get("openfaas", ""),
     }
     edge_values = {
         "MYAPP_DATA_ROOT": str(_data_root_from_cfg()),
@@ -5191,8 +5153,6 @@ def _print_faas_health(data: dict, *, as_json: bool = False) -> int:
         {"key": "ok", "value": data.get("ok")},
         {"key": "deploy_mode", "value": data.get("deploy_mode")},
         {"key": "auth_required", "value": data.get("auth_required")},
-        {"key": "openfaas_gateway", "value": data.get("openfaas_gateway") or "-"},
-        {"key": "openfaas_gateway_ok", "value": data.get("openfaas_gateway_ok")},
         {"key": "tables", "value": data.get("tables")},
     ]
     _print_table(rows, [("key", "KEY"), ("value", "VALUE")])
@@ -5218,140 +5178,6 @@ def _faas_user_query(args) -> str:
     return "?" + urlencode(params)
 
 
-def _read_optional_secret_arg(*, env_name: str = "", file_path: str = "") -> str:
-    if env_name:
-        return os.environ.get(env_name, "").strip()
-    if file_path:
-        return Path(file_path).expanduser().read_text(encoding="utf-8").strip()
-    return ""
-
-
-def _cmd_faasd_host_preflight(args) -> int:
-    rows: list[dict[str, object]] = []
-
-    def add_check(name: str, ok: bool, detail: str, *, required: bool = True) -> None:
-        rows.append({"check": name, "ok": ok, "required": required, "detail": detail})
-
-    machine = os.uname().machine.lower()
-    add_check(
-        "cpu-arch",
-        machine in {"x86_64", "amd64", "aarch64", "arm64"},
-        machine or "unknown",
-    )
-
-    add_check(
-        "root-user",
-        os.geteuid() == 0,
-        f"uid={os.geteuid()}",
-        required=False,
-    )
-
-    systemd_ok = Path("/run/systemd/system").exists() and shutil.which("systemctl") is not None
-    add_check(
-        "systemd",
-        systemd_ok,
-        "available" if systemd_ok else "missing /run/systemd/system or systemctl",
-    )
-
-    docker_bin = shutil.which("docker")
-    docker_running = False
-    docker_detail = "not installed"
-    if docker_bin:
-        proc = _run(["docker", "info"])
-        docker_running = proc.returncode == 0
-        if docker_running:
-            docker_detail = "docker daemon is reachable"
-        else:
-            docker_detail = (proc.stderr or proc.stdout or "docker installed but daemon is not reachable").strip().splitlines()[0]
-    # Co-location with Docker is supported and proven: faasd and Docker share the
-    # one system containerd via separate namespaces (Docker 'moby', faasd
-    # 'openfaas'/'openfaas-fn'). So Docker being present is a heads-up, not a
-    # blocker. Install faasd skipping its own containerd (reuse the system one),
-    # and add openfaas0 FORWARD ACCEPT rules if the host FORWARD policy is DROP.
-    if docker_running:
-        colocation_detail = (
-            "docker running — co-location OK: faasd shares the system containerd "
-            "via separate namespaces; install faasd reusing it, add openfaas0 "
-            "FORWARD ACCEPT if FORWARD policy is DROP"
-        )
-    else:
-        colocation_detail = docker_detail
-    add_check(
-        "docker-colocation",
-        True,
-        colocation_detail,
-        required=False,
-    )
-
-    containerd_bin = shutil.which("containerd")
-    add_check(
-        "containerd-command",
-        containerd_bin is not None,
-        containerd_bin or "containerd not found before faasd install",
-        required=False,
-    )
-
-    for binary in ["curl", "git", "iptables"]:
-        path = shutil.which(binary)
-        add_check(f"command-{binary}", path is not None, path or f"{binary} not found", required=binary != "git")
-
-    port_proc = _run(["sh", "-lc", "ss -lnt 2>/dev/null | awk 'NR>1 {print $4}' | grep -E ':(8080|8081)$' || true"])
-    occupied_ports = [line.strip() for line in (port_proc.stdout or "").splitlines() if line.strip()]
-    expect_empty_ports = bool(getattr(args, "expect_empty_ports", False))
-    add_check(
-        "ports-8080-8081",
-        not occupied_ports if expect_empty_ports else True,
-        ", ".join(occupied_ports) if occupied_ports else "free",
-        required=expect_empty_ports,
-    )
-
-    faasd_active = False
-    if shutil.which("systemctl"):
-        proc = _run(["systemctl", "is-active", "faasd", "faasd-provider"])
-        states = [line.strip() for line in (proc.stdout or "").splitlines() if line.strip()]
-        faasd_active = bool(states) and all(state == "active" for state in states)
-        add_check(
-            "faasd-services",
-            faasd_active if getattr(args, "expect_installed", False) else True,
-            ", ".join(states) if states else "not installed or inactive",
-            required=bool(getattr(args, "expect_installed", False)),
-        )
-
-        # Community faasd has no autoscaler, so the faasd-idler daemon provides
-        # scale-to-zero. Required only once faasd itself is up and we expect a
-        # fully installed host; otherwise it is informational.
-        idler_state = (_run(["systemctl", "is-active", "faasd-idler"]).stdout or "").strip() or "inactive"
-        expect_idler = bool(getattr(args, "expect_installed", False)) and faasd_active
-        add_check(
-            "faasd-idler",
-            (idler_state == "active") if expect_idler else True,
-            f"{idler_state} (scale-to-zero reaper)",
-            required=expect_idler,
-        )
-
-    ok = all(bool(row["ok"]) for row in rows if bool(row["required"]))
-    payload = {"ok": ok, "checks": rows}
-    if args.json:
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
-    else:
-        _print_table(
-            rows,
-            [
-                ("check", "CHECK"),
-                ("ok", "OK"),
-                ("required", "REQUIRED"),
-                ("detail", "DETAIL"),
-            ],
-        )
-        if not ok:
-            print(
-                "faasd host preflight failed; fix the required checks above. "
-                "(Docker co-location is supported and is only a warning.)",
-                file=sys.stderr,
-            )
-    return 0 if ok else 1
-
-
 def _set_faas_mode(args) -> int:
     env_path = _secret_path("faas")
     data = _parse_env(env_path)
@@ -5364,15 +5190,14 @@ def _set_faas_mode(args) -> int:
     if args.bundle_base_url:
         data["FAAS_RUNTIME_BUNDLE_BASE_URL"] = args.bundle_base_url.rstrip("/")
     if args.runtime_image:
-        data["FAAS_OPENFAAS_RUNTIME_IMAGE"] = args.runtime_image
-        data["FAAS_LOCAL_DOCKER_IMAGE"] = args.runtime_image if mode in {"local-docker", "docker", "docker-local"} else data.get("FAAS_LOCAL_DOCKER_IMAGE", "")
+        data["FAAS_LOCAL_DOCKER_IMAGE"] = args.runtime_image
     if mode == "local-docker":
         data.setdefault("FAAS_LOCAL_DOCKER_IMAGE", _configured_image("faas-runtime"))
         data.setdefault("FAAS_LOCAL_DOCKER_NETWORK", "myapp_default")
         data.setdefault("FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT", "/mnt/myapp/faas/code")
         data.setdefault("FAAS_LOCAL_DOCKER_HOST_CODE_ROOT", str(_data_root_from_cfg() / "faas" / "code"))
-        # Self-managed scale-to-zero (no faasd). The backend runs the reaper; the
-        # invoke proxy cold-wakes. Tunable, and managed here so they survive deploys.
+        # Self-managed scale-to-zero. The backend runs the reaper; the invoke
+        # proxy cold-wakes. Tunable, and managed here so they survive deploys.
         data.setdefault("FAAS_DOCKER_SCALE_ZERO", "1")
         data.setdefault("FAAS_DOCKER_IDLE_SECONDS", "600")
         data.setdefault("FAAS_DOCKER_REAPER_INTERVAL", "60")
@@ -5383,34 +5208,7 @@ def _set_faas_mode(args) -> int:
         if not data.get("FAAS_DEPLOY_SCRIPT"):
             print("FAAS_DEPLOY_SCRIPT is required for script mode", file=sys.stderr)
             return 2
-    if mode == "openfaas":
-        if args.gateway:
-            data["FAAS_OPENFAAS_GATEWAY"] = args.gateway.rstrip("/")
-        if args.username:
-            data["FAAS_OPENFAAS_USERNAME"] = args.username
-        password = _read_optional_secret_arg(
-            env_name=args.password_env or "",
-            file_path=args.password_file or "",
-        )
-        if password:
-            data["FAAS_OPENFAAS_PASSWORD"] = password
-        if args.scale_zero is not None:
-            data["FAAS_OPENFAAS_SCALE_ZERO"] = "1" if args.scale_zero else "0"
-        if args.min_replicas is not None:
-            data["FAAS_OPENFAAS_MIN_REPLICAS"] = str(max(0, int(args.min_replicas)))
-        if args.max_replicas is not None:
-            data["FAAS_OPENFAAS_MAX_REPLICAS"] = str(max(1, int(args.max_replicas)))
-        data.setdefault("FAAS_OPENFAAS_RUNTIME_IMAGE", _configured_image("faas-runtime"))
-        if not data.get("FAAS_OPENFAAS_GATEWAY"):
-            print("FAAS_OPENFAAS_GATEWAY is required for openfaas mode; pass --gateway", file=sys.stderr)
-            return 2
-        if not data.get("FAAS_RUNTIME_BUNDLE_BASE_URL"):
-            data["FAAS_RUNTIME_BUNDLE_BASE_URL"] = _backend_base_url(None)
-        if not data.get("FAAS_RUNTIME_TOKEN"):
-            data["FAAS_RUNTIME_TOKEN"] = _rand_hex(32)
-    if mode == "metadata":
-        pass
-    if mode not in {"local-docker", "docker", "docker-local", "openfaas", "script", "metadata"}:
+    if mode not in {"local-docker", "docker", "docker-local", "script", "metadata"}:
         print(f"unsupported FaaS mode: {mode}", file=sys.stderr)
         return 2
     _write_env(env_path, data)
@@ -5489,104 +5287,7 @@ def _set_faas_git(args) -> int:
     return 0
 
 
-def _faas_gateway_creds(args) -> tuple[str, str, str, str]:
-    data = _parse_env(_secret_path("faas"))
-    gateway = (getattr(args, "gateway", None) or data.get("FAAS_OPENFAAS_GATEWAY", "")).strip().rstrip("/")
-    username = (getattr(args, "username", None) or data.get("FAAS_OPENFAAS_USERNAME", "admin")).strip() or "admin"
-    if getattr(args, "password_file", None):
-        password = Path(args.password_file).expanduser().read_text(encoding="utf-8").strip()
-    elif getattr(args, "password_env", None):
-        password = os.environ.get(args.password_env, "").strip()
-    else:
-        password = data.get("FAAS_OPENFAAS_PASSWORD", "").strip()
-    mode = (data.get("FAAS_DEPLOY_MODE", "") or "").strip()
-    return gateway, username, password, mode
-
-
-def _faas_gateway_get(gateway: str, path: str, *, username: str = "", password: str = "", timeout: int = 8) -> tuple[int, str]:
-    import base64
-    import urllib.error
-    import urllib.request
-
-    req = urllib.request.Request(f"{gateway}{path}")
-    if username and password:
-        token = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
-        req.add_header("Authorization", f"Basic {token}")
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.getcode(), resp.read().decode("utf-8", "replace")
-    except urllib.error.HTTPError as exc:
-        return exc.code, ""
-    except Exception:
-        return 0, ""
-
-
-def _cmd_faas_node(args) -> int:
-    from urllib.parse import urlparse
-
-    node_cmd = getattr(args, "faas_node_cmd", None) or "ls"
-    gateway, username, password, mode = _faas_gateway_creds(args)
-    as_json = bool(getattr(args, "json", False))
-    if not gateway:
-        note = f"no faasd/openfaas node configured (deploy_mode={mode or 'unset'})"
-        print(json.dumps({"nodes": [], "note": note}, ensure_ascii=False, indent=2) if as_json else note)
-        return 0
-
-    health_http, _ = _faas_gateway_get(gateway, "/healthz", timeout=6)
-    fn_http, fn_body = _faas_gateway_get(gateway, "/system/functions", username=username, password=password, timeout=8)
-    fn_names: list[str] = []
-    fn_count: object = "-"
-    if fn_http == 200 and fn_body:
-        try:
-            arr = json.loads(fn_body)
-            if isinstance(arr, list):
-                fn_count = len(arr)
-                fn_names = [str(item.get("name", "")) for item in arr if isinstance(item, dict)]
-        except json.JSONDecodeError:
-            pass
-    host = urlparse(gateway).hostname or gateway
-    online = health_http == 200
-    auth_ok = fn_http == 200
-    node = {
-        "name": host, "gateway": gateway,
-        "status": "online" if online else "down",
-        "auth": "ok" if auth_ok else "fail",
-        "functions": fn_count, "deploy_mode": mode or "-",
-        "health_http": health_http, "functions_http": fn_http,
-    }
-    if as_json:
-        payload = {"nodes": [node]}
-        if node_cmd == "status":
-            payload["functions_list"] = fn_names
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
-        return 0 if online else 1
-    if node_cmd == "status":
-        rows = [
-            {"key": "node", "value": host},
-            {"key": "gateway", "value": gateway},
-            {"key": "status", "value": node["status"]},
-            {"key": "health_http", "value": health_http},
-            {"key": "auth", "value": node["auth"] if auth_ok else f"fail (http={fn_http})"},
-            {"key": "functions", "value": fn_count},
-            {"key": "deploy_mode", "value": mode or "-"},
-        ]
-        _print_table(rows, [("key", "KEY"), ("value", "VALUE")])
-        if fn_names:
-            print("functions:")
-            for name in fn_names:
-                print(f"  - {name}")
-        return 0 if online else 1
-    _print_table(
-        [{"name": host, "status": node["status"], "auth": node["auth"],
-          "functions": fn_count, "mode": mode or "-", "gateway": gateway}],
-        [("name", "NAME"), ("status", "STATUS"), ("auth", "AUTH"), ("functions", "FUNCTIONS"), ("mode", "MODE"), ("gateway", "GATEWAY")],
-    )
-    return 0 if online else 1
-
-
 def cmd_faas(args) -> int:
-    if getattr(args, "faas_cmd", None) == "node":
-        return _cmd_faas_node(args)
     base_url = _backend_base_url(getattr(args, "base_url", None))
     token = _faas_token_arg(args)
     if args.faas_cmd == "health":
@@ -5611,34 +5312,19 @@ def cmd_faas(args) -> int:
             print(f"faas ls failed: {status or '-'} {text[:500]}", file=sys.stderr)
             return 1
         services = data.get("services", []) if isinstance(data, dict) else []
-        # Instances per function. In self-managed Docker mode, count running
-        # containers (the faasd gateway is gone); otherwise query the gateway.
+        # Instances per function: count running Docker FaaS containers. The
+        # self-managed Docker runtime is the only mode (0 = scaled to zero).
         replicas: dict[str, object] = {}
-        docker_inst = False
+        docker_inst = True
         try:
-            gateway, gw_user, gw_pass, mode = _faas_gateway_creds(args)
-            if mode in {"local-docker", "docker", "docker-local"}:
-                docker_inst = True
-                proc = _run([
-                    "docker", "ps", "--filter", "label=myapp.faas=1",
-                    "--format", '{{.Label "myapp.faas.function_name"}}',
-                ])
-                for line in (proc.stdout or "").splitlines():
-                    fn = line.strip()
-                    if fn:
-                        replicas[fn] = int(replicas.get(fn, 0)) + 1
-            elif gateway:
-                fn_http, fn_body = _faas_gateway_get(gateway, "/system/functions", username=gw_user, password=gw_pass, timeout=8)
-                if fn_http == 200 and fn_body:
-                    for fn in json.loads(fn_body):
-                        if isinstance(fn, dict) and fn.get("name"):
-                            rep = fn.get("replicas")
-                            if rep is None:
-                                rep = fn.get("availableReplicas")
-                            # faasd reports replicas=None for a function whose task
-                            # is stopped (scaled to zero). It is present in the list,
-                            # so None means 0 running instances, not "unknown" -> 1.
-                            replicas[str(fn["name"])] = rep if rep is not None else 0
+            proc = _run([
+                "docker", "ps", "--filter", "label=myapp.faas=1",
+                "--format", '{{.Label "myapp.faas.function_name"}}',
+            ])
+            for line in (proc.stdout or "").splitlines():
+                fn = line.strip()
+                if fn:
+                    replicas[fn] = int(replicas.get(fn, 0)) + 1
         except Exception:
             replicas = {}
             docker_inst = False
@@ -5705,139 +5391,6 @@ def cmd_faas(args) -> int:
         if args.no_cleanup:
             cmd.append("--no-cleanup")
         return _run(cmd, capture=False).returncode
-    if args.faas_cmd == "openfaas-runtime-smoke":
-        script = _source_dir() / "scripts" / "faas_openfaas_runtime_compat_test.py"
-        if not script.is_file():
-            print(f"faas OpenFaaS runtime smoke script not found: {script}", file=sys.stderr)
-            return 1
-        configured = _parse_env(_secret_path("faas"))
-        runtime_image = args.runtime_image or configured.get("FAAS_OPENFAAS_RUNTIME_IMAGE") or _configured_image("faas-runtime")
-        cmd = [sys.executable, str(script), "--runtime-image", runtime_image]
-        if args.service_id:
-            cmd.extend(["--service-id", args.service_id])
-        if args.function_name:
-            cmd.extend(["--function-name", args.function_name])
-        if args.pull_image:
-            cmd.append("--pull-image")
-        if args.keep:
-            cmd.append("--keep")
-        return _run(cmd, capture=False).returncode
-    if args.faas_cmd == "openfaas-backend-smoke":
-        script = _source_dir() / "scripts" / "faas_openfaas_backend_smoke.py"
-        if not script.is_file():
-            print(f"faas OpenFaaS backend smoke script not found: {script}", file=sys.stderr)
-            return 1
-        configured = _parse_env(_secret_path("faas"))
-        runtime_image = args.runtime_image or configured.get("FAAS_OPENFAAS_RUNTIME_IMAGE") or _configured_image("faas-runtime")
-        cmd = [
-            sys.executable,
-            str(script),
-            "--runtime-image",
-            runtime_image,
-            "--base-url",
-            args.base_url or _backend_base_url(None),
-            "--network",
-            args.network,
-            "--bundle-base-url",
-            args.bundle_base_url,
-            "--user-id",
-            args.user_id,
-            "--service-id",
-            args.service_id,
-        ]
-        if args.yes:
-            cmd.append("--yes")
-        if args.pull_image:
-            cmd.append("--pull-image")
-        if args.pull_stack:
-            cmd.append("--pull-stack")
-        if args.keep:
-            cmd.append("--keep")
-        return _run(cmd, capture=False).returncode
-    if args.faas_cmd == "openfaas-gateway-smoke":
-        script = _source_dir() / "scripts" / "faas_openfaas_gateway_smoke.py"
-        if not script.is_file():
-            print(f"faas real OpenFaaS gateway smoke script not found: {script}", file=sys.stderr)
-            return 1
-        configured = _parse_env(_secret_path("faas"))
-        runtime_image = args.runtime_image or configured.get("FAAS_OPENFAAS_RUNTIME_IMAGE") or _configured_image("faas-runtime")
-        cmd = [
-            sys.executable,
-            str(script),
-            "--runtime-image",
-            runtime_image,
-            "--base-url",
-            args.base_url or _backend_base_url(None),
-            "--gateway",
-            args.gateway,
-            "--username",
-            args.username,
-            "--bundle-base-url",
-            args.bundle_base_url,
-            "--user-id",
-            args.user_id,
-            "--service-id",
-            args.service_id,
-        ]
-        if args.yes:
-            cmd.append("--yes")
-        if args.password_env:
-            cmd.extend(["--password-env", args.password_env])
-        if args.password_file:
-            cmd.extend(["--password-file", args.password_file])
-        if args.pull_stack:
-            cmd.append("--pull-stack")
-        return _run(cmd, capture=False).returncode
-    if args.faas_cmd == "openfaas-gateway-check":
-        script = _source_dir() / "scripts" / "faas_openfaas_gateway_check.py"
-        if not script.is_file():
-            print(f"faas real OpenFaaS gateway check script not found: {script}", file=sys.stderr)
-            return 1
-        cmd = [
-            sys.executable,
-            str(script),
-            "--gateway",
-            args.gateway,
-            "--username",
-            args.username,
-            "--bundle-base-url",
-            args.bundle_base_url,
-        ]
-        if args.password_env:
-            cmd.extend(["--password-env", args.password_env])
-        if args.password_file:
-            cmd.extend(["--password-file", args.password_file])
-        if args.json:
-            cmd.append("--json")
-        return _run(cmd, capture=False).returncode
-    if args.faas_cmd == "faasd-host-preflight":
-        return _cmd_faasd_host_preflight(args)
-    if args.faas_cmd == "git-backend-smoke":
-        script = _source_dir() / "scripts" / "faas_git_backend_smoke.py"
-        if not script.is_file():
-            print(f"faas Git backend smoke script not found: {script}", file=sys.stderr)
-            return 1
-        cmd = [
-            sys.executable,
-            str(script),
-            "--base-url",
-            args.base_url or _backend_base_url(None),
-            "--work-root",
-            args.work_root,
-            "--branch",
-            args.branch,
-            "--user-id",
-            args.user_id,
-            "--service-id",
-            args.service_id,
-        ]
-        if args.yes:
-            cmd.append("--yes")
-        if args.pull_stack:
-            cmd.append("--pull-stack")
-        if args.keep:
-            cmd.append("--keep")
-        return _run(cmd, capture=False).returncode
     if args.faas_cmd == "ai-action-smoke":
         script = _source_dir() / "scripts" / "faas_ai_action_smoke.py"
         if not script.is_file():
@@ -5895,10 +5448,6 @@ def cmd_faas(args) -> int:
             cmd.extend(["--password", args.password])
         if args.with_update:
             cmd.append("--with-update")
-        if args.faas_domain:
-            cmd.extend(["--faas-domain", args.faas_domain])
-        if args.function_name:
-            cmd.extend(["--function-name", args.function_name])
         if args.keep:
             cmd.append("--keep")
         try:
@@ -7737,62 +7286,6 @@ def build_parser() -> argparse.ArgumentParser:
     faas_smoke.add_argument("--service-id", help=_tx("explicit smoke service id", zh="指定冒烟服务 ID", de="explizite Smoke-Service-ID", es="service id smoke explicito"))
     faas_smoke.add_argument("--no-cleanup", action="store_true", help=_tx("leave the smoke service in place", zh="保留冒烟服务不清理", de="Smoke-Dienst nicht bereinigen", es="no limpiar servicio smoke"))
     faas_smoke.set_defaults(func=cmd_faas)
-    faas_openfaas_runtime_smoke = faas_sub.add_parser("openfaas-runtime-smoke", help=_tx("verify OpenFaaS runtime payloads with a local Docker compatibility gateway", zh="用本地 Docker 兼容网关验证 OpenFaaS runtime payload", de="OpenFaaS-Runtime-Payloads mit lokalem Docker-Kompatibilitaetsgateway pruefen", es="verificar payloads runtime OpenFaaS con gateway compatible Docker local"), usage=_tx("myapp-ctl faas openfaas-runtime-smoke [options]", zh="myapp-ctl faas openfaas-runtime-smoke [选项]", de="myapp-ctl faas openfaas-runtime-smoke [Optionen]", es="myapp-ctl faas openfaas-runtime-smoke [opciones]"))
-    faas_openfaas_runtime_smoke.add_argument("--runtime-image", help=_tx("runtime image to start; defaults to configured FAAS_OPENFAAS_RUNTIME_IMAGE", zh="要启动的 runtime 镜像；默认使用已配置 FAAS_OPENFAAS_RUNTIME_IMAGE", de="zu startendes Runtime-Image; Standard ist FAAS_OPENFAAS_RUNTIME_IMAGE", es="imagen runtime a iniciar; por defecto FAAS_OPENFAAS_RUNTIME_IMAGE"))
-    faas_openfaas_runtime_smoke.add_argument("--service-id", help=_tx("explicit test service id", zh="指定测试服务 ID", de="explizite Test-Service-ID", es="service id de prueba explicito"))
-    faas_openfaas_runtime_smoke.add_argument("--function-name", help=_tx("explicit test function name", zh="指定测试函数名", de="expliziter Test-Funktionsname", es="nombre de funcion de prueba explicito"))
-    faas_openfaas_runtime_smoke.add_argument("--pull-image", action="store_true", help=_tx("pull the runtime image before running", zh="运行前拉取 runtime 镜像", de="Runtime-Image vor Ausfuehrung pullen", es="hacer pull de la imagen runtime antes de ejecutar"))
-    faas_openfaas_runtime_smoke.add_argument("--keep", action="store_true", help=_tx("keep test containers after completion", zh="完成后保留测试容器", de="Test-Container nach Abschluss behalten", es="mantener contenedores de prueba al finalizar"))
-    faas_openfaas_runtime_smoke.set_defaults(func=cmd_faas)
-    faas_openfaas_backend_smoke = faas_sub.add_parser("openfaas-backend-smoke", help=_tx("temporarily switch deployed backend to openfaas mode and run a smoke test", zh="临时切换已部署后端到 openfaas 模式并运行冒烟测试", de="Backend temporaer in openfaas-Modus schalten und Smoke-Test ausfuehren", es="cambiar temporalmente backend a modo openfaas y ejecutar smoke"), usage=_tx("myapp-ctl faas openfaas-backend-smoke --yes [options]", zh="myapp-ctl faas openfaas-backend-smoke --yes [选项]", de="myapp-ctl faas openfaas-backend-smoke --yes [Optionen]", es="myapp-ctl faas openfaas-backend-smoke --yes [opciones]"))
-    faas_openfaas_backend_smoke.add_argument("--yes", action="store_true", help=_tx("confirm temporary config switch and backend restart", zh="确认临时切换配置并重启后端", de="temporaere Konfigurationsaenderung und Backend-Neustart bestaetigen", es="confirmar cambio temporal y reinicio backend"))
-    faas_openfaas_backend_smoke.add_argument("--base-url", default=None, help=_tx("backend base URL used by faas smoke", zh="faas smoke 使用的后端 base URL", de="Backend-Basis-URL fuer FaaS-Smoke", es="URL base backend para faas smoke"))
-    faas_openfaas_backend_smoke.add_argument("--runtime-image", help=_tx("runtime image to start; defaults to configured FAAS_OPENFAAS_RUNTIME_IMAGE", zh="要启动的 runtime 镜像；默认使用已配置 FAAS_OPENFAAS_RUNTIME_IMAGE", de="zu startendes Runtime-Image; Standard ist FAAS_OPENFAAS_RUNTIME_IMAGE", es="imagen runtime a iniciar; por defecto FAAS_OPENFAAS_RUNTIME_IMAGE"))
-    faas_openfaas_backend_smoke.add_argument("--network", default="myapp_default", help=_tx("Docker network shared by backend and runtime containers", zh="backend 和 runtime 容器共享的 Docker 网络", de="Docker-Netzwerk fuer Backend und Runtime-Container", es="red Docker compartida por backend y runtimes"))
-    faas_openfaas_backend_smoke.add_argument("--bundle-base-url", default="http://backend:5566", help=_tx("bundle base URL visible from runtime containers", zh="runtime 容器可见的 bundle base URL", de="Bundle-Basis-URL sichtbar fuer Runtime-Container", es="URL base bundle visible desde runtimes"))
-    faas_openfaas_backend_smoke.add_argument("--user-id", default="openfaas-backend-smoke", help=_tx("test owner user id", zh="测试 owner user id", de="Test-Owner-User-ID", es="user id owner de prueba"))
-    faas_openfaas_backend_smoke.add_argument("--service-id", default=f"openfaas-backend-smoke-{int(time.time())}", help=_tx("test service id", zh="测试服务 ID", de="Test-Service-ID", es="service id de prueba"))
-    faas_openfaas_backend_smoke.add_argument("--pull-image", action="store_true", help=_tx("pull the runtime image before running", zh="运行前拉取 runtime 镜像", de="Runtime-Image vor Ausfuehrung pullen", es="hacer pull de la imagen runtime antes de ejecutar"))
-    faas_openfaas_backend_smoke.add_argument("--pull-stack", action="store_true", help=_tx("pull backend/FaaS stack images while redeploying", zh="重部署时拉取 backend/FaaS 栈镜像", de="Backend/FaaS-Stack-Images beim Redeploy pullen", es="hacer pull de imagenes backend/FaaS al redesplegar"))
-    faas_openfaas_backend_smoke.add_argument("--keep", action="store_true", help=_tx("keep test runtime containers after completion", zh="完成后保留测试 runtime 容器", de="Test-Runtime-Container nach Abschluss behalten", es="mantener contenedores runtime de prueba"))
-    faas_openfaas_backend_smoke.set_defaults(func=cmd_faas)
-    faas_openfaas_gateway_smoke = faas_sub.add_parser("openfaas-gateway-smoke", help=_tx("temporarily switch deployed backend to a real OpenFaaS/faasd gateway and run smoke", zh="临时切换已部署后端到真实 OpenFaaS/faasd gateway 并运行冒烟测试", de="Backend temporaer auf echtes OpenFaaS/faasd Gateway schalten und Smoke ausfuehren", es="cambiar temporalmente backend a gateway OpenFaaS/faasd real y ejecutar smoke"), usage=_tx("myapp-ctl faas openfaas-gateway-smoke --yes --gateway URL --bundle-base-url URL [options]", zh="myapp-ctl faas openfaas-gateway-smoke --yes --gateway URL --bundle-base-url URL [选项]", de="myapp-ctl faas openfaas-gateway-smoke --yes --gateway URL --bundle-base-url URL [Optionen]", es="myapp-ctl faas openfaas-gateway-smoke --yes --gateway URL --bundle-base-url URL [opciones]"))
-    faas_openfaas_gateway_smoke.add_argument("--yes", action="store_true", help=_tx("confirm temporary config switch and backend restart", zh="确认临时切换配置并重启后端", de="temporaere Konfigurationsaenderung und Backend-Neustart bestaetigen", es="confirmar cambio temporal y reinicio backend"))
-    faas_openfaas_gateway_smoke.add_argument("--gateway", required=True, help=_tx("real OpenFaaS/faasd gateway URL", zh="真实 OpenFaaS/faasd gateway URL", de="echte OpenFaaS/faasd Gateway-URL", es="URL gateway OpenFaaS/faasd real"))
-    faas_openfaas_gateway_smoke.add_argument("--username", default="admin", help=_tx("OpenFaaS basic auth username", zh="OpenFaaS basic auth 用户名", de="OpenFaaS Basic-Auth Benutzername", es="usuario basic auth OpenFaaS"))
-    faas_openfaas_gateway_smoke.add_argument("--password-env", help=_tx("environment variable containing OpenFaaS password", zh="包含 OpenFaaS 密码的环境变量", de="Umgebungsvariable mit OpenFaaS-Passwort", es="variable de entorno con password OpenFaaS"))
-    faas_openfaas_gateway_smoke.add_argument("--password-file", help=_tx("file containing OpenFaaS password", zh="包含 OpenFaaS 密码的文件", de="Datei mit OpenFaaS-Passwort", es="archivo con password OpenFaaS"))
-    faas_openfaas_gateway_smoke.add_argument("--base-url", default=None, help=_tx("backend base URL used by faas smoke", zh="faas smoke 使用的后端 base URL", de="Backend-Basis-URL fuer FaaS-Smoke", es="URL base backend para faas smoke"))
-    faas_openfaas_gateway_smoke.add_argument("--bundle-base-url", required=True, help=_tx("backend base URL visible from OpenFaaS runtime containers", zh="OpenFaaS runtime 容器可访问的后端 base URL", de="Backend-Basis-URL sichtbar fuer OpenFaaS-Runtime-Container", es="URL base backend visible desde runtimes OpenFaaS"))
-    faas_openfaas_gateway_smoke.add_argument("--runtime-image", help=_tx("runtime image to deploy; defaults to configured FAAS_OPENFAAS_RUNTIME_IMAGE", zh="要部署的 runtime 镜像；默认使用已配置 FAAS_OPENFAAS_RUNTIME_IMAGE", de="zu deployendes Runtime-Image; Standard ist FAAS_OPENFAAS_RUNTIME_IMAGE", es="imagen runtime a desplegar; por defecto FAAS_OPENFAAS_RUNTIME_IMAGE"))
-    faas_openfaas_gateway_smoke.add_argument("--user-id", default="openfaas-gateway-smoke", help=_tx("test owner user id", zh="测试 owner user id", de="Test-Owner-User-ID", es="user id owner de prueba"))
-    faas_openfaas_gateway_smoke.add_argument("--service-id", default=f"openfaas-gateway-smoke-{int(time.time())}", help=_tx("test service id", zh="测试服务 ID", de="Test-Service-ID", es="service id de prueba"))
-    faas_openfaas_gateway_smoke.add_argument("--pull-stack", action="store_true", help=_tx("pull backend/FaaS stack images while redeploying", zh="重部署时拉取 backend/FaaS 栈镜像", de="Backend/FaaS-Stack-Images beim Redeploy pullen", es="hacer pull de imagenes backend/FaaS al redesplegar"))
-    faas_openfaas_gateway_smoke.set_defaults(func=cmd_faas)
-    faas_openfaas_gateway_check = faas_sub.add_parser("openfaas-gateway-check", help=_tx("preflight a real OpenFaaS/faasd gateway without changing backend config", zh="预检真实 OpenFaaS/faasd gateway，不修改后端配置", de="echtes OpenFaaS/faasd Gateway pruefen ohne Backend-Konfig zu aendern", es="preflight gateway OpenFaaS/faasd real sin cambiar config backend"), usage=_tx("myapp-ctl faas openfaas-gateway-check --gateway URL --bundle-base-url URL [options]", zh="myapp-ctl faas openfaas-gateway-check --gateway URL --bundle-base-url URL [选项]", de="myapp-ctl faas openfaas-gateway-check --gateway URL --bundle-base-url URL [Optionen]", es="myapp-ctl faas openfaas-gateway-check --gateway URL --bundle-base-url URL [opciones]"))
-    faas_openfaas_gateway_check.add_argument("--gateway", required=True, help=_tx("real OpenFaaS/faasd gateway URL", zh="真实 OpenFaaS/faasd gateway URL", de="echte OpenFaaS/faasd Gateway-URL", es="URL gateway OpenFaaS/faasd real"))
-    faas_openfaas_gateway_check.add_argument("--username", default="admin", help=_tx("OpenFaaS basic auth username", zh="OpenFaaS basic auth 用户名", de="OpenFaaS Basic-Auth Benutzername", es="usuario basic auth OpenFaaS"))
-    faas_openfaas_gateway_check.add_argument("--password-env", help=_tx("environment variable containing OpenFaaS password", zh="包含 OpenFaaS 密码的环境变量", de="Umgebungsvariable mit OpenFaaS-Passwort", es="variable de entorno con password OpenFaaS"))
-    faas_openfaas_gateway_check.add_argument("--password-file", help=_tx("file containing OpenFaaS password", zh="包含 OpenFaaS 密码的文件", de="Datei mit OpenFaaS-Passwort", es="archivo con password OpenFaaS"))
-    faas_openfaas_gateway_check.add_argument("--bundle-base-url", required=True, help=_tx("backend base URL intended for runtime bundle fetches", zh="runtime 拉取 bundle 使用的后端 base URL", de="Backend-Basis-URL fuer Runtime-Bundle-Fetch", es="URL base backend para descarga de bundle runtime"))
-    faas_openfaas_gateway_check.add_argument("--json", action="store_true", help=_tx("output machine-readable JSON", zh="输出机器可读 JSON", de="maschinenlesbares JSON ausgeben", es="mostrar JSON legible por maquina"))
-    faas_openfaas_gateway_check.set_defaults(func=cmd_faas)
-    faas_faasd_host_preflight = faas_sub.add_parser("faasd-host-preflight", help=_tx("check whether this host is safe for dedicated faasd installation", zh="检查本机是否适合专用 faasd 安装", de="pruefen, ob dieser Host fuer eine dedizierte faasd-Installation geeignet ist", es="comprobar si este host es apto para instalacion faasd dedicada"), usage=_tx("myapp-ctl faas faasd-host-preflight [options]", zh="myapp-ctl faas faasd-host-preflight [选项]", de="myapp-ctl faas faasd-host-preflight [Optionen]", es="myapp-ctl faas faasd-host-preflight [opciones]"))
-    faas_faasd_host_preflight.add_argument("--allow-docker", action="store_true", help=_tx("deprecated: Docker co-location is now supported, so this is a no-op", zh="已废弃：现已支持与 Docker 共存，此项无效", de="veraltet: Docker-Koexistenz wird jetzt unterstuetzt, ohne Wirkung", es="obsoleto: la co-ubicacion con Docker ahora es compatible; sin efecto"))
-    faas_faasd_host_preflight.add_argument("--expect-empty-ports", action="store_true", help=_tx("fail if ports 8080/8081 are already listening", zh="8080/8081 已监听时失败", de="fehlschlagen, wenn Ports 8080/8081 bereits lauschen", es="fallar si puertos 8080/8081 ya escuchan"))
-    faas_faasd_host_preflight.add_argument("--expect-installed", action="store_true", help=_tx("require faasd and faasd-provider systemd services to be active", zh="要求 faasd 和 faasd-provider systemd 服务处于 active", de="faasd und faasd-provider systemd-Dienste muessen aktiv sein", es="requerir servicios systemd faasd y faasd-provider activos"))
-    faas_faasd_host_preflight.add_argument("--json", action="store_true", help=_tx("output machine-readable JSON", zh="输出机器可读 JSON", de="maschinenlesbares JSON ausgeben", es="mostrar JSON legible por maquina"))
-    faas_faasd_host_preflight.set_defaults(func=cmd_faas)
-    faas_git_backend_smoke = faas_sub.add_parser("git-backend-smoke", help=_tx("temporarily verify backend-owned FaaS Git push through HTTP API", zh="临时验证后端托管的 FaaS Git push HTTP 链路", de="Backend-eigenen FaaS-Git-Push ueber HTTP-API temporaer pruefen", es="verificar temporalmente push Git FaaS del backend via API HTTP"), usage=_tx("myapp-ctl faas git-backend-smoke --yes [options]", zh="myapp-ctl faas git-backend-smoke --yes [选项]", de="myapp-ctl faas git-backend-smoke --yes [Optionen]", es="myapp-ctl faas git-backend-smoke --yes [opciones]"))
-    faas_git_backend_smoke.add_argument("--yes", action="store_true", help=_tx("confirm temporary config switch and backend restart", zh="确认临时切换配置并重启后端", de="temporaere Konfigurationsaenderung und Backend-Neustart bestaetigen", es="confirmar cambio temporal y reinicio backend"))
-    faas_git_backend_smoke.add_argument("--base-url", default=None, help=_tx("backend base URL used by faas smoke", zh="faas smoke 使用的后端 base URL", de="Backend-Basis-URL fuer FaaS-Smoke", es="URL base backend para faas smoke"))
-    faas_git_backend_smoke.add_argument("--work-root", default="/mnt/myapp/faas/tmp", help=_tx("shared temp root visible from host and backend container", zh="宿主机和 backend 容器都可见的临时目录", de="gemeinsames Temp-Verzeichnis fuer Host und Backend-Container", es="raiz temporal compartida visible por host y contenedor backend"))
-    faas_git_backend_smoke.add_argument("--branch", default="main", help=_tx("temporary bare Git remote branch", zh="临时 bare Git remote 分支", de="Branch des temporaeren Bare-Git-Remotes", es="rama del remote Git bare temporal"))
-    faas_git_backend_smoke.add_argument("--user-id", default="git-backend-smoke-user", help=_tx("test owner user id", zh="测试 owner user id", de="Test-Owner-User-ID", es="user id owner de prueba"))
-    faas_git_backend_smoke.add_argument("--service-id", default=f"git-backend-smoke-{int(time.time())}", help=_tx("test service id", zh="测试服务 ID", de="Test-Service-ID", es="service id de prueba"))
-    faas_git_backend_smoke.add_argument("--pull-stack", action="store_true", help=_tx("pull backend/FaaS stack images while redeploying", zh="重部署时拉取 backend/FaaS 栈镜像", de="Backend/FaaS-Stack-Images beim Redeploy pullen", es="hacer pull de imagenes backend/FaaS al redesplegar"))
-    faas_git_backend_smoke.add_argument("--keep", action="store_true", help=_tx("keep temporary Git remote and generated service", zh="保留临时 Git remote 和生成服务", de="temporaeres Git-Remote und generierten Dienst behalten", es="mantener remote Git temporal y servicio generado"))
-    faas_git_backend_smoke.set_defaults(func=cmd_faas)
     faas_ai_action_smoke = faas_sub.add_parser("ai-action-smoke", help=_tx("simulate Agent FaaS artifacts and resolve them through the deployed backend", zh="模拟 Agent FaaS 产物并通过已部署后端解析部署", de="Agent-FaaS-Artefakte simulieren und im deployten Backend aufloesen", es="simular artefactos FaaS de Agent y resolverlos en backend desplegado"), usage=_tx("myapp-ctl faas ai-action-smoke [options]", zh="myapp-ctl faas ai-action-smoke [选项]", de="myapp-ctl faas ai-action-smoke [Optionen]", es="myapp-ctl faas ai-action-smoke [opciones]"))
     faas_ai_action_smoke.add_argument("--base-url", default="http://127.0.0.1:5566", help=_tx("backend base URL used for invocation", zh="调用生成服务使用的后端 base URL", de="Backend-Basis-URL fuer Invocation", es="URL base backend para invocacion"))
     faas_ai_action_smoke.add_argument("--user-id", default="ai-action-smoke-user", help=_tx("test owner user id", zh="测试 owner user id", de="Test-Owner-User-ID", es="user id owner de prueba"))
@@ -7807,28 +7300,17 @@ def build_parser() -> argparse.ArgumentParser:
     faas_e2e.add_argument("--agent", default="claude", help=_tx("agent id used for generation", zh="生成使用的 agent id", de="Agent-ID fuer die Generierung", es="id del agente para la generacion"))
     faas_e2e.add_argument("--timeout", type=int, default=900, help=_tx("max seconds to wait per generation", zh="每次生成等待的最大秒数", de="maximale Wartezeit pro Generierung in Sekunden", es="segundos maximos de espera por generacion"))
     faas_e2e.add_argument("--with-update", action="store_true", help=_tx("also run the update path (second generation)", zh="同时跑更新路径（第二次生成）", de="auch den Update-Pfad ausfuehren (zweite Generierung)", es="ejecutar tambien la ruta de actualizacion (segunda generacion)"))
-    faas_e2e.add_argument("--faas-domain", default="", help=_tx("enable direct mode-b invoke via this faasd node domain", zh="启用经该 faasd 节点域名的直连 mode-b 调用", de="Direkt-Invoke (Modus b) ueber diese faasd-Node-Domain aktivieren", es="activar invocacion directa modo-b via este dominio de nodo faasd"))
-    faas_e2e.add_argument("--function-name", default="", help=_tx("faasd function name for mode-b direct invoke", zh="mode-b 直连使用的 faasd 函数名", de="faasd-Funktionsname fuer Modus-b-Direktaufruf", es="nombre de funcion faasd para invocacion directa modo-b"))
     faas_e2e.add_argument("--email", default="", help=_tx("test user email (default fixed faas-e2e@e2e.local)", zh="测试用户邮箱（默认固定 faas-e2e@e2e.local）", de="Test-Benutzer-E-Mail (Standard faas-e2e@e2e.local)", es="email de usuario de prueba (por defecto faas-e2e@e2e.local)"))
     faas_e2e.add_argument("--password", default="", help=_tx("test user password (default fixed)", zh="测试用户密码（默认固定）", de="Test-Benutzer-Passwort (Standard fest)", es="password de usuario de prueba (fijo por defecto)"))
     faas_e2e.add_argument("--keep", action="store_true", help=_tx("do not delete the generated service", zh="不删除生成的服务", de="generierten Dienst nicht loeschen", es="no eliminar el servicio generado"))
     faas_e2e.set_defaults(func=cmd_faas)
     faas_mode = faas_sub.add_parser("mode", help=_tx("configure generated FaaS deploy mode", zh="配置生成后端的 FaaS 部署模式", de="Deploy-Modus fuer generierte FaaS konfigurieren", es="configurar modo deploy FaaS generado"), usage=_tx("myapp-ctl faas mode <mode> [options]", zh="myapp-ctl faas mode <模式> [选项]", de="myapp-ctl faas mode <Modus> [Optionen]", es="myapp-ctl faas mode <modo> [opciones]"))
-    faas_mode.add_argument("mode", choices=["local-docker", "openfaas", "metadata", "script"], help=_tx("deploy mode: local-docker, openfaas, metadata, script", zh="部署模式: local-docker, openfaas, metadata, script", de="Deploy-Modus: local-docker, openfaas, metadata, script", es="modo de deploy: local-docker, openfaas, metadata, script"))
-    faas_mode.add_argument("--gateway", help=_tx("OpenFaaS gateway URL for openfaas mode", zh="openfaas 模式的 OpenFaaS gateway URL", de="OpenFaaS-Gateway-URL fuer openfaas-Modus", es="URL gateway OpenFaaS para modo openfaas"))
-    faas_mode.add_argument("--username", help=_tx("OpenFaaS basic auth username", zh="OpenFaaS basic auth 用户名", de="OpenFaaS Basic-Auth Benutzername", es="usuario basic auth OpenFaaS"))
-    faas_mode.add_argument("--password-env", help=_tx("environment variable containing OpenFaaS password", zh="包含 OpenFaaS 密码的环境变量", de="Umgebungsvariable mit OpenFaaS-Passwort", es="variable de entorno con password OpenFaaS"))
-    faas_mode.add_argument("--password-file", help=_tx("file containing OpenFaaS password", zh="包含 OpenFaaS 密码的文件", de="Datei mit OpenFaaS-Passwort", es="archivo con password OpenFaaS"))
-    faas_mode.add_argument("--runtime-image", help=_tx("runtime image used by local-docker/openfaas", zh="local-docker/openfaas 使用的 runtime 镜像", de="Runtime-Image fuer local-docker/openfaas", es="imagen runtime usada por local-docker/openfaas"))
-    faas_mode.add_argument("--bundle-base-url", help=_tx("backend base URL used by OpenFaaS runtimes to fetch bundles", zh="OpenFaaS runtime 拉取 bundle 的后端 base URL", de="Backend-Basis-URL fuer Bundle-Fetch durch OpenFaaS-Runtimes", es="URL base backend para que runtimes OpenFaaS descarguen bundles"))
+    faas_mode.add_argument("mode", choices=["local-docker", "metadata", "script"], help=_tx("deploy mode: local-docker, metadata, script", zh="部署模式: local-docker, metadata, script", de="Deploy-Modus: local-docker, metadata, script", es="modo de deploy: local-docker, metadata, script"))
+    faas_mode.add_argument("--runtime-image", help=_tx("runtime image used by the Docker FaaS", zh="Docker FaaS 使用的 runtime 镜像", de="Runtime-Image fuer die Docker-FaaS", es="imagen runtime usada por la Docker FaaS"))
+    faas_mode.add_argument("--bundle-base-url", help=_tx("backend base URL used to fetch runtime bundles", zh="拉取 runtime bundle 的后端 base URL", de="Backend-Basis-URL fuer Bundle-Fetch", es="URL base backend para descargar bundles runtime"))
     faas_mode.add_argument("--public-base-url", help=_tx("public base URL returned for generated FaaS invoke paths", zh="生成 FaaS 调用路径返回的 public base URL", de="oeffentliche Basis-URL fuer generierte FaaS-Aufrufe", es="URL base publica para invocaciones FaaS"))
     faas_mode.add_argument("--deploy-script", help=_tx("deploy script path for script mode", zh="script 模式部署脚本路径", de="Deploy-Script-Pfad fuer script-Modus", es="ruta script deploy para modo script"))
     faas_mode.add_argument("--max-services", type=int, help=_tx("per-user active service limit", zh="每用户活跃服务数量上限", de="aktive Dienste pro Benutzer", es="limite de servicios activos por usuario"))
-    scale_group = faas_mode.add_mutually_exclusive_group()
-    scale_group.add_argument("--scale-zero", dest="scale_zero", action="store_true", default=None, help=_tx("enable OpenFaaS scale-to-zero labels", zh="启用 OpenFaaS scale-to-zero label", de="OpenFaaS Scale-to-zero Labels aktivieren", es="activar labels scale-to-zero de OpenFaaS"))
-    scale_group.add_argument("--no-scale-zero", dest="scale_zero", action="store_false", help=_tx("disable OpenFaaS scale-to-zero labels", zh="禁用 OpenFaaS scale-to-zero label", de="OpenFaaS Scale-to-zero Labels deaktivieren", es="desactivar labels scale-to-zero de OpenFaaS"))
-    faas_mode.add_argument("--min-replicas", type=int, help=_tx("OpenFaaS min replicas label", zh="OpenFaaS 最小副本 label", de="OpenFaaS min replicas Label", es="label replicas min OpenFaaS"))
-    faas_mode.add_argument("--max-replicas", type=int, help=_tx("OpenFaaS max replicas label", zh="OpenFaaS 最大副本 label", de="OpenFaaS max replicas Label", es="label replicas max OpenFaaS"))
     faas_mode.set_defaults(func=cmd_faas)
     faas_git = faas_sub.add_parser("git", help=_tx("configure backend-owned FaaS Git storage", zh="配置后端托管的 FaaS Git 存储", de="Backend-eigenen FaaS-Git-Speicher konfigurieren", es="configurar almacenamiento Git FaaS del backend"), usage=_tx("myapp-ctl faas git [options]", zh="myapp-ctl faas git [选项]", de="myapp-ctl faas git [Optionen]", es="myapp-ctl faas git [opciones]"))
     git_enable = faas_git.add_mutually_exclusive_group()
@@ -7852,23 +7334,6 @@ def build_parser() -> argparse.ArgumentParser:
     faas_config.add_argument("--json", action="store_true", help=_tx("output machine-readable JSON", zh="输出机器可读 JSON", de="maschinenlesbares JSON ausgeben", es="mostrar JSON legible por maquina"))
     faas_config.add_argument("--show-secrets", action="store_true", help=_tx("show raw secret values", zh="显示原始密钥值", de="echte Secret-Werte anzeigen", es="mostrar valores secretos reales"))
     faas_config.set_defaults(func=cmd_faas)
-    faas_node = faas_sub.add_parser("node", help=_tx("inspect the faasd/openfaas node(s) backing generated FaaS", zh="查看承载 FaaS 的 faasd/openfaas 节点", de="faasd/openfaas-Node(s) fuer generierte FaaS anzeigen", es="inspeccionar nodo(s) faasd/openfaas de FaaS"), usage=_tx("myapp-ctl faas node <ls|status> [options]", zh="myapp-ctl faas node <ls|status> [选项]", de="myapp-ctl faas node <ls|status> [Optionen]", es="myapp-ctl faas node <ls|status> [opciones]"))
-    faas_node_sub = _add_subcommands(faas_node, "faas_node_cmd", required=False)
-    faas_node.set_defaults(func=cmd_faas, faas_node_cmd=None)
-
-    def _faas_node_opts(p):
-        p.add_argument("--gateway", help=_tx("override faasd/openfaas gateway URL", zh="覆盖 faasd/openfaas 网关 URL", de="faasd/openfaas-Gateway-URL ueberschreiben", es="anular URL de gateway faasd/openfaas"))
-        p.add_argument("--username", help=_tx("gateway basic-auth username (default admin)", zh="网关 basic-auth 用户名(默认 admin)", de="Gateway-Basic-Auth-Benutzer (Standard admin)", es="usuario basic-auth del gateway (admin)"))
-        p.add_argument("--password-env", help=_tx("env var holding gateway password", zh="存放网关密码的环境变量", de="Umgebungsvariable mit Gateway-Passwort", es="variable de entorno con contrasena del gateway"))
-        p.add_argument("--password-file", help=_tx("file holding gateway password", zh="存放网关密码的文件", de="Datei mit Gateway-Passwort", es="archivo con contrasena del gateway"))
-        p.add_argument("--json", action="store_true", help=_tx("output machine-readable JSON", zh="输出机器可读 JSON", de="maschinenlesbares JSON ausgeben", es="mostrar JSON legible por maquina"))
-
-    faas_node_ls = faas_node_sub.add_parser("ls", help=_tx("list faas node(s) and health", zh="列出 faas 节点及健康状态", de="faas-Node(s) und Health auflisten", es="listar nodo(s) faas y salud"), usage=_tx("myapp-ctl faas node ls [options]", zh="myapp-ctl faas node ls [选项]", de="myapp-ctl faas node ls [Optionen]", es="myapp-ctl faas node ls [opciones]"))
-    _faas_node_opts(faas_node_ls)
-    faas_node_ls.set_defaults(func=cmd_faas)
-    faas_node_status = faas_node_sub.add_parser("status", help=_tx("show detailed faas node status", zh="显示 faas 节点详细状态", de="detaillierten faas-Node-Status anzeigen", es="mostrar estado detallado del nodo faas"), usage=_tx("myapp-ctl faas node status [options]", zh="myapp-ctl faas node status [选项]", de="myapp-ctl faas node status [Optionen]", es="myapp-ctl faas node status [opciones]"))
-    _faas_node_opts(faas_node_status)
-    faas_node_status.set_defaults(func=cmd_faas)
     client_env = sub.add_parser("client-env", help=_tx("generate client Service Environment import JSON and QR", zh="生成客户端服务环境导入 JSON 和二维码", de="Client-Service-Environment JSON und QR erzeugen", es="generar JSON y QR de entorno de servicio del cliente"), usage=_tx("myapp-ctl client-env [options]", zh="myapp-ctl client-env [选项]", de="myapp-ctl client-env [Optionen]", es="myapp-ctl client-env [opciones]"))
     client_env.add_argument("--host", help=_tx("public host/IP to use in generated URLs", zh="生成 URL 使用的公网域名或 IP", de="oeffentlicher Host/IP fuer generierte URLs", es="host/IP publico para URLs generadas"))
     client_env.add_argument("--name", help=_tx("environment name shown in the client", zh="客户端显示的环境名称", de="im Client angezeigter Umgebungsname", es="nombre de entorno mostrado en el cliente"))

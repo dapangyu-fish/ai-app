@@ -1,6 +1,6 @@
 # 带 FaaS 后端的 JSON-APP 生成方法（标准路径 · 范本：FaaS 测试台）
 
-> ⚠️ **运行时已更新(2026-06):FaaS 默认运行时已从 OpenFaaS/faasd 迁移到自研 Docker FaaS**(`FAAS_DEPLOY_MODE=local-docker`:容器即服务,控制面自管 部署/路由/冷唤醒/scale-to-zero/扩缩容,无 OpenFaaS CE 的 15 函数上限)。faasd/OpenFaaS 仅作为可选 legacy 模式保留。当前运行时与运维以 `docs/faas-docker-runtime.md` 为准;本文档中涉及 faasd/OpenFaaS 安装与网关的部分按 legacy 看待。
+> **运行时：自研 Docker FaaS**(`FAAS_DEPLOY_MODE=local-docker`:容器即服务,控制面自管 部署/路由/冷唤醒/scale-to-zero/扩缩容,无函数数量上限)。运行时与运维以 `docs/faas-docker-runtime.md` 为准。
 
 > **读者：后端生成 Agent（v1/v2 都适用）。** 一旦你判断用户需求需要「后端能力」，
 > 在写任何 bundle/JSON 之前**必须通读本文件并严格照此执行**。这是把「前端 JSON-APP

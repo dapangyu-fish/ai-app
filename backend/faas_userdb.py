@@ -28,9 +28,9 @@ ADMIN_PORT = int(os.environ.get("DB_PORT", "5432"))
 ADMIN_USER = os.environ.get("DB_USER", "jsonapp")
 ADMIN_PASSWORD = os.environ.get("DB_PASSWORD", "")
 PLATFORM_DB_NAME = os.environ.get("DB_NAME", "jsonapp")
-# Host:port the FaaS RUNTIME (faasd CNI) uses to reach Postgres. Functions can
-# reach the docker bridge gateway IP (same place the openfaas gateway lives), so
-# Postgres is published there. Distinct from ADMIN_HOST (docker DNS for backend).
+# Host:port the FaaS RUNTIME containers use to reach Postgres. Functions can
+# reach the docker bridge gateway IP, so Postgres is published there. Distinct
+# from ADMIN_HOST (docker DNS for the backend).
 RUNTIME_HOST = os.environ.get("FAAS_USER_DB_RUNTIME_HOST", "172.18.0.1").strip()
 RUNTIME_PORT = int(os.environ.get("FAAS_USER_DB_RUNTIME_PORT", "5432"))
 CONN_LIMIT = int(os.environ.get("FAAS_USER_DB_CONN_LIMIT", "8"))

@@ -17,7 +17,7 @@ from flask import Response, jsonify, request, stream_with_context
 
 try:
     from auth import verify_access_token
-    from config import AGENT_NODE_TOKEN, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_OPENFAAS_GATEWAY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
+    from config import AGENT_NODE_TOKEN, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
     from faas_store import (
         FaaSError,
         FaaSValidationError,
@@ -30,7 +30,6 @@ try:
         list_services,
         load_bundle_bytes,
         load_bundle_zip,
-        openfaas_gateway_for_service,
         runtime_bundle_for_service,
         service_deploy_mode,
         scale_service,
@@ -38,7 +37,7 @@ try:
     )
 except ModuleNotFoundError:
     from backend.auth import verify_access_token
-    from backend.config import AGENT_NODE_TOKEN, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_OPENFAAS_GATEWAY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
+    from backend.config import AGENT_NODE_TOKEN, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
     from backend.faas_store import (
         FaaSError,
         FaaSValidationError,
@@ -50,7 +49,6 @@ except ModuleNotFoundError:
         list_services,
         load_bundle_bytes,
         load_bundle_zip,
-        openfaas_gateway_for_service,
         runtime_bundle_for_service,
         service_deploy_mode,
         scale_service,
@@ -243,20 +241,10 @@ def health():
         tables = True
     except Exception:
         tables = False
-    gateway = FAAS_OPENFAAS_GATEWAY
-    gateway_ok: bool | None = None
-    if gateway:
-        try:
-            resp = requests.get(f"{gateway.rstrip('/')}/healthz", timeout=1.5)
-            gateway_ok = 200 <= resp.status_code < 500
-        except requests.RequestException:
-            gateway_ok = False
     return jsonify({
         "ok": tables,
         "tables": tables,
         "deploy_mode": FAAS_DEPLOY_MODE,
-        "openfaas_gateway": gateway,
-        "openfaas_gateway_ok": gateway_ok,
         "auth_required": FAAS_REQUIRE_AUTH,
     })
 
@@ -380,27 +368,16 @@ def invoke_service(service_id: str, route_path: str = ""):
         return _json_error(message, status, code="FAAS_ROUTE_NOT_ALLOWED")
 
     mode = service_deploy_mode(service)
-    if mode in _LOCAL_DOCKER_MODES:
-        try:
-            upstream = ensure_local_docker_runtime_for_service(service)
-        except FaaSError as exc:
-            return _json_error(str(exc), 502, code="FAAS_INVOKE_FAILED")
-    else:
-        gateway = (
-            openfaas_gateway_for_service(service)
-            if mode == "openfaas"
-            else FAAS_OPENFAAS_GATEWAY.rstrip("/")
+    if mode not in _LOCAL_DOCKER_MODES:
+        return _json_error(
+            f"service deploy mode '{mode}' is not invocable; only the self-managed Docker runtime is supported",
+            503,
+            code="FAAS_RUNTIME_UNCONFIGURED",
         )
-        if not gateway:
-            return _json_error(
-                "FaaS gateway is not configured and local runtime mode is disabled",
-                503,
-                code="FAAS_GATEWAY_UNCONFIGURED",
-            )
-        function_name = str(service.get("function_name") or "").strip()
-        if not function_name:
-            return _json_error("service function name is missing", 500, code="FAAS_MISCONFIGURED")
-        upstream = f"{gateway}/function/{quote(function_name)}"
+    try:
+        upstream = ensure_local_docker_runtime_for_service(service)
+    except FaaSError as exc:
+        return _json_error(str(exc), 502, code="FAAS_INVOKE_FAILED")
     if safe_route_suffix:
         upstream = upstream.rstrip("/") + safe_route_suffix
     if request.query_string:
@@ -421,11 +398,9 @@ def invoke_service(service_id: str, route_path: str = ""):
         if key.lower() not in sensitive_request_headers
     }
     request_body = request.get_data()
-    # Tolerate faasd/OpenFaaS scale-from-zero cold starts: faasd reports a
-    # function "ready" as soon as its container task runs, before the runtime is
-    # listening, so the first proxy can fail with a gateway-level 5xx
-    # ("Can't reach service" / connection refused). The request never reached the
-    # generated app, so retrying is safe for any HTTP method.
+    # Tolerate scale-from-zero cold starts: a just-started container may not be
+    # listening yet, so the first proxy can fail with a connection-level 5xx. The
+    # request never reached the generated app, so retrying is safe for any method.
     _cold_markers = ("can't reach service", "cannot reach", "no endpoints available", "connection refused")
     max_attempts = 5
     resp = None

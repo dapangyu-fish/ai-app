@@ -1,7 +1,7 @@
 """User-generated FaaS service storage and deployment helpers.
 
 This module is deliberately backend-owned. Agent runtimes may generate a
-structured bundle, but they never receive GitHub/OpenFaaS credentials and never
+structured bundle, but they never receive GitHub credentials and never
 write directly to the durable repository.
 """
 
@@ -22,7 +22,6 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from urllib.parse import quote
 
 import requests
 
@@ -52,17 +51,6 @@ try:
         FAAS_LOCAL_DOCKER_START_ON_DEPLOY,
         FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS,
         FAAS_MAX_SERVICES_PER_USER,
-        FAAS_DEFAULT_NODE_ID,
-        FAAS_OPENFAAS_GATEWAY,
-        FAAS_OPENFAAS_MAX_REPLICAS,
-        FAAS_OPENFAAS_NODES,
-        FAAS_OPENFAAS_MIN_REPLICAS,
-        FAAS_OPENFAAS_PASSWORD,
-        FAAS_OPENFAAS_READ_TIMEOUT,
-        FAAS_OPENFAAS_RUNTIME_IMAGE,
-        FAAS_OPENFAAS_SCALE_ZERO,
-        FAAS_OPENFAAS_USERNAME,
-        FAAS_OPENFAAS_WRITE_TIMEOUT,
         FAAS_NODE_PUBLIC_URL,
         FAAS_PUBLIC_BASE_URL,
         FAAS_REQUIREMENTS_MAX_LINES,
@@ -98,17 +86,6 @@ except ModuleNotFoundError:
         FAAS_LOCAL_DOCKER_START_ON_DEPLOY,
         FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS,
         FAAS_MAX_SERVICES_PER_USER,
-        FAAS_DEFAULT_NODE_ID,
-        FAAS_OPENFAAS_GATEWAY,
-        FAAS_OPENFAAS_MAX_REPLICAS,
-        FAAS_OPENFAAS_NODES,
-        FAAS_OPENFAAS_MIN_REPLICAS,
-        FAAS_OPENFAAS_PASSWORD,
-        FAAS_OPENFAAS_READ_TIMEOUT,
-        FAAS_OPENFAAS_RUNTIME_IMAGE,
-        FAAS_OPENFAAS_SCALE_ZERO,
-        FAAS_OPENFAAS_USERNAME,
-        FAAS_OPENFAAS_WRITE_TIMEOUT,
         FAAS_NODE_PUBLIC_URL,
         FAAS_PUBLIC_BASE_URL,
         FAAS_REQUIREMENTS_MAX_LINES,
@@ -386,10 +363,10 @@ def _running_replicas(function_name: str) -> list[int]:
 
 
 # ── self-managed Docker FaaS: scale-to-zero state ────────────────────────────
-# Replaces faasd's idler. The invoke path touches a per-service activity file;
+# The invoke path touches a per-service activity file;
 # the reaper (faas_docker_reaper.py) stops containers idle past the threshold,
 # and the invoke path cold-wakes them (container.start, env preserved). No
-# OpenFaaS CE 15-function cap — Docker manages an arbitrary number of services.
+# The self-managed Docker FaaS manages an arbitrary number of services (no cap).
 FAAS_DOCKER_SCALE_ZERO = os.environ.get("FAAS_DOCKER_SCALE_ZERO", "1").strip().lower() in {"1", "true", "yes", "on"}
 FAAS_DOCKER_IDLE_SECONDS = int(os.environ.get("FAAS_DOCKER_IDLE_SECONDS", "600"))
 FAAS_DOCKER_STATE_DIR = os.environ.get("FAAS_DOCKER_STATE_DIR", "/mnt/myapp/faas/state").rstrip("/")
@@ -448,19 +425,7 @@ def _json_object(value: Any) -> dict[str, Any]:
 def _current_deploy_meta() -> dict[str, Any]:
     mode = str(FAAS_DEPLOY_MODE or "").strip()
     meta: dict[str, Any] = {"mode": mode}
-    if mode == "openfaas":
-        meta.update(
-            {
-                "openfaas_gateway": str(FAAS_OPENFAAS_GATEWAY or "").rstrip("/"),
-                "runtime_image": FAAS_OPENFAAS_RUNTIME_IMAGE,
-                "bundle_base_url": FAAS_RUNTIME_BUNDLE_BASE_URL or FAAS_PUBLIC_BASE_URL,
-            }
-        )
-        # Pin the service to a faas-node when multi-node routing is configured; the
-        # invoke proxy resolves node_id -> gateway URL via FAAS_OPENFAAS_NODES.
-        if FAAS_DEFAULT_NODE_ID:
-            meta["node_id"] = FAAS_DEFAULT_NODE_ID
-    elif mode in _LOCAL_DOCKER_MODES:
+    if mode in _LOCAL_DOCKER_MODES:
         meta.update(
             {
                 "runtime_image": FAAS_LOCAL_DOCKER_IMAGE,
@@ -479,35 +444,10 @@ def _meta_with_current_deploy(bundle_meta: Any) -> dict[str, Any]:
     return meta
 
 
-def openfaas_gateway_for_service(service: dict[str, Any] | None) -> str:
-    """Resolve which faasd gateway a service is invoked through.
-
-    Priority: meta_json.deploy.node_id (resolved via FAAS_OPENFAAS_NODES) ->
-    the service's pinned meta_json.deploy.openfaas_gateway -> the global
-    FAAS_OPENFAAS_GATEWAY. A node_id that is set but absent from the registry is a
-    misconfiguration we surface loudly rather than silently routing to the wrong
-    (or global) node."""
-    if service:
-        meta = _json_object(service.get("meta_json"))
-        deploy = _json_object(meta.get("deploy"))
-        node_id = str(deploy.get("node_id") or "").strip()
-        if node_id:
-            url = FAAS_OPENFAAS_NODES.get(node_id)
-            if not url:
-                raise FaaSError(
-                    f"faas node '{node_id}' for this service is not in FAAS_OPENFAAS_NODES"
-                )
-            return str(url).strip().rstrip("/")
-        gateway = str(deploy.get("openfaas_gateway") or "").strip().rstrip("/")
-        if gateway:
-            return gateway
-    return str(FAAS_OPENFAAS_GATEWAY or "").strip().rstrip("/")
-
-
 def service_deploy_mode(service: dict[str, Any] | None) -> str:
     """Per-service deploy mode (meta_json.deploy.mode) with the global
-    FAAS_DEPLOY_MODE as fallback. Lets faasd-era services keep routing to faasd
-    while new services use the self-managed Docker runtime during/after migration."""
+    FAAS_DEPLOY_MODE as fallback. The only real runtime is the self-managed
+    Docker FaaS (local-docker); 'metadata'/'none' are no-op modes for tests/dev."""
     if service:
         meta = _json_object(service.get("meta_json"))
         deploy = _json_object(meta.get("deploy"))
@@ -1570,48 +1510,6 @@ def scale_service(owner_user_id: str, service_id: str, replicas: int) -> dict[st
     return {"service_id": service_id, "replicas": replicas, "running": _running_replicas(function_name)}
 
 
-def migrate_service_to_docker(service: dict[str, Any]) -> dict[str, Any]:
-    """Migrate one faasd/openfaas service to the self-managed Docker runtime:
-    flip meta.deploy.mode to local-docker, start a docker container from the
-    service's existing code, then delete the old faasd function. Idempotent."""
-    service_id = str(service.get("service_id") or "").strip()
-    function_name = str(service.get("function_name") or "").strip()
-    active_path = str(service.get("active_path") or "").strip()
-    if not service_id or not function_name or not active_path:
-        raise FaaSError("service is missing runtime metadata")
-    warnings: list[str] = []
-    if service_deploy_mode(service) in _LOCAL_DOCKER_MODES:
-        return {"service_id": service_id, "migrated": False, "reason": "already docker"}
-    old_gateway = ""
-    try:
-        old_gateway = openfaas_gateway_for_service(service)
-    except Exception as exc:
-        warnings.append(f"old gateway resolve: {exc}")
-    # 1) flip recorded deploy mode -> docker, so the invoke proxy routes to docker
-    db_execute(
-        "UPDATE faas_services SET meta_json = jsonb_set(coalesce(meta_json, '{}')::jsonb, "
-        "'{deploy}', %s::jsonb, true), updated_at = NOW() WHERE service_id = %s",
-        [json.dumps(_current_deploy_meta()), service_id],
-    )
-    # 2) start a docker container from the existing code (verifies health)
-    fresh = get_service(service_id) or service
-    upstream = ensure_local_docker_runtime_for_service(fresh)
-    # 3) remove the old faasd function (best-effort)
-    if old_gateway:
-        try:
-            _delete_openfaas_function(function_name, gateway=old_gateway)
-        except Exception as exc:
-            warnings.append(f"delete faasd fn: {exc}")
-    return {"service_id": service_id, "migrated": True, "upstream": upstream, "warnings": warnings}
-
-
-def _runtime_bundle_url(service_id: str) -> str:
-    base = FAAS_RUNTIME_BUNDLE_BASE_URL or FAAS_PUBLIC_BASE_URL
-    if not base:
-        raise FaaSError("FAAS_RUNTIME_BUNDLE_BASE_URL or FAAS_PUBLIC_BASE_URL is required for OpenFaaS runtime")
-    return f"{base.rstrip('/')}/api/faas/runtime_bundle/{service_id}"
-
-
 def _platform_runtime_env() -> dict[str, str]:
     """Public, NON-SECRET platform config injected into every FaaS function.
 
@@ -1631,134 +1529,6 @@ def _platform_runtime_env() -> dict[str, str]:
         "MYAPP_CFG_FAAS_PUBLIC_BASE_URL": (FAAS_NODE_PUBLIC_URL or "").rstrip("/"),
     }
     return {key: value for key, value in values.items() if value}
-
-
-def _openfaas_auth():
-    if not FAAS_OPENFAAS_PASSWORD:
-        return None
-    return (FAAS_OPENFAAS_USERNAME or "admin", FAAS_OPENFAAS_PASSWORD)
-
-
-def _openfaas_function_exists(function_name: str, *, gateway: str | None = None) -> bool:
-    gateway = str(gateway or FAAS_OPENFAAS_GATEWAY or "").rstrip("/")
-    if not gateway:
-        raise FaaSError("FAAS_OPENFAAS_GATEWAY is required for FAAS_DEPLOY_MODE=openfaas")
-    try:
-        resp = requests.get(
-            f"{gateway}/system/function/{quote(function_name, safe='')}",
-            auth=_openfaas_auth(),
-            timeout=(5, 30),
-        )
-    except requests.RequestException as exc:
-        raise FaaSError(f"OpenFaaS status request failed: {exc}") from exc
-    if resp.status_code == 200:
-        return True
-    if resp.status_code == 404:
-        return False
-    raise FaaSError(f"OpenFaaS status failed status={resp.status_code}: {resp.text[:1000]}")
-
-
-def _openfaas_deploy_request(method: str, payload: dict[str, Any], *, gateway: str | None = None) -> requests.Response:
-    gateway = str(gateway or FAAS_OPENFAAS_GATEWAY or "").rstrip("/")
-    if not gateway:
-        raise FaaSError("FAAS_OPENFAAS_GATEWAY is required for FAAS_DEPLOY_MODE=openfaas")
-    if method == "POST":
-        return requests.post(
-            f"{gateway}/system/functions",
-            json=payload,
-            auth=_openfaas_auth(),
-            timeout=(5, 60),
-        )
-    if method == "PUT":
-        return requests.put(
-            f"{gateway}/system/functions",
-            json=payload,
-            auth=_openfaas_auth(),
-            timeout=(5, 60),
-        )
-    raise ValueError(f"unsupported OpenFaaS deploy method: {method}")
-
-
-def _deploy_openfaas_function(*, function_name: str, service_id: str, commit_sha: str, db_dsn: str = "") -> str:
-    gateway = str(FAAS_OPENFAAS_GATEWAY or "").rstrip("/")
-    if not gateway:
-        raise FaaSError("FAAS_OPENFAAS_GATEWAY is required for FAAS_DEPLOY_MODE=openfaas")
-    if not FAAS_OPENFAAS_RUNTIME_IMAGE:
-        raise FaaSError("FAAS_OPENFAAS_RUNTIME_IMAGE is required for FAAS_DEPLOY_MODE=openfaas")
-    runtime_token = runtime_token_for_service(service_id)
-    if not runtime_token:
-        raise FaaSError("FAAS_RUNTIME_TOKEN is required for FAAS_DEPLOY_MODE=openfaas")
-
-    labels: dict[str, str] = {
-        "myapp.faas": "1",
-        "myapp.faas.service_id": service_id,
-    }
-    if FAAS_OPENFAAS_SCALE_ZERO:
-        labels.update({
-            "com.openfaas.scale.zero": "true",
-            # Idle duration before scaling a function to zero (default 10 minutes).
-            "com.openfaas.scale.zero.duration": (os.environ.get("FAAS_OPENFAAS_SCALE_ZERO_DURATION", "").strip() or "10m"),
-            "com.openfaas.scale.min": str(max(0, FAAS_OPENFAAS_MIN_REPLICAS)),
-            "com.openfaas.scale.max": str(max(1, FAAS_OPENFAAS_MAX_REPLICAS)),
-        })
-
-    payload = {
-        "service": function_name,
-        "image": FAAS_OPENFAAS_RUNTIME_IMAGE,
-        "envVars": {
-            "PORT": "8080",
-            "MYAPP_FAAS_SERVICE_ID": service_id,
-            "MYAPP_FAAS_FUNCTION_NAME": function_name,
-            "MYAPP_FAAS_COMMIT": commit_sha,
-            "MYAPP_FAAS_BUNDLE_URL": _runtime_bundle_url(service_id),
-            "MYAPP_FAAS_RUNTIME_TOKEN": runtime_token,
-            "PYTHONUNBUFFERED": "1",
-            # Scoped per-user DB DSN (internal; read only by the myapp_db helper,
-            # never bridged into the public app config / MYAPP_CFG_*).
-            **({"MYAPP_DB_DSN": db_dsn} if db_dsn else {}),
-            **_platform_runtime_env(),
-        },
-        "labels": labels,
-        "annotations": {
-            "com.openfaas.health.http.path": "/__myapp_faas_health",
-            "com.openfaas.health.http.initialDelay": "2s",
-            "com.openfaas.health.http.periodSeconds": "5",
-            "com.openfaas.timeouts.read": FAAS_OPENFAAS_READ_TIMEOUT,
-            "com.openfaas.timeouts.write": FAAS_OPENFAAS_WRITE_TIMEOUT,
-        },
-    }
-    method = "PUT" if _openfaas_function_exists(function_name, gateway=gateway) else "POST"
-    try:
-        resp = _openfaas_deploy_request(method, payload, gateway=gateway)
-        if method == "PUT" and resp.status_code == 404:
-            method = "POST"
-            resp = _openfaas_deploy_request(method, payload, gateway=gateway)
-        elif method == "POST" and resp.status_code in {409}:
-            method = "PUT"
-            resp = _openfaas_deploy_request(method, payload, gateway=gateway)
-    except requests.RequestException as exc:
-        raise FaaSError(f"OpenFaaS deploy request failed: {exc}") from exc
-    if resp.status_code not in {200, 201, 202}:
-        raise FaaSError(f"OpenFaaS deploy failed status={resp.status_code}: {resp.text[:1000]}")
-    return f"openfaas method={method} function={function_name} image={FAAS_OPENFAAS_RUNTIME_IMAGE} status={resp.status_code}"
-
-
-def _delete_openfaas_function(function_name: str, *, gateway: str | None = None) -> str:
-    gateway = str(gateway or FAAS_OPENFAAS_GATEWAY or "").rstrip("/")
-    if not gateway:
-        return ""
-    try:
-        resp = requests.delete(
-            f"{gateway}/system/functions",
-            json={"functionName": function_name},
-            auth=_openfaas_auth(),
-            timeout=(5, 60),
-        )
-    except requests.RequestException as exc:
-        raise FaaSError(f"OpenFaaS delete request failed: {exc}") from exc
-    if resp.status_code in {200, 202, 204, 404}:
-        return f"openfaas delete function={function_name} status={resp.status_code}"
-    raise FaaSError(f"OpenFaaS delete failed status={resp.status_code}: {resp.text[:1000]}")
 
 
 def _deploy_service(root: Path, *, function_name: str, service_id: str, commit_sha: str, db_dsn: str = "") -> tuple[str, str]:
@@ -1790,8 +1560,6 @@ def _deploy_service(root: Path, *, function_name: str, service_id: str, commit_s
         if proc.returncode != 0:
             raise FaaSError((proc.stderr or proc.stdout or "FaaS deploy script failed").strip())
         return "ready", (proc.stdout or "").strip()[:2000]
-    if mode == "openfaas":
-        return "ready", _deploy_openfaas_function(function_name=function_name, service_id=service_id, commit_sha=commit_sha, db_dsn=db_dsn)
     raise FaaSError(f"unsupported FaaS deploy mode: {mode}")
 
 
@@ -1805,18 +1573,11 @@ def disable_service(owner_user_id: str, service_id: str) -> dict[str, Any]:
     function_name = str(service.get("function_name") or "").strip()
     warnings: list[str] = []
     svc_mode = service_deploy_mode(service)
-    if function_name:
-        if svc_mode in _LOCAL_DOCKER_MODES:
-            try:
-                _remove_local_docker_runtime(function_name)
-            except FaaSError as exc:
-                warnings.append(str(exc))
-        openfaas_gateway = openfaas_gateway_for_service(service)
-        if openfaas_gateway and svc_mode == "openfaas":
-            try:
-                _delete_openfaas_function(function_name, gateway=openfaas_gateway)
-            except FaaSError as exc:
-                warnings.append(str(exc))
+    if function_name and svc_mode in _LOCAL_DOCKER_MODES:
+        try:
+            _remove_local_docker_runtime(function_name)
+        except FaaSError as exc:
+            warnings.append(str(exc))
     db_execute(
         "UPDATE faas_services SET status = 'disabled', updated_at = NOW() WHERE service_id = %s",
         [service_id],
@@ -1876,7 +1637,7 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
                 normalized["service_slug"],
                 function_name,
                 str(root),
-                FAAS_PUBLIC_BASE_URL or FAAS_OPENFAAS_GATEWAY,
+                FAAS_PUBLIC_BASE_URL,
                 json.dumps(routes, ensure_ascii=False),
                 json.dumps(meta_json, ensure_ascii=False),
             ],
@@ -1937,7 +1698,7 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
                     public_base_url = %s, updated_at = NOW()
                 WHERE service_id = %s
                 """,
-                [status, commit_sha, str(root), FAAS_PUBLIC_BASE_URL or FAAS_OPENFAAS_GATEWAY, service_id],
+                [status, commit_sha, str(root), FAAS_PUBLIC_BASE_URL, service_id],
             )
             db_execute(
                 """
@@ -1955,7 +1716,7 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
                 status=status,
                 commit_sha=commit_sha,
                 code_path=str(root),
-                public_base_url=FAAS_PUBLIC_BASE_URL or FAAS_OPENFAAS_GATEWAY,
+                public_base_url=FAAS_PUBLIC_BASE_URL,
                 routes=routes,
                 deployment_id=deployment_id,
             )

@@ -1,4 +1,4 @@
-"""Self-managed scale-to-zero reaper for the Docker FaaS (replaces the faasd idler).
+"""Self-managed scale-to-zero reaper for the Docker FaaS.
 
 Stops FaaS service containers that have been idle past FAAS_DOCKER_IDLE_SECONDS;
 the invoke proxy cold-wakes them again on the next request (container.start, so

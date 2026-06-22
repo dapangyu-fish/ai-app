@@ -94,27 +94,6 @@ rm -rf "$INSTALL_ROOT/backend/providers"
 install -d -m 755 "$INSTALL_ROOT/backend"
 cp -a "$ROOT_DIR/backend/providers" "$INSTALL_ROOT/backend/providers"
 
-# faasd idle-to-zero reaper (scale-to-zero). Community faasd ships no
-# autoscaler/idler, so functions deployed with com.openfaas.scale.zero never
-# actually scale down. This host-level daemon stops idle function tasks; the
-# faasd gateway's scale_from_zero wakes them on demand. Always stage the files;
-# install + enable the service only when this host actually runs faasd.
-FAASD_IDLER_SRC="$ROOT_DIR/deploy/production/faasd-idler"
-install -d -m 755 "$INSTALL_ROOT/deploy/production/faasd-idler"
-install -m 755 "$FAASD_IDLER_SRC/faasd_idler.py" "$INSTALL_ROOT/deploy/production/faasd-idler/faasd_idler.py"
-install -m 644 "$FAASD_IDLER_SRC/faasd-idler.service" "$INSTALL_ROOT/deploy/production/faasd-idler/faasd-idler.service"
-install -m 755 "$FAASD_IDLER_SRC/install.sh" "$INSTALL_ROOT/deploy/production/faasd-idler/install.sh"
-if [ -d /var/lib/faasd ] && command -v systemctl >/dev/null 2>&1; then
-  install -d -m 755 /opt/faasd-idler
-  install -m 755 "$FAASD_IDLER_SRC/faasd_idler.py" /opt/faasd-idler/faasd_idler.py
-  install -m 644 "$FAASD_IDLER_SRC/faasd-idler.service" /etc/systemd/system/faasd-idler.service
-  systemctl daemon-reload || true
-  systemctl enable --now faasd-idler.service >/dev/null 2>&1 || true
-  echo "faasd host detected: installed + enabled faasd-idler.service (scale-to-zero)"
-else
-  echo "faasd-idler staged at $INSTALL_ROOT/deploy/production/faasd-idler (run install.sh on the faasd host)"
-fi
-
 SUPABASE_INSTALL="$INSTALL_ROOT/deploy/production/supabase"
 OPENIM_INSTALL="$INSTALL_ROOT/deploy/production/openim"
 

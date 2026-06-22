@@ -2,8 +2,8 @@
 
 这是配套 JSON-APP「HTTPS 测试台」(templates/https_test_lab.json) 的 FaaS 后端。
 每个路由对应客户端里的一个测试用例，覆盖 GET / POST / PUT / DELETE / SSE /
-带 token 的真实 Supabase 鉴权 / 任意状态码。响应全部是内存里 mock 的，不连数据库
-（faasd CE 的函数无持久卷、无 DB），只有 /auth/verify 会真实出网调用 Supabase。
+带 token 的真实 Supabase 鉴权 / 任意状态码。响应全部是内存里 mock 的，不连数据库，
+只有 /auth/verify 会真实出网调用 Supabase。
 
 约束（见 backend/faas_store.py 校验器）：
 - 顶层只允许 imports、`app = Flask(__name__)`、字面量常量、（路由及辅助）函数、

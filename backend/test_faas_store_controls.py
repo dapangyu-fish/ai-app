@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Core FaaS store controls that do not require Docker or OpenFaaS."""
+"""Core FaaS store controls that do not require Docker."""
 
 from __future__ import annotations
 
@@ -37,19 +37,8 @@ for _name, _value in {
     "FAAS_LOCAL_DOCKER_START_ON_DEPLOY": False,
     "FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS": 15,
     "FAAS_MAX_SERVICES_PER_USER": 2,
-    "FAAS_OPENFAAS_GATEWAY": "",
-    "FAAS_DEFAULT_NODE_ID": "",
-    "FAAS_OPENFAAS_NODES": {},
-    "FAAS_OPENFAAS_MAX_REPLICAS": 1,
-    "FAAS_OPENFAAS_MIN_REPLICAS": 0,
-    "FAAS_OPENFAAS_PASSWORD": "",
-    "FAAS_OPENFAAS_READ_TIMEOUT": "60s",
-    "FAAS_OPENFAAS_RUNTIME_IMAGE": "example/faas-runtime:test",
-    "FAAS_OPENFAAS_SCALE_ZERO": True,
-    "FAAS_OPENFAAS_USERNAME": "admin",
-    "FAAS_OPENFAAS_WRITE_TIMEOUT": "60s",
     "FAAS_PUBLIC_BASE_URL": "https://backend.example",
-    "FAAS_NODE_PUBLIC_URL": "https://openfaas.example",
+    "FAAS_NODE_PUBLIC_URL": "https://faas.example",
     "FAAS_REQUIREMENTS_MAX_LINES": 40,
     "FAAS_RUNTIME_BUNDLE_BASE_URL": "https://backend.example",
     "FAAS_RUNTIME_TOKEN": "runtime-master-token",
@@ -900,41 +889,33 @@ def test_failed_new_deploy_does_not_consume_quota() -> None:
         assert faas_store._count_user_services("user-a") == 1
 
 
-def test_openfaas_deploy_records_gateway_metadata() -> None:
-    with tempfile.TemporaryDirectory(prefix="myapp-faas-store-openfaas-") as raw:
+def test_local_docker_deploy_records_runtime_metadata() -> None:
+    with tempfile.TemporaryDirectory(prefix="myapp-faas-store-docker-") as raw:
         old_root = faas_store.FAAS_CODE_ROOT
         old_mode = faas_store.FAAS_DEPLOY_MODE
-        old_gateway = faas_store.FAAS_OPENFAAS_GATEWAY
-        old_image = faas_store.FAAS_OPENFAAS_RUNTIME_IMAGE
-        old_bundle_base = faas_store.FAAS_RUNTIME_BUNDLE_BASE_URL
-        old_deploy = faas_store._deploy_openfaas_function
+        old_start = faas_store.FAAS_LOCAL_DOCKER_START_ON_DEPLOY
+        old_remove = faas_store._remove_local_docker_runtime
         try:
             faas_store.FAAS_CODE_ROOT = raw
-            faas_store.FAAS_DEPLOY_MODE = "openfaas"
-            faas_store.FAAS_OPENFAAS_GATEWAY = "http://openfaas-a:8080"
-            faas_store.FAAS_OPENFAAS_RUNTIME_IMAGE = "example/faas-runtime:openfaas"
-            faas_store.FAAS_RUNTIME_BUNDLE_BASE_URL = "https://backend.example"
-            faas_store._deploy_openfaas_function = (
-                lambda *, function_name, service_id, commit_sha, db_dsn="": "openfaas method=POST status=202"
-            )
+            faas_store.FAAS_DEPLOY_MODE = "local-docker"
+            # Don't actually touch docker: deferred deploy records metadata only.
+            faas_store.FAAS_LOCAL_DOCKER_START_ON_DEPLOY = False
+            faas_store._remove_local_docker_runtime = lambda *a, **k: None
             _db.services.clear()
             _db.deployments.clear()
 
-            result = faas_store.deploy_bundle("user-openfaas", _bundle("api-openfaas"), source="test")
+            result = faas_store.deploy_bundle("user-docker", _bundle("api-docker"), source="test")
         finally:
             faas_store.FAAS_CODE_ROOT = old_root
             faas_store.FAAS_DEPLOY_MODE = old_mode
-            faas_store.FAAS_OPENFAAS_GATEWAY = old_gateway
-            faas_store.FAAS_OPENFAAS_RUNTIME_IMAGE = old_image
-            faas_store.FAAS_RUNTIME_BUNDLE_BASE_URL = old_bundle_base
-            faas_store._deploy_openfaas_function = old_deploy
+            faas_store.FAAS_LOCAL_DOCKER_START_ON_DEPLOY = old_start
+            faas_store._remove_local_docker_runtime = old_remove
 
     assert result.status == "ready"
-    deploy_meta = _db.services["api-openfaas"]["meta_json"]["deploy"]
-    assert deploy_meta["mode"] == "openfaas"
-    assert deploy_meta["openfaas_gateway"] == "http://openfaas-a:8080"
-    assert deploy_meta["runtime_image"] == "example/faas-runtime:openfaas"
-    assert deploy_meta["bundle_base_url"] == "https://backend.example"
+    deploy_meta = _db.services["api-docker"]["meta_json"]["deploy"]
+    assert deploy_meta["mode"] == "local-docker"
+    assert deploy_meta["runtime_image"] == faas_store.FAAS_LOCAL_DOCKER_IMAGE
+    assert deploy_meta["network"] == faas_store.FAAS_LOCAL_DOCKER_NETWORK
 
 
 if __name__ == "__main__":
@@ -951,5 +932,5 @@ if __name__ == "__main__":
     test_validation_db_enabled_and_reserved_name()
     test_deploy_quota_conflict_disable_and_runtime_bundle()
     test_failed_new_deploy_does_not_consume_quota()
-    test_openfaas_deploy_records_gateway_metadata()
+    test_local_docker_deploy_records_runtime_metadata()
     print(json.dumps({"ok": True}, sort_keys=True))

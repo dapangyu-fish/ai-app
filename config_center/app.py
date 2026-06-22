@@ -102,8 +102,9 @@ BACKEND_URL = os.environ.get(
 AGENT_NODE_TOKEN = os.environ.get("AGENT_NODE_REGISTRATION_TOKEN", "") or os.environ.get(
     "AGENT_NODE_TOKEN", ""
 )
-FAAS_CAP_MIN = int(os.environ.get("FAAS_OPENFAAS_MIN_REPLICAS", "0") or "0")
-FAAS_CAP_MAX = int(os.environ.get("FAAS_OPENFAAS_MAX_REPLICAS", "1") or "1")
+# Self-managed Docker FaaS scales to zero; max replicas per service is the cap.
+FAAS_CAP_MIN = 0
+FAAS_CAP_MAX = int(os.environ.get("FAAS_DOCKER_MAX_REPLICAS", "5") or "5")
 DASH_HTTP_TIMEOUT = 12
 
 if not ADMIN_PASSWORD:

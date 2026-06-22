@@ -45,7 +45,7 @@ def _inject_platform_config(app: Flask) -> None:
     """Bridge backend-injected ``MYAPP_CFG_*`` env vars into ``app.config["MYAPP"]``.
 
     The backend injects public, non-secret platform config (Supabase URL + anon
-    key, backend base URL, faasd public URL) as ``MYAPP_CFG_*`` env vars on every
+    key, backend base URL, FaaS public URL) as ``MYAPP_CFG_*`` env vars on every
     function. The generated ``app.py`` cannot import ``os`` (validator), so the
     runtime — which runs with full Python — copies them into the app config under
     a single ``MYAPP`` dict (lowercased, prefix stripped). Generated code reads
@@ -185,8 +185,8 @@ def _runtime_dispatcher(environ, start_response):
         start_response("503 Service Unavailable", [("Content-Type", "application/json")])
         return [b'{"ok": false, "loading": true}']
     # Block the first cold request until the generated app finishes loading (or
-    # fails), so faasd's task-running readiness never proxies into an app that is
-    # not yet listening (which previously returned connection-refused).
+    # fails), so a just-started container never proxies into an app that is not
+    # yet listening (which would otherwise return connection-refused).
     _RUNTIME_READY.wait(timeout=60)
     app = _RUNTIME_STATE["app"]
     if app is None:

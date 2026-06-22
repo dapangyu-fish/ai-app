@@ -1851,7 +1851,7 @@ def _build_faas_backend_prompt_note(*, workspace: Optional[str] = None) -> str:
         "用 `@faas.*` 接线、校验发布；范本是已上线全绿的「FaaS 测试台」。跳过这份方法是带 faas 后端的"
         "JSON-APP 生成失败的主因——务必先读再动手。"
         f"\n- 你可以生成一个受限 Python/Flask 后端服务 bundle：`{bundle_path}`。"
-        "\n- 你在本轮内自己完成部署、自测、接好前端（见下方后端工作流）；不要操作 Git/Docker/OpenFaaS/密钥，"
+        "\n- 你在本轮内自己完成部署、自测、接好前端（见下方后端工作流）；不要操作 Git/Docker/密钥，"
         "脚本会安全地代你调用后端部署。"
         "\n- 工作区会提供只读 `faas_services.json`，列出当前用户已有 FaaS 服务、路由、调用地址以及每个服务的现有源码 `source`；"
         "如果本轮是在给已有后端追加接口，请复用其 `service_id`，基于 `source` 里的 `app.py` 续写、"

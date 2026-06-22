@@ -32,10 +32,9 @@ sys.modules["auth"] = auth
 
 _config = types.ModuleType("config")
 for _name, _value in {
+    "AGENT_NODE_TOKEN": "",
     "FAAS_DEPLOY_MODE": "metadata",
-    "FAAS_OPENFAAS_GATEWAY": "",
-    "FAAS_DEFAULT_NODE_ID": "",
-    "FAAS_OPENFAAS_NODES": {},
+    "FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER": False,
     "FAAS_REQUIRE_AUTH": False,
     "FAAS_RUNTIME_TOKEN": "runtime-master-token",
 }.items():
@@ -52,12 +51,12 @@ faas_store.ensure_tables = lambda *args, **kwargs: None
 faas_store.get_service = lambda *args, **kwargs: None
 faas_store.list_services = lambda *args, **kwargs: []
 faas_store.load_bundle_bytes = lambda *args, **kwargs: {}
-faas_store.openfaas_gateway_for_service = lambda service: (
-    ((service.get("meta_json") or {}).get("deploy") or {}).get("openfaas_gateway")
-    or _config.FAAS_OPENFAAS_GATEWAY
-).rstrip("/")
+faas_store.load_bundle_zip = lambda *args, **kwargs: {}
+faas_store.build_service_archive = lambda *args, **kwargs: b""
 faas_store.runtime_bundle_for_service = lambda *args, **kwargs: {}
 faas_store.runtime_token_for_service = lambda *args, **kwargs: "runtime-token"
+faas_store.service_deploy_mode = lambda service=None: "metadata"
+faas_store.scale_service = lambda *args, **kwargs: {}
 sys.modules["faas_store"] = faas_store
 
 import faas  # noqa: E402
@@ -136,7 +135,7 @@ def test_rejected_route_does_not_start_runtime() -> None:
     assert called["runtime"] is False
 
 
-def test_openfaas_invoke_prefers_service_gateway() -> None:
+def test_local_docker_invoke_proxies_to_container_upstream() -> None:
     class _Request:
         method = "POST"
         query_string = b"q=1"
@@ -174,18 +173,21 @@ def test_openfaas_invoke_prefers_service_gateway() -> None:
     old_get_service = faas.get_service
     old_requests = faas.requests
     old_mode = faas.FAAS_DEPLOY_MODE
-    old_gateway = faas.FAAS_OPENFAAS_GATEWAY
+    old_deploy_mode = faas.service_deploy_mode
+    old_ensure = faas.ensure_local_docker_runtime_for_service
     try:
         faas.request = _Request()
         faas.requests = fake_requests
-        faas.FAAS_DEPLOY_MODE = "openfaas"
-        faas.FAAS_OPENFAAS_GATEWAY = "http://global-gateway:8080"
+        faas.FAAS_DEPLOY_MODE = "local-docker"
+        faas.service_deploy_mode = lambda service: "local-docker"
+        # Cold-wake / runtime resolution returns the container upstream base URL.
+        faas.ensure_local_docker_runtime_for_service = lambda service: "http://myapp-svc:8080"
         faas.get_service = lambda service_id: {
             "service_id": service_id,
             "function_name": "myapp-svc",
             "status": "ready",
             "routes": [{"path": "/items/<item_id>", "methods": ["POST"]}],
-            "meta_json": {"deploy": {"openfaas_gateway": "http://service-gateway:8080"}},
+            "meta_json": {"deploy": {"mode": "local-docker"}},
         }
         response = faas.invoke_service("svc", "items/42")
     finally:
@@ -193,11 +195,12 @@ def test_openfaas_invoke_prefers_service_gateway() -> None:
         faas.get_service = old_get_service
         faas.requests = old_requests
         faas.FAAS_DEPLOY_MODE = old_mode
-        faas.FAAS_OPENFAAS_GATEWAY = old_gateway
+        faas.service_deploy_mode = old_deploy_mode
+        faas.ensure_local_docker_runtime_for_service = old_ensure
 
     assert isinstance(response, _FakeFlaskResponse)
     assert response.status_code == 201
-    assert fake_requests.calls[0]["url"] == "http://service-gateway:8080/function/myapp-svc/items/42?q=1"
+    assert fake_requests.calls[0]["url"] == "http://myapp-svc:8080/items/42?q=1"
     assert "Authorization" not in fake_requests.calls[0]["kwargs"]["headers"]
 
 
@@ -205,5 +208,5 @@ if __name__ == "__main__":
     test_route_allowlist_contract()
     test_flask_style_route_patterns()
     test_rejected_route_does_not_start_runtime()
-    test_openfaas_invoke_prefers_service_gateway()
+    test_local_docker_invoke_proxies_to_container_upstream()
     print(json.dumps({"ok": True}, sort_keys=True))

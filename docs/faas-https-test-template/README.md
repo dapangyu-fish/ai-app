@@ -1,6 +1,6 @@
 # FaaS 测试台 / FaaS Test Lab — 前后端连体调参考样板
 
-> ⚠️ **运行时已更新(2026-06):FaaS 默认运行时已从 OpenFaaS/faasd 迁移到自研 Docker FaaS**(`FAAS_DEPLOY_MODE=local-docker`:容器即服务,控制面自管 部署/路由/冷唤醒/scale-to-zero/扩缩容,无 OpenFaaS CE 的 15 函数上限)。faasd/OpenFaaS 仅作为可选 legacy 模式保留。当前运行时与运维以 `../faas-docker-runtime.md` 为准;本文档中涉及 faasd/OpenFaaS 安装与网关的部分按 legacy 看待。
+> **运行时:自研 Docker FaaS**(`FAAS_DEPLOY_MODE=local-docker`:容器即服务,控制面自管 部署/路由/冷唤醒/scale-to-zero/扩缩容,无函数数量上限)。运行时与运维细节以 `../faas-docker-runtime.md` 为准。
 
 > JSON-APP 名为「FaaS 测试台 / FaaS Test Lab」，支持 zh/en i18n（`global.i18n` + `{{ t('a.b') }}`，首页「中/EN」按钮 `@set_locale` 切换）。
 > **干净分层（v1.2.0，见 §5.1）**：框架暴露只读 `app` 命名空间（`{{ app.backendUrl }}` 等，取自 `AppConfig`）；`faas` JSON lib（`templates/lib_faas.json`，作为 `dependencies` 声明）用 `{{ app.backendUrl }}` 拼出完整 invoke URL 再调**通用 http builtin**；本 app 只 `@faas.get/post/put/del/sse(serviceId, route, …)`——**无硬编码域名、无相对地址魔法**。
@@ -33,10 +33,10 @@
 ┌─────────────── 后端 invoke 代理（backend，faas.py）──────────────────┐
 │  · 校验 <route>/<method> 是否在 service.routes 声明内（否则 404/405）   │
 │  · 剥离请求头 authorization / cookie（!!）→ 转发到函数                  │
-│  · 冷启动重试（faasd scale-from-zero）                                 │
+│  · 容器停了则冷唤醒（control plane container.start，~1-2s）            │
 └────────┼──────────────────────────────────────────────────────────────┘
-         ▼  faasd gateway（bridge 172.18.0.1:8731）/function/<fn>/<route>
-┌─────────────── FaaS 函数（faasd，受限 Flask app.py）─────────────────┐
+         ▼  转发到该服务的 Docker 容器  http://<container>:8080/<route>
+┌─────────────── FaaS 函数（Docker 容器，受限 Flask app.py）───────────┐
 │  docs/faas-https-test-template/app.py                                 │
 │   @app.get("/ping") ...                                               │
 │   @app.post("/auth/verify"): 读 X-User-Token → urllib 真调 Supabase    │
@@ -45,7 +45,7 @@
    https://myapp-pre-de-auth.dapangyu.work/auth/v1/user  （真实 Supabase GoTrue）
 ```
 
-**一句话**：JSON-APP 用相对地址 `/api/faas/invoke/<service_id>/<route>` 调后端 invoke 代理，代理转发给 faasd 里的函数；函数返回 mock 数据，唯独鉴权用例真实出网调 Supabase 验 token。
+**一句话**：JSON-APP 用相对地址 `/api/faas/invoke/<service_id>/<route>` 调后端 invoke 代理，代理转发给该服务的 Docker 容器；函数返回 mock 数据，唯独鉴权用例真实出网调 Supabase 验 token。
 
 ---
 
@@ -84,8 +84,8 @@ deploy 前 `validate_bundle` 会用 AST 校验 `app.py`：
 
 → **客户端的用户 token 不能走标准 `Authorization` 头**（到不了函数）。必须用**自定义头**（本样板用 `X-User-Token`，不在剔除表 → 能透传）或 body 传。`GET /headers` 用例就是用来肉眼确认这件事的（`has_authorization:false`）。
 
-### 3.3 函数无数据库、无持久卷；scale-to-zero 在 faasd CE 不生效（legacy OpenFaaS mode）
-faasd 社区版只有 gateway + queue-worker，**没有 idler/autoscaler**，`com.openfaas.scale.zero` 标签不被兑现。所以函数实际是常驻的（不会缩容到 0，也别指望冷启动省资源）。（OpenFaaS CE 这套限制——含 15 函数上限与不兑现 scale-to-zero——正是我们迁移到自研 Docker FaaS 的原因；local-docker 模式由控制面自管 冷唤醒/scale-to-zero/扩缩容，见 `../faas-docker-runtime.md`。本节描述的是 legacy faasd 行为。）数据用内存 dict mock 即可（重启即丢，测试足够）。真实业务要持久化得另接外部存储（同样经 `urllib`）。
+### 3.3 函数无持久卷；scale-to-zero 由控制面自管
+控制面对每个服务起一个 Docker 容器，按 `FAAS_DOCKER_IDLE_SECONDS`（默认 600s）把空闲容器缩到 0，下次 invoke 自动冷唤醒（~1-2s，容器定义保留无槽位成本），见 `../faas-docker-runtime.md`。容器内的内存状态在缩容/重启后丢失，所以本样板数据用内存 dict mock 即可（重启即丢，测试足够）。真实业务要持久化可用运行时镜像自带的 `myapp_db`（每用户隔离的 Postgres schema，见运行时文档），或另接外部存储（经 `urllib`）。
 
 ---
 
@@ -235,7 +235,7 @@ PY
 {"ok": true, "service": {"service_id": "svc-77be07ffad7b", "status": "ready",
   "routes": [{"path":"/ping","methods":["GET"]}, …7 条… ]}}
 ```
-- `status: ready` = 函数已在 faasd 起来、可被 invoke。
+- `status: ready` = 服务容器已部署、可被 invoke。
 - 失败时 HTTP 4xx + `{ok:false, error/code}`，按 error 修 bundle（典型：`declared route not implemented`、`@app.head 不存在`、`import is not allowed: requests`）。
 
 > ⚠️ `docker exec` 跑 heredoc 必须 `-i`，否则 stdin 不转发、容器内 python 读到空、静默无输出。本样板改用 `docker cp 一个 .py 再 exec` 规避。
@@ -265,10 +265,9 @@ faas 函数不能 `import os`（校验器禁），所以平台公开配置经一
 
 ```
 myapp-ctl ingress render
-  └ 写 faas.env: FAAS_NODE_PUBLIC_URL = cfg.domains.openfaas（faasd 主域名）
-                 FAAS_PUBLIC_BASE_URL = backend 公网；SUPABASE_URL/ANON_KEY 已在 backend env
+  └ 写 faas.env: FAAS_PUBLIC_BASE_URL = backend 公网；SUPABASE_URL/ANON_KEY 已在 backend env
         │
-backend  faas_store.py `_platform_runtime_env()`  → 注入每个 faasd 函数的 envVars：
+backend  faas_store.py `_platform_runtime_env()`  → 注入每个服务容器的 envVars：
   MYAPP_CFG_SUPABASE_URL / MYAPP_CFG_SUPABASE_ANON_KEY / MYAPP_CFG_BACKEND_BASE_URL / MYAPP_CFG_FAAS_PUBLIC_BASE_URL
         │  （只注公开值；service_role / runtime_token / bundle_url 绝不注入）
 runtime  faas_runtime_server.py `_inject_platform_config(app)`  → app.config["MYAPP"] = {supabase_url, supabase_anon_key, …}
@@ -276,9 +275,9 @@ runtime  faas_runtime_server.py `_inject_platform_config(app)`  → app.config["
 用户 app.py：  current_app.config["MYAPP"]["supabase_url"]      （不能 import os，由运行时代读 env）
 ```
 
-- **访问路径（确认）**：JSON-APP 默认走【后端代理】`/api/faas/invoke/<svc>/<route>`（路由强制 + 剥头 + 冷启动重试），不是直连 faasd（legacy OpenFaaS mode；默认运行时现为 local-docker，代理路径不变 — 见 `../faas-docker-runtime.md`）。faasd 直连域名（`MYAPP_CFG_FAAS_PUBLIC_BASE_URL`）是旁路，注入它是为了函数间直连 / 函数自知公网地址。
+- **访问路径（确认）**：JSON-APP 走【后端代理】`/api/faas/invoke/<svc>/<route>`（路由强制 + 剥头 + 冷唤醒），代理转发到该服务的 Docker 容器，见 `../faas-docker-runtime.md`。`MYAPP_CFG_FAAS_PUBLIC_BASE_URL` 注入是为了函数自知公网地址。
 - **安全边界**：只桥 `MYAPP_CFG_` 前缀；内部密钥用 `MYAPP_FAAS_` 前缀（`MYAPP_FAAS_RUNTIME_TOKEN` / `MYAPP_FAAS_BUNDLE_URL`），永不进 `app.config`。
-- **换域名**：改 `myapp-ctl domain set openfaas/...` + `ingress render` 重写 env，再重部署函数即可，**不动任何函数源码**。
+- **换域名**：改 `myapp-ctl` 配置 + `ingress render` 重写 env，再重部署服务即可，**不动任何函数源码**。
 - **验证**：`GET /ping` 的 `config_keys` 字段会列出实际注入了哪些键（只列键不泄值）。
 
 ---

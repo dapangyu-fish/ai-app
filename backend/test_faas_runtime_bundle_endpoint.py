@@ -23,10 +23,9 @@ sys.modules["auth"] = auth
 
 _config = types.ModuleType("config")
 for _name, _value in {
+    "AGENT_NODE_TOKEN": "",
     "FAAS_DEPLOY_MODE": "metadata",
-    "FAAS_OPENFAAS_GATEWAY": "",
-    "FAAS_DEFAULT_NODE_ID": "",
-    "FAAS_OPENFAAS_NODES": {},
+    "FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER": False,
     "FAAS_REQUIRE_AUTH": False,
     "FAAS_RUNTIME_TOKEN": "runtime-master-token",
 }.items():
@@ -43,9 +42,12 @@ faas_store.ensure_tables = lambda *args, **kwargs: None
 faas_store.get_service = lambda *args, **kwargs: None
 faas_store.list_services = lambda *args, **kwargs: []
 faas_store.load_bundle_bytes = lambda *args, **kwargs: {}
-faas_store.openfaas_gateway_for_service = lambda service: _config.FAAS_OPENFAAS_GATEWAY.rstrip("/")
+faas_store.load_bundle_zip = lambda *args, **kwargs: {}
+faas_store.build_service_archive = lambda *args, **kwargs: b""
 faas_store.runtime_bundle_for_service = lambda *args, **kwargs: {}
 faas_store.runtime_token_for_service = lambda *args, **kwargs: "expected-runtime-token"
+faas_store.service_deploy_mode = lambda service=None: "metadata"
+faas_store.scale_service = lambda *args, **kwargs: {}
 sys.modules["faas_store"] = faas_store
 
 import faas  # noqa: E402

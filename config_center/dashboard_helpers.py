@@ -67,7 +67,7 @@ def compute_faas_view(
 ) -> dict[str, Any]:
     """Derive the 4 required metrics from an existing /api/faas/services row.
 
-    On host-77 (local-docker, no OpenFaaS autoscaler) replicas/current-capacity are
+    On host-77 (local-docker, no external autoscaler) replicas/current-capacity are
     status-derived (0/1) and capacity range is the configured min..max (default 0..1).
     启动时间 uses updated_at (last deploy) with created_at as first-created.
     """
@@ -94,7 +94,6 @@ def compute_faas_view(
         "status": service.get("status"),
         "running": running,
         "deploy_mode": deploy_meta.get("mode") or deploy_mode,
-        "node_id": deploy_meta.get("node_id"),
         "public_base_url": service.get("public_base_url"),
         "routes_count": len(routes),
         "active_commit": service.get("active_commit"),

@@ -5,13 +5,11 @@ This drives the REAL generation pipeline over the public HTTP API exactly as a
 client app would (no UI automation): it authenticates a throwaway test user,
 asks the AI (default provider=minimax, model MiniMax-M3) to generate an app that
 needs a Python/Flask backend, waits for the backend to validate + deploy the
-generated FaaS service, then verifies the service through the backend proxy
-(mode a) and — when the FaaS node domain is wired — directly (mode b).
+generated FaaS service, then verifies the service through the backend proxy.
 
 Implements docs/faas-e2e-and-access-goal.md sections 七/八 (verification steps and
-test goals). Access-architecture-dependent checks (direct-domain mode b, public
-port firewall) are OPTIONAL and skipped-with-a-log until D-A/D-B land, so the
-core chain (generate -> deploy -> proxy invoke -> update -> cleanup) runs today.
+test goals): the core chain (generate -> deploy -> proxy invoke -> update ->
+cleanup) runs today.
 
 Run on or against 77. Supabase config is read from env (SUPABASE_URL,
 SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY) or flags. Real AI usage is expected and
@@ -174,9 +172,9 @@ _COLD_MARKERS = ("can't reach service", "cannot reach", "no endpoints available"
 
 def invoke_until_ready(base_url: str, service_id: str, route_path: str, method: str,
                        token: Optional[str], *, attempts: int = 12, delay: float = 6.0, **kw: Any) -> requests.Response:
-    """Invoke, tolerating faasd scale-from-zero cold starts (first invoke of a fresh
-    function can take tens of seconds). Retries only on cold-start signals so a
-    genuinely-broken function still surfaces after the budget."""
+    """Invoke, tolerating Docker cold starts (the first invoke of a freshly
+    woken service can take tens of seconds). Retries only on cold-start signals
+    so a genuinely-broken function still surfaces after the budget."""
     last = None
     for i in range(attempts):
         r = invoke_proxy(base_url, service_id, route_path, method, token, **kw)
@@ -205,8 +203,6 @@ def main() -> int:
     p.add_argument("--password", default=os.environ.get("FAAS_E2E_PASSWORD", "FaasE2e!fixed-2026"))
     p.add_argument("--timeout", type=int, default=900, help="max seconds to wait per generation")
     p.add_argument("--with-update", action="store_true", help="also run the update path (second generation)")
-    p.add_argument("--faas-domain", default="", help="enable mode-b direct invoke via this faasd node domain")
-    p.add_argument("--function-name", default="", help="faasd function name for mode-b (else derived not attempted)")
     p.add_argument("--keep", action="store_true", help="do not delete the generated service")
     args = p.parse_args()
 
@@ -288,43 +284,7 @@ def main() -> int:
         update_info = {"status": r2.status_code, "body": (r2.json() if r2.status_code == 200 else r2.text[:300])}
         step("update", service_id=uready.get("service_id"), **update_info)
 
-    # 6) mode-b: direct faasd node domain (needs the access architecture wired).
-    # The faas domain fronts faasd directly with no backend cold-start retry, so
-    # retry here; derive function_name from the service if not supplied.
-    mode_b = None
-    if args.faas_domain:
-        fn = args.function_name
-        if not fn:
-            try:
-                detail = _req("GET", f"{args.base_url.rstrip('/')}/api/faas/services/{service_id}",
-                              headers={"Authorization": f"Bearer {token}"}, ok=(200,)).json()
-                fn = str((detail.get("service") or {}).get("function_name") or "")
-            except Exception as exc:
-                _log(f"could not derive function_name for mode-b: {exc}")
-        if fn:
-            url = f"https://{args.faas_domain.rstrip('/')}/function/{fn}{route_path}"
-            rb = None
-            for i in range(10):
-                try:
-                    rb = requests.post(url, json={"a": 2, "b": 3}, timeout=20)
-                    if rb.status_code == 200:
-                        break
-                    if rb.status_code < 500:
-                        break
-                except Exception:
-                    rb = None
-                _log(f"mode-b cold-start retry {i + 1}/10")
-                time.sleep(5)
-            ct = rb.headers.get("content-type", "") if rb is not None else ""
-            mode_b = {"url": url, "status": (rb.status_code if rb is not None else None),
-                      "body": (rb.json() if (rb is not None and ct.startswith("application/json")) else (rb.text[:200] if rb is not None else None))}
-            step("invoke_direct_domain", **mode_b)
-        else:
-            _log("SKIP mode-b: could not resolve function_name")
-    else:
-        _log("SKIP mode-b (pass --faas-domain to also test direct faasd-node access)")
-
-    # 7) cleanup (faasd function-delete + git can be slow -> generous timeout + retry).
+    # 6) cleanup (container teardown + git can be slow -> generous timeout + retry).
     # service_id is a global PK, so a leftover blocks re-runs; make deletion best-effort but patient.
     cleaned = False
     if not args.keep:
@@ -339,7 +299,7 @@ def main() -> int:
     step("cleanup", deleted=cleaned)
 
     summary.update({"ok": True, "service_id": service_id, "user_id": user_id, "email": email,
-                    "session_id": session_id, "math_contract": math_ok, "update": update_info, "mode_b": mode_b})
+                    "session_id": session_id, "math_contract": math_ok, "update": update_info})
     print(json.dumps(summary, ensure_ascii=False, sort_keys=True))
     return 0
 

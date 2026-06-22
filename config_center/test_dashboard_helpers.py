@@ -62,7 +62,7 @@ svc = {
     "owner_user_id": "u1", "status": "active",
     "created_at": "2026-01-01T00:00:00Z", "updated_at": "2026-06-01T00:00:00Z",
     "routes": [{"path": "/a"}, {"path": "/b"}], "public_base_url": "https://x/shop",
-    "meta_json": {"deploy": {"mode": "local-docker", "node_id": "n1"}},
+    "meta_json": {"deploy": {"mode": "local-docker"}},
 }
 v = compute_faas_view(svc, deploy_mode="local-docker", cap_min=0, cap_max=1)
 check("faas 启动时间 = updated_at", v["deployed_at"] == "2026-06-01T00:00:00Z")
@@ -81,7 +81,7 @@ check("faas disabled → 0 current", v2["current_capacity"] == 0)
 
 # per-service scale override from bundle meta
 svc_scaled = dict(svc, service_id="svc-3",
-                  meta_json={"deploy": {"mode": "openfaas", "scale_min": 1, "scale_max": 5}})
+                  meta_json={"deploy": {"mode": "local-docker", "scale_min": 1, "scale_max": 5}})
 v3 = compute_faas_view(svc_scaled)
 check("faas per-service capacity override min", v3["capacity_min"] == 1)
 check("faas per-service capacity override max", v3["capacity_max"] == 5)

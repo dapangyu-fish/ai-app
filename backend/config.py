@@ -88,10 +88,10 @@ REGISTRY_BASE_URL = os.environ.get("REGISTRY_BASE_URL", "https://myapp-registry.
 
 # User-generated FaaS backend code.
 #
-# The Agent never receives Git/OpenFaaS credentials. It can only produce a
-# structured bundle in its workspace. The backend validates that bundle, writes
-# it to FAAS_CODE_ROOT, optionally commits/pushes through host-local Git config,
-# and optionally calls a deploy script/OpenFaaS gateway owned by the backend.
+# The Agent never receives Git credentials. It can only produce a structured
+# bundle in its workspace. The backend validates that bundle, writes it to
+# FAAS_CODE_ROOT, optionally commits/pushes through host-local Git config, and
+# starts the self-managed Docker FaaS container for the service.
 FAAS_ENABLED = os.environ.get("FAAS_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"}
 FAAS_REQUIRE_AUTH = os.environ.get("FAAS_REQUIRE_AUTH", "0").strip().lower() in {"1", "true", "yes", "on"}
 # Even when FAAS_REQUIRE_AUTH is off (invoke stays open), a DEPLOY must be scoped
@@ -119,50 +119,16 @@ FAAS_GIT_ASYNC_PUSH = os.environ.get("FAAS_GIT_ASYNC_PUSH", "1").strip().lower()
 # GitHub-pulled checkout (reconciled from FAAS_GIT_REMOTE) instead of the local
 # write tree, so served code provably comes from git, not a backend-local write.
 FAAS_BUNDLE_SERVE_ROOT = os.environ.get("FAAS_BUNDLE_SERVE_ROOT", "").rstrip("/")
-FAAS_DEPLOY_MODE = os.environ.get("FAAS_DEPLOY_MODE", "metadata").strip().lower().replace("_", "-") or "metadata"
+# Self-managed Docker FaaS is the only runtime. 'local-docker' runs a container
+# per service; 'metadata'/'none' are no-op modes used by tests/dev.
+FAAS_DEPLOY_MODE = os.environ.get("FAAS_DEPLOY_MODE", "local-docker").strip().lower().replace("_", "-") or "local-docker"
 FAAS_DEPLOY_SCRIPT = os.environ.get("FAAS_DEPLOY_SCRIPT", "").strip()
-FAAS_OPENFAAS_GATEWAY = os.environ.get("FAAS_OPENFAAS_GATEWAY", "").rstrip("/")
-
-
-def _parse_faas_nodes(raw: str) -> dict:
-    """Parse FAAS_OPENFAAS_NODES (JSON {node_id: gateway_url}) for multi-node routing.
-
-    We run single-node faasd per server (not the paid cluster). With more than one
-    faas-node server, each service pins its node in meta_json.deploy.node_id and the
-    backend proxies to that node's gateway. An empty/invalid map => single global
-    gateway (FAAS_OPENFAAS_GATEWAY)."""
-    raw = (raw or "").strip()
-    if not raw:
-        return {}
-    try:
-        data = json.loads(raw)
-    except (json.JSONDecodeError, ValueError):
-        return {}
-    if not isinstance(data, dict):
-        return {}
-    return {str(k): str(v).rstrip("/") for k, v in data.items() if str(k) and str(v)}
-
-
-# node_id -> gateway URL registry; FAAS_DEFAULT_NODE_ID is stamped onto new deploys.
-FAAS_OPENFAAS_NODES = _parse_faas_nodes(os.environ.get("FAAS_OPENFAAS_NODES", ""))
-FAAS_DEFAULT_NODE_ID = os.environ.get("FAAS_DEFAULT_NODE_ID", "").strip()
-FAAS_OPENFAAS_USERNAME = os.environ.get("FAAS_OPENFAAS_USERNAME", "admin").strip()
-FAAS_OPENFAAS_PASSWORD = os.environ.get("FAAS_OPENFAAS_PASSWORD", "").strip()
-FAAS_OPENFAAS_RUNTIME_IMAGE = os.environ.get(
-    "FAAS_OPENFAAS_RUNTIME_IMAGE",
-    os.environ.get("MYAPP_FAAS_RUNTIME_IMAGE", "dapangyu/myapp-faas-runtime:agent-control-plane"),
-).strip()
 FAAS_RUNTIME_BUNDLE_BASE_URL = os.environ.get("FAAS_RUNTIME_BUNDLE_BASE_URL", "").rstrip("/")
 FAAS_RUNTIME_TOKEN = os.environ.get("FAAS_RUNTIME_TOKEN", "").strip()
-FAAS_OPENFAAS_SCALE_ZERO = os.environ.get("FAAS_OPENFAAS_SCALE_ZERO", "1").strip().lower() in {"1", "true", "yes", "on"}
-FAAS_OPENFAAS_MIN_REPLICAS = _env_int("FAAS_OPENFAAS_MIN_REPLICAS", 0)
-FAAS_OPENFAAS_MAX_REPLICAS = _env_int("FAAS_OPENFAAS_MAX_REPLICAS", 1)
-FAAS_OPENFAAS_READ_TIMEOUT = os.environ.get("FAAS_OPENFAAS_READ_TIMEOUT", "60s").strip() or "60s"
-FAAS_OPENFAAS_WRITE_TIMEOUT = os.environ.get("FAAS_OPENFAAS_WRITE_TIMEOUT", "60s").strip() or "60s"
 FAAS_PUBLIC_BASE_URL = os.environ.get("FAAS_PUBLIC_BASE_URL", "").rstrip("/")
-# Public domain of the faasd node for direct /function/<fn> invokes. Synced from
-# cfg.domains.openfaas by `myapp-ctl ingress render` and injected into every FaaS
-# function as MYAPP_CFG_FAAS_PUBLIC_BASE_URL so generated code never hardcodes it.
+# Optional public base URL for FaaS invokes, injected into every FaaS function as
+# MYAPP_CFG_FAAS_PUBLIC_BASE_URL so generated code reads it from config instead of
+# hardcoding a domain. Invokes normally go through the backend /api/faas/invoke proxy.
 FAAS_NODE_PUBLIC_URL = os.environ.get("FAAS_NODE_PUBLIC_URL", "").rstrip("/")
 FAAS_FUNCTION_PREFIX = os.environ.get("FAAS_FUNCTION_PREFIX", "myapp").strip().lower() or "myapp"
 FAAS_LOCAL_DOCKER_IMAGE = os.environ.get(

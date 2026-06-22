@@ -10,8 +10,6 @@
 
 > **Platform Status**: ✅ Production (iOS/Android/Web) • ⚠️ Experimental (macOS, core features only) • 🚧 Untested (Linux/Windows)
 
-> ⚠️ **运行时已更新(2026-06):FaaS 默认运行时已从 OpenFaaS/faasd 迁移到自研 Docker FaaS**(`FAAS_DEPLOY_MODE=local-docker`:容器即服务,控制面自管 部署/路由/冷唤醒/scale-to-zero/扩缩容,无 OpenFaaS CE 的 15 函数上限)。faasd/OpenFaaS 仅作为可选 legacy 模式保留。当前运行时与运维以 `docs/faas-docker-runtime.md` 为准;本文档中涉及 faasd/OpenFaaS 安装与网关的部分按 legacy 看待。
-
 ---
 
 ## What is this?
@@ -183,7 +181,7 @@ The project is now closer to a small app platform than a single Flutter demo.
 The Flutter client is a compiled runtime; JSON-APPs, components, assets, IM,
 AI generation, and **AI-generated FaaS backends** are all served by the backend
 stack — which can run all-in-one on a single host (backend + Docker Compose stack
-+ the self-managed Docker FaaS runtime; co-located faasd sharing one containerd is now a legacy OpenFaaS mode — default is `local-docker`, see `docs/faas-docker-runtime.md`).
++ the self-managed Docker FaaS runtime, see `docs/faas-docker-runtime.md`).
 
 ```mermaid
 flowchart TB
@@ -224,12 +222,12 @@ flowchart TB
   FaaSDeploy --> PushWorker["isolated git push worker<br/>(ai-worker, scoped deploy key)"]
   PushWorker --> FaaSRepo["GitHub myapp-faas-services<br/>(source of truth)"]
   FaaSRepo --> ServeCheckout["serve checkout<br/>(git pull)"]
-  FaaSDeploy --> Faasd["co-located faasd<br/>(shares Docker's containerd)"]
-  Faasd --> FaaSFn["generic runtime<br/>Python/Flask function"]
+  FaaSDeploy --> DockerFaaS["self-managed Docker FaaS<br/>(one container per service)"]
+  DockerFaaS --> FaaSFn["generic runtime<br/>Python/Flask function"]
   ServeCheckout --> FaaSBundle["/api/faas/runtime_bundle"]
   FaaSFn --> FaaSBundle
   Client --> FaaSInvoke["/api/faas/invoke<br/>route-enforced proxy"]
-  FaaSInvoke --> Faasd
+  FaaSInvoke --> DockerFaaS
 
   Client --> Config["Config Center<br/>/api/v1/public"]
   Client --> Auth["Backend Auth -> Supabase Auth"]
@@ -243,7 +241,7 @@ flowchart TB
 | Backend API | `backend/app.py`, `backend/claude_chat.py` | Flask API for auth-gated AI chat, SSE streaming, media upload, push, provider config, and client-facing backend endpoints |
 | AI Queue / Sessions | `backend/ai_session.py` + Redis | Durable-ish AI task metadata, bounded worker queue, resumable SSE event stream, abort/retry status |
 | AI Worker Pool | `backend/ai_worker_daemon.py`, `backend/ai_session.py`, `backend/agent_node_service.py`, `deploy/production/agent_runner.py` | Moves accepted jobs through Redis, defaults to pull-mode agent-node execution, and can also run direct agent-node or local CLI paths depending on `AI_WORKER_EXECUTION_BACKEND` |
-| FaaS Backends | `backend/faas.py`, `backend/faas_store.py`, `backend/faas_push_worker.py`, `backend/faas_runtime_server.py` | AI-generated Python/Flask backends: strict bundle validation, isolated git push worker → `myapp-faas-services` (GitHub source of truth), self-managed Docker runtime (`local-docker`, default; co-located faasd is the legacy OpenFaaS mode — see `docs/faas-docker-runtime.md`), route-enforced `/api/faas/invoke` proxy, per-user quota + create-vs-append |
+| FaaS Backends | `backend/faas.py`, `backend/faas_store.py`, `backend/faas_push_worker.py`, `backend/faas_runtime_server.py` | AI-generated Python/Flask backends: strict bundle validation, isolated git push worker → `myapp-faas-services` (GitHub source of truth), self-managed Docker runtime (one container per service, control-plane-owned deploy/route/cold-wake/scale-to-zero — see `docs/faas-docker-runtime.md`), route-enforced `/api/faas/invoke` proxy, per-user quota + create-vs-append |
 | Registry | `backend/registry_server.py` | Package registry for JSON-APPs/components: `_index.json` + MinIO package files are the runtime resolve source; Postgres `registry_packages` is the market/detail/enrichment/social index |
 | Object Storage | MinIO / OSS | Public JSON packages under `json-component`, app media, asset packs under `json-app-assets`, and temporary AI-generated JSON URLs |
 | OpenIM | `backend/openim/` | IM backend bridge. Native clients use OpenIM Flutter/native SDK; Web uses the WASM SDK bridge |
@@ -391,8 +389,8 @@ licensed by their authors unless they explicitly say otherwise.
 - [ ] Prompt system v2: split the long app-generation prompt into core rules + task cards, and move JSON validation into tooling
 - [ ] More agent runtime adapters beyond the current Claude/Codex execution paths
 - [ ] Audio support for JSON-APPs (recording, playback, upload, and reusable audio UI/actions)
-- [x] FaaS support: AI conversations create Python/Flask backend functions, served by co-located faasd (all-in-one, sharing Docker's containerd) with strict bundle validation, GitHub source-of-truth (`myapp-faas-services`), an isolated git push worker, per-user quota + create-vs-append, and a route-enforced invoke proxy
-- [ ] FaaS scale-out: multi-node faasd + backend secondary routing (horizontal scale) and user-private faas nodes (reusing the agent-node registry pattern)
+- [x] FaaS support: AI conversations create Python/Flask backend functions, served by the self-managed Docker FaaS runtime (one container per service, control-plane-owned deploy/route/cold-wake/scale-to-zero) with strict bundle validation, GitHub source-of-truth (`myapp-faas-services`), an isolated git push worker, per-user quota + create-vs-append, and a route-enforced invoke proxy
+- [ ] FaaS scale-out: multi-node Docker FaaS + backend secondary routing (horizontal scale) and user-private faas nodes (reusing the agent-node registry pattern)
 - [ ] Mario JSON demo parity: finish Koopa spawn/movement/rendering parity against the original `flutter_game` reference before treating that demo as fully complete
 - [ ] DSL v4 (stabilize breaking-change window)
 - [ ] More tests around the interpreter

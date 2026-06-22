@@ -1,6 +1,9 @@
 # AI Generated FaaS Backends
 
-> ⚠️ **运行时已更新(2026-06):FaaS 默认运行时已从 OpenFaaS/faasd 迁移到自研 Docker FaaS**(`FAAS_DEPLOY_MODE=local-docker`:容器即服务,控制面自管 部署/路由/冷唤醒/scale-to-zero/扩缩容,无 OpenFaaS CE 的 15 函数上限)。faasd/OpenFaaS 仅作为可选 legacy 模式保留。当前运行时与运维以 `faas-docker-runtime.md` 为准;本文档中涉及 faasd/OpenFaaS 安装与网关的部分按 legacy 看待。
+The FaaS runtime is the self-managed Docker FaaS (`FAAS_DEPLOY_MODE=local-docker`):
+each service is a Docker container, the control plane owns the full lifecycle
+(deploy/route/cold-wake/scale-to-zero/扩缩容), and there is no function-count cap.
+See `faas-docker-runtime.md` for the authoritative runtime details.
 
 This document tracks the backend-generation path for JSON-APPs. It is aligned
 with the current `agent-control-plane` architecture: Agent containers generate
@@ -11,8 +14,8 @@ deployment.
 
 Users can ask the AI Agent to generate an APP that also needs backend logic. The
 Agent may create a restricted Python/Flask FaaS service bundle, and the MyApp
-backend deploys it without exposing GitHub, Docker registry, OpenFaaS, or
-`/etc/myapp` secrets to the Agent runtime.
+backend deploys it without exposing GitHub, Docker registry, or `/etc/myapp`
+secrets to the Agent runtime.
 
 The first supported runtime shape is:
 
@@ -21,8 +24,8 @@ The first supported runtime shape is:
 - Default per-user limit: 5 active services.
 - Auth-free invoke path for now.
 - Backend-owned Git commit/push and deployment.
-- OpenFaaS/faasd integration through a backend-controlled adapter (legacy
-  OpenFaaS mode; default is now local-docker — see `faas-docker-runtime.md`).
+- Self-managed Docker FaaS deployment through a backend-controlled adapter
+  (see `faas-docker-runtime.md`).
 - A backend API to disable a service and release its quota slot.
 
 ## Artifact Protocol
@@ -136,7 +139,6 @@ users/9a/eb/9aebdab8-3318-4dfa-99ff-54973bd28cf4/services/todo-api/
 ## Security Boundary
 
 - Agent runtime does not receive GitHub keys.
-- Agent runtime does not receive OpenFaaS admin credentials.
 - Agent runtime does not receive Docker registry credentials.
 - Agent runtime does not write the durable code repository.
 - Optional Git push is configured only on the backend host through
@@ -148,105 +150,19 @@ users/9a/eb/9aebdab8-3318-4dfa-99ff-54973bd28cf4/services/todo-api/
 - Static validation currently blocks dangerous imports/calls and restricts
   dependencies.
 
-## Deploy Modes
+## Deploy Mode
 
-`FAAS_DEPLOY_MODE=local-docker` is the default v0 runtime mode installed by
-`myapp-ctl`. It validates, writes, and commits service code, then starts a
-backend-owned runtime container named `myapp-faas-*` using the configured
-`faas-runtime` image. The generated service directory is mounted read-only into
-that runtime. Agent containers never receive Docker, GitHub, or OpenFaaS
-credentials.
-
-`FAAS_DEPLOY_MODE=metadata` validates, writes, and commits service code, then
-marks the service ready without starting a runtime. It is useful only for
-control-plane tests.
-
-`FAAS_DEPLOY_MODE=script` calls:
-
-```text
-$FAAS_DEPLOY_SCRIPT <service_dir> <function_name> <service_id> <commit_sha>
-```
-
-Use this for host-specific experiments. The script can build or sync code using
-whatever strategy a given faasd/OpenFaaS prototype needs.
-
-`FAAS_DEPLOY_MODE=openfaas` (legacy OpenFaaS mode; default is now local-docker —
-see `faas-docker-runtime.md`) deploys the same generic runtime image for every
-generated service via the OpenFaaS REST API:
-
-```text
-PUT $FAAS_OPENFAAS_GATEWAY/system/functions
-```
-
-The runtime image does not contain user code. Instead, it starts with
-`MYAPP_FAAS_BUNDLE_URL=/api/faas/runtime_bundle/<service_id>` and
-`MYAPP_FAAS_RUNTIME_TOKEN=<token>`, downloads the backend-validated bundle, and
-loads `app.py`. This avoids per-user Docker image builds and keeps registry and
-OpenFaaS credentials outside Agent containers.
+`FAAS_DEPLOY_MODE=local-docker` is the runtime mode installed by `myapp-ctl`. It
+validates, writes, and commits service code, then starts a backend-owned runtime
+container named `myapp-faas-*` using the configured `faas-runtime` image on the
+shared `myapp_default` network. The generated service directory is mounted
+read-only into that runtime. Agent containers never receive Docker or GitHub
+credentials. See `faas-docker-runtime.md` for routing, cold-wake, and
+scale-to-zero behavior.
 
 On every successful deployment the backend records non-secret deployment
-metadata under `faas_services.meta_json.deploy`, including the deploy mode,
-OpenFaaS gateway, runtime image, and bundle base URL. In `openfaas` mode,
-invocation and disable/delete operations prefer the gateway recorded on the
-service and fall back to the current global `FAAS_OPENFAAS_GATEWAY`. This keeps
-the current single-gateway behavior unchanged while leaving a migration path for
-multiple single-node faasd gateways and backend-side routing later.
-
-Deployment shapes (legacy OpenFaaS mode; default is now local-docker — see
-`faas-docker-runtime.md`) — **faasd CAN co-locate with Docker** (empirically proven
-2026-06-15 on Ubuntu 24.04): faasd and Docker share the one **system**
-containerd (`/run/containerd/containerd.sock`) through separate containerd
-**namespaces** (Docker uses `moby`, faasd uses `openfaas` + `openfaas-fn`); there
-is no second competing containerd. Bridges/subnets do not overlap (docker0
-172.17/16, openfaas0 10.62/16), and modern Docker (Engine 28+) keeps the iptables
-`FORWARD` policy off the DROP path via a dedicated `DOCKER-FORWARD` chain. So
-either shape works:
-
-```text
-all-in-one:  MyApp backend + Docker Compose stack + faasd  (one host)  [current prod]
-split:       MyApp backend host   ->   separate faasd/OpenFaaS gateway host
-```
-
-The **current production deployment is all-in-one on host 77**:
-`FAAS_DEPLOY_MODE=openfaas` pointing at the *local* faasd gateway (host IP
-`:8080`). To install faasd co-located: install faasd but **skip its own
-containerd install** (reuse the system containerd Docker already runs); drop any
-conflicting faasd host-port mapping (e.g. prometheus `127.0.0.1:9090`); and if
-the host `FORWARD` policy is `DROP`, add explicit `openfaas0` FORWARD `ACCEPT`
-rules. `FAAS_DEPLOY_MODE=local-docker` remains available for running generated
-services as per-service Docker containers without faasd.
-
-Required OpenFaaS mode settings:
-
-```text
-FAAS_DEPLOY_MODE=openfaas
-FAAS_OPENFAAS_GATEWAY=http://<gateway>:8080
-FAAS_OPENFAAS_USERNAME=admin
-FAAS_OPENFAAS_PASSWORD=<gateway-password>
-FAAS_OPENFAAS_RUNTIME_IMAGE=dapangyu/myapp-faas-runtime:agent-control-plane
-FAAS_RUNTIME_BUNDLE_BASE_URL=https://<backend-domain>
-FAAS_RUNTIME_TOKEN=<random-secret>
-```
-
-faasd host bring-up checklist (legacy OpenFaaS mode only; default is now
-local-docker — see `faas-docker-runtime.md`) (dedicated host OR co-located with
-Docker):
-
-1. Run `myapp-ctl faas faasd-host-preflight --expect-empty-ports` on the
-   candidate host. It is read-only and only **warns** (not fails) if Docker is
-   running — co-location is supported via shared containerd namespaces.
-2. Install faasd. **When co-locating with Docker**: skip faasd's own containerd
-   install (reuse the system containerd), drop conflicting host-port mappings
-   (e.g. prometheus `127.0.0.1:9090`), and add `openfaas0` FORWARD `ACCEPT` rules
-   if the host `FORWARD` policy is `DROP`. Keep the gateway reachable from the
-   MyApp backend (local `host:8080` when co-located) and record the generated
-   gateway password outside Git.
-3. Ensure the faasd host can pull `FAAS_OPENFAAS_RUNTIME_IMAGE`.
-4. Ensure the faasd function runtime can reach
-   `FAAS_RUNTIME_BUNDLE_BASE_URL/api/faas/runtime_bundle/<service_id>`.
-5. Run `myapp-ctl faas openfaas-gateway-check` before changing backend mode.
-6. Run `myapp-ctl faas openfaas-gateway-smoke --yes` on a disposable/test
-   environment before promoting the gateway.
+metadata under `faas_services.meta_json.deploy`, including the deploy mode and
+runtime image.
 
 ## myapp-ctl
 
@@ -275,10 +191,6 @@ myapp-ctl faas ls --user-id <user-id>
 myapp-ctl faas ls --user-id <user-id> --all
 myapp-ctl faas disable <service-id> --user-id <user-id>
 myapp-ctl faas mode local-docker
-myapp-ctl faas mode script --deploy-script /opt/myapp/faas/deploy-service.sh
-myapp-ctl faas mode openfaas --gateway http://<openfaas-gateway>:8080 \
-  --bundle-base-url https://<backend-domain> \
-  --password-env OPENFAAS_PASSWORD
 myapp-ctl faas git --enable --remote git@github.com:<org>/<repo>.git \
   --branch main --push --ssh-key-file /root/.ssh/myapp-faas-deploy-key \
   --known-hosts-file /root/.ssh/known_hosts
@@ -291,25 +203,12 @@ myapp-ctl faas smoke
 myapp-ctl faas git-backend-smoke --yes
 myapp-ctl faas ai-action-smoke
 myapp-ctl faas ai-action-smoke --include-invalid
-myapp-ctl faas faasd-host-preflight --expect-empty-ports
-myapp-ctl faas openfaas-runtime-smoke --pull-image
-myapp-ctl faas openfaas-backend-smoke --yes
-OPENFAAS_PASSWORD=<password> myapp-ctl faas openfaas-gateway-check \
-  --gateway http://<real-faasd-gateway>:8080 \
-  --bundle-base-url https://<backend-domain> \
-  --password-env OPENFAAS_PASSWORD
-OPENFAAS_PASSWORD=<password> myapp-ctl faas openfaas-gateway-smoke --yes \
-  --gateway http://<real-faasd-gateway>:8080 \
-  --bundle-base-url https://<backend-domain> \
-  --password-env OPENFAAS_PASSWORD
 python3 backend/test_faas_store_controls.py
 python3 backend/test_faas_invoke_routes.py
 python3 backend/test_faas_ai_session_owner.py
 python3 backend/test_faas_git_store.py
 python3 backend/test_faas_runtime_bundle_endpoint.py
 python3 backend/test_faas_runtime_server_bundle.py
-python3 backend/test_faas_openfaas_gateway.py
-python3 backend/test_faas_openfaas_gateway_check.py
 ```
 
 `faas-control` and `faas-worker` are service-inventory aliases for the existing
@@ -331,11 +230,8 @@ Minimum verification:
 - `/api/faas/health` returns `ok`.
 - A valid bundle creates a service row and code files.
 - `scripts/faas_smoke_test.py` can deploy, invoke, and disable a test service.
-- In `local-docker` mode, invoking `/api/faas/invoke/<service_id>/...` starts or
-  reuses the corresponding `myapp-faas-*` runtime container.
-- `backend/test_faas_openfaas_gateway.py` passes. This verifies the backend
-  OpenFaaS adapter against an HTTP fake gateway and checks create/update/delete
-  method selection and runtime payload shape.
+- Invoking `/api/faas/invoke/<service_id>/...` starts or reuses the
+  corresponding `myapp-faas-*` runtime container.
 - `backend/test_faas_git_store.py` passes. This verifies backend-owned Git
   commit and push behavior against a local bare remote without exposing any key
   to Agent runtime.
@@ -349,8 +245,7 @@ Minimum verification:
   disabling services, and runtime bundle materialization.
 - `backend/test_faas_invoke_routes.py` passes. This verifies the invoke proxy
   only forwards routes and methods declared by the generated service contract
-  while keeping empty-route legacy services compatible, and verifies
-  service-recorded OpenFaaS gateways take precedence in `openfaas` mode.
+  while keeping empty-route legacy services compatible.
 - `backend/test_faas_ai_session_owner.py` passes. This verifies FaaS deploy
   actions use the authenticated chat-session owner and can resolve agent-pull
   uploaded artifacts.
@@ -360,17 +255,6 @@ Minimum verification:
 - `backend/test_faas_runtime_server_bundle.py` passes. This verifies the generic
   runtime sends its token while downloading the validated bundle and only
   materializes allowed text files.
-- `myapp-ctl faas openfaas-runtime-smoke` passes. This starts a local
-  OpenFaaS-compatible test gateway backed by Docker, deploys the generic
-  runtime image with the same payload shape used for OpenFaaS, verifies the
-  runtime downloads its bundle with the per-service token, invokes the function,
-  updates it, and deletes it. This is a runtime contract test, not a substitute
-  for a real faasd/OpenFaaS gateway test.
-- `myapp-ctl faas openfaas-backend-smoke --yes` passes on a disposable/test
-  host. This temporarily switches the deployed backend to `FAAS_DEPLOY_MODE=openfaas`,
-  restarts the FaaS control services, runs the public FaaS smoke test through a
-  local OpenFaaS-compatible gateway, then restores the previous `faas.env`. It
-  does not pull stack images unless `--pull-stack` is supplied.
 - `myapp-ctl faas ai-action-smoke` passes. This copies a smoke script into the
   deployed backend container, writes the same `faas_bundle.json` and
   `client_actions.json` artifacts an Agent would write, resolves
@@ -379,68 +263,32 @@ Minimum verification:
 - `myapp-ctl faas ai-action-smoke --include-invalid` passes. This also checks
   that an Agent-uploaded bundle with import-time side effects is rejected as a
   `faas_service_failed` action instead of creating a runnable service.
-- `myapp-ctl faas faasd-host-preflight --expect-empty-ports` only **warns** on a
-  Docker Compose host via the non-blocking `docker-colocation` check. Co-location
-  is supported (faasd and Docker share the system containerd via namespaces), and
-  77 in fact runs faasd co-located with the MyApp Docker stack in production.
-- `myapp-ctl faas openfaas-gateway-smoke --yes --gateway <real-gateway>
-  --bundle-base-url <backend-url>` passes against a real external faasd/OpenFaaS
-  gateway. This temporarily switches the deployed backend to the real gateway,
-  runs the public FaaS smoke test, then restores the previous `faas.env`.
-- `myapp-ctl faas openfaas-gateway-check --gateway <real-gateway>
-  --bundle-base-url <backend-url>` passes before the destructive gateway smoke.
-  This does not change backend configuration; it checks gateway health,
-  `/system/functions` authentication, and backend FaaS health reachability from
-  the operator host.
-- In `openfaas` mode, OpenFaaS lists the generated function and invocation via
-  `/api/faas/invoke/<service_id>/...` reaches the generic runtime image.
 - `/api/faas/runtime_bundle/<service_id>` rejects missing or wrong runtime
   tokens and returns the validated service files with the correct token.
 - A bundle with a forbidden import is rejected.
 - The sixth active service for one user is rejected.
 - `server_deploy_faas_service` works through agent-pull artifact upload.
-- If `FAAS_DEPLOY_MODE=script` fails, only that service deployment is marked
-  failed.
 - Existing JSON app generation still works.
 
-## Executed production deployment (2026-06-15) — all-in-one on 77, real faasd PROVEN
+## Executed production deployment — all-in-one on 77
 
-The real-gateway gate is satisfied and the deployment is **all-in-one on a single
-host**. The live `myapp-ctl faas smoke` (and `openfaas-gateway-smoke`) pass
-against the local faasd gateway, with generated code pushed to GitHub and served
-from the git-pulled checkout.
+The deployment is **all-in-one on a single host**. The live `myapp-ctl faas
+smoke` passes, with generated code pushed to GitHub and served from the
+git-pulled checkout.
 
-- **77.237.233.229** = MyApp backend + the full Docker Compose stack + **faasd
-  0.19.7, all co-located on one host**. `FAAS_DEPLOY_MODE=openfaas` points at the
-  *local* faasd gateway (host IP `:8080`). faasd shares Docker's system containerd
-  via namespaces (Docker `moby`, faasd `openfaas`/`openfaas-fn`) — no second
-  containerd. The isolated git push worker runs in `ai-worker`; functions pull the
-  runtime image from Docker Hub
+- **77.237.233.229** = MyApp backend + the full Docker Compose stack, all
+  co-located on one host. `FAAS_DEPLOY_MODE=local-docker`: each generated service
+  runs as its own backend-owned `myapp-faas-*` Docker container on the shared
+  `myapp_default` network, with the backend invoke proxy as the single front
+  door. The isolated git push worker runs in `ai-worker`; service containers use
+  the runtime image from Docker Hub
   (`dapangyufish/myapp-faas-runtime:agent-control-plane`).
-- **103.233.254.179** = **decommissioned.** It served as a transitional dedicated
-  faasd node before co-location was proven; faasd there is stopped/disabled.
 
-Co-located faasd install on 77 (the pattern):
-- Install faasd but **skip its own containerd** (reuse the system containerd).
-- Drop the faasd prometheus `127.0.0.1:9090` host-port mapping (conflicts on 77).
-- 77's `FORWARD` policy is `DROP`, so add `iptables -I FORWARD -i openfaas0 -j
-  ACCEPT` and `iptables -I FORWARD -o openfaas0 -j ACCEPT`.
-- No registry/mirror needed: 77 reaches Docker Hub + ghcr directly.
-
-Two runtime realities handled (apply to any faasd node):
-
-1. **Cold-start race.** faasd CE has a no-op Health handler and reports a function
-   ready as soon as its task runs (before the runtime is listening), so the first
-   scale-from-zero invoke could hit connection-refused. Handled at two layers: the
-   runtime (`faas_runtime_server.py`) listens immediately and blocks the first
-   request until the generated app loads; the invoke proxy (`faas.py`) retries on
-   gateway cold-start markers (safe — the request never reached the app).
-2. **Image distribution behind a firewalled node** (used for 103, kept for
-   reference): if a faasd node cannot reach Docker Hub, run a local `registry:2`
-   as a faasd compose service on `127.0.0.1:5000` (faasd pulls it over plain-http
-   via `WithPlainHTTP(MatchLocalhost)`), push the runtime image there, and rewrite
-   the core image refs to `docker.m.daocloud.io`/`ghcr.m.daocloud.io` mirrors in
-   `/var/lib/faasd/docker-compose.yaml`.
+Cold-start handling: the runtime (`faas_runtime_server.py`) listens immediately
+and blocks the first request until the generated app loads; the invoke proxy
+(`faas.py`) cold-wakes a stopped (scaled-to-zero) container and waits for the
+service health endpoint before forwarding, so the first scale-from-zero invoke
+never hits a connection error.
 
 Strict git-source-of-truth (LIVE): the isolated push worker
 (`backend/faas_push_worker.py`, default-on via `FAAS_GIT_ASYNC_PUSH`) commits the
@@ -451,16 +299,5 @@ that git checkout (not the local write). The backend image installs
 services WITH source in `faas_services.json` to append routes without consuming a
 new quota slot.
 
-Observed passing command (live, all-in-one on 77):
-
-```bash
-OPENFAAS_PASSWORD=<pw> myapp-ctl faas openfaas-gateway-smoke --yes \
-  --gateway http://77.237.233.229:8080 \
-  --bundle-base-url http://77.237.233.229:5566 \
-  --runtime-image dapangyufish/myapp-faas-runtime:agent-control-plane \
-  --password-env OPENFAAS_PASSWORD
-# -> {"ok": true, ..., "restored": true}
-```
-
-`myapp-ctl faas node ls/status` reports the local 77 faasd node (gateway health,
-auth, live function count).
+`myapp-ctl faas ls` and `myapp-ctl faas health` report the deployed services and
+the running `myapp-faas-*` runtime containers.
