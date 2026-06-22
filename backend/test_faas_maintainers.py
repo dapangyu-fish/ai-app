@@ -125,6 +125,16 @@ def test_can_manage_service_owner_maintainer_stranger():
     assert F.can_manage_service("", svc) is False
 
 
+def test_db_tenant_key_per_app():
+    # B2-G3: default per-owner app reuses the owner's existing schema (no migration)
+    assert F._db_tenant_key("appd-owner1", "owner1") == "owner1"
+    # a custom app gets its OWN tenant key (separate schema from the owner default)
+    assert F._db_tenant_key("myapp2", "owner1") == "myapp2"
+    assert F._db_tenant_key("myapp2", "owner1") != F._db_tenant_key("appd-owner1", "owner1")
+    # empty app falls back to owner
+    assert F._db_tenant_key("", "owner1") == "owner1"
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for fn in fns:

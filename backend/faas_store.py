@@ -760,6 +760,18 @@ def can_manage_service(acting_user: str, service: dict[str, Any]) -> bool:
     return is_maintainer(service.get("app_id", ""), acting_user)
 
 
+def _db_tenant_key(app_id: str, owner_user_id: str) -> str:
+    """B2-G3: which DB tenant a service's data lives under. The per-owner DEFAULT app
+    ('appd-<owner>') maps to the owner's EXISTING per-user schema (zero migration);
+    a custom app (its own app_id) gets its OWN app-keyed schema, so an owner's
+    multiple apps do not share one database. Provisioning is keyed on this string."""
+    app_id = str(app_id or "").strip()
+    owner = str(owner_user_id or "").strip()
+    if app_id.startswith("appd-"):
+        return app_id[len("appd-"):] or owner
+    return app_id or owner
+
+
 def _resolve_app_id(owner_user_id: str, meta: dict[str, Any]) -> tuple[str, str]:
     """Pick the application a deploy binds to. A bundle may declare meta.app_id (or
     carry meta.appid for JSON-App binding); otherwise it falls under the owner's
@@ -1669,17 +1681,17 @@ def local_docker_upstream_for_service(service: dict[str, Any]) -> str:
 
 
 def _owner_db_dsn(service: dict[str, Any]) -> str:
-    owner = str(service.get("owner_user_id") or "").strip()
-    if not owner:
+    # B2-G3: key the DSN on the service's app tenant (default app → owner schema).
+    tenant = _db_tenant_key(service.get("app_id", ""), service.get("owner_user_id", ""))
+    if not tenant:
         return ""
     try:
-        try:
-            from faas_userdb import dsn_for_user
-        except ModuleNotFoundError:
-            from backend.faas_userdb import dsn_for_user
-        return dsn_for_user(owner, provision=False) or ""
-    except Exception:
-        return ""
+        from faas_userdb import dsn_for_user
+    except ModuleNotFoundError:
+        from backend.faas_userdb import dsn_for_user
+    # B2-G1: do NOT swallow errors — a decryption failure must FAIL CLOSED (abort
+    # cold-wake) rather than start a container with an empty/wrong DSN.
+    return dsn_for_user(tenant, provision=False) or ""
 
 
 def _wake_replica_zero(service: dict[str, Any], function_name: str, root: Path, service_id: str, commit_sha: str) -> str:
@@ -2026,17 +2038,20 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
             _write_service_files(root, normalized["files"])
             # Per-user database: provision the owner's schema+role (idempotent),
             # run the declared schema.sql migration into it, and obtain the scoped
-            # DSN to inject into the runtime. Confined to the owner's own schema.
+            # DSN to inject into the runtime. B2-G3: provision is keyed on the app
+            # TENANT (default app → owner's existing schema; custom app → its own),
+            # so an owner's distinct apps don't share a database.
             db_dsn = ""
             if normalized.get("db_enabled"):
                 try:
                     from faas_userdb import provision_user_db, run_user_migration
                 except ModuleNotFoundError:
                     from backend.faas_userdb import provision_user_db, run_user_migration
-                db_info = provision_user_db(owner_user_id)
+                db_tenant = _db_tenant_key(app_id, owner_user_id)
+                db_info = provision_user_db(db_tenant)
                 db_dsn = db_info["dsn"]
                 if normalized.get("schema_sql"):
-                    run_user_migration(owner_user_id, normalized["schema_sql"])
+                    run_user_migration(db_tenant, normalized["schema_sql"])
             if FAAS_GIT_ENABLED and FAAS_GIT_ASYNC_PUSH:
                 # Hand the commit+push to the isolated worker (outside the request
                 # path). The runtime still gets code from the local write above /
