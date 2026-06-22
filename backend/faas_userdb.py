@@ -59,6 +59,13 @@ def role_name(user_id: str) -> str:
     return "u_" + _hash(user_id)
 
 
+def owner_role_name(user_id: str) -> str:
+    # B1-G3: NOLOGIN role that OWNS the schema + tables. The runtime login role
+    # (role_name) gets only DML, so runtime code cannot ALTER/DROP/TRUNCATE/DISABLE
+    # RLS — closing R6 and making FORCE RLS (later) actually enforceable.
+    return "o_" + _hash(user_id)
+
+
 def _password(user_id: str) -> str:
     if PW_SECRET:
         return hmac.new(PW_SECRET.encode("utf-8"), str(user_id).encode("utf-8"), hashlib.sha256).hexdigest()
@@ -193,13 +200,22 @@ def provision_user_db(user_id: str) -> dict[str, Any]:
     ensure_tables()
 
     role = role_name(user_id)
+    owner = owner_role_name(user_id)
     schema = schema_name(user_id)
     password = _resolve_password(user_id, get_user_db(user_id))
-    # Identifiers are derived from a hash (^[su]_[0-9a-f]{16}$) so direct
+    # Identifiers are derived from a hash (^[suo]_[0-9a-f]{16}$) so direct
     # interpolation is safe; the password is set via parameter.
     ud = _admin_conn(USER_DB_NAME)
     try:
         with ud.cursor() as cur:
+            # B1-G3: NOLOGIN owner role that OWNS schema + tables.
+            cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", [owner])
+            if cur.fetchone() is None:
+                cur.execute(
+                    f'CREATE ROLE "{owner}" NOLOGIN NOSUPERUSER NOCREATEDB '
+                    f"NOCREATEROLE NOINHERIT NOREPLICATION"
+                )
+            # LOGIN runtime role (DML only).
             cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", [role])
             exists = cur.fetchone() is not None
             if not exists:
@@ -212,8 +228,30 @@ def provision_user_db(user_id: str) -> dict[str, Any]:
                 # Converge the password to the deterministic/derived value.
                 cur.execute(f'ALTER ROLE "{role}" WITH PASSWORD %s', [password])
             cur.execute(f'GRANT CONNECT ON DATABASE "{USER_DB_NAME}" TO "{role}"')
-            cur.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema}" AUTHORIZATION "{role}"')
-            cur.execute(f'GRANT USAGE, CREATE ON SCHEMA "{schema}" TO "{role}"')
+            # Schema owned by the owner role. For a fresh user CREATE makes o_ the
+            # owner; for an existing schema (previously AUTHORIZATION u_) the ALTER
+            # transfers ownership. REASSIGN OWNED then moves any tables/sequences the
+            # runtime role used to own (the migration the user authorized) — idempotent.
+            cur.execute(f'CREATE SCHEMA IF NOT EXISTS "{schema}" AUTHORIZATION "{owner}"')
+            cur.execute(f'ALTER SCHEMA "{schema}" OWNER TO "{owner}"')
+            cur.execute(f'REASSIGN OWNED BY "{role}" TO "{owner}"')
+            # Runtime role: USAGE (NOT CREATE) + table/sequence DML only. Revoke any
+            # legacy CREATE so it can no longer ALTER/DROP/TRUNCATE/DISABLE RLS.
+            cur.execute(f'REVOKE CREATE ON SCHEMA "{schema}" FROM "{role}"')
+            cur.execute(f'GRANT USAGE ON SCHEMA "{schema}" TO "{role}"')
+            cur.execute(
+                f'GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "{schema}" TO "{role}"'
+            )
+            cur.execute(f'GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "{schema}" TO "{role}"')
+            # New tables/sequences created by the owner role auto-grant DML to runtime.
+            cur.execute(
+                f'ALTER DEFAULT PRIVILEGES FOR ROLE "{owner}" IN SCHEMA "{schema}" '
+                f'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "{role}"'
+            )
+            cur.execute(
+                f'ALTER DEFAULT PRIVILEGES FOR ROLE "{owner}" IN SCHEMA "{schema}" '
+                f'GRANT USAGE, SELECT ON SEQUENCES TO "{role}"'
+            )
             cur.execute(f'ALTER ROLE "{role}" SET search_path = "{schema}"')
             cur.execute(f"ALTER ROLE \"{role}\" SET statement_timeout = '{STATEMENT_TIMEOUT}'")
             cur.execute(
@@ -288,13 +326,17 @@ def run_user_migration(user_id: str, sql: str) -> None:
     if sql.count(";") > MIGRATION_MAX_STATEMENTS:
         raise UserDBError(f"schema.sql has too many statements (> {MIGRATION_MAX_STATEMENTS})")
     mapping = provision_user_db(user_id)
-    role, schema = mapping["role_name"], mapping["schema_name"]
+    schema = mapping["schema_name"]
+    owner = owner_role_name(user_id)
     ud = _admin_conn(USER_DB_NAME)
     try:
         ud.autocommit = False
         with ud.cursor() as cur:
-            # Drop superuser powers for the migration: act AS the scoped role.
-            cur.execute(f'SET ROLE "{role}"')
+            # B1-G3: run DDL AS THE OWNER ROLE (o_), not the runtime role. Tables
+            # thus belong to o_; the runtime role (u_) only ever gets DML (via the
+            # default privileges set in provision), so it cannot ALTER/DROP them at
+            # runtime. SET ROLE drops the admin's superuser powers for the migration.
+            cur.execute(f'SET ROLE "{owner}"')
             cur.execute(f'SET search_path = "{schema}"')
             cur.execute(f"SET statement_timeout = '{STATEMENT_TIMEOUT}'")
             cur.execute(sql)
