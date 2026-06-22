@@ -26,7 +26,7 @@ for _name, _value in {
     "AGENT_NODE_TOKEN": "",
     "FAAS_DEPLOY_MODE": "metadata",
     "FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER": False,
-    "FAAS_REQUIRE_AUTH": False,
+    "FAAS_REQUIRE_AUTH": False, "FAAS_REQUIRE_RUN_TOKEN": False, "FAAS_RUN_TOKEN_SECRET": "",
     "FAAS_ENFORCE_ACCESS_POLICY": False, "FAAS_INVOKE_RATE_PER_MIN": 0,
     "FAAS_RUNTIME_TOKEN": "runtime-master-token",
     "FAAS_CALLER_PSEUDONYM_SECRET": "test-pseudo-secret",

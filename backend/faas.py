@@ -20,7 +20,7 @@ from flask import Response, jsonify, request, stream_with_context
 
 try:
     from auth import verify_access_token
-    from config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_ENFORCE_ACCESS_POLICY, FAAS_INVOKE_RATE_PER_MIN, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
+    from config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_ENFORCE_ACCESS_POLICY, FAAS_INVOKE_RATE_PER_MIN, FAAS_REQUIRE_AUTH, FAAS_REQUIRE_RUN_TOKEN, FAAS_RUN_TOKEN_SECRET, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
     from faas_store import (
         FaaSError,
         FaaSValidationError,
@@ -57,7 +57,7 @@ try:
     )
 except ModuleNotFoundError:
     from backend.auth import verify_access_token
-    from backend.config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_ENFORCE_ACCESS_POLICY, FAAS_INVOKE_RATE_PER_MIN, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
+    from backend.config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_ENFORCE_ACCESS_POLICY, FAAS_INVOKE_RATE_PER_MIN, FAAS_REQUIRE_AUTH, FAAS_REQUIRE_RUN_TOKEN, FAAS_RUN_TOKEN_SECRET, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
     from backend.faas_store import (
         FaaSError,
         FaaSValidationError,
@@ -102,11 +102,20 @@ def _request_user_id(*, trusted_only: bool = False) -> str | None:
     # owner explicitly, so an in-run deploy is scoped to the right owner without
     # ever handing the agent a user access token. Owner is a header so it works
     # even when the body is the octet-stream bundle.
+    # X-G2 (binding): a BACKEND-minted run token is the strongest trusted owner —
+    # the agent-node cannot forge it (it lacks FAAS_RUN_TOKEN_SECRET), so a leaked
+    # AGENT_NODE_TOKEN alone cannot impersonate an arbitrary owner. Checked first.
+    run_claims = _verify_run_token(request.headers.get("X-MyApp-Faas-Run-Token", ""))
+    if run_claims and run_claims.get("o"):
+        return str(run_claims["o"]).strip()
     node_token = request.headers.get("X-MyApp-Agent-Node-Token", "")
     if node_token and AGENT_NODE_TOKEN and hmac.compare_digest(node_token, AGENT_NODE_TOKEN):
-        owner = str(request.headers.get("X-MyApp-Owner-User-Id", "") or "").strip()
-        if owner:
-            return owner
+        # When run tokens are REQUIRED, the free-text owner header is no longer
+        # accepted on the node-token path alone — only the verified run token above.
+        if not (FAAS_REQUIRE_RUN_TOKEN and trusted_only):
+            owner = str(request.headers.get("X-MyApp-Owner-User-Id", "") or "").strip()
+            if owner:
+                return owner
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Bearer "):
         user = verify_access_token(auth[7:])
@@ -220,6 +229,37 @@ def _verify_data_token(token: str) -> dict | None:
     try:
         raw, sig = token.split(".", 1)
         expect = hmac.new(FAAS_CALLER_PSEUDONYM_SECRET.encode("utf-8"), raw.encode("ascii"), hashlib.sha256).hexdigest()[:32]
+        if not hmac.compare_digest(sig, expect):
+            return None
+        payload = json.loads(base64.urlsafe_b64decode(raw.encode("ascii")))
+        if int(payload.get("e", 0)) < int(time.time()):
+            return None
+        return payload
+    except Exception:
+        return None
+
+
+# ── X-G2 (binding): backend-minted run-scoped deploy token ──
+
+def mint_run_token(owner: str, run_id: str = "", ttl: int = 3600) -> str:
+    """Mint a run-scoped owner token (backend-only secret). The agent-dispatch path
+    calls this when handing a run to an agent; the agent-node forwards it on deploy.
+    A bare AGENT_NODE_TOKEN holder cannot mint one (no FAAS_RUN_TOKEN_SECRET)."""
+    owner = str(owner or "").strip()
+    if not (FAAS_RUN_TOKEN_SECRET and owner):
+        return ""
+    payload = {"o": owner, "r": str(run_id or ""), "e": int(time.time()) + ttl}
+    raw = base64.urlsafe_b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
+    sig = hmac.new(FAAS_RUN_TOKEN_SECRET.encode("utf-8"), raw.encode("ascii"), hashlib.sha256).hexdigest()[:32]
+    return f"{raw}.{sig}"
+
+
+def _verify_run_token(token: str) -> dict | None:
+    if not (FAAS_RUN_TOKEN_SECRET and token and "." in token):
+        return None
+    try:
+        raw, sig = token.split(".", 1)
+        expect = hmac.new(FAAS_RUN_TOKEN_SECRET.encode("utf-8"), raw.encode("ascii"), hashlib.sha256).hexdigest()[:32]
         if not hmac.compare_digest(sig, expect):
             return None
         payload = json.loads(base64.urlsafe_b64decode(raw.encode("ascii")))

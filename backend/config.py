@@ -132,6 +132,15 @@ FAAS_CALLER_PSEUDONYM_SECRET = (
     os.environ.get("FAAS_CALLER_PSEUDONYM_SECRET", "").strip()
     or os.environ.get("AGENT_NODE_TOKEN", "").strip()
 )
+# X-G2 (binding): BACKEND-ONLY secret for run-scoped deploy tokens. The agent-node
+# does NOT have it, so a leaked AGENT_NODE_TOKEN alone cannot forge an owner — only
+# a token the backend minted for a real run is accepted. Distinct from
+# AGENT_NODE_TOKEN on purpose (no fallback to it).
+FAAS_RUN_TOKEN_SECRET = os.environ.get("FAAS_RUN_TOKEN_SECRET", "").strip()
+# When on, a trusted deploy MUST present a valid backend-minted run token (the
+# free-text X-MyApp-Owner-User-Id given only AGENT_NODE_TOKEN is rejected). Default
+# off until the agent dispatch path threads the run token through.
+FAAS_REQUIRE_RUN_TOKEN = os.environ.get("FAAS_REQUIRE_RUN_TOKEN", "0").strip().lower() in {"1", "true", "yes", "on"}
 FAAS_CODE_ROOT = os.environ.get("FAAS_CODE_ROOT", "/mnt/myapp/faas/code")
 FAAS_MAX_SERVICES_PER_USER = _env_int("FAAS_MAX_SERVICES_PER_USER", 5)
 FAAS_GIT_ENABLED = os.environ.get("FAAS_GIT_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"}

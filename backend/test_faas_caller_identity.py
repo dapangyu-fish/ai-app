@@ -55,7 +55,7 @@ sys.modules["database"] = _database
 _config = types.ModuleType("config")
 for _name, _value in {
     "AGENT_NODE_TOKEN": "node-tok", "FAAS_DEPLOY_MODE": "metadata",
-    "FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER": True, "FAAS_REQUIRE_AUTH": False,
+    "FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER": True, "FAAS_REQUIRE_AUTH": False, "FAAS_REQUIRE_RUN_TOKEN": False, "FAAS_RUN_TOKEN_SECRET": "",
     "FAAS_RUNTIME_TOKEN": "rt", "FAAS_CALLER_PSEUDONYM_SECRET": "server-secret-xyz",
     "SUPABASE_JWT_SECRET": "", "FAAS_ENFORCE_ACCESS_POLICY": False, "FAAS_INVOKE_RATE_PER_MIN": 0,
     "FAAS_BUNDLE_MAX_BYTES": 512 * 1024, "FAAS_BUNDLE_SERVE_ROOT": "",
@@ -196,6 +196,34 @@ def test_data_token_mint_verify_tamper_expiry():
     assert faas._verify_data_token(expired) is None
     # a function CANNOT forge a different pseudonym (it has no secret) — only the
     # backend can mint; verify confirms the bound pseudonym, not a function-supplied one.
+
+
+def test_run_token_mint_verify_and_gate():
+    # X-G2 binding: run-token is authoritative; agent-node can't forge it.
+    faas.FAAS_RUN_TOKEN_SECRET = "rt-secret"
+    try:
+        tok = faas.mint_run_token("ownerX", "run1")
+        c = faas._verify_run_token(tok)
+        assert c and c["o"] == "ownerX"
+        raw, sig = tok.split(".", 1)
+        assert faas._verify_run_token(raw + "." + "0" * len(sig)) is None
+        assert faas._verify_run_token("") is None
+        assert faas._verify_run_token(faas.mint_run_token("o", "r", ttl=-1)) is None
+        # _request_user_id: run-token wins over a spoofed free-text owner
+        _with_headers({"X-MyApp-Faas-Run-Token": tok, "X-MyApp-Agent-Node-Token": "node-tok",
+                       "X-MyApp-Owner-User-Id": "spoofed"})
+        assert faas._request_user_id(trusted_only=True) == "ownerX"
+        # require-run-token gate: node-token + free-text owner alone is REJECTED
+        faas.FAAS_REQUIRE_RUN_TOKEN = True
+        _with_headers({"X-MyApp-Agent-Node-Token": "node-tok", "X-MyApp-Owner-User-Id": "spoofed"})
+        assert faas._request_user_id(trusted_only=True) is None
+        # gate off → free-text owner accepted (back-compat)
+        faas.FAAS_REQUIRE_RUN_TOKEN = False
+        _with_headers({"X-MyApp-Agent-Node-Token": "node-tok", "X-MyApp-Owner-User-Id": "o2"})
+        assert faas._request_user_id(trusted_only=True) == "o2"
+    finally:
+        faas.FAAS_RUN_TOKEN_SECRET = ""
+        faas.FAAS_REQUIRE_RUN_TOKEN = False
 
 
 def test_access_policy_enforcement_matrix():
