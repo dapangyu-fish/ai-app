@@ -5611,11 +5611,23 @@ def cmd_faas(args) -> int:
             print(f"faas ls failed: {status or '-'} {text[:500]}", file=sys.stderr)
             return 1
         services = data.get("services", []) if isinstance(data, dict) else []
-        # Instances/replicas per function from the faasd/openfaas gateway.
+        # Instances per function. In self-managed Docker mode, count running
+        # containers (the faasd gateway is gone); otherwise query the gateway.
         replicas: dict[str, object] = {}
+        docker_inst = False
         try:
-            gateway, gw_user, gw_pass, _mode = _faas_gateway_creds(args)
-            if gateway:
+            gateway, gw_user, gw_pass, mode = _faas_gateway_creds(args)
+            if mode in {"local-docker", "docker", "docker-local"}:
+                docker_inst = True
+                proc = _run([
+                    "docker", "ps", "--filter", "label=myapp.faas=1",
+                    "--format", '{{.Label "myapp.faas.function_name"}}',
+                ])
+                for line in (proc.stdout or "").splitlines():
+                    fn = line.strip()
+                    if fn:
+                        replicas[fn] = int(replicas.get(fn, 0)) + 1
+            elif gateway:
                 fn_http, fn_body = _faas_gateway_get(gateway, "/system/functions", username=gw_user, password=gw_pass, timeout=8)
                 if fn_http == 200 and fn_body:
                     for fn in json.loads(fn_body):
@@ -5629,6 +5641,7 @@ def cmd_faas(args) -> int:
                             replicas[str(fn["name"])] = rep if rep is not None else 0
         except Exception:
             replicas = {}
+            docker_inst = False
         if args.json:
             print(json.dumps(data, ensure_ascii=False))
             return 0
@@ -5640,7 +5653,8 @@ def cmd_faas(args) -> int:
                 "service_id": item.get("service_id", "-"),
                 "owner": (str(item.get("owner_user_id", "") or "-"))[:13],
                 "status": item.get("status", "-"),
-                "inst": replicas.get(fn, "-") if replicas else "?",
+                # docker mode: 0 = scaled to zero (no running container) is real, not unknown.
+                "inst": (replicas.get(fn, 0) if docker_inst else (replicas.get(fn, "-") if replicas else "?")),
                 "routes": len(routes) if isinstance(routes, list) else "-",
                 "function": fn,
             })
