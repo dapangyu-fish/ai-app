@@ -112,6 +112,11 @@ def create_app():
         view_func=faas.download_service_archive,
     )
     app.add_url_rule(
+        "/api/faas/services/<service_id>/scale",
+        methods=["POST"],
+        view_func=faas.scale_user_service,
+    )
+    app.add_url_rule(
         "/api/faas/runtime_bundle/<service_id>",
         methods=["GET"],
         view_func=faas.runtime_bundle,

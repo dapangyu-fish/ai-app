@@ -33,6 +33,7 @@ try:
         openfaas_gateway_for_service,
         runtime_bundle_for_service,
         service_deploy_mode,
+        scale_service,
         runtime_token_for_service,
     )
 except ModuleNotFoundError:
@@ -52,6 +53,7 @@ except ModuleNotFoundError:
         openfaas_gateway_for_service,
         runtime_bundle_for_service,
         service_deploy_mode,
+        scale_service,
         runtime_token_for_service,
     )
 
@@ -157,6 +159,26 @@ def download_service_archive(service_id: str):
             "Content-Length": str(len(data)),
         },
     )
+
+
+def scale_user_service(service_id: str):
+    user_id = _request_user_id()
+    if not user_id:
+        return _json_error("user_id is required", 401 if FAAS_REQUIRE_AUTH else 400, code="FAAS_USER_REQUIRED")
+    body = request.get_json(silent=True) or {}
+    try:
+        replicas = int(body.get("replicas"))
+    except (TypeError, ValueError):
+        return _json_error("replicas must be an integer", 400, code="FAAS_SCALE_INVALID")
+    try:
+        result = scale_service(user_id, service_id, replicas)
+    except FaaSValidationError as exc:
+        return _json_error(str(exc), 404, code="FAAS_NOT_FOUND")
+    except FaaSError as exc:
+        return _json_error(str(exc), 500, code="FAAS_SCALE_FAILED")
+    except Exception as exc:
+        return _json_error(str(exc), 500, code="FAAS_SCALE_FAILED")
+    return jsonify({"ok": True, **result})
 
 
 def disable_user_service(service_id: str):

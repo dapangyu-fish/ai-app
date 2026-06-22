@@ -348,6 +348,43 @@ def _local_upstream_url(function_name: str) -> str:
     return f"http://{_local_container_name(function_name)}:8080"
 
 
+# ── multi-replica (扩容/缩容) ─────────────────────────────────────────────────
+# Replica 0 keeps the base name (back-compat + cold-wake target); replicas 1..N
+# get a "-r<i>" suffix. The invoke proxy load-balances across running replicas.
+def _replica_name(function_name: str, replica: int) -> str:
+    base = _local_container_name(function_name)
+    return base if replica <= 0 else f"{base}-r{replica}"
+
+
+def _replica_upstream(function_name: str, replica: int) -> str:
+    return f"http://{_replica_name(function_name, replica)}:8080"
+
+
+def _running_replicas(function_name: str) -> list[int]:
+    """Indices of currently-running replica containers for a service."""
+    client = _docker_client()
+    names = {_replica_name(function_name, 0): 0}
+    # Map every possible replica container name -> index by scanning by label.
+    out: list[int] = []
+    try:
+        containers = client.containers.list(
+            filters={"label": f"myapp.faas.function_name={function_name}", "status": "running"}
+        )
+    except Exception:
+        return out
+    base = _local_container_name(function_name)
+    for c in containers:
+        nm = c.name
+        if nm == base:
+            out.append(0)
+        elif nm.startswith(base + "-r"):
+            try:
+                out.append(int(nm[len(base) + 2:]))
+            except ValueError:
+                continue
+    return sorted(set(out))
+
+
 # ── self-managed Docker FaaS: scale-to-zero state ────────────────────────────
 # Replaces faasd's idler. The invoke path touches a per-service activity file;
 # the reaper (faas_docker_reaper.py) stops containers idle past the threshold,
@@ -356,6 +393,8 @@ def _local_upstream_url(function_name: str) -> str:
 FAAS_DOCKER_SCALE_ZERO = os.environ.get("FAAS_DOCKER_SCALE_ZERO", "1").strip().lower() in {"1", "true", "yes", "on"}
 FAAS_DOCKER_IDLE_SECONDS = int(os.environ.get("FAAS_DOCKER_IDLE_SECONDS", "600"))
 FAAS_DOCKER_STATE_DIR = os.environ.get("FAAS_DOCKER_STATE_DIR", "/mnt/myapp/faas/state").rstrip("/")
+FAAS_DOCKER_MAX_REPLICAS = int(os.environ.get("FAAS_DOCKER_MAX_REPLICAS", "5"))
+_RR_COUNTER: dict[str, int] = {}
 
 
 def _activity_path(service_id: str) -> Path:
@@ -1291,9 +1330,9 @@ def _docker_not_found_type():
         return None
 
 
-def _remove_local_docker_runtime(function_name: str) -> None:
+def _remove_replica(function_name: str, replica: int) -> None:
     client = _docker_client()
-    name = _local_container_name(function_name)
+    name = _replica_name(function_name, replica)
     try:
         container = client.containers.get(name)
     except Exception as exc:
@@ -1304,13 +1343,35 @@ def _remove_local_docker_runtime(function_name: str) -> None:
     try:
         container.remove(force=True)
     except Exception as exc:
-        raise FaaSError(f"cannot remove old FaaS container {name}: {exc}") from exc
+        raise FaaSError(f"cannot remove FaaS container {name}: {exc}") from exc
 
 
-def _wait_local_docker_runtime(function_name: str) -> None:
+def _remove_local_docker_runtime(function_name: str) -> None:
+    """Remove ALL replica containers of a service (running or stopped) — destroy."""
+    client = _docker_client()
+    base = _local_container_name(function_name)
+    try:
+        containers = client.containers.list(
+            all=True, filters={"label": f"myapp.faas.function_name={function_name}"}
+        )
+    except Exception:
+        containers = []
+    found = False
+    for c in containers:
+        if c.name == base or c.name.startswith(base + "-r"):
+            found = True
+            try:
+                c.remove(force=True)
+            except Exception as exc:
+                raise FaaSError(f"cannot remove FaaS container {c.name}: {exc}") from exc
+    if not found:
+        _remove_replica(function_name, 0)
+
+
+def _wait_local_docker_runtime(function_name: str, replica: int = 0) -> None:
     import requests
 
-    url = f"{_local_upstream_url(function_name)}/__myapp_faas_health"
+    url = f"{_replica_upstream(function_name, replica)}/__myapp_faas_health"
     deadline = time.time() + max(1, FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS)
     last_error = ""
     while time.time() < deadline:
@@ -1325,15 +1386,15 @@ def _wait_local_docker_runtime(function_name: str) -> None:
     raise FaaSError(f"FaaS runtime did not become healthy: {last_error}")
 
 
-def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: str, commit_sha: str, db_dsn: str = "") -> str:
+def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: str, commit_sha: str, db_dsn: str = "", replica: int = 0) -> str:
     client = _docker_client()
-    name = _local_container_name(function_name)
+    name = _replica_name(function_name, replica)
     container_code_root = Path(FAAS_CODE_ROOT).resolve()
     host_code_root = Path(FAAS_LOCAL_DOCKER_HOST_CODE_ROOT).resolve()
     if not container_code_root.exists():
         raise FaaSError(f"FaaS code root does not exist in backend container: {container_code_root}")
     service_dir = _local_runtime_service_dir(root)
-    _remove_local_docker_runtime(function_name)
+    _remove_replica(function_name, replica)
     try:
         client.containers.run(
             FAAS_LOCAL_DOCKER_IMAGE,
@@ -1347,6 +1408,7 @@ def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: s
                 "MYAPP_FAAS_SERVICE_DIR": service_dir,
                 "MYAPP_FAAS_FUNCTION_NAME": function_name,
                 "MYAPP_FAAS_COMMIT": commit_sha,
+                "MYAPP_FAAS_REPLICA": str(replica),
                 "PYTHONUNBUFFERED": "1",
                 # Scoped per-user DB DSN (internal; read only by the myapp_db
                 # helper, never bridged into the public app config).
@@ -1358,6 +1420,7 @@ def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: s
                 "myapp.faas": "1",
                 "myapp.faas.service_id": service_id,
                 "myapp.faas.function_name": function_name,
+                "myapp.faas.replica": str(replica),
             },
             volumes={
                 str(host_code_root): {
@@ -1369,9 +1432,9 @@ def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: s
         )
     except Exception as exc:
         raise FaaSError(f"cannot start FaaS runtime container {name}: {exc}") from exc
-    _wait_local_docker_runtime(function_name)
+    _wait_local_docker_runtime(function_name, replica)
     touch_service_activity(service_id)
-    return f"local-docker container={name} upstream={_local_upstream_url(function_name)}"
+    return f"local-docker container={name} upstream={_replica_upstream(function_name, replica)}"
 
 
 def local_docker_upstream_for_service(service: dict[str, Any]) -> str:
@@ -1381,33 +1444,33 @@ def local_docker_upstream_for_service(service: dict[str, Any]) -> str:
     return _local_upstream_url(function_name)
 
 
-def ensure_local_docker_runtime_for_service(service: dict[str, Any]) -> str:
-    """Cold-wake + route for the self-managed Docker FaaS. Single front door
-    (called from the invoke proxy): if the container is running, route to it; if
-    it was scaled to zero (stopped), start() it (fast, env incl. the DB DSN
-    preserved); if it is absent, (re)create it, re-injecting the owner's scoped
-    DB DSN. Every invoke records activity so the reaper knows it is live."""
-    function_name = str(service.get("function_name") or "").strip()
-    service_id = str(service.get("service_id") or "").strip()
-    active_path = str(service.get("active_path") or "").strip()
-    commit_sha = str(service.get("active_commit") or "").strip()
-    if not function_name or not service_id or not active_path:
-        raise FaaSError("service is missing runtime metadata")
-    touch_service_activity(service_id)
-    root = Path(active_path)
-    name = _local_container_name(function_name)
+def _owner_db_dsn(service: dict[str, Any]) -> str:
+    owner = str(service.get("owner_user_id") or "").strip()
+    if not owner:
+        return ""
+    try:
+        try:
+            from faas_userdb import dsn_for_user
+        except ModuleNotFoundError:
+            from backend.faas_userdb import dsn_for_user
+        return dsn_for_user(owner, provision=False) or ""
+    except Exception:
+        return ""
+
+
+def _wake_replica_zero(service: dict[str, Any], function_name: str, root: Path, service_id: str, commit_sha: str) -> str:
+    """Start replica 0 (fast start() if it exists; recreate with DSN otherwise)."""
     client = _docker_client()
+    name = _replica_name(function_name, 0)
     try:
         container = client.containers.get(name)
         container.reload()
         if container.status == "running":
-            return _local_upstream_url(function_name)
-        # Scaled to zero: fast wake by starting the existing container so the
-        # original env (PORT, MYAPP_DB_DSN, platform config) is preserved.
+            return _replica_upstream(function_name, 0)
         try:
-            container.start()
-            _wait_local_docker_runtime(function_name)
-            return _local_upstream_url(function_name)
+            container.start()  # env (incl. MYAPP_DB_DSN) preserved
+            _wait_local_docker_runtime(function_name, 0)
+            return _replica_upstream(function_name, 0)
         except Exception:
             try:
                 container.remove(force=True)
@@ -1417,20 +1480,129 @@ def ensure_local_docker_runtime_for_service(service: dict[str, Any]) -> str:
         not_found = _docker_not_found_type()
         if not_found and not isinstance(exc, not_found):
             raise FaaSError(f"cannot inspect FaaS container {name}: {exc}") from exc
-    # Absent (or a failed start): recreate, re-injecting the owner's scoped DSN.
-    db_dsn = ""
-    owner = str(service.get("owner_user_id") or "").strip()
-    if owner:
+    _start_local_docker_runtime(
+        root, function_name=function_name, service_id=service_id,
+        commit_sha=commit_sha, db_dsn=_owner_db_dsn(service), replica=0,
+    )
+    return _replica_upstream(function_name, 0)
+
+
+def ensure_local_docker_runtime_for_service(service: dict[str, Any]) -> str:
+    """Cold-wake + load-balanced route for the self-managed Docker FaaS. Single
+    front door (invoke proxy): route round-robin across running replicas; if none
+    are running (scaled to zero), wake replica 0 (start() preserves the DB DSN, or
+    recreate re-injecting it). Records activity so the reaper knows it is live."""
+    function_name = str(service.get("function_name") or "").strip()
+    service_id = str(service.get("service_id") or "").strip()
+    active_path = str(service.get("active_path") or "").strip()
+    commit_sha = str(service.get("active_commit") or "").strip()
+    if not function_name or not service_id or not active_path:
+        raise FaaSError("service is missing runtime metadata")
+    touch_service_activity(service_id)
+    running = _running_replicas(function_name)
+    if running:
+        idx = _RR_COUNTER.get(function_name, 0)
+        _RR_COUNTER[function_name] = idx + 1
+        return _replica_upstream(function_name, running[idx % len(running)])
+    return _wake_replica_zero(service, function_name, Path(active_path), service_id, commit_sha)
+
+
+def _set_service_replicas(service_id: str, replicas: int) -> None:
+    try:
+        db_execute(
+            "UPDATE faas_services SET meta_json = jsonb_set(coalesce(meta_json, '{}')::jsonb, "
+            "'{deploy,replicas}', %s::jsonb, true), updated_at = NOW() WHERE service_id = %s",
+            [json.dumps(int(replicas)), service_id],
+        )
+    except Exception:
+        pass
+
+
+def scale_service(owner_user_id: str, service_id: str, replicas: int) -> dict[str, Any]:
+    """扩容/缩容: set the number of running replica containers for a docker-mode
+    service. replicas=0 scales to zero (kept warm-recreatable); >1 runs multiple
+    load-balanced replicas. Capped at FAAS_DOCKER_MAX_REPLICAS."""
+    if not owner_user_id:
+        raise FaaSValidationError("owner_user_id is required")
+    replicas = max(0, min(int(replicas), FAAS_DOCKER_MAX_REPLICAS))
+    ensure_tables()
+    service = get_service(service_id)
+    if not service or service.get("owner_user_id") != owner_user_id:
+        raise FaaSValidationError("service not found")
+    if service_deploy_mode(service) not in _LOCAL_DOCKER_MODES:
+        raise FaaSValidationError("scaling is only supported for docker-mode services")
+    function_name = str(service.get("function_name") or "").strip()
+    root = Path(str(service.get("active_path") or "").strip())
+    commit_sha = str(service.get("active_commit") or "").strip()
+    db_dsn = _owner_db_dsn(service)
+    touch_service_activity(service_id)
+    client = _docker_client()
+    # Bring up replicas 0..replicas-1
+    for i in range(replicas):
+        name = _replica_name(function_name, i)
+        started = False
         try:
-            try:
-                from faas_userdb import dsn_for_user
-            except ModuleNotFoundError:
-                from backend.faas_userdb import dsn_for_user
-            db_dsn = dsn_for_user(owner, provision=False) or ""
+            c = client.containers.get(name)
+            c.reload()
+            if c.status == "running":
+                started = True
+            else:
+                try:
+                    c.start()
+                    _wait_local_docker_runtime(function_name, i)
+                    started = True
+                except Exception:
+                    try:
+                        c.remove(force=True)
+                    except Exception:
+                        pass
         except Exception:
-            db_dsn = ""
-    _start_local_docker_runtime(root, function_name=function_name, service_id=service_id, commit_sha=commit_sha, db_dsn=db_dsn)
-    return _local_upstream_url(function_name)
+            pass
+        if not started:
+            _start_local_docker_runtime(
+                root, function_name=function_name, service_id=service_id,
+                commit_sha=commit_sha, db_dsn=db_dsn, replica=i,
+            )
+    # Remove replicas >= the new count (scale down / clean stopped extras)
+    for i in range(replicas, FAAS_DOCKER_MAX_REPLICAS + 1):
+        _remove_replica(function_name, i)
+    _set_service_replicas(service_id, replicas)
+    return {"service_id": service_id, "replicas": replicas, "running": _running_replicas(function_name)}
+
+
+def migrate_service_to_docker(service: dict[str, Any]) -> dict[str, Any]:
+    """Migrate one faasd/openfaas service to the self-managed Docker runtime:
+    flip meta.deploy.mode to local-docker, start a docker container from the
+    service's existing code, then delete the old faasd function. Idempotent."""
+    service_id = str(service.get("service_id") or "").strip()
+    function_name = str(service.get("function_name") or "").strip()
+    active_path = str(service.get("active_path") or "").strip()
+    if not service_id or not function_name or not active_path:
+        raise FaaSError("service is missing runtime metadata")
+    warnings: list[str] = []
+    if service_deploy_mode(service) in _LOCAL_DOCKER_MODES:
+        return {"service_id": service_id, "migrated": False, "reason": "already docker"}
+    old_gateway = ""
+    try:
+        old_gateway = openfaas_gateway_for_service(service)
+    except Exception as exc:
+        warnings.append(f"old gateway resolve: {exc}")
+    # 1) flip recorded deploy mode -> docker, so the invoke proxy routes to docker
+    db_execute(
+        "UPDATE faas_services SET meta_json = jsonb_set(coalesce(meta_json, '{}')::jsonb, "
+        "'{deploy}', %s::jsonb, true), updated_at = NOW() WHERE service_id = %s",
+        [json.dumps(_current_deploy_meta()), service_id],
+    )
+    # 2) start a docker container from the existing code (verifies health)
+    fresh = get_service(service_id) or service
+    upstream = ensure_local_docker_runtime_for_service(fresh)
+    # 3) remove the old faasd function (best-effort)
+    if old_gateway:
+        try:
+            _delete_openfaas_function(function_name, gateway=old_gateway)
+        except Exception as exc:
+            warnings.append(f"delete faasd fn: {exc}")
+    return {"service_id": service_id, "migrated": True, "upstream": upstream, "warnings": warnings}
 
 
 def _runtime_bundle_url(service_id: str) -> str:
