@@ -130,6 +130,24 @@ def test_set_policy_enforces_ownership_and_ladder():
         pass
 
 
+def test_b3g2_serial_pk_rejected_uuid_ok():
+    # B3-G2 (IDOR): SERIAL primary keys rejected; UUID accepted.
+    for bad in ["CREATE TABLE t (id SERIAL PRIMARY KEY);",
+                "create table t (id bigserial primary key, v text);"]:
+        try:
+            faas_store._lint_schema_sql(bad)
+            raise AssertionError(f"SERIAL not rejected: {bad}")
+        except FaaSValidationError:
+            pass
+    # UUID schema passes
+    faas_store._lint_schema_sql("CREATE TABLE t (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), v text);")
+    faas_store._lint_schema_sql("")  # empty ok
+
+
+def test_b3g6_privacy_notice_present():
+    assert faas_store.privacy_notice().strip()  # non-empty disclosure
+
+
 def test_list_user_applications():
     faas_store.ensure_application("appd-list1", "lister")
     faas_store.ensure_application("appd-list2", "lister")

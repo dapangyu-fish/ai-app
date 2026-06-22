@@ -154,6 +154,31 @@ _ALLOWED_EXTENSIONS = {
 _MAX_BUNDLE_FILES = 60
 # Name of the user's DDL/migration file (run into their schema on deploy).
 _SCHEMA_SQL_FILE = "schema.sql"
+# B3-G2 (IDOR): sequential SERIAL primary keys are an enumeration oracle across
+# consumers (guessable ids). Reject them; steer to UUID gen_random_uuid().
+_SERIAL_RE = re.compile(r"\b(?:SMALL|BIG)?SERIAL\b", re.IGNORECASE)
+
+
+# B3-G6 / D4(a): privacy posture is DISCLOSURE (not E2E encryption). The owner and
+# their maintainers can technically read all consumer data in the app's schema;
+# consumer data is isolated from OTHER apps but not hidden from THIS app's owner.
+# Surfaced to consumers at install / in the client management UI (B3-G8).
+PRIVACY_NOTICE = (
+    "此应用的开发者（及其维护者）可以访问你在本应用内创建的数据。"
+    "你的数据与其他应用相互隔离，但对本应用的所有者不是隐藏的。"
+)
+
+
+def privacy_notice() -> str:
+    return PRIVACY_NOTICE
+
+
+def _lint_schema_sql(schema_sql: str) -> None:
+    if schema_sql and _SERIAL_RE.search(schema_sql):
+        raise FaaSValidationError(
+            "schema.sql uses SERIAL/BIGSERIAL — use a UUID primary key instead "
+            "(e.g. id UUID PRIMARY KEY DEFAULT gen_random_uuid()) to avoid IDOR id enumeration"
+        )
 # Filenames a user bundle may NOT ship — they would shadow platform-provided
 # runtime modules (myapp_db is the scoped DB helper baked into the image).
 _RESERVED_FILE_NAMES = {"myapp_db.py"}
@@ -1561,6 +1586,7 @@ def validate_bundle(bundle: dict[str, Any], *, default_slug: str = "") -> dict[s
     # service.db, or imports the myapp_db helper in any module. That triggers
     # provisioning + DSN injection at deploy time.
     schema_sql = normalized_files.get(_SCHEMA_SQL_FILE, "")
+    _lint_schema_sql(schema_sql)  # B3-G2: reject SERIAL PKs (IDOR)
     uses_helper = any(
         path.endswith(".py") and "myapp_db" in content
         for path, content in normalized_files.items()
