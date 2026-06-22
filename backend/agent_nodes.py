@@ -337,7 +337,8 @@ def _probe_agent_node(row: dict) -> dict:
     node_id = str(row.get("node_id") or "")
     if url.startswith("pull://"):
         try:
-            active_runs = int(get_redis().scard(f"ai:agent_pull:node_running:{node_id}") or 0)
+            from ai_session import agent_pull_live_running_count
+            active_runs = int(agent_pull_live_running_count(node_id))
         except Exception:
             active_runs = 0
         return {

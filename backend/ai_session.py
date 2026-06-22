@@ -1669,6 +1669,14 @@ def _run_redis_job(job: _WorkerJob) -> None:
     def heartbeat_loop() -> None:
         while not stop_heartbeat.wait(_WORKER_HEARTBEAT_SECONDS):
             try:
+                # If the session was aborted, stop renewing the lease and release it
+                # now, so a force_restart can take over even while this worker is
+                # still blocked in a long agent-node read. The stale worker's later
+                # set_status calls are no-ops because active_job_id will have changed.
+                if store.is_aborted(job.session_id):
+                    logger.info(f"[WORKER_QUEUE] heartbeat 检测到 abort，释放 running lease sid={job.session_id}")
+                    _complete_running(job.session_id, job.provider_id)
+                    return
                 _refresh_running_lease(job.session_id, job.provider_id)
             except Exception as e:
                 logger.warning(f"[WORKER_QUEUE] heartbeat 失败 sid={job.session_id}: {e}")
@@ -3041,8 +3049,67 @@ def _agent_pull_release_node_running(run_id: str, node_id: str = "") -> None:
         return
     try:
         get_redis().srem(_agent_pull_node_running_key(node), run_id)
+    except redis.exceptions.RedisError as exc:
+        # A swallowed release used to leak a phantom 'running' run for the whole 24h
+        # TTL. Log it; agent_pull_live_running_count() reconciles it away on read.
+        logger.warning("[AGENT_PULL] release node_running failed node=%s run=%s: %s", node, run_id, exc)
+
+
+# Statuses that mean a run is no longer occupying a node slot. Broad on purpose so a
+# release that never happened (worker crash / swallowed srem) can't keep the run "live".
+_AGENT_PULL_RUN_TERMINAL = {
+    "done", "completed", "failed", "error", "aborted", "cancelled", "canceled", "stopped", "timeout",
+}
+# A non-terminal run whose last_seen_at is older than this is treated as dead (its
+# worker/node died before writing a terminal status). Generous so a long, quiet but
+# live run is never falsely reaped — a live worker would have failed it at its own
+# idle timeout (~180s) long before this.
+AGENT_PULL_RUN_STALE_SECONDS = max(120, int(os.environ.get("AGENT_PULL_RUN_STALE_SECONDS", "900")))
+
+
+def agent_pull_live_running_count(node_id: str) -> int:
+    """Reconciled count of runs ACTUALLY still running on a pull node.
+
+    The node_running set is the dashboard's active_runs source but is only cleaned on
+    the happy path (stop event / idle release). Worker crash, node death, or a dropped
+    srem leak a phantom run until the 24h TTL. This reads the set, drops any member
+    whose job is terminal / has no meta / is stale, and returns the live count — so the
+    displayed number self-heals instead of over-counting.
+    """
+    node = (node_id or "").strip()
+    if not node:
+        return 0
+    key = _agent_pull_node_running_key(node)
+    try:
+        members = get_redis().smembers(key)
     except redis.exceptions.RedisError:
-        pass
+        return 0
+    now_ms = int(time.time() * 1000)
+    stale_ms = AGENT_PULL_RUN_STALE_SECONDS * 1000
+    live = 0
+    dead: list = []
+    for raw in members or []:
+        run_id = raw.decode() if isinstance(raw, bytes) else str(raw)
+        meta = _agent_pull_job_meta(run_id)
+        if not meta:
+            dead.append(run_id)
+            continue
+        status = str(meta.get("status") or "").strip().lower()
+        if status in _AGENT_PULL_RUN_TERMINAL:
+            dead.append(run_id)
+            continue
+        last_seen = _agent_pull_meta_int(meta, "last_seen_at")
+        if last_seen and (now_ms - last_seen) > stale_ms:
+            dead.append(run_id)
+            continue
+        live += 1
+    if dead:
+        try:
+            get_redis().srem(key, *dead)
+            logger.info("[AGENT_PULL] reconciled %d stale run(s) off node=%s", len(dead), node)
+        except redis.exceptions.RedisError as exc:
+            logger.warning("[AGENT_PULL] reconcile srem failed node=%s: %s", node, exc)
+    return live
 
 
 def _agent_pull_append_job_event(run_id: str, item: dict) -> None:
