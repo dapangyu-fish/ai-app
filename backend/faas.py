@@ -22,6 +22,7 @@ try:
     from faas_store import (
         FaaSError,
         FaaSValidationError,
+        audit_log,
         build_service_archive,
         can_manage_service,
         deploy_bundle,
@@ -47,6 +48,7 @@ except ModuleNotFoundError:
     from backend.faas_store import (
         FaaSError,
         FaaSValidationError,
+        audit_log,
         can_manage_service,
         deploy_bundle,
         disable_service,
@@ -121,6 +123,16 @@ def _acting_user() -> str:
     if auth.startswith("Bearer "):
         return _verify_caller_uid(auth[7:]) or ""
     return ""
+
+
+def _auth_via() -> str:
+    """X-G2 audit: how this request authenticated (node-token / bearer / untrusted)."""
+    node_token = request.headers.get("X-MyApp-Agent-Node-Token", "")
+    if node_token and AGENT_NODE_TOKEN and hmac.compare_digest(node_token, AGENT_NODE_TOKEN):
+        return "node-token"
+    if request.headers.get("Authorization", "").startswith("Bearer "):
+        return "bearer"
+    return "untrusted"
 
 
 # ── B1-G2: trusted, app-scoped caller identity injected into the function ──
@@ -295,6 +307,8 @@ def scale_user_service(service_id: str):
         return _json_error("replicas must be an integer", 400, code="FAAS_SCALE_INVALID")
     try:
         result = scale_service(user_id, service_id, replicas, acting_user=_acting_user())
+        audit_log("scale", service_id=service_id, owner_user_id=user_id,
+                  acting_user=_acting_user() or user_id, via=_auth_via(), detail=f"replicas={replicas}")
     except FaaSValidationError as exc:
         return _json_error(str(exc), 404, code="FAAS_NOT_FOUND")
     except FaaSError as exc:
@@ -315,8 +329,12 @@ def disable_user_service(service_id: str):
     try:
         if purge:
             result = delete_service(user_id, service_id)
+            audit_log("delete", service_id=service_id, owner_user_id=user_id,
+                      acting_user=_acting_user() or user_id, via=_auth_via())
             return jsonify({"ok": True, **result})
         service = disable_service(user_id, service_id)
+        audit_log("disable", service_id=service_id, owner_user_id=user_id,
+                  acting_user=_acting_user() or user_id, via=_auth_via())
     except FaaSValidationError as exc:
         return _json_error(str(exc), 404, code="FAAS_NOT_FOUND")
     except FaaSError as exc:
@@ -346,6 +364,8 @@ def deploy_service():
         else:
             bundle = request.get_json(silent=True) or {}
         result = deploy_bundle(user_id, bundle, source="api", acting_user=_acting_user())
+        audit_log("deploy", service_id=result.service_id, owner_user_id=user_id,
+                  acting_user=_acting_user() or user_id, via=_auth_via())
     except FaaSValidationError as exc:
         return _json_error(str(exc), 400, code="FAAS_VALIDATION_FAILED")
     except FaaSError as exc:

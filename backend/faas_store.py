@@ -347,6 +347,25 @@ def ensure_tables() -> None:
         )
         """
     )
+    # X-G2: audit trail for every privileged FaaS mutation (deploy/scale/disable/
+    # delete/grant/member). Makes trusted-token (AGENT_NODE_TOKEN) abuse detectable
+    # even before a full backend-minted run-scoped token lands (INV-9).
+    db_execute(
+        """
+        CREATE TABLE IF NOT EXISTS faas_audit_log (
+            id BIGSERIAL PRIMARY KEY,
+            action TEXT NOT NULL,
+            service_id TEXT NOT NULL DEFAULT '',
+            app_id TEXT NOT NULL DEFAULT '',
+            owner_user_id TEXT NOT NULL DEFAULT '',
+            acting_user TEXT NOT NULL DEFAULT '',
+            via TEXT NOT NULL DEFAULT '',
+            detail TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """
+    )
+    db_execute("CREATE INDEX IF NOT EXISTS idx_faas_audit_created ON faas_audit_log(created_at DESC)")
     # B3-G3: per-app CONSUMER grants (server-verified — NOT the anonymous-writable
     # registry install telemetry). revoked_at set => revoked (checked live per call).
     db_execute(
@@ -820,6 +839,40 @@ def list_consumers(app_id: str) -> list[dict[str, Any]]:
         [str(app_id or "").strip()],
         fetch_all=True,
     )
+    return rows or []
+
+
+def audit_log(action: str, *, service_id: str = "", app_id: str = "", owner_user_id: str = "",
+              acting_user: str = "", via: str = "", detail: str = "") -> None:
+    """X-G2: record a privileged FaaS mutation. Best-effort — never breaks the
+    operation it audits."""
+    try:
+        ensure_tables()
+        db_execute(
+            "INSERT INTO faas_audit_log (action, service_id, app_id, owner_user_id, acting_user, via, detail) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            [str(action or ""), str(service_id or ""), str(app_id or ""),
+             str(owner_user_id or ""), str(acting_user or ""), str(via or ""), str(detail or "")[:500]],
+        )
+    except Exception:
+        pass
+
+
+def list_audit_log(*, owner_user_id: str = "", limit: int = 100) -> list[dict[str, Any]]:
+    ensure_tables()
+    limit = max(1, min(int(limit or 100), 1000))
+    if owner_user_id:
+        rows = db_query(
+            "SELECT action, service_id, app_id, owner_user_id, acting_user, via, detail, created_at "
+            "FROM faas_audit_log WHERE owner_user_id = %s ORDER BY created_at DESC LIMIT %s",
+            [str(owner_user_id).strip(), limit], fetch_all=True,
+        )
+    else:
+        rows = db_query(
+            "SELECT action, service_id, app_id, owner_user_id, acting_user, via, detail, created_at "
+            "FROM faas_audit_log ORDER BY created_at DESC LIMIT %s",
+            [limit], fetch_all=True,
+        )
     return rows or []
 
 

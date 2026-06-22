@@ -53,6 +53,7 @@ faas_store.delete_service = lambda *args, **kwargs: {"deleted": True}
 faas_store.running_replica_counts = lambda *args, **kwargs: {}
 faas_store.ensure_local_docker_runtime_for_service = lambda *args, **kwargs: None
 faas_store.ensure_tables = lambda *args, **kwargs: None
+faas_store.audit_log = lambda *a, **k: None
 faas_store.get_application = lambda *a, **k: None
 faas_store.is_consumer_granted = lambda *a, **k: False
 faas_store.can_manage_service = lambda *a, **k: False

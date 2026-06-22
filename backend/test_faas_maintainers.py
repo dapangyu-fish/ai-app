@@ -35,6 +35,7 @@ class _DB:
         self.apps = {}
         self.maint = {}  # (app_id,user_id) -> row
         self.grants = {}  # (app_id,user_id) -> revoked(bool)
+        self.audit = []
 
     def execute(self, sql, params=None):
         params = list(params or [])
@@ -54,6 +55,11 @@ class _DB:
         if n.startswith("delete from faas_app_maintainers"):
             app_id, user_id = params
             self.maint.pop((app_id, user_id), None)
+            return None
+        if "insert into faas_audit_log" in n:
+            self.audit.append({"action": params[0], "service_id": params[1], "app_id": params[2],
+                               "owner_user_id": params[3], "acting_user": params[4],
+                               "via": params[5], "detail": params[6], "created_at": "c"})
             return None
         if "insert into faas_app_consumer_grants" in n:
             app_id, user_id = params[0], params[1]
@@ -78,6 +84,10 @@ class _DB:
         if "from faas_app_consumer_grants where app_id = %s and user_id = %s and revoked_at is null" in n:
             k = (params[0], params[1])
             return {"ok": 1} if (k in self.grants and not self.grants[k]) else None
+        if "from faas_audit_log" in n:
+            if "where owner_user_id = %s" in n:
+                return [r for r in self.audit if r["owner_user_id"] == params[0]]
+            return list(self.audit)
         return [] if fetch_all else None
 
 
@@ -159,6 +169,14 @@ def test_maintainer_can_grant():
     F.add_maintainer("owner1", "appM", "mGrant")
     F.grant_consumer("mGrant", "appM", "cUser2")  # maintainer may grant
     assert F.is_consumer_granted("appM", "cUser2")
+
+
+def test_audit_log_records_and_lists():
+    F.audit_log("deploy", service_id="svc-1", owner_user_id="ownerA",
+                acting_user="maintB", via="node-token", detail="x")
+    rows = F.list_audit_log(owner_user_id="ownerA")
+    assert any(r["action"] == "deploy" and r["acting_user"] == "maintB" and r["via"] == "node-token"
+               for r in rows), rows
 
 
 def test_db_tenant_key_per_app():
