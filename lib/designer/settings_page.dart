@@ -8,6 +8,7 @@ import 'default_startup_page.dart';
 import 'default_startup_prefs.dart';
 import 'hidden_env_entry.dart';
 import 'private_agent_nodes_page.dart';
+import 'faas_apps_page.dart';
 import '../i18n/framework_strings.dart';
 import '../i18n/language_switcher.dart';
 import '../im/im_cache_manage_entry.dart';
@@ -140,6 +141,8 @@ class _SettingsPageState extends State<SettingsPage> {
             _buildAgentScopeSelector(cs),
             const SizedBox(height: 8.0),
             _buildPrivateAgentNodeTile(cs),
+            const SizedBox(height: 8.0),
+            _buildFaasAppsTile(cs),
             const SizedBox(height: 24.0),
             _buildSectionTitle(t.settingsSectionAsr, cs),
             const SizedBox(height: 8.0),
@@ -412,6 +415,37 @@ class _SettingsPageState extends State<SettingsPage> {
         trailing: const Icon(Icons.chevron_right),
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const PrivateAgentNodesPage()),
+        ),
+      ),
+    );
+  }
+
+  // B3-G8: entry to the Owner's FaaS Application self-management page.
+  Widget _buildFaasAppsTile(ColorScheme cs) {
+    return Card(
+      child: ListTile(
+        leading: Icon(Icons.dns_outlined, color: cs.primary),
+        title: Text(
+          _privateAgentText(
+            zh: '我的应用 (FaaS + 数据库)',
+            en: 'My Apps (FaaS + Database)',
+            de: 'Meine Apps (FaaS + Datenbank)',
+            es: 'Mis apps (FaaS + base de datos)',
+          ),
+        ),
+        subtitle: Text(
+          _privateAgentText(
+            zh: '管理你的 FaaS 服务与数据库、访问策略、维护者与授权用户',
+            en: 'Manage your FaaS services & database, access policy, maintainers and granted users',
+            de: 'FaaS-Dienste & Datenbank, Zugriffsrichtlinie, Maintainer und Nutzer verwalten',
+            es: 'Gestiona tus servicios FaaS y base de datos, politica de acceso, maintainers y usuarios',
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const FaasAppsPage()),
         ),
       ),
     );
