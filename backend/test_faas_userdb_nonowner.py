@@ -22,6 +22,8 @@ sys.modules["database"] = _database
 
 import faas_userdb as U  # noqa: E402
 
+U.ENC_KEY = "unit-test-enc-key"  # B2-G1: provisioning now encrypts the password
+
 
 class _FakeCursor:
     def __init__(self, log):

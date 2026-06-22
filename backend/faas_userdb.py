@@ -36,9 +36,17 @@ RUNTIME_PORT = int(os.environ.get("FAAS_USER_DB_RUNTIME_PORT", "5432"))
 CONN_LIMIT = int(os.environ.get("FAAS_USER_DB_CONN_LIMIT", "8"))
 STATEMENT_TIMEOUT = os.environ.get("FAAS_USER_DB_STATEMENT_TIMEOUT", "5s").strip() or "5s"
 IDLE_TX_TIMEOUT = os.environ.get("FAAS_USER_DB_IDLE_TX_TIMEOUT", "10s").strip() or "10s"
-# Deterministic role passwords from a host secret (no secret storage). If unset,
-# a random password is generated and stored in the mapping row.
-PW_SECRET = os.environ.get("FAAS_USER_DB_SECRET", "").strip()
+# B2-G1 (R15): role passwords are RANDOM per tenant (never derived from user_id),
+# stored ENCRYPTED at rest. The old FAAS_USER_DB_SECRET deterministic derivation is
+# removed — a single leaked host secret must NOT yield every tenant's password.
+PW_SECRET = os.environ.get("FAAS_USER_DB_SECRET", "").strip()  # legacy; no longer used for derivation
+# Encryption key for credentials at rest. Falls back to AGENT_NODE_TOKEN so a
+# deployment that hasn't set it still encrypts with a server-only, non-guessable
+# key; if BOTH are empty, credential storage fails closed.
+ENC_KEY = (
+    os.environ.get("FAAS_USER_DB_ENC_KEY", "").strip()
+    or os.environ.get("AGENT_NODE_TOKEN", "").strip()
+)
 MIGRATION_MAX_BYTES = int(os.environ.get("FAAS_USER_DB_MIGRATION_MAX_BYTES", "65536"))
 MIGRATION_MAX_STATEMENTS = int(os.environ.get("FAAS_USER_DB_MIGRATION_MAX_STATEMENTS", "100"))
 
@@ -66,24 +74,42 @@ def owner_role_name(user_id: str) -> str:
     return "o_" + _hash(user_id)
 
 
-def _password(user_id: str) -> str:
-    if PW_SECRET:
-        return hmac.new(PW_SECRET.encode("utf-8"), str(user_id).encode("utf-8"), hashlib.sha256).hexdigest()
-    return secrets.token_hex(24)
+def _fernet():
+    if not ENC_KEY:
+        raise UserDBError("FAAS_USER_DB_ENC_KEY (or AGENT_NODE_TOKEN) is required to encrypt FaaS DB credentials")
+    try:
+        import base64
+        from cryptography.fernet import Fernet
+    except ModuleNotFoundError as exc:  # pragma: no cover
+        raise UserDBError("cryptography is required for FaaS DB credential encryption") from exc
+    # Any string → a valid 32-byte urlsafe Fernet key.
+    key = base64.urlsafe_b64encode(hashlib.sha256(ENC_KEY.encode("utf-8")).digest())
+    return Fernet(key)
+
+
+def _encrypt(plaintext: str) -> str:
+    return _fernet().encrypt(plaintext.encode("utf-8")).decode("ascii")
+
+
+def _decrypt(token: str) -> str:
+    try:
+        return _fernet().decrypt(token.encode("utf-8")).decode("utf-8")
+    except UserDBError:
+        raise
+    except Exception as exc:
+        # Fail CLOSED — never silently fall back to an empty/wrong credential
+        # (cold-wake must abort rather than start a container with a bad DSN).
+        raise UserDBError("failed to decrypt stored FaaS DB credential") from exc
 
 
 def _resolve_password(user_id: str, existing: Optional[dict[str, Any]]) -> str:
-    """Resolve a STABLE password so repeated provisioning converges.
-
-    With FAAS_USER_DB_SECRET set, the password is derived deterministically (no
-    storage needed). Otherwise reuse the password already stored in the mapping
-    row — critical because provisioning runs more than once per deploy (deploy +
-    migration), and a fresh random each time would leave the injected DSN out of
-    sync with the role's actual password.
-    """
-    if PW_SECRET:
-        return _password(user_id)
-    if existing and existing.get("dsn"):
+    """Resolve a STABLE password so repeated provisioning converges (provisioning
+    runs more than once per deploy). B2-G1: reuse the encrypted stored password if
+    present; migrate a legacy plaintext DSN's password on first re-provision;
+    otherwise generate a fresh RANDOM password (never derived from user_id)."""
+    if existing and existing.get("pw_enc"):
+        return _decrypt(existing["pw_enc"])
+    if existing and existing.get("dsn"):  # legacy plaintext row → migrate
         from urllib.parse import unquote, urlsplit
         pw = urlsplit(existing["dsn"]).password
         if pw:
@@ -135,6 +161,9 @@ def ensure_tables() -> None:
         )
         """
     )
+    # B2-G1: store the password ENCRYPTED here; the plaintext `dsn` column is no
+    # longer written (kept for legacy-row migration). Additive, idempotent.
+    db_execute("ALTER TABLE faas_user_databases ADD COLUMN IF NOT EXISTS pw_enc TEXT NOT NULL DEFAULT ''")
 
 
 def get_user_db(user_id: str) -> Optional[dict[str, Any]]:
@@ -144,7 +173,8 @@ def get_user_db(user_id: str) -> Optional[dict[str, Any]]:
         from backend.database import db_query
     ensure_tables()
     return db_query(
-        "SELECT user_id, db_name, schema_name, role_name, dsn, created_at FROM faas_user_databases WHERE user_id = %s",
+        "SELECT user_id, db_name, schema_name, role_name, dsn, pw_enc, created_at "
+        "FROM faas_user_databases WHERE user_id = %s",
         [user_id],
         fetch_one=True,
     )
@@ -265,15 +295,19 @@ def provision_user_db(user_id: str) -> dict[str, Any]:
         from database import db_execute
     except ModuleNotFoundError:
         from backend.database import db_execute
+    # B2-G1: persist the password ENCRYPTED (pw_enc); the plaintext `dsn` column is
+    # cleared so credentials are no longer stored in the clear. The DSN is rebuilt
+    # in memory from role + decrypted password whenever the runtime needs it.
+    pw_enc = _encrypt(password)
     db_execute(
         """
-        INSERT INTO faas_user_databases (user_id, db_name, schema_name, role_name, dsn)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO faas_user_databases (user_id, db_name, schema_name, role_name, dsn, pw_enc)
+        VALUES (%s, %s, %s, %s, '', %s)
         ON CONFLICT (user_id) DO UPDATE SET
             db_name = EXCLUDED.db_name, schema_name = EXCLUDED.schema_name,
-            role_name = EXCLUDED.role_name, dsn = EXCLUDED.dsn
+            role_name = EXCLUDED.role_name, dsn = '', pw_enc = EXCLUDED.pw_enc
         """,
-        [user_id, USER_DB_NAME, schema, role, dsn],
+        [user_id, USER_DB_NAME, schema, role, pw_enc],
     )
     return {"user_id": user_id, "db_name": USER_DB_NAME, "schema_name": schema, "role_name": role, "dsn": dsn}
 
@@ -305,8 +339,12 @@ def list_user_tables(user_id: str) -> list[str]:
 
 def dsn_for_user(user_id: str, *, provision: bool = True) -> Optional[str]:
     existing = get_user_db(user_id)
-    if existing and existing.get("dsn"):
-        return existing["dsn"]
+    if existing:
+        # B2-G1: rebuild the DSN in memory from role + decrypted password.
+        if existing.get("pw_enc"):
+            return _dsn(existing["role_name"], _decrypt(existing["pw_enc"]))
+        if existing.get("dsn"):  # legacy plaintext row (pre-B2-G1)
+            return existing["dsn"]
     if not provision:
         return None
     return provision_user_db(user_id)["dsn"]
