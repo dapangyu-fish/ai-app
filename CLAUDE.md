@@ -147,6 +147,36 @@ client.fput_object("models", "path/in/bucket/file.onnx", "/local/path/file.onnx"
 PY
 ```
 
+## FaaS Application 权限模型（应用维度）
+
+把「FaaS 服务 + 数据库 + JSON-App」收敛为一个 **Application** 治理单元。角色：**Owner**
+（唯一所有者，改代码/改 schema/管成员/设策略/删应用）、**Maintainer**（可发版/扩缩容，不可
+转移/删/管成员）、**Consumer**（框架已登录用户，经服务以**不可伪造的应用内假名**读写**自己的**
+数据）。核心代码：`backend/faas.py`、`faas_store.py`、`faas_userdb.py`、`faas_data.py`，运行时
+内置 helper `faas_runtime_auth.py`(=`myapp_auth`)、`faas_runtime_data.py`(=`myapp_data`)。
+
+约定与不变量：
+- **schema 续写只能经 deploy 迁移**：运行时 DB 角色**非属主**（仅 DML），DDL 只在部署期由属主
+  角色执行；`schema.sql` **禁止 SERIAL/BIGSERIAL**（用 `uuid ... DEFAULT gen_random_uuid()`）。
+- **消费者身份**：invoke 后端验 JWT → 注入**应用作用域签名假名**（`HMAC(密钥, app_id‖uid)`），
+  函数用 `myapp_auth.current_user()` 读；客户端伪造的 `x-myapp-*` 头被前缀剥离;原始 token/anon-key
+  **不进函数**。
+- **消费者数据隔离**：多租户表必须带 `owner text` 列，函数用 `myapp_data`（后端中介，平台强制
+  `owner=caller`，函数**不持 DSN**）；裸 `myapp_db` 仅限 Owner 自有/非消费者数据。
+- **DB 隔离**：per-app schema（`_db_tenant_key`，默认 app=owner 复用旧库）；口令随机 + Fernet
+  加密存储（`FAAS_USER_DB_ENC_KEY`，回落 `AGENT_NODE_TOKEN`）；容器加固（cap_drop ALL +
+  no-new-privileges + pids/mem 限）。
+- **访问策略（D3 梯子）**：`access_policy` ∈ {owner-only(默认)/allowlist/install-required/public}，
+  invoke 每次查 live grant（`faas_app_consumer_grants`，服务端校验）。**默认门禁关**
+  `FAAS_ENFORCE_ACCESS_POLICY=0`（避免破坏现有开放调用，按部署开启）。
+- **可信部署**：所有特权变更入 `faas_audit_log`；后端可签发 run 作用域令牌
+  （`FAAS_RUN_TOKEN_SECRET`，agent-node 转发 `X-MyApp-Faas-Run-Token`），开
+  `FAAS_REQUIRE_RUN_TOKEN=1` 后裸 `AGENT_NODE_TOKEN` 不能再冒充任意 owner（默认关）。
+- **客户端**：设置页「我的应用 (FaaS + 数据库)」(`lib/designer/faas_apps_page.dart`) 经
+  `/api/faas/apps*` owner-scoped 管理。AI 生成 FaaS 必读 `docs/faas-jsonapp-generation-playbook.md`
+  （已含 UUID/`myapp_auth`/`myapp_data`）。设计/可行性/落地目标见 `~/faas-app-permission-*.md`，
+  网络锁定运维手册见 `~/faas-b2g2-network-runbook.md`。
+
 ## 发布 JSON-APP / 组件到市场
 
 ### 发布方式

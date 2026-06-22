@@ -76,7 +76,9 @@
   调用 / 网络或文件 IO / 循环 / 线程**。函数默认参数、类型注解、装饰器也不能调用运行时代码。
 - **import 白名单（根模块）**：`__future__ base64 collections dateutil datetime decimal flask
   functools hashlib hmac itertools json math pydantic random re statistics string time urllib
-  uuid`。**没有 `requests`/`http`/`socket`/`os`**——要出网只能用 **`urllib`**。
+  uuid`，以及平台内置 `myapp_db`（裸 SQL）/ `myapp_auth`（当前用户）/ `myapp_data`（按调用者隔离的
+  CRUD）。**没有 `requests`/`http`/`socket`/`os`**——要出网只能用 **`urllib`**。也**不要用反射**
+  （`getattr`/`__class__`/`._os` 等）或 `eval/exec`——会被沙箱拒绝。
 - **方法装饰器只有** `@app.get/post/put/patch/delete`；OPTIONS/HEAD 等必须
   `@app.route(path, methods=[...])`（写 `@app.head` 会 import 即崩 503）。
 - **`service.routes` 声明必须与 `@app.xxx` 装饰器逐一对齐**（按路径形状，`<int:id>`/`<id>` 视为
@@ -158,33 +160,53 @@ bash backend/faas_pull.sh <service_id>      # 解压到 $AI_APP_WORKSPACE/faas_p
 需要存储/查询数据（清单、订单、收藏、留言、购物车…）时，本服务可拥有一块**自己的
 Postgres 库**，按 schema 隔离——只能读写自己的数据，碰不到别的用户或平台数据。
 
-1. **声明表**：在 bundle 里加 `schema.sql`，用幂等 DDL：
+1. **声明表**：在 bundle 里加 `schema.sql`，用幂等 DDL。**主键必须用 UUID**（`SERIAL`/`BIGSERIAL`
+   会被拒绝——自增 id 可被枚举，存在越权风险）。多人使用的表必须带一个 **`owner text`** 列
+   （平台据它做"每个消费者只看自己数据"的隔离）：
 
    ```sql
    CREATE TABLE IF NOT EXISTS listings (
-     id serial PRIMARY KEY,
+     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+     owner text NOT NULL,                       -- 该行属于哪个消费者（平台自动填/校验）
      title text NOT NULL,
      price numeric NOT NULL DEFAULT 0,
      created_at timestamptz NOT NULL DEFAULT now()
    );
    ```
 
-   部署时后端会在你的 schema 里执行它。**不要在 app.py 运行时建表/改表。**
-2. **读写**：`app.py` 里 `import myapp_db`：
+   部署时后端会在你的 schema 里执行它。**不要在 app.py 运行时建表/改表**（运行时角色无 DDL 权限）。
+
+2. **当前用户身份**：`import myapp_auth`：
 
    ```python
-   import myapp_db
-   rows = myapp_db.query("SELECT id, title, price FROM listings ORDER BY id DESC LIMIT 50")
-   row  = myapp_db.queryone("INSERT INTO listings(title, price) VALUES (%s, %s) "
-                            "RETURNING id, title, price", [title, price])
-   n    = myapp_db.execute("DELETE FROM listings WHERE id = %s", [lid])
-   with myapp_db.tx() as cur:          # 多语句事务
-       cur.execute("UPDATE ...", [...])
+   import myapp_auth
+   uid = myapp_auth.current_user()         # 当前调用者的"应用内稳定假名"，未登录则 None
+   if not myapp_auth.is_authenticated():
+       return {"error": "login required"}, 401
    ```
-3. **铁律**：值一律 `%s` 占位 + params（防注入，禁止 f-string 拼 SQL）；search_path 已指向你的
-   schema，直接写表名；不要 `import psycopg2/os`、不要碰连接串（连接由 myapp_db 内部完成）；
+
+   这是后端注入的**可信身份**——框架已登录的用户无需在 app 内再登录，函数直接拿到他的应用内
+   假名（不可伪造，且跨应用不可关联）。**用它作为数据归属，而不是信任请求里传来的 user_id。**
+
+3. **读写（推荐：平台数据访问层 `myapp_data`，自动按调用者隔离）**：
+
+   ```python
+   import myapp_data                         # 每次操作平台自动加上 owner = 当前调用者
+   mine = myapp_data.find("listings", {"price": 0}, limit=50)   # 只返回"我"的行
+   row  = myapp_data.insert("listings", {"title": title, "price": price})  # owner 自动设为我
+   myapp_data.update("listings", {"id": row["id"]}, {"price": 9})
+   myapp_data.delete("listings", {"id": row["id"]})
+   ```
+
+   `myapp_data` 让消费者**只能读写自己的数据**（无法看/改别人的行，也无法伪造 owner）——这是
+   多人 CRUD 应用的**默认正确做法**。表必须有 `owner` 列。
+
+4. **读写（裸 SQL `myapp_db`，仅用于 Owner 自己的、非消费者数据）**：`import myapp_db` 的
+   `query/queryone/execute/tx` 跑原始 SQL（不自动按调用者隔离，**不要**用它处理多消费者共享表）。
+   值一律 `%s` 占位 + params（禁止 f-string 拼 SQL）；不要 `import psycopg2/os`、不要碰连接串；
    单条语句超时 5s。
-4. **改已有 DB 应用**：`faas_services.json` 的 `database` 块会列出你已有的 `schema` 和 `tables`；
+
+5. **改已有 DB 应用**：`faas_services.json` 的 `database` 块会列出你已有的 `schema` 和 `tables`；
    续写时复用 service_id，schema.sql 用 `CREATE TABLE IF NOT EXISTS` + 需要时 `ALTER TABLE ... ADD
    COLUMN IF NOT EXISTS`，保留旧表与数据。
 

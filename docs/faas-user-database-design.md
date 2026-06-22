@@ -1,5 +1,14 @@
 # Per-user FaaS database (schema isolation) — design
 
+> **更新（FaaS Application 权限模型）**：本文是最初的 per-USER schema 设计。现已演进为**应用维度
+> (Application) 权限模型**：DB 租户键改为 **per-app**（`_db_tenant_key`，默认每-owner 应用复用其原
+> schema，零迁移）；运行时角色改为**非属主**（仅 DML，DDL 仅部署期）；口令改为**随机 + Fernet
+> 加密存储**（不再确定性派生，明文 DSN 列清空）；新增**后端中介数据访问层 `myapp_data`**（平台强制
+> `owner=调用者`，函数不持 DSN）与**可信假名身份 `myapp_auth`**；`schema.sql` 禁 SERIAL（用 UUID）；
+> 访问策略 + grant + 容器加固。详见 `CLAUDE.md`「FaaS Application 权限模型」、
+> `docs/faas-jsonapp-generation-playbook.md`，及 `~/faas-app-permission-*.md`。下文保留为底层 schema
+> 隔离机制的原始设计参考。
+
 Goal: give each user their own Postgres space so generated JSON-APP + FaaS
 backends can persist real data (orders, listings, …), isolated per user by
 **Postgres schema**, with a hard security boundary between tenants and away from

@@ -104,14 +104,14 @@ const copy = {
     stackItems: [
       ['Flutter Runtime', '预编译控件、JsonLogic、Flame 游戏 atoms、IM 兼容层和媒体能力。'],
       ['AI Worker Queue', 'Redis 队列、隔离的 pull 式 agent-node 执行、SSE 恢复、并发控制和结果持久化。'],
-      ['AI FaaS 后端', 'AI 生成的 Python/Flask 后端：bundle 校验、隔离 git push worker、自研容器化 FaaS 运行时（每服务独立容器、无函数数量上限、自动 scale-to-zero 与冷唤醒）和路由校验的调用代理。'],
+      ['AI FaaS 后端', 'AI 生成的 Python/Flask 后端：bundle 校验、隔离 git push worker、自研容器化 FaaS 运行时（每服务独立容器、无函数数量上限、自动 scale-to-zero 与冷唤醒）、路由校验的调用代理，以及应用级权限模型——每应用隔离数据库、可信假名身份、后端中介的按调用者隔离数据访问层（函数不持数据库连接）、容器加固与可撤销的访问策略。'],
       ['Registry + Assets', '分页搜索、版本约束、组件依赖、跨实例镜像和 OSS/MinIO 资源分发。'],
     ],
     complianceTitle: '审核友好的边界',
     complianceBody: 'AI 为客户端生成的是声明式 JSON 配置：只组合已编译的控件和动作，不下发 Dart、Swift、Kotlin、插件或二进制。需要后端时，生成的 FaaS 服务运行在隔离的自研容器化 FaaS 运行时（服务端），同样不会向客户端下发可执行代码。',
     features: [
       ['AI 原生 DSL', '为大模型生成而设计，并渲染成真正的原生 UI，而不只是手写配置。'],
-      ['全栈生成', 'AI 生成 JSON 应用，需要时再生成经校验的 Python/Flask 后端，部署到隔离的自研容器化 FaaS 运行时（无函数数量上限、自动 scale-to-zero、冷唤醒与扩缩容）。'],
+      ['全栈生成', 'AI 生成 JSON 应用，需要时再生成经校验的 Python/Flask 后端，部署到隔离的自研容器化 FaaS 运行时（无函数数量上限、自动 scale-to-zero、冷唤醒与扩缩容）。每个应用还自带隔离的 Postgres 数据库与应用级权限模型（所有者 / 维护者 / 消费者）——消费者数据由平台按调用者强制隔离，函数代码拿不到数据库连接。'],
       ['Flame 游戏', '真正的 2D 游戏引擎——精灵、物理、Tiled 地图——在 Web、iOS、Android 上运行，而不只是小玩具。'],
       ['内置 IM', '好友、群聊、消息同步和 Web OpenIM 兼容层。'],
       ['应用库', '带命名空间的 Registry：版本约束、依赖解析和跨实例镜像。'],
@@ -185,14 +185,14 @@ const copy = {
     stackItems: [
       ['Flutter Runtime', 'Precompiled widgets, JsonLogic, Flame game atoms, IM compatibility and media capabilities.'],
       ['AI Worker Queue', 'Redis queue, isolated pull-based agent-node execution, resumable SSE, concurrency limits and durable results.'],
-      ['AI FaaS backends', 'AI-generated Python/Flask backends: validated bundles, an isolated git push worker, a self-managed containerized FaaS runtime (one container per service, no function-count cap, automatic scale-to-zero and cold-wake) and a route-enforced invoke proxy.'],
+      ['AI FaaS backends', 'AI-generated Python/Flask backends: validated bundles, an isolated git push worker, a self-managed containerized FaaS runtime (one container per service, no function-count cap, automatic scale-to-zero and cold-wake), a route-enforced invoke proxy, and an application-level permission model — per-app isolated database, trusted pseudonymous identity, a backend-mediated per-caller data layer (functions hold no DB connection), container hardening and revocable access policies.'],
       ['Registry + Assets', 'Paginated search, semver, component dependencies, cross-instance mirror and OSS/MinIO asset delivery.'],
     ],
     complianceTitle: 'Review-friendly boundary',
     complianceBody: 'AI produces declarative JSON for the client: it composes only compiled widgets and actions, never Dart, Swift, Kotlin, plugins or binaries. When an app needs a backend, the generated FaaS services run server-side in an isolated self-managed containerized FaaS runtime, so no executable code is shipped to the client.',
     features: [
       ['AI-native DSL', 'Structured for LLM generation and rendered to real native UI, not just hand-written config.'],
-      ['Full-stack generation', 'AI emits the JSON app and, when needed, a validated Python/Flask backend deployed to an isolated self-managed containerized FaaS runtime (no function-count cap, automatic scale-to-zero, cold-wake and autoscaling).'],
+      ['Full-stack generation', 'AI emits the JSON app and, when needed, a validated Python/Flask backend deployed to an isolated self-managed containerized FaaS runtime (no function-count cap, automatic scale-to-zero, cold-wake and autoscaling). Each app also gets an isolated Postgres database and an application-level permission model (owner / maintainer / consumer) — consumer data is isolated per-caller by the platform, and function code never holds a database connection.'],
       ['Flame games', 'A real 2D game engine — sprites, physics and tiled maps — running on Web, iOS and Android, not just toys.'],
       ['Built-in IM', 'Friends, groups, sync and the OpenIM compatibility layer for Web.'],
       ['App library', 'Namespaced registry with semver, dependency resolution and cross-instance mirroring.'],
@@ -273,7 +273,7 @@ const copy = {
     complianceBody: 'Die KI erzeugt deklarative JSON-Konfiguration für den Client: nur kompilierte Widgets und Actions, kein Dart-, Swift-, Kotlin-, Plugin- oder Binärcode. Braucht eine App ein Backend, laufen die generierten FaaS-Services serverseitig in einer isolierten selbstverwalteten containerisierten FaaS-Runtime; es wird kein ausführbarer Code an den Client ausgeliefert.',
     features: [
       ['AI-native DSL', 'Für LLM-Generierung gebaut und in echtes natives UI gerendert, nicht nur manuelle Konfiguration.'],
-      ['Full-Stack-Generierung', 'Die KI erzeugt die JSON App und bei Bedarf ein validiertes Python/Flask-Backend in isolierter selbstverwalteter containerisierter FaaS-Runtime (keine Funktionsanzahl-Grenze, automatisches Scale-to-Zero, Cold-Wake und Autoscaling).'],
+      ['Full-Stack-Generierung', 'Die KI erzeugt die JSON App und bei Bedarf ein validiertes Python/Flask-Backend in isolierter selbstverwalteter containerisierter FaaS-Runtime (keine Funktionsanzahl-Grenze, automatisches Scale-to-Zero, Cold-Wake und Autoscaling). Jede App erhält außerdem eine isolierte Postgres-Datenbank und ein Berechtigungsmodell auf App-Ebene (Owner / Maintainer / Consumer) — Consumer-Daten werden von der Plattform pro Aufrufer isoliert, und Funktionscode erhält nie eine Datenbankverbindung.'],
       ['Flame Games', 'Eine echte 2D-Game-Engine – Sprites, Physik und Tiled-Maps – auf Web, iOS und Android, nicht nur Spielzeug.'],
       ['Integriertes IM', 'Freunde, Gruppen, Sync und OpenIM-Kompatibilität für Web.'],
       ['App-Bibliothek', 'Registry mit Namespaces: Semver, Abhängigkeitsauflösung und Cross-Instance-Mirror.'],
@@ -354,7 +354,7 @@ const copy = {
     complianceBody: 'La IA produce configuración JSON declarativa para el cliente: solo compone widgets y acciones ya compilados, nunca Dart, Swift, Kotlin, plugins ni binarios. Cuando una app necesita backend, los servicios FaaS generados corren en el servidor dentro de un runtime FaaS contenedorizado propio y aislado; nunca se envía código ejecutable al cliente.',
     features: [
       ['DSL nativa para IA', 'Pensada para LLMs y renderizada como UI nativa real, no solo configuración manual.'],
-      ['Generación full-stack', 'La IA genera la app JSON y, si hace falta, un backend Python/Flask validado en un runtime FaaS contenedorizado propio y aislado (sin límite de número de funciones, scale-to-zero automático, cold-wake y autoescalado).'],
+      ['Generación full-stack', 'La IA genera la app JSON y, si hace falta, un backend Python/Flask validado en un runtime FaaS contenedorizado propio y aislado (sin límite de número de funciones, scale-to-zero automático, cold-wake y autoescalado). Cada app obtiene además una base de datos Postgres aislada y un modelo de permisos a nivel de aplicación (propietario / mantenedor / consumidor): los datos de cada consumidor quedan aislados por llamante en la plataforma, y el código de la función nunca tiene una conexión a la base de datos.'],
       ['Juegos con Flame', 'Un motor 2D real —sprites, física y mapas Tiled— en Web, iOS y Android, no solo juguetes.'],
       ['IM integrado', 'Amigos, grupos, sincronización y compatibilidad OpenIM para Web.'],
       ['Biblioteca de apps', 'Registry con namespaces: semver, resolución de dependencias y mirror entre instancias.'],
