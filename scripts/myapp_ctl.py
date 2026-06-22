@@ -5371,6 +5371,12 @@ def _set_faas_mode(args) -> int:
         data.setdefault("FAAS_LOCAL_DOCKER_NETWORK", "myapp_default")
         data.setdefault("FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT", "/mnt/myapp/faas/code")
         data.setdefault("FAAS_LOCAL_DOCKER_HOST_CODE_ROOT", str(_data_root_from_cfg() / "faas" / "code"))
+        # Self-managed scale-to-zero (no faasd). The backend runs the reaper; the
+        # invoke proxy cold-wakes. Tunable, and managed here so they survive deploys.
+        data.setdefault("FAAS_DOCKER_SCALE_ZERO", "1")
+        data.setdefault("FAAS_DOCKER_IDLE_SECONDS", "600")
+        data.setdefault("FAAS_DOCKER_REAPER_INTERVAL", "60")
+        data.setdefault("FAAS_DOCKER_STATE_DIR", "/mnt/myapp/faas/state")
     if mode == "script":
         if args.deploy_script:
             data["FAAS_DEPLOY_SCRIPT"] = args.deploy_script
