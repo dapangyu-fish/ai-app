@@ -32,6 +32,7 @@ try:
         load_bundle_zip,
         openfaas_gateway_for_service,
         runtime_bundle_for_service,
+        service_deploy_mode,
         runtime_token_for_service,
     )
 except ModuleNotFoundError:
@@ -50,6 +51,7 @@ except ModuleNotFoundError:
         load_bundle_zip,
         openfaas_gateway_for_service,
         runtime_bundle_for_service,
+        service_deploy_mode,
         runtime_token_for_service,
     )
 
@@ -355,7 +357,7 @@ def invoke_service(service_id: str, route_path: str = ""):
     if not allowed:
         return _json_error(message, status, code="FAAS_ROUTE_NOT_ALLOWED")
 
-    mode = FAAS_DEPLOY_MODE
+    mode = service_deploy_mode(service)
     if mode in _LOCAL_DOCKER_MODES:
         try:
             upstream = ensure_local_docker_runtime_for_service(service)

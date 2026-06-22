@@ -348,6 +348,38 @@ def _local_upstream_url(function_name: str) -> str:
     return f"http://{_local_container_name(function_name)}:8080"
 
 
+# ── self-managed Docker FaaS: scale-to-zero state ────────────────────────────
+# Replaces faasd's idler. The invoke path touches a per-service activity file;
+# the reaper (faas_docker_reaper.py) stops containers idle past the threshold,
+# and the invoke path cold-wakes them (container.start, env preserved). No
+# OpenFaaS CE 15-function cap — Docker manages an arbitrary number of services.
+FAAS_DOCKER_SCALE_ZERO = os.environ.get("FAAS_DOCKER_SCALE_ZERO", "1").strip().lower() in {"1", "true", "yes", "on"}
+FAAS_DOCKER_IDLE_SECONDS = int(os.environ.get("FAAS_DOCKER_IDLE_SECONDS", "600"))
+FAAS_DOCKER_STATE_DIR = os.environ.get("FAAS_DOCKER_STATE_DIR", "/mnt/myapp/faas/state").rstrip("/")
+
+
+def _activity_path(service_id: str) -> Path:
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "-", str(service_id or "")).strip("-")[:80] or "svc"
+    return Path(FAAS_DOCKER_STATE_DIR) / safe
+
+
+def touch_service_activity(service_id: str) -> None:
+    """Record last-invoke for a Docker FaaS service (read by the reaper)."""
+    try:
+        p = _activity_path(service_id)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.touch()
+    except Exception:
+        pass
+
+
+def service_last_active(service_id: str) -> float:
+    try:
+        return _activity_path(service_id).stat().st_mtime
+    except Exception:
+        return 0.0
+
+
 def _count_user_services(user_id: str) -> int:
     # Count only services that actually occupy a slot. 'disabled' is an explicit
     # delete; 'failed' is a deploy that never became live — neither should consume
@@ -431,6 +463,19 @@ def openfaas_gateway_for_service(service: dict[str, Any] | None) -> str:
         if gateway:
             return gateway
     return str(FAAS_OPENFAAS_GATEWAY or "").strip().rstrip("/")
+
+
+def service_deploy_mode(service: dict[str, Any] | None) -> str:
+    """Per-service deploy mode (meta_json.deploy.mode) with the global
+    FAAS_DEPLOY_MODE as fallback. Lets faasd-era services keep routing to faasd
+    while new services use the self-managed Docker runtime during/after migration."""
+    if service:
+        meta = _json_object(service.get("meta_json"))
+        deploy = _json_object(meta.get("deploy"))
+        mode = str(deploy.get("mode") or "").strip()
+        if mode:
+            return mode
+    return str(FAAS_DEPLOY_MODE or "").strip()
 
 
 def list_services(
@@ -1325,6 +1370,7 @@ def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: s
     except Exception as exc:
         raise FaaSError(f"cannot start FaaS runtime container {name}: {exc}") from exc
     _wait_local_docker_runtime(function_name)
+    touch_service_activity(service_id)
     return f"local-docker container={name} upstream={_local_upstream_url(function_name)}"
 
 
@@ -1336,12 +1382,18 @@ def local_docker_upstream_for_service(service: dict[str, Any]) -> str:
 
 
 def ensure_local_docker_runtime_for_service(service: dict[str, Any]) -> str:
+    """Cold-wake + route for the self-managed Docker FaaS. Single front door
+    (called from the invoke proxy): if the container is running, route to it; if
+    it was scaled to zero (stopped), start() it (fast, env incl. the DB DSN
+    preserved); if it is absent, (re)create it, re-injecting the owner's scoped
+    DB DSN. Every invoke records activity so the reaper knows it is live."""
     function_name = str(service.get("function_name") or "").strip()
     service_id = str(service.get("service_id") or "").strip()
     active_path = str(service.get("active_path") or "").strip()
     commit_sha = str(service.get("active_commit") or "").strip()
     if not function_name or not service_id or not active_path:
         raise FaaSError("service is missing runtime metadata")
+    touch_service_activity(service_id)
     root = Path(active_path)
     name = _local_container_name(function_name)
     client = _docker_client()
@@ -1350,12 +1402,34 @@ def ensure_local_docker_runtime_for_service(service: dict[str, Any]) -> str:
         container.reload()
         if container.status == "running":
             return _local_upstream_url(function_name)
-        container.remove(force=True)
+        # Scaled to zero: fast wake by starting the existing container so the
+        # original env (PORT, MYAPP_DB_DSN, platform config) is preserved.
+        try:
+            container.start()
+            _wait_local_docker_runtime(function_name)
+            return _local_upstream_url(function_name)
+        except Exception:
+            try:
+                container.remove(force=True)
+            except Exception:
+                pass
     except Exception as exc:
         not_found = _docker_not_found_type()
         if not_found and not isinstance(exc, not_found):
             raise FaaSError(f"cannot inspect FaaS container {name}: {exc}") from exc
-    _start_local_docker_runtime(root, function_name=function_name, service_id=service_id, commit_sha=commit_sha)
+    # Absent (or a failed start): recreate, re-injecting the owner's scoped DSN.
+    db_dsn = ""
+    owner = str(service.get("owner_user_id") or "").strip()
+    if owner:
+        try:
+            try:
+                from faas_userdb import dsn_for_user
+            except ModuleNotFoundError:
+                from backend.faas_userdb import dsn_for_user
+            db_dsn = dsn_for_user(owner, provision=False) or ""
+        except Exception:
+            db_dsn = ""
+    _start_local_docker_runtime(root, function_name=function_name, service_id=service_id, commit_sha=commit_sha, db_dsn=db_dsn)
     return _local_upstream_url(function_name)
 
 
@@ -1558,14 +1632,15 @@ def disable_service(owner_user_id: str, service_id: str) -> dict[str, Any]:
         raise FaaSValidationError("service not found")
     function_name = str(service.get("function_name") or "").strip()
     warnings: list[str] = []
+    svc_mode = service_deploy_mode(service)
     if function_name:
-        if FAAS_DEPLOY_MODE in _LOCAL_DOCKER_MODES:
+        if svc_mode in _LOCAL_DOCKER_MODES:
             try:
                 _remove_local_docker_runtime(function_name)
             except FaaSError as exc:
                 warnings.append(str(exc))
         openfaas_gateway = openfaas_gateway_for_service(service)
-        if openfaas_gateway and FAAS_DEPLOY_MODE == "openfaas":
+        if openfaas_gateway and svc_mode == "openfaas":
             try:
                 _delete_openfaas_function(function_name, gateway=openfaas_gateway)
             except FaaSError as exc:

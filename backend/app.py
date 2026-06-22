@@ -167,6 +167,17 @@ def create_app():
 
 app, socketio = create_app()
 
+# Self-managed Docker FaaS: start the scale-to-zero reaper (flock-guarded so only
+# one worker reaps). Only in docker deploy mode; the invoke proxy cold-wakes.
+try:
+    from config import FAAS_DEPLOY_MODE as _FAAS_DEPLOY_MODE
+    if str(_FAAS_DEPLOY_MODE or "").strip().lower() in {"local-docker", "docker", "docker-local"}:
+        import threading as _threading
+        from faas_docker_reaper import run_loop as _faas_reaper_loop
+        _threading.Thread(target=_faas_reaper_loop, name="faas-docker-reaper", daemon=True).start()
+except Exception:
+    pass
+
 
 if __name__ == "__main__":
     logger = logging.getLogger(__name__)
