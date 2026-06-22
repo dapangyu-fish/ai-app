@@ -24,6 +24,8 @@ try:
         build_service_archive,
         deploy_bundle,
         disable_service,
+        delete_service,
+        running_replica_counts,
         ensure_local_docker_runtime_for_service,
         ensure_tables,
         get_service,
@@ -43,6 +45,8 @@ except ModuleNotFoundError:
         FaaSValidationError,
         deploy_bundle,
         disable_service,
+        delete_service,
+        running_replica_counts,
         ensure_local_docker_runtime_for_service,
         ensure_tables,
         get_service,
@@ -98,6 +102,19 @@ def _json_error(message: str, status: int, *, code: str = "FAAS_ERROR") -> tuple
     return jsonify({"error": message, "code": code}), status
 
 
+def _annotate_running(services: list) -> list:
+    """Attach the REAL running-container count per service (0 = scaled to zero) so
+    callers (dashboard, CLI) never infer instances from status. One docker query."""
+    try:
+        counts = running_replica_counts()
+    except Exception:
+        counts = {}
+    for s in services:
+        if isinstance(s, dict):
+            s["running_replicas"] = int(counts.get(s.get("function_name") or "", 0))
+    return services
+
+
 def list_user_services():
     include_disabled = str(request.args.get("include_disabled") or request.args.get("all") or "").strip().lower() in {"1", "true", "yes", "on"}
     all_users = str(request.args.get("all_users") or "").strip().lower() in {"1", "true", "yes", "on"}
@@ -107,14 +124,14 @@ def list_user_services():
         if FAAS_REQUIRE_AUTH:
             return _json_error("all_users listing is admin-only", 403, code="FAAS_FORBIDDEN")
         try:
-            return jsonify({"services": list_services("", include_disabled=include_disabled, all_services=True)})
+            return jsonify({"services": _annotate_running(list_services("", include_disabled=include_disabled, all_services=True))})
         except Exception as exc:
             return _json_error(str(exc), 500)
     user_id = _request_user_id()
     if not user_id:
         return _json_error("user_id is required", 401 if FAAS_REQUIRE_AUTH else 400, code="FAAS_USER_REQUIRED")
     try:
-        return jsonify({"services": list_services(user_id, include_disabled=include_disabled)})
+        return jsonify({"services": _annotate_running(list_services(user_id, include_disabled=include_disabled))})
     except Exception as exc:
         return _json_error(str(exc), 500)
 
@@ -180,17 +197,24 @@ def scale_user_service(service_id: str):
 
 
 def disable_user_service(service_id: str):
+    # DELETE /api/faas/services/<id>            -> disable (stop containers, keep record)
+    # DELETE /api/faas/services/<id>?purge=1    -> HARD delete (drop record + code),
+    #                                              also works on already-disabled services.
     user_id = _request_user_id()
     if not user_id:
         return _json_error("user_id is required", 401 if FAAS_REQUIRE_AUTH else 400, code="FAAS_USER_REQUIRED")
+    purge = str(request.args.get("purge") or request.args.get("hard") or "").strip().lower() in {"1", "true", "yes", "on"}
     try:
+        if purge:
+            result = delete_service(user_id, service_id)
+            return jsonify({"ok": True, **result})
         service = disable_service(user_id, service_id)
     except FaaSValidationError as exc:
         return _json_error(str(exc), 404, code="FAAS_NOT_FOUND")
     except FaaSError as exc:
-        return _json_error(str(exc), 500, code="FAAS_DISABLE_FAILED")
+        return _json_error(str(exc), 500, code="FAAS_DELETE_FAILED" if purge else "FAAS_DISABLE_FAILED")
     except Exception as exc:
-        return _json_error(str(exc), 500, code="FAAS_DISABLE_FAILED")
+        return _json_error(str(exc), 500, code="FAAS_DELETE_FAILED" if purge else "FAAS_DISABLE_FAILED")
     return jsonify({"ok": True, "service": service})
 
 

@@ -363,10 +363,9 @@ def _running_replicas(function_name: str) -> list[int]:
 
 
 # ── self-managed Docker FaaS: scale-to-zero state ────────────────────────────
-# The invoke path touches a per-service activity file;
-# the reaper (faas_docker_reaper.py) stops containers idle past the threshold,
-# and the invoke path cold-wakes them (container.start, env preserved). No
-# The self-managed Docker FaaS manages an arbitrary number of services (no cap).
+# The invoke path touches a per-service activity file; the reaper
+# (faas_docker_reaper.py) stops containers idle past the threshold, and the
+# invoke path cold-wakes them (container.start, env preserved).
 FAAS_DOCKER_SCALE_ZERO = os.environ.get("FAAS_DOCKER_SCALE_ZERO", "1").strip().lower() in {"1", "true", "yes", "on"}
 FAAS_DOCKER_IDLE_SECONDS = int(os.environ.get("FAAS_DOCKER_IDLE_SECONDS", "600"))
 FAAS_DOCKER_STATE_DIR = os.environ.get("FAAS_DOCKER_STATE_DIR", "/mnt/myapp/faas/state").rstrip("/")
@@ -1585,6 +1584,59 @@ def disable_service(owner_user_id: str, service_id: str) -> dict[str, Any]:
     service["status"] = "disabled"
     service["warnings"] = warnings
     return service
+
+
+def delete_service(owner_user_id: str, service_id: str) -> dict[str, Any]:
+    """Hard-delete a service: remove ALL replica containers, drop the DB row, and
+    clean its activity + code. Works on any status, INCLUDING 'disabled' — this is
+    how a disabled/orphaned service is permanently removed."""
+    if not owner_user_id:
+        raise FaaSValidationError("owner_user_id is required")
+    ensure_tables()
+    service = get_service(service_id)
+    if not service or service.get("owner_user_id") != owner_user_id:
+        raise FaaSValidationError("service not found")
+    function_name = str(service.get("function_name") or "").strip()
+    warnings: list[str] = []
+    if function_name and service_deploy_mode(service) in _LOCAL_DOCKER_MODES:
+        try:
+            _remove_local_docker_runtime(function_name)
+        except FaaSError as exc:
+            warnings.append(str(exc))
+    db_execute("DELETE FROM faas_services WHERE service_id = %s", [service_id])
+    try:
+        _activity_path(service_id).unlink()
+    except Exception:
+        pass
+    try:
+        code_root = service_code_root(owner_user_id, service_id)
+        if code_root.exists():
+            shutil.rmtree(code_root, ignore_errors=True)
+    except Exception as exc:
+        warnings.append(f"code cleanup: {exc}")
+    return {"service_id": service_id, "deleted": True, "warnings": warnings}
+
+
+def running_replica_counts() -> dict[str, int]:
+    """Real running-container count per function_name in ONE docker query — the
+    single source of truth for instance counts (0 = scaled to zero / stopped).
+    Returns {} on any docker error or non-docker host."""
+    counts: dict[str, int] = {}
+    try:
+        client = _docker_client()
+        containers = client.containers.list(
+            filters={"label": "myapp.faas=1", "status": "running"}
+        )
+    except Exception:
+        return counts
+    for c in containers:
+        try:
+            fn = (c.labels or {}).get("myapp.faas.function_name", "")
+        except Exception:
+            fn = ""
+        if fn:
+            counts[fn] = counts.get(fn, 0) + 1
+    return counts
 
 
 def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "agent") -> FaaSDeployResult:

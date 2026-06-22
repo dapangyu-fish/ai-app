@@ -5367,6 +5367,33 @@ def cmd_faas(args) -> int:
             return 1
         print(json.dumps(data, ensure_ascii=False) if args.json else f"disabled faas service: {args.service_id}")
         return 0
+    if args.faas_cmd == "rm":
+        # Hard delete: removes containers + DB record + code. Works on any status,
+        # including 'disabled'. Resolve the owner automatically so the operator does
+        # not need to know it (auth-disabled host accepts ?user_id=<owner>).
+        owner = (getattr(args, "user_id", "") or "").strip()
+        if not owner:
+            _st, sdata, _stext = _http_request_json(
+                f"{base_url}/api/faas/services/{quote(args.service_id, safe='')}",
+                token=token, timeout=20,
+            )
+            if isinstance(sdata, dict):
+                owner = str((sdata.get("service") or {}).get("owner_user_id") or "").strip()
+        if not owner:
+            print(f"faas rm failed: cannot resolve owner for {args.service_id} (pass --user-id)", file=sys.stderr)
+            return 1
+        q = "?" + urlencode({"user_id": owner, "purge": "1"})
+        status, data, text = _http_request_json(
+            f"{base_url}/api/faas/services/{quote(args.service_id, safe='')}{q}",
+            method="DELETE",
+            token=token,
+            timeout=60,
+        )
+        if status >= 400 or not data:
+            print(f"faas rm failed: {status or '-'} {text[:500]}", file=sys.stderr)
+            return 1
+        print(json.dumps(data, ensure_ascii=False) if args.json else f"deleted faas service: {args.service_id}")
+        return 0
     if args.faas_cmd == "smoke":
         script = _source_dir() / "scripts" / "faas_smoke_test.py"
         if not script.is_file():
@@ -7281,6 +7308,11 @@ def build_parser() -> argparse.ArgumentParser:
     faas_disable.add_argument("--user-id", help=_tx("test-mode owner user id when auth is disabled", zh="鉴权关闭时使用的测试 owner user id", de="Test-Owner-User-ID wenn Auth deaktiviert ist", es="user id owner de prueba cuando auth esta desactivada"))
     faas_disable.add_argument("--json", action="store_true", help=_tx("output machine-readable JSON", zh="输出机器可读 JSON", de="maschinenlesbares JSON ausgeben", es="mostrar JSON legible por maquina"))
     faas_disable.set_defaults(func=cmd_faas)
+    faas_rm = faas_sub.add_parser("rm", parents=[faas_parent], help=_tx("permanently delete a FaaS service (incl. disabled): containers + record + code", zh="彻底删除一个 FaaS 服务(含已禁用): 容器+记录+代码", de="einen FaaS-Dienst endgueltig loeschen (auch deaktivierte): Container+Eintrag+Code", es="eliminar permanentemente un servicio FaaS (incl. deshabilitado): contenedores+registro+codigo"), usage=_tx("myapp-ctl faas rm <service-id> [options]", zh="myapp-ctl faas rm <服务ID> [选项]", de="myapp-ctl faas rm <Service-ID> [Optionen]", es="myapp-ctl faas rm <service-id> [opciones]"))
+    faas_rm.add_argument("service_id", help=_tx("FaaS service id to delete", zh="要删除的 FaaS 服务 ID", de="zu loeschende FaaS-Service-ID", es="id del servicio FaaS a eliminar"))
+    faas_rm.add_argument("--user-id", help=_tx("owner user id (auto-resolved if omitted)", zh="owner user id(省略则自动解析)", de="Owner-User-ID (wird sonst automatisch ermittelt)", es="user id owner (se resuelve solo si se omite)"))
+    faas_rm.add_argument("--json", action="store_true", help=_tx("output machine-readable JSON", zh="输出机器可读 JSON", de="maschinenlesbares JSON ausgeben", es="mostrar JSON legible por maquina"))
+    faas_rm.set_defaults(func=cmd_faas)
     faas_smoke = faas_sub.add_parser("smoke", parents=[faas_parent], help=_tx("deploy, invoke, and clean up a generated FaaS smoke service", zh="部署、调用并清理一个 FaaS 冒烟服务", de="FaaS-Smoke-Dienst deployen, aufrufen und bereinigen", es="desplegar, invocar y limpiar servicio FaaS smoke"), usage=_tx("myapp-ctl faas smoke [options]", zh="myapp-ctl faas smoke [选项]", de="myapp-ctl faas smoke [Optionen]", es="myapp-ctl faas smoke [opciones]"))
     faas_smoke.add_argument("--user-id", help=_tx("test-mode owner user id when auth is disabled", zh="鉴权关闭时使用的测试 owner user id", de="Test-Owner-User-ID wenn Auth deaktiviert ist", es="user id owner de prueba cuando auth esta desactivada"))
     faas_smoke.add_argument("--service-id", help=_tx("explicit smoke service id", zh="指定冒烟服务 ID", de="explizite Smoke-Service-ID", es="service id smoke explicito"))

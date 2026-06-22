@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Boxes, Play, CircleSlash, Layers } from 'lucide-react';
 import { api } from '../api';
 import { useApi } from '../useApi';
@@ -5,17 +6,45 @@ import { KPI, Badge, Loading, ErrorBanner, Empty, fmtTime } from '../ui';
 import type { FaasService } from '../types';
 
 function statusBadge(s: FaasService) {
-  if (s.running) return <Badge tone="ok" dot>{s.status || 'running'}</Badge>;
-  return <Badge tone="err" dot>{s.status || 'stopped'}</Badge>;
+  if (s.status === 'disabled') return <Badge tone="err" dot>已停用</Badge>;
+  if ((s.instances ?? 0) > 0) return <Badge tone="ok" dot>{s.status || 'running'} · {s.instances}</Badge>;
+  // ready but no live container: scaled to zero, cold-wakes on next invoke
+  return <Badge tone="warn" dot>{s.status || 'ready'} · 0(休眠)</Badge>;
 }
 
 export default function FaasTab() {
   const { data, loading, error, reload } = useApi(() => api.faas(), []);
+  const [busy, setBusy] = useState<string>('');
+  const [actionErr, setActionErr] = useState<string>('');
+
   if (loading) return <Loading />;
   if (error) return <ErrorBanner message={error} onRetry={reload} />;
   if (!data) return <Empty />;
 
   const { services, overview, deploy_mode } = data;
+
+  async function run(id: string, label: string, fn: () => Promise<unknown>) {
+    setActionErr('');
+    setBusy(id + label);
+    try {
+      await fn();
+      await reload();
+    } catch (e) {
+      setActionErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy('');
+    }
+  }
+
+  function onDisable(s: FaasService) {
+    if (!window.confirm(`停用服务「${s.name}」？\n会停掉所有容器并置为已停用，记录与代码保留，可重新部署恢复。`)) return;
+    run(s.service_id, 'disable', () => api.faasDisable(s.service_id));
+  }
+
+  function onDelete(s: FaasService) {
+    if (!window.confirm(`彻底删除服务「${s.name}」？\n会删除容器、数据库记录和代码，不可恢复（已停用的服务也用它清理）。`)) return;
+    run(s.service_id, 'delete', () => api.faasDelete(s.service_id));
+  }
 
   return (
     <div>
@@ -26,11 +55,13 @@ export default function FaasTab() {
         <button className="btn btn-sm" onClick={reload}>刷新</button>
       </div>
 
+      {actionErr && <ErrorBanner message={actionErr} />}
+
       <div className="kpis">
         <KPI label="服务总数" value={overview.total} tone="accent" icon={<Boxes />} />
-        <KPI label="运行中" value={overview.running} tone="ok" icon={<Play />} />
-        <KPI label="已停止" value={overview.stopped} tone={overview.stopped ? 'warn' : undefined} icon={<CircleSlash />} />
-        <KPI label="实例总数" value={overview.total_instances} icon={<Layers />} />
+        <KPI label="启用中" value={overview.running} tone="ok" icon={<Play />} />
+        <KPI label="已停用" value={overview.stopped} tone={overview.stopped ? 'warn' : undefined} icon={<CircleSlash />} />
+        <KPI label="运行实例总数" value={overview.total_instances} icon={<Layers />} />
       </div>
 
       {services.length === 0 ? (
@@ -50,6 +81,7 @@ export default function FaasTab() {
                 <th>创建时间</th>
                 <th className="num">路由</th>
                 <th>访问地址</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -74,6 +106,26 @@ export default function FaasTab() {
                       </a>
                     ) : '—'}
                   </td>
+                  <td>
+                    <div className="row-actions">
+                      {s.status !== 'disabled' && (
+                        <button
+                          className="btn btn-sm"
+                          disabled={!!busy}
+                          onClick={() => onDisable(s)}
+                        >
+                          {busy === s.service_id + 'disable' ? '停用中…' : '停用'}
+                        </button>
+                      )}
+                      <button
+                        className="btn btn-sm btn-danger"
+                        disabled={!!busy}
+                        onClick={() => onDelete(s)}
+                      >
+                        {busy === s.service_id + 'delete' ? '删除中…' : '删除'}
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -81,9 +133,9 @@ export default function FaasTab() {
         </div>
       )}
       <p className="hint">
-        {deploy_mode === 'openfaas'
-          ? 'OpenFaaS 模式：实例数量/当前容量按服务运行状态展示，容量范围取配置 {min..max}；启动时间为最近一次部署时间。'
-          : 'local-docker 单实例模式：实例数量/当前容量按服务状态推导（运行=1，停止=0），容量范围取配置 {min..max}；启动时间为最近一次部署时间。'}
+        实例数量/当前容量为真实运行容器数（与 <span className="mono">myapp-ctl faas ls</span> 同源）：
+        <b>0(休眠)</b> 表示已缩容到零，下次调用会自动冷唤醒；<b>停用</b> 会停掉容器并保留记录，
+        <b>删除</b> 会连记录和代码一起清除（已停用的服务也用删除来彻底清理）。容量范围取配置 {'{min..max}'}。
       </p>
     </div>
   );

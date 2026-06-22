@@ -65,6 +65,8 @@ export const api = {
   setQuota: (id: string, quota: string | null) => postJSON(`${DASH}/users/${id}/quota`, { quota }),
 
   faas: () => getJSON<FaasResponse>(`${DASH}/faas`),
+  faasDisable: (id: string) => postJSON<{ ok: boolean }>(`${DASH}/faas/${encodeURIComponent(id)}/disable`, {}),
+  faasDelete: (id: string) => postJSON<{ ok: boolean }>(`${DASH}/faas/${encodeURIComponent(id)}/delete`, {}),
   agents: (probe = false) => getJSON<AgentsResponse>(`${DASH}/agents?probe=${probe ? 1 : 0}`),
   agentDetail: (id: string) => getJSON<{ node: AgentNode; runs?: unknown[] }>(`${DASH}/agents/${id}`),
 };

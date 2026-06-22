@@ -55,7 +55,7 @@ export interface FaasService {
   status: string;
   running: boolean;
   deploy_mode: string;
-  node_id: string | null;
+  node_id?: string | null;
   public_base_url: string | null;
   routes_count: number;
   active_commit: string | null;
@@ -65,6 +65,7 @@ export interface FaasService {
   current_capacity: number;
   capacity_min: number;
   capacity_max: number;
+  running_replicas?: number;
 }
 export interface FaasResponse {
   services: FaasService[];

@@ -86,10 +86,25 @@ v3 = compute_faas_view(svc_scaled)
 check("faas per-service capacity override min", v3["capacity_min"] == 1)
 check("faas per-service capacity override max", v3["capacity_max"] == 5)
 
+# real running_replicas from backend overrides status-derived instances
+# (the bug: a ready-but-scaled-to-zero service must show 0, matching `faas ls`).
+svc_zero = dict(svc, service_id="svc-z", status="active", running_replicas=0)
+vz = compute_faas_view(svc_zero)
+check("faas scaled-to-zero → 0 instances (not status-derived 1)", vz["instances"] == 0)
+check("faas scaled-to-zero → 0 current_capacity", vz["current_capacity"] == 0)
+
+svc_multi = dict(svc, service_id="svc-m", status="active", running_replicas=3)
+vm = compute_faas_view(svc_multi)
+check("faas real running_replicas → instances=3", vm["instances"] == 3)
+check("faas real running_replicas → current_capacity=3", vm["current_capacity"] == 3)
+
 ov = compute_faas_overview([v, v2, v3])
 check("faas overview total", ov["total"] == 3)
 check("faas overview running", ov["running"] == 2)
 check("faas overview stopped", ov["stopped"] == 1)
+
+ov2 = compute_faas_overview([vz, vm])
+check("faas overview total_instances = sum real", ov2["total_instances"] == 3)
 
 # ── agents ──
 ag = shape_agents({"summary": {"total": 2, "online": 1}, "nodes": [{"node_id": "n1"}, {"node_id": "n2"}]})

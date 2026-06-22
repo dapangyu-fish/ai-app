@@ -85,7 +85,16 @@ def compute_faas_view(
         smax = int(deploy_meta.get("scale_max", cap_max))
     except (TypeError, ValueError):
         smin, smax = cap_min, cap_max
-    replicas = 1 if running else 0
+    # 实例数量 = 后端注入的真实运行容器数 running_replicas(与 `myapp-ctl faas ls`
+    # 同源；0 = 已缩容到零/已停止）。仅当后端未提供该字段时才回退到按状态推导。
+    rr = service.get("running_replicas")
+    if rr is None:
+        replicas = 1 if running else 0
+    else:
+        try:
+            replicas = max(0, int(rr))
+        except (TypeError, ValueError):
+            replicas = 0
     return {
         "service_id": service.get("service_id"),
         "name": service.get("service_slug") or service.get("function_name"),

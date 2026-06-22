@@ -1240,6 +1240,64 @@ def dash_faas():
     })
 
 
+def _faas_trusted_headers(owner: str) -> dict:
+    """Trusted backend identity for FaaS mutations: the agent-node token marks the
+    call trusted, X-MyApp-Owner-User-Id scopes it to the service's real owner so an
+    admin can stop/delete any owner's service without holding a user token."""
+    h: dict = {}
+    if AGENT_NODE_TOKEN:
+        h["X-MyApp-Agent-Node-Token"] = AGENT_NODE_TOKEN
+    if owner:
+        h["X-MyApp-Owner-User-Id"] = owner
+    return h
+
+
+def _faas_service_owner(service_id: str) -> str:
+    data = _backend_get(f"/api/faas/services/{quote(service_id, safe='')}")
+    svc = data.get("service") if isinstance(data, dict) else None
+    return str((svc or {}).get("owner_user_id") or "")
+
+
+def _faas_mutate(service_id: str, *, purge: bool, action_label: str):
+    owner = _faas_service_owner(service_id)
+    if not owner:
+        return _dash_err(f"{action_label}失败: 找不到服务或无法确定负责人", 404)
+    r = requests.request(
+        "DELETE",
+        f"{BACKEND_URL}/api/faas/services/{quote(service_id, safe='')}",
+        headers=_faas_trusted_headers(owner),
+        params={"purge": "1"} if purge else {},
+        timeout=DASH_HTTP_TIMEOUT,
+    )
+    if r.status_code >= 400:
+        detail = (r.text or "")[:300]
+        return _dash_err(f"{action_label}失败: {r.status_code} {detail}", 502)
+    try:
+        return jsonify(r.json() if r.content else {"ok": True})
+    except ValueError:
+        return jsonify({"ok": True})
+
+
+@app.route("/api/admin/dashboard/faas/<service_id>/disable", methods=["POST"])
+def dash_faas_disable(service_id: str):
+    """停用(关闭)一个正常服务:停掉容器、置为 disabled,保留记录与代码。"""
+    require_user()
+    try:
+        return _faas_mutate(service_id, purge=False, action_label="停用")
+    except requests.RequestException as e:
+        return _dash_err(f"停用失败: {e}")
+
+
+@app.route("/api/admin/dashboard/faas/<service_id>/delete", methods=["POST"])
+def dash_faas_delete(service_id: str):
+    """彻底删除一个服务(含已 disabled 的):删容器 + 删记录 + 删代码。"""
+    require_user()
+    try:
+        return _faas_mutate(service_id, purge=True, action_label="删除")
+    except requests.RequestException as e:
+        return _dash_err(f"删除失败: {e}")
+
+
 # ── Tab: Agent 节点（代理 backend 聚合接口）──
 @app.route("/api/admin/dashboard/agents", methods=["GET"])
 def dash_agents():
