@@ -497,11 +497,25 @@ def _heuristic_review(screenshots: list[Screenshot], render_error: str = "") -> 
         "hard_fail": hard_fail,
         "issues": issues,
         "recommended_next_steps": [
-            "If the current Agent/model supports image input, inspect the screenshot PNG files listed in report.md and revise app.json before upload."
-            if not hard_fail
-            else "Fix render/capture failure before final upload."
+            (
+                (
+                    "Inspect the screenshot PNG files listed in report.md, then fix app.json per the real frames before upload."
+                    if _supports_vision()
+                    else "This run's model has no image input: rely on this text report as visual evidence; do NOT read the screenshot PNGs (reading an image fails the run with a 400)."
+                )
+                if not hard_fail
+                else "Fix render/capture failure before final upload."
+            )
         ],
     }
+
+
+def _supports_vision() -> bool:
+    """Whether the run's model accepts image input. The launcher sets
+    AI_APP_MODEL_SUPPORTS_VISION per the selected provider. Default (unset) = NO
+    vision, because a text-only model that tries to Read a screenshot PNG fails the
+    whole run with a 400. When False, the report must not embed/invite image reads."""
+    return os.environ.get("AI_APP_MODEL_SUPPORTS_VISION", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _write_reports(
@@ -527,6 +541,7 @@ def _write_reports(
         "ready_state": ready_state,
         "agent_visual_review": {
             "tool_calls_vision_api": False,
+            "model_supports_vision": _supports_vision(),
             "agent_should_inspect_images_if_supported": True,
             "note": "Screenshots are artifacts for the running Agent/model. This tool does not call a separate visual model.",
         },
@@ -562,22 +577,42 @@ def _write_reports(
         f"- Pass: `{payload['summary']['pass']}`",
         f"- Hard fail: `{payload['summary']['hard_fail']}`",
     ]
-    lines.extend(
-        [
-            "",
-            "## Agent Instruction",
-            "",
-            "If your current model supports image understanding, inspect the PNG files below before final upload.",
-            "If it does not, use this report as render/capture evidence only and do not claim visual inspection.",
-            "",
-            "## Screenshots",
-        ]
-    )
-    for item in payload["screenshots"]:
-        action = item["action"]
-        action_text = "initial" if not action else f"{action.get('type')} at ({action.get('x')},{action.get('y')})"
-        lines.append(f"- `{item['id']}`: `{item['path']}`; {action_text}; changed={item['changed_from_previous']}")
-        lines.append(f"  ![{item['id']}]({item['path']})")
+    if _supports_vision():
+        lines.extend(
+            [
+                "",
+                "## Agent Instruction",
+                "",
+                "Your model supports image input. Inspect the PNG files below before final upload, then fix app.json per the real frames.",
+                "",
+                "## Screenshots",
+            ]
+        )
+        for item in payload["screenshots"]:
+            action = item["action"]
+            action_text = "initial" if not action else f"{action.get('type')} at ({action.get('x')},{action.get('y')})"
+            lines.append(f"- `{item['id']}`: `{item['path']}`; {action_text}; changed={item['changed_from_previous']}")
+            lines.append(f"  ![{item['id']}]({item['path']})")
+    else:
+        lines.extend(
+            [
+                "",
+                "## Agent Instruction",
+                "",
+                "This run's model has NO image input. DO NOT read or open any screenshot PNG — "
+                "reading an image will fail the whole run with a 400 error. Use this text report "
+                "(render success, capture, interaction changes, and issues below) as your sole "
+                "visual evidence; do not claim pixel-level visual inspection.",
+                "",
+                f"## Screenshots ({len(payload['screenshots'])} captured as build artifacts; not shown to a text-only model)",
+            ]
+        )
+        for item in payload["screenshots"]:
+            action = item["action"]
+            action_text = "initial" if not action else f"{action.get('type')} at ({action.get('x')},{action.get('y')})"
+            lines.append(
+                f"- `{item['id']}`: {action_text}; changed={item['changed_from_previous']} (PNG saved under screenshots/, not for reading)"
+            )
     lines.extend(["", "## Issues"])
     issues = payload["issues"]
     if not issues:

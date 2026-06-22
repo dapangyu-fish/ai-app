@@ -1768,6 +1768,17 @@ def _env_enabled(name: str, default: str = "0") -> bool:
     return str(os.environ.get(name, default)).strip().lower() in {"1", "true", "yes", "on", "enabled"}
 
 
+def _provider_supports_vision(provider: dict) -> bool:
+    """Whether the run's model accepts image input. Default False (safe: text-only
+    review), opt in per provider via ``<PREFIX>_SUPPORTS_VISION=1`` (e.g.
+    MINIMAX_SUPPORTS_VISION=1). A non-vision model that tries to Read a screenshot
+    PNG fails the whole run with a 400, so we keep the visual review text-only unless
+    the provider is explicitly known to read images."""
+    pid = provider.get("id") if isinstance(provider, dict) else None
+    prefix = _provider_env_prefix(pid)
+    return _env_enabled(f"{prefix}_SUPPORTS_VISION", "0")
+
+
 def _visual_review_env() -> dict[str, str]:
     keys = (
         "AI_APP_VISUAL_REVIEW_ENABLED",
@@ -1794,10 +1805,13 @@ def _build_visual_review_prompt_note(*, workspace: Optional[str] = None) -> str:
         f"\n- 运行命令：`{cmd} \"{app_path}\"{capture_small}`。"
         "\n- 该工具只负责用真实 Flutter Web JSON 解释器渲染、截图和生成 report.md/report.json；"
         "不会调用任何额外视觉 API。"
-        "\n- 如果当前 Agent/模型支持读取图片，复杂 APP、视觉质量敏感 APP、游戏或多页面 APP "
-        "在最终上传前至少运行一次，并打开 `$AI_APP_WORKSPACE/visual_review/report.md` 中引用的 PNG 截图，"
-        "根据真实画面修复 JSON 后重新 repair/validate。"
-        "\n- 如果当前模型不能读取图片，只能把视觉复检报告当作渲染/截图证据；不要声称已经完成图片级视觉评估。"
+        "\n- 复杂 APP、视觉质量敏感 APP、游戏或多页面 APP 在最终上传前至少运行一次，"
+        "然后**打开 `$AI_APP_WORKSPACE/visual_review/report.md` 并严格按它的「Agent Instruction」执行**。"
+        "\n- ⚠️ 报告会按本轮模型能力自动裁剪：如果报告标注 text-only / 没有内嵌截图，"
+        "说明**本轮模型不支持图片输入——绝对不要去 Read 或打开任何 PNG 截图**"
+        "（无图片能力的模型读图会直接 400 失败整轮），只依据报告里的文字结论"
+        "（渲染是否成功、交互是否变化、issues）来判断，不要声称做了图片级视觉评估。"
+        "\n- 只有当报告内嵌了截图（说明本轮模型支持图片输入）时，才去读取这些 PNG 并据此修 JSON 再 repair/validate。"
         "\n- 视觉复检不是客户端动作；最终仍必须通过 upload_with_signature.sh 写入 client_actions。"
     )
 
@@ -2769,6 +2783,7 @@ def _agent_node_provider_env(provider: dict, *, include_provider_secrets: bool =
     env["REGISTRY_BASE_URL"] = os.environ.get("REGISTRY_BASE_URL", "")
     env["MINIO_PUBLIC_URL"] = os.environ.get("MINIO_PUBLIC_URL", "")
     env.update(_visual_review_env())
+    env["AI_APP_MODEL_SUPPORTS_VISION"] = "1" if _provider_supports_vision(provider) else "0"
     return {k: v for k, v in env.items() if v is not None}
 
 
