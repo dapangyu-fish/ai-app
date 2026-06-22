@@ -185,6 +185,9 @@ _ALLOWED_IMPORT_ROOTS = {
     # generated code cannot — os is not importable). The DSN is least-privilege
     # (own schema only), so this is safe to expose.
     "myapp_db",
+    # B1-G2: caller-identity helper baked into the runtime. current_user() returns
+    # the backend-injected app-scoped pseudonym; exposes no token/uid.
+    "myapp_auth",
 }
 _FORBIDDEN_CALLS = {
     "__import__",

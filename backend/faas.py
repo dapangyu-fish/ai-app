@@ -8,6 +8,7 @@ client-supplied user_id.
 
 from __future__ import annotations
 
+import hashlib
 import hmac
 import time
 from urllib.parse import quote
@@ -17,7 +18,7 @@ from flask import Response, jsonify, request, stream_with_context
 
 try:
     from auth import verify_access_token
-    from config import AGENT_NODE_TOKEN, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
+    from config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
     from faas_store import (
         FaaSError,
         FaaSValidationError,
@@ -39,7 +40,7 @@ try:
     )
 except ModuleNotFoundError:
     from backend.auth import verify_access_token
-    from backend.config import AGENT_NODE_TOKEN, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN
+    from backend.config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
     from backend.faas_store import (
         FaaSError,
         FaaSValidationError,
@@ -100,6 +101,67 @@ def _request_user_id(*, trusted_only: bool = False) -> str | None:
 
 def _json_error(message: str, status: int, *, code: str = "FAAS_ERROR") -> tuple[Response, int]:
     return jsonify({"error": message, "code": code}), status
+
+
+# ── B1-G2: trusted, app-scoped caller identity injected into the function ──
+
+def _verify_caller_uid(token: str) -> str | None:
+    """Verify a caller's Supabase JWT and return the platform uid, or None.
+    Prefers LOCAL HS256 verification (no GoTrue round-trip on the invoke hot path)
+    when SUPABASE_JWT_SECRET is configured; otherwise falls back to remote verify."""
+    token = (token or "").strip()
+    if not token:
+        return None
+    if SUPABASE_JWT_SECRET:
+        try:
+            import jwt  # PyJWT
+            claims = jwt.decode(
+                token, SUPABASE_JWT_SECRET, algorithms=["HS256"],
+                options={"verify_aud": False},
+            )
+            uid = str(claims.get("sub") or "").strip()
+            return uid or None
+        except Exception:
+            return None  # invalid/expired/malformed → anonymous
+    user = verify_access_token(token)
+    if user:
+        return str(user.get("id") or "").strip() or None
+    return None
+
+
+def _caller_pseudonym(app_id: str, uid: str) -> str:
+    """App-scoped, non-reversible, non-cross-app-correlatable consumer id =
+    HMAC(server_secret, app_id || uid). The secret is server-only so owner code
+    cannot reverse it to a platform account or link the same consumer across apps."""
+    app_id = str(app_id or "").strip()
+    uid = str(uid or "").strip()
+    if not (FAAS_CALLER_PSEUDONYM_SECRET and app_id and uid):
+        return ""
+    msg = (app_id + "\x00" + uid).encode("utf-8")
+    return "c_" + hmac.new(
+        FAAS_CALLER_PSEUDONYM_SECRET.encode("utf-8"), msg, hashlib.sha256
+    ).hexdigest()[:32]
+
+
+def _build_proxy_headers(pseudonym: str) -> dict[str, str]:
+    """Headers forwarded to the function container. WHITELIST-strip: drop ALL
+    client x-myapp-* (normalize _→-) plus authorization/cookie/runtime-token/host,
+    THEN inject the backend-derived caller pseudonym. The raw token/uid NEVER
+    reaches the function; client-supplied identity headers can't be smuggled."""
+    drop_exact = {
+        "host", "content-length", "connection",
+        "authorization", "cookie", "x-myapp-faas-runtime-token",
+    }
+    out: dict[str, str] = {}
+    for key, value in request.headers.items():
+        norm = key.lower().replace("_", "-")
+        if norm in drop_exact or norm.startswith("x-myapp-"):
+            continue
+        out[key] = value
+    if pseudonym:
+        out["X-MyApp-Caller-Pseudonym"] = pseudonym
+        out["X-MyApp-Caller-Authed"] = "1"
+    return out
 
 
 def _annotate_running(services: list) -> list:
@@ -412,20 +474,14 @@ def invoke_service(service_id: str, route_path: str = ""):
     if request.query_string:
         upstream = f"{upstream}?{request.query_string.decode('utf-8', errors='replace')}"
 
-    sensitive_request_headers = {
-        "host",
-        "content-length",
-        "connection",
-        "authorization",
-        "cookie",
-        "x-myapp-faas-runtime-token",
-        "x-myapp-user-id",
-    }
-    headers = {
-        key: value
-        for key, value in request.headers.items()
-        if key.lower() not in sensitive_request_headers
-    }
+    # B1-G2: derive a trusted, app-scoped caller pseudonym from the verified JWT
+    # (if present) and inject it; prefix-strip all client x-myapp-*/auth so identity
+    # cannot be forged through the proxy and no raw token reaches the function.
+    # (Sibling-container direct-connect forgery is closed by network isolation, B2-G2.)
+    _auth = request.headers.get("Authorization", "")
+    _uid = _verify_caller_uid(_auth[7:]) if _auth.startswith("Bearer ") else None
+    _pseudonym = _caller_pseudonym(service.get("app_id", ""), _uid) if _uid else ""
+    headers = _build_proxy_headers(_pseudonym)
     request_body = request.get_data()
     # Tolerate scale-from-zero cold starts: a just-started container may not be
     # listening yet, so the first proxy can fail with a connection-level 5xx. The

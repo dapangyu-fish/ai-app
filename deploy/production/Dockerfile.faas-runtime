@@ -13,6 +13,9 @@ COPY backend/faas_runtime_server.py /app/backend/faas_runtime_server.py
 # Scoped per-user DB helper, importable by generated app.py as `myapp_db`
 # (/app/backend is on sys.path[0] when the runtime script runs).
 COPY backend/faas_runtime_db.py /app/backend/myapp_db.py
+# B1-G2: caller-identity helper, importable as `myapp_auth`. current_user()
+# returns the backend-injected app-scoped pseudonym (no raw token/uid in code).
+COPY backend/faas_runtime_auth.py /app/backend/myapp_auth.py
 
 EXPOSE 8080
 

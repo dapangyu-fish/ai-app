@@ -43,6 +43,10 @@ for _p in _env_candidates:
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://myapp-auth.dapangyu.work")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
+# B1-G2: GoTrue HS256 JWT secret for LOCAL token verification on the FaaS invoke
+# hot path (avoids a blocking GoTrue round-trip per call). Optional — when unset,
+# invoke falls back to remote verify_access_token.
+SUPABASE_JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET", "").strip()
 
 def _env_for_prefix(prefix: str, key: str, default: str = "") -> str:
     return _registry_env_for_prefix(os.environ, prefix, key, default)
@@ -109,6 +113,15 @@ FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER = os.environ.get(
 FAAS_INJECT_SUPABASE_ANON_KEY = os.environ.get(
     "FAAS_INJECT_SUPABASE_ANON_KEY", "0"
 ).strip().lower() in {"1", "true", "yes", "on"}
+# B1-G2 / A7: server-only secret for the app-scoped caller PSEUDONYM injected into
+# FaaS functions. pseudonym = HMAC(secret, app_id || uid). Keeps the raw platform
+# uid/token out of owner code and prevents an owner from reversing/​correlating a
+# consumer across apps (the secret is server-only). Falls back to AGENT_NODE_TOKEN
+# so a deployment that hasn't set it still gets a non-empty, non-guessable key.
+FAAS_CALLER_PSEUDONYM_SECRET = (
+    os.environ.get("FAAS_CALLER_PSEUDONYM_SECRET", "").strip()
+    or os.environ.get("AGENT_NODE_TOKEN", "").strip()
+)
 FAAS_CODE_ROOT = os.environ.get("FAAS_CODE_ROOT", "/mnt/myapp/faas/code")
 FAAS_MAX_SERVICES_PER_USER = _env_int("FAAS_MAX_SERVICES_PER_USER", 5)
 FAAS_GIT_ENABLED = os.environ.get("FAAS_GIT_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"}

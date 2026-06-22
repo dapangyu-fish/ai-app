@@ -37,6 +37,8 @@ for _name, _value in {
     "FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER": False,
     "FAAS_REQUIRE_AUTH": False,
     "FAAS_RUNTIME_TOKEN": "runtime-master-token",
+    "FAAS_CALLER_PSEUDONYM_SECRET": "test-pseudo-secret",
+    "SUPABASE_JWT_SECRET": "",
 }.items():
     setattr(_config, _name, _value)
 sys.modules["config"] = _config
