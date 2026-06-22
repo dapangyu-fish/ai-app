@@ -26,6 +26,7 @@ for _name, _value in {
     "FAAS_LOCAL_DOCKER_HOST_CODE_ROOT": "/mnt/myapp/faas/code",
     "FAAS_LOCAL_DOCKER_IMAGE": "example/faas-runtime:test",
     "FAAS_LOCAL_DOCKER_NETWORK": "myapp_default", "FAAS_LOCAL_DOCKER_START_ON_DEPLOY": False,
+    "FAAS_HARDEN_CONTAINERS": True, "FAAS_LOCAL_DOCKER_MEM_LIMIT": "512m", "FAAS_LOCAL_DOCKER_PIDS_LIMIT": 256,
     "FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS": 15, "FAAS_MAX_SERVICES_PER_USER": 5,
     "FAAS_NODE_PUBLIC_URL": "https://faas.example", "FAAS_PUBLIC_BASE_URL": "https://backend.example",
     "FAAS_REQUIREMENTS_MAX_LINES": 40, "FAAS_RUNTIME_BUNDLE_BASE_URL": "https://backend.example",

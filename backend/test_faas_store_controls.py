@@ -35,6 +35,9 @@ for _name, _value in {
     "FAAS_LOCAL_DOCKER_HOST_CODE_ROOT": "/mnt/myapp/faas/code",
     "FAAS_LOCAL_DOCKER_IMAGE": "example/faas-runtime:test",
     "FAAS_LOCAL_DOCKER_NETWORK": "myapp_default",
+    "FAAS_HARDEN_CONTAINERS": True,
+    "FAAS_LOCAL_DOCKER_MEM_LIMIT": "512m",
+    "FAAS_LOCAL_DOCKER_PIDS_LIMIT": 256,
     "FAAS_LOCAL_DOCKER_START_ON_DEPLOY": False,
     "FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS": 15,
     "FAAS_MAX_SERVICES_PER_USER": 2,
@@ -947,6 +950,21 @@ def test_local_docker_deploy_records_runtime_metadata() -> None:
     assert deploy_meta["mode"] == "local-docker"
     assert deploy_meta["runtime_image"] == faas_store.FAAS_LOCAL_DOCKER_IMAGE
     assert deploy_meta["network"] == faas_store.FAAS_LOCAL_DOCKER_NETWORK
+
+
+def test_container_hardening_b2g2():
+    h = faas_store._container_hardening()
+    if faas_store.FAAS_HARDEN_CONTAINERS:
+        assert h["cap_drop"] == ["ALL"]
+        assert "no-new-privileges:true" in h["security_opt"]
+        assert isinstance(h["pids_limit"], int) and h["pids_limit"] > 0
+    # disabled → empty
+    old = faas_store.FAAS_HARDEN_CONTAINERS
+    try:
+        faas_store.FAAS_HARDEN_CONTAINERS = False
+        assert faas_store._container_hardening() == {}
+    finally:
+        faas_store.FAAS_HARDEN_CONTAINERS = old
 
 
 def test_image_is_stale_xg3():

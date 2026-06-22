@@ -50,6 +50,9 @@ try:
         FAAS_LOCAL_DOCKER_IMAGE,
         FAAS_LOCAL_DOCKER_NETWORK,
         FAAS_LOCAL_DOCKER_START_ON_DEPLOY,
+        FAAS_HARDEN_CONTAINERS,
+        FAAS_LOCAL_DOCKER_MEM_LIMIT,
+        FAAS_LOCAL_DOCKER_PIDS_LIMIT,
         FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS,
         FAAS_MAX_SERVICES_PER_USER,
         FAAS_NODE_PUBLIC_URL,
@@ -86,6 +89,9 @@ except ModuleNotFoundError:
         FAAS_LOCAL_DOCKER_IMAGE,
         FAAS_LOCAL_DOCKER_NETWORK,
         FAAS_LOCAL_DOCKER_START_ON_DEPLOY,
+        FAAS_HARDEN_CONTAINERS,
+        FAAS_LOCAL_DOCKER_MEM_LIMIT,
+        FAAS_LOCAL_DOCKER_PIDS_LIMIT,
         FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS,
         FAAS_MAX_SERVICES_PER_USER,
         FAAS_NODE_PUBLIC_URL,
@@ -1822,6 +1828,7 @@ def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: s
         raise FaaSError(f"FaaS code root does not exist in backend container: {container_code_root}")
     service_dir = _local_runtime_service_dir(root)
     _remove_replica(function_name, replica)
+    hardening = _container_hardening()
     try:
         client.containers.run(
             FAAS_LOCAL_DOCKER_IMAGE,
@@ -1829,6 +1836,7 @@ def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: s
             name=name,
             detach=True,
             network=FAAS_LOCAL_DOCKER_NETWORK,
+            **hardening,
             environment={
                 "PORT": "8080",
                 "MYAPP_FAAS_SERVICE_ID": service_id,
@@ -1883,6 +1891,21 @@ def _owner_db_dsn(service: dict[str, Any]) -> str:
     # B2-G1: do NOT swallow errors — a decryption failure must FAIL CLOSED (abort
     # cold-wake) rather than start a container with an empty/wrong DSN.
     return dsn_for_user(tenant, provision=False) or ""
+
+
+def _container_hardening() -> dict[str, Any]:
+    """B2-G2: docker run kwargs that contain a compromised function — drop ALL Linux
+    caps, forbid privilege escalation, bound PIDs/memory. Empty when disabled."""
+    if not FAAS_HARDEN_CONTAINERS:
+        return {}
+    h: dict[str, Any] = {
+        "cap_drop": ["ALL"],
+        "security_opt": ["no-new-privileges:true"],
+        "pids_limit": int(FAAS_LOCAL_DOCKER_PIDS_LIMIT),
+    }
+    if FAAS_LOCAL_DOCKER_MEM_LIMIT:
+        h["mem_limit"] = FAAS_LOCAL_DOCKER_MEM_LIMIT
+    return h
 
 
 def _image_is_stale(container) -> bool:

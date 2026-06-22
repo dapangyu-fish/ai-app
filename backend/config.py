@@ -179,6 +179,14 @@ FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT = os.environ.get("FAAS_LOCAL_DOCKER_CONTAI
 FAAS_LOCAL_DOCKER_HOST_CODE_ROOT = os.environ.get("FAAS_LOCAL_DOCKER_HOST_CODE_ROOT", FAAS_CODE_ROOT).rstrip("/")
 FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS = _env_int("FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS", 15)
 FAAS_LOCAL_DOCKER_START_ON_DEPLOY = os.environ.get("FAAS_LOCAL_DOCKER_START_ON_DEPLOY", "1").strip().lower() in {"1", "true", "yes", "on"}
+# B2-G2: container hardening for function runtimes (defense-in-depth that limits a
+# compromised/escaped function). Safe defaults ON — the runtime is a plain Flask
+# server needing no Linux capabilities. Network topology lockdown (per-tenant net /
+# PG cert-auth) is a separate ops step; FAAS_LOCAL_DOCKER_NETWORK already lets an
+# operator isolate the function network.
+FAAS_HARDEN_CONTAINERS = os.environ.get("FAAS_HARDEN_CONTAINERS", "1").strip().lower() in {"1", "true", "yes", "on"}
+FAAS_LOCAL_DOCKER_MEM_LIMIT = os.environ.get("FAAS_LOCAL_DOCKER_MEM_LIMIT", "512m").strip()
+FAAS_LOCAL_DOCKER_PIDS_LIMIT = _env_int("FAAS_LOCAL_DOCKER_PIDS_LIMIT", 256)
 FAAS_BUNDLE_MAX_BYTES = _env_int("FAAS_BUNDLE_MAX_BYTES", 512 * 1024)
 FAAS_FILE_MAX_BYTES = _env_int("FAAS_FILE_MAX_BYTES", 256 * 1024)
 FAAS_REQUIREMENTS_MAX_LINES = _env_int("FAAS_REQUIREMENTS_MAX_LINES", 40)
