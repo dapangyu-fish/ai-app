@@ -1,5 +1,7 @@
 # FaaS 测试台 / FaaS Test Lab — 前后端连体调参考样板
 
+> ⚠️ **运行时已更新(2026-06):FaaS 默认运行时已从 OpenFaaS/faasd 迁移到自研 Docker FaaS**(`FAAS_DEPLOY_MODE=local-docker`:容器即服务,控制面自管 部署/路由/冷唤醒/scale-to-zero/扩缩容,无 OpenFaaS CE 的 15 函数上限)。faasd/OpenFaaS 仅作为可选 legacy 模式保留。当前运行时与运维以 `../faas-docker-runtime.md` 为准;本文档中涉及 faasd/OpenFaaS 安装与网关的部分按 legacy 看待。
+
 > JSON-APP 名为「FaaS 测试台 / FaaS Test Lab」，支持 zh/en i18n（`global.i18n` + `{{ t('a.b') }}`，首页「中/EN」按钮 `@set_locale` 切换）。
 > **干净分层（v1.2.0，见 §5.1）**：框架暴露只读 `app` 命名空间（`{{ app.backendUrl }}` 等，取自 `AppConfig`）；`faas` JSON lib（`templates/lib_faas.json`，作为 `dependencies` 声明）用 `{{ app.backendUrl }}` 拼出完整 invoke URL 再调**通用 http builtin**；本 app 只 `@faas.get/post/put/del/sse(serviceId, route, …)`——**无硬编码域名、无相对地址魔法**。
 > （目录名 `faas-https-test-template/` 与 faas 服务 slug `https-test-lab`/`svc-77be07ffad7b` 是稳定标识符，不随显示名改。`app` 命名空间是客户端 Dart 改动，**需重编客户端**才生效。）
@@ -82,8 +84,8 @@ deploy 前 `validate_bundle` 会用 AST 校验 `app.py`：
 
 → **客户端的用户 token 不能走标准 `Authorization` 头**（到不了函数）。必须用**自定义头**（本样板用 `X-User-Token`，不在剔除表 → 能透传）或 body 传。`GET /headers` 用例就是用来肉眼确认这件事的（`has_authorization:false`）。
 
-### 3.3 函数无数据库、无持久卷；scale-to-zero 在 faasd CE 不生效
-faasd 社区版只有 gateway + queue-worker，**没有 idler/autoscaler**，`com.openfaas.scale.zero` 标签不被兑现。所以函数实际是常驻的（不会缩容到 0，也别指望冷启动省资源）。数据用内存 dict mock 即可（重启即丢，测试足够）。真实业务要持久化得另接外部存储（同样经 `urllib`）。
+### 3.3 函数无数据库、无持久卷；scale-to-zero 在 faasd CE 不生效（legacy OpenFaaS mode）
+faasd 社区版只有 gateway + queue-worker，**没有 idler/autoscaler**，`com.openfaas.scale.zero` 标签不被兑现。所以函数实际是常驻的（不会缩容到 0，也别指望冷启动省资源）。（OpenFaaS CE 这套限制——含 15 函数上限与不兑现 scale-to-zero——正是我们迁移到自研 Docker FaaS 的原因；local-docker 模式由控制面自管 冷唤醒/scale-to-zero/扩缩容，见 `../faas-docker-runtime.md`。本节描述的是 legacy faasd 行为。）数据用内存 dict mock 即可（重启即丢，测试足够）。真实业务要持久化得另接外部存储（同样经 `urllib`）。
 
 ---
 
@@ -274,7 +276,7 @@ runtime  faas_runtime_server.py `_inject_platform_config(app)`  → app.config["
 用户 app.py：  current_app.config["MYAPP"]["supabase_url"]      （不能 import os，由运行时代读 env）
 ```
 
-- **访问路径（确认）**：JSON-APP 默认走【后端代理】`/api/faas/invoke/<svc>/<route>`（路由强制 + 剥头 + 冷启动重试），不是直连 faasd。faasd 直连域名（`MYAPP_CFG_FAAS_PUBLIC_BASE_URL`）是旁路，注入它是为了函数间直连 / 函数自知公网地址。
+- **访问路径（确认）**：JSON-APP 默认走【后端代理】`/api/faas/invoke/<svc>/<route>`（路由强制 + 剥头 + 冷启动重试），不是直连 faasd（legacy OpenFaaS mode；默认运行时现为 local-docker，代理路径不变 — 见 `../faas-docker-runtime.md`）。faasd 直连域名（`MYAPP_CFG_FAAS_PUBLIC_BASE_URL`）是旁路，注入它是为了函数间直连 / 函数自知公网地址。
 - **安全边界**：只桥 `MYAPP_CFG_` 前缀；内部密钥用 `MYAPP_FAAS_` 前缀（`MYAPP_FAAS_RUNTIME_TOKEN` / `MYAPP_FAAS_BUNDLE_URL`），永不进 `app.config`。
 - **换域名**：改 `myapp-ctl domain set openfaas/...` + `ingress render` 重写 env，再重部署函数即可，**不动任何函数源码**。
 - **验证**：`GET /ping` 的 `config_keys` 字段会列出实际注入了哪些键（只列键不泄值）。

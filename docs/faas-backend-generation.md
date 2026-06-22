@@ -1,5 +1,7 @@
 # AI Generated FaaS Backends
 
+> ⚠️ **运行时已更新(2026-06):FaaS 默认运行时已从 OpenFaaS/faasd 迁移到自研 Docker FaaS**(`FAAS_DEPLOY_MODE=local-docker`:容器即服务,控制面自管 部署/路由/冷唤醒/scale-to-zero/扩缩容,无 OpenFaaS CE 的 15 函数上限)。faasd/OpenFaaS 仅作为可选 legacy 模式保留。当前运行时与运维以 `faas-docker-runtime.md` 为准;本文档中涉及 faasd/OpenFaaS 安装与网关的部分按 legacy 看待。
+
 This document tracks the backend-generation path for JSON-APPs. It is aligned
 with the current `agent-control-plane` architecture: Agent containers generate
 artifacts only; backend-owned services perform validation, Git writes, and
@@ -19,7 +21,8 @@ The first supported runtime shape is:
 - Default per-user limit: 5 active services.
 - Auth-free invoke path for now.
 - Backend-owned Git commit/push and deployment.
-- OpenFaaS/faasd integration through a backend-controlled adapter.
+- OpenFaaS/faasd integration through a backend-controlled adapter (legacy
+  OpenFaaS mode; default is now local-docker — see `faas-docker-runtime.md`).
 - A backend API to disable a service and release its quota slot.
 
 ## Artifact Protocol
@@ -167,7 +170,8 @@ $FAAS_DEPLOY_SCRIPT <service_dir> <function_name> <service_id> <commit_sha>
 Use this for host-specific experiments. The script can build or sync code using
 whatever strategy a given faasd/OpenFaaS prototype needs.
 
-`FAAS_DEPLOY_MODE=openfaas` deploys the same generic runtime image for every
+`FAAS_DEPLOY_MODE=openfaas` (legacy OpenFaaS mode; default is now local-docker —
+see `faas-docker-runtime.md`) deploys the same generic runtime image for every
 generated service via the OpenFaaS REST API:
 
 ```text
@@ -188,7 +192,8 @@ service and fall back to the current global `FAAS_OPENFAAS_GATEWAY`. This keeps
 the current single-gateway behavior unchanged while leaving a migration path for
 multiple single-node faasd gateways and backend-side routing later.
 
-Deployment shapes — **faasd CAN co-locate with Docker** (empirically proven
+Deployment shapes (legacy OpenFaaS mode; default is now local-docker — see
+`faas-docker-runtime.md`) — **faasd CAN co-locate with Docker** (empirically proven
 2026-06-15 on Ubuntu 24.04): faasd and Docker share the one **system**
 containerd (`/run/containerd/containerd.sock`) through separate containerd
 **namespaces** (Docker uses `moby`, faasd uses `openfaas` + `openfaas-fn`); there
@@ -223,7 +228,9 @@ FAAS_RUNTIME_BUNDLE_BASE_URL=https://<backend-domain>
 FAAS_RUNTIME_TOKEN=<random-secret>
 ```
 
-faasd host bring-up checklist (dedicated host OR co-located with Docker):
+faasd host bring-up checklist (legacy OpenFaaS mode only; default is now
+local-docker — see `faas-docker-runtime.md`) (dedicated host OR co-located with
+Docker):
 
 1. Run `myapp-ctl faas faasd-host-preflight --expect-empty-ports` on the
    candidate host. It is read-only and only **warns** (not fails) if Docker is

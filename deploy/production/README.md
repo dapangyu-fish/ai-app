@@ -1,5 +1,7 @@
 # MyApp Deployment Guide
 
+> ⚠️ **运行时已更新(2026-06):FaaS 默认运行时已从 OpenFaaS/faasd 迁移到自研 Docker FaaS**(`FAAS_DEPLOY_MODE=local-docker`:容器即服务,控制面自管 部署/路由/冷唤醒/scale-to-zero/扩缩容,无 OpenFaaS CE 的 15 函数上限)。faasd/OpenFaaS 仅作为可选 legacy 模式保留。当前运行时与运维以 `../../docs/faas-docker-runtime.md` 为准;本文档中涉及 faasd/OpenFaaS 安装与网关的部分按 legacy 看待。
+
 This is the only supported backend deployment guide. Older supervisor,
 standalone IM, test-environment, and one-off migration paths have been removed
 from the documentation.
@@ -428,10 +430,11 @@ myapp-ctl deploy --group faas --pull
 The FaaS group updates the backend-owned FaaS control path. By default,
 `FAAS_DEPLOY_MODE=local-docker`: generated Flask services run in separate
 `myapp-faas-*` containers created by the backend, with generated code mounted
-read-only from the data root. `FAAS_DEPLOY_MODE=openfaas` is also supported:
-the backend deploys the generic `myapp-faas-runtime` image to OpenFaaS/faasd
-and the function runtime fetches its validated code bundle from the backend with
-`FAAS_RUNTIME_TOKEN`. Successful deployments record the target gateway in the
+read-only from the data root (this is the current runtime — see
+`../../docs/faas-docker-runtime.md`). `FAAS_DEPLOY_MODE=openfaas` is also
+supported as a legacy/optional mode: the backend deploys the generic
+`myapp-faas-runtime` image to OpenFaaS/faasd and the function runtime fetches
+its validated code bundle from the backend with `FAAS_RUNTIME_TOKEN`. Successful deployments record the target gateway in the
 service metadata. While the current CLI configures one active gateway per
 backend, invoke and disable operations in `openfaas` mode prefer the
 service-recorded gateway and fall back to the current global gateway.
@@ -450,8 +453,9 @@ FaaS data root. It verifies that the deployed backend, not the Agent runtime,
 can commit and push generated service code, then restores the previous FaaS
 configuration.
 
-Before using a real faasd/OpenFaaS gateway, run the read-only host preflight on
-the candidate gateway host:
+Before using a real faasd/OpenFaaS gateway (legacy OpenFaaS mode; default is now
+local-docker — see `../../docs/faas-docker-runtime.md`), run the read-only host
+preflight on the candidate gateway host:
 
 ```bash
 myapp-ctl faas faasd-host-preflight --expect-empty-ports
@@ -475,7 +479,8 @@ myapp-ctl faas ls --user-id <user_id> --all
 myapp-ctl faas disable <service_id> --user-id <user_id>
 ```
 
-Switch runtime mode:
+Switch runtime mode (`local-docker` is the default/current runtime; `openfaas`
+is legacy/optional — see `../../docs/faas-docker-runtime.md`):
 
 ```bash
 myapp-ctl faas mode local-docker

@@ -1,5 +1,7 @@
 # FaaS 生成：Agent 自闭环部署 方案（待评审）
 
+> ⚠️ **运行时已更新(2026-06):FaaS 默认运行时已从 OpenFaaS/faasd 迁移到自研 Docker FaaS**(`FAAS_DEPLOY_MODE=local-docker`:容器即服务,控制面自管 部署/路由/冷唤醒/scale-to-zero/扩缩容,无 OpenFaaS CE 的 15 函数上限)。faasd/OpenFaaS 仅作为可选 legacy 模式保留。当前运行时与运维以 `docs/faas-docker-runtime.md` 为准;本文档中涉及 faasd/OpenFaaS 安装与网关的部分按 legacy 看待。
+
 ## 0. 目标
 让生成后端的 JSON-APP **真的能连上它自己的后端**，由 **AI Agent 在 run 内全程主导**：
 部署 → 拿真实 `service_id`/报错 → 自修重部署 → 自测后端 → 用真实 id 回改 JSON-APP → 上传。
