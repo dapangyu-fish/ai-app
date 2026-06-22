@@ -103,6 +103,20 @@ def _json_error(message: str, status: int, *, code: str = "FAAS_ERROR") -> tuple
     return jsonify({"error": message, "code": code}), status
 
 
+def _acting_user() -> str:
+    """B2-G4: the human performing a mutation (for owner∨maintainer authz). On the
+    trusted agent-node path it comes from X-MyApp-Acting-User-Id (never spoofable —
+    requires the node token); on the Bearer path it IS the verified caller. Empty →
+    the store layer defaults it to the resource owner (current behavior)."""
+    node_token = request.headers.get("X-MyApp-Agent-Node-Token", "")
+    if node_token and AGENT_NODE_TOKEN and hmac.compare_digest(node_token, AGENT_NODE_TOKEN):
+        return str(request.headers.get("X-MyApp-Acting-User-Id", "") or "").strip()
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        return _verify_caller_uid(auth[7:]) or ""
+    return ""
+
+
 # ── B1-G2: trusted, app-scoped caller identity injected into the function ──
 
 def _verify_caller_uid(token: str) -> str | None:
@@ -253,7 +267,7 @@ def scale_user_service(service_id: str):
     except (TypeError, ValueError):
         return _json_error("replicas must be an integer", 400, code="FAAS_SCALE_INVALID")
     try:
-        result = scale_service(user_id, service_id, replicas)
+        result = scale_service(user_id, service_id, replicas, acting_user=_acting_user())
     except FaaSValidationError as exc:
         return _json_error(str(exc), 404, code="FAAS_NOT_FOUND")
     except FaaSError as exc:
@@ -304,7 +318,7 @@ def deploy_service():
             bundle = load_bundle_bytes(request.get_data())
         else:
             bundle = request.get_json(silent=True) or {}
-        result = deploy_bundle(user_id, bundle, source="api")
+        result = deploy_bundle(user_id, bundle, source="api", acting_user=_acting_user())
     except FaaSValidationError as exc:
         return _json_error(str(exc), 400, code="FAAS_VALIDATION_FAILED")
     except FaaSError as exc:

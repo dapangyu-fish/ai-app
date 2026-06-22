@@ -335,6 +335,18 @@ def ensure_tables() -> None:
     )
     db_execute("CREATE INDEX IF NOT EXISTS idx_faas_applications_owner ON faas_applications(owner_user_id)")
     db_execute("CREATE INDEX IF NOT EXISTS idx_faas_applications_appid ON faas_applications(appid)")
+    # X-G1: app-level maintainers (can deploy/scale/migrate, NOT transfer/delete/manage-members).
+    db_execute(
+        """
+        CREATE TABLE IF NOT EXISTS faas_app_maintainers (
+            app_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            added_by TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (app_id, user_id)
+        )
+        """
+    )
     # B1-G1: bind each service to its application (additive; nullable→'' default so
     # existing rows migrate cleanly, then backfilled below to a per-owner default app).
     db_execute("ALTER TABLE faas_services ADD COLUMN IF NOT EXISTS app_id TEXT NOT NULL DEFAULT ''")
@@ -677,6 +689,75 @@ def set_application_policy(owner_user_id: str, app_id: str, access_policy: str) 
         [access_policy, app_id],
     )
     return get_application(app_id) or app
+
+
+# ── X-G1: maintainers (collaborators who can deploy/scale, not own) ──
+
+def is_maintainer(app_id: str, user_id: str) -> bool:
+    app_id = str(app_id or "").strip()
+    user_id = str(user_id or "").strip()
+    if not app_id or not user_id:
+        return False
+    row = db_query(
+        "SELECT 1 AS ok FROM faas_app_maintainers WHERE app_id = %s AND user_id = %s",
+        [app_id, user_id],
+        fetch_one=True,
+    )
+    return bool(row)
+
+
+def list_maintainers(app_id: str) -> list[dict[str, Any]]:
+    ensure_tables()
+    rows = db_query(
+        "SELECT app_id, user_id, added_by, created_at FROM faas_app_maintainers "
+        "WHERE app_id = %s ORDER BY created_at",
+        [str(app_id or "").strip()],
+        fetch_all=True,
+    )
+    return rows or []
+
+
+def add_maintainer(owner_user_id: str, app_id: str, user_id: str) -> dict[str, Any]:
+    """Owner-only: add a maintainer to an app. Ownership enforced."""
+    ensure_tables()
+    app = get_application(app_id)
+    if not app or app.get("owner_user_id") != str(owner_user_id or "").strip():
+        raise FaaSValidationError("application not found")
+    user_id = str(user_id or "").strip()
+    if not user_id:
+        raise FaaSValidationError("user_id is required")
+    if user_id == app.get("owner_user_id"):
+        raise FaaSValidationError("owner is already implicitly a maintainer")
+    db_execute(
+        "INSERT INTO faas_app_maintainers (app_id, user_id, added_by) VALUES (%s, %s, %s) "
+        "ON CONFLICT (app_id, user_id) DO NOTHING",
+        [app_id, user_id, owner_user_id],
+    )
+    return {"app_id": app_id, "user_id": user_id}
+
+
+def remove_maintainer(owner_user_id: str, app_id: str, user_id: str) -> None:
+    """Owner-only: remove a maintainer. Ownership enforced."""
+    ensure_tables()
+    app = get_application(app_id)
+    if not app or app.get("owner_user_id") != str(owner_user_id or "").strip():
+        raise FaaSValidationError("application not found")
+    db_execute(
+        "DELETE FROM faas_app_maintainers WHERE app_id = %s AND user_id = %s",
+        [app_id, str(user_id or "").strip()],
+    )
+
+
+def can_manage_service(acting_user: str, service: dict[str, Any]) -> bool:
+    """B2-G4 + X-G1: may `acting_user` deploy/scale this service? True if they are
+    the service's OWNER or a MAINTAINER of its application. Resource ownership is
+    always the service's own owner_user_id — never the acting user."""
+    acting_user = str(acting_user or "").strip()
+    if not acting_user or not isinstance(service, dict):
+        return False
+    if service.get("owner_user_id") == acting_user:
+        return True
+    return is_maintainer(service.get("app_id", ""), acting_user)
 
 
 def _resolve_app_id(owner_user_id: str, meta: dict[str, Any]) -> tuple[str, str]:
@@ -1661,17 +1742,22 @@ def _set_service_replicas(service_id: str, replicas: int) -> None:
         pass
 
 
-def scale_service(owner_user_id: str, service_id: str, replicas: int) -> dict[str, Any]:
+def scale_service(owner_user_id: str, service_id: str, replicas: int, *, acting_user: str = "") -> dict[str, Any]:
     """扩容/缩容: set the number of running replica containers for a docker-mode
     service. replicas=0 scales to zero (kept warm-recreatable); >1 runs multiple
-    load-balanced replicas. Capped at FAAS_DOCKER_MAX_REPLICAS."""
+    load-balanced replicas. Capped at FAAS_DOCKER_MAX_REPLICAS.
+
+    X-G1: the owner OR a maintainer of the service's app may scale."""
     if not owner_user_id:
         raise FaaSValidationError("owner_user_id is required")
+    acting_user = str(acting_user or "").strip() or owner_user_id
     replicas = max(0, min(int(replicas), FAAS_DOCKER_MAX_REPLICAS))
     ensure_tables()
     service = get_service(service_id)
     if not service or service.get("owner_user_id") != owner_user_id:
         raise FaaSValidationError("service not found")
+    if not can_manage_service(acting_user, service):
+        raise FaaSValidationError("not authorized to scale this service")
     if service_deploy_mode(service) not in _LOCAL_DOCKER_MODES:
         raise FaaSValidationError("scaling is only supported for docker-mode services")
     function_name = str(service.get("function_name") or "").strip()
@@ -1851,19 +1937,32 @@ def running_replica_counts() -> dict[str, int]:
     return counts
 
 
-def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "agent") -> FaaSDeployResult:
+def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "agent", acting_user: str = "") -> FaaSDeployResult:
     if not owner_user_id:
         raise FaaSValidationError("owner_user_id is required")
+    # B2-G4: separate the ACTING user (the human performing the deploy) from the
+    # RESOURCE owner. All resource keying (schema, code root, owner column) uses
+    # owner_user_id; acting_user is only for authz + audit. Defaults to the owner.
+    acting_user = str(acting_user or "").strip() or owner_user_id
     ensure_tables()
     normalized = validate_bundle(bundle)
     service_id = normalized["service_id"]
     lock = _service_lock(f"{owner_user_id}:{service_id}")
     with lock:
         existing = get_service(service_id)
-        if existing and existing.get("owner_user_id") != owner_user_id:
-            raise FaaSValidationError("service_id already belongs to another user")
-        if not existing and _count_user_services(owner_user_id) >= max(1, FAAS_MAX_SERVICES_PER_USER):
-            raise FaaSValidationError(f"service limit exceeded: max {FAAS_MAX_SERVICES_PER_USER}")
+        if existing:
+            if existing.get("owner_user_id") != owner_user_id:
+                raise FaaSValidationError("service_id already belongs to another user")
+            # X-G1: the owner OR a maintainer of the service's app may redeploy.
+            if not can_manage_service(acting_user, existing):
+                raise FaaSValidationError("not authorized to modify this service")
+        else:
+            # A new service can only be created as one's OWN (maintainers act on
+            # existing apps they were added to, never create services for others).
+            if acting_user != owner_user_id:
+                raise FaaSValidationError("cannot create a service owned by another user")
+            if _count_user_services(owner_user_id) >= max(1, FAAS_MAX_SERVICES_PER_USER):
+                raise FaaSValidationError(f"service limit exceeded: max {FAAS_MAX_SERVICES_PER_USER}")
 
         function_name = existing.get("function_name") if existing else _function_name(owner_user_id, service_id)
         root = service_code_root(owner_user_id, service_id)
@@ -1881,6 +1980,7 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
                                name=normalized.get("service_slug", ""))
         summary = {
             "source": source,
+            "acting_user": acting_user,  # B2-G4 audit: who performed this deploy
             "service_slug": normalized["service_slug"],
             "route_count": len(routes),
             "files": sorted(normalized["files"]),
