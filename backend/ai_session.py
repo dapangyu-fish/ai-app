@@ -2879,12 +2879,26 @@ def _build_agent_node_payload(
             workspace=runtime_workspace,
             generation_pipeline=generation_pipeline,
         )
+    # X-G2 (binding): mint a BACKEND-signed run-scoped token (the agent-node forwards
+    # it on in-run FaaS deploys). Lets the backend trust the run's owner from a token
+    # the node cannot forge, instead of a free-text header. Best-effort; ignored
+    # downstream unless FAAS_REQUIRE_RUN_TOKEN is on.
+    faas_run_token = ""
+    try:
+        try:
+            from faas import mint_run_token as _mint_run_token
+        except ModuleNotFoundError:
+            from backend.faas import mint_run_token as _mint_run_token
+        faas_run_token = _mint_run_token(user_id or "user", run_id)
+    except Exception:
+        faas_run_token = ""
     return {
         "run_id": run_id,
         "session_id": session_id,
         "cli_session_id": "" if resume_id else _agent_cli_session_id(session_id, run_id),
         "job_id": run_id,
         "user_id": user_id or "user",
+        "faas_run_token": faas_run_token,
         "provider_id": provider.get("id"),
         "agent_id": runner,
         "generation_pipeline": normalize_generation_pipeline(generation_pipeline),

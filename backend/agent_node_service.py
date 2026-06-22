@@ -8,6 +8,7 @@ and streams the container output back as JSONL events.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
 import json
@@ -373,7 +374,7 @@ def _issue_proxy_token(run_id: str, upstream_base_url: str, upstream_token: str,
     return token
 
 
-def _issue_faas_proxy_token(run_id: str, owner_user_id: str) -> str:
+def _issue_faas_proxy_token(run_id: str, owner_user_id: str, run_token: str = "") -> str:
     """Stateless per-run, owner-scoped token for the in-run FaaS deploy/invoke proxy.
 
     HMAC-signed `owner.expiry.sig` instead of an in-memory entry, so it stays valid
@@ -383,7 +384,10 @@ def _issue_faas_proxy_token(run_id: str, owner_user_id: str) -> str:
     the runtime never sees a user token or NODE_TOKEN.
     """
     exp = str(int(time.time()) + PROVIDER_PROXY_TOKEN_TTL_SECONDS)
-    msg = f"{owner_user_id}.{exp}"
+    # X-G2: carry the BACKEND-minted run token (base64url, no dots) so faas_proxy can
+    # forward it to the backend as the unforgeable owner proof. Empty field = legacy.
+    rt = base64.urlsafe_b64encode(run_token.encode("utf-8")).decode("ascii").rstrip("=") if run_token else ""
+    msg = f"{owner_user_id}.{exp}.{rt}"
     sig = hmac.new(NODE_TOKEN.encode("utf-8"), msg.encode("utf-8"), hashlib.sha256).hexdigest()[:40]
     return f"{msg}.{sig}"
 
@@ -688,8 +692,11 @@ def _prepare_provider_proxy(payload: dict) -> list[str]:
 
     owner_user_id = str(payload.get("owner_user_id") or "").strip()
     if owner_user_id:
-        # stateless signed token — no entry to revoke, no in-memory lifetime
-        faas_token = _issue_faas_proxy_token(run_id, owner_user_id)
+        # stateless signed token — no entry to revoke, no in-memory lifetime.
+        # X-G2: embed the backend-minted run token so faas_proxy forwards it.
+        faas_token = _issue_faas_proxy_token(
+            run_id, owner_user_id, str(payload.get("faas_run_token") or ""),
+        )
         env["MYAPP_FAAS_PROXY_URL"] = f"{PROVIDER_PROXY_BASE_URL}/faas/{faas_token}"
 
     payload["env"] = env
@@ -1156,14 +1163,21 @@ def _proxy_lookup(token: str) -> Optional[dict]:
 
 
 def _faas_proxy_lookup(token: str) -> Optional[dict]:
-    """Verify the stateless HMAC faas token and return its owner (no store lookup)."""
+    """Verify the stateless HMAC faas token and return its owner (no store lookup).
+    Tolerates both the legacy `owner.exp.sig` and the X-G2 `owner.exp.rt.sig`
+    (rt = base64url backend run token) formats."""
     if not NODE_TOKEN:
         return None
-    try:
-        owner, exp, sig = token.rsplit(".", 2)
-    except ValueError:
+    parts = token.rsplit(".", 3)
+    if len(parts) == 4:
+        owner, exp, rt_b64, sig = parts
+        signed = f"{owner}.{exp}.{rt_b64}"
+    elif len(parts) == 3:
+        owner, exp, sig = parts
+        rt_b64, signed = "", f"{owner}.{exp}"
+    else:
         return None
-    expected = hmac.new(NODE_TOKEN.encode("utf-8"), f"{owner}.{exp}".encode("utf-8"), hashlib.sha256).hexdigest()[:40]
+    expected = hmac.new(NODE_TOKEN.encode("utf-8"), signed.encode("utf-8"), hashlib.sha256).hexdigest()[:40]
     if not hmac.compare_digest(sig, expected):
         return None
     try:
@@ -1171,7 +1185,13 @@ def _faas_proxy_lookup(token: str) -> Optional[dict]:
             return None
     except ValueError:
         return None
-    return {"owner_user_id": owner}
+    run_token = ""
+    if rt_b64:
+        try:
+            run_token = base64.urlsafe_b64decode(rt_b64 + "=" * (-len(rt_b64) % 4)).decode("utf-8")
+        except Exception:
+            run_token = ""
+    return {"owner_user_id": owner, "run_token": run_token}
 
 
 def _upstream_headers(proxy_token: str, upstream_token: str) -> dict:
@@ -1415,6 +1435,11 @@ def faas_proxy(token: str, subpath: str):
         "X-MyApp-Agent-Node-Token": NODE_TOKEN,
         "X-MyApp-Owner-User-Id": str(entry.get("owner_user_id") or ""),
     }
+    # X-G2: forward the backend-minted run token (when present) so the backend can
+    # bind the owner to a token the node cannot forge (activated by FAAS_REQUIRE_RUN_TOKEN).
+    _run_token = str(entry.get("run_token") or "")
+    if _run_token:
+        headers["X-MyApp-Faas-Run-Token"] = _run_token
     content_type = request.headers.get("Content-Type")
     if content_type:
         headers["Content-Type"] = content_type
@@ -1536,6 +1561,8 @@ def _create_local_run(data: dict) -> str:
         "user_id": user_id,
         # raw owner id (the path-safe user_id above can mangle it) for the faas proxy
         "owner_user_id": str(data.get("user_id") or "").strip(),
+        # X-G2: backend-minted run token, forwarded by faas_proxy as the owner proof
+        "faas_run_token": str(data.get("faas_run_token") or ""),
         "provider_id": str(data.get("provider_id") or ""),
         "agent_id": str(data.get("agent_id") or "claude"),
         "resume_id": str(data.get("resume_id") or ""),
