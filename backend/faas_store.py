@@ -1502,10 +1502,14 @@ def scale_service(owner_user_id: str, service_id: str, replicas: int) -> dict[st
                 root, function_name=function_name, service_id=service_id,
                 commit_sha=commit_sha, db_dsn=db_dsn, replica=i,
             )
-    # Remove replicas >= the new count (scale down / clean stopped extras)
-    for i in range(replicas, FAAS_DOCKER_MAX_REPLICAS + 1):
-        _remove_replica(function_name, i)
-    _set_service_replicas(service_id, replicas)
+    # Remove replicas >= the new count (scale down / clean stopped extras). Always
+    # reconcile the recorded count to what is actually running — even if a removal
+    # throws mid-loop — so meta_json.deploy.replicas never contradicts reality.
+    try:
+        for i in range(replicas, FAAS_DOCKER_MAX_REPLICAS + 1):
+            _remove_replica(function_name, i)
+    finally:
+        _set_service_replicas(service_id, len(_running_replicas(function_name)))
     return {"service_id": service_id, "replicas": replicas, "running": _running_replicas(function_name)}
 
 

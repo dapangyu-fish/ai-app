@@ -143,6 +143,7 @@ def get_user_service(service_id: str):
     user_id = _request_user_id()
     if FAAS_REQUIRE_AUTH and service.get("owner_user_id") != user_id:
         return _json_error("forbidden", 403, code="FAAS_FORBIDDEN")
+    _annotate_running([service])
     return jsonify({"service": service})
 
 

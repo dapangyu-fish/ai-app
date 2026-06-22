@@ -1226,7 +1226,9 @@ def dash_faas():
         health = _backend_get("/api/faas/health")
     except requests.RequestException:
         health = {}
-    deploy_mode = (health.get("deploy_mode") if isinstance(health, dict) else None) or "local-docker"
+    # Don't fabricate a mode when health is unreachable — show "unknown" rather than
+    # a confident-looking default the admin might act on.
+    deploy_mode = ((health.get("deploy_mode") if isinstance(health, dict) else None) or "local-docker") if health else "unknown"
     try:
         raw = _backend_get("/api/faas/services",
                            params={"all_users": "1", "include_disabled": "1"})

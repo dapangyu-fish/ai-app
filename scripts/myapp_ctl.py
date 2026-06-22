@@ -5312,22 +5312,6 @@ def cmd_faas(args) -> int:
             print(f"faas ls failed: {status or '-'} {text[:500]}", file=sys.stderr)
             return 1
         services = data.get("services", []) if isinstance(data, dict) else []
-        # Instances per function: count running Docker FaaS containers. The
-        # self-managed Docker runtime is the only mode (0 = scaled to zero).
-        replicas: dict[str, object] = {}
-        docker_inst = True
-        try:
-            proc = _run([
-                "docker", "ps", "--filter", "label=myapp.faas=1",
-                "--format", '{{.Label "myapp.faas.function_name"}}',
-            ])
-            for line in (proc.stdout or "").splitlines():
-                fn = line.strip()
-                if fn:
-                    replicas[fn] = int(replicas.get(fn, 0)) + 1
-        except Exception:
-            replicas = {}
-            docker_inst = False
         if args.json:
             print(json.dumps(data, ensure_ascii=False))
             return 0
@@ -5335,12 +5319,15 @@ def cmd_faas(args) -> int:
         for item in services:
             routes = item.get("routes") or []
             fn = item.get("function_name", "-")
+            # Instance count comes from the backend's authoritative running_replicas
+            # (same source the dashboard uses); 0 = scaled to zero. '?' only if an old
+            # backend didn't supply it — never inferred from a local docker probe.
+            rr = item.get("running_replicas")
             rows.append({
                 "service_id": item.get("service_id", "-"),
                 "owner": (str(item.get("owner_user_id", "") or "-"))[:13],
                 "status": item.get("status", "-"),
-                # docker mode: 0 = scaled to zero (no running container) is real, not unknown.
-                "inst": (replicas.get(fn, 0) if docker_inst else (replicas.get(fn, "-") if replicas else "?")),
+                "inst": rr if isinstance(rr, int) else "?",
                 "routes": len(routes) if isinstance(routes, list) else "-",
                 "function": fn,
             })
