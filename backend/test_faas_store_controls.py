@@ -949,7 +949,34 @@ def test_local_docker_deploy_records_runtime_metadata() -> None:
     assert deploy_meta["network"] == faas_store.FAAS_LOCAL_DOCKER_NETWORK
 
 
+def test_image_is_stale_xg3():
+    import types as _t
+
+    class _Img:
+        def __init__(self, _id): self.id = _id
+
+    class _Container:
+        def __init__(self, image_id): self.image = _Img(image_id)
+
+    class _Client:
+        def __init__(self, desired): self.images = _t.SimpleNamespace(get=lambda name: _Img(desired))
+
+    old = faas_store._docker_client
+    try:
+        faas_store._docker_client = lambda: _Client("img-new")
+        assert faas_store._image_is_stale(_Container("img-old")) is True   # older image → stale
+        assert faas_store._image_is_stale(_Container("img-new")) is False  # current → not stale
+        # unresolvable image → fail-safe False (don't force recreate)
+        def _boom():
+            raise RuntimeError("no docker")
+        faas_store._docker_client = _boom
+        assert faas_store._image_is_stale(_Container("x")) is False
+    finally:
+        faas_store._docker_client = old
+
+
 if __name__ == "__main__":
+    test_image_is_stale_xg3()
     test_validation_rejects_dangerous_python_and_dependencies()
     test_validation_requires_declared_routes_to_match_flask_decorators()
     test_validation_rejects_reserved_runtime_routes()

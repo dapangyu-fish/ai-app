@@ -1885,24 +1885,46 @@ def _owner_db_dsn(service: dict[str, Any]) -> str:
     return dsn_for_user(tenant, provision=False) or ""
 
 
+def _image_is_stale(container) -> bool:
+    """X-G3: True if the container was built from an OLDER image than the current
+    FAAS_LOCAL_DOCKER_IMAGE — so cold-wake recreates it (propagating runtime changes
+    like myapp_auth/myapp_data) instead of starting stale code. Fail-safe: if the
+    image can't be resolved, returns False (don't force a recreate)."""
+    try:
+        desired = _docker_client().images.get(FAAS_LOCAL_DOCKER_IMAGE)
+        cur_id = getattr(getattr(container, "image", None), "id", None)
+        return bool(desired and cur_id and desired.id != cur_id)
+    except Exception:
+        return False
+
+
 def _wake_replica_zero(service: dict[str, Any], function_name: str, root: Path, service_id: str, commit_sha: str) -> str:
-    """Start replica 0 (fast start() if it exists; recreate with DSN otherwise)."""
+    """Start replica 0 (fast start() if current; recreate with DSN if missing or if
+    its image is stale — X-G3 image-aware cold-wake)."""
     client = _docker_client()
     name = _replica_name(function_name, 0)
     try:
         container = client.containers.get(name)
         container.reload()
-        if container.status == "running":
+        stale = _image_is_stale(container)
+        if container.status == "running" and not stale:
             return _replica_upstream(function_name, 0)
-        try:
-            container.start()  # env (incl. MYAPP_DB_DSN) preserved
-            _wait_local_docker_runtime(function_name, 0)
-            return _replica_upstream(function_name, 0)
-        except Exception:
+        if stale:
+            # Recreate from the current image (picks up runtime security changes).
             try:
                 container.remove(force=True)
             except Exception:
                 pass
+        else:
+            try:
+                container.start()  # env (incl. MYAPP_DB_DSN) preserved
+                _wait_local_docker_runtime(function_name, 0)
+                return _replica_upstream(function_name, 0)
+            except Exception:
+                try:
+                    container.remove(force=True)
+                except Exception:
+                    pass
     except Exception as exc:
         not_found = _docker_not_found_type()
         if not_found and not isinstance(exc, not_found):
