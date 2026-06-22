@@ -180,6 +180,24 @@ def test_rate_limit_fails_open_on_redis_error():
         sys.modules.pop("ai_session", None)
 
 
+def test_data_token_mint_verify_tamper_expiry():
+    # B3-G1: data-token round-trips, and tamper/expiry/garbage are rejected.
+    tok = faas._mint_data_token("svc-1", "c_me")
+    claims = faas._verify_data_token(tok)
+    assert claims and claims["s"] == "svc-1" and claims["p"] == "c_me"
+    # tampered signature → None
+    raw, sig = tok.split(".", 1)
+    assert faas._verify_data_token(raw + "." + ("0" * len(sig))) is None
+    # garbage → None
+    assert faas._verify_data_token("not-a-token") is None
+    assert faas._verify_data_token("") is None
+    # expired → None
+    expired = faas._mint_data_token("svc-1", "c_me", ttl=-1)
+    assert faas._verify_data_token(expired) is None
+    # a function CANNOT forge a different pseudonym (it has no secret) — only the
+    # backend can mint; verify confirms the bound pseudonym, not a function-supplied one.
+
+
 def test_access_policy_enforcement_matrix():
     # B3-G3: drive _access_denied_reason with controlled app policy + grant/owner.
     svc = {"owner_user_id": "ownerO", "app_id": "appP"}

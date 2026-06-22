@@ -8,8 +8,10 @@ client-supplied user_id.
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
+import json
 import time
 from urllib.parse import quote
 
@@ -25,6 +27,7 @@ try:
         audit_log,
         build_service_archive,
         can_manage_service,
+        _db_tenant_key,
         deploy_bundle,
         disable_service,
         delete_service,
@@ -50,6 +53,7 @@ except ModuleNotFoundError:
         FaaSValidationError,
         audit_log,
         can_manage_service,
+        _db_tenant_key,
         deploy_bundle,
         disable_service,
         delete_service,
@@ -175,7 +179,38 @@ def _caller_pseudonym(app_id: str, uid: str) -> str:
     ).hexdigest()[:32]
 
 
-def _build_proxy_headers(pseudonym: str) -> dict[str, str]:
+# ── B3-G1: non-forgeable data-access token (for the backend-mediated CRUD layer) ──
+
+def _mint_data_token(service_id: str, pseudonym: str, ttl: int = 300) -> str:
+    """Sign {service_id, pseudonym, exp}. Injected into the function so its
+    myapp_data calls carry an identity the function CANNOT forge — the gateway
+    trusts the token's pseudonym, not any function-supplied value, so owner code
+    cannot read/write another consumer's rows."""
+    if not (FAAS_CALLER_PSEUDONYM_SECRET and service_id and pseudonym):
+        return ""
+    payload = {"s": service_id, "p": pseudonym, "e": int(time.time()) + ttl}
+    raw = base64.urlsafe_b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
+    sig = hmac.new(FAAS_CALLER_PSEUDONYM_SECRET.encode("utf-8"), raw.encode("ascii"), hashlib.sha256).hexdigest()[:32]
+    return f"{raw}.{sig}"
+
+
+def _verify_data_token(token: str) -> dict | None:
+    if not (FAAS_CALLER_PSEUDONYM_SECRET and token and "." in token):
+        return None
+    try:
+        raw, sig = token.split(".", 1)
+        expect = hmac.new(FAAS_CALLER_PSEUDONYM_SECRET.encode("utf-8"), raw.encode("ascii"), hashlib.sha256).hexdigest()[:32]
+        if not hmac.compare_digest(sig, expect):
+            return None
+        payload = json.loads(base64.urlsafe_b64decode(raw.encode("ascii")))
+        if int(payload.get("e", 0)) < int(time.time()):
+            return None
+        return payload
+    except Exception:
+        return None
+
+
+def _build_proxy_headers(pseudonym: str, data_token: str = "") -> dict[str, str]:
     """Headers forwarded to the function container. WHITELIST-strip: drop ALL
     client x-myapp-* (normalize _→-) plus authorization/cookie/runtime-token/host,
     THEN inject the backend-derived caller pseudonym. The raw token/uid NEVER
@@ -193,6 +228,8 @@ def _build_proxy_headers(pseudonym: str) -> dict[str, str]:
     if pseudonym:
         out["X-MyApp-Caller-Pseudonym"] = pseudonym
         out["X-MyApp-Caller-Authed"] = "1"
+    if data_token:
+        out["X-MyApp-Data-Token"] = data_token  # B3-G1: for myapp_data → gateway
     return out
 
 
@@ -410,6 +447,39 @@ def deploy_service():
     })
 
 
+def faas_data_gateway():
+    """B3-G1: backend-mediated CRUD for FaaS functions. The function calls this with
+    a non-forgeable X-MyApp-Data-Token (minted at invoke); we run the op owner-scoped
+    to the token's pseudonym against the app's tenant DSN. The function never holds a
+    DSN and cannot read/write another consumer's rows."""
+    claims = _verify_data_token(request.headers.get("X-MyApp-Data-Token", ""))
+    if not claims:
+        return _json_error("invalid or expired data token", 401, code="FAAS_DATA_UNAUTH")
+    service = get_service(str(claims.get("s") or ""))
+    if not service:
+        return _json_error("service not found", 404, code="FAAS_NOT_FOUND")
+    pseudonym = str(claims.get("p") or "")
+    body = request.get_json(silent=True) or {}
+    try:
+        from faas_userdb import dsn_for_user
+        from faas_data import run_data_op, DataOpError
+    except ModuleNotFoundError:
+        from backend.faas_userdb import dsn_for_user
+        from backend.faas_data import run_data_op, DataOpError
+    tenant = _db_tenant_key(service.get("app_id", ""), service.get("owner_user_id", ""))
+    try:
+        dsn = dsn_for_user(tenant, provision=False)
+        result = run_data_op(
+            dsn, pseudonym, str(body.get("op") or ""), str(body.get("resource") or ""),
+            where=body.get("where"), values=body.get("values"), limit=body.get("limit", 100),
+        )
+    except DataOpError as exc:
+        return _json_error(str(exc), 400, code="FAAS_DATA_ERROR")
+    except Exception as exc:
+        return _json_error(str(exc), 500, code="FAAS_DATA_FAILED")
+    return jsonify({"ok": True, "result": result})
+
+
 def health():
     try:
         ensure_tables()
@@ -577,7 +647,8 @@ def invoke_service(service_id: str, route_path: str = ""):
     # be forged through the proxy and no raw token reaches the function.
     # (Sibling-container direct-connect forgery is closed by network isolation, B2-G2.)
     _pseudonym = _caller_pseudonym(service.get("app_id", ""), _uid) if _uid else ""
-    headers = _build_proxy_headers(_pseudonym)
+    _data_token = _mint_data_token(service_id, _pseudonym) if _pseudonym else ""
+    headers = _build_proxy_headers(_pseudonym, _data_token)
     request_body = request.get_data()
     # Tolerate scale-from-zero cold starts: a just-started container may not be
     # listening yet, so the first proxy can fail with a connection-level 5xx. The

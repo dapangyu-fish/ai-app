@@ -102,6 +102,8 @@ def create_app():
     # 用户生成后端服务：FaaS 控制面。当前 FaaS invoke 暂不强制鉴权；
     # 管理接口在 FAAS_REQUIRE_AUTH=0 时也允许测试用 user_id 参数，后续可收紧。
     app.add_url_rule("/api/faas/health", methods=["GET"], view_func=faas.health)
+    # B3-G1: backend-mediated data-access gateway for FaaS functions (myapp_data).
+    app.add_url_rule("/api/faas/data", methods=["POST"], view_func=faas.faas_data_gateway)
     app.add_url_rule("/api/faas/services", methods=["GET"], view_func=faas.list_user_services)
     app.add_url_rule("/api/faas/services", methods=["POST"], view_func=faas.deploy_service)
     app.add_url_rule("/api/faas/services/<service_id>", methods=["GET"], view_func=faas.get_user_service)

@@ -213,6 +213,8 @@ _ALLOWED_IMPORT_ROOTS = {
     # B1-G2: caller-identity helper baked into the runtime. current_user() returns
     # the backend-injected app-scoped pseudonym; exposes no token/uid.
     "myapp_auth",
+    # B3-G1: backend-mediated CRUD helper. Owner-scoped server-side; no DSN in code.
+    "myapp_data",
 }
 _FORBIDDEN_CALLS = {
     "__import__",

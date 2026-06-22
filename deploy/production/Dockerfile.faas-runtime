@@ -16,6 +16,8 @@ COPY backend/faas_runtime_db.py /app/backend/myapp_db.py
 # B1-G2: caller-identity helper, importable as `myapp_auth`. current_user()
 # returns the backend-injected app-scoped pseudonym (no raw token/uid in code).
 COPY backend/faas_runtime_auth.py /app/backend/myapp_auth.py
+# B3-G1: backend-mediated CRUD client, importable as `myapp_data` (no DSN in code).
+COPY backend/faas_runtime_data.py /app/backend/myapp_data.py
 
 EXPOSE 8080
 
