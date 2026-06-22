@@ -18,7 +18,7 @@ from flask import Response, jsonify, request, stream_with_context
 
 try:
     from auth import verify_access_token
-    from config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_ENFORCE_ACCESS_POLICY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
+    from config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_ENFORCE_ACCESS_POLICY, FAAS_INVOKE_RATE_PER_MIN, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
     from faas_store import (
         FaaSError,
         FaaSValidationError,
@@ -44,7 +44,7 @@ try:
     )
 except ModuleNotFoundError:
     from backend.auth import verify_access_token
-    from backend.config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_ENFORCE_ACCESS_POLICY, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
+    from backend.config import AGENT_NODE_TOKEN, FAAS_CALLER_PSEUDONYM_SECRET, FAAS_DEPLOY_MODE, FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER, FAAS_ENFORCE_ACCESS_POLICY, FAAS_INVOKE_RATE_PER_MIN, FAAS_REQUIRE_AUTH, FAAS_RUNTIME_TOKEN, SUPABASE_JWT_SECRET
     from backend.faas_store import (
         FaaSError,
         FaaSValidationError,
@@ -215,6 +215,29 @@ def _access_denied_reason(service: dict, caller_uid: str | None) -> str | None:
     if policy in ("allowlist", "install-required"):
         return None if is_consumer_granted(service.get("app_id", ""), caller_uid) else "not authorized for this app"
     return "this service is private (owner-only)"
+
+
+def _rate_limited(app_id: str, caller_key: str) -> bool:
+    """B3-G7: per-(app, caller) fixed-window invoke rate limit via Redis. FAIL-OPEN
+    on any Redis error (never block a legit call on infra blips). No-op when the
+    limit is <= 0."""
+    limit = FAAS_INVOKE_RATE_PER_MIN
+    if limit <= 0:
+        return False
+    try:
+        try:
+            from ai_session import get_redis
+        except ModuleNotFoundError:
+            from backend.ai_session import get_redis
+        r = get_redis()
+        window = int(time.time()) // 60
+        key = f"faas:rl:{app_id}:{caller_key}:{window}".encode()
+        n = int(r.incr(key))
+        if n == 1:
+            r.expire(key, 90)
+        return n > limit
+    except Exception:
+        return False
 
 
 def _annotate_running(services: list) -> list:
@@ -526,6 +549,12 @@ def invoke_service(service_id: str, route_path: str = ""):
     _deny = _access_denied_reason(service, _uid)
     if _deny:
         return _json_error(_deny, 403, code="FAAS_ACCESS_DENIED")
+
+    # B3-G7: per-(app, caller) rate limit (fail-open). Key on the pseudonym when
+    # authed, else the client IP, so one consumer/IP can't exhaust the owner's app.
+    _rl_key = _uid or request.headers.get("X-Real-IP") or getattr(request, "remote_addr", None) or "anon"
+    if _rate_limited(service.get("app_id", ""), _rl_key):
+        return _json_error("rate limit exceeded", 429, code="FAAS_RATE_LIMITED")
 
     mode = service_deploy_mode(service)
     if mode not in _LOCAL_DOCKER_MODES:

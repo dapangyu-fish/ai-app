@@ -57,7 +57,7 @@ for _name, _value in {
     "AGENT_NODE_TOKEN": "node-tok", "FAAS_DEPLOY_MODE": "metadata",
     "FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER": True, "FAAS_REQUIRE_AUTH": False,
     "FAAS_RUNTIME_TOKEN": "rt", "FAAS_CALLER_PSEUDONYM_SECRET": "server-secret-xyz",
-    "SUPABASE_JWT_SECRET": "", "FAAS_ENFORCE_ACCESS_POLICY": False,
+    "SUPABASE_JWT_SECRET": "", "FAAS_ENFORCE_ACCESS_POLICY": False, "FAAS_INVOKE_RATE_PER_MIN": 0,
     "FAAS_BUNDLE_MAX_BYTES": 512 * 1024, "FAAS_BUNDLE_SERVE_ROOT": "",
     "FAAS_CODE_ROOT": "/tmp/x", "FAAS_DEPLOY_SCRIPT": "", "FAAS_ENABLED": True,
     "FAAS_FILE_MAX_BYTES": 256 * 1024, "FAAS_FUNCTION_PREFIX": "myapp",
@@ -143,6 +143,41 @@ def test_runtime_helper_reads_injected_header():
     _with_headers({})
     assert myapp_auth.current_user() is None
     assert myapp_auth.is_authenticated() is False
+
+
+def test_rate_limit_fixed_window():
+    # B3-G7: with a fake redis, the (limit+1)-th call in a window is limited; fail-open.
+    class _R:
+        def __init__(self): self.d = {}
+        def incr(self, k): self.d[k] = self.d.get(k, 0) + 1; return self.d[k]
+        def expire(self, k, s): pass
+    fake = _R()
+    fake_ai = types.ModuleType("ai_session"); fake_ai.get_redis = lambda: fake
+    sys.modules["ai_session"] = fake_ai
+    try:
+        faas.FAAS_INVOKE_RATE_PER_MIN = 0
+        assert faas._rate_limited("appR", "c1") is False  # disabled → never limited
+        faas.FAAS_INVOKE_RATE_PER_MIN = 2
+        assert faas._rate_limited("appR", "c1") is False   # 1
+        assert faas._rate_limited("appR", "c1") is False   # 2
+        assert faas._rate_limited("appR", "c1") is True    # 3 > limit
+        assert faas._rate_limited("appR", "c2") is False   # different caller ok
+    finally:
+        faas.FAAS_INVOKE_RATE_PER_MIN = 0
+        sys.modules.pop("ai_session", None)
+
+
+def test_rate_limit_fails_open_on_redis_error():
+    fake_ai = types.ModuleType("ai_session")
+    def _boom(): raise RuntimeError("redis down")
+    fake_ai.get_redis = _boom
+    sys.modules["ai_session"] = fake_ai
+    try:
+        faas.FAAS_INVOKE_RATE_PER_MIN = 1
+        assert faas._rate_limited("appR", "c1") is False  # fail-open
+    finally:
+        faas.FAAS_INVOKE_RATE_PER_MIN = 0
+        sys.modules.pop("ai_session", None)
 
 
 def test_access_policy_enforcement_matrix():

@@ -337,6 +337,34 @@ def list_user_tables(user_id: str) -> list[str]:
         ud.close()
 
 
+def schema_storage_bytes(tenant: str) -> int:
+    """B3-G7: total bytes used by a tenant's schema (tables + indexes + toast).
+    Best-effort — returns 0 on any error. Powers storage usage in the client UI
+    and an optional deploy-time soft quota."""
+    tenant = str(tenant or "").strip()
+    if not tenant:
+        return 0
+    s = schema_name(tenant)
+    try:
+        ud = _admin_conn(USER_DB_NAME)
+    except Exception:
+        return 0
+    try:
+        with ud.cursor() as cur:
+            cur.execute(
+                "SELECT COALESCE(SUM(pg_total_relation_size(c.oid)), 0) "
+                "FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace "
+                "WHERE n.nspname = %s AND c.relkind IN ('r', 'm', 'p')",
+                [s],
+            )
+            row = cur.fetchone()
+            return int(row[0]) if row else 0
+    except Exception:
+        return 0
+    finally:
+        ud.close()
+
+
 def drop_user_db(tenant: str) -> None:
     """B3-G5: tear down a tenant's schema + roles + mapping row (app deletion /
     erasure). Idempotent; runs as the provisioning admin."""

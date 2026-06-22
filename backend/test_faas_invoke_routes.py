@@ -36,7 +36,7 @@ for _name, _value in {
     "FAAS_DEPLOY_MODE": "metadata",
     "FAAS_DEPLOY_REQUIRE_TRUSTED_OWNER": False,
     "FAAS_REQUIRE_AUTH": False,
-    "FAAS_ENFORCE_ACCESS_POLICY": False,
+    "FAAS_ENFORCE_ACCESS_POLICY": False, "FAAS_INVOKE_RATE_PER_MIN": 0,
     "FAAS_RUNTIME_TOKEN": "runtime-master-token",
     "FAAS_CALLER_PSEUDONYM_SECRET": "test-pseudo-secret",
     "SUPABASE_JWT_SECRET": "",

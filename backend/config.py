@@ -102,6 +102,12 @@ FAAS_REQUIRE_AUTH = os.environ.get("FAAS_REQUIRE_AUTH", "0").strip().lower() in 
 # required/public) on invoke, fail-closed + per-call live grant. Default OFF so
 # existing open invoke isn't broken; flip on per-deployment once apps set policies.
 FAAS_ENFORCE_ACCESS_POLICY = os.environ.get("FAAS_ENFORCE_ACCESS_POLICY", "0").strip().lower() in {"1", "true", "yes", "on"}
+# B3-G7: per-(app, caller) invoke rate limit (requests/minute). 0 = disabled.
+# Fail-open if Redis is unavailable (never blocks a legit call on infra blips).
+FAAS_INVOKE_RATE_PER_MIN = _env_int("FAAS_INVOKE_RATE_PER_MIN", 0)
+# B3-G7: per-app DB storage soft cap in MB (0 = disabled). Enforced at deploy time
+# (a new deploy is rejected if the app's schema already exceeds the cap).
+FAAS_APP_STORAGE_CAP_MB = _env_int("FAAS_APP_STORAGE_CAP_MB", 0)
 # Even when FAAS_REQUIRE_AUTH is off (invoke stays open), a DEPLOY must be scoped
 # to a trusted owner — the agent-node token path or a verified Bearer token — so a
 # client cannot pass an arbitrary/rotating user_id to bypass the per-user service
