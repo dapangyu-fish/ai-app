@@ -102,6 +102,11 @@ BACKEND_URL = os.environ.get(
 AGENT_NODE_TOKEN = os.environ.get("AGENT_NODE_REGISTRATION_TOKEN", "") or os.environ.get(
     "AGENT_NODE_TOKEN", ""
 )
+# The backend's trusted-owner FaaS path checks X-MyApp-Agent-Node-Token against its
+# own AGENT_NODE_TOKEN (NOT the registration token), so prefer that for FaaS mutations.
+FAAS_NODE_TOKEN = os.environ.get("AGENT_NODE_TOKEN", "") or os.environ.get(
+    "AGENT_NODE_REGISTRATION_TOKEN", ""
+)
 # Self-managed Docker FaaS scales to zero; max replicas per service is the cap.
 FAAS_CAP_MIN = 0
 FAAS_CAP_MAX = int(os.environ.get("FAAS_DOCKER_MAX_REPLICAS", "5") or "5")
@@ -1245,8 +1250,8 @@ def _faas_trusted_headers(owner: str) -> dict:
     call trusted, X-MyApp-Owner-User-Id scopes it to the service's real owner so an
     admin can stop/delete any owner's service without holding a user token."""
     h: dict = {}
-    if AGENT_NODE_TOKEN:
-        h["X-MyApp-Agent-Node-Token"] = AGENT_NODE_TOKEN
+    if FAAS_NODE_TOKEN:
+        h["X-MyApp-Agent-Node-Token"] = FAAS_NODE_TOKEN
     if owner:
         h["X-MyApp-Owner-User-Id"] = owner
     return h

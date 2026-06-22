@@ -52,7 +52,9 @@ describe('FaasTab — metrics + lifecycle controls', () => {
     render(<FaasTab />);
     expect(await screen.findByText('sleepy-api')).toBeInTheDocument();
     // svc-2 is "ready" but has 0 running containers → rendered as 休眠, not running·1
-    expect(screen.getByText(/0\(休眠\)/)).toBeInTheDocument();
+    // (scope to the table; the same phrase also appears in the hint paragraph below)
+    const table = within(screen.getByRole('table'));
+    expect(table.getByText(/0\(休眠\)/)).toBeInTheDocument();
   });
 
   it('exposes 删除 for every service and 停用 only for non-disabled ones', async () => {
