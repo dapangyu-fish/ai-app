@@ -4009,6 +4009,9 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "SUPABASE_URL": f"http://{public_host}:18000",
         "SUPABASE_ANON_KEY": anon_key,
         "SUPABASE_SERVICE_KEY": service_role_key,
+        # Local HS256 verification of caller JWTs on the FaaS invoke hot path
+        # (avoids a GoTrue round-trip per invoke). Same secret GoTrue signs with.
+        "SUPABASE_JWT_SECRET": jwt_secret,
         "OPENIM_API_URL": f"http://{public_host}:10002",
         "OPENIM_WS_URL": f"ws://{public_host}:10001",
         "OPENIM_SECRET": openim_secret,
@@ -4176,7 +4179,12 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "FAAS_ENABLED": "1",
         "FAAS_REQUIRE_AUTH": "0",
         "FAAS_CODE_ROOT": "/mnt/myapp/faas/code",
-        "FAAS_MAX_SERVICES_PER_USER": "5",
+        "FAAS_MAX_SERVICES_PER_USER": "10",
+        # MUST be non-empty or the invoke proxy can never inject a caller pseudonym
+        # → every authenticated FaaS write returns 401 "login required". Stable per
+        # deploy (rotating it changes all consumer pseudonyms → data ownership).
+        "FAAS_CALLER_PSEUDONYM_SECRET": _rand_token(32),
+        "FAAS_RUN_TOKEN_SECRET": _rand_hex(32),
         "FAAS_GIT_ENABLED": "1",
         "FAAS_GIT_PUSH_ENABLED": "0",
         "FAAS_GIT_REMOTE": "",

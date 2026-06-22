@@ -88,7 +88,17 @@ class _FaasAppsPageState extends State<FaasAppsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('我的应用 (FaaS)'),
-        actions: [IconButton(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh))],
+        actions: [
+          IconButton(
+            tooltip: 'FaaS 服务 (配额 / 删除)',
+            onPressed: !AuthService.isLoggedIn
+                ? null
+                : () => Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const _FaasServicesPage())),
+            icon: const Icon(Icons.dns_outlined),
+          ),
+          IconButton(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
+        ],
       ),
       body: !AuthService.isLoggedIn
           ? const Center(child: Text('请先登录'))
@@ -313,4 +323,142 @@ class _FaasAppDetailPageState extends State<_FaasAppDetailPage> {
           ],
         ),
       );
+}
+
+/// Raw FaaS service manager: lists the owner's services (the unit the
+/// `FAAS_MAX_SERVICES_PER_USER` quota counts) and lets them be permanently
+/// deleted (purge) to free a slot. Without this, a user who hit the quota could
+/// never create another service. Owner-scoped server-side via /api/faas/services.
+class _FaasServicesPage extends StatefulWidget {
+  const _FaasServicesPage();
+
+  @override
+  State<_FaasServicesPage> createState() => _FaasServicesPageState();
+}
+
+class _FaasServicesPageState extends State<_FaasServicesPage> {
+  List<Map<String, dynamic>> _services = const [];
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  String get _base => AppConfig.backendUrl;
+
+  Map<String, String> get _headers {
+    final h = {'Content-Type': 'application/json'};
+    final t = AuthService.token;
+    if (t != null) h['Authorization'] = 'Bearer $t';
+    return h;
+  }
+
+  Map<String, dynamic> _obj(http.Response r) {
+    try {
+      final d = jsonDecode(r.body);
+      return d is Map<String, dynamic> ? d : <String, dynamic>{};
+    } catch (_) {
+      return <String, dynamic>{};
+    }
+  }
+
+  void _snack(String msg) {
+    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<void> _load() async {
+    if (!AuthService.isLoggedIn) return;
+    setState(() => _loading = true);
+    try {
+      final r = await http.get(Uri.parse('$_base/api/faas/services'), headers: _headers);
+      final d = _obj(r);
+      if (r.statusCode >= 400) throw Exception(d['error'] ?? 'HTTP ${r.statusCode}');
+      final raw = d['services'] as List<dynamic>? ?? const [];
+      if (!mounted) return;
+      setState(() => _services =
+          raw.whereType<Map>().map((e) => e.cast<String, dynamic>()).toList());
+    } catch (e) {
+      _snack('加载服务失败: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _delete(String serviceId, String label) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除 FaaS 服务'),
+        content: Text(
+            '确定永久删除「$label」吗？\n\n这会停止并彻底移除该服务（含代码与数据库 schema），并释放一个服务配额。此操作不可恢复。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('永久删除'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _loading = true);
+    try {
+      final r = await http.delete(
+          Uri.parse('$_base/api/faas/services/$serviceId?purge=1'),
+          headers: _headers);
+      final d = _obj(r);
+      if (r.statusCode >= 400) throw Exception(d['error'] ?? 'HTTP ${r.statusCode}');
+      _snack('已删除：$label');
+      await _load();
+    } catch (e) {
+      _snack('删除失败: $e');
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('FaaS 服务 (${_services.length})'),
+        actions: [
+          IconButton(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh)),
+        ],
+      ),
+      body: !AuthService.isLoggedIn
+          ? const Center(child: Text('请先登录'))
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: _services.isEmpty
+                  ? ListView(children: const [
+                      SizedBox(height: 120),
+                      Center(child: Text('暂无 FaaS 服务')),
+                    ])
+                  : ListView.separated(
+                      itemCount: _services.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (_, i) {
+                        final s = _services[i];
+                        final id = (s['service_id'] ?? '').toString();
+                        final slug = (s['slug'] ?? s['name'] ?? id).toString();
+                        final status = (s['status'] ?? '').toString();
+                        return ListTile(
+                          title: Text(slug),
+                          subtitle: Text('$id\n状态: $status'),
+                          isThreeLine: true,
+                          trailing: IconButton(
+                            tooltip: '删除服务',
+                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                            onPressed:
+                                _loading || id.isEmpty ? null : () => _delete(id, slug),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+    );
+  }
 }

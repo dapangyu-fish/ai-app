@@ -297,6 +297,26 @@ while stack:
 
 前端再用 `validate_json_app.py` 过一遍（exit 0、0 warning 最佳）。
 
+### 7.1 排错：所有写操作都报 `login required`（401），但用户明明已登录
+
+这是**部署级**问题，不是某个 app 的问题——会让**所有** FaaS app 的鉴权写入全挂：
+
+- 根因：后端 `FAAS_CALLER_PSEUDONYM_SECRET` 为空。invoke 代理验证完调用者 JWT 后，要用这个
+  密钥派生**应用内假名**注入给函数；密钥为空时 `_caller_pseudonym()` 返回 `""` →
+  不注入 `X-MyApp-Caller-Pseudonym` → 函数里 `myapp_auth.current_user()` 永远是 None →
+  每个鉴权写入都 401。公开读不受影响（所以"能看不能写"是典型症状）。
+- 排查：拿一个**真实用户**的 token 打 `GET .../whoami`，若返回 `logged_in:false` 且
+  `me:""`，就是没注入假名。
+- 修复（运维侧，一次性，**密钥要稳定**——轮换会让所有人的假名变化、丢失数据归属）：
+  ```bash
+  myapp-ctl secret generate faas FAAS_CALLER_PSEUDONYM_SECRET --bytes 32
+  # 可选：本地 HS256 校验 token（省掉每次 invoke 一次 GoTrue 往返），值＝GoTrue 的 JWT_SECRET
+  myapp-ctl secret set backend SUPABASE_JWT_SECRET="<supabase 组的 JWT_SECRET>"
+  myapp-ctl deploy --group core
+  ```
+- 预防：`myapp-ctl secret init-stack` 现已自动生成 `FAAS_CALLER_PSEUDONYM_SECRET` /
+  `FAAS_RUN_TOKEN_SECRET` 并把 `SUPABASE_JWT_SECRET` 写入 backend 组，新部署不会再踩。
+
 ---
 
 ## 8. 范本索引

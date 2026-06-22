@@ -142,7 +142,7 @@ FAAS_RUN_TOKEN_SECRET = os.environ.get("FAAS_RUN_TOKEN_SECRET", "").strip()
 # off until the agent dispatch path threads the run token through.
 FAAS_REQUIRE_RUN_TOKEN = os.environ.get("FAAS_REQUIRE_RUN_TOKEN", "0").strip().lower() in {"1", "true", "yes", "on"}
 FAAS_CODE_ROOT = os.environ.get("FAAS_CODE_ROOT", "/mnt/myapp/faas/code")
-FAAS_MAX_SERVICES_PER_USER = _env_int("FAAS_MAX_SERVICES_PER_USER", 5)
+FAAS_MAX_SERVICES_PER_USER = _env_int("FAAS_MAX_SERVICES_PER_USER", 10)
 FAAS_GIT_ENABLED = os.environ.get("FAAS_GIT_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"}
 FAAS_GIT_PUSH_ENABLED = os.environ.get("FAAS_GIT_PUSH_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
 FAAS_GIT_REMOTE = os.environ.get("FAAS_GIT_REMOTE", "").strip()
