@@ -82,9 +82,15 @@ class _MemoryFaaSDB:
         if normalized.startswith("update faas_services set app_id"):
             return None  # backfill no-op (deploy sets app_id explicitly)
         if normalized.startswith("update faas_applications set access_policy"):
-            access_policy, app_id = params
-            if app_id in self.applications:
-                self.applications[app_id]["access_policy"] = access_policy
+            if len(params) >= 2:
+                access_policy, app_id = params[:2]
+                if app_id in self.applications:
+                    self.applications[app_id]["access_policy"] = access_policy
+            else:
+                # 服务组：param-less install-required→allowlist relabel migration
+                for app in self.applications.values():
+                    if app.get("access_policy") == "install-required":
+                        app["access_policy"] = "allowlist"
             return None
         if "insert into faas_services" in normalized:
             (

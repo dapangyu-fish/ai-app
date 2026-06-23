@@ -1,11 +1,12 @@
 # Per-user FaaS database (schema isolation) — design
 
-> **更新（FaaS Application 权限模型）**：本文是最初的 per-USER schema 设计。现已演进为**应用维度
-> (Application) 权限模型**：DB 租户键改为 **per-app**（`_db_tenant_key`，默认每-owner 应用复用其原
+> **更新（FaaS 服务组权限模型）**：本文是最初的 per-USER schema 设计。现已演进为**服务组
+> (Service Group) 模型**：每个服务组 = 1 个 FaaS + 可选 1 个 DB（1:1）；DB 租户键 `_db_tenant_key`
+> 改为 **per-服务组**（新服务组 = service_id 各自独立库；历史默认组 `appd-<owner>` 仍复用 owner 旧
 > schema，零迁移）；运行时角色改为**非属主**（仅 DML，DDL 仅部署期）；口令改为**随机 + Fernet
 > 加密存储**（不再确定性派生，明文 DSN 列清空）；新增**后端中介数据访问层 `myapp_data`**（平台强制
-> `owner=调用者`，函数不持 DSN）与**可信假名身份 `myapp_auth`**；`schema.sql` 禁 SERIAL（用 UUID）；
-> 访问策略 + grant + 容器加固。详见 `CLAUDE.md`「FaaS Application 权限模型」、
+> `owner=调用者`，函数不持 DSN）与**可信组内假名身份 `myapp_auth`**；`schema.sql` 禁 SERIAL（用 UUID）；
+> 访问策略（组级 3 档：owner-only/allowlist/public）+ grant + 容器加固。详见 `CLAUDE.md`「FaaS 服务组权限模型」、
 > `docs/faas-jsonapp-generation-playbook.md`，及 `~/faas-app-permission-*.md`。下文保留为底层 schema
 > 隔离机制的原始设计参考。
 

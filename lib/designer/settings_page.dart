@@ -427,10 +427,10 @@ class _SettingsPageState extends State<SettingsPage> {
         leading: Icon(Icons.dns_outlined, color: cs.primary),
         title: Text(
           _privateAgentText(
-            zh: '我的应用 (FaaS + 数据库)',
-            en: 'My Apps (FaaS + Database)',
-            de: 'Meine Apps (FaaS + Datenbank)',
-            es: 'Mis apps (FaaS + base de datos)',
+            zh: '我的服务组 (FaaS + 数据库)',
+            en: 'My Service Groups (FaaS + DB)',
+            de: 'Meine Servicegruppen (FaaS + DB)',
+            es: 'Mis grupos de servicio (FaaS + BD)',
           ),
         ),
         subtitle: Text(

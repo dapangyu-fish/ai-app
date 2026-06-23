@@ -297,7 +297,7 @@ def _access_denied_reason(service: dict, caller_uid: str | None) -> str | None:
     """B3-G3: per-call, fail-closed access_policy enforcement. Returns a denial
     reason if the caller may NOT invoke this service, else None. No-op unless
     FAAS_ENFORCE_ACCESS_POLICY is on (rollout gate). Owner/maintainer always pass;
-    allowlist/install-required need a live (non-revoked) grant; public needs auth;
+    allowlist needs a live (non-revoked) grant; public needs auth;
     owner-only denies everyone else."""
     if not FAAS_ENFORCE_ACCESS_POLICY:
         return None
@@ -309,8 +309,8 @@ def _access_denied_reason(service: dict, caller_uid: str | None) -> str | None:
         return "authentication required"
     if can_manage_service(caller_uid, service):
         return None
-    if policy in ("allowlist", "install-required"):
-        return None if is_consumer_granted(service.get("app_id", ""), caller_uid) else "not authorized for this app"
+    if policy == "allowlist":
+        return None if is_consumer_granted(service.get("app_id", ""), caller_uid) else "not authorized for this service"
     return "this service is private (owner-only)"
 
 

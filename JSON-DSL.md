@@ -167,12 +167,12 @@
 
 后端 Agent 生成复杂 APP 时可以使用 `backend/json_app_builder.py` 作为临时 Python 生成器的辅助库。它不是客户端运行时能力，只用于降低生成 JSON 的出错率。
 
-> **需要后端/数据库的 JSON-APP（FaaS Application 权限模型）**：客户端侧没有变化——仍用 `@http_post`/`@http_get`
-> 调 `{{ app.backendUrl }}/api/faas/invoke/<service_id><route>`。但 FaaS 后端现在是「应用维度」的权限单元：
-> 函数用内置 `myapp_auth.current_user()` 拿可信的应用内调用者假名（框架已登录即生效，无需 app 内再登录），
-> 用 `myapp_data`（按调用者隔离的 CRUD，函数不持 DB 连接）读写**消费者自己的**数据；`schema.sql` 主键用
-> UUID（禁 SERIAL）。生成 FaaS 必读 `docs/faas-jsonapp-generation-playbook.md`；模型详见 `CLAUDE.md`「FaaS
-> Application 权限模型」。
+> **需要后端/数据库的 JSON-APP（FaaS 服务组权限模型）**：客户端侧没有变化——仍用 `@http_post`/`@http_get`
+> 调 `{{ app.backendUrl }}/api/faas/invoke/<service_id><route>`。FaaS 后端的权限单元是**服务组**
+> （= 1 个 FaaS + 可选 1 个 DB，1:1）：函数用内置 `myapp_auth.current_user()` 拿可信的组内调用者假名
+> （框架已登录即生效，无需 app 内再登录），用 `myapp_data`（按调用者隔离的 CRUD，函数不持 DB 连接）
+> 读写**消费者自己的**数据；`schema.sql` 主键用 UUID（禁 SERIAL）。JSON-App 前端与服务组解耦，按需调用。
+> 生成 FaaS 必读 `docs/faas-jsonapp-generation-playbook.md`；模型详见 `CLAUDE.md`「FaaS 服务组权限模型」。
 
 推荐使用场景：`flame_game`、Tiled 地图、长关卡、大量实体、重复 UI、素材 manifest 选材和 sprite sheet 切帧。生成器应输出最终 JSON 后继续运行 `python3 backend/validate_json_app.py <TMPFILE>`。
 

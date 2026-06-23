@@ -360,7 +360,7 @@ def ensure_tables() -> None:
             appid TEXT NOT NULL DEFAULT '',
             name TEXT NOT NULL DEFAULT '',
             access_policy TEXT NOT NULL DEFAULT 'owner-only'
-                CHECK (access_policy IN ('owner-only', 'allowlist', 'install-required', 'public')),
+                CHECK (access_policy IN ('owner-only', 'allowlist', 'public')),
             created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )
@@ -368,6 +368,8 @@ def ensure_tables() -> None:
     )
     db_execute("CREATE INDEX IF NOT EXISTS idx_faas_applications_owner ON faas_applications(owner_user_id)")
     db_execute("CREATE INDEX IF NOT EXISTS idx_faas_applications_appid ON faas_applications(appid)")
+    # 服务组模型：策略收敛为 3 档；install-required 等价收敛为 allowlist（白名单 + 实时授权门禁）
+    db_execute("UPDATE faas_applications SET access_policy='allowlist' WHERE access_policy='install-required'")
     # X-G1: app-level maintainers (can deploy/scale/migrate, NOT transfer/delete/manage-members).
     db_execute(
         """
@@ -672,7 +674,7 @@ def get_service(service_id: str) -> dict[str, Any] | None:
 
 # ── B1-G1: Application entity (governance unit grouping services + db + policy) ──
 
-_VALID_ACCESS_POLICIES = {"owner-only", "allowlist", "install-required", "public"}
+_VALID_ACCESS_POLICIES = {"owner-only", "allowlist", "public"}
 
 
 def _default_app_id(owner_user_id: str) -> str:
@@ -852,8 +854,8 @@ def remove_maintainer(owner_user_id: str, app_id: str, user_id: str) -> None:
 # ── B3-G3: per-app consumer access grants (server-verified) ──
 
 def grant_consumer(owner_user_id: str, app_id: str, user_id: str) -> dict[str, Any]:
-    """Owner/maintainer grants a consumer access to an app (for allowlist/
-    install-required policies). Ownership/maintainer enforced."""
+    """Owner/maintainer grants a consumer access to a service group (allowlist
+    policy). Ownership/maintainer enforced."""
     ensure_tables()
     app = get_application(app_id)
     owner_user_id = str(owner_user_id or "").strip()
@@ -968,14 +970,14 @@ def _db_tenant_key(app_id: str, owner_user_id: str) -> str:
     return app_id or owner
 
 
-def _resolve_app_id(owner_user_id: str, meta: dict[str, Any]) -> tuple[str, str]:
-    """Pick the application a deploy binds to. A bundle may declare meta.app_id (or
-    carry meta.appid for JSON-App binding); otherwise it falls under the owner's
-    default app. Returns (app_id, appid)."""
+def _resolve_app_id(owner_user_id: str, service_id: str, meta: dict[str, Any]) -> tuple[str, str]:
+    """服务组模型：一个服务自己就是一个服务组，新服务的 app_id 默认 = service_id
+    （1:1，不再落到 per-owner 默认组 appd-<owner>）。仅当 bundle 显式声明 meta.app_id
+    （高级/共享场景）时才用它；meta.appid 仅作前端身份，不参与分组。Returns (app_id, appid)."""
     meta = meta if isinstance(meta, dict) else {}
     declared = str(meta.get("app_id") or "").strip()
     appid = str(meta.get("appid") or "").strip()
-    app_id = declared or _default_app_id(owner_user_id)
+    app_id = declared or str(service_id or "").strip()
     return app_id, appid
 
 
@@ -2219,11 +2221,12 @@ def deploy_bundle(owner_user_id: str, bundle: dict[str, Any], *, source: str = "
         deployment_id = f"dep-{uuid.uuid4().hex}"
         routes = normalized["routes"]
         meta_json = _meta_with_current_deploy(normalized["meta"])
-        # B1-G1: bind the service to its application (default per-owner app unless
-        # the bundle declares meta.app_id). On redeploy, keep the existing binding.
+        meta_json["db_enabled"] = bool(normalized.get("db_enabled"))  # 服务组：带库/无库标记落 meta
+        # 服务组模型：新服务自己就是一个组（app_id = service_id）。On redeploy keep the
+        # existing binding (legacy services stay grandfathered under their old app_id).
         app_id = existing.get("app_id") if (existing and existing.get("app_id")) else None
         if not app_id:
-            app_id, app_appid = _resolve_app_id(owner_user_id, normalized["meta"])
+            app_id, app_appid = _resolve_app_id(owner_user_id, service_id, normalized["meta"])
             ensure_application(app_id, owner_user_id, appid=app_appid,
                                name=normalized.get("service_slug", ""))
         summary = {

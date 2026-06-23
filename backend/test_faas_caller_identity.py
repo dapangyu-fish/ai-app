@@ -248,8 +248,8 @@ def test_access_policy_enforcement_matrix():
     faas.get_application = lambda a: {"app_id": a, "access_policy": "public"}
     assert faas._access_denied_reason(svc, "anyone") is None
     assert faas._access_denied_reason(svc, None) is not None
-    # install-required: only granted consumer (or owner) allowed
-    faas.get_application = lambda a: {"app_id": a, "access_policy": "install-required"}
+    # allowlist: only granted consumer (or owner) allowed
+    faas.get_application = lambda a: {"app_id": a, "access_policy": "allowlist"}
     assert faas._access_denied_reason(svc, "grantedUser") is None
     assert faas._access_denied_reason(svc, "ownerO") is None
     assert faas._access_denied_reason(svc, "ungranted") is not None

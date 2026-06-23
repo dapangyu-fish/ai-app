@@ -60,7 +60,7 @@ profiles (owner_id text PK, display_name, updated_at)
 ```
 
 - `posts.parent_id`：`NULL`=楼层（直接回主题），非 `NULL`=楼中楼（回某条回帖）。**一列承载无限层级。**
-- `owner_id` / `author_id` 存的是**应用内假名**（见 §4），不是平台 uid。
+- `owner_id` / `author_id` 存的是**组内假名**（见 §4），不是平台 uid。
 - `reply_count` 冗余计数，省得每次 count；发帖时 `+1`。
 - 索引覆盖所有 WHERE/JOIN 列：`boards(name)`、`threads(board_id)`、`posts(thread_id)`、`posts(parent_id)`。
 
@@ -73,7 +73,7 @@ profiles (owner_id text PK, display_name, updated_at)
 用户原话："记录 ID，真实昵称需要查询，防止有人改。"经典做法是：每条帖存平台 `user_id`，
 展示时用 `@im_get_user_info {user_id}` 查权威昵称。这样昵称不存死、永远是最新、谁也改不了。
 
-**但我撞到一堵墙：** FaaS 的身份模型里，后端 `myapp_auth.current_user()` 给的是**应用内假名**
+**但我撞到一堵墙：** FaaS 的身份模型里，后端 `myapp_auth.current_user()` 给的是**组内假名**
 （`HMAC(server_secret, app_id||uid)`），**不是平台 uid**，而且**反推不出 uid**（secret 只在服务端）。
 这是权限模型的隐私设计（B1-G2）：吧主/应用作者不能把假名还原成真人、也不能跨应用关联同一个人。
 

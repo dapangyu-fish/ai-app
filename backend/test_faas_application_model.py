@@ -55,9 +55,15 @@ class _DB:
         if n.startswith("update faas_services set app_id"):
             return None
         if n.startswith("update faas_applications set access_policy"):
-            pol, a = params
-            if a in self.apps:
-                self.apps[a]["access_policy"] = pol
+            if len(params) >= 2:
+                pol, a = params[:2]
+                if a in self.apps:
+                    self.apps[a]["access_policy"] = pol
+            else:
+                # 服务组：param-less install-required→allowlist relabel migration
+                for app in self.apps.values():
+                    if app.get("access_policy") == "install-required":
+                        app["access_policy"] = "allowlist"
             return None
         return None  # other ensure_tables DDL / backfill: no-op
 
@@ -121,8 +127,8 @@ def test_set_policy_enforces_ownership_and_ladder():
     except FaaSValidationError:
         pass
     # owner can move up the ladder
-    updated = faas_store.set_application_policy("u2", "appd-u2", "install-required")
-    assert updated["access_policy"] == "install-required"
+    updated = faas_store.set_application_policy("u2", "appd-u2", "allowlist")
+    assert updated["access_policy"] == "allowlist"
     # invalid ladder value rejected
     try:
         faas_store.set_application_policy("u2", "appd-u2", "nope")

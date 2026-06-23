@@ -58,7 +58,7 @@
 
 1. **主键一律 UUID**，禁自增：`id uuid PRIMARY KEY DEFAULT gen_random_uuid()`。
    自增 id 会被人顺序枚举（IDOR）。FaaS 的静态校验器会直接**拒收** `SERIAL`。
-2. **每条数据记一个 owner**：用 `author_id` / `owner_id` 存**调用者的应用内假名**（见 §5），不是平台 uid。
+2. **每条数据记一个 owner**：用 `author_id` / `owner_id` 存**调用者的组内假名**（见 §5），不是平台 uid。
 3. **想清楚"公开读 vs 私有读"**：
    - 公开内容（论坛帖、评论）→ 用 `myapp_db` 裸 SQL，人人可读。
    - 私有数据（每人只能看自己的）→ 用 `myapp_data`（后端按调用者强制 owner 作用域）。
@@ -93,7 +93,7 @@ profiles (owner_id text PK, display_name, updated_at)
 | 运行时模块 | 干什么 | 什么时候用 |
 |-----------|--------|-----------|
 | `myapp_db` | 裸 SQL：`query / queryone / execute / tx` | **公开读**、跨用户聚合（列吧、列帖、JOIN profiles 取昵称）、计数 |
-| `myapp_auth` | `current_user()` = 调用者**应用内假名**；`is_authenticated()` | 任何"谁在操作"的判断；写操作记 owner |
+| `myapp_auth` | `current_user()` = 调用者**组内假名**；`is_authenticated()` | 任何"谁在操作"的判断；写操作记 owner |
 | `myapp_data` | 后端中介的按调用者 CRUD：`find/insert/update/delete`，**强制 owner=调用者** | **私有数据**（每人只看/改自己的那种），自己不想写 owner 过滤时 |
 
 贴吧是公开论坛 → 主体用 `myapp_db`（公开读）+ `myapp_auth`（记作者、判越权）。
@@ -224,7 +224,7 @@ while stack:
 
 ---
 
-## 5. 接身份：不可伪造的"应用内假名"
+## 5. 接身份：不可伪造的"组内假名"
 
 这是全栈应用最容易做错、也最关键的一环。
 
@@ -233,14 +233,14 @@ while stack:
 ```
 前端 @get_auth_token 拿到用户 token
   → 调 @faas.post/get 时带 headers: { "Authorization": "Bearer {{ global.userToken }}" }
-  → invoke 代理验证 JWT，派生 假名 = HMAC(server_secret, app_id || uid)，剥掉 Authorization，注入 X-MyApp-Caller-Pseudonym
+  → invoke 代理验证 JWT，派生 假名 = HMAC(server_secret, app_id || uid)（app_id = 本服务组 id，新服务组即 service_id），剥掉 Authorization，注入 X-MyApp-Caller-Pseudonym
   → 后端 myapp_auth.current_user() 读到这个假名（拿不到平台 uid，更没有原始 token）
 ```
 
 要点：
 - **写操作（建吧/发帖/回帖/同步昵称）必须带 `Authorization: Bearer`**，否则后端 `current_user()` 为空 → 401。
 - 公开读也可以带（无害），带了 `/board` 才能正确返回 `is_owner`。
-- 假名**按 (应用, 用户) 稳定**：同一用户在本应用里每次都是同一个 `author_id`；跨应用不可关联（secret 只在服务端）。
+- 假名**按 (服务组, 用户) 稳定**：同一用户在本服务组里每次都是同一个 `author_id`；跨服务组不可关联（secret 只在服务端）。
 - 后端**拿不到平台 uid**，这是隐私设计（权限模型 B1-G2），不是 bug。
 
 ### 5.2 推论：为什么 `@im_get_user_info` 在 FaaS 里直接查不了别人昵称
@@ -302,7 +302,7 @@ while stack:
 这是**部署级**问题，不是某个 app 的问题——会让**所有** FaaS app 的鉴权写入全挂：
 
 - 根因：后端 `FAAS_CALLER_PSEUDONYM_SECRET` 为空。invoke 代理验证完调用者 JWT 后，要用这个
-  密钥派生**应用内假名**注入给函数；密钥为空时 `_caller_pseudonym()` 返回 `""` →
+  密钥派生**组内假名**注入给函数；密钥为空时 `_caller_pseudonym()` 返回 `""` →
   不注入 `X-MyApp-Caller-Pseudonym` → 函数里 `myapp_auth.current_user()` 永远是 None →
   每个鉴权写入都 401。公开读不受影响（所以"能看不能写"是典型症状）。
 - 排查：拿一个**真实用户**的 token 打 `GET .../whoami`，若返回 `logged_in:false` 且

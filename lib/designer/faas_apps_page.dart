@@ -77,7 +77,7 @@ class _FaasAppsPageState extends State<FaasAppsPage> {
       if (!mounted) return;
       setState(() => _apps = raw.whereType<Map>().map((e) => e.cast<String, dynamic>()).toList());
     } catch (e) {
-      _snack('加载应用失败: $e');
+      _snack('加载服务组失败: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -87,7 +87,7 @@ class _FaasAppsPageState extends State<FaasAppsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的应用 (FaaS)'),
+        title: const Text('我的服务组'),
         actions: [
           IconButton(
             tooltip: 'FaaS 服务 (配额 / 删除)',
@@ -107,7 +107,7 @@ class _FaasAppsPageState extends State<FaasAppsPage> {
               child: _apps.isEmpty
                   ? ListView(children: const [
                       SizedBox(height: 120),
-                      Center(child: Text('暂无应用')),
+                      Center(child: Text('暂无服务组')),
                     ])
                   : ListView.separated(
                       itemCount: _apps.length,
@@ -148,7 +148,7 @@ class _FaasAppDetailPage extends StatefulWidget {
 class _FaasAppDetailPageState extends State<_FaasAppDetailPage> {
   Map<String, dynamic> _detail = const {};
   bool _loading = false;
-  static const _policies = ['owner-only', 'allowlist', 'install-required', 'public'];
+  static const _policies = ['owner-only', 'allowlist', 'public'];
 
   @override
   void initState() {
@@ -222,7 +222,7 @@ class _FaasAppDetailPageState extends State<_FaasAppDetailPage> {
       builder: (_) => AlertDialog(
         title: const Text('删除这个 FaaS 服务'),
         content: Text('仅永久删除服务「$serviceId」（停容器 + 删记录 + 删代码，释放一个配额），'
-            '不影响本应用的其他服务与数据库。此操作不可恢复。'),
+            '不影响该服务组里的其它服务与数据库。此操作不可恢复。'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
           FilledButton(
@@ -247,9 +247,9 @@ class _FaasAppDetailPageState extends State<_FaasAppDetailPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('删除整个应用'),
-        content: const Text('将删除该应用下的【所有】FaaS 服务和数据库（不可恢复）。'
-            '若只想删其中某一个服务，请点下面服务列表里每条右侧的删除按钮。确定删除整个应用？'),
+        title: const Text('删除整个服务组'),
+        content: const Text('将删除该服务组下的【所有】FaaS 服务和数据库（不可恢复）。'
+            '若只想删其中某一个服务，请点下面服务列表里每条右侧的删除按钮。确定删除整个服务组？'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除')),
@@ -295,7 +295,7 @@ class _FaasAppDetailPageState extends State<_FaasAppDetailPage> {
           const Card(
             child: Padding(
               padding: EdgeInsets.all(12),
-              child: Text('提示：作为应用所有者/维护者，你可以访问本应用内消费者创建的数据。',
+              child: Text('提示：作为服务组所有者/维护者，你可以访问本服务组内消费者创建的数据。',
                   style: TextStyle(fontSize: 12)),
             ),
           ),

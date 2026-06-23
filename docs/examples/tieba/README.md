@@ -55,7 +55,7 @@ docs/examples/tieba/
 
 ## 身份与"真实昵称、防止有人改"
 
-- 后端 `myapp_auth.current_user()` 返回**应用内假名**（不可伪造、按 (应用,用户) 稳定、不是平台 uid）。
+- 后端 `myapp_auth.current_user()` 返回**组内假名**（不可伪造、按 (服务组,用户) 稳定、不是平台 uid）。
   写操作把 `author_id`/`owner_id` 强制成它 → **没人能改/冒充别人的帖子归属**。
 - 显示名放 `profiles`，`_sync_name` 把 `owner_id` 强制成 `current_user()` → **只能改自己的名字**。
 - 前端登录后/发帖前把用户**真实平台昵称**（`@get_user_info().username`）同步进 `profiles`，
