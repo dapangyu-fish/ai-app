@@ -175,3 +175,25 @@ profiles (owner_id text PK, display_name, updated_at)
 4. **FaaS 假名 ≠ 平台 uid**：凡是"按 uid 查权威信息"的经典写法都要重新设计。
 5. **现有能力做不到时换设计，不改框架；并把设计边界诚实写清楚**（本例：防冒充他人做满，自报虚名作为残留风险记录）。
 6. **每步当场验证**：后端 `validate_bundle`、前端 `validate_json_app.py`、部署后真链路 invoke。
+
+---
+
+## 9. v1.1 增量（楼中楼折叠 + 用户主页 + 好友 + 私信 + 底部 tab）
+
+第二轮迭代把 demo 做得更像真贴吧。三个值得记的思考：
+
+1. **楼中楼折叠：状态在前端、计算在后端。** 用户要"一组楼中楼超过 2 条默认收起、可展开"。
+   不在前端 jsonlogic 里按祖先链算可见性（很难写对）——前端只用 `@list_add`/`@list_remove` 维护一个
+   "已展开父帖 id 集合"，`str_join` 拼成 `?expanded=` 传后端；后端 DFS 时按集合决定每组展开/折叠，
+   吐带 `kind`(post/more/collapse) 的扁平行，前端按 `kind` 用 `visible` 分支渲染。**不改框架。**
+
+2. **社交不能用平台 IM。** 想加好友/私信时第一反应是用 `@im_*`——但它按平台 uid 工作，而 FaaS 只有
+   组内假名、反推不出 uid（同 §3 的墙）。所以从一条帖子（假名）发起社交，platform IM 接不上。
+   决策：**好友/私信建进 FaaS 自己的库、用假名做主体**（`friendships`/`messages`），`demo_im` 只当 UI 参照。
+   隐私自洽：社交只在本服务组内用假名互通，跨 App 关联不了同一个人。
+
+3. **底部 tab 没有"切换钩子"。** screen 级 `tabs` 切换不触发动作 → 需要数据的 tab（好友/我的）放
+   「刷新」按钮（loader 第一步拿 token + 记 myId），并在关键动作后重拉。
+
+验证同前：前端 validate exit0/0warn；后端 AST 沙箱 + schema lint；折叠 DFS 单测；
+全部新 SQL 在真 Postgres 跑通。完整路由/屏幕见 `README.md`。
