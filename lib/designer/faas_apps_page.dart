@@ -215,12 +215,41 @@ class _FaasAppDetailPageState extends State<_FaasAppDetailPage> {
     }
   }
 
+  Future<void> _deleteService(String serviceId) async {
+    if (serviceId.isEmpty) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('删除这个 FaaS 服务'),
+        content: Text('仅永久删除服务「$serviceId」（停容器 + 删记录 + 删代码，释放一个配额），'
+            '不影响本应用的其他服务与数据库。此操作不可恢复。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除此服务'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final r = await widget.req('DELETE', '/api/faas/services/$serviceId?purge=1');
+    if (r.statusCode >= 400) {
+      _snack('删除失败: ${widget.obj(r)['error']}');
+    } else {
+      _snack('已删除服务: $serviceId');
+      _load();
+    }
+  }
+
   Future<void> _deleteApp() async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('删除应用'),
-        content: const Text('将删除该应用的所有服务和数据库（不可恢复）。确定？'),
+        title: const Text('删除整个应用'),
+        content: const Text('将删除该应用下的【所有】FaaS 服务和数据库（不可恢复）。'
+            '若只想删其中某一个服务，请点下面服务列表里每条右侧的删除按钮。确定删除整个应用？'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('取消')),
           TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('删除')),
@@ -283,11 +312,16 @@ class _FaasAppDetailPageState extends State<_FaasAppDetailPage> {
           _sectionTitle('数据库 (schema)'),
           ListTile(title: const Text('存储用量'), trailing: Text(_fmtBytes(storage))),
           const Divider(),
-          _sectionTitle('FaaS 服务 (${services.length})'),
+          _sectionTitle('FaaS 服务 (${services.length}) — 可单独删除'),
           ...services.map((s) => ListTile(
                 dense: true,
                 title: Text((s['service_id'] ?? '').toString()),
                 subtitle: Text('状态: ${s['status']}  实例: ${s['running_replicas'] ?? 0}'),
+                trailing: IconButton(
+                  tooltip: '只删除这个服务',
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  onPressed: () => _deleteService((s['service_id'] ?? '').toString()),
+                ),
               )),
           const Divider(),
           _sectionTitle('维护者 (${maintainers.length})', onAdd: () => _addMember('/maintainers', '添加维护者')),
