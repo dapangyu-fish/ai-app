@@ -67,17 +67,26 @@
 ### 2.2 贴吧的表
 
 ```sql
-boards   (id uuid PK, name text UNIQUE, intro, owner_id text[吧主假名], created_at)
-threads  (id uuid PK, board_id uuid, author_id text, title, body, reply_count int, created_at)
-posts    (id uuid PK, thread_id uuid, parent_id uuid NULL, author_id text, body, created_at)
-profiles (owner_id text PK, display_name, updated_at)
+-- 论坛
+boards      (id uuid PK, name text UNIQUE, intro, owner_id text[吧主假名], created_at)
+threads     (id uuid PK, board_id uuid, author_id text, title, body, reply_count int, created_at)
+posts       (id uuid PK, thread_id uuid, parent_id uuid NULL, author_id text, body, created_at)
+-- 身份
+profiles    (owner_id text PK, display_name, updated_at)
+-- 社交（§4.6）
+friendships (id uuid PK, requester_id text, addressee_id text, status pending|accepted, UNIQUE(requester,addressee))
+messages    (id uuid PK, sender_id text, recipient_id text, body, created_at)
 ```
 
 要点：
+- 表多没关系——按领域拆开（论坛 / 身份 / 社交）比硬塞一张表清楚；用户说"一个 schema 不够可以用多个"，
+  本范本仍放一个 `schema.sql` 但分段写。
 - `posts.parent_id` 自引用：`NULL` = 直接回主题（楼层），非 `NULL` = 回某条回帖（楼中楼）。一列搞定无限层级。
 - `boards.name UNIQUE`：吧名全局唯一，重复建吧时后端返 409。
 - `profiles` 单独存显示名（§6 详解为什么要拆出来）。
-- 索引覆盖所有 WHERE/JOIN 列：`threads(board_id)`、`posts(thread_id)`、`posts(parent_id)`、`boards(name)`。
+- `friendships` 主体是**组内假名**，一条边一行、状态机 `pending→accepted`；无序对去重在函数里查双向。
+- 索引覆盖所有 WHERE/JOIN 列：`threads(board_id)`、`posts(thread_id)`、`posts(parent_id)`、`boards(name)`、
+  `friendships(addressee_id,status)`、`messages(sender_id,recipient_id,created_at)`。
 
 完整文件见 `docs/examples/tieba/backend/schema.sql`。
 
@@ -209,6 +218,30 @@ while stack:
 ```
 数据是无限层级的；视觉缩进在第 12 层封顶，防止深嵌套把内容挤出屏幕。
 
+**楼中楼默认收起（超过 2 条折叠 + 展开/收起按钮）——状态留在前端、计算放后端。**
+真实贴吧里一组楼中楼太多会很长，要默认只显示前 2 条 + 「展开 N 条」。别想在前端 jsonlogic 里
+按祖先链算可见性（很难写对）。正确分工：**前端只维护一个「已展开的父帖 id 集合」，把它传给后端；
+后端在 DFS 时按集合决定每组展开还是折叠，并吐出带 `kind` 标记的扁平行。**
+
+后端 `/thread?expanded=id1,id2`：楼层（root）永远全显示；任何一组楼中楼 `>2` 且其父不在 `expanded`
+里 → 只发前 2 条 + 一个 `kind:"more"` 行（带 `remaining`）；父在 `expanded` 里 → 全发 + 一个
+`kind:"collapse"` 行。普通帖子行 `kind:"post"`。（完整实现见范本 `app.py:_flatten_thread`。）
+
+前端用 DSL 的数组算子维护展开集合，再用 `str_join` 拼成查询串重拉——**不改框架**：
+```json
+"expandReplies": { "params": ["parentId"], "logic": [
+  { "call": "@list_add", "args": { "var": "global.expanded", "item": "{{ params.parentId }}" } },
+  { "call": "@set", "args": { "var": "global.expandedCsv", "value": { "str_join": [ { "var": "global.expanded" }, "," ] } } },
+  { "call": "@global.reloadThread", "args": {} } ] }
+```
+（`collapseReplies` 把 `@list_add` 换成 `@list_remove`；`reloadThread` 的 route 带 `&expanded={{ global.expandedCsv }}`；
+进帖时 `@list_clear global.expanded` 复位。）item_template 里用 `visible` 按 `kind` 分支渲染 post / more / collapse 三种行：
+```json
+{ "type": "button", "label": "▾ 展开 {{ loop.item.remaining }} 条回复", "variant": "text",
+  "visible": { "==": [{ "var": "loop.item.kind" }, "more"] },
+  "action": { "call": "@global.expandReplies", "args": { "parentId": "{{ loop.item.parent_id }}" } } }
+```
+
 ### 4.4 滚动契约（别踩的坑）
 
 `validate_json_app.py` 会对"整屏长列表混一堆静态兄弟"告警。最省心的做法：
@@ -221,6 +254,29 @@ while stack:
 - 展示文本槽（`value`/`label`/`title`…）用字符串或 `{{ }}` 插值，别塞 jsonlogic。
 - `container` 没有 `style` 字段；样式属性直接平铺（`paddingLeft`/`color`…）。`text` 可以有 `style`。
 - 按钮 action 用 `{ "call": "@global.fn", "args": {} }`，不用写 `"type":"call"`（冗余会告警）。
+
+### 4.6 多 tab + 社交（用户主页 / 加好友 / 私信）
+
+**底部 tab 用 screen 级 `tabs`**（不是 `tab_view`，那是页内的）：每个 tab 一份 `children`。
+注意 **`tabs` 没有"切换时触发动作"的钩子**——需要数据的 tab（好友、我的）放一个「🔄 刷新」按钮，
+点了走 loader（loader 第一步 `@global.syncMyName` 拿 token + 记 `myId`），并在关键动作后（同意请求、发完私信）顺手重拉。
+tab 里有列表照样 `shrinkWrap: true`，整屏一起滚。
+
+**🔴 别用平台 IM（`@im_*`）做 FaaS 应用内的好友/私信。** `demo_im` 的 `@im_send_friend_request` /
+`@im_history` / `@im_send_text` 都按**平台 uid** 工作；而 FaaS 后端只有**组内假名**、反推不出 uid（同 §5.2）。
+所以从一条帖子（假名）发起加好友 / 私信，platform IM 接不上。`demo_im` 只能当**UI 参照**（头像 `avatar`、
+左右气泡用 `visible` + 前导 flex `spacer`、输入行）。**社交关系要建进 FaaS 自己的库、用假名做主体**：
+
+- 表：`friendships(requester_id, addressee_id, status pending|accepted, UNIQUE(requester,addressee))`、
+  `messages(sender_id, recipient_id, body)`——主体全是组内假名。
+- 后端三套路照旧：所有写强制 `current_user()`；私信收发前先查双向 `accepted` 边（**只有好友能私信**）；
+  对方已请求过我时再请求 → 直接互为好友（mutual auto-accept）。
+- 用户主页 `/user?owner_id=<假名>`：吐显示名 + 统计 + 最近主题 + **与我的关系** `rel{is_self,is_friend,outgoing_pending,incoming_pending}`，
+  前端按 `rel` 用 `visible` 切「加好友 / 已发送 / 同意 / 发私信 / 这是你」。
+- 私信会话：`is_me`（`sender_id==current_user()`）由后端标，前端左右气泡分别 `visible: {"!":[is_me]}` / `is_me`。
+- **隐私自洽**：好友/私信只在**本服务组内**用假名互通，跨 App 关联不了同一个人——和假名隔离一致，不是缺陷。
+
+完整范本见 `docs/examples/tieba/`（前端 7 屏 + 后端 14 路由）。
 
 ---
 

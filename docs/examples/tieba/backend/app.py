@@ -1,8 +1,9 @@
-"""贴吧 FaaS 后端：公开论坛（吧 / 主题帖 / 回帖+楼中楼 / 搜索吧）。
+"""贴吧 FaaS 后端：公开论坛（吧 / 主题 / 楼中楼）+ 用户主页 + 好友 + 私信。
 
 身份：myapp_auth.current_user() = 当前调用者的组内假名（已验证、不可伪造）。
 公开内容用 myapp_db 裸 SQL（人人可读）；写入把 author/owner 强制成当前用户的假名，
 所以谁都改不了别人的帖子/别人的显示名。显示名由客户端用真实平台昵称同步进 profiles。
+好友 / 私信只在本服务组内、用组内假名互通（跨 App 关联不了同一个人，符合假名隔离）。
 值一律用 %s 占位（禁 f-string 拼 SQL）。
 """
 from flask import Flask, request, jsonify
@@ -10,6 +11,10 @@ import myapp_db
 import myapp_auth
 
 app = Flask(__name__)
+
+INDENT_PX = 16          # 每层楼中楼缩进像素（客户端直接当 paddingLeft 用）
+INDENT_CAP = 12         # 数据无限层级，视觉缩进封顶防溢出
+COLLAPSE_AFTER = 2      # 一组楼中楼超过 2 条就默认收起，给「展开」按钮
 
 
 def _me():
@@ -31,11 +36,28 @@ def _sync_name(me, body):
         )
 
 
+def _name_of(owner_id):
+    if not owner_id:
+        return ""
+    row = myapp_db.queryone("SELECT display_name FROM profiles WHERE owner_id = %s", [owner_id])
+    return (row or {}).get("display_name", "") or ""
+
+
+def _are_friends(a, b):
+    if not a or not b:
+        return False
+    row = myapp_db.queryone(
+        "SELECT 1 FROM friendships WHERE status = 'accepted' AND "
+        "((requester_id = %s AND addressee_id = %s) OR (requester_id = %s AND addressee_id = %s)) LIMIT 1",
+        [a, b, b, a],
+    )
+    return bool(row)
+
+
 @app.get("/whoami")
 def whoami():
     me = _me()
-    row = myapp_db.queryone("SELECT display_name FROM profiles WHERE owner_id = %s", [me]) if me else None
-    return jsonify({"me": me or "", "display_name": (row or {}).get("display_name", ""), "logged_in": bool(me)})
+    return jsonify({"me": me or "", "display_name": _name_of(me), "logged_in": bool(me)})
 
 
 @app.post("/me")
@@ -52,21 +74,15 @@ def set_me():
 @app.get("/boards")
 def list_boards():
     q = str(request.args.get("q") or "").strip()
+    base = (
+        "SELECT b.id, b.name, b.intro, b.created_at, COALESCE(p.display_name,'') AS owner_name, "
+        "(SELECT count(*) FROM threads t WHERE t.board_id = b.id) AS thread_count "
+        "FROM boards b LEFT JOIN profiles p ON p.owner_id = b.owner_id "
+    )
     if q:
-        rows = myapp_db.query(
-            "SELECT b.id, b.name, b.intro, b.created_at, COALESCE(p.display_name,'') AS owner_name, "
-            "(SELECT count(*) FROM threads t WHERE t.board_id = b.id) AS thread_count "
-            "FROM boards b LEFT JOIN profiles p ON p.owner_id = b.owner_id "
-            "WHERE b.name ILIKE %s ORDER BY b.created_at DESC LIMIT 100",
-            ["%" + q + "%"],
-        )
+        rows = myapp_db.query(base + "WHERE b.name ILIKE %s ORDER BY b.created_at DESC LIMIT 100", ["%" + q + "%"])
     else:
-        rows = myapp_db.query(
-            "SELECT b.id, b.name, b.intro, b.created_at, COALESCE(p.display_name,'') AS owner_name, "
-            "(SELECT count(*) FROM threads t WHERE t.board_id = b.id) AS thread_count "
-            "FROM boards b LEFT JOIN profiles p ON p.owner_id = b.owner_id "
-            "ORDER BY b.created_at DESC LIMIT 100",
-        )
+        rows = myapp_db.query(base + "ORDER BY b.created_at DESC LIMIT 100")
     return jsonify({"boards": rows})
 
 
@@ -80,8 +96,7 @@ def create_board():
     if not name:
         return jsonify({"error": "吧名不能为空"}), 400
     _sync_name(me, body)
-    exists = myapp_db.queryone("SELECT id FROM boards WHERE name = %s", [name])
-    if exists:
+    if myapp_db.queryone("SELECT id FROM boards WHERE name = %s", [name]):
         return jsonify({"error": "该吧已存在"}), 409
     row = myapp_db.queryone(
         "INSERT INTO boards (name, intro, owner_id) VALUES (%s, %s, %s) RETURNING id, name, intro, created_at",
@@ -110,7 +125,8 @@ def get_board():
 def list_threads():
     bid = str(request.args.get("board_id") or "").strip()
     rows = myapp_db.query(
-        "SELECT t.id, t.title, t.body, t.reply_count, t.created_at, COALESCE(p.display_name,'') AS author_name "
+        "SELECT t.id, t.author_id, t.title, t.body, t.reply_count, t.created_at, "
+        "COALESCE(p.display_name,'') AS author_name "
         "FROM threads t LEFT JOIN profiles p ON p.owner_id = t.author_id "
         "WHERE t.board_id = %s ORDER BY t.created_at DESC LIMIT 100",
         [bid],
@@ -139,9 +155,73 @@ def create_thread():
     return jsonify({"thread": row})
 
 
+def _flatten_thread(rows, expanded):
+    """把回帖按楼中楼树形先序拍平成一个扁平列表（客户端按 indent 缩进渲染）。
+
+    - 楼层（parent_id 为 NULL，is_root）始终全显示。
+    - 任何一组楼中楼超过 COLLAPSE_AFTER 条且其父 id 不在 expanded 里 → 只显示前 2 条，
+      追加一个 kind='more' 行（带剩余条数），客户端渲染「展开 N 条」按钮。
+    - 父 id 在 expanded 里 → 全显示，追加一个 kind='collapse' 行（「收起」按钮）。
+    迭代式 DFS（不递归），避免超深楼中楼链把调用栈打爆。
+    """
+    expanded = set(expanded or [])
+    children = {}
+    for r in rows:
+        children.setdefault(r.get("parent_id"), []).append(r)  # 已按 created_at ASC
+
+    def frames_for(parent_id, depth, is_root):
+        kids = children.get(parent_id, [])
+        out = []
+        show_all = is_root or len(kids) <= COLLAPSE_AFTER or (parent_id in expanded)
+        if show_all:
+            for k in kids:
+                out.append(("node", k, depth))
+            if (not is_root) and len(kids) > COLLAPSE_AFTER:
+                out.append(("collapse", parent_id, depth))
+        else:
+            for k in kids[:COLLAPSE_AFTER]:
+                out.append(("node", k, depth))
+            out.append(("more", parent_id, depth, len(kids) - COLLAPSE_AFTER))
+        return out
+
+    ordered, seen = [], set()
+    stack = list(reversed(frames_for(None, 0, True)))
+    while stack:
+        f = stack.pop()
+        kind = f[0]
+        if kind == "node":
+            _, node, depth = f
+            nid = node.get("id")
+            if nid in seen:
+                continue
+            seen.add(nid)
+            cap = depth if depth < INDENT_CAP else INDENT_CAP
+            node["kind"] = "post"
+            node["depth"] = cap
+            node["indent"] = cap * INDENT_PX
+            node["is_floor"] = (depth == 0)
+            node["floor_label"] = "楼层" if depth == 0 else "楼中楼"
+            ordered.append(node)
+            for cf in reversed(frames_for(nid, depth + 1, False)):
+                stack.append(cf)
+        else:  # 'more' / 'collapse'
+            parent_id = f[1]
+            depth = f[2]
+            cap = depth if depth < INDENT_CAP else INDENT_CAP
+            marker = {
+                "id": kind + "-" + str(parent_id), "kind": kind, "parent_id": parent_id,
+                "depth": cap, "indent": cap * INDENT_PX,
+            }
+            if kind == "more":
+                marker["remaining"] = f[3]
+            ordered.append(marker)
+    return ordered
+
+
 @app.get("/thread")
 def get_thread():
     tid = str(request.args.get("thread_id") or "").strip()
+    expanded = [x for x in str(request.args.get("expanded") or "").split(",") if x]
     t = myapp_db.queryone(
         "SELECT t.id, t.board_id, t.title, t.body, t.created_at, t.author_id, "
         "COALESCE(p.display_name,'') AS author_name "
@@ -150,8 +230,6 @@ def get_thread():
     )
     if not t:
         return jsonify({"error": "帖子不存在"}), 404
-    # 全部回帖一次取出（含楼中楼），后端按 parent_id 做先序 DFS 排好序并标 depth，
-    # 客户端只要按 depth 缩进渲染一个扁平列表，即可呈现无限层级的楼中楼。
     rows = myapp_db.query(
         "SELECT po.id, po.parent_id, po.body, po.created_at, po.author_id, "
         "COALESCE(p.display_name,'') AS author_name "
@@ -159,27 +237,7 @@ def get_thread():
         "WHERE po.thread_id = %s ORDER BY po.created_at ASC LIMIT 2000",
         [tid],
     )
-    children = {}
-    for r in rows:
-        children.setdefault(r.get("parent_id"), []).append(r)
-    ordered = []
-    # 迭代式 DFS（不递归，避免深层栈问题）。栈里放 (节点, 深度)，倒序压栈保证时间正序。
-    stack = [(r, 0) for r in reversed(children.get(None, []))]
-    seen = set()
-    while stack:
-        node, depth = stack.pop()
-        nid = node.get("id")
-        if nid in seen:
-            continue
-        seen.add(nid)
-        capped = depth if depth < 12 else 12  # 数据无限层级，视觉缩进封顶防溢出
-        node["depth"] = capped
-        node["indent"] = capped * 14  # 客户端直接用作 paddingLeft（像素）
-        ordered.append(node)
-        kids = children.get(nid, [])
-        for k in reversed(kids):
-            stack.append((k, depth + 1))
-    return jsonify({"thread": t, "posts": ordered})
+    return jsonify({"thread": t, "posts": _flatten_thread(rows, expanded)})
 
 
 # ── 回帖 + 楼中楼 ──
@@ -215,8 +273,192 @@ def delete_post():
     if not me:
         return _need_login()
     pid = str(request.args.get("post_id") or "").strip()
-    # 只能删自己的回帖（author_id 强制等于调用者）——防止改/删别人的
     n = myapp_db.execute("DELETE FROM posts WHERE id = %s AND author_id = %s", [pid, me])
     if not n:
         return jsonify({"error": "无权删除或不存在"}), 403
     return jsonify({"ok": True})
+
+
+# ── 用户主页 ──
+
+@app.get("/user")
+def get_user():
+    """某用户（组内假名）的公开主页：显示名 + 统计 + 最近主题 + 与我的关系。"""
+    uid = str(request.args.get("owner_id") or "").strip()
+    if not uid:
+        return jsonify({"error": "缺少 owner_id"}), 400
+    me = _me()
+    stats = myapp_db.queryone(
+        "SELECT (SELECT count(*) FROM boards  WHERE owner_id  = %s) AS board_count, "
+        "       (SELECT count(*) FROM threads WHERE author_id = %s) AS thread_count, "
+        "       (SELECT count(*) FROM posts   WHERE author_id = %s) AS post_count",
+        [uid, uid, uid],
+    ) or {}
+    threads = myapp_db.query(
+        "SELECT t.id, t.title, t.reply_count, t.created_at, COALESCE(b.name,'') AS board_name "
+        "FROM threads t LEFT JOIN boards b ON b.id = t.board_id "
+        "WHERE t.author_id = %s ORDER BY t.created_at DESC LIMIT 30",
+        [uid],
+    )
+    rel = {"is_self": me == uid, "is_friend": False, "outgoing_pending": False, "incoming_pending": False}
+    if me and me != uid:
+        rel["is_friend"] = _are_friends(me, uid)
+        if not rel["is_friend"]:
+            out = myapp_db.queryone(
+                "SELECT 1 FROM friendships WHERE status='pending' AND requester_id=%s AND addressee_id=%s",
+                [me, uid],
+            )
+            inc = myapp_db.queryone(
+                "SELECT 1 FROM friendships WHERE status='pending' AND requester_id=%s AND addressee_id=%s",
+                [uid, me],
+            )
+            rel["outgoing_pending"] = bool(out)
+            rel["incoming_pending"] = bool(inc)
+    return jsonify({
+        "user": {"owner_id": uid, "display_name": _name_of(uid),
+                 "board_count": stats.get("board_count", 0),
+                 "thread_count": stats.get("thread_count", 0),
+                 "post_count": stats.get("post_count", 0)},
+        "threads": threads, "rel": rel,
+    })
+
+
+# ── 好友 ──
+
+@app.get("/friends")
+def list_friends():
+    me = _me()
+    if not me:
+        return _need_login()
+    rows = myapp_db.query(
+        "SELECT CASE WHEN f.requester_id = %s THEN f.addressee_id ELSE f.requester_id END AS owner_id "
+        "FROM friendships f WHERE f.status='accepted' AND (f.requester_id=%s OR f.addressee_id=%s)",
+        [me, me, me],
+    )
+    friends = []
+    for r in rows:
+        oid = r.get("owner_id")
+        friends.append({"owner_id": oid, "display_name": _name_of(oid)})
+    friends.sort(key=lambda x: x["display_name"] or x["owner_id"])
+    return jsonify({"friends": friends})
+
+
+@app.get("/friends/requests")
+def list_requests():
+    me = _me()
+    if not me:
+        return _need_login()
+    rows = myapp_db.query(
+        "SELECT requester_id, created_at FROM friendships "
+        "WHERE status='pending' AND addressee_id=%s ORDER BY created_at DESC",
+        [me],
+    )
+    reqs = [{"owner_id": r.get("requester_id"), "display_name": _name_of(r.get("requester_id")),
+             "created_at": r.get("created_at")} for r in rows]
+    return jsonify({"requests": reqs, "count": len(reqs)})
+
+
+@app.post("/friends/request")
+def request_friend():
+    me = _me()
+    if not me:
+        return _need_login()
+    body = request.get_json(silent=True) or {}
+    _sync_name(me, body)
+    target = str(body.get("to") or "").strip()
+    if not target:
+        return jsonify({"error": "缺少对象"}), 400
+    if target == me:
+        return jsonify({"error": "不能加自己为好友"}), 400
+    if not myapp_db.queryone("SELECT 1 FROM profiles WHERE owner_id=%s", [target]):
+        return jsonify({"error": "用户不存在"}), 404
+    if _are_friends(me, target):
+        return jsonify({"ok": True, "status": "accepted"})
+    # 对方已经请求过我 → 直接互相成为好友（双方都想加）
+    rev = myapp_db.queryone(
+        "SELECT id FROM friendships WHERE status='pending' AND requester_id=%s AND addressee_id=%s",
+        [target, me],
+    )
+    if rev:
+        myapp_db.execute("UPDATE friendships SET status='accepted', updated_at=now() WHERE id=%s", [rev["id"]])
+        return jsonify({"ok": True, "status": "accepted"})
+    # upsert 我 → 对方 的 pending 请求（唯一约束防重复）
+    myapp_db.execute(
+        "INSERT INTO friendships (requester_id, addressee_id, status) VALUES (%s, %s, 'pending') "
+        "ON CONFLICT (requester_id, addressee_id) DO NOTHING",
+        [me, target],
+    )
+    return jsonify({"ok": True, "status": "pending"})
+
+
+@app.post("/friends/accept")
+def accept_friend():
+    me = _me()
+    if not me:
+        return _need_login()
+    frm = str((request.get_json(silent=True) or {}).get("from") or "").strip()
+    n = myapp_db.execute(
+        "UPDATE friendships SET status='accepted', updated_at=now() "
+        "WHERE status='pending' AND requester_id=%s AND addressee_id=%s",
+        [frm, me],
+    )
+    if not n:
+        return jsonify({"error": "没有待处理的请求"}), 404
+    return jsonify({"ok": True})
+
+
+@app.post("/friends/reject")
+def reject_friend():
+    me = _me()
+    if not me:
+        return _need_login()
+    frm = str((request.get_json(silent=True) or {}).get("from") or "").strip()
+    myapp_db.execute(
+        "DELETE FROM friendships WHERE status='pending' AND requester_id=%s AND addressee_id=%s",
+        [frm, me],
+    )
+    return jsonify({"ok": True})
+
+
+# ── 私信（只在好友之间）──
+
+@app.get("/dm")
+def dm_history():
+    me = _me()
+    if not me:
+        return _need_login()
+    peer = str(request.args.get("peer") or "").strip()
+    if not peer:
+        return jsonify({"error": "缺少对象"}), 400
+    if not _are_friends(me, peer):
+        return jsonify({"error": "仅好友之间可私信", "messages": []}), 403
+    rows = myapp_db.query(
+        "SELECT id, sender_id, recipient_id, body, created_at FROM messages "
+        "WHERE (sender_id=%s AND recipient_id=%s) OR (sender_id=%s AND recipient_id=%s) "
+        "ORDER BY created_at ASC LIMIT 500",
+        [me, peer, peer, me],
+    )
+    for r in rows:
+        r["is_me"] = (r.get("sender_id") == me)
+    return jsonify({"peer": {"owner_id": peer, "display_name": _name_of(peer)}, "messages": rows})
+
+
+@app.post("/dm")
+def dm_send():
+    me = _me()
+    if not me:
+        return _need_login()
+    body = request.get_json(silent=True) or {}
+    peer = str(body.get("to") or "").strip()
+    text = str(body.get("body") or "").strip()[:2000]
+    if not peer or not text:
+        return jsonify({"error": "内容必填"}), 400
+    if not _are_friends(me, peer):
+        return jsonify({"error": "仅好友之间可私信"}), 403
+    row = myapp_db.queryone(
+        "INSERT INTO messages (sender_id, recipient_id, body) VALUES (%s, %s, %s) "
+        "RETURNING id, sender_id, recipient_id, body, created_at",
+        [me, peer, text],
+    )
+    row["is_me"] = True
+    return jsonify({"message": row})
