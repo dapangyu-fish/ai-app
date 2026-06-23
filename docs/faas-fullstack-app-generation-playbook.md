@@ -262,7 +262,12 @@ while stack:
 点了走 loader（loader 第一步 `@global.syncMyName` 拿 token + 记 `myId`），并在关键动作后（同意请求、发完私信）顺手重拉。
 tab 里有列表照样 `shrinkWrap: true`，整屏一起滚。
 
-**🔴 别用平台 IM（`@im_*`）做 FaaS 应用内的好友/私信。** `demo_im` 的 `@im_send_friend_request` /
+**🔴 先分叉：要的是"平台级真人实时社交"还是"应用内假名社交"？**
+如果需求是"搜得到平台上任何人 + 要推送 + 通讯录 + 跨 App 同一个人"（微信式），**那根本不该走 FaaS**，
+改读 [`docs/im-app-generation-playbook.md`](im-app-generation-playbook.md)（范本 `demo-im`，用 `lib_im` 平台 IM 能力、
+**不写后端**）。本节讲的是另一种：**论坛/社区内部的、用假名的轻社交**，这种才建进 FaaS。
+
+**别用平台 IM（`@im_*`）做 FaaS 应用内的好友/私信。** `demo_im` 的 `@im_send_friend_request` /
 `@im_history` / `@im_send_text` 都按**平台 uid** 工作；而 FaaS 后端只有**组内假名**、反推不出 uid（同 §5.2）。
 所以从一条帖子（假名）发起加好友 / 私信，platform IM 接不上。`demo_im` 只能当**UI 参照**（头像 `avatar`、
 左右气泡用 `visible` + 前导 flex `spacer`、输入行）。**社交关系要建进 FaaS 自己的库、用假名做主体**：
