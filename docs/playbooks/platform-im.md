@@ -5,6 +5,12 @@
 **别去写 FaaS + Postgres**，直接用**平台内置 IM 能力**（`@im_*` 一组内置函数，已由 `lib_im` 封装好，
 后端是平台托管的 OpenIM）。范本：`templates/demo_im.json`（微信风 IM，`meta.name = demo-im`）。
 
+> ⚠️ **本文里出现的 `loadHome` / `openChat` / `sendMessage` 等函数名、`home/add_friend/chat` 等屏幕 id、
+> 以及微信三 tab 结构，都只是 `demo_im` 的【示例形状】，用来讲清 `lib_im` 接线，不是要你照抄。**
+> **必须按本轮产品重新设计信息架构、tab 划分、屏幕 id、函数名（用产品语义的动词，如 `loadInbox`/`openTicket`/
+> `openGroup`/`postMoment`）、空状态与文案。** 判据：把品牌词换成"微信"后如果还像 `demo_im`（同一套
+> `loadHome/openChat/addFriend` + 同样的页面），就是失败，要重做 IA。只把 demo 当 API 接线参考，不当骨架。
+
 ---
 
 ## 0. 最重要的一步：先判断用 IM 还是用 FaaS 自建社交
