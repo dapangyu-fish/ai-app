@@ -5,7 +5,7 @@
 1. `python3 backend/repair_json_app.py "$AI_APP_WORKSPACE/app.json"`
 2. `python3 backend/validate_json_app.py "$AI_APP_WORKSPACE/app.json"`
 3. 如视觉复检工具可用，复杂 APP、游戏、多页面 APP 或视觉质量敏感 APP 至少运行一次 `myapp-visual-review "$AI_APP_WORKSPACE/app.json"`，并根据截图报告修复。
-4. 再次运行 validate，最终必须无 ERROR。
+4. 再次运行 validate，最终必须无 ERROR，**且无 presentation-text WARN**（报错路径形如 `$.ui.screens[].title`/`...value`/`label` “should be a string or string interpolation, not raw jsonlogic / not a structured value”）——根因是把 JsonLogic Map/List 或结构化值塞进了展示槽，改法：先在 action/global 算成 `global.xxxLabel`，展示槽只写字符串或 `{{ global.xxxLabel }}` 插值。带这类 WARN 不许上传。
 5. `bash backend/upload_with_signature.sh "$AI_APP_WORKSPACE/app.json"`
 
 任何一步失败：

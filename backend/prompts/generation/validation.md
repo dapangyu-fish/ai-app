@@ -59,7 +59,11 @@ python3 backend/validate_json_app.py "$TMPFILE"
 - `json.tool` 失败：先修 JSON 语法。
 - `validate_json_app.py` 出现 `ERROR`：必须按路径修复，重新从 `json.tool` 开始。
 - `WARN`：新生成 APP 尽量修复；只有兼容旧 APP 的修复场景才可保留。
-- 最终回复前，最后一次 validator 必须无 `ERROR`。
+- **🔴 但「presentation text」类 WARN 必须修到 0 再上传**（报错路径形如 `$.ui.screens[].title` / `...value` / `label`
+  “should be a string or string interpolation, not raw jsonlogic / not a structured value”）。根因：你把 JsonLogic
+  Map/List 或结构化值直接塞进了 `title`/`value`/`label`/`subtitle` 等展示槽。改法：在 action/global 函数里先把它算成
+  `global.xxxLabel`（或 `params.xxx`），展示槽只写字符串或 `{{ global.xxxLabel }}` 插值。**带这类 WARN 不许上传。**
+- 最终回复前，最后一次 validator 必须无 `ERROR`，且无任何 presentation-text WARN。
 - 如果大量重复机械错误（`body`、`marginTop`、container `style`、padding/margin dict），写递归清理脚本或运行 `repair_json_app.py`，不要逐条手改到漏项。
 
 ## 高频禁忌字段
