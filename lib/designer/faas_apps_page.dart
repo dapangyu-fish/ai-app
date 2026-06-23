@@ -426,7 +426,7 @@ class _FaasServicesPageState extends State<_FaasServicesPage> {
       builder: (ctx) => AlertDialog(
         title: const Text('删除 FaaS 服务'),
         content: Text(
-            '确定永久删除「$label」吗？\n\n这会停止并彻底移除该服务（含代码与数据库 schema），并释放一个服务配额。此操作不可恢复。'),
+            '确定永久删除「$label」吗？\n\n这会停止并彻底移除该服务（含代码），并释放一个服务配额。数据库不会被删除（如需连同数据库一并清除，请删除整个服务组）。此操作不可恢复。'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
           FilledButton(

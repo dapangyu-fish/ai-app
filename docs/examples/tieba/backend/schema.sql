@@ -1,5 +1,5 @@
 -- 贴吧 FaaS 后端 schema（公开内容论坛）
--- 规则：用 UUID 主键（不要用自增主键）；公开可读，写入记作者的应用内假名（author_id =
+-- 规则：用 UUID 主键（不要用自增主键）；公开可读，写入记作者的组内假名（author_id =
 -- myapp_auth.current_user()，不可伪造）；profiles 自助显示名（只能改自己的）。
 -- 部署期由属主角色执行；运行时角色只有数据读写权限（不能改表结构）。
 
@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS boards (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name        text NOT NULL UNIQUE,          -- 「xxx吧」里的 xxx，全局唯一
   intro       text NOT NULL DEFAULT '',
-  owner_id    text NOT NULL,                 -- 吧主 = 创建者的应用内假名
+  owner_id    text NOT NULL,                 -- 吧主 = 创建者的组内假名
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS posts (
 -- 用户在本吧的显示名：自助设置，函数强制 owner_id = current_user()（改不了别人的）。
 -- display_name 由客户端用用户的真实平台昵称同步进来（见 playbook 的昵称章节）。
 CREATE TABLE IF NOT EXISTS profiles (
-  owner_id     text PRIMARY KEY,             -- 应用内假名
+  owner_id     text PRIMARY KEY,             -- 组内假名
   display_name text NOT NULL DEFAULT '',
   updated_at   timestamptz NOT NULL DEFAULT now()
 );

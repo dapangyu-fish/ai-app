@@ -978,6 +978,13 @@ def _resolve_app_id(owner_user_id: str, service_id: str, meta: dict[str, Any]) -
     declared = str(meta.get("app_id") or "").strip()
     appid = str(meta.get("appid") or "").strip()
     app_id = declared or str(service_id or "").strip()
+    # SECURITY: 'appd-' is a RESERVED platform prefix — it is the legacy default-app
+    # namespace that _db_tenant_key maps to an owner's SHARED schema (strip 'appd-').
+    # A new service is its own group, so its app_id must never start with 'appd-';
+    # otherwise a caller-supplied service_id / meta.app_id = 'appd-<victim>' would
+    # alias (provision + read/write) another tenant's schema. Reject it.
+    if app_id.startswith("appd-"):
+        raise FaaSValidationError("'appd-' is a reserved prefix; service_id / app_id may not start with it")
     return app_id, appid
 
 
@@ -1591,6 +1598,10 @@ def validate_bundle(bundle: dict[str, Any], *, default_slug: str = "") -> dict[s
         raise FaaSValidationError("bundle.service must be an object")
     service_slug = _safe_slug(str(raw_service.get("slug") or bundle.get("slug") or default_slug), "service")
     requested_id = str(raw_service.get("service_id") or bundle.get("service_id") or "").strip()
+    # SECURITY: refuse a caller-supplied service_id in the reserved 'appd-' namespace
+    # (would let a new service alias another tenant's shared schema via _db_tenant_key).
+    if requested_id.lower().startswith("appd-"):
+        raise FaaSValidationError("service_id may not start with the reserved 'appd-' prefix")
     service_id = _safe_id(requested_id, f"svc-{uuid.uuid4().hex[:12]}")
     routes = _normalize_routes(raw_service.get("routes") or bundle.get("routes") or [])
 

@@ -185,13 +185,13 @@ Postgres 库**，按 schema 隔离——只能读写自己的数据，碰不到�
 
    ```python
    import myapp_auth
-   uid = myapp_auth.current_user()         # 当前调用者的"应用内稳定假名"，未登录则 None
+   uid = myapp_auth.current_user()         # 当前调用者的"组内稳定假名"，未登录则 None
    if not myapp_auth.is_authenticated():
        return {"error": "login required"}, 401
    ```
 
-   这是后端注入的**可信身份**——框架已登录的用户无需在 app 内再登录，函数直接拿到他的应用内
-   假名（不可伪造，且跨应用不可关联）。**用它作为数据归属，而不是信任请求里传来的 user_id。**
+   这是后端注入的**可信身份**——框架已登录的用户无需在 app 内再登录，函数直接拿到他的组内
+   假名（不可伪造，且跨服务组不可关联）。**用它作为数据归属，而不是信任请求里传来的 user_id。**
 
 3. **读写（推荐：平台数据访问层 `myapp_data`，自动按调用者隔离）**：
 

@@ -1,6 +1,6 @@
 """贴吧 FaaS 后端：公开论坛（吧 / 主题帖 / 回帖+楼中楼 / 搜索吧）。
 
-身份：myapp_auth.current_user() = 当前调用者的应用内假名（已验证、不可伪造）。
+身份：myapp_auth.current_user() = 当前调用者的组内假名（已验证、不可伪造）。
 公开内容用 myapp_db 裸 SQL（人人可读）；写入把 author/owner 强制成当前用户的假名，
 所以谁都改不了别人的帖子/别人的显示名。显示名由客户端用真实平台昵称同步进 profiles。
 值一律用 %s 占位（禁 f-string 拼 SQL）。

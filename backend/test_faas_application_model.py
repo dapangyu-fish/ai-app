@@ -92,6 +92,24 @@ def test_default_app_id_is_per_owner():
     assert faas_store._default_app_id("user-A") == "appd-user-A"
 
 
+def test_resolve_app_id_new_service_is_own_group():
+    # 服务组：新服务的 app_id 默认 = service_id（不再落 per-owner 默认组）
+    assert faas_store._resolve_app_id("ownerX", "svc-new", {}) == ("svc-new", "")
+    # 显式 meta.app_id 仍被尊重（高级/共享场景）
+    assert faas_store._resolve_app_id("ownerX", "svc-new", {"app_id": "grp-1"}) == ("grp-1", "")
+
+
+def test_resolve_app_id_rejects_reserved_appd_prefix():
+    # SECURITY: a caller-supplied service_id / meta.app_id in the reserved 'appd-'
+    # namespace would alias another tenant's shared schema → must be rejected.
+    for sid, meta in [("appd-victim", {}), ("svc-x", {"app_id": "appd-victim"})]:
+        try:
+            faas_store._resolve_app_id("attacker", sid, meta)
+            raise AssertionError(f"reserved 'appd-' prefix was NOT rejected: sid={sid} meta={meta}")
+        except FaaSValidationError:
+            pass
+
+
 def test_ensure_application_defaults_owner_only():
     app = faas_store.ensure_application("appd-u1", "u1", name="svc1")
     assert app["access_policy"] == "owner-only", app
