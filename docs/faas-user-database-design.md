@@ -7,7 +7,7 @@
 > 加密存储**（不再确定性派生，明文 DSN 列清空）；新增**后端中介数据访问层 `myapp_data`**（平台强制
 > `owner=调用者`，函数不持 DSN）与**可信组内假名身份 `myapp_auth`**；`schema.sql` 禁 SERIAL（用 UUID）；
 > 访问策略（组级 3 档：owner-only/allowlist/public）+ grant + 容器加固。详见 `CLAUDE.md`「FaaS 服务组权限模型」、
-> `docs/faas-jsonapp-generation-playbook.md`，及 `~/faas-app-permission-*.md`。下文保留为底层 schema
+> `docs/playbooks/faas-jsonapp.md`，及 `~/faas-app-permission-*.md`。下文保留为底层 schema
 > 隔离机制的原始设计参考。
 
 Goal: give each user their own Postgres space so generated JSON-APP + FaaS

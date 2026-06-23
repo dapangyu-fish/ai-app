@@ -172,7 +172,7 @@
 > （= 1 个 FaaS + 可选 1 个 DB，1:1）：函数用内置 `myapp_auth.current_user()` 拿可信的组内调用者假名
 > （框架已登录即生效，无需 app 内再登录），用 `myapp_data`（按调用者隔离的 CRUD，函数不持 DB 连接）
 > 读写**消费者自己的**数据；`schema.sql` 主键用 UUID（禁 SERIAL）。JSON-App 前端与服务组解耦，按需调用。
-> 生成 FaaS 必读 `docs/faas-jsonapp-generation-playbook.md`；模型详见 `CLAUDE.md`「FaaS 服务组权限模型」。
+> 生成 FaaS 必读 `docs/playbooks/faas-jsonapp.md`；模型详见 `CLAUDE.md`「FaaS 服务组权限模型」。
 
 推荐使用场景：`flame_game`、Tiled 地图、长关卡、大量实体、重复 UI、素材 manifest 选材和 sprite sheet 切帧。生成器应输出最终 JSON 后继续运行 `python3 backend/validate_json_app.py <TMPFILE>`。
 

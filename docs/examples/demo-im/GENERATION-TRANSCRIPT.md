@@ -5,7 +5,7 @@
 >
 > 和[贴吧范本](../tieba/GENERATION-TRANSCRIPT.md)成对照：贴吧选择**自建 FaaS 社交**，本例选择
 > **平台 IM 能力、不写后端**。两份记录放一起看，最值钱的是"**第 1 节的选型判断**"。
-> 配套方法论见 [`docs/im-app-generation-playbook.md`](../../im-app-generation-playbook.md)。
+> 配套方法论见 [`docs/im-app-generation-playbook.md`](../../playbooks/platform-im.md)。
 > 最终产物：`templates/demo_im.json`（App）+ `templates/lib_im.json`（IM 组件库）。
 
 ---

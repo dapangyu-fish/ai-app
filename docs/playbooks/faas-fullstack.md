@@ -3,7 +3,7 @@
 > 范本：**贴吧**（`docs/examples/tieba/`）。本文是"带后端、带数据库、多用户"这类应用的**标准生成路径**，
 > 照着走就能稳定产出一套能跑、能过校验、能部署的全栈应用。
 >
-> 只讲后端单文件细节的更底层文档见 [`faas-jsonapp-generation-playbook.md`](faas-jsonapp-generation-playbook.md)（受限 Flask、bundle、点了没反应的根因等）。
+> 只讲后端单文件细节的更底层文档见 [`faas-jsonapp-generation-playbook.md`](faas-jsonapp.md)（受限 Flask、bundle、点了没反应的根因等）。
 > 本文聚焦**端到端**：需求 → 数据模型 → 后端 → 前端 → 身份/昵称 → 部署 → 自测。
 >
 > 关键原则（来自 CLAUDE.md「框架稳定性原则」）：**一条龙应用是"生成物"，不是框架。**
@@ -95,7 +95,7 @@ messages    (id uuid PK, sender_id text, recipient_id text, body, created_at)
 ## 3. 写 FaaS 后端
 
 底层规则（受限 Flask、AST 白名单、`%s` 参数、UUID 主键、bundle 格式）见
-[`faas-jsonapp-generation-playbook.md` §3–§4](faas-jsonapp-generation-playbook.md)。这里只补"多用户 DB 应用"特有的几条。
+[`faas-jsonapp-generation-playbook.md` §3–§4](faas-jsonapp.md)。这里只补"多用户 DB 应用"特有的几条。
 
 ### 3.1 三件套怎么选
 
@@ -264,7 +264,7 @@ tab 里有列表照样 `shrinkWrap: true`，整屏一起滚。
 
 **🔴 先分叉：要的是"平台级真人实时社交"还是"应用内假名社交"？**
 如果需求是"搜得到平台上任何人 + 要推送 + 通讯录 + 跨 App 同一个人"（微信式），**那根本不该走 FaaS**，
-改读 [`docs/im-app-generation-playbook.md`](im-app-generation-playbook.md)（范本 `demo-im`，用 `lib_im` 平台 IM 能力、
+改读 [`docs/im-app-generation-playbook.md`](platform-im.md)（范本 `demo-im`，用 `lib_im` 平台 IM 能力、
 **不写后端**）。本节讲的是另一种：**论坛/社区内部的、用假名的轻社交**，这种才建进 FaaS。
 
 **别用平台 IM（`@im_*`）做 FaaS 应用内的好友/私信。** `demo_im` 的 `@im_send_friend_request` /
@@ -345,7 +345,7 @@ tab 里有列表照样 `shrinkWrap: true`，整屏一起滚。
 ## 7. 部署 + 自测（本轮自己跑完）
 
 部署动作（上传 bundle → 部署 → 跑 schema → 起容器）必须**在本轮内自己完成**，不能只写步骤让"服务端代劳"。
-具体命令见 [`faas-jsonapp-generation-playbook.md` §5](faas-jsonapp-generation-playbook.md) 和
+具体命令见 [`faas-jsonapp-generation-playbook.md` §5](faas-jsonapp.md) 和
 [`faas-docker-runtime`](faas-docker-runtime.md)。要点：
 
 - 运行时是 **local-docker**（OpenFaaS/faasd 已移除）；改了运行时镜像要 rebuild + push + ctr 重新拉。

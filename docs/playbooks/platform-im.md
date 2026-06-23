@@ -1,6 +1,6 @@
 # 即时通讯（IM）类 App 生成方法（基于平台 IM 能力，**不写后端**）
 
-这是和 [`faas-fullstack-app-generation-playbook.md`](faas-fullstack-app-generation-playbook.md)
+这是和 [`faas-fullstack-app-generation-playbook.md`](faas-fullstack.md)
 **互补**的另一条路：当需求是"微信式"的实时社交（通讯录、加好友、单聊、未读红点、推送）时，
 **别去写 FaaS + Postgres**，直接用**平台内置 IM 能力**（`@im_*` 一组内置函数，已由 `lib_im` 封装好，
 后端是平台托管的 OpenIM）。范本：`templates/demo_im.json`（微信风 IM，`meta.name = demo-im`）。
@@ -11,7 +11,7 @@
 
 两条路都能做"好友 + 私信"，但**根基完全不同**，选错会绕一大圈：
 
-| 维度 | **平台 IM**（`@im_*` / `lib_im`，本篇） | **FaaS 自建社交**（[贴吧范本](examples/tieba/)） |
+| 维度 | **平台 IM**（`@im_*` / `lib_im`，本篇） | **FaaS 自建社交**（[贴吧范本](../examples/tieba/)） |
 |------|------|------|
 | 身份 | **平台 uid + 权威昵称/头像**（真人、跨 App 一致） | **组内假名**（不可反推 uid，按服务组隔离） |
 | 好友图 | **全平台通用**，能搜任意平台用户 | **仅本服务组内**，靠在 App 里点到的人加 |
@@ -190,4 +190,4 @@ IM App 很少单打独斗，`demo_im` 的 `dependencies` 是个好模板：
 - [ ] `validate_json_app.py` exit 0、0 warning。
 - [ ] **没有 backend/、没有 schema、没有部署**——本篇 App 的正确形态就是"纯前端 + 平台能力"。
 
-范本与生成思考记录见 [`docs/examples/demo-im/`](examples/demo-im/)。
+范本与生成思考记录见 [`docs/examples/demo-im/`](../examples/demo-im/)。

@@ -6,7 +6,7 @@
 列表展示发帖人的**真实昵称**。只做文本，不做图片。
 
 > 这是"一条龙全栈生成"的标准范本。配套方法论：
-> [`docs/faas-fullstack-app-generation-playbook.md`](../../faas-fullstack-app-generation-playbook.md)。
+> [`docs/faas-fullstack-app-generation-playbook.md`](../../playbooks/faas-fullstack.md)。
 > 完整生成思考记录：[`GENERATION-TRANSCRIPT.md`](GENERATION-TRANSCRIPT.md)。
 
 ## 文件结构
@@ -105,7 +105,7 @@ python3 backend/validate_json_app.py docs/examples/tieba/tieba.json
 
 ## 部署（概要）
 
-详见 [`docs/faas-jsonapp-generation-playbook.md`](../../faas-jsonapp-generation-playbook.md) §5 与
+详见 [`docs/faas-jsonapp-generation-playbook.md`](../../playbooks/faas-jsonapp.md) §5 与
 [`docs/faas-docker-runtime.md`](../../faas-docker-runtime.md)。流程：
 
 1. 把 `backend/`（`app.py` + `schema.sql` + `service.json`）打成 bundle 上传、创建/部署服务（service_id=`tieba`）。

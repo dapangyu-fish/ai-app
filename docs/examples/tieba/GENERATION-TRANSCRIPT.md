@@ -4,7 +4,7 @@
 > 提了下面这个需求，AI（生成 agent）从零把"前端 + FaaS 后端 + Postgres 数据库"一条龙做出来的完整思考与动作轨迹。
 >
 > 目的：给后续的全栈生成当**可复现的参考样本**——不仅给出最终产物，更把"为什么这么设计"的推理留下来。
-> 配套方法论见 [`docs/faas-fullstack-app-generation-playbook.md`](../../faas-fullstack-app-generation-playbook.md)。
+> 配套方法论见 [`docs/faas-fullstack-app-generation-playbook.md`](../../playbooks/faas-fullstack.md)。
 
 ---
 

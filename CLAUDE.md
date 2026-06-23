@@ -176,7 +176,7 @@ PY
   `FAAS_REQUIRE_RUN_TOKEN=1` 后裸 `AGENT_NODE_TOKEN` 不能再冒充任意 owner（默认关）。
 - **客户端**：设置页「我的服务组 (FaaS + 数据库)」(`lib/designer/faas_apps_page.dart`) 经
   `/api/faas/apps*`（路径 id 即服务组 id）owner-scoped 管理：看库用量、改 3 档策略、管白名单、按组单独删。
-  AI 生成 FaaS 必读 `docs/faas-jsonapp-generation-playbook.md`（已含 UUID/`myapp_auth`/`myapp_data`）。
+  AI 生成 FaaS 必读 `docs/playbooks/faas-jsonapp.md`（已含 UUID/`myapp_auth`/`myapp_data`）。
   设计/落地目标见 `~/faas-app-permission-*.md`，网络锁定运维手册见 `~/faas-b2g2-network-runbook.md`。
 
 ## 发布 JSON-APP / 组件到市场

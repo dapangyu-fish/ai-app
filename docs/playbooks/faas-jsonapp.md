@@ -16,7 +16,7 @@
 >
 > **需要"带数据库的多用户应用"（论坛/社区/任意用户互相可见的内容）？** 本文聚焦"前端＋单后端"的连法；
 > 端到端的全栈生成（需求收敛 → 数据模型 → 后端 → 前端 → 身份/真实昵称 → 部署 → 自测）见
-> [`docs/faas-fullstack-app-generation-playbook.md`](faas-fullstack-app-generation-playbook.md)，
+> [`docs/faas-fullstack-app-generation-playbook.md`](faas-fullstack.md)，
 > 范本：`docs/examples/tieba/`（贴吧：开吧/发帖/楼中楼无限嵌套/搜索/真实昵称）。
 
 ---

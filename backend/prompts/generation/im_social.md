@@ -2,6 +2,15 @@
 
 适用：聊天、通讯录、好友申请、会话列表、个人页、设置页、朋友圈式信息流、IM 演示应用。
 
+## 0. 先分叉：平台 IM 还是应用内 FaaS 社交？（决定根基，选错绕一大圈）
+
+- **平台级真人实时社交**——搜得到**平台上任何人** / 加好友 / 单聊私信 / 未读红点 / 推送 / 跨 App 同一个人
+  → 用**平台 IM**（本文 + `lib_im`，**不写后端**）。**先读深度方法论 `docs/playbooks/platform-im.md`（Tier-2，
+  比盲读 demo 源码更可靠、不会被 demo 的结构带偏），再翻范本 `docs/examples/demo-im/`**。
+- **只在“这个 App 内部”的关注 / 私信、且要自己存数据/自定义表/用假名**（论坛、社区内部社交）
+  → **不要用平台 IM**（它按平台 uid 工作，而 FaaS 后端只有组内假名、反推不出 uid，接不上）。
+  改走 `faas_fullstack`：读 `docs/playbooks/faas-fullstack.md`，范本 `docs/examples/tieba/`（含好友/私信建进 FaaS 的做法）。
+
 ## 参考
 
 - `templates/demo_im.json` 只能作为 `lib_im` / `lib_user` API 接线、头像字段、消息读写流程的参考。

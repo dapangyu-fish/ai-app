@@ -5,7 +5,7 @@
 
 > 这是和[贴吧全栈范本](../tieba/)**成对照**的另一条路：贴吧**自建 FaaS 社交**（假名、自有 Postgres），
 > demo-im **用平台 IM**（真人 uid、平台托管、要推送）。两者的选型判断见下方表 / playbook §0。
-> 配套方法论：[`docs/im-app-generation-playbook.md`](../../im-app-generation-playbook.md)。
+> 配套方法论：[`docs/im-app-generation-playbook.md`](../../playbooks/platform-im.md)。
 > 完整生成思考记录：[`GENERATION-TRANSCRIPT.md`](GENERATION-TRANSCRIPT.md)。
 
 ## 文件在哪
