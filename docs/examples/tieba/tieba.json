@@ -38,8 +38,9 @@
     "functions": {
       "syncMyName": {
         "params": [],
-        "description": "把我的真实平台昵称同步进后端 profiles（只能改自己的），保证别人看到的是真实昵称。",
+        "description": "取登录 token + 把我的真实平台昵称同步进后端 profiles。@get_auth_token 必须在动作里调（首屏构建后才有 UI 上下文能弹授权框）——放启动 steps 里会因无上下文而 fail-closed 返回空，导致之后所有写操作 401 login required。",
         "logic": [
+          { "call": "@get_auth_token", "args": { "bind": "global.userToken" } },
           { "call": "@get_user_info", "args": { "bind": "global._info" } },
           { "call": "@set", "args": { "var": "global.myName", "value": "{{ global._info.username }}" } },
           {
@@ -294,8 +295,6 @@
   },
   "steps": [
     { "call": "@is_logged_in", "args": { "bind": "global.loggedIn" } },
-    { "call": "@get_auth_token", "args": { "bind": "global.userToken" } },
-    { "call": "@global.syncMyName", "args": {} },
     { "call": "@global.loadBoards", "args": {} }
   ],
   "ui": {

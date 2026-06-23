@@ -238,6 +238,12 @@ while stack:
 ```
 
 要点：
+- 🔴 **`@get_auth_token` 必须放在「写操作」里调（在动作里、首屏构建之后），绝不能放启动 `steps`。**
+  原因：`@get_auth_token` 的授权弹窗需要 UI 上下文（`globalContext`），而启动 `steps` 在首屏构建**之前**执行，
+  此时 `globalContext==null` → 授权 fail-closed 返回空 → `global.userToken` 整个会话都是空 → **每个写操作都 401
+  "login required"**（公开读不受影响，所以症状是"能看不能写"）。正确做法：在每个写动作都先走的 `syncMyName`
+  里把 `@get_auth_token {bind global.userToken}` 作为**第一步**；启动 `steps` 只做 `@is_logged_in` + 公开读。
+  这样首次点写操作时（已有上下文）弹一次授权框，用户授权后 token 落到 `global.userToken`，后续写入即带上有效 Bearer。
 - **写操作（建吧/发帖/回帖/同步昵称）必须带 `Authorization: Bearer`**，否则后端 `current_user()` 为空 → 401。
 - 公开读也可以带（无害），带了 `/board` 才能正确返回 `is_owner`。
 - 假名**按 (服务组, 用户) 稳定**：同一用户在本服务组里每次都是同一个 `author_id`；跨服务组不可关联（secret 只在服务端）。

@@ -111,7 +111,7 @@ profiles (owner_id text PK, display_name, updated_at)
 落地决策：
 - 写操作（建吧/发帖/回帖/`POST /me`）**一律带 Authorization**，否则 401。
 - 公开读也带（无害），这样 `/board` 能正确算 `is_owner`。
-- 前端用一个 `global.userToken` 缓存 token，启动时 `@get_auth_token` 取一次。
+- 前端用一个 `global.userToken` 缓存 token，但 **`@get_auth_token` 要在写动作里取（`syncMyName` 第一步），不能在启动 `steps` 里取**——启动时首屏还没构建、授权弹窗无 UI 上下文会 fail-closed 取空，导致之后写操作全 401。
 
 ---
 
