@@ -1081,6 +1081,50 @@ const docsI18n: Record<string, Partial<Record<Lang, string>>> = {
   'Private node join': { de: 'Beitritt einer privaten Node', es: 'Unión de nodo privado', fr: 'Jonction d\'un nœud privé', pt: 'Adesão de nó privado', ca: 'Incorporació de node privat', hi: 'निजी नोड join', ko: '프라이빗 노드 조인', ja: 'プライベートノードの参加', it: 'Join del nodo privato' },
   'Client routing currently has only public and private modes. public uses the platform pool; private uses only the signed-in user’s private nodes and does not automatically fall back to public when offline.': { de: 'Das Client-Routing kennt derzeit nur die Modi public und private. public nutzt den Plattform-Pool; private nutzt ausschließlich die privaten Nodes des angemeldeten Nutzers und fällt im Offline-Fall nicht automatisch auf public zurück.', es: 'El enrutamiento del cliente solo tiene actualmente los modos público y privado. public usa el pool de la plataforma; private usa únicamente los nodos privados del usuario que ha iniciado sesión y no recurre automáticamente a public cuando están sin conexión.', fr: 'Le routage client ne propose actuellement que les modes public et private. public utilise le pool de la plateforme ; private utilise uniquement les nœuds privés de l\'utilisateur connecté et ne bascule pas automatiquement vers public en cas de mise hors ligne.', pt: 'O encaminhamento do cliente tem atualmente apenas os modos público e privado. O público usa o pool da plataforma; o privado usa apenas os nós privados do utilizador com sessão iniciada e não recorre automaticamente ao público quando estes estão offline.', ca: 'L\'enrutament del client actualment només té els modes public i private. public utilitza el grup de la plataforma; private utilitza només els nodes privats de l\'usuari amb sessió iniciada i no torna automàticament a public quan està fora de línia.', hi: 'क्लाइंट रूटिंग में फ़िलहाल केवल public और private मोड हैं। public प्लेटफ़ॉर्म पूल का उपयोग करता है; private केवल साइन इन किए गए उपयोगकर्ता के निजी नोड का उपयोग करता है और ऑफ़लाइन होने पर स्वतः public पर वापस नहीं जाता।', ko: '클라이언트 라우팅에는 현재 public과 private 모드만 있습니다. public은 플랫폼 풀을 사용하고, private은 로그인한 사용자의 프라이빗 노드만 사용하며 오프라인일 때 자동으로 public으로 폴백하지 않습니다.', ja: 'クライアントのルーティングには現在 public と private の 2 つのモードのみがあります。public はプラットフォームのプールを使用し、private はサインイン中のユーザーのプライベートノードのみを使用し、オフライン時に自動的に public へフォールバックすることはありません。', it: 'Il routing del client attualmente prevede solo le modalità public e private. public usa il pool della piattaforma; private usa solo i nodi privati dell\'utente connesso e non torna automaticamente a public quando questi sono offline.' },
   'The website is the Vite project under website. Deploy website/dist to Cloudflare Pages; do not confuse it with the Flutter Web client build/web output.': { de: 'Die Website ist das Vite-Projekt unter website. Stellen Sie website/dist auf Cloudflare Pages bereit; verwechseln Sie sie nicht mit dem build/web-Output des Flutter-Web-Clients.', es: 'El sitio web es el proyecto Vite ubicado en website. Despliega website/dist en Cloudflare Pages; no lo confundas con la salida build/web del cliente Flutter Web.', fr: 'Le site web est le projet Vite sous website. Déployez website/dist sur Cloudflare Pages ; ne le confondez pas avec la sortie build/web du client Flutter Web.', pt: 'O site é o projeto Vite em website. Implemente website/dist no Cloudflare Pages; não o confunda com o resultado build/web do cliente Flutter Web.', ca: 'El lloc web és el projecte Vite dins de website. Desplega website/dist a Cloudflare Pages; no el confonguis amb la sortida build/web del client Flutter Web.', hi: 'वेबसाइट website के अंतर्गत Vite प्रोजेक्ट है। website/dist को Cloudflare Pages पर परिनियोजित करें; इसे Flutter Web क्लाइंट के build/web आउटपुट के साथ भ्रमित न करें।', ko: '웹사이트는 website 아래의 Vite 프로젝트입니다. website/dist를 Cloudflare Pages에 배포하세요. Flutter Web 클라이언트의 build/web 출력과 혼동하지 마세요.', ja: 'ウェブサイトは website 配下の Vite プロジェクトです。website/dist を Cloudflare Pages にデプロイしてください。Flutter Web クライアントの build/web 出力と混同しないでください。', it: 'Il sito web è il progetto Vite nella cartella website. Distribuisci website/dist su Cloudflare Pages; non confonderlo con l\'output build/web del client Flutter Web.' },
+  'Web app': {de: 'Web-App', es: 'App web', fr: 'Application Web', pt: 'App Web', ca: 'App web', hi: 'Web ऐप', ko: '웹 앱', ja: 'Web アプリ', it: 'App web'},
+  'No install required. Open the hosted Web client.': {de: 'Keine Installation nötig. Den gehosteten Web-Client öffnen.', es: 'Sin instalación. Abre el cliente web alojado.', fr: 'Aucune installation requise. Ouvrez le client Web hébergé.', pt: 'Sem instalação. Abra o cliente Web alojado.', ca: 'No cal instal·lar res. Obre el client web allotjat.', hi: 'इंस्टॉल की ज़रूरत नहीं। होस्ट किया गया Web क्लाइंट खोलें।', ko: '설치 불필요. 호스팅된 웹 클라이언트를 바로 여세요.', ja: 'インストール不要。ホスト型 Web クライアントをそのまま開けます。', it: 'Nessuna installazione richiesta. Apri il client web ospitato.'},
+  'Available': {de: 'Verfügbar', es: 'Disponible', fr: 'Disponible', pt: 'Disponível', ca: 'Disponible', hi: 'उपलब्ध', ko: '사용 가능', ja: '利用可能', it: 'Disponibile'},
+  'Public Group 1 is open for real-device testing.': {de: 'Public Group 1 ist für Tests auf echten Geräten geöffnet.', es: 'El Grupo público 1 está abierto para pruebas en dispositivos reales.', fr: 'Le Groupe public 1 est ouvert aux tests sur appareils réels.', pt: 'O Grupo Público 1 está aberto para testes em dispositivos reais.', ca: 'El Grup Públic 1 està obert per a proves en dispositius reals.', hi: 'Public Group 1 असली डिवाइस पर परीक्षण के लिए खुला है।', ko: '공개 그룹 1이 실기기 테스트용으로 열려 있습니다.', ja: 'Public Group 1 を公開中。実機での体験に最適です。', it: 'Il Gruppo pubblico 1 è aperto per i test su dispositivi reali.'},
+  'Public group': {de: 'Öffentliche Gruppe', es: 'Grupo público', fr: 'Groupe public', pt: 'Grupo público', ca: 'Grup públic', hi: 'सार्वजनिक समूह', ko: '공개 그룹', ja: '公開グループ', it: 'Gruppo pubblico'},
+  'Android APK': {de: 'Android APK', es: 'APK de Android', fr: 'APK Android', pt: 'APK Android', ca: 'APK d\'Android', hi: 'Android APK', ko: 'Android APK', ja: 'Android APK', it: 'APK Android'},
+  'Download the latest APK from a fixed link. Google Play is preparing.': {de: 'Lade die neueste APK über einen festen Link herunter. Google Play wird vorbereitet.', es: 'Descarga el último APK desde un enlace fijo. Google Play está en preparación.', fr: 'Téléchargez le dernier APK via un lien fixe. Google Play est en préparation.', pt: 'Transfira o APK mais recente a partir de uma ligação fixa. A Google Play está a ser preparada.', ca: 'Descarrega l\'últim APK des d\'un enllaç fix. Google Play s\'està preparant.', hi: 'स्थायी लिंक से नवीनतम APK डाउनलोड करें। Google Play तैयार हो रहा है।', ko: '고정 링크에서 최신 APK를 내려받으세요. Google Play는 준비 중입니다.', ja: '固定リンクから最新の APK をダウンロード。Google Play は準備中です。', it: 'Scarica l\'ultimo APK da un link fisso. Google Play è in preparazione.'},
+  'Direct download': {de: 'Direkter Download', es: 'Descarga directa', fr: 'Téléchargement direct', pt: 'Transferência direta', ca: 'Descàrrega directa', hi: 'सीधा डाउनलोड', ko: '직접 다운로드', ja: '直接ダウンロード', it: 'Download diretto'},
+  'Self-host backend': {de: 'Backend selbst hosten', es: 'Backend autoalojado', fr: 'Backend auto-hébergé', pt: 'Backend autoalojado', ca: 'Backend autoallotjat', hi: 'बैकएंड स्वयं होस्ट करें', ko: '백엔드 자체 호스팅', ja: 'バックエンドを自分でホスト', it: 'Backend self-hosted'},
+  'Connect Web, iOS or Android clients to your backend.': {de: 'Verbinde Web-, iOS- oder Android-Clients mit deinem Backend.', es: 'Conecta clientes web, iOS o Android a tu backend.', fr: 'Connectez des clients Web, iOS ou Android à votre backend.', pt: 'Ligue clientes Web, iOS ou Android ao seu backend.', ca: 'Connecta clients web, iOS o Android al teu backend.', hi: 'अपने बैकएंड से Web, iOS या Android क्लाइंट जोड़ें।', ko: '웹, iOS, Android 클라이언트를 직접 운영하는 백엔드에 연결하세요.', ja: 'Web、iOS、Android のクライアントを自分のバックエンドに接続できます。', it: 'Collega i client Web, iOS o Android al tuo backend.'},
+  'Docs': {de: 'Doku', es: 'Documentación', fr: 'Docs', pt: 'Documentação', ca: 'Documentació', hi: 'दस्तावेज़', ko: '문서', ja: 'ドキュメント', it: 'Documentazione'},
+  'GitHub soon': {de: 'GitHub bald', es: 'GitHub pronto', fr: 'GitHub bientôt', pt: 'GitHub em breve', ca: 'GitHub aviat', hi: 'GitHub जल्द', ko: 'GitHub 곧 공개', ja: 'GitHub 近日公開', it: 'GitHub a breve'},
+  'Quick links': {de: 'Schnellzugriff', es: 'Enlaces rápidos', fr: 'Liens rapides', pt: 'Ligações rápidas', ca: 'Enllaços ràpids', hi: 'त्वरित लिंक', ko: '바로 가기', ja: 'クイックリンク', it: 'Link rapidi'},
+  'Review boundary': {de: 'Prüfungsgrenze', es: 'Límite de revisión', fr: 'Périmètre de revue', pt: 'Limite de revisão', ca: 'Límit de revisió', hi: 'समीक्षा सीमा', ko: '심사 범위', ja: '審査の境界', it: 'Ambito di revisione'},
+  'open now': {de: 'jetzt offen', es: 'abrir ahora', fr: 'ouvert maintenant', pt: 'já aberto', ca: 'obre ara', hi: 'अभी खुला', ko: '지금 열기', ja: '今すぐ開く', it: 'apri ora'},
+  'direct download': {de: 'direkter Download', es: 'descarga directa', fr: 'téléchargement direct', pt: 'transferência direta', ca: 'descàrrega directa', hi: 'सीधा डाउनलोड', ko: '직접 다운로드', ja: '直接ダウンロード', it: 'download diretto'},
+  'Why it is credible': {de: 'Warum es glaubwürdig ist', es: 'Por qué es fiable', fr: 'Pourquoi c\'est crédible', pt: 'Porque é credível', ca: 'Per què és fiable', hi: 'यह क्यों भरोसेमंद है', ko: '신뢰할 수 있는 이유', ja: '信頼できる理由', it: 'Perché è affidabile'},
+  'Keep exploring': {de: 'Weiter erkunden', es: 'Sigue explorando', fr: 'Continuer à explorer', pt: 'Continue a explorar', ca: 'Continua explorant', hi: 'और जानें', ko: '계속 둘러보기', ja: 'さらに見る', it: 'Continua a esplorare'},
+  'Try it live': {de: 'Live ausprobieren', es: 'Pruébalo en vivo', fr: 'Essayez en direct', pt: 'Experimente ao vivo', ca: 'Prova-ho en directe', hi: 'लाइव आज़माएँ', ko: '라이브로 사용해 보기', ja: '今すぐ試す', it: 'Provalo dal vivo'},
+  'Use myapp-ctl to deploy the backend, manage secrets, inspect status and ship components.': {de: 'Mit myapp-ctl das Backend bereitstellen, Secrets verwalten, Status prüfen und Komponenten ausliefern.', es: 'Usa myapp-ctl para desplegar el backend, gestionar secretos, revisar el estado y publicar componentes.', fr: 'Utilisez myapp-ctl pour déployer le backend, gérer les secrets, inspecter l\'état et publier des composants.', pt: 'Use o myapp-ctl para implementar o backend, gerir segredos, inspecionar o estado e publicar componentes.', ca: 'Usa myapp-ctl per desplegar el backend, gestionar secrets, inspeccionar l\'estat i publicar components.', hi: 'बैकएंड डिप्लॉय करने, सीक्रेट प्रबंधित करने, स्थिति जाँचने और कंपोनेंट भेजने के लिए myapp-ctl का उपयोग करें।', ko: 'myapp-ctl로 백엔드를 배포하고 시크릿을 관리하며 상태를 확인하고 컴포넌트를 배포하세요.', ja: 'myapp-ctl でバックエンドをデプロイし、シークレットの管理、ステータスの確認、コンポーネントの配信を行えます。', it: 'Usa myapp-ctl per distribuire il backend, gestire i segreti, controllare lo stato e pubblicare i componenti.'},
+  'Backend first': {de: 'Backend zuerst', es: 'Backend primero', fr: 'Le backend d\'abord', pt: 'Backend primeiro', ca: 'El backend primer', hi: 'पहले बैकएंड', ko: '백엔드 우선', ja: 'バックエンド優先', it: 'Backend prima di tutto'},
+  'Use the hosted Web app directly, or build Flutter Web, iOS or Android yourself.': {de: 'Nutze die gehostete Web-App direkt oder baue Flutter Web, iOS oder Android selbst.', es: 'Usa directamente la app web alojada, o compila tú mismo Flutter Web, iOS o Android.', fr: 'Utilisez directement l\'application Web hébergée, ou compilez vous-même Flutter Web, iOS ou Android.', pt: 'Use diretamente a app Web alojada ou construa você mesmo o Flutter Web, iOS ou Android.', ca: 'Usa l\'app web allotjada directament o compila tu mateix Flutter Web, iOS o Android.', hi: 'होस्ट किया गया Web ऐप सीधे इस्तेमाल करें, या Flutter Web, iOS या Android खुद बनाएँ।', ko: '호스팅된 웹 앱을 바로 쓰거나, Flutter Web, iOS, Android를 직접 빌드하세요.', ja: 'ホスト型 Web アプリをそのまま使うか、Flutter Web、iOS、Android を自分でビルドできます。', it: 'Usa direttamente l\'app web ospitata oppure compila tu stesso Flutter Web, iOS o Android.'},
+  'Replaceable clients': {de: 'Austauschbare Clients', es: 'Clientes intercambiables', fr: 'Clients remplaçables', pt: 'Clientes substituíveis', ca: 'Clients reemplaçables', hi: 'बदले जा सकने वाले क्लाइंट', ko: '교체 가능한 클라이언트', ja: '置き換え可能なクライアント', it: 'Client sostituibili'},
+  'Scan or paste': {de: 'Scannen oder einfügen', es: 'Escanea o pega', fr: 'Scannez ou collez', pt: 'Digitalize ou cole', ca: 'Escaneja o enganxa', hi: 'स्कैन करें या पेस्ट करें', ko: '스캔 또는 붙여넣기', ja: 'スキャンまたは貼り付け', it: 'Scansiona o incolla'},
+  'Continue': {de: 'Weiter', es: 'Continuar', fr: 'Continuer', pt: 'Continuar', ca: 'Continua', hi: 'जारी रखें', ko: '계속', ja: '続行', it: 'Continua'},
+  'Camping kit planner': {de: 'Camping-Ausrüstungsplaner', es: 'Organizador de equipo de acampada', fr: 'Planificateur de kit de camping', pt: 'Planeador de equipamento de campismo', ca: 'Planificador d\'equip d\'acampada', hi: 'कैंपिंग किट प्लानर', ko: '캠핑 장비 플래너', ja: 'キャンプ装備プランナー', it: 'Pianificatore kit da campeggio'},
+  'Build a camping packing app with checklist, weather and shared notes': {de: 'Erstelle eine Camping-Pack-App mit Checkliste, Wetter und geteilten Notizen', es: 'Crea una app de equipaje para acampar con lista de tareas, clima y notas compartidas', fr: 'Créez une appli de préparation de camping avec checklist, météo et notes partagées', pt: 'Cria uma app de bagagem para campismo com lista de verificação, meteorologia e notas partilhadas', ca: 'Crea una app per fer la motxilla d\'acampada amb llista de comprovació, temps i notes compartides', hi: 'चेकलिस्ट, मौसम और साझा नोट्स वाला कैंपिंग पैकिंग App बनाएं', ko: '체크리스트, 날씨, 공유 메모를 갖춘 캠핑 짐 싸기 앱 만들기', ja: 'チェックリスト・天気・共有メモ付きのキャンプ持ち物アプリを作成', it: 'Crea un\'app per il campeggio con checklist, meteo e note condivise'},
+  'AI creates checklist states, trip summary, team notes and a cross-client UI.': {de: 'Die AI erstellt Checklisten-Status, Reiseübersicht, Teamnotizen und eine plattformübergreifende UI.', es: 'La IA crea estados de la lista, resumen del viaje, notas del equipo y una interfaz multiplataforma.', fr: 'L\'IA crée les états de la checklist, le récapitulatif du séjour, les notes d\'équipe et une UI multiplateforme.', pt: 'A IA gera estados da lista, resumo da viagem, notas da equipa e uma interface multiplataforma.', ca: 'La IA crea estats de la llista, resum del viatge, notes d\'equip i una interfície multiplataforma.', hi: 'AI चेकलिस्ट स्टेट्स, ट्रिप सारांश, टीम नोट्स और क्रॉस-क्लाइंट UI बनाता है।', ko: 'AI가 체크리스트 상태, 여행 요약, 팀 메모, 크로스 플랫폼 UI를 생성합니다.', ja: 'AI がチェックリスト・集計・チームメモ・マルチ端末対応 UI を生成します。', it: 'L\'AI genera stati della checklist, riepilogo del viaggio, note del team e un\'interfaccia multipiattaforma.'},
+  'Tool': {de: 'Tool', es: 'Herramienta', fr: 'Outil', pt: 'Ferramenta', ca: 'Eina', hi: 'टूल', ko: '도구', ja: 'ツール', it: 'Strumento'},
+  'Checklist': {de: 'Checkliste', es: 'Lista', fr: 'Checklist', pt: 'Lista de verificação', ca: 'Llista', hi: 'चेकलिस्ट', ko: '체크리스트', ja: 'チェックリスト', it: 'Checklist'},
+  'Shared': {de: 'Geteilt', es: 'Compartido', fr: 'Partagé', pt: 'Partilhado', ca: 'Compartit', hi: 'साझा', ko: '공유', ja: '共有', it: 'Condiviso'},
+  'Star runner mini-game': {de: 'Star-Runner-Minispiel', es: 'Minijuego de corredor estelar', fr: 'Mini-jeu de course aux étoiles', pt: 'Minijogo Star Runner', ca: 'Minijoc Star Runner', hi: 'स्टार रनर मिनी-गेम', ko: '스타 러너 미니 게임', ja: 'スターランナー ミニゲーム', it: 'Mini-gioco star runner'},
+  'Create a side-scrolling space runner with jump, obstacles, stars and lives': {de: 'Erstelle einen Side-Scrolling-Weltraumläufer mit Sprung, Hindernissen, Sternen und Leben', es: 'Crea un corredor espacial de scroll lateral con salto, obstáculos, estrellas y vidas', fr: 'Créez un runner spatial à défilement latéral avec saut, obstacles, étoiles et vies', pt: 'Cria um runner espacial lateral com salto, obstáculos, estrelas e vidas', ca: 'Crea un runner espacial de scroll lateral amb salt, obstacles, estrelles i vides', hi: 'जंप, बाधाओं, सितारों और जीवन वाला साइड-स्क्रॉलिंग स्पेस रनर बनाएं', ko: '점프, 장애물, 별, 생명이 있는 횡스크롤 우주 러너 만들기', ja: 'ジャンプ・障害物・スター・ライフ付きの横スクロール宇宙ランナーを作成', it: 'Crea un runner spaziale a scorrimento con salti, ostacoli, stelle e vite'},
+  'JSON App composes game atoms, score/life HUD, pause and restart flows.': {de: 'Die JSON-App kombiniert Spiel-Atoms, Punkte-/Leben-HUD, Pause- und Neustart-Abläufe.', es: 'La JSON App compone los átomos del juego, el HUD de puntuación/vidas y los flujos de pausa y reinicio.', fr: 'L\'appli JSON assemble les atomes de jeu, le HUD score/vies, la pause et le redémarrage.', pt: 'A JSON App combina átomos de jogo, HUD de pontuação/vidas e fluxos de pausa e reinício.', ca: 'L\'app JSON combina àtoms de joc, HUD de punts/vides i fluxos de pausa i reinici.', hi: 'JSON App गेम atoms, स्कोर/लाइफ HUD, पॉज़ और रीस्टार्ट फ्लो जोड़ता है।', ko: 'JSON App이 게임 atom, 점수/생명 HUD, 일시정지 및 재시작 흐름을 구성합니다.', ja: 'JSON App がゲーム atom・スコア/ライフ HUD・一時停止と再開フローを構成します。', it: 'L\'app JSON compone gli atomi di gioco, HUD punteggio/vite, pausa e riavvio.'},
+  'Game': {de: 'Spiel', es: 'Juego', fr: 'Jeu', pt: 'Jogo', ca: 'Joc', hi: 'गेम', ko: '게임', ja: 'ゲーム', it: 'Gioco'},
+  'State': {de: 'Status', es: 'Estado', fr: 'État', pt: 'Estado', ca: 'Estat', hi: 'स्टेट', ko: '상태', ja: '状態', it: 'Stato'},
+  'Motion': {de: 'Animation', es: 'Animación', fr: 'Animation', pt: 'Movimento', ca: 'Moviment', hi: 'मोशन', ko: '애니메이션', ja: 'アニメーション', it: 'Movimento'},
+  'Creator community': {de: 'Creator-Community', es: 'Comunidad de creadores', fr: 'Communauté de créateurs', pt: 'Comunidade de criadores', ca: 'Comunitat de creadors', hi: 'क्रिएटर कम्युनिटी', ko: '크리에이터 커뮤니티', ja: 'クリエイターコミュニティ', it: 'Community per creator'},
+  'Make a lifestyle content app with feed, publish, favorites and profile': {de: 'Erstelle eine Lifestyle-Content-App mit Feed, Veröffentlichen, Favoriten und Profil', es: 'Crea una app de contenido de estilo de vida con feed, publicación, favoritos y perfil', fr: 'Créez une appli de contenu lifestyle avec fil, publication, favoris et profil', pt: 'Faz uma app de conteúdo de estilo de vida com feed, publicação, favoritos e perfil', ca: 'Fes una app de contingut d\'estil de vida amb feed, publicació, preferits i perfil', hi: 'फ़ीड, पब्लिश, पसंदीदा और प्रोफ़ाइल वाला लाइफस्टाइल कंटेंट App बनाएं', ko: '피드, 게시, 즐겨찾기, 프로필을 갖춘 라이프스타일 콘텐츠 앱 만들기', ja: 'フィード・投稿・お気に入り・プロフィール付きのライフスタイルアプリを作成', it: 'Crea un\'app di contenuti lifestyle con feed, pubblicazione, preferiti e profilo'},
+  'The precompiled runtime renders tabs, feeds and profile screens from JSON.': {de: 'Die vorkompilierte Runtime rendert Tabs, Feeds und Profilseiten aus JSON.', es: 'El runtime precompilado renderiza pestañas, feeds y pantallas de perfil desde JSON.', fr: 'Le runtime précompilé affiche les onglets, les fils et les écrans de profil à partir du JSON.', pt: 'O runtime pré-compilado renderiza separadores, feeds e ecrãs de perfil a partir de JSON.', ca: 'El runtime precompilat renderitza pestanyes, feeds i pantalles de perfil a partir de JSON.', hi: 'प्रीकंपाइल्ड रनटाइम JSON से टैब, फ़ीड और प्रोफ़ाइल स्क्रीन रेंडर करता है।', ko: '사전 컴파일된 런타임이 JSON에서 탭, 피드, 프로필 화면을 렌더링합니다.', ja: 'プリコンパイル済みランタイムが JSON からタブ・フィード・プロフィール画面を描画します。', it: 'Il runtime precompilato genera schede, feed e schermate del profilo dal JSON.'},
+  'Community': {de: 'Community', es: 'Comunidad', fr: 'Communauté', pt: 'Comunidade', ca: 'Comunitat', hi: 'कम्युनिटी', ko: '커뮤니티', ja: 'コミュニティ', it: 'Community'},
+  'Feed': {de: 'Feed', es: 'Feed', fr: 'Fil', pt: 'Feed', ca: 'Feed', hi: 'फ़ीड', ko: '피드', ja: 'フィード', it: 'Feed'},
+  'Profile': {de: 'Profil', es: 'Perfil', fr: 'Profil', pt: 'Perfil', ca: 'Perfil', hi: 'प्रोफ़ाइल', ko: '프로필', ja: 'プロフィール', it: 'Profilo'},
+  'Generated examples': {de: 'Generierte Beispiele', es: 'Ejemplos generados', fr: 'Exemples générés', pt: 'Exemplos gerados', ca: 'Exemples generats', hi: 'जनरेटेड उदाहरण', ko: '생성된 예시', ja: '生成事例', it: 'Esempi generati'},
 };
 function tl(lang: Lang, zh: string, en: string): string {
   if (lang === 'zh') return zh;
@@ -1871,8 +1915,7 @@ function App() {
   const [page, setPage] = useState<Page>(() => (window.location.pathname === '/docs' ? 'docs' : 'home'));
   const t = copy[lang];
   const activeLanguage = languageOptions.find((item) => item.key === lang) ?? languageOptions[1];
-  const docsLabel = lang === 'zh' ? '文档' : 'Docs';
-  const zh = lang === 'zh';
+  const docsLabel = tl(lang, '文档', 'Docs');
   const trustTitle = 'trustTitle' in t ? t.trustTitle : lang === 'de' ? 'Vertrauensgrenze' : 'Límite de confianza';
   const trustPoints =
     'trustPoints' in t
@@ -1891,78 +1934,57 @@ function App() {
           [lang === 'de' ? 'Architekturdiagramm' : 'Diagrama de arquitectura', lang === 'de' ? 'Runtime, Worker und Registry' : 'Runtime, Worker y Registry'],
           [lang === 'de' ? 'Runtime-Grenze' : 'Límite del runtime', lang === 'de' ? 'Vorkompiliertes Capability-Set und review-freundliche Grenze' : 'Set de capacidades precompilado y límite apto para revisión'],
         ];
-  const showcaseCards = zh
-    ? [
-        {
-          title: '露营装备管家',
-          prompt: '生成一个露营装备打包 App，支持清单、天气、共享备注',
-          body: 'AI 生成清单、状态统计、团队备注和跨端运行界面。',
-          tags: ['工具', '清单', '共享'],
-        },
-        {
-          title: '星际跑酷小游戏',
-          prompt: '横版星际跑酷：跳跃躲障碍，收集星星，分数和生命完整',
-          body: 'JSON App 组合游戏 atoms、状态栏、暂停和重开流程。',
-          tags: ['游戏', '状态', '动画'],
-        },
-        {
-          title: '小型社区空间',
-          prompt: '做一个小红书风格的内容社区，有首页、发布、收藏、个人页',
-          body: '用预编译运行时渲染多 tab、内容流和个人资料体验。',
-          tags: ['社区', '内容流', '个人页'],
-        },
-      ]
-    : [
-        {
-          title: 'Camping kit planner',
-          prompt: 'Build a camping packing app with checklist, weather and shared notes',
-          body: 'AI creates checklist states, trip summary, team notes and a cross-client UI.',
-          tags: ['Tool', 'Checklist', 'Shared'],
-        },
-        {
-          title: 'Star runner mini-game',
-          prompt: 'Create a side-scrolling space runner with jump, obstacles, stars and lives',
-          body: 'JSON App composes game atoms, score/life HUD, pause and restart flows.',
-          tags: ['Game', 'State', 'Motion'],
-        },
-        {
-          title: 'Creator community',
-          prompt: 'Make a lifestyle content app with feed, publish, favorites and profile',
-          body: 'The precompiled runtime renders tabs, feeds and profile screens from JSON.',
-          tags: ['Community', 'Feed', 'Profile'],
-        },
-      ];
+  const showcaseCards = [
+    {
+      title: tl(lang, '露营装备管家', 'Camping kit planner'),
+      prompt: tl(lang, '生成一个露营装备打包 App，支持清单、天气、共享备注', 'Build a camping packing app with checklist, weather and shared notes'),
+      body: tl(lang, 'AI 生成清单、状态统计、团队备注和跨端运行界面。', 'AI creates checklist states, trip summary, team notes and a cross-client UI.'),
+      tags: [tl(lang, '工具', 'Tool'), tl(lang, '清单', 'Checklist'), tl(lang, '共享', 'Shared')],
+    },
+    {
+      title: tl(lang, '星际跑酷小游戏', 'Star runner mini-game'),
+      prompt: tl(lang, '横版星际跑酷：跳跃躲障碍，收集星星，分数和生命完整', 'Create a side-scrolling space runner with jump, obstacles, stars and lives'),
+      body: tl(lang, 'JSON App 组合游戏 atoms、状态栏、暂停和重开流程。', 'JSON App composes game atoms, score/life HUD, pause and restart flows.'),
+      tags: [tl(lang, '游戏', 'Game'), tl(lang, '状态', 'State'), tl(lang, '动画', 'Motion')],
+    },
+    {
+      title: tl(lang, '小型社区空间', 'Creator community'),
+      prompt: tl(lang, '做一个小红书风格的内容社区，有首页、发布、收藏、个人页', 'Make a lifestyle content app with feed, publish, favorites and profile'),
+      body: tl(lang, '用预编译运行时渲染多 tab、内容流和个人资料体验。', 'The precompiled runtime renders tabs, feeds and profile screens from JSON.'),
+      tags: [tl(lang, '社区', 'Community'), tl(lang, '内容流', 'Feed'), tl(lang, '个人页', 'Profile')],
+    },
+  ];
   const downloadOptions = [
     {
-      title: zh ? 'Web 立即体验' : 'Web app',
-      body: zh ? '无需安装，直接打开线上 Web 客户端。' : 'No install required. Open the hosted Web client.',
+      title: tl(lang, 'Web 立即体验', 'Web app'),
+      body: tl(lang, '无需安装，直接打开线上 Web 客户端。', 'No install required. Open the hosted Web client.'),
       href: WEB_APP_URL,
       icon: Play,
-      status: zh ? '可用' : 'Available',
+      status: tl(lang, '可用', 'Available'),
       primary: true,
     },
     {
       title: 'iOS TestFlight',
-      body: zh ? 'Public Group 1 已开放，适合真实手机体验。' : 'Public Group 1 is open for real-device testing.',
+      body: tl(lang, 'Public Group 1 已开放，适合真实手机体验。', 'Public Group 1 is open for real-device testing.'),
       href: TESTFLIGHT_URL,
       icon: Smartphone,
-      status: zh ? '2500 人公开组' : 'Public group',
+      status: tl(lang, '2500 人公开组', 'Public group'),
       primary: false,
     },
     {
-      title: zh ? 'Android APK' : 'Android APK',
-      body: zh ? '固定链接下载最新版 APK；Google Play 正在准备。' : 'Download the latest APK from a fixed link. Google Play is preparing.',
+      title: tl(lang, 'Android APK', 'Android APK'),
+      body: tl(lang, '固定链接下载最新版 APK；Google Play 正在准备。', 'Download the latest APK from a fixed link. Google Play is preparing.'),
       href: APK_URL,
       icon: Download,
-      status: zh ? '直接下载' : 'Direct download',
+      status: tl(lang, '直接下载', 'Direct download'),
       primary: false,
     },
     {
-      title: zh ? '自部署后端' : 'Self-host backend',
-      body: zh ? '用自己的后端连接 Web、iOS 或 Android 客户端。' : 'Connect Web, iOS or Android clients to your backend.',
+      title: tl(lang, '自部署后端', 'Self-host backend'),
+      body: tl(lang, '用自己的后端连接 Web、iOS 或 Android 客户端。', 'Connect Web, iOS or Android clients to your backend.'),
       href: '/docs',
       icon: Server,
-      status: zh ? '文档' : 'Docs',
+      status: tl(lang, '文档', 'Docs'),
       primary: false,
     },
   ];
@@ -2033,9 +2055,9 @@ function App() {
                 <span>GitHub</span>
               </a>
             ) : (
-              <span className="navIconLink disabledLink" aria-label={zh ? 'GitHub 即将公开' : 'GitHub coming soon'}>
+              <span className="navIconLink disabledLink" aria-label={tl(lang, 'GitHub 即将公开', 'GitHub coming soon')}>
                 <Github size={17} />
-                <span>{zh ? 'GitHub 即将公开' : 'GitHub soon'}</span>
+                <span>{tl(lang, 'GitHub 即将公开', 'GitHub soon')}</span>
               </span>
             )}
             <label className="languageSelect" aria-label="Language">
@@ -2084,7 +2106,7 @@ function App() {
                 APK
               </a>
             </div>
-            <div className="heroLinkRow" aria-label={zh ? '快速入口' : 'Quick links'}>
+            <div className="heroLinkRow" aria-label={tl(lang, '快速入口', 'Quick links')}>
               <a href="/docs" onClick={goDocs}>
                 <BookOpen size={15} />
                 {docsLabel}
@@ -2097,12 +2119,12 @@ function App() {
               ) : (
                 <span>
                   <Github size={15} />
-                  {zh ? 'GitHub 即将公开' : 'GitHub soon'}
+                  {tl(lang, 'GitHub 即将公开', 'GitHub soon')}
                 </span>
               )}
               <a href={REVIEW_BOUNDARY_URL} onClick={(event) => goDocs(event, '#runtime-boundary')}>
                 <ShieldCheck size={15} />
-                {zh ? '合规边界' : 'Review boundary'}
+                {tl(lang, '合规边界', 'Review boundary')}
               </a>
             </div>
             <div className="heroConsole">
@@ -2123,7 +2145,7 @@ function App() {
             <div className="metricRow">
               <div>
                 <strong>Web</strong>
-                <span>{zh ? '即开即用' : 'open now'}</span>
+                <span>{tl(lang, '即开即用', 'open now')}</span>
               </div>
               <div>
                 <strong>iOS</strong>
@@ -2131,7 +2153,7 @@ function App() {
               </div>
               <div>
                 <strong>APK</strong>
-                <span>{zh ? '直接下载' : 'direct download'}</span>
+                <span>{tl(lang, '直接下载', 'direct download')}</span>
               </div>
             </div>
           </div>
@@ -2142,7 +2164,7 @@ function App() {
         </div>
         <div className="shell heroTrustGrid">
           <div className="trustPanel" aria-labelledby="trust-title">
-            <p className="eyebrow">{zh ? '为什么可信' : 'Why it is credible'}</p>
+            <p className="eyebrow">{tl(lang, '为什么可信', 'Why it is credible')}</p>
             <h2 id="trust-title">{trustTitle}</h2>
             <div className="trustItems">
               {trustPoints.map(([title, body]) => (
@@ -2155,7 +2177,7 @@ function App() {
             </div>
           </div>
           <div className="docsEntryPanel" aria-labelledby="docs-entry-title">
-            <p className="eyebrow">{zh ? '继续了解' : 'Keep exploring'}</p>
+            <p className="eyebrow">{tl(lang, '继续了解', 'Keep exploring')}</p>
             <h2 id="docs-entry-title">{docsTitle}</h2>
             <div className="docsEntryLinks">
               {docsLinks.map(([title, body], index) => {
@@ -2188,13 +2210,13 @@ function App() {
         <div className="shell">
           <div className="sectionHeader split">
             <div>
-              <p className="eyebrow">{lang === 'zh' ? '生成案例' : 'Generated examples'}</p>
+              <p className="eyebrow">{tl(lang, '生成案例', 'Generated examples')}</p>
               <h2>{t.videosTitle}</h2>
               <p>{t.videosSubtitle}</p>
             </div>
             <a className="button secondary" href={WEB_APP_URL} target="_blank" rel="noreferrer">
               <Play size={17} />
-              {zh ? '直接试用' : 'Try it live'}
+              {tl(lang, '直接试用', 'Try it live')}
             </a>
           </div>
           <div className="showcaseGrid">
@@ -2308,20 +2330,20 @@ function App() {
             <article className="deployCard">
               <div className="deployIcon"><Server size={20} /></div>
               <h3>{t.backendDeployTitle}</h3>
-              <p>{zh ? '用 myapp-ctl 部署后端，管理密钥、服务状态和组件发布。' : 'Use myapp-ctl to deploy the backend, manage secrets, inspect status and ship components.'}</p>
-              <span className="deployMeta">{zh ? '后端优先' : 'Backend first'}</span>
+              <p>{tl(lang, '用 myapp-ctl 部署后端，管理密钥、服务状态和组件发布。', 'Use myapp-ctl to deploy the backend, manage secrets, inspect status and ship components.')}</p>
+              <span className="deployMeta">{tl(lang, '后端优先', 'Backend first')}</span>
             </article>
             <article className="deployCard">
               <div className="deployIcon"><Smartphone size={20} /></div>
               <h3>{t.clientBuildTitle}</h3>
-              <p>{zh ? '可以直接用线上 Web，也可以自行构建 Flutter Web、iOS 或 Android 客户端。' : 'Use the hosted Web app directly, or build Flutter Web, iOS or Android yourself.'}</p>
-              <span className="deployMeta">{zh ? '客户端可替换' : 'Replaceable clients'}</span>
+              <p>{tl(lang, '可以直接用线上 Web，也可以自行构建 Flutter Web、iOS 或 Android 客户端。', 'Use the hosted Web app directly, or build Flutter Web, iOS or Android yourself.')}</p>
+              <span className="deployMeta">{tl(lang, '客户端可替换', 'Replaceable clients')}</span>
             </article>
             <article className="deployCard">
               <div className="deployIcon"><Network size={20} /></div>
               <h3>{t.switchEnvTitle}</h3>
               <p>{t.switchEnvBody}</p>
-              <span className="deployMeta">{zh ? '扫码或粘贴' : 'Scan or paste'}</span>
+              <span className="deployMeta">{tl(lang, '扫码或粘贴', 'Scan or paste')}</span>
             </article>
             <article className="deployCard">
               <div className="deployIcon"><Bot size={20} /></div>
@@ -2416,7 +2438,7 @@ function App() {
                   <strong>{item.title}</strong>
                   <p>{item.body}</p>
                   <small>
-                    {zh ? '继续' : 'Continue'}
+                    {tl(lang, '继续', 'Continue')}
                     <ChevronRight size={14} />
                   </small>
                 </a>
@@ -2437,7 +2459,7 @@ function App() {
                 GitHub
               </a>
             ) : (
-              <span>{zh ? 'GitHub 即将公开' : 'GitHub soon'}</span>
+              <span>{tl(lang, 'GitHub 即将公开', 'GitHub soon')}</span>
             )}
             <a href="mailto:2501808198@qq.com">fish</a>
           </div>
