@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../i18n/runtime_extra_i18n.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_storage.dart';
 import 'ai_chat_service.dart';
@@ -92,16 +93,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required String de,
     required String es,
   }) {
-    switch (Localizations.localeOf(context).languageCode) {
-      case 'en':
-        return en;
-      case 'de':
-        return de;
-      case 'es':
-        return es;
-      default:
-        return zh;
-    }
+    return adminTr(context, zh: zh, en: en, de: de, es: es);
   }
 
   @override

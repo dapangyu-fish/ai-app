@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'i18n/runtime_extra_i18n.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart'
@@ -2144,13 +2145,10 @@ class _MarketPageState extends State<_MarketPage> {
     }
   }
 
-  bool _isZh(BuildContext context) =>
-      Localizations.localeOf(context).languageCode.startsWith('zh');
-
-  String _spaceLabel(BuildContext context) => _isZh(context) ? '空间' : 'Space';
+  String _spaceLabel(BuildContext context) => localePick(context, '空间', 'Space');
 
   String _officialSpaceLabel(BuildContext context) =>
-      _isZh(context) ? '官方' : 'Official';
+      localePick(context, '官方', 'Official');
 
   String _namespaceLabel(BuildContext context, Map<String, dynamic> ns) {
     final name = ns['name']?.toString() ?? '/';
@@ -2305,11 +2303,7 @@ class _MarketPageState extends State<_MarketPage> {
                         ),
                       ),
                       child: Text(
-                        Localizations.localeOf(
-                              context,
-                            ).languageCode.startsWith('zh')
-                            ? '收藏'
-                            : 'Favorites',
+                        localePick(context, '收藏', 'Favorites'),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 15,

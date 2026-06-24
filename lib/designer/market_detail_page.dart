@@ -8,6 +8,7 @@
 // 点赞走 POST/DELETE，带 AuthService.token。运行埋点在实际加载成功后记录。
 
 import 'dart:convert';
+import '../i18n/runtime_extra_i18n.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -295,7 +296,7 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
             ],
             Text(
               selected.isEmpty
-                  ? (_isZh(context) ? '加载版本' : 'Loading versions')
+                  ? (localePick(context, '加载版本', 'Loading versions'))
                   : 'v$selected',
               style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
             ),
@@ -315,10 +316,10 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isZh(context) ? '详情' : 'Details'),
+        title: Text(localePick(context, '详情', 'Details')),
         actions: [
           IconButton(
-            tooltip: _isZh(context) ? '收藏' : 'Favorite',
+            tooltip: localePick(context, '收藏', 'Favorite'),
             icon: Icon(
               _favorited ? Icons.bookmark : Icons.bookmark_border,
               color: _favorited ? cs.primary : null,
@@ -398,7 +399,7 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
                 // summary
                 if (d != null && _pickSummary(context, d).isNotEmpty) ...[
                   Text(
-                    _isZh(context) ? '简介' : 'About',
+                    localePick(context, '简介', 'About'),
                     style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -421,7 +422,7 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
                 if (d?['tech_stack'] is List &&
                     (d!['tech_stack'] as List).isNotEmpty) ...[
                   Text(
-                    _isZh(context) ? '技术栈' : 'Tech stack',
+                    localePick(context, '技术栈', 'Tech stack'),
                     style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -449,7 +450,7 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
                 if (d?['capabilities'] is List &&
                     (d!['capabilities'] as List).isNotEmpty) ...[
                   Text(
-                    _isZh(context) ? '功能' : 'Features',
+                    localePick(context, '功能', 'Features'),
                     style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -492,7 +493,7 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
                   onPressed: _run,
                   icon: const Icon(Icons.play_arrow),
                   label: Text(
-                    _isZh(context) ? '运行' : 'Run',
+                    localePick(context, '运行', 'Run'),
                     style: const TextStyle(fontSize: 16),
                   ),
                   style: FilledButton.styleFrom(
@@ -523,7 +524,7 @@ class _MarketAppDetailPageState extends State<MarketAppDetailPage> {
             const SizedBox(width: 10),
             Text(
               nickname.isEmpty
-                  ? (_isZh(context) ? '未知作者' : 'Unknown')
+                  ? (localePick(context, '未知作者', 'Unknown'))
                   : nickname,
               style: TextStyle(
                 fontSize: 14,
@@ -616,7 +617,7 @@ class _MarketUserProfilePageState extends State<MarketUserProfilePage> {
     final apps = (p?['apps'] as List?) ?? [];
 
     return Scaffold(
-      appBar: AppBar(title: Text(_isZh(context) ? '作者主页' : 'Author')),
+      appBar: AppBar(title: Text(localePick(context, '作者主页', 'Author'))),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
@@ -635,7 +636,7 @@ class _MarketUserProfilePageState extends State<MarketUserProfilePage> {
                       const SizedBox(height: 12),
                       Text(
                         nickname.isEmpty
-                            ? (_isZh(context) ? '未知作者' : 'Unknown')
+                            ? (localePick(context, '未知作者', 'Unknown'))
                             : nickname,
                         style: GoogleFonts.inter(
                           fontSize: 20,
@@ -653,7 +654,7 @@ class _MarketUserProfilePageState extends State<MarketUserProfilePage> {
                   children: [
                     Expanded(
                       child: _bigStat(
-                        _isZh(context) ? '总下载' : 'Downloads',
+                        localePick(context, '总下载', 'Downloads'),
                         '${p?['total_installs'] ?? 0}',
                         Icons.download_outlined,
                         cs,
@@ -662,7 +663,7 @@ class _MarketUserProfilePageState extends State<MarketUserProfilePage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: _bigStat(
-                        _isZh(context) ? '总点赞' : 'Likes',
+                        localePick(context, '总点赞', 'Likes'),
                         '${p?['total_likes'] ?? 0}',
                         Icons.favorite,
                         cs,
@@ -673,9 +674,7 @@ class _MarketUserProfilePageState extends State<MarketUserProfilePage> {
                 const SizedBox(height: 24),
 
                 Text(
-                  _isZh(context)
-                      ? '发布的应用 (${apps.length})'
-                      : 'Apps (${apps.length})',
+                  '${localePick(context, '发布的应用', 'Apps')} (${apps.length})',
                   style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,

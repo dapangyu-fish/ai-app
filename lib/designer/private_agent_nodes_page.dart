@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../i18n/runtime_extra_i18n.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,16 +35,7 @@ class _PrivateAgentNodesPageState extends State<PrivateAgentNodesPage> {
     required String de,
     required String es,
   }) {
-    switch (Localizations.localeOf(context).languageCode) {
-      case 'en':
-        return en;
-      case 'de':
-        return de;
-      case 'es':
-        return es;
-      default:
-        return zh;
-    }
+    return adminTr(context, zh: zh, en: en, de: de, es: es);
   }
 
   Future<http.Response> _authedRequest(
