@@ -9,7 +9,14 @@
       "zh": "我的启动器",
       "en": "My Launcher",
       "de": "Mein Launcher",
-      "es": "Mi launcher"
+      "es": "Mi launcher",
+      "fr": "Mon lanceur",
+      "pt": "O meu lançador",
+      "ca": "El meu llançador",
+      "hi": "मेरा लॉन्चर",
+      "ko": "내 런처",
+      "ja": "マイランチャー",
+      "it": "Il mio launcher"
     },
     "description": "用 launcher 组件库拼出来的三 tab 启动器 demo —— 本地 / 市场 / 设置。设成默认启动 App 就完全替代了原生主页。",
     "author": "fish"
@@ -214,6 +221,342 @@
           "name_dialog_hint": "Introduce un nuevo alias",
           "name_toast": "✅ Actualizado",
           "avatar_toast": "✅ Avatar actualizado"
+        }
+      },
+      "fr": {
+        "title": "Mon lanceur",
+        "common": {
+          "cancel": "Annuler"
+        },
+        "tabs": {
+          "local": "Local",
+          "market": "Boutique",
+          "settings": "Réglages",
+          "local_title": "Applis locales",
+          "market_title": "Boutique d'applis",
+          "settings_title": "Réglages"
+        },
+        "myapps": {
+          "empty": "Aucune appli enregistrée. Essayez la boutique !",
+          "delete_title": "Confirmer la suppression",
+          "delete_msg": "Supprimer « {{ params.displayName }} » ? Cette action est irréversible."
+        },
+        "market": {
+          "empty": "Aucun contenu dans la boutique pour l'instant"
+        },
+        "settings": {
+          "theme": "Thème",
+          "theme_system": "Système",
+          "theme_light": "Clair",
+          "theme_dark": "Sombre",
+          "locale": "Langue",
+          "startup": "Appli de démarrage par défaut",
+          "startup_none": "Non définie (rester à l'accueil)",
+          "startup_reset": "Réinitialiser",
+          "startup_reset_title": "Réinitialiser l'appli de démarrage",
+          "startup_reset_msg": "Annuler l'appli de démarrage par défaut ? Le prochain démarrage à froid reviendra à l'accueil.",
+          "startup_reset_toast": "✅ Réinitialisé",
+          "cache": "Vider le cache",
+          "cache_msg": "Cela supprimera le cache local de la boutique et des bibliothèques. Au prochain démarrage, les données seront récupérées depuis le serveur. Continuer ?",
+          "cache_toast": "✅ Cache vidé",
+          "logout": "Se déconnecter",
+          "logout_msg": "Se déconnecter du compte actuel ?",
+          "profile_edit": "Modifier le profil",
+          "profile_edit_msg": "Choisissez ce que vous voulez modifier",
+          "profile_edit_name": "Renommer",
+          "profile_edit_avatar": "Changer l'avatar",
+          "name_dialog_title": "Renommer",
+          "name_dialog_hint": "Saisissez un nouveau pseudo",
+          "name_toast": "✅ Mis à jour",
+          "avatar_toast": "✅ Avatar mis à jour"
+        }
+      },
+      "pt": {
+        "title": "O meu lançador",
+        "common": {
+          "cancel": "Cancelar"
+        },
+        "tabs": {
+          "local": "Local",
+          "market": "Mercado",
+          "settings": "Definições",
+          "local_title": "Aplicações locais",
+          "market_title": "Loja de aplicações",
+          "settings_title": "Definições"
+        },
+        "myapps": {
+          "empty": "Sem aplicações guardadas. Experimente o mercado!",
+          "delete_title": "Confirmar eliminação",
+          "delete_msg": "Eliminar \"{{ params.displayName }}\"? Esta ação não pode ser anulada."
+        },
+        "market": {
+          "empty": "Ainda não há conteúdo no mercado"
+        },
+        "settings": {
+          "theme": "Tema",
+          "theme_system": "Sistema",
+          "theme_light": "Claro",
+          "theme_dark": "Escuro",
+          "locale": "Idioma",
+          "startup": "Aplicação de arranque predefinida",
+          "startup_none": "Não definida (manter o início)",
+          "startup_reset": "Repor",
+          "startup_reset_title": "Repor aplicação de arranque",
+          "startup_reset_msg": "Cancelar a aplicação de arranque predefinida? O próximo arranque a frio regressa ao início.",
+          "startup_reset_toast": "✅ Reposta",
+          "cache": "Limpar cache",
+          "cache_msg": "Isto remove a cache local do mercado/bibliotecas. No próximo arranque os dados serão obtidos novamente do servidor. Continuar?",
+          "cache_toast": "✅ Cache limpa",
+          "logout": "Terminar sessão",
+          "logout_msg": "Terminar a sessão da conta atual?",
+          "profile_edit": "Editar perfil",
+          "profile_edit_msg": "Escolha o que pretende alterar",
+          "profile_edit_name": "Mudar o nome",
+          "profile_edit_avatar": "Alterar avatar",
+          "name_dialog_title": "Mudar o nome",
+          "name_dialog_hint": "Introduza uma nova alcunha",
+          "name_toast": "✅ Atualizado",
+          "avatar_toast": "✅ Avatar atualizado"
+        }
+      },
+      "ca": {
+        "title": "El meu llançador",
+        "common": {
+          "cancel": "Cancel·la"
+        },
+        "tabs": {
+          "local": "Local",
+          "market": "Botiga",
+          "settings": "Configuració",
+          "local_title": "Aplicacions locals",
+          "market_title": "Botiga d'aplicacions",
+          "settings_title": "Configuració"
+        },
+        "myapps": {
+          "empty": "No tens cap aplicació desada. Prova la botiga!",
+          "delete_title": "Confirma l'eliminació",
+          "delete_msg": "Vols suprimir «{{ params.displayName }}»? Aquesta acció no es pot desfer."
+        },
+        "market": {
+          "empty": "Encara no hi ha contingut a la botiga"
+        },
+        "settings": {
+          "theme": "Tema",
+          "theme_system": "Sistema",
+          "theme_light": "Clar",
+          "theme_dark": "Fosc",
+          "locale": "Idioma",
+          "startup": "Aplicació d'inici per defecte",
+          "startup_none": "Sense definir (mantén l'inici)",
+          "startup_reset": "Restableix",
+          "startup_reset_title": "Restableix l'aplicació d'inici",
+          "startup_reset_msg": "Vols cancel·lar l'aplicació d'inici per defecte? El proper inici en fred tornarà a la pantalla d'inici.",
+          "startup_reset_toast": "✅ Restablert",
+          "cache": "Esborra la memòria cau",
+          "cache_msg": "Això eliminarà la memòria cau local de la botiga i les biblioteques. El proper inici ho tornarà a baixar del servidor. Vols continuar?",
+          "cache_toast": "✅ Memòria cau esborrada",
+          "logout": "Tanca la sessió",
+          "logout_msg": "Vols tancar la sessió del compte actual?",
+          "profile_edit": "Edita el perfil",
+          "profile_edit_msg": "Tria què vols canviar",
+          "profile_edit_name": "Canvia el nom",
+          "profile_edit_avatar": "Canvia l'avatar",
+          "name_dialog_title": "Canvia el nom",
+          "name_dialog_hint": "Introdueix un sobrenom nou",
+          "name_toast": "✅ Actualitzat",
+          "avatar_toast": "✅ Avatar actualitzat"
+        }
+      },
+      "hi": {
+        "title": "मेरा लॉन्चर",
+        "common": {
+          "cancel": "रद्द करें"
+        },
+        "tabs": {
+          "local": "लोकल",
+          "market": "मार्केट",
+          "settings": "सेटिंग्स",
+          "local_title": "लोकल ऐप्स",
+          "market_title": "ऐप स्टोर",
+          "settings_title": "सेटिंग्स"
+        },
+        "myapps": {
+          "empty": "कोई सहेजा हुआ ऐप नहीं। मार्केट आज़माएँ!",
+          "delete_title": "हटाने की पुष्टि करें",
+          "delete_msg": "\"{{ params.displayName }}\" हटाएँ? इसे पूर्ववत नहीं किया जा सकता।"
+        },
+        "market": {
+          "empty": "मार्केट में अभी कोई सामग्री नहीं है"
+        },
+        "settings": {
+          "theme": "थीम",
+          "theme_system": "सिस्टम",
+          "theme_light": "लाइट",
+          "theme_dark": "डार्क",
+          "locale": "भाषा",
+          "startup": "डिफ़ॉल्ट स्टार्टअप ऐप",
+          "startup_none": "सेट नहीं (होम रखें)",
+          "startup_reset": "रीसेट करें",
+          "startup_reset_title": "स्टार्टअप ऐप रीसेट करें",
+          "startup_reset_msg": "डिफ़ॉल्ट स्टार्टअप ऐप रद्द करें? अगली कोल्ड स्टार्ट पर होम पर लौटेगा।",
+          "startup_reset_toast": "✅ रीसेट हो गया",
+          "cache": "कैश साफ़ करें",
+          "cache_msg": "इससे मार्केट/लाइब्रेरी का लोकल कैश हट जाएगा। अगली बार शुरू होने पर सर्वर से फिर से लाया जाएगा। जारी रखें?",
+          "cache_toast": "✅ कैश साफ़ हो गया",
+          "logout": "साइन आउट",
+          "logout_msg": "मौजूदा खाते से साइन आउट करें?",
+          "profile_edit": "प्रोफ़ाइल संपादित करें",
+          "profile_edit_msg": "चुनें कि क्या बदलना है",
+          "profile_edit_name": "नाम बदलें",
+          "profile_edit_avatar": "अवतार बदलें",
+          "name_dialog_title": "नाम बदलें",
+          "name_dialog_hint": "नया उपनाम दर्ज करें",
+          "name_toast": "✅ अपडेट हो गया",
+          "avatar_toast": "✅ अवतार अपडेट हो गया"
+        }
+      },
+      "ko": {
+        "title": "내 런처",
+        "common": {
+          "cancel": "취소"
+        },
+        "tabs": {
+          "local": "로컬",
+          "market": "마켓",
+          "settings": "설정",
+          "local_title": "로컬 앱",
+          "market_title": "앱 스토어",
+          "settings_title": "설정"
+        },
+        "myapps": {
+          "empty": "저장된 앱이 없습니다. 마켓을 둘러보세요!",
+          "delete_title": "삭제 확인",
+          "delete_msg": "\"{{ params.displayName }}\"을(를) 삭제할까요? 이 작업은 되돌릴 수 없습니다."
+        },
+        "market": {
+          "empty": "아직 마켓에 콘텐츠가 없습니다"
+        },
+        "settings": {
+          "theme": "테마",
+          "theme_system": "시스템",
+          "theme_light": "라이트",
+          "theme_dark": "다크",
+          "locale": "언어",
+          "startup": "기본 시작 앱",
+          "startup_none": "설정 안 함 (홈 유지)",
+          "startup_reset": "초기화",
+          "startup_reset_title": "시작 앱 초기화",
+          "startup_reset_msg": "기본 시작 앱을 해제할까요? 다음 콜드 스타트 시 홈으로 돌아갑니다.",
+          "startup_reset_toast": "✅ 초기화됨",
+          "cache": "캐시 지우기",
+          "cache_msg": "마켓/라이브러리의 로컬 캐시를 삭제합니다. 다음 실행 시 서버에서 다시 가져옵니다. 계속할까요?",
+          "cache_toast": "✅ 캐시를 지웠습니다",
+          "logout": "로그아웃",
+          "logout_msg": "현재 계정에서 로그아웃할까요?",
+          "profile_edit": "프로필 편집",
+          "profile_edit_msg": "변경할 항목을 선택하세요",
+          "profile_edit_name": "이름 변경",
+          "profile_edit_avatar": "아바타 변경",
+          "name_dialog_title": "이름 변경",
+          "name_dialog_hint": "새 닉네임을 입력하세요",
+          "name_toast": "✅ 업데이트됨",
+          "avatar_toast": "✅ 아바타를 변경했습니다"
+        }
+      },
+      "ja": {
+        "title": "マイランチャー",
+        "common": {
+          "cancel": "キャンセル"
+        },
+        "tabs": {
+          "local": "ローカル",
+          "market": "マーケット",
+          "settings": "設定",
+          "local_title": "ローカルアプリ",
+          "market_title": "アプリストア",
+          "settings_title": "設定"
+        },
+        "myapps": {
+          "empty": "保存されたアプリはありません。マーケットを見てみましょう。",
+          "delete_title": "削除の確認",
+          "delete_msg": "「{{ params.displayName }}」を削除しますか？この操作は元に戻せません。"
+        },
+        "market": {
+          "empty": "マーケットにはまだコンテンツがありません"
+        },
+        "settings": {
+          "theme": "テーマ",
+          "theme_system": "システム",
+          "theme_light": "ライト",
+          "theme_dark": "ダーク",
+          "locale": "言語",
+          "startup": "起動時のアプリ",
+          "startup_none": "未設定（ホームのまま）",
+          "startup_reset": "リセット",
+          "startup_reset_title": "起動アプリをリセット",
+          "startup_reset_msg": "起動時のアプリを解除しますか？次回のコールドスタートでホームに戻ります。",
+          "startup_reset_toast": "✅ リセットしました",
+          "cache": "キャッシュを消去",
+          "cache_msg": "マーケット／ライブラリのローカルキャッシュを削除します。次回起動時にサーバーから再取得します。続行しますか？",
+          "cache_toast": "✅ キャッシュを消去しました",
+          "logout": "ログアウト",
+          "logout_msg": "現在のアカウントからログアウトしますか？",
+          "profile_edit": "プロフィールを編集",
+          "profile_edit_msg": "変更する項目を選択してください",
+          "profile_edit_name": "名前を変更",
+          "profile_edit_avatar": "アバターを変更",
+          "name_dialog_title": "名前を変更",
+          "name_dialog_hint": "新しいニックネームを入力",
+          "name_toast": "✅ 更新しました",
+          "avatar_toast": "✅ アバターを更新しました"
+        }
+      },
+      "it": {
+        "title": "Il mio launcher",
+        "common": {
+          "cancel": "Annulla"
+        },
+        "tabs": {
+          "local": "Locali",
+          "market": "Store",
+          "settings": "Impostazioni",
+          "local_title": "App locali",
+          "market_title": "App store",
+          "settings_title": "Impostazioni"
+        },
+        "myapps": {
+          "empty": "Nessuna app salvata. Prova lo store!",
+          "delete_title": "Conferma eliminazione",
+          "delete_msg": "Eliminare \"{{ params.displayName }}\"? L'operazione è irreversibile."
+        },
+        "market": {
+          "empty": "Ancora nessun contenuto nello store"
+        },
+        "settings": {
+          "theme": "Tema",
+          "theme_system": "Sistema",
+          "theme_light": "Chiaro",
+          "theme_dark": "Scuro",
+          "locale": "Lingua",
+          "startup": "App di avvio predefinita",
+          "startup_none": "Non impostata (resta nella home)",
+          "startup_reset": "Reimposta",
+          "startup_reset_title": "Reimposta app di avvio",
+          "startup_reset_msg": "Annullare l'app di avvio predefinita? Al prossimo avvio a freddo tornerai alla home.",
+          "startup_reset_toast": "✅ Reimpostata",
+          "cache": "Svuota cache",
+          "cache_msg": "Verrà rimossa la cache locale di store e librerie. Al prossimo avvio i dati saranno recuperati dal server. Continuare?",
+          "cache_toast": "✅ Cache svuotata",
+          "logout": "Esci",
+          "logout_msg": "Uscire dall'account corrente?",
+          "profile_edit": "Modifica profilo",
+          "profile_edit_msg": "Scegli cosa modificare",
+          "profile_edit_name": "Rinomina",
+          "profile_edit_avatar": "Cambia avatar",
+          "name_dialog_title": "Rinomina",
+          "name_dialog_hint": "Inserisci un nuovo soprannome",
+          "name_toast": "✅ Aggiornato",
+          "avatar_toast": "✅ Avatar aggiornato"
         }
       }
     }

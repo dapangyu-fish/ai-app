@@ -9,7 +9,14 @@
       "zh": "启动器组件 · 市场",
       "en": "Launcher Component · Market",
       "de": "Launcher-Komponente · Markt",
-      "es": "Componente launcher · Mercado"
+      "es": "Componente launcher · Mercado",
+      "fr": "Composant lanceur · Boutique",
+      "pt": "Componente de lançador · Mercado",
+      "ca": "Component de llançador · Botiga",
+      "hi": "लॉन्चर कॉम्पोनेंट · मार्केट",
+      "ko": "런처 컴포넌트 · 마켓",
+      "ja": "ランチャーコンポーネント・マーケット",
+      "it": "Componente launcher · Store"
     },
     "description": "可嵌入的'市场'组件库——浏览 Registry 上的 JSON-APP / 组件库，一键启动。",
     "author": "fish",

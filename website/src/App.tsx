@@ -1127,7 +1127,8 @@ function ValueArchitecture({ lang }: { lang: Lang }) {
 
 function DocsPage({ lang }: { lang: Lang }) {
   const zh = lang === 'zh';
-  const cliLang = lang === 'zh' ? 'zh' : lang === 'de' ? 'de' : lang === 'es' ? 'es' : 'en';
+  // myapp-ctl supports all 11 framework languages, so show the visitor's own code in CLI examples
+  const cliLang = lang;
   const docs = {
     badge: zh ? 'myapp-ctl 部署手册' : 'myapp-ctl deployment guide',
     title: zh ? '用 myapp-ctl 安装、部署、更新和扩展 MyApp' : 'Install, deploy, update and extend MyApp with myapp-ctl',

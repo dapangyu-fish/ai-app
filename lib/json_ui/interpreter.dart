@@ -995,7 +995,21 @@ class JsonInterpreter extends ChangeNotifier {
             .toString();
     final dict = (_config['global'] as Map<String, dynamic>?)?['i18n'] as Map?;
     if (dict == null) return keyPath;
-    final localeDict = dict[locale];
+    // 优先精确 locale；缺失时按 语言码(zh-CN→zh) → en → zh → 任意可用 回退，
+    // 这样部分翻译的 i18n 字典会降级到真实语言，而不是把原始 key 显示给用户。
+    var localeDict = dict[locale];
+    if (localeDict is! Map) {
+      final lang = locale.split(RegExp(r'[-_]')).first;
+      localeDict = dict[lang] ?? dict['en'] ?? dict['zh'];
+      if (localeDict is! Map) {
+        for (final v in dict.values) {
+          if (v is Map) {
+            localeDict = v;
+            break;
+          }
+        }
+      }
+    }
     if (localeDict is! Map) return keyPath;
     final raw = _getNestedValue(Map<String, dynamic>.from(localeDict), keyPath);
     final value = raw?.toString() ?? keyPath;

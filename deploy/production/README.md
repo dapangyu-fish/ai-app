@@ -117,8 +117,8 @@ cd ~/ai-app  # or any real git checkout of this repository
 `paths.source`; later `myapp-ctl deploy --build` uses that path as the Docker
 build context.
 
-First interactive use asks for the CLI language once: `zh`, `en`, `de`, or
-`es`. Change it later with:
+First interactive use asks for the CLI language once: `zh`, `en`, `de`, `es`,
+`fr`, `pt`, `ca`, `hi`, `ko`, `ja`, or `it`. Change it later with:
 
 ```bash
 myapp-ctl config lang zh

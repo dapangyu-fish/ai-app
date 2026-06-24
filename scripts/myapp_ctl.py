@@ -1170,7 +1170,7 @@ def _choose_language_interactive() -> str:
         normalized = _normalize_lang(value)
         if normalized:
             return normalized
-        print("please choose zh, en, de, or es")
+        print("please choose one of: " + ", ".join(_LANGUAGES))
 
 
 def _is_config_lang_command(args) -> bool:
