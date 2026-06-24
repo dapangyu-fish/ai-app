@@ -1,67 +1,2836 @@
 {
   "dsl": "3.3",
+  "appid": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
   "meta": {
-    "name": "demo-forum",
+    "name": "forum",
+    "displayName": {
+      "zh": "论坛",
+      "en": "Forum",
+      "default": "Forum"
+    },
     "version": "1.0.0",
     "type": "app",
-    "displayName": {
-      "zh": "演示论坛",
-      "en": "Demo Forum"
-    }
+    "description": "论坛：创建讨论区（吧）、发帖、评论（楼中楼）、点赞、真实头像、用户主页、好友、私信。",
+    "author": "fish"
+  },
+  "dependencies": {
+    "faas": "^1.0.2"
   },
   "global": {
     "variables": {
-      "boards": [
-        {
-          "name": "灌水吧",
-          "desc": "随便聊聊"
-        },
-        {
-          "name": "技术吧",
-          "desc": "代码与折腾"
-        },
-        {
-          "name": "美食吧",
-          "desc": "今天吃什么"
-        }
-      ]
+      "svc": "svc-39e8b9300f41",
+      "userToken": null,
+      "loggedIn": false,
+      "myId": "",
+      "myName": "",
+      "myAvatar": "",
+      "myDisplayName": "",
+      "myAvatarUrl": "",
+      "_info": null,
+      "_r": null,
+      "q": "",
+      "boards": [],
+      "currentBoardId": null,
+      "currentBoard": null,
+      "threads": [],
+      "currentThread": null,
+      "posts": [],
+      "expanded": [],
+      "expandedCsv": "",
+      "newBoardName": "",
+      "newBoardIntro": "",
+      "newThreadTitle": "",
+      "newThreadBody": "",
+      "replyText": "",
+      "replyParentId": null,
+      "replyHint": "主楼",
+      "currentUser": null,
+      "currentUserThreads": [],
+      "currentUserRel": {},
+      "friends": [],
+      "friendRequests": [],
+      "friendReqCount": 0,
+      "chatPeer": {},
+      "chatMessages": [],
+      "dmText": "",
+      "myStats": {},
+      "myThreads": []
+    },
+    "functions": {
+      "syncMyName": {
+        "params": [],
+        "description": "取登录 token + 同步真实昵称和头像到后端 profiles + 记下我的假名 myId",
+        "logic": [
+          {
+            "call": "@get_auth_token",
+            "args": {
+              "bind": "global.userToken"
+            }
+          },
+          {
+            "call": "@get_user_info",
+            "args": {
+              "bind": "global._info"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.myName",
+              "value": "{{ global._info.username }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.myAvatar",
+              "value": "{{ global._info.avatar }}"
+            }
+          },
+          {
+            "call": "@faas.post",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/me",
+              "body": {
+                "display_name": "{{ global.myName }}",
+                "avatar_url": "{{ global.myAvatar }}"
+              },
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/whoami",
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.myId",
+              "value": "{{ global._r.data.me }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.myDisplayName",
+              "value": "{{ global._r.data.display_name }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.myAvatarUrl",
+              "value": "{{ global._r.data.avatar_url }}"
+            }
+          }
+        ]
+      },
+      "loadBoards": {
+        "params": [],
+        "description": "按搜索词拉取吧列表",
+        "logic": [
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/boards?q={{ global.q }}",
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.boards",
+              "value": "{{ global._r.data.boards }}"
+            }
+          }
+        ]
+      },
+      "openBoard": {
+        "params": [
+          "boardId"
+        ],
+        "description": "进入某个吧",
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentBoardId",
+              "value": "{{ params.boardId }}"
+            }
+          },
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/board?board_id={{ params.boardId }}",
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentBoard",
+              "value": "{{ global._r.data.board }}"
+            }
+          },
+          {
+            "call": "@global.loadThreads",
+            "args": {}
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "board"
+            }
+          }
+        ]
+      },
+      "loadThreads": {
+        "params": [],
+        "description": "拉取当前吧的主题列表",
+        "logic": [
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/threads?board_id={{ global.currentBoardId }}",
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.threads",
+              "value": "{{ global._r.data.threads }}"
+            }
+          }
+        ]
+      },
+      "openThread": {
+        "params": [
+          "threadId"
+        ],
+        "description": "进入某个主题帖：重置楼中楼展开状态，取主题+回帖，跳转thread页",
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentThread",
+              "value": {
+                "id": "{{ params.threadId }}"
+              }
+            }
+          },
+          {
+            "call": "@list_clear",
+            "args": {
+              "var": "global.expanded"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.expandedCsv",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.replyParentId",
+              "value": null
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.replyHint",
+              "value": "主楼"
+            }
+          },
+          {
+            "call": "@global.reloadThread",
+            "args": {}
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "thread"
+            }
+          }
+        ]
+      },
+      "reloadThread": {
+        "params": [],
+        "description": "按当前展开集合重新拉取主题+回帖",
+        "logic": [
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/thread?thread_id={{ global.currentThread.id }}&expanded={{ global.expandedCsv }}",
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentThread",
+              "value": "{{ global._r.data.thread }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.posts",
+              "value": "{{ global._r.data.posts }}"
+            }
+          }
+        ]
+      },
+      "expandReplies": {
+        "params": [
+          "parentId"
+        ],
+        "description": "展开楼中楼",
+        "logic": [
+          {
+            "call": "@list_add",
+            "args": {
+              "var": "global.expanded",
+              "item": "{{ params.parentId }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.expandedCsv",
+              "value": {
+                "str_join": [
+                  {
+                    "var": "global.expanded"
+                  },
+                  ","
+                ]
+              }
+            }
+          },
+          {
+            "call": "@global.reloadThread",
+            "args": {}
+          }
+        ]
+      },
+      "collapseReplies": {
+        "params": [
+          "parentId"
+        ],
+        "description": "收起楼中楼",
+        "logic": [
+          {
+            "call": "@list_remove",
+            "args": {
+              "var": "global.expanded",
+              "value": "{{ params.parentId }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.expandedCsv",
+              "value": {
+                "str_join": [
+                  {
+                    "var": "global.expanded"
+                  },
+                  ","
+                ]
+              }
+            }
+          },
+          {
+            "call": "@global.reloadThread",
+            "args": {}
+          }
+        ]
+      },
+      "replyTo": {
+        "params": [
+          "postId",
+          "name"
+        ],
+        "description": "把回帖目标设成某条回帖（楼中楼）",
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.replyParentId",
+              "value": "{{ params.postId }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.replyHint",
+              "value": "@{{ params.name }}"
+            }
+          }
+        ]
+      },
+      "replyToFloor": {
+        "params": [],
+        "description": "把回帖目标重置成主楼",
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.replyParentId",
+              "value": null
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.replyHint",
+              "value": "主楼"
+            }
+          }
+        ]
+      },
+      "submitReply": {
+        "params": [],
+        "description": "发一条回帖",
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "var": "global.replyText"
+                  },
+                  ""
+                ]
+              },
+              "then": [
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "回帖内容不能为空"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@global.syncMyName",
+                  "args": {}
+                },
+                {
+                  "call": "@faas.post",
+                  "args": {
+                    "serviceId": "{{ global.svc }}",
+                    "route": "/posts",
+                    "body": {
+                      "thread_id": "{{ global.currentThread.id }}",
+                      "parent_id": "{{ global.replyParentId }}",
+                      "body": "{{ global.replyText }}",
+                      "display_name": "{{ global.myName }}",
+                      "avatar_url": "{{ global.myAvatar }}"
+                    },
+                    "headers": {
+                      "Authorization": "Bearer {{ global.userToken }}"
+                    }
+                  },
+                  "assign": "global._r"
+                },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        {
+                          "var": "global._r.status"
+                        },
+                        200
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.replyText",
+                          "value": ""
+                        }
+                      },
+                      {
+                        "call": "@global.replyToFloor",
+                        "args": {}
+                      },
+                      {
+                        "call": "@global.reloadThread",
+                        "args": {}
+                      },
+                      {
+                        "call": "@show_toast",
+                        "args": {
+                          "message": "已回复"
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@show_toast",
+                        "args": {
+                          "message": "{{ global._r.data.error }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "submitBoard": {
+        "params": [],
+        "description": "创建一个新吧",
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "var": "global.newBoardName"
+                  },
+                  ""
+                ]
+              },
+              "then": [
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "请输入吧名"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@global.syncMyName",
+                  "args": {}
+                },
+                {
+                  "call": "@faas.post",
+                  "args": {
+                    "serviceId": "{{ global.svc }}",
+                    "route": "/boards",
+                    "body": {
+                      "name": "{{ global.newBoardName }}",
+                      "intro": "{{ global.newBoardIntro }}",
+                      "display_name": "{{ global.myName }}",
+                      "avatar_url": "{{ global.myAvatar }}"
+                    },
+                    "headers": {
+                      "Authorization": "Bearer {{ global.userToken }}"
+                    }
+                  },
+                  "assign": "global._r"
+                },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        {
+                          "var": "global._r.status"
+                        },
+                        200
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.newBoardName",
+                          "value": ""
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.newBoardIntro",
+                          "value": ""
+                        }
+                      },
+                      {
+                        "call": "@global.loadBoards",
+                        "args": {}
+                      },
+                      {
+                        "call": "@show_toast",
+                        "args": {
+                          "message": "创建成功！"
+                        }
+                      },
+                      {
+                        "call": "@navigate",
+                        "args": {
+                          "screen": "home"
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@show_toast",
+                        "args": {
+                          "message": "{{ global._r.data.error }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "submitThread": {
+        "params": [],
+        "description": "在当前吧发一个主题帖",
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "var": "global.newThreadTitle"
+                  },
+                  ""
+                ]
+              },
+              "then": [
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "请输入标题"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@global.syncMyName",
+                  "args": {}
+                },
+                {
+                  "call": "@faas.post",
+                  "args": {
+                    "serviceId": "{{ global.svc }}",
+                    "route": "/threads",
+                    "body": {
+                      "board_id": "{{ global.currentBoardId }}",
+                      "title": "{{ global.newThreadTitle }}",
+                      "body": "{{ global.newThreadBody }}",
+                      "display_name": "{{ global.myName }}",
+                      "avatar_url": "{{ global.myAvatar }}"
+                    },
+                    "headers": {
+                      "Authorization": "Bearer {{ global.userToken }}"
+                    }
+                  },
+                  "assign": "global._r"
+                },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        {
+                          "var": "global._r.status"
+                        },
+                        200
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.newThreadTitle",
+                          "value": ""
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.newThreadBody",
+                          "value": ""
+                        }
+                      },
+                      {
+                        "call": "@global.loadThreads",
+                        "args": {}
+                      },
+                      {
+                        "call": "@show_toast",
+                        "args": {
+                          "message": "已发布"
+                        }
+                      },
+                      {
+                        "call": "@navigate",
+                        "args": {
+                          "screen": "board"
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@show_toast",
+                        "args": {
+                          "message": "{{ global._r.data.error }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "toggleLikeThread": {
+        "params": [
+          "threadId",
+          "liked"
+        ],
+        "description": "切换主题帖点赞状态",
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "var": "params.liked"
+              },
+              "then": [
+                {
+                  "call": "@global.syncMyName",
+                  "args": {}
+                },
+                {
+                  "call": "@faas.del",
+                  "args": {
+                    "serviceId": "{{ global.svc }}",
+                    "route": "/likes?target_type=thread&target_id={{ params.threadId }}",
+                    "headers": {
+                      "Authorization": "Bearer {{ global.userToken }}"
+                    }
+                  },
+                  "assign": "global._r"
+                },
+                {
+                  "call": "@global.reloadThread",
+                  "args": {}
+                }
+              ],
+              "else": [
+                {
+                  "call": "@global.syncMyName",
+                  "args": {}
+                },
+                {
+                  "call": "@faas.post",
+                  "args": {
+                    "serviceId": "{{ global.svc }}",
+                    "route": "/likes",
+                    "body": {
+                      "target_type": "thread",
+                      "target_id": "{{ params.threadId }}"
+                    },
+                    "headers": {
+                      "Authorization": "Bearer {{ global.userToken }}"
+                    }
+                  },
+                  "assign": "global._r"
+                },
+                {
+                  "call": "@global.reloadThread",
+                  "args": {}
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "toggleLikePost": {
+        "params": [
+          "postId",
+          "liked"
+        ],
+        "description": "切换回帖点赞状态",
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "var": "params.liked"
+              },
+              "then": [
+                {
+                  "call": "@global.syncMyName",
+                  "args": {}
+                },
+                {
+                  "call": "@faas.del",
+                  "args": {
+                    "serviceId": "{{ global.svc }}",
+                    "route": "/likes?target_type=post&target_id={{ params.postId }}",
+                    "headers": {
+                      "Authorization": "Bearer {{ global.userToken }}"
+                    }
+                  },
+                  "assign": "global._r"
+                },
+                {
+                  "call": "@global.reloadThread",
+                  "args": {}
+                }
+              ],
+              "else": [
+                {
+                  "call": "@global.syncMyName",
+                  "args": {}
+                },
+                {
+                  "call": "@faas.post",
+                  "args": {
+                    "serviceId": "{{ global.svc }}",
+                    "route": "/likes",
+                    "body": {
+                      "target_type": "post",
+                      "target_id": "{{ params.postId }}"
+                    },
+                    "headers": {
+                      "Authorization": "Bearer {{ global.userToken }}"
+                    }
+                  },
+                  "assign": "global._r"
+                },
+                {
+                  "call": "@global.reloadThread",
+                  "args": {}
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "openUser": {
+        "params": [
+          "ownerId"
+        ],
+        "description": "进入某用户主页",
+        "logic": [
+          {
+            "call": "@global.syncMyName",
+            "args": {}
+          },
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/user?owner_id={{ params.ownerId }}",
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentUser",
+              "value": "{{ global._r.data.user }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentUserThreads",
+              "value": "{{ global._r.data.threads }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentUserRel",
+              "value": "{{ global._r.data.rel }}"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "user_profile"
+            }
+          }
+        ]
+      },
+      "reloadUser": {
+        "params": [],
+        "description": "刷新当前用户主页",
+        "logic": [
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/user?owner_id={{ global.currentUser.owner_id }}",
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentUser",
+              "value": "{{ global._r.data.user }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentUserThreads",
+              "value": "{{ global._r.data.threads }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentUserRel",
+              "value": "{{ global._r.data.rel }}"
+            }
+          }
+        ]
+      },
+      "addFriend": {
+        "params": [
+          "ownerId"
+        ],
+        "description": "给某用户发好友请求",
+        "logic": [
+          {
+            "call": "@global.syncMyName",
+            "args": {}
+          },
+          {
+            "call": "@faas.post",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/friends/request",
+              "body": {
+                "to": "{{ params.ownerId }}",
+                "display_name": "{{ global.myName }}",
+                "avatar_url": "{{ global.myAvatar }}"
+              },
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "var": "global._r.status"
+                  },
+                  200
+                ]
+              },
+              "then": [
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "已发送好友请求"
+                  }
+                },
+                {
+                  "call": "@global.reloadUser",
+                  "args": {}
+                }
+              ],
+              "else": [
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "{{ global._r.data.error }}"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "loadFriends": {
+        "params": [],
+        "description": "刷新好友列表+待处理请求",
+        "logic": [
+          {
+            "call": "@global.syncMyName",
+            "args": {}
+          },
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/friends",
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.friends",
+              "value": "{{ global._r.data.friends }}"
+            }
+          },
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/friends/requests",
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.friendRequests",
+              "value": "{{ global._r.data.requests }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.friendReqCount",
+              "value": "{{ global._r.data.count }}"
+            }
+          }
+        ]
+      },
+      "acceptRequest": {
+        "params": [
+          "ownerId"
+        ],
+        "description": "同意好友请求",
+        "logic": [
+          {
+            "call": "@faas.post",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/friends/accept",
+              "body": {
+                "from": "{{ params.ownerId }}"
+              },
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "已成为好友"
+            }
+          },
+          {
+            "call": "@global.loadFriends",
+            "args": {}
+          }
+        ]
+      },
+      "rejectRequest": {
+        "params": [
+          "ownerId"
+        ],
+        "description": "拒绝好友请求",
+        "logic": [
+          {
+            "call": "@faas.post",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/friends/reject",
+              "body": {
+                "from": "{{ params.ownerId }}"
+              },
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@global.loadFriends",
+            "args": {}
+          }
+        ]
+      },
+      "openChat": {
+        "params": [
+          "ownerId",
+          "name",
+          "avatar"
+        ],
+        "description": "打开和某好友的私信会话",
+        "logic": [
+          {
+            "call": "@global.syncMyName",
+            "args": {}
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.chatPeer",
+              "value": {
+                "owner_id": "{{ params.ownerId }}",
+                "display_name": "{{ params.name }}",
+                "avatar_url": "{{ params.avatar }}"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.dmText",
+              "value": ""
+            }
+          },
+          {
+            "call": "@global.reloadChat",
+            "args": {}
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "chat"
+            }
+          }
+        ]
+      },
+      "reloadChat": {
+        "params": [],
+        "description": "拉取私信历史",
+        "logic": [
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/dm?peer={{ global.chatPeer.owner_id }}",
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.chatMessages",
+              "value": "{{ global._r.data.messages }}"
+            }
+          }
+        ]
+      },
+      "sendDm": {
+        "params": [],
+        "description": "发私信",
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "var": "global.dmText"
+                  },
+                  ""
+                ]
+              },
+              "then": [
+                {
+                  "call": "@show_toast",
+                  "args": {
+                    "message": "说点什么吧"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@faas.post",
+                  "args": {
+                    "serviceId": "{{ global.svc }}",
+                    "route": "/dm",
+                    "body": {
+                      "to": "{{ global.chatPeer.owner_id }}",
+                      "body": "{{ global.dmText }}"
+                    },
+                    "headers": {
+                      "Authorization": "Bearer {{ global.userToken }}"
+                    }
+                  },
+                  "assign": "global._r"
+                },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        {
+                          "var": "global._r.status"
+                        },
+                        200
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.dmText",
+                          "value": ""
+                        }
+                      },
+                      {
+                        "call": "@global.reloadChat",
+                        "args": {}
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@show_toast",
+                        "args": {
+                          "message": "{{ global._r.data.error }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "loadMyProfile": {
+        "params": [],
+        "description": "刷新我的资料",
+        "logic": [
+          {
+            "call": "@global.syncMyName",
+            "args": {}
+          },
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.svc }}",
+              "route": "/user?owner_id={{ global.myId }}",
+              "headers": {
+                "Authorization": "Bearer {{ global.userToken }}"
+              }
+            },
+            "assign": "global._r"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.myStats",
+              "value": "{{ global._r.data.user }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.myThreads",
+              "value": "{{ global._r.data.threads }}"
+            }
+          }
+        ]
+      }
     }
   },
+  "steps": [
+    {
+      "call": "@is_logged_in",
+      "args": {
+        "bind": "global.loggedIn"
+      }
+    },
+    {
+      "call": "@global.loadBoards",
+      "args": {}
+    }
+  ],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "演示论坛",
+        "title": "论坛",
+        "tabs": [
+          {
+            "label": "吧",
+            "icon": "menu_book",
+            "title": "论坛",
+            "padding": 16,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "input",
+                    "placeholder": "搜索吧名…",
+                    "bind": "global.q",
+                    "prefixIcon": "search",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "button",
+                    "label": "搜索",
+                    "variant": "filled",
+                    "action": {
+                      "call": "@global.loadBoards",
+                      "args": {}
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "button",
+                "label": "＋ 创建新吧",
+                "variant": "outlined",
+                "action": {
+                  "type": "navigate",
+                  "screen": "create_board"
+                }
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "type": "list",
+                "source": "{{ global.boards }}",
+                "shrinkWrap": true,
+                "separator": "none",
+                "emptyText": "还没有吧，点上面「创建新吧」开第一个吧～",
+                "item_template": {
+                  "type": "card",
+                  "layout": "column",
+                  "padding": 12,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "image",
+                          "url": "{{ loop.item.owner_avatar }}",
+                          "width": 36,
+                          "height": 36,
+                          "borderRadius": 18
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 10
+                        },
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "crossAxisAlignment": "start",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.name }}吧",
+                              "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "color": "#3A6EA5"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.intro }}",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#666666"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "吧主：{{ loop.item.owner_name }}  ·  {{ loop.item.thread_count }} 主题",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#999999"
+                              }
+                            }
+                          ],
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          }
+                        }
+                      ]
+                    }
+                  ],
+                  "onTap": {
+                    "call": "@global.openBoard",
+                    "args": {
+                      "boardId": "{{ loop.item.id }}"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "label": "好友",
+            "icon": "people",
+            "title": "好友",
+            "padding": 16,
+            "children": [
+              {
+                "type": "button",
+                "label": "🔄 刷新好友 / 请求",
+                "variant": "outlined",
+                "action": {
+                  "call": "@global.loadFriends",
+                  "args": {}
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "新的好友请求 · {{ global.friendReqCount }}",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "list",
+                "source": "{{ global.friendRequests }}",
+                "shrinkWrap": true,
+                "separator": "none",
+                "emptyText": "没有待处理的请求",
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "crossAxisAlignment": "center",
+                  "children": [
+                    {
+                      "type": "image",
+                      "url": "{{ loop.item.avatar_url }}",
+                      "width": 36,
+                      "height": 36,
+                      "borderRadius": 18
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 10
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.display_name }}",
+                      "style": {
+                        "fontSize": 14
+                      },
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "label": "通过",
+                      "variant": "filled",
+                      "action": {
+                        "call": "@global.acceptRequest",
+                        "args": {
+                          "ownerId": "{{ loop.item.owner_id }}"
+                        }
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 6
+                    },
+                    {
+                      "type": "button",
+                      "label": "拒绝",
+                      "variant": "text",
+                      "action": {
+                        "call": "@global.rejectRequest",
+                        "args": {
+                          "ownerId": "{{ loop.item.owner_id }}"
+                        }
+                      }
+                    }
+                  ],
+                  "padding": 8
+                }
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "我的好友",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "list",
+                "source": "{{ global.friends }}",
+                "shrinkWrap": true,
+                "separator": "none",
+                "emptyText": "还没有好友。去帖子里点某人的头像/名字，进主页加好友吧～",
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "crossAxisAlignment": "center",
+                  "children": [
+                    {
+                      "type": "image",
+                      "url": "{{ loop.item.avatar_url }}",
+                      "width": 40,
+                      "height": 40,
+                      "borderRadius": 20
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 12
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.display_name }}",
+                      "style": {
+                        "fontSize": 16
+                      },
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "label": "发私信",
+                      "variant": "text",
+                      "action": {
+                        "call": "@global.openChat",
+                        "args": {
+                          "ownerId": "{{ loop.item.owner_id }}",
+                          "name": "{{ loop.item.display_name }}",
+                          "avatar": "{{ loop.item.avatar_url }}"
+                        }
+                      },
+                      "icon": "send"
+                    }
+                  ],
+                  "padding": 10
+                }
+              }
+            ]
+          },
+          {
+            "label": "我的",
+            "icon": "person",
+            "title": "我的",
+            "padding": 16,
+            "children": [
+              {
+                "type": "card",
+                "layout": "column",
+                "padding": 16,
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "image",
+                        "url": "{{ global.myStats.avatar_url }}",
+                        "width": 56,
+                        "height": 56,
+                        "borderRadius": 28
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 14
+                      },
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "crossAxisAlignment": "start",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ global.myStats.display_name }}",
+                            "style": {
+                              "fontSize": 18,
+                              "fontWeight": "bold"
+                            }
+                          },
+                          {
+                            "type": "text",
+                            "value": "开了 {{ global.myStats.board_count }} 个吧 · 发了 {{ global.myStats.thread_count }} 主题 · {{ global.myStats.post_count }} 回帖",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#999999"
+                            }
+                          }
+                        ],
+                        "position": {
+                          "type": "flex",
+                          "flex": 1
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "button",
+                "label": "🔄 刷新我的资料",
+                "variant": "outlined",
+                "action": {
+                  "call": "@global.loadMyProfile",
+                  "args": {}
+                }
+              },
+              {
+                "type": "divider"
+              },
+              {
+                "type": "text",
+                "value": "我发的主题",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "list",
+                "source": "{{ global.myThreads }}",
+                "shrinkWrap": true,
+                "separator": "none",
+                "emptyText": "你还没发过主题。去吧里发一帖吧～",
+                "item_template": {
+                  "type": "card",
+                  "layout": "column",
+                  "padding": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.title }}",
+                      "style": {
+                        "fontSize": 15,
+                        "fontWeight": "bold"
+                      }
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.board_name }}吧  ·  {{ loop.item.reply_count }} 回复 · {{ loop.item.like_count }} 赞",
+                      "style": {
+                        "fontSize": 11,
+                        "color": "#999999"
+                      }
+                    }
+                  ],
+                  "onTap": {
+                    "call": "@global.openThread",
+                    "args": {
+                      "threadId": "{{ loop.item.id }}"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "board",
+        "title": "{{ global.currentBoard.name }}吧",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
         "children": [
           {
+            "type": "button",
+            "label": "← 返回",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
             "type": "text",
-            "value": "🎉 这是 Demo 模式生成的论坛 App",
-            "fontSize": 16,
-            "margin": 12
+            "value": "{{ global.currentBoard.name }}吧",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.currentBoard.intro }}",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "吧主：{{ global.currentBoard.owner_name }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 8
+          },
+          {
+            "type": "button",
+            "label": "＋ 发主题",
+            "variant": "filled",
+            "action": {
+              "type": "navigate",
+              "screen": "create_thread"
+            }
+          },
+          {
+            "type": "divider"
           },
           {
             "type": "list",
-            "source": "{{ global.boards }}",
+            "source": "{{ global.threads }}",
+            "shrinkWrap": true,
+            "separator": "none",
+            "emptyText": "本吧还没有主题，来发第一帖～",
+            "item_template": {
+              "type": "card",
+              "layout": "column",
+              "padding": 12,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "crossAxisAlignment": "center",
+                  "children": [
+                    {
+                      "type": "image",
+                      "url": "{{ loop.item.author_avatar }}",
+                      "width": 32,
+                      "height": 32,
+                      "borderRadius": 16
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 8
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "crossAxisAlignment": "start",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.title }}",
+                          "style": {
+                            "fontSize": 15,
+                            "fontWeight": "bold"
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.body }}",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#555555"
+                          },
+                          "maxLines": 2
+                        },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "crossAxisAlignment": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.author_name }}",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#999999"
+                              }
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "❤ {{ loop.item.like_count }}",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#E57373"
+                              }
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "💬 {{ loop.item.reply_count }} 回复",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#999999"
+                              }
+                            }
+                          ]
+                        }
+                      ],
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      }
+                    }
+                  ]
+                }
+              ],
+              "onTap": {
+                "call": "@global.openThread",
+                "args": {
+                  "threadId": "{{ loop.item.id }}"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "thread",
+        "title": "{{ global.currentThread.title }}",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.currentThread.title }}",
+            "style": {
+              "fontSize": 19,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 4
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "crossAxisAlignment": "center",
+            "children": [
+              {
+                "type": "image",
+                "url": "{{ global.currentThread.author_avatar }}",
+                "width": 28,
+                "height": 28,
+                "borderRadius": 14
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "button",
+                "label": "楼主：{{ global.currentThread.author_name }}",
+                "variant": "text",
+                "action": {
+                  "call": "@global.openUser",
+                  "args": {
+                    "ownerId": "{{ global.currentThread.author_id }}"
+                  }
+                }
+              },
+              {
+                "type": "spacer",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "❤ {{ global.currentThread.like_count }}",
+                    "style": {
+                      "fontSize": 13,
+                      "color": "#E57373"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 4
+                  },
+                  {
+                    "type": "button",
+                    "label": "{{ global.currentThread.liked_by_me }} ? '❤️ 已赞' : '🤍 点赞'",
+                    "variant": "text",
+                    "action": {
+                      "call": "@global.toggleLikeThread",
+                      "args": {
+                        "threadId": "{{ global.currentThread.id }}",
+                        "liked": "{{ global.currentThread.liked_by_me }}"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 8
+          },
+          {
+            "type": "text",
+            "value": "{{ global.currentThread.body }}",
+            "style": {
+              "fontSize": 15,
+              "color": "#222222"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "padding": 8,
+            "children": [
+              {
+                "type": "text",
+                "value": "回复：{{ global.replyHint }}",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#888888"
+                }
+              },
+              {
+                "type": "spacer",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "button",
+                "label": "回主楼",
+                "variant": "text",
+                "action": {
+                  "call": "@global.replyToFloor",
+                  "args": {}
+                }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "crossAxisAlignment": "center",
+            "children": [
+              {
+                "type": "input",
+                "placeholder": "写回复…",
+                "bind": "global.replyText",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "button",
+                "label": "发送",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.submitReply",
+                  "args": {}
+                }
+              }
+            ]
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "list",
+            "source": "{{ global.posts }}",
+            "shrinkWrap": true,
+            "separator": "none",
+            "emptyText": "还没有回帖，来抢沙发～",
             "item_template": {
               "type": "container",
               "layout": "column",
-              "padding": 12,
-              "margin": 6,
+              "paddingLeft": "{{ loop.item.indent }}",
+              "paddingTop": 4,
+              "paddingBottom": 4,
               "children": [
                 {
-                  "type": "text",
-                  "value": "{{ loop.item.name }}",
-                  "fontSize": 16,
-                  "fontWeight": "w600"
+                  "type": "container",
+                  "layout": "column",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "loop.item.kind"
+                      },
+                      "post"
+                    ]
+                  },
+                  "crossAxisAlignment": "start",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "image",
+                          "url": "{{ loop.item.author_avatar }}",
+                          "width": 24,
+                          "height": 24,
+                          "borderRadius": 12
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 6
+                        },
+                        {
+                          "type": "button",
+                          "label": "{{ loop.item.author_name }}",
+                          "variant": "text",
+                          "action": {
+                            "call": "@global.openUser",
+                            "args": {
+                              "ownerId": "{{ loop.item.author_id }}"
+                            }
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "value": "· {{ loop.item.floor_label }}",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#BBBBBB"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 2
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.body }}",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#222222"
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "button",
+                          "label": "回复",
+                          "variant": "text",
+                          "action": {
+                            "call": "@global.replyTo",
+                            "args": {
+                              "postId": "{{ loop.item.id }}",
+                              "name": "{{ loop.item.author_name }}"
+                            }
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "❤ {{ loop.item.like_count }}",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#E57373"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 4
+                        },
+                        {
+                          "type": "button",
+                          "label": "{{ loop.item.liked_by_me }} ? '已赞' : '点赞'",
+                          "variant": "text",
+                          "action": {
+                            "call": "@global.toggleLikePost",
+                            "args": {
+                              "postId": "{{ loop.item.id }}",
+                              "liked": "{{ loop.item.liked_by_me }}"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
-                  "type": "text",
-                  "value": "{{ loop.item.desc }}",
-                  "fontSize": 13,
-                  "color": "#888888"
+                  "type": "button",
+                  "label": "▾ 展开 {{ loop.item.remaining }} 条回复",
+                  "variant": "text",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "loop.item.kind"
+                      },
+                      "more"
+                    ]
+                  },
+                  "action": {
+                    "call": "@global.expandReplies",
+                    "args": {
+                      "parentId": "{{ loop.item.parent_id }}"
+                    }
+                  }
+                },
+                {
+                  "type": "button",
+                  "label": "▴ 收起",
+                  "variant": "text",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "loop.item.kind"
+                      },
+                      "collapse"
+                    ]
+                  },
+                  "action": {
+                    "call": "@global.collapseReplies",
+                    "args": {
+                      "parentId": "{{ loop.item.parent_id }}"
+                    }
+                  }
                 }
               ]
             }
+          }
+        ]
+      },
+      {
+        "id": "create_board",
+        "title": "创建新吧",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "text",
+            "value": "创建新吧",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "吧名",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 4
+          },
+          {
+            "type": "input",
+            "placeholder": "给你的吧起个名字（全局唯一）",
+            "bind": "global.newBoardName"
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "简介",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 4
+          },
+          {
+            "type": "input",
+            "placeholder": "简单介绍一下这个吧",
+            "bind": "global.newBoardIntro",
+            "maxLines": 3
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "button",
+            "label": "创建",
+            "variant": "filled",
+            "action": {
+              "call": "@global.submitBoard",
+              "args": {}
+            }
+          }
+        ]
+      },
+      {
+        "id": "create_thread",
+        "title": "发新主题",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "text",
+            "value": "在 {{ global.currentBoard.name }}吧 发帖",
+            "style": {
+              "fontSize": 18,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "标题",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 4
+          },
+          {
+            "type": "input",
+            "placeholder": "给帖子起个标题",
+            "bind": "global.newThreadTitle"
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "正文",
+            "style": {
+              "fontSize": 14,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 4
+          },
+          {
+            "type": "input",
+            "placeholder": "说点什么…",
+            "bind": "global.newThreadBody",
+            "maxLines": 6
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "button",
+            "label": "发布",
+            "variant": "filled",
+            "action": {
+              "call": "@global.submitThread",
+              "args": {}
+            }
+          }
+        ]
+      },
+      {
+        "id": "user_profile",
+        "title": "{{ global.currentUser.display_name }} 的主页",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "padding": 16,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "image",
+                    "url": "{{ global.currentUser.avatar_url }}",
+                    "width": 60,
+                    "height": 60,
+                    "borderRadius": 30
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 14
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "crossAxisAlignment": "start",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentUser.display_name }}",
+                        "style": {
+                          "fontSize": 20,
+                          "fontWeight": "bold"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "value": "开了 {{ global.currentUser.board_count }} 个吧 · 发了 {{ global.currentUser.thread_count }} 主题 · {{ global.currentUser.post_count }} 回帖",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#999999"
+                        }
+                      }
+                    ],
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 8
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "visible": {
+              "var": "global.currentUserRel.is_self"
+            },
+            "children": [
+              {
+                "type": "button",
+                "label": "这是我的主页",
+                "variant": "text",
+                "action": {}
+              },
+              {
+                "type": "spacer",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "button",
+                "label": "🔄 刷新",
+                "variant": "outlined",
+                "action": {
+                  "call": "@global.reloadUser",
+                  "args": {}
+                }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "visible": {
+              "and": [
+                {
+                  "!": {
+                    "var": "global.currentUserRel.is_self"
+                  }
+                },
+                {
+                  "var": "global.currentUserRel.is_friend"
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "button",
+                "label": "已是好友",
+                "variant": "text",
+                "action": {}
+              },
+              {
+                "type": "spacer",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "button",
+                "label": "发私信",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.openChat",
+                  "args": {
+                    "ownerId": "{{ global.currentUser.owner_id }}",
+                    "name": "{{ global.currentUser.display_name }}",
+                    "avatar": "{{ global.currentUser.avatar_url }}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "visible": {
+              "var": "global.currentUserRel.outgoing_pending"
+            },
+            "children": [
+              {
+                "type": "button",
+                "label": "已发送好友请求",
+                "variant": "text",
+                "action": {}
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "visible": {
+              "var": "global.currentUserRel.incoming_pending"
+            },
+            "children": [
+              {
+                "type": "button",
+                "label": "同意好友请求",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.acceptRequest",
+                  "args": {
+                    "ownerId": "{{ global.currentUser.owner_id }}"
+                  }
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "button",
+                "label": "拒绝",
+                "variant": "text",
+                "action": {
+                  "call": "@global.rejectRequest",
+                  "args": {
+                    "ownerId": "{{ global.currentUser.owner_id }}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "visible": {
+              "and": [
+                {
+                  "!": {
+                    "var": "global.currentUserRel.is_self"
+                  }
+                },
+                {
+                  "!": {
+                    "var": "global.currentUserRel.is_friend"
+                  }
+                },
+                {
+                  "!": {
+                    "var": "global.currentUserRel.outgoing_pending"
+                  }
+                },
+                {
+                  "!": {
+                    "var": "global.currentUserRel.incoming_pending"
+                  }
+                }
+              ]
+            },
+            "children": [
+              {
+                "type": "button",
+                "label": "＋ 加好友",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.addFriend",
+                  "args": {
+                    "ownerId": "{{ global.currentUser.owner_id }}"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "最近主题",
+            "style": {
+              "fontSize": 15,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "list",
+            "source": "{{ global.currentUserThreads }}",
+            "shrinkWrap": true,
+            "separator": "none",
+            "emptyText": "该用户还没有发过主题。",
+            "item_template": {
+              "type": "card",
+              "layout": "column",
+              "padding": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.title }}",
+                  "style": {
+                    "fontSize": 15,
+                    "fontWeight": "bold"
+                  }
+                },
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.board_name }}吧  ·  {{ loop.item.reply_count }} 回复 · {{ loop.item.like_count }} 赞",
+                  "style": {
+                    "fontSize": 11,
+                    "color": "#999999"
+                  }
+                }
+              ],
+              "onTap": {
+                "call": "@global.openThread",
+                "args": {
+                  "threadId": "{{ loop.item.id }}"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "chat",
+        "title": "{{ global.chatPeer.display_name }}",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "← 返回",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "crossAxisAlignment": "center",
+            "children": [
+              {
+                "type": "image",
+                "url": "{{ global.chatPeer.avatar_url }}",
+                "width": 36,
+                "height": 36,
+                "borderRadius": 18
+              },
+              {
+                "type": "spacer",
+                "width": 10
+              },
+              {
+                "type": "text",
+                "value": "{{ global.chatPeer.display_name }}",
+                "style": {
+                  "fontSize": 18,
+                  "fontWeight": "bold"
+                }
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 4
+          },
+          {
+            "type": "button",
+            "label": "🔄 刷新消息",
+            "variant": "outlined",
+            "action": {
+              "call": "@global.reloadChat",
+              "args": {}
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "list",
+            "source": "{{ global.chatMessages }}",
+            "shrinkWrap": true,
+            "separator": "none",
+            "emptyText": "还没有聊天记录，发第一条消息吧～",
+            "item_template": {
+              "type": "container",
+              "layout": "row",
+              "padding": 6,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "visible": {
+                    "!": {
+                      "var": "loop.item.is_me"
+                    }
+                  },
+                  "crossAxisAlignment": "start",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "padding": 10,
+                      "borderRadius": 12,
+                      "color": "#F0F0F0",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.body }}",
+                          "style": {
+                            "fontSize": 14,
+                            "color": "#222222"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "visible": {
+                    "var": "loop.item.is_me"
+                  },
+                  "mainAxisAlignment": "end",
+                  "children": [
+                    {
+                      "type": "spacer",
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "padding": 10,
+                      "borderRadius": 12,
+                      "color": "#95EC69",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.body }}",
+                          "style": {
+                            "fontSize": 14,
+                            "color": "#222222"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "crossAxisAlignment": "center",
+            "children": [
+              {
+                "type": "input",
+                "placeholder": "说点什么…",
+                "bind": "global.dmText",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "button",
+                "label": "发送",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.sendDm",
+                  "args": {}
+                },
+                "icon": "send"
+              }
+            ]
           }
         ]
       }

@@ -1,40 +1,560 @@
 {
   "dsl": "3.3",
   "meta": {
-    "name": "demo-pomodoro",
+    "name": "pomodoro-timer",
     "version": "1.0.0",
     "type": "app",
+    "description": "25 分钟番茄钟，开始/暂停/重置，结束提醒",
+    "author": "fish",
     "displayName": {
       "zh": "番茄钟",
-      "en": "Pomodoro"
+      "en": "Pomodoro Timer"
     }
   },
+  "dependencies": {},
   "global": {
     "variables": {
-      "minutes": 25
-    }
-  },
-  "ui": {
-    "screens": [
-      {
-        "id": "home",
-        "title": "番茄钟",
-        "children": [
+      "remainingSeconds": 1500,
+      "totalSeconds": 1500,
+      "isRunning": false,
+      "displayTime": "25:00",
+      "progress": 1.0,
+      "statusLabel": "准备开始",
+      "buttonLabel": "开始",
+      "buttonIcon": "play",
+      "sessions": 0,
+      "sessionLabel": "0"
+    },
+    "functions": {
+      "toggleTimer": {
+        "logic": [
           {
-            "type": "center",
-            "child": {
-              "type": "text",
-              "value": "{{ global.minutes }}:00",
-              "fontSize": 48,
-              "fontWeight": "w700"
+            "call": "@if",
+            "args": {
+              "condition": {
+                "var": "global.isRunning"
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "isRunning",
+                    "value": false
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "statusLabel",
+                    "value": "已暂停"
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "buttonLabel",
+                    "value": "继续"
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "buttonIcon",
+                    "value": "play"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "<=": [
+                        {
+                          "var": "global.remainingSeconds"
+                        },
+                        0
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "remainingSeconds",
+                          "value": 1500
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "totalSeconds",
+                          "value": 1500
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "displayTime",
+                          "value": "25:00"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "progress",
+                          "value": 1.0
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "isRunning",
+                    "value": true
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "statusLabel",
+                    "value": "运行中..."
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "buttonLabel",
+                    "value": "暂停"
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "buttonIcon",
+                    "value": "pause"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "resetTimer": {
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "remainingSeconds",
+              "value": 1500
             }
           },
           {
-            "type": "text",
-            "value": "Demo 模式生成的纯前端番茄钟",
-            "fontSize": 13,
-            "color": "#888888",
-            "margin": 12
+            "call": "@set",
+            "args": {
+              "var": "totalSeconds",
+              "value": 1500
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "displayTime",
+              "value": "25:00"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "progress",
+              "value": 1.0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "isRunning",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "statusLabel",
+              "value": "已重置"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "buttonLabel",
+              "value": "开始"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "buttonIcon",
+              "value": "play"
+            }
+          }
+        ]
+      },
+      "tick": {
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "var": "global.isRunning"
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "remainingSeconds",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.remainingSeconds"
+                        },
+                        -1
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "displayTime",
+                    "value": {
+                      "cat": [
+                        {
+                          "if": [
+                            {
+                              "<": [
+                                {
+                                  "floor": {
+                                    "/": [
+                                      {
+                                        "var": "global.remainingSeconds"
+                                      },
+                                      60
+                                    ]
+                                  }
+                                },
+                                10
+                              ]
+                            },
+                            "0",
+                            ""
+                          ]
+                        },
+                        {
+                          "to_string": {
+                            "floor": {
+                              "/": [
+                                {
+                                  "var": "global.remainingSeconds"
+                                },
+                                60
+                              ]
+                            }
+                          }
+                        },
+                        ":",
+                        {
+                          "if": [
+                            {
+                              "<": [
+                                {
+                                  "%": [
+                                    {
+                                      "var": "global.remainingSeconds"
+                                    },
+                                    60
+                                  ]
+                                },
+                                10
+                              ]
+                            },
+                            "0",
+                            ""
+                          ]
+                        },
+                        {
+                          "to_string": {
+                            "%": [
+                              {
+                                "var": "global.remainingSeconds"
+                              },
+                              60
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "progress",
+                    "value": {
+                      "/": [
+                        {
+                          "var": "global.remainingSeconds"
+                        },
+                        {
+                          "var": "global.totalSeconds"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "<=": [
+                        {
+                          "var": "global.remainingSeconds"
+                        },
+                        0
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "isRunning",
+                          "value": false
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "statusLabel",
+                          "value": "已完成"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "buttonLabel",
+                          "value": "开始"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "buttonIcon",
+                          "value": "play"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "sessions",
+                          "value": {
+                            "+": [
+                              {
+                                "var": "global.sessions"
+                              },
+                              1
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "sessionLabel",
+                          "value": {
+                            "to_string": {
+                              "var": "global.sessions"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "call": "@haptic",
+                        "args": {
+                          "style": "heavy"
+                        }
+                      },
+                      {
+                        "call": "@show_dialog",
+                        "args": {
+                          "title": "时间到！",
+                          "message": "25 分钟番茄钟已完成，休息一下吧 ☕"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "main",
+        "title": "番茄钟",
+        "layout": "column",
+        "children": [
+          {
+            "type": "interval_action",
+            "intervalMs": 1000,
+            "runImmediately": false,
+            "action": {
+              "call": "@global.tick"
+            },
+            "child": {
+              "type": "spacer",
+              "height": 0
+            }
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "{{ global.displayTime }}",
+                "fontSize": 72,
+                "fontWeight": "bold",
+                "color": "#111827",
+                "letterSpacing": 4
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "{{ global.statusLabel }}",
+                "fontSize": 16,
+                "color": "#6B7280"
+              },
+              {
+                "type": "spacer",
+                "height": 32
+              },
+              {
+                "type": "gradient_progress",
+                "value": "{{ global.progress }}",
+                "width": 280,
+                "height": 12,
+                "borderRadius": 6,
+                "backgroundColor": "#E5E7EB",
+                "fillGradients": [
+                  {
+                    "colors": [
+                      "#10B981",
+                      "#34D399"
+                    ],
+                    "begin": [
+                      0,
+                      0
+                    ],
+                    "end": [
+                      1,
+                      0
+                    ]
+                  }
+                ],
+                "animation": {
+                  "mode": "mount",
+                  "durationMs": 800
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 48
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "clock",
+                    "size": 18,
+                    "color": "#6B7280"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "text",
+                    "value": "已完成 {{ global.sessionLabel }} 个番茄",
+                    "fontSize": 14,
+                    "color": "#6B7280"
+                  }
+                ],
+                "crossAxisAlignment": "center",
+                "padding": 12,
+                "color": "#F3F4F6",
+                "borderRadius": 12
+              },
+              {
+                "type": "spacer",
+                "height": 40
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "button",
+                    "label": "重置",
+                    "variant": "outlined",
+                    "action": {
+                      "call": "@global.resetTimer"
+                    },
+                    "icon": "refresh",
+                    "style": {
+                      "textColor": "#6B7280",
+                      "fontSize": 16,
+                      "paddingH": 24,
+                      "paddingV": 12
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 20
+                  },
+                  {
+                    "type": "button",
+                    "label": "{{ global.buttonLabel }}",
+                    "variant": "filled",
+                    "action": {
+                      "call": "@global.toggleTimer"
+                    },
+                    "icon": "{{ global.buttonIcon }}",
+                    "style": {
+                      "textColor": "#FFFFFF",
+                      "backgroundColor": "#10B981",
+                      "fontSize": 18,
+                      "paddingH": 32,
+                      "paddingV": 14
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              }
+            ],
+            "crossAxisAlignment": "center",
+            "mainAxisAlignment": "center",
+            "padding": 24
           }
         ]
       }
