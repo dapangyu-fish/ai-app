@@ -946,6 +946,147 @@ const copy = {
   },
 };
 
+const docsI18n: Record<string, Partial<Record<Lang, string>>> = {
+  'Entry': { de: 'Einstieg', es: 'Entrada', fr: 'Entrée', pt: 'Entrada', ca: 'Entrada', hi: 'प्रवेश बिंदु', ko: '진입점', ja: '入口', it: 'Ingresso' },
+  'Web client': { de: 'Web-Client', es: 'Cliente Web', fr: 'Client Web', pt: 'Cliente Web', ca: 'Client web', hi: 'Web क्लाइंट', ko: 'Web 클라이언트', ja: 'Web クライアント', it: 'Client Web' },
+  'iOS / Android': { de: 'iOS / Android', es: 'iOS / Android', fr: 'iOS / Android', pt: 'iOS / Android', ca: 'iOS / Android', hi: 'iOS / Android', ko: 'iOS / Android', ja: 'iOS / Android', it: 'iOS / Android' },
+  'Runtime': { de: 'Laufzeitumgebung', es: 'Entorno de ejecución', fr: 'Runtime', pt: 'Runtime', ca: 'Entorn d\'execució', hi: 'रनटाइम', ko: '런타임', ja: 'ランタイム', it: 'Runtime' },
+  'JSON DSL interpreter': { de: 'JSON-DSL-Interpreter', es: 'Intérprete de JSON DSL', fr: 'Interpréteur JSON DSL', pt: 'Interpretador de JSON DSL', ca: 'Intèrpret de JSON DSL', hi: 'JSON DSL इंटरप्रेटर', ko: 'JSON DSL 인터프리터', ja: 'JSON DSL インタープリター', it: 'Interprete JSON DSL' },
+  'compiled capabilities only': { de: 'nur kompilierte Funktionen', es: 'solo capacidades compiladas', fr: 'capacités compilées uniquement', pt: 'apenas capacidades compiladas', ca: 'només capacitats compilades', hi: 'केवल कंपाइल की गई क्षमताएँ', ko: '컴파일된 기능만 사용', ja: 'コンパイル済み機能のみ', it: 'solo funzionalità compilate' },
+  'IM / game / media atoms': { de: 'IM-/Spiel-/Medien-Atome', es: 'Átomos de IM / juegos / multimedia', fr: 'atomes IM / jeu / média', pt: 'Átomos de IM / jogo / multimédia', ca: 'Àtoms d\'IM / joc / multimèdia', hi: 'IM / गेम / मीडिया एटम', ko: 'IM / 게임 / 미디어 원자 위젯', ja: 'IM / ゲーム / メディアの構成要素', it: 'Atomi IM / giochi / media' },
+  'general capability layer': { de: 'generische Funktionsschicht', es: 'capa de capacidades generales', fr: 'couche de capacités génériques', pt: 'camada de capacidades genéricas', ca: 'capa de capacitats generals', hi: 'सामान्य क्षमता परत', ko: '범용 기능 계층', ja: '汎用機能レイヤー', it: 'livello di funzionalità generiche' },
+  'Backend': { de: 'Backend', es: 'Backend', fr: 'Backend', pt: 'Backend', ca: 'Backend', hi: 'बैकएंड', ko: '백엔드', ja: 'バックエンド', it: 'Backend' },
+  'Flask API + SSE': { de: 'Flask-API + SSE', es: 'API Flask + SSE', fr: 'API Flask + SSE', pt: 'API Flask + SSE', ca: 'API Flask + SSE', hi: 'Flask API + SSE', ko: 'Flask API + SSE', ja: 'Flask API + SSE', it: 'API Flask + SSE' },
+  'sessions, auth, recovery': { de: 'Sitzungen, Auth, Wiederherstellung', es: 'sesiones, autenticación, recuperación', fr: 'sessions, authentification, reprise', pt: 'sessões, autenticação, recuperação', ca: 'sessions, autenticació, recuperació', hi: 'सेशन, प्रमाणीकरण, रिकवरी', ko: '세션, 인증, 복구', ja: 'セッション、認証、復旧', it: 'sessioni, autenticazione, ripristino' },
+  'AI worker queue': { de: 'AI-Worker-Queue', es: 'Cola de workers de IA', fr: 'File de workers IA', pt: 'Fila de workers de IA', ca: 'Cua de workers d\'IA', hi: 'AI वर्कर क्यू', ko: 'AI 워커 큐', ja: 'AI ワーカーキュー', it: 'Coda worker IA' },
+  'Redis queue + agents': { de: 'Redis-Queue + Agents', es: 'Cola Redis + agentes', fr: 'File Redis + agents', pt: 'Fila Redis + agentes', ca: 'Cua Redis + agents', hi: 'Redis क्यू + एजेंट', ko: 'Redis 큐 + 에이전트', ja: 'Redis キュー + エージェント', it: 'Coda Redis + agenti' },
+  'Platform services': { de: 'Plattformdienste', es: 'Servicios de plataforma', fr: 'Services de plateforme', pt: 'Serviços de plataforma', ca: 'Serveis de plataforma', hi: 'प्लेटफ़ॉर्म सेवाएँ', ko: '플랫폼 서비스', ja: 'プラットフォームサービス', it: 'Servizi di piattaforma' },
+  'Registry / config center': { de: 'Registry / Konfigurationszentrale', es: 'Registry / centro de configuración', fr: 'Registry / centre de configuration', pt: 'Registry / centro de configuração', ca: 'Registry / centre de configuració', hi: 'Registry / कॉन्फ़िग केंद्र', ko: 'Registry / 설정 센터', ja: 'Registry / 構成センター', it: 'Registry / centro di configurazione' },
+  'JSON Apps, versions, APK': { de: 'JSON-Apps, Versionen, APK', es: 'Apps JSON, versiones, APK', fr: 'Apps JSON, versions, APK', pt: 'JSON Apps, versões, APK', ca: 'JSON Apps, versions, APK', hi: 'JSON ऐप, वर्शन, APK', ko: 'JSON App, 버전, APK', ja: 'JSON アプリ、バージョン、APK', it: 'App JSON, versioni, APK' },
+  'User center / OpenIM': { de: 'Benutzerzentrale / OpenIM', es: 'Centro de usuarios / OpenIM', fr: 'Centre utilisateur / OpenIM', pt: 'Centro de utilizadores / OpenIM', ca: 'Centre d\'usuaris / OpenIM', hi: 'यूज़र केंद्र / OpenIM', ko: '사용자 센터 / OpenIM', ja: 'ユーザーセンター / OpenIM', it: 'Centro utenti / OpenIM' },
+  'users, friends, messages': { de: 'Benutzer, Freunde, Nachrichten', es: 'usuarios, amigos, mensajes', fr: 'utilisateurs, amis, messages', pt: 'utilizadores, amigos, mensagens', ca: 'usuaris, amics, missatges', hi: 'उपयोगकर्ता, मित्र, संदेश', ko: '사용자, 친구, 메시지', ja: 'ユーザー、フレンド、メッセージ', it: 'utenti, amici, messaggi' },
+  'Data and assets': { de: 'Daten und Assets', es: 'Datos y recursos', fr: 'Données et ressources', pt: 'Dados e recursos', ca: 'Dades i recursos', hi: 'डेटा और एसेट', ko: '데이터 및 에셋', ja: 'データとアセット', it: 'Dati e risorse' },
+  'business data, queues, sessions': { de: 'Geschäftsdaten, Queues, Sitzungen', es: 'datos de negocio, colas, sesiones', fr: 'données métier, files, sessions', pt: 'dados de negócio, filas, sessões', ca: 'dades de negoci, cues, sessions', hi: 'बिज़नेस डेटा, क्यू, सेशन', ko: '비즈니스 데이터, 큐, 세션', ja: '業務データ、キュー、セッション', it: 'dati di business, code, sessioni' },
+  'JSON, media, release files': { de: 'JSON, Medien, Release-Dateien', es: 'JSON, multimedia, archivos de publicación', fr: 'JSON, médias, fichiers de publication', pt: 'JSON, multimédia, ficheiros de versão', ca: 'JSON, multimèdia, fitxers de publicació', hi: 'JSON, मीडिया, रिलीज़ फ़ाइलें', ko: 'JSON, 미디어, 릴리스 파일', ja: 'JSON、メディア、リリースファイル', it: 'JSON, media, file di release' },
+  'System architecture': { de: 'Systemarchitektur', es: 'Arquitectura del sistema', fr: 'Architecture du système', pt: 'Arquitetura do sistema', ca: 'Arquitectura del sistema', hi: 'सिस्टम आर्किटेक्चर', ko: '시스템 아키텍처', ja: 'システムアーキテクチャ', it: 'Architettura del sistema' },
+  'Clients interpret JSON; backend generates, distributes and resumes work': { de: 'Clients interpretieren JSON; das Backend generiert, verteilt und setzt Aufgaben fort', es: 'Los clientes interpretan JSON; el backend genera, distribuye y reanuda el trabajo', fr: 'Les clients interprètent le JSON ; le backend génère, distribue et reprend le travail', pt: 'Os clientes interpretam JSON; o backend gera, distribui e retoma o trabalho', ca: 'Els clients interpreten JSON; el backend genera, distribueix i reprèn la feina', hi: 'क्लाइंट JSON की व्याख्या करते हैं; बैकएंड काम जेनरेट, वितरित और पुनः शुरू करता है', ko: '클라이언트는 JSON을 해석하고, 백엔드는 작업을 생성·배포·재개합니다', ja: 'クライアントが JSON を解釈し、バックエンドが生成・配信・処理の再開を担う', it: 'I client interpretano il JSON; il backend genera, distribuisce e riprende i lavori' },
+  'GitHub coming soon': { de: 'GitHub folgt in Kürze', es: 'GitHub próximamente', fr: 'GitHub bientôt disponible', pt: 'GitHub em breve', ca: 'GitHub disponible aviat', hi: 'GitHub जल्द आ रहा है', ko: 'GitHub 공개 예정', ja: 'GitHub は近日公開', it: 'GitHub in arrivo' },
+  'MyApp system architecture diagram': { de: 'Systemarchitektur-Diagramm von MyApp', es: 'Diagrama de arquitectura del sistema MyApp', fr: 'Diagramme d\'architecture du système MyApp', pt: 'Diagrama de arquitetura do sistema MyApp', ca: 'Diagrama d\'arquitectura del sistema MyApp', hi: 'MyApp सिस्टम आर्किटेक्चर आरेख', ko: 'MyApp 시스템 아키텍처 다이어그램', ja: 'MyApp システムアーキテクチャ図', it: 'Diagramma dell\'architettura di sistema di MyApp' },
+  'Declarative JSON Apps': { de: 'Deklarative JSON-Apps', es: 'Apps JSON declarativas', fr: 'Apps JSON déclaratives', pt: 'JSON Apps declarativos', ca: 'JSON Apps declaratives', hi: 'घोषणात्मक JSON ऐप', ko: '선언형 JSON App', ja: '宣言的な JSON アプリ', it: 'App JSON dichiarative' },
+  'General Flutter capability layer': { de: 'Generische Flutter-Funktionsschicht', es: 'Capa general de capacidades Flutter', fr: 'Couche de capacités Flutter génériques', pt: 'Camada de capacidades genéricas Flutter', ca: 'Capa general de capacitats Flutter', hi: 'सामान्य Flutter क्षमता परत', ko: '범용 Flutter 기능 계층', ja: '汎用 Flutter 機能レイヤー', it: 'Livello generico di funzionalità Flutter' },
+  'Self-hostable backend': { de: 'Selbst hostbares Backend', es: 'Backend autoalojable', fr: 'Backend auto-hébergeable', pt: 'Backend auto-hospedável', ca: 'Backend autoallotjable', hi: 'स्व-होस्ट किया जाने वाला बैकएंड', ko: '셀프 호스팅 가능한 백엔드', ja: 'セルフホスト可能なバックエンド', it: 'Backend self-hosted' },
+  'Describe an idea': { de: 'Eine Idee beschreiben', es: 'Describe una idea', fr: 'Décrire une idée', pt: 'Descrever uma ideia', ca: 'Descriu una idea', hi: 'एक विचार बताएँ', ko: '아이디어 설명', ja: 'アイデアを記述する', it: 'Descrivi un\'idea' },
+  'User describes a tool, game or screen.': { de: 'Der Nutzer beschreibt ein Tool, ein Spiel oder eine Ansicht.', es: 'El usuario describe una herramienta, un juego o una pantalla.', fr: 'L\'utilisateur décrit un outil, un jeu ou un écran.', pt: 'O utilizador descreve uma ferramenta, jogo ou ecrã.', ca: 'L\'usuari descriu una eina, un joc o una pantalla.', hi: 'उपयोगकर्ता किसी टूल, गेम या स्क्रीन का वर्णन करता है।', ko: '사용자가 도구, 게임 또는 화면을 설명합니다.', ja: 'ユーザーがツール、ゲーム、または画面を記述します。', it: 'L\'utente descrive uno strumento, un gioco o una schermata.' },
+  'Generate JSON App': { de: 'JSON-App generieren', es: 'Generar App JSON', fr: 'Générer une App JSON', pt: 'Gerar JSON App', ca: 'Genera una JSON App', hi: 'JSON ऐप जेनरेट करें', ko: 'JSON App 생성', ja: 'JSON アプリを生成する', it: 'Genera l\'App JSON' },
+  'AI produces declarative JSON and validation passes.': { de: 'Die AI erzeugt deklaratives JSON und die Validierung besteht.', es: 'La IA produce JSON declarativo y la validación se supera.', fr: 'L\'IA produit du JSON déclaratif et la validation réussit.', pt: 'A IA produz JSON declarativo e a validação é aprovada.', ca: 'La IA produeix JSON declaratiu i la validació passa.', hi: 'AI घोषणात्मक JSON तैयार करती है और सत्यापन पास हो जाता है।', ko: 'AI가 선언형 JSON을 생성하고 검증을 통과합니다.', ja: 'AI が宣言的な JSON を生成し、検証を通過します。', it: 'L\'IA produce JSON dichiarativo e la validazione viene superata.' },
+  'Run everywhere': { de: 'Überall ausführen', es: 'Ejecuta en todas partes', fr: 'Exécuter partout', pt: 'Executar em qualquer lado', ca: 'Executa-ho a tot arreu', hi: 'हर जगह चलाएँ', ko: '어디서나 실행', ja: 'どこでも実行', it: 'Esegui ovunque' },
+  'One JSON renders in Web, iOS and Android runtimes.': { de: 'Ein JSON wird in Web-, iOS- und Android-Laufzeiten gerendert.', es: 'Un único JSON se renderiza en los entornos Web, iOS y Android.', fr: 'Un seul JSON s\'affiche dans les runtimes Web, iOS et Android.', pt: 'Um único JSON é renderizado nos runtimes Web, iOS e Android.', ca: 'Un sol JSON es renderitza als entorns Web, iOS i Android.', hi: 'एक ही JSON Web, iOS और Android रनटाइम में रेंडर होता है।', ko: '하나의 JSON이 Web, iOS, Android 런타임에서 렌더링됩니다.', ja: '1 つの JSON が Web、iOS、Android のランタイムで描画されます。', it: 'Un unico JSON viene reso nei runtime Web, iOS e Android.' },
+  'Review-friendly boundary': { de: 'Prüffreundliche Grenze', es: 'Límite fácil de revisar', fr: 'Périmètre propice à la revue', pt: 'Fronteira fácil de rever', ca: 'Límit fàcil de revisar', hi: 'समीक्षा-अनुकूल सीमा', ko: '검토 친화적인 경계', ja: 'レビューしやすい境界', it: 'Confine adatto alla revisione' },
+  'AI can only compose compiled widgets and actions. It cannot ship native code, plugins or binaries.': { de: 'Die AI kann nur kompilierte Widgets und Aktionen kombinieren. Sie kann keinen nativen Code, keine Plugins und keine Binärdateien ausliefern.', es: 'La IA solo puede componer widgets y acciones compilados. No puede entregar código nativo, plugins ni binarios.', fr: 'L\'IA peut uniquement composer des widgets et des actions compilés. Elle ne peut pas livrer de code natif, de plugins ni de binaires.', pt: 'A IA só pode compor widgets e ações compilados. Não pode distribuir código nativo, plugins ou binários.', ca: 'La IA només pot compondre widgets i accions compilats. No pot distribuir codi natiu, plugins ni binaris.', hi: 'AI केवल कंपाइल किए गए विजेट और एक्शन ही जोड़ सकती है। यह नेटिव कोड, प्लगइन या बाइनरी नहीं भेज सकती।', ko: 'AI는 컴파일된 위젯과 액션만 조합할 수 있습니다. 네이티브 코드, 플러그인 또는 바이너리를 배포할 수 없습니다.', ja: 'AI はコンパイル済みのウィジェットとアクションを組み合わせることしかできません。ネイティブコード、プラグイン、バイナリを配信することはできません。', it: 'L\'IA può solo comporre widget e azioni compilati. Non può distribuire codice nativo, plugin o binari.' },
+  'myapp-ctl deployment guide': { de: 'myapp-ctl-Bereitstellungsanleitung', es: 'Guía de despliegue de myapp-ctl', fr: 'Guide de déploiement myapp-ctl', pt: 'Guia de implementação do myapp-ctl', ca: 'Guia de desplegament de myapp-ctl', hi: 'myapp-ctl परिनियोजन गाइड', ko: 'myapp-ctl 배포 가이드', ja: 'myapp-ctl デプロイガイド', it: 'Guida al deployment con myapp-ctl' },
+  'Install, deploy, update and extend MyApp with myapp-ctl': { de: 'MyApp mit myapp-ctl installieren, bereitstellen, aktualisieren und erweitern', es: 'Instala, despliega, actualiza y amplía MyApp con myapp-ctl', fr: 'Installer, déployer, mettre à jour et étendre MyApp avec myapp-ctl', pt: 'Instalar, implementar, atualizar e estender o MyApp com o myapp-ctl', ca: 'Instal·la, desplega, actualitza i amplia MyApp amb myapp-ctl', hi: 'myapp-ctl के साथ MyApp को इंस्टॉल, परिनियोजित, अपडेट और विस्तारित करें', ko: 'myapp-ctl로 MyApp을 설치, 배포, 업데이트 및 확장하기', ja: 'myapp-ctl で MyApp をインストール、デプロイ、更新、拡張する', it: 'Installa, distribuisci, aggiorna ed estendi MyApp con myapp-ctl' },
+  'The backend is now managed through myapp-ctl under deploy/production. Legacy bootstrap scripts, bare services and one-off migration paths are deprecated.': { de: 'Das Backend wird jetzt über myapp-ctl unter deploy/production verwaltet. Alte Bootstrap-Skripte, blanke Dienste und einmalige Migrationspfade sind veraltet.', es: 'El backend ahora se gestiona mediante myapp-ctl en deploy/production. Los scripts de arranque heredados, los servicios sueltos y las rutas de migración puntuales están obsoletos.', fr: 'Le backend est désormais géré via myapp-ctl sous deploy/production. Les anciens scripts d\'amorçage, les services bruts et les chemins de migration ponctuels sont obsolètes.', pt: 'O backend é agora gerido através do myapp-ctl em deploy/production. Scripts de arranque antigos, serviços diretos e migrações pontuais estão obsoletos.', ca: 'El backend ara es gestiona amb myapp-ctl dins de deploy/production. Els scripts d\'arrencada antics, els serveis nus i les vies de migració puntuals estan obsolets.', hi: 'अब बैकएंड को deploy/production के अंतर्गत myapp-ctl के माध्यम से प्रबंधित किया जाता है। पुराने bootstrap स्क्रिप्ट, बेयर सेवाएँ और एकबारगी माइग्रेशन पथ अप्रचलित हैं।', ko: '백엔드는 이제 deploy/production 아래의 myapp-ctl을 통해 관리됩니다. 기존 부트스트랩 스크립트, 베어 서비스 및 일회성 마이그레이션 경로는 더 이상 사용되지 않습니다.', ja: 'バックエンドは deploy/production 配下の myapp-ctl で管理されるようになりました。従来のブートストラップスクリプト、ベアサービス、1 回限りの移行手順は非推奨です。', it: 'Il backend è ora gestito tramite myapp-ctl in deploy/production. Gli script di bootstrap legacy, i servizi nudi e i percorsi di migrazione una tantum sono deprecati.' },
+  'Fast fresh deploy': { de: 'Schnelle Neuinstallation', es: 'Despliegue limpio rápido', fr: 'Déploiement initial rapide', pt: 'Implementação de raiz rápida', ca: 'Desplegament nou ràpid', hi: 'तेज़ नया परिनियोजन', ko: '빠른 신규 배포', ja: '高速な新規デプロイ', it: 'Deployment rapido da zero' },
+  'Prepare an Ubuntu host, Docker and a source checkout. Install myapp-ctl, configure secrets, deploy the stack, then import the client environment JSON into the app.': { de: 'Bereiten Sie einen Ubuntu-Host, Docker und ein Source-Checkout vor. Installieren Sie myapp-ctl, konfigurieren Sie die Secrets, stellen Sie den Stack bereit und importieren Sie dann das Client-Umgebungs-JSON in die App.', es: 'Prepara un host Ubuntu, Docker y una copia del código fuente. Instala myapp-ctl, configura los secretos, despliega el stack y luego importa el JSON de entorno del cliente en la app.', fr: 'Préparez un hôte Ubuntu, Docker et un checkout des sources. Installez myapp-ctl, configurez les secrets, déployez la stack, puis importez le JSON d\'environnement client dans l\'app.', pt: 'Prepare um host Ubuntu, o Docker e um checkout do código-fonte. Instale o myapp-ctl, configure os segredos, implemente a stack e depois importe o JSON de ambiente do cliente para a app.', ca: 'Prepara un host Ubuntu, Docker i una còpia del codi font. Instal·la myapp-ctl, configura els secrets, desplega l\'stack i després importa el JSON d\'entorn del client a l\'app.', hi: 'एक Ubuntu होस्ट, Docker और एक सोर्स चेकआउट तैयार करें। myapp-ctl इंस्टॉल करें, सीक्रेट कॉन्फ़िगर करें, स्टैक परिनियोजित करें, फिर क्लाइंट एनवायरनमेंट JSON को ऐप में इम्पोर्ट करें।', ko: 'Ubuntu 호스트, Docker, 소스 체크아웃을 준비합니다. myapp-ctl을 설치하고 시크릿을 설정한 뒤 스택을 배포하고, 클라이언트 환경 JSON을 앱으로 가져옵니다.', ja: 'Ubuntu ホスト、Docker、ソースのチェックアウトを準備します。myapp-ctl をインストールし、シークレットを設定し、スタックをデプロイした後、クライアント環境 JSON をアプリにインポートします。', it: 'Prepara un host Ubuntu, Docker e un checkout del sorgente. Installa myapp-ctl, configura i segreti, distribuisci lo stack, quindi importa nell\'app il JSON dell\'ambiente client.' },
+  'Backend install and first setup': { de: 'Backend-Installation und Ersteinrichtung', es: 'Instalación del backend y configuración inicial', fr: 'Installation du backend et première configuration', pt: 'Instalação do backend e configuração inicial', ca: 'Instal·lació del backend i primera configuració', hi: 'बैकएंड इंस्टॉल और प्रारंभिक सेटअप', ko: '백엔드 설치 및 초기 설정', ja: 'バックエンドのインストールと初期セットアップ', it: 'Installazione del backend e primo setup' },
+  'myapp-ctl installs the control entrypoint, generates base secrets, manages AI/SMTP/push configuration, deploys Docker services and prints a client import QR code. Production secrets stay under /etc/myapp and the data root, never Git.': { de: 'myapp-ctl installiert den Steuerungs-Einstiegspunkt, generiert Basis-Secrets, verwaltet die AI-/SMTP-/Push-Konfiguration, stellt Docker-Dienste bereit und gibt einen QR-Code für den Client-Import aus. Produktions-Secrets verbleiben unter /etc/myapp und im Daten-Root, niemals in Git.', es: 'myapp-ctl instala el punto de entrada de control, genera los secretos base, gestiona la configuración de IA/SMTP/push, despliega los servicios Docker e imprime un código QR de importación para el cliente. Los secretos de producción permanecen en /etc/myapp y en el directorio raíz de datos, nunca en Git.', fr: 'myapp-ctl installe le point d\'entrée de contrôle, génère les secrets de base, gère la configuration IA/SMTP/push, déploie les services Docker et affiche un QR code d\'import client. Les secrets de production restent sous /etc/myapp et la racine des données, jamais dans Git.', pt: 'O myapp-ctl instala o ponto de entrada de controlo, gera os segredos base, gere a configuração de AI/SMTP/push, implementa os serviços Docker e imprime um código QR de importação para o cliente. Os segredos de produção ficam em /etc/myapp e na raiz de dados, nunca no Git.', ca: 'myapp-ctl instal·la el punt d\'entrada de control, genera els secrets base, gestiona la configuració d\'AI/SMTP/push, desplega els serveis Docker i imprimeix un codi QR d\'importació per al client. Els secrets de producció es queden a /etc/myapp i a l\'arrel de dades, mai a Git.', hi: 'myapp-ctl कंट्रोल एंट्रीपॉइंट इंस्टॉल करता है, बेस सीक्रेट जेनरेट करता है, AI/SMTP/पुश कॉन्फ़िगरेशन प्रबंधित करता है, Docker सेवाएँ परिनियोजित करता है और एक क्लाइंट इम्पोर्ट QR कोड प्रिंट करता है। प्रोडक्शन सीक्रेट /etc/myapp और डेटा रूट के अंतर्गत रहते हैं, कभी Git में नहीं।', ko: 'myapp-ctl은 제어 진입점을 설치하고 기본 시크릿을 생성하며 AI/SMTP/푸시 설정을 관리하고 Docker 서비스를 배포한 뒤 클라이언트 가져오기 QR 코드를 출력합니다. 프로덕션 시크릿은 /etc/myapp과 데이터 루트에만 보관되며 Git에는 절대 저장되지 않습니다.', ja: 'myapp-ctl は制御用エントリポイントをインストールし、基本シークレットを生成し、AI/SMTP/プッシュの設定を管理し、Docker サービスをデプロイして、クライアントインポート用の QR コードを出力します。本番環境のシークレットは /etc/myapp とデータルート配下に保持され、Git には保存されません。', it: 'myapp-ctl installa l\'entrypoint di controllo, genera i segreti di base, gestisce la configurazione AI/SMTP/push, distribuisce i servizi Docker e stampa un codice QR per l\'importazione nel client. I segreti di produzione restano in /etc/myapp e nella data root, mai in Git.' },
+  'Client connection': { de: 'Client-Verbindung', es: 'Conexión del cliente', fr: 'Connexion du client', pt: 'Ligação do cliente', ca: 'Connexió del client', hi: 'क्लाइंट कनेक्शन', ko: '클라이언트 연결', ja: 'クライアント接続', it: 'Connessione del client' },
+  'Web, iOS TestFlight and Android APK can all connect to a private backend. Open Service Environment, scan or paste the JSON printed by myapp-ctl, save and sign in again.': { de: 'Web, iOS TestFlight und Android APK können sich alle mit einem privaten Backend verbinden. Öffnen Sie die Dienstumgebung, scannen oder fügen Sie das von myapp-ctl ausgegebene JSON ein, speichern Sie und melden Sie sich erneut an.', es: 'Web, iOS TestFlight y el APK de Android pueden conectarse a un backend privado. Abre el Entorno de servicio, escanea o pega el JSON que imprime myapp-ctl, guarda e inicia sesión de nuevo.', fr: 'Web, iOS TestFlight et l\'APK Android peuvent tous se connecter à un backend privé. Ouvrez Environnement de service, scannez ou collez le JSON affiché par myapp-ctl, enregistrez et reconnectez-vous.', pt: 'A Web, o iOS TestFlight e o APK Android podem todos ligar-se a um backend privado. Abra o Ambiente de Serviço, leia ou cole o JSON impresso pelo myapp-ctl, guarde e inicie sessão novamente.', ca: 'Web, iOS TestFlight i l\'APK d\'Android poden connectar-se a un backend privat. Obre Entorn de servei, escaneja o enganxa el JSON imprès per myapp-ctl, desa-ho i torna a iniciar la sessió.', hi: 'Web, iOS TestFlight और Android APK सभी एक निजी बैकएंड से कनेक्ट हो सकते हैं। Service Environment खोलें, myapp-ctl द्वारा प्रिंट किए गए JSON को स्कैन या पेस्ट करें, सहेजें और फिर से साइन इन करें।', ko: 'Web, iOS TestFlight, Android APK 모두 프라이빗 백엔드에 연결할 수 있습니다. 서비스 환경을 열고 myapp-ctl이 출력한 JSON을 스캔하거나 붙여넣은 뒤 저장하고 다시 로그인하세요.', ja: 'Web、iOS TestFlight、Android APK はすべてプライベートバックエンドに接続できます。サービス環境を開き、myapp-ctl が出力した JSON をスキャンまたは貼り付け、保存して再度サインインします。', it: 'Web, iOS TestFlight e APK Android possono tutti connettersi a un backend privato. Apri Ambiente di servizio, scansiona o incolla il JSON stampato da myapp-ctl, salva e accedi di nuovo.' },
+  'Client and website builds': { de: 'Client- und Website-Builds', es: 'Compilaciones del cliente y del sitio web', fr: 'Builds du client et du site web', pt: 'Builds do cliente e do site', ca: 'Builds del client i del lloc web', hi: 'क्लाइंट और वेबसाइट बिल्ड', ko: '클라이언트 및 웹사이트 빌드', ja: 'クライアントとウェブサイトのビルド', it: 'Build del client e del sito web' },
+  'Website deployment': { de: 'Website-Bereitstellung', es: 'Despliegue del sitio web', fr: 'Déploiement du site web', pt: 'Implementação do site', ca: 'Desplegament del lloc web', hi: 'वेबसाइट परिनियोजन', ko: '웹사이트 배포', ja: 'ウェブサイトのデプロイ', it: 'Deployment del sito web' },
+  'Release and distribution': { de: 'Release und Verteilung', es: 'Publicación y distribución', fr: 'Publication et distribution', pt: 'Lançamento e distribuição', ca: 'Publicació i distribució', hi: 'रिलीज़ और वितरण', ko: '릴리스 및 배포', ja: 'リリースと配布', it: 'Release e distribuzione' },
+  'JSON Apps are published through Registry and stored in OSS/MinIO. Android APK uploads through config center to a fixed object path. Flutter Web client builds to build/web; this marketing website is the Vite app under website. iOS is distributed through TestFlight.': { de: 'JSON-Apps werden über die Registry veröffentlicht und in OSS/MinIO gespeichert. Das Android-APK wird über die Konfigurationszentrale auf einen festen Objektpfad hochgeladen. Der Flutter-Web-Client baut nach build/web; diese Marketing-Website ist die Vite-App unter website. iOS wird über TestFlight verteilt.', es: 'Las Apps JSON se publican a través de Registry y se almacenan en OSS/MinIO. El APK de Android se sube mediante el centro de configuración a una ruta de objeto fija. El cliente Flutter Web se compila en build/web; este sitio web de marketing es la app Vite ubicada en website. iOS se distribuye a través de TestFlight.', fr: 'Les Apps JSON sont publiées via Registry et stockées dans OSS/MinIO. L\'APK Android est téléversé via le centre de configuration vers un chemin d\'objet fixe. Le client Flutter Web se compile vers build/web ; ce site marketing est l\'app Vite sous website. iOS est distribué via TestFlight.', pt: 'Os JSON Apps são publicados através do Registry e armazenados em OSS/MinIO. O APK Android é carregado através do centro de configuração para um caminho de objeto fixo. O cliente Flutter Web é compilado para build/web; este site de marketing é a app Vite em website. O iOS é distribuído através do TestFlight.', ca: 'Les JSON Apps es publiquen mitjançant Registry i s\'emmagatzemen a OSS/MinIO. L\'APK d\'Android es puja a través del centre de configuració a una ruta d\'objecte fixa. El client Flutter Web es construeix a build/web; aquest lloc web de màrqueting és l\'app Vite dins de website. iOS es distribueix mitjançant TestFlight.', hi: 'JSON ऐप Registry के माध्यम से प्रकाशित होते हैं और OSS/MinIO में संग्रहीत होते हैं। Android APK कॉन्फ़िग केंद्र के माध्यम से एक निश्चित ऑब्जेक्ट पथ पर अपलोड होता है। Flutter Web क्लाइंट build/web में बिल्ड होता है; यह मार्केटिंग वेबसाइट website के अंतर्गत Vite ऐप है। iOS को TestFlight के माध्यम से वितरित किया जाता है।', ko: 'JSON App은 Registry를 통해 게시되고 OSS/MinIO에 저장됩니다. Android APK는 설정 센터를 통해 고정된 오브젝트 경로로 업로드됩니다. Flutter Web 클라이언트는 build/web으로 빌드되며, 이 마케팅 웹사이트는 website 아래의 Vite 앱입니다. iOS는 TestFlight를 통해 배포됩니다.', ja: 'JSON アプリは Registry を通じて公開され、OSS/MinIO に保存されます。Android APK は構成センター経由で固定のオブジェクトパスにアップロードされます。Flutter Web クライアントは build/web にビルドされ、このマーケティングサイトは website 配下の Vite アプリです。iOS は TestFlight で配布されます。', it: 'Le App JSON vengono pubblicate tramite Registry e archiviate in OSS/MinIO. L\'APK Android viene caricato tramite il centro di configurazione in un percorso oggetto fisso. Il client Flutter Web compila in build/web; questo sito di marketing è l\'app Vite nella cartella website. iOS viene distribuito tramite TestFlight.' },
+  'Configuration and security boundary': { de: 'Konfigurations- und Sicherheitsgrenze', es: 'Configuración y límite de seguridad', fr: 'Configuration et périmètre de sécurité', pt: 'Fronteira de configuração e segurança', ca: 'Límit de configuració i seguretat', hi: 'कॉन्फ़िगरेशन और सुरक्षा सीमा', ko: '설정 및 보안 경계', ja: '構成とセキュリティの境界', it: 'Confine di configurazione e sicurezza' },
+  'AI produces declarative JSON, not Dart, Swift, Kotlin, plugins or binaries. The runtime only interprets generic widgets, actions and media capabilities already compiled into the client.': { de: 'Die AI erzeugt deklaratives JSON, kein Dart, Swift, Kotlin, keine Plugins oder Binärdateien. Die Laufzeit interpretiert nur generische Widgets, Aktionen und Medienfunktionen, die bereits in den Client kompiliert sind.', es: 'La IA produce JSON declarativo, no Dart, Swift, Kotlin, plugins ni binarios. El entorno de ejecución solo interpreta widgets, acciones y capacidades multimedia genéricas ya compiladas en el cliente.', fr: 'L\'IA produit du JSON déclaratif, et non du Dart, Swift, Kotlin, des plugins ou des binaires. Le runtime interprète uniquement les widgets, actions et capacités média génériques déjà compilés dans le client.', pt: 'A IA produz JSON declarativo, não Dart, Swift, Kotlin, plugins ou binários. O runtime apenas interpreta widgets genéricos, ações e capacidades multimédia já compilados no cliente.', ca: 'La IA produeix JSON declaratiu, no Dart, Swift, Kotlin, plugins ni binaris. L\'entorn d\'execució només interpreta widgets, accions i capacitats multimèdia genèrics ja compilats dins del client.', hi: 'AI घोषणात्मक JSON तैयार करती है, Dart, Swift, Kotlin, प्लगइन या बाइनरी नहीं। रनटाइम केवल उन सामान्य विजेट, एक्शन और मीडिया क्षमताओं की व्याख्या करता है जो पहले से क्लाइंट में कंपाइल हैं।', ko: 'AI는 Dart, Swift, Kotlin, 플러그인 또는 바이너리가 아닌 선언형 JSON을 생성합니다. 런타임은 이미 클라이언트에 컴파일된 범용 위젯, 액션, 미디어 기능만 해석합니다.', ja: 'AI が生成するのは宣言的な JSON であり、Dart、Swift、Kotlin、プラグイン、バイナリではありません。ランタイムは、すでにクライアントにコンパイルされている汎用ウィジェット、アクション、メディア機能のみを解釈します。', it: 'L\'IA produce JSON dichiarativo, non Dart, Swift, Kotlin, plugin o binari. Il runtime interpreta solo widget, azioni e funzionalità media generici già compilati nel client.' },
+  'Install control CLI': { de: 'Steuerungs-CLI installieren', es: 'Instalar la CLI de control', fr: 'Installer la CLI de contrôle', pt: 'Instalar a CLI de controlo', ca: 'Instal·la la CLI de control', hi: 'कंट्रोल CLI इंस्टॉल करें', ko: '제어 CLI 설치', ja: '制御 CLI をインストールする', it: 'Installa la CLI di controllo' },
+  'Run install_ctl.sh from the source root; myapp-ctl records that checkout as the build context.': { de: 'Führen Sie install_ctl.sh aus dem Source-Root aus; myapp-ctl merkt sich dieses Checkout als Build-Kontext.', es: 'Ejecuta install_ctl.sh desde la raíz del código fuente; myapp-ctl registra esa copia como contexto de compilación.', fr: 'Exécutez install_ctl.sh depuis la racine des sources ; myapp-ctl enregistre ce checkout comme contexte de build.', pt: 'Execute o install_ctl.sh a partir da raiz do código-fonte; o myapp-ctl regista esse checkout como o contexto de build.', ca: 'Executa install_ctl.sh des de l\'arrel del codi font; myapp-ctl registra aquesta còpia com a context de build.', hi: 'सोर्स रूट से install_ctl.sh चलाएँ; myapp-ctl उस चेकआउट को बिल्ड कॉन्टेक्स्ट के रूप में रिकॉर्ड करता है।', ko: '소스 루트에서 install_ctl.sh를 실행하세요. myapp-ctl은 해당 체크아웃을 빌드 컨텍스트로 기록합니다.', ja: 'ソースルートで install_ctl.sh を実行します。myapp-ctl はそのチェックアウトをビルドコンテキストとして記録します。', it: 'Esegui install_ctl.sh dalla radice del sorgente; myapp-ctl registra quel checkout come contesto di build.' },
+  'Configure secrets': { de: 'Secrets konfigurieren', es: 'Configurar secretos', fr: 'Configurer les secrets', pt: 'Configurar segredos', ca: 'Configura els secrets', hi: 'सीक्रेट कॉन्फ़िगर करें', ko: '시크릿 설정', ja: 'シークレットを設定する', it: 'Configura i segreti' },
+  'setup configures language, data root, AI providers, SMTP, APNs, FCM and GeTui.': { de: 'setup konfiguriert Sprache, Daten-Root, AI-Anbieter, SMTP, APNs, FCM und GeTui.', es: 'setup configura el idioma, el directorio raíz de datos, los proveedores de IA, SMTP, APNs, FCM y GeTui.', fr: 'setup configure la langue, la racine des données, les fournisseurs IA, SMTP, APNs, FCM et GeTui.', pt: 'O setup configura o idioma, a raiz de dados, os fornecedores de IA, SMTP, APNs, FCM e GeTui.', ca: 'setup configura l\'idioma, l\'arrel de dades, els proveïdors d\'IA, SMTP, APNs, FCM i GeTui.', hi: 'setup भाषा, डेटा रूट, AI प्रोवाइडर, SMTP, APNs, FCM और GeTui कॉन्फ़िगर करता है।', ko: 'setup은 언어, 데이터 루트, AI 제공자, SMTP, APNs, FCM, GeTui를 설정합니다.', ja: 'setup は言語、データルート、AI プロバイダー、SMTP、APNs、FCM、GeTui を設定します。', it: 'setup configura lingua, data root, provider IA, SMTP, APNs, FCM e GeTui.' },
+  'Deploy services': { de: 'Dienste bereitstellen', es: 'Desplegar servicios', fr: 'Déployer les services', pt: 'Implementar serviços', ca: 'Desplega els serveis', hi: 'सेवाएँ परिनियोजित करें', ko: '서비스 배포', ja: 'サービスをデプロイする', it: 'Distribuisci i servizi' },
+  'deploy --build builds from source; deploy --pull uses published images.': { de: 'deploy --build baut aus dem Quellcode; deploy --pull verwendet veröffentlichte Images.', es: 'deploy --build compila desde el código fuente; deploy --pull usa imágenes publicadas.', fr: 'deploy --build compile depuis les sources ; deploy --pull utilise les images publiées.', pt: 'deploy --build compila a partir do código-fonte; deploy --pull usa imagens publicadas.', ca: 'deploy --build construeix des del codi font; deploy --pull utilitza imatges publicades.', hi: 'deploy --build सोर्स से बिल्ड करता है; deploy --pull प्रकाशित इमेज का उपयोग करता है।', ko: 'deploy --build는 소스에서 빌드하고, deploy --pull은 게시된 이미지를 사용합니다.', ja: 'deploy --build はソースからビルドし、deploy --pull は公開済みイメージを使用します。', it: 'deploy --build compila dal sorgente; deploy --pull usa le immagini pubblicate.' },
+  'Connect clients': { de: 'Clients verbinden', es: 'Conectar clientes', fr: 'Connecter les clients', pt: 'Ligar clientes', ca: 'Connecta els clients', hi: 'क्लाइंट कनेक्ट करें', ko: '클라이언트 연결', ja: 'クライアントを接続する', it: 'Connetti i client' },
+  'client-env prints JSON and a QR code; import it in the client and sign in again.': { de: 'client-env gibt JSON und einen QR-Code aus; importieren Sie ihn im Client und melden Sie sich erneut an.', es: 'client-env imprime un JSON y un código QR; impórtalo en el cliente e inicia sesión de nuevo.', fr: 'client-env affiche du JSON et un QR code ; importez-le dans le client et reconnectez-vous.', pt: 'O client-env imprime o JSON e um código QR; importe-o no cliente e inicie sessão novamente.', ca: 'client-env imprimeix el JSON i un codi QR; importa\'l al client i torna a iniciar la sessió.', hi: 'client-env JSON और एक QR कोड प्रिंट करता है; इसे क्लाइंट में इम्पोर्ट करें और फिर से साइन इन करें।', ko: 'client-env는 JSON과 QR 코드를 출력합니다. 클라이언트에서 가져온 뒤 다시 로그인하세요.', ja: 'client-env は JSON と QR コードを出力します。クライアントにインポートして再度サインインします。', it: 'client-env stampa il JSON e un codice QR; importalo nel client e accedi di nuovo.' },
+  'Core services': { de: 'Kerndienste', es: 'Servicios principales', fr: 'Services principaux', pt: 'Serviços principais', ca: 'Serveis principals', hi: 'कोर सेवाएँ', ko: '핵심 서비스', ja: 'コアサービス', it: 'Servizi core' },
+  'backend, ai-worker, Registry, Config Center and User Center': { de: 'backend, ai-worker, Registry, Config Center und User Center', es: 'backend, ai-worker, Registry, Config Center y User Center', fr: 'backend, ai-worker, Registry, Config Center et User Center', pt: 'backend, ai-worker, Registry, Config Center e User Center', ca: 'backend, ai-worker, Registry, Config Center i User Center', hi: 'backend, ai-worker, Registry, Config Center और User Center', ko: 'backend, ai-worker, Registry, Config Center, User Center', ja: 'backend、ai-worker、Registry、Config Center、User Center', it: 'backend, ai-worker, Registry, Config Center e User Center' },
+  'Infrastructure': { de: 'Infrastruktur', es: 'Infraestructura', fr: 'Infrastructure', pt: 'Infraestrutura', ca: 'Infraestructura', hi: 'इन्फ्रास्ट्रक्चर', ko: '인프라', ja: 'インフラストラクチャ', it: 'Infrastruttura' },
+  'JSON App Postgres, AI Redis, App MinIO, Supabase and OpenIM': { de: 'JSON-App-Postgres, AI-Redis, App-MinIO, Supabase und OpenIM', es: 'Postgres de Apps JSON, Redis de IA, App MinIO, Supabase y OpenIM', fr: 'Postgres des Apps JSON, Redis IA, MinIO de l\'app, Supabase et OpenIM', pt: 'Postgres do JSON App, Redis da IA, MinIO da App, Supabase e OpenIM', ca: 'Postgres de JSON App, Redis d\'IA, MinIO d\'App, Supabase i OpenIM', hi: 'JSON ऐप Postgres, AI Redis, App MinIO, Supabase और OpenIM', ko: 'JSON App용 Postgres, AI용 Redis, App MinIO, Supabase, OpenIM', ja: 'JSON アプリ用 Postgres、AI 用 Redis、アプリ用 MinIO、Supabase、OpenIM', it: 'Postgres delle App JSON, Redis IA, MinIO dell\'app, Supabase e OpenIM' },
+  'AI execution': { de: 'AI-Ausführung', es: 'Ejecución de IA', fr: 'Exécution IA', pt: 'Execução de IA', ca: 'Execució d\'IA', hi: 'AI निष्पादन', ko: 'AI 실행', ja: 'AI 実行', it: 'Esecuzione IA' },
+  'agent-node schedules Docker runtimes; Claude/Codex run inside isolated Ubuntu containers': { de: 'agent-node plant Docker-Laufzeiten; Claude/Codex laufen in isolierten Ubuntu-Containern', es: 'agent-node programa los entornos Docker; Claude/Codex se ejecutan dentro de contenedores Ubuntu aislados', fr: 'agent-node planifie les runtimes Docker ; Claude/Codex s\'exécutent dans des conteneurs Ubuntu isolés', pt: 'O agent-node agenda runtimes Docker; o Claude/Codex correm dentro de contentores Ubuntu isolados', ca: 'agent-node planifica entorns Docker; Claude/Codex s\'executen dins de contenidors Ubuntu aïllats', hi: 'agent-node Docker रनटाइम शेड्यूल करता है; Claude/Codex अलग-थलग Ubuntu कंटेनरों के अंदर चलते हैं', ko: 'agent-node가 Docker 런타임을 스케줄링하며, Claude/Codex는 격리된 Ubuntu 컨테이너 내부에서 실행됩니다', ja: 'agent-node が Docker ランタイムをスケジューリングし、Claude/Codex は隔離された Ubuntu コンテナ内で実行されます', it: 'agent-node pianifica i runtime Docker; Claude/Codex girano in container Ubuntu isolati' },
+  'Persistent data': { de: 'Persistente Daten', es: 'Datos persistentes', fr: 'Données persistantes', pt: 'Dados persistentes', ca: 'Dades persistents', hi: 'स्थायी डेटा', ko: '영구 데이터', ja: '永続データ', it: 'Dati persistenti' },
+  'Default data root is /mnt/myapp; databases and object stores use local bind mounts': { de: 'Der Standard-Daten-Root ist /mnt/myapp; Datenbanken und Objektspeicher verwenden lokale Bind-Mounts', es: 'El directorio raíz de datos por defecto es /mnt/myapp; las bases de datos y los almacenes de objetos usan bind mounts locales', fr: 'La racine des données par défaut est /mnt/myapp ; les bases de données et les stores d\'objets utilisent des bind mounts locaux', pt: 'A raiz de dados predefinida é /mnt/myapp; as bases de dados e os armazenamentos de objetos usam bind mounts locais', ca: 'L\'arrel de dades per defecte és /mnt/myapp; les bases de dades i els magatzems d\'objectes utilitzen bind mounts locals', hi: 'डिफ़ॉल्ट डेटा रूट /mnt/myapp है; डेटाबेस और ऑब्जेक्ट स्टोर लोकल बाइंड माउंट का उपयोग करते हैं', ko: '기본 데이터 루트는 /mnt/myapp이며, 데이터베이스와 오브젝트 스토어는 로컬 바인드 마운트를 사용합니다', ja: 'デフォルトのデータルートは /mnt/myapp です。データベースとオブジェクトストアはローカルのバインドマウントを使用します', it: 'La data root predefinita è /mnt/myapp; database e object store usano bind mount locali' },
+  'Refresh control files': { de: 'Steuerungsdateien aktualisieren', es: 'Actualizar los archivos de control', fr: 'Rafraîchir les fichiers de contrôle', pt: 'Atualizar ficheiros de controlo', ca: 'Actualitza els fitxers de control', hi: 'कंट्रोल फ़ाइलें रिफ़्रेश करें', ko: '제어 파일 새로 고침', ja: '制御ファイルを更新する', it: 'Aggiorna i file di controllo' },
+  'Backend routes only': { de: 'Nur Backend-Routen', es: 'Solo rutas del backend', fr: 'Routes backend uniquement', pt: 'Apenas rotas do backend', ca: 'Només les rutes del backend', hi: 'केवल बैकएंड रूट', ko: '백엔드 라우트만', ja: 'バックエンドのルートのみ', it: 'Solo route del backend' },
+  'Worker / prompts / validators': { de: 'Worker / Prompts / Validatoren', es: 'Worker / prompts / validadores', fr: 'Worker / prompts / validateurs', pt: 'Worker / prompts / validadores', ca: 'Worker / prompts / validadors', hi: 'Worker / prompts / validators', ko: '워커 / 프롬프트 / 검증기', ja: 'ワーカー / プロンプト / バリデーター', it: 'Worker / prompt / validatori' },
+  'agent-node changes': { de: 'agent-node-Änderungen', es: 'Cambios en agent-node', fr: 'Modifications d\'agent-node', pt: 'Alterações ao agent-node', ca: 'Canvis a agent-node', hi: 'agent-node में बदलाव', ko: 'agent-node 변경', ja: 'agent-node の変更', it: 'Modifiche ad agent-node' },
+  'Runtime image changes': { de: 'Änderungen am Laufzeit-Image', es: 'Cambios en la imagen de ejecución', fr: 'Modifications de l\'image runtime', pt: 'Alterações à imagem de runtime', ca: 'Canvis a la imatge d\'execució', hi: 'रनटाइम इमेज में बदलाव', ko: '런타임 이미지 변경', ja: 'ランタイムイメージの変更', it: 'Modifiche all\'immagine di runtime' },
+  'Image-based host': { de: 'Image-basierter Host', es: 'Host basado en imágenes', fr: 'Hôte basé sur images', pt: 'Host baseado em imagens', ca: 'Host basat en imatges', hi: 'इमेज-आधारित होस्ट', ko: '이미지 기반 호스트', ja: 'イメージベースのホスト', it: 'Host basato su immagini' },
+  'Service operations': { de: 'Dienstbetrieb', es: 'Operaciones de servicio', fr: 'Opérations sur les services', pt: 'Operações de serviço', ca: 'Operacions de serveis', hi: 'सेवा संचालन', ko: '서비스 운영', ja: 'サービス運用', it: 'Operazioni sui servizi' },
+  'Secrets and config': { de: 'Secrets und Konfiguration', es: 'Secretos y configuración', fr: 'Secrets et configuration', pt: 'Segredos e configuração', ca: 'Secrets i configuració', hi: 'सीक्रेट और कॉन्फ़िग', ko: '시크릿 및 설정', ja: 'シークレットと構成', it: 'Segreti e configurazione' },
+  'Backup and restore': { de: 'Sicherung und Wiederherstellung', es: 'Copia de seguridad y restauración', fr: 'Sauvegarde et restauration', pt: 'Cópia de segurança e restauro', ca: 'Còpia de seguretat i restauració', hi: 'बैकअप और रिस्टोर', ko: '백업 및 복원', ja: 'バックアップと復元', it: 'Backup e ripristino' },
+  'Uninstall': { de: 'Deinstallieren', es: 'Desinstalar', fr: 'Désinstaller', pt: 'Desinstalar', ca: 'Desinstal·la', hi: 'अनइंस्टॉल', ko: '제거', ja: 'アンインストール', it: 'Disinstallazione' },
+  '# config and data root are preserved; manually rm -rf /mnt/myapp only when destroying data': { de: '# Konfiguration und Daten-Root bleiben erhalten; manuelles rm -rf /mnt/myapp nur beim Löschen der Daten', es: '# la configuración y el directorio raíz de datos se conservan; ejecuta manualmente rm -rf /mnt/myapp solo cuando quieras destruir los datos', fr: '# la config et la racine des données sont conservées ; n\'exécutez rm -rf /mnt/myapp manuellement que pour détruire les données', pt: '# a configuração e a raiz de dados são preservadas; faça rm -rf /mnt/myapp manualmente apenas ao destruir os dados', ca: '# la configuració i l\'arrel de dades es conserven; fes rm -rf /mnt/myapp manualment només quan vulguis destruir les dades', hi: '# कॉन्फ़िग और डेटा रूट सुरक्षित रहते हैं; डेटा नष्ट करते समय ही मैन्युअल रूप से rm -rf /mnt/myapp चलाएँ', ko: '# 설정과 데이터 루트는 보존됩니다. 데이터를 완전히 삭제할 때만 수동으로 rm -rf /mnt/myapp을 실행하세요', ja: '# 構成とデータルートは保持されます。データを完全に削除する場合のみ手動で rm -rf /mnt/myapp を実行してください', it: '# config e data root vengono conservati; esegui manualmente rm -rf /mnt/myapp solo per eliminare i dati' },
+  'Lifecycle and services': { de: 'Lebenszyklus und Dienste', es: 'Ciclo de vida y servicios', fr: 'Cycle de vie et services', pt: 'Ciclo de vida e serviços', ca: 'Cicle de vida i serveis', hi: 'लाइफ़साइकल और सेवाएँ', ko: '라이프사이클 및 서비스', ja: 'ライフサイクルとサービス', it: 'Ciclo di vita e servizi' },
+  'Deploy, update, restart, logs and uninstall. Targets can be service names, or use --group with infra / supabase / openim / agent / core.': { de: 'Bereitstellen, aktualisieren, neu starten, Logs und deinstallieren. Ziele können Dienstnamen sein, oder verwenden Sie --group mit infra / supabase / openim / agent / core.', es: 'Desplegar, actualizar, reiniciar, ver logs y desinstalar. Los destinos pueden ser nombres de servicio, o usa --group con infra / supabase / openim / agent / core.', fr: 'Déployer, mettre à jour, redémarrer, consulter les logs et désinstaller. Les cibles peuvent être des noms de services, ou utilisez --group avec infra / supabase / openim / agent / core.', pt: 'Implementar, atualizar, reiniciar, ver logs e desinstalar. Os alvos podem ser nomes de serviços ou usar --group com infra / supabase / openim / agent / core.', ca: 'Desplega, actualitza, reinicia, registres i desinstal·la. Els objectius poden ser noms de servei, o pots fer servir --group amb infra / supabase / openim / agent / core.', hi: 'परिनियोजित, अपडेट, रीस्टार्ट, लॉग और अनइंस्टॉल करें। टारगेट सेवा के नाम हो सकते हैं, या infra / supabase / openim / agent / core के साथ --group का उपयोग करें।', ko: '배포, 업데이트, 재시작, 로그, 제거. 대상은 서비스 이름이거나 --group과 함께 infra / supabase / openim / agent / core를 사용할 수 있습니다.', ja: 'デプロイ、更新、再起動、ログ、アンインストール。対象にはサービス名を指定するか、--group で infra / supabase / openim / agent / core を使用できます。', it: 'Distribuisci, aggiorna, riavvia, log e disinstalla. I target possono essere nomi di servizio, oppure usa --group con infra / supabase / openim / agent / core.' },
+  'Setup and secrets': { de: 'Einrichtung und Secrets', es: 'Configuración y secretos', fr: 'Configuration et secrets', pt: 'Configuração e segredos', ca: 'Configuració i secrets', hi: 'सेटअप और सीक्रेट', ko: '설정 및 시크릿', ja: 'セットアップとシークレット', it: 'Setup e segreti' },
+  'setup is the interactive entrypoint; secret manages host-local credentials. Do not put production secrets in Git.': { de: 'setup ist der interaktive Einstiegspunkt; secret verwaltet host-lokale Zugangsdaten. Legen Sie keine Produktions-Secrets in Git ab.', es: 'setup es el punto de entrada interactivo; secret gestiona las credenciales locales del host. No pongas secretos de producción en Git.', fr: 'setup est le point d\'entrée interactif ; secret gère les identifiants locaux à l\'hôte. Ne placez pas les secrets de production dans Git.', pt: 'O setup é o ponto de entrada interativo; o secret gere as credenciais locais do host. Não coloque segredos de produção no Git.', ca: 'setup és el punt d\'entrada interactiu; secret gestiona les credencials locals del host. No posis secrets de producció a Git.', hi: 'setup इंटरैक्टिव एंट्रीपॉइंट है; secret होस्ट-लोकल क्रेडेंशियल प्रबंधित करता है। प्रोडक्शन सीक्रेट को Git में न रखें।', ko: 'setup은 대화형 진입점이며, secret은 호스트 로컬 자격 증명을 관리합니다. 프로덕션 시크릿을 Git에 넣지 마세요.', ja: 'setup は対話型のエントリポイントで、secret はホストローカルの資格情報を管理します。本番環境のシークレットを Git に置かないでください。', it: 'setup è l\'entrypoint interattivo; secret gestisce le credenziali locali dell\'host. Non mettere i segreti di produzione in Git.' },
+  'Config, domains and client env': { de: 'Konfiguration, Domains und Client-Umgebung', es: 'Configuración, dominios y entorno del cliente', fr: 'Config, domaines et environnement client', pt: 'Configuração, domínios e ambiente do cliente', ca: 'Configuració, dominis i entorn del client', hi: 'कॉन्फ़िग, डोमेन और क्लाइंट env', ko: '설정, 도메인, 클라이언트 환경', ja: '構成、ドメイン、クライアント環境', it: 'Configurazione, domini e ambiente client' },
+  'Config bundles are used for migration and recovery; client-env prints importable client JSON and QR codes.': { de: 'Konfigurations-Bundles dienen der Migration und Wiederherstellung; client-env gibt importierbares Client-JSON und QR-Codes aus.', es: 'Los paquetes de configuración se usan para migración y recuperación; client-env imprime el JSON del cliente y los códigos QR importables.', fr: 'Les bundles de configuration servent à la migration et à la reprise ; client-env affiche du JSON client importable et des QR codes.', pt: 'Os pacotes de configuração são usados para migração e recuperação; o client-env imprime JSON e códigos QR de cliente importáveis.', ca: 'Els paquets de configuració s\'utilitzen per a la migració i la recuperació; client-env imprimeix JSON i codis QR del client importables.', hi: 'कॉन्फ़िग बंडल माइग्रेशन और रिकवरी के लिए उपयोग होते हैं; client-env इम्पोर्ट योग्य क्लाइंट JSON और QR कोड प्रिंट करता है।', ko: '설정 번들은 마이그레이션과 복구에 사용됩니다. client-env는 가져올 수 있는 클라이언트 JSON과 QR 코드를 출력합니다.', ja: '構成バンドルは移行と復旧に使用します。client-env はインポート可能なクライアント JSON と QR コードを出力します。', it: 'I bundle di configurazione servono per migrazione e ripristino; client-env stampa JSON e codici QR del client importabili.' },
+  'Images': { de: 'Images', es: 'Imágenes', fr: 'Images', pt: 'Imagens', ca: 'Imatges', hi: 'इमेज', ko: '이미지', ja: 'イメージ', it: 'Immagini' },
+  'Current image targets are all, backend, agent-node and agent-runtime. --build uses source; --pull uses published images.': { de: 'Aktuelle Image-Ziele sind all, backend, agent-node und agent-runtime. --build verwendet den Quellcode; --pull verwendet veröffentlichte Images.', es: 'Los destinos de imagen actuales son all, backend, agent-node y agent-runtime. --build usa el código fuente; --pull usa imágenes publicadas.', fr: 'Les cibles d\'images actuelles sont all, backend, agent-node et agent-runtime. --build utilise les sources ; --pull utilise les images publiées.', pt: 'Os alvos de imagem atuais são all, backend, agent-node e agent-runtime. --build usa o código-fonte; --pull usa imagens publicadas.', ca: 'Els objectius d\'imatge actuals són all, backend, agent-node i agent-runtime. --build utilitza el codi font; --pull utilitza imatges publicades.', hi: 'वर्तमान इमेज टारगेट हैं all, backend, agent-node और agent-runtime। --build सोर्स का उपयोग करता है; --pull प्रकाशित इमेज का उपयोग करता है।', ko: '현재 이미지 대상은 all, backend, agent-node, agent-runtime입니다. --build는 소스를 사용하고, --pull은 게시된 이미지를 사용합니다.', ja: '現在のイメージ対象は all、backend、agent-node、agent-runtime です。--build はソースを使用し、--pull は公開済みイメージを使用します。', it: 'I target di immagine attuali sono all, backend, agent-node e agent-runtime. --build usa il sorgente; --pull usa le immagini pubblicate.' },
+  'Public Agent Node': { de: 'Öffentliche Agent Node', es: 'Agent Node público', fr: 'Agent Node public', pt: 'Agent Node público', ca: 'Agent Node públic', hi: 'सार्वजनिक Agent Node', ko: '공용 Agent Node', ja: 'パブリック Agent Node', it: 'Agent Node pubblico' },
+  'agent-node ls is the cluster view; agent ls is local-only and shows running agent containers on this host.': { de: 'agent-node ls ist die Cluster-Ansicht; agent ls ist rein lokal und zeigt laufende Agent-Container auf diesem Host.', es: 'agent-node ls es la vista del clúster; agent ls es solo local y muestra los contenedores de agente en ejecución en este host.', fr: 'agent-node ls donne la vue du cluster ; agent ls est local uniquement et affiche les conteneurs d\'agents en cours d\'exécution sur cet hôte.', pt: 'O agent-node ls é a vista do cluster; o agent ls é apenas local e mostra os contentores de agente em execução neste host.', ca: 'agent-node ls és la vista del clúster; agent ls és només local i mostra els contenidors d\'agent en execució en aquest host.', hi: 'agent-node ls क्लस्टर व्यू है; agent ls केवल लोकल है और इस होस्ट पर चल रहे एजेंट कंटेनर दिखाता है।', ko: 'agent-node ls는 클러스터 뷰이며, agent ls는 로컬 전용으로 이 호스트에서 실행 중인 에이전트 컨테이너를 보여줍니다.', ja: 'agent-node ls はクラスター全体のビューで、agent ls はローカル専用で、このホスト上で稼働中のエージェントコンテナを表示します。', it: 'agent-node ls è la vista del cluster; agent ls è solo locale e mostra i container agente in esecuzione su questo host.' },
+  'User-private Agent Node': { de: 'Benutzerprivate Agent Node', es: 'Agent Node privado del usuario', fr: 'Agent Node privé à l\'utilisateur', pt: 'Agent Node privado do utilizador', ca: 'Agent Node privat d\'usuari', hi: 'उपयोगकर्ता-निजी Agent Node', ko: '사용자 전용 Agent Node', ja: 'ユーザー専用 Agent Node', it: 'Agent Node privato dell\'utente' },
+  'Private nodes serve only their owner, and long-lived provider keys stay on the node host. The app settings page creates a one-time join token and command.': { de: 'Private Nodes bedienen nur ihren Eigentümer, und langlebige Anbieter-Schlüssel verbleiben auf dem Node-Host. Die Einstellungsseite der App erstellt ein einmaliges Beitritts-Token und den zugehörigen Befehl.', es: 'Los nodos privados sirven únicamente a su propietario, y las claves de proveedor de larga duración permanecen en el host del nodo. La página de ajustes de la app crea un token y un comando de unión de un solo uso.', fr: 'Les nœuds privés ne servent que leur propriétaire, et les clés de fournisseur à longue durée de vie restent sur l\'hôte du nœud. La page de paramètres de l\'app crée un jeton et une commande de jonction à usage unique.', pt: 'Os nós privados servem apenas o seu proprietário e as chaves de fornecedor de longa duração ficam no host do nó. A página de definições da app cria um token e comando de adesão de utilização única.', ca: 'Els nodes privats només serveixen el seu propietari, i les claus de proveïdor de llarga durada es queden al host del node. La pàgina de configuració de l\'app crea un token i una ordre d\'incorporació d\'un sol ús.', hi: 'निजी नोड केवल अपने मालिक की सेवा करते हैं, और दीर्घकालिक प्रोवाइडर की नोड होस्ट पर ही रहती हैं। ऐप की सेटिंग पेज एक बार उपयोग होने वाला join टोकन और कमांड बनाती है।', ko: '프라이빗 노드는 소유자에게만 서비스를 제공하며, 장기 제공자 키는 노드 호스트에 남아 있습니다. 앱 설정 페이지에서 일회용 조인 토큰과 명령을 생성합니다.', ja: 'プライベートノードは所有者のみにサービスを提供し、長期間有効なプロバイダーキーはノードホスト上に保持されます。アプリの設定ページで 1 回限りの参加トークンとコマンドを作成します。', it: 'I nodi privati servono solo il loro proprietario e le chiavi provider a lunga durata restano sull\'host del nodo. La pagina delle impostazioni dell\'app crea un token e un comando di join monouso.' },
+  'Open Web app': { de: 'Web-App öffnen', es: 'Abrir la app Web', fr: 'Ouvrir l\'app Web', pt: 'Abrir a app Web', ca: 'Obre l\'app web', hi: 'Web ऐप खोलें', ko: 'Web 앱 열기', ja: 'Web アプリを開く', it: 'Apri l\'app Web' },
+  'Architecture': { de: 'Architektur', es: 'Arquitectura', fr: 'Architecture', pt: 'Arquitetura', ca: 'Arquitectura', hi: 'आर्किटेक्चर', ko: '아키텍처', ja: 'アーキテクチャ', it: 'Architettura' },
+  'Install': { de: 'Installation', es: 'Instalar', fr: 'Installation', pt: 'Instalar', ca: 'Instal·lació', hi: 'इंस्टॉल', ko: '설치', ja: 'インストール', it: 'Installazione' },
+  'Operations': { de: 'Betrieb', es: 'Operaciones', fr: 'Opérations', pt: 'Operações', ca: 'Operacions', hi: 'संचालन', ko: '운영', ja: '運用', it: 'Operazioni' },
+  'CLI reference': { de: 'CLI-Referenz', es: 'Referencia de la CLI', fr: 'Référence CLI', pt: 'Referência da CLI', ca: 'Referència de la CLI', hi: 'CLI संदर्भ', ko: 'CLI 레퍼런스', ja: 'CLI リファレンス', it: 'Riferimento CLI' },
+  'Agent Node': { de: 'Agent Node', es: 'Agent Node', fr: 'Agent Node', pt: 'Agent Node', ca: 'Agent Node', hi: 'Agent Node', ko: 'Agent Node', ja: 'Agent Node', it: 'Agent Node' },
+  'Private nodes': { de: 'Private Nodes', es: 'Nodos privados', fr: 'Nœuds privés', pt: 'Nós privados', ca: 'Nodes privats', hi: 'निजी नोड', ko: '프라이빗 노드', ja: 'プライベートノード', it: 'Nodi privati' },
+  'Clients': { de: 'Clients', es: 'Clientes', fr: 'Clients', pt: 'Clientes', ca: 'Clients', hi: 'क्लाइंट', ko: '클라이언트', ja: 'クライアント', it: 'Client' },
+  'Recommended flow': { de: 'Empfohlener Ablauf', es: 'Flujo recomendado', fr: 'Flux recommandé', pt: 'Fluxo recomendado', ca: 'Flux recomanat', hi: 'अनुशंसित प्रवाह', ko: '권장 흐름', ja: '推奨フロー', it: 'Flusso consigliato' },
+  'The website, Flutter Web client and backend are three separate release paths: website builds website/dist, Flutter Web client builds build/web, and backend deployment runs through deploy/production and myapp-ctl.': { de: 'Website, Flutter-Web-Client und Backend sind drei separate Release-Pfade: Die Website baut nach website/dist, der Flutter-Web-Client nach build/web, und die Backend-Bereitstellung läuft über deploy/production und myapp-ctl.', es: 'El sitio web, el cliente Flutter Web y el backend son tres rutas de publicación independientes: el sitio web se compila en website/dist, el cliente Flutter Web se compila en build/web, y el despliegue del backend se realiza mediante deploy/production y myapp-ctl.', fr: 'Le site web, le client Flutter Web et le backend constituent trois chemins de publication distincts : le site web se compile vers website/dist, le client Flutter Web vers build/web, et le déploiement du backend passe par deploy/production et myapp-ctl.', pt: 'O site, o cliente Flutter Web e o backend são três caminhos de lançamento distintos: o site compila para website/dist, o cliente Flutter Web compila para build/web e a implementação do backend passa por deploy/production e pelo myapp-ctl.', ca: 'El lloc web, el client Flutter Web i el backend són tres vies de publicació independents: el lloc web es construeix a website/dist, el client Flutter Web a build/web, i el desplegament del backend es fa mitjançant deploy/production i myapp-ctl.', hi: 'वेबसाइट, Flutter Web क्लाइंट और बैकएंड तीन अलग रिलीज़ पथ हैं: वेबसाइट website/dist में बिल्ड होती है, Flutter Web क्लाइंट build/web में बिल्ड होता है, और बैकएंड परिनियोजन deploy/production और myapp-ctl के माध्यम से चलता है।', ko: '웹사이트, Flutter Web 클라이언트, 백엔드는 세 개의 별도 릴리스 경로입니다. 웹사이트는 website/dist로 빌드되고, Flutter Web 클라이언트는 build/web으로 빌드되며, 백엔드 배포는 deploy/production과 myapp-ctl을 통해 진행됩니다.', ja: 'ウェブサイト、Flutter Web クライアント、バックエンドは 3 つの独立したリリース経路です。ウェブサイトは website/dist にビルドされ、Flutter Web クライアントは build/web にビルドされ、バックエンドのデプロイは deploy/production と myapp-ctl を通じて実行されます。', it: 'Il sito web, il client Flutter Web e il backend sono tre percorsi di release distinti: il sito web compila in website/dist, il client Flutter Web compila in build/web e il deployment del backend passa per deploy/production e myapp-ctl.' },
+  'Backend control plane': { de: 'Backend-Steuerungsebene', es: 'Plano de control del backend', fr: 'Plan de contrôle du backend', pt: 'Plano de controlo do backend', ca: 'Pla de control del backend', hi: 'बैकएंड कंट्रोल प्लेन', ko: '백엔드 제어 플레인', ja: 'バックエンドのコントロールプレーン', it: 'Piano di controllo del backend' },
+  'Fresh install': { de: 'Neuinstallation', es: 'Instalación limpia', fr: 'Installation initiale', pt: 'Instalação de raiz', ca: 'Instal·lació nova', hi: 'नया इंस्टॉल', ko: '신규 설치', ja: '新規インストール', it: 'Installazione da zero' },
+  'Image-based deploy': { de: 'Image-basierte Bereitstellung', es: 'Despliegue basado en imágenes', fr: 'Déploiement basé sur images', pt: 'Implementação baseada em imagens', ca: 'Desplegament basat en imatges', hi: 'इमेज-आधारित परिनियोजन', ko: '이미지 기반 배포', ja: 'イメージベースのデプロイ', it: 'Deployment basato su immagini' },
+  'setup asks for AI providers. DeepSeek, MiniMax or custom Anthropic-compatible providers are written into server-local env files. APNs, FCM, GeTui and SMTP are optional; skipping them only disables that channel.': { de: 'setup fragt nach AI-Anbietern. DeepSeek, MiniMax oder benutzerdefinierte Anthropic-kompatible Anbieter werden in server-lokale env-Dateien geschrieben. APNs, FCM, GeTui und SMTP sind optional; ein Überspringen deaktiviert lediglich den jeweiligen Kanal.', es: 'setup solicita los proveedores de IA. DeepSeek, MiniMax o proveedores personalizados compatibles con Anthropic se escriben en archivos env locales del servidor. APNs, FCM, GeTui y SMTP son opcionales; omitirlos solo desactiva ese canal.', fr: 'setup demande les fournisseurs IA. DeepSeek, MiniMax ou des fournisseurs personnalisés compatibles Anthropic sont écrits dans des fichiers env locaux au serveur. APNs, FCM, GeTui et SMTP sont optionnels ; les ignorer ne désactive que ce canal.', pt: 'O setup pergunta pelos fornecedores de IA. O DeepSeek, o MiniMax ou fornecedores personalizados compatíveis com a Anthropic são gravados em ficheiros env locais do servidor. APNs, FCM, GeTui e SMTP são opcionais; ignorá-los apenas desativa esse canal.', ca: 'setup demana els proveïdors d\'IA. DeepSeek, MiniMax o proveïdors personalitzats compatibles amb Anthropic s\'escriuen en fitxers env locals del servidor. APNs, FCM, GeTui i SMTP són opcionals; ometre\'ls només desactiva aquell canal.', hi: 'setup AI प्रोवाइडर के बारे में पूछता है। DeepSeek, MiniMax या कस्टम Anthropic-संगत प्रोवाइडर सर्वर-लोकल env फ़ाइलों में लिखे जाते हैं। APNs, FCM, GeTui और SMTP वैकल्पिक हैं; इन्हें छोड़ने से केवल वही चैनल अक्षम होता है।', ko: 'setup은 AI 제공자를 묻습니다. DeepSeek, MiniMax 또는 사용자 지정 Anthropic 호환 제공자가 서버 로컬 env 파일에 기록됩니다. APNs, FCM, GeTui, SMTP는 선택 사항이며, 건너뛰면 해당 채널만 비활성화됩니다.', ja: 'setup は AI プロバイダーを尋ねます。DeepSeek、MiniMax、またはカスタムの Anthropic 互換プロバイダーはサーバーローカルの env ファイルに書き込まれます。APNs、FCM、GeTui、SMTP は任意で、スキップするとそのチャネルが無効になるだけです。', it: 'setup chiede i provider IA. DeepSeek, MiniMax o provider personalizzati compatibili con Anthropic vengono scritti in file env locali del server. APNs, FCM, GeTui e SMTP sono opzionali; saltarli disabilita solo quel canale.' },
+  'Routine updates': { de: 'Routine-Updates', es: 'Actualizaciones rutinarias', fr: 'Mises à jour de routine', pt: 'Atualizações de rotina', ca: 'Actualitzacions rutinàries', hi: 'नियमित अपडेट', ko: '일상적인 업데이트', ja: '定常的な更新', it: 'Aggiornamenti di routine' },
+  'Deploy only the changed surface': { de: 'Nur den geänderten Teil bereitstellen', es: 'Despliega solo lo que ha cambiado', fr: 'Ne déployer que la surface modifiée', pt: 'Implementar apenas o que foi alterado', ca: 'Desplega només la part que ha canviat', hi: 'केवल बदले गए हिस्से को परिनियोजित करें', ko: '변경된 부분만 배포', ja: '変更箇所のみをデプロイする', it: 'Distribuisci solo la parte modificata' },
+  'For routine code updates, run myapp-ctl update first, then rebuild or pull only the changed components. Auth, Redis, Postgres, OpenIM, Supabase and MinIO should stay up for ordinary backend or agent changes.': { de: 'Führen Sie bei routinemäßigen Code-Updates zuerst myapp-ctl update aus und bauen oder pullen Sie dann nur die geänderten Komponenten. Auth, Redis, Postgres, OpenIM, Supabase und MinIO sollten bei gewöhnlichen Backend- oder Agent-Änderungen weiterlaufen.', es: 'Para actualizaciones rutinarias de código, ejecuta primero myapp-ctl update y luego recompila o descarga solo los componentes que han cambiado. Auth, Redis, Postgres, OpenIM, Supabase y MinIO deben permanecer activos para los cambios habituales de backend o de agente.', fr: 'Pour les mises à jour de code de routine, exécutez d\'abord myapp-ctl update, puis recompilez ou récupérez uniquement les composants modifiés. L\'authentification, Redis, Postgres, OpenIM, Supabase et MinIO doivent rester actifs pour les modifications ordinaires du backend ou des agents.', pt: 'Para atualizações de código de rotina, execute primeiro o myapp-ctl update e depois recompile ou faça pull apenas dos componentes alterados. Auth, Redis, Postgres, OpenIM, Supabase e MinIO devem permanecer ativos para alterações comuns ao backend ou ao agente.', ca: 'Per a actualitzacions de codi rutinàries, executa primer myapp-ctl update i després reconstrueix o descarrega només els components que han canviat. Auth, Redis, Postgres, OpenIM, Supabase i MinIO haurien de continuar actius per als canvis habituals de backend o d\'agent.', hi: 'नियमित कोड अपडेट के लिए, पहले myapp-ctl update चलाएँ, फिर केवल बदले गए कॉम्पोनेंट को rebuild या pull करें। सामान्य बैकएंड या एजेंट बदलावों के लिए Auth, Redis, Postgres, OpenIM, Supabase और MinIO चलते रहने चाहिए।', ko: '일상적인 코드 업데이트의 경우 먼저 myapp-ctl update를 실행한 뒤 변경된 컴포넌트만 다시 빌드하거나 풀하세요. 일반적인 백엔드 또는 에이전트 변경 시에는 Auth, Redis, Postgres, OpenIM, Supabase, MinIO를 계속 가동 상태로 유지해야 합니다.', ja: '定常的なコード更新では、まず myapp-ctl update を実行し、その後で変更されたコンポーネントのみを再ビルドまたはプルします。通常のバックエンドやエージェントの変更では、Auth、Redis、Postgres、OpenIM、Supabase、MinIO は稼働させたままにします。', it: 'Per gli aggiornamenti di routine del codice, esegui prima myapp-ctl update, poi ricompila o esegui il pull solo dei componenti modificati. Auth, Redis, Postgres, OpenIM, Supabase e MinIO dovrebbero restare attivi per le normali modifiche al backend o agli agenti.' },
+  'Command reference': { de: 'Befehlsreferenz', es: 'Referencia de comandos', fr: 'Référence des commandes', pt: 'Referência de comandos', ca: 'Referència d\'ordres', hi: 'कमांड संदर्भ', ko: '명령어 레퍼런스', ja: 'コマンドリファレンス', it: 'Riferimento dei comandi' },
+  'Common subcommands and key flags': { de: 'Gängige Unterbefehle und wichtige Flags', es: 'Subcomandos habituales y flags clave', fr: 'Sous-commandes courantes et options clés', pt: 'Subcomandos comuns e flags principais', ca: 'Subordres habituals i opcions clau', hi: 'सामान्य सबकमांड और प्रमुख फ़्लैग', ko: '주요 하위 명령어 및 핵심 플래그', ja: '主なサブコマンドと重要なフラグ', it: 'Sottocomandi comuni e flag principali' },
+  'This is the compact reference embedded in the website. For the full argument list, run myapp-ctl <command> --help on the host.': { de: 'Dies ist die kompakte, in die Website eingebettete Referenz. Die vollständige Argumentliste erhalten Sie mit myapp-ctl <command> --help auf dem Host.', es: 'Esta es la referencia compacta integrada en el sitio web. Para ver la lista completa de argumentos, ejecuta myapp-ctl <command> --help en el host.', fr: 'Ceci est la référence condensée intégrée au site web. Pour la liste complète des arguments, exécutez myapp-ctl <command> --help sur l\'hôte.', pt: 'Esta é a referência compacta incorporada no site. Para a lista completa de argumentos, execute myapp-ctl <command> --help no host.', ca: 'Aquesta és la referència compacta incrustada al lloc web. Per a la llista completa d\'arguments, executa myapp-ctl <command> --help al host.', hi: 'यह वेबसाइट में एम्बेड किया गया संक्षिप्त संदर्भ है। पूरी आर्ग्युमेंट सूची के लिए, होस्ट पर myapp-ctl <command> --help चलाएँ।', ko: '이것은 웹사이트에 포함된 간략한 레퍼런스입니다. 전체 인자 목록은 호스트에서 myapp-ctl <command> --help를 실행하세요.', ja: 'これはウェブサイトに組み込まれた簡易リファレンスです。引数の完全な一覧は、ホストで myapp-ctl <command> --help を実行してください。', it: 'Questo è il riferimento compatto incluso nel sito web. Per l\'elenco completo degli argomenti, esegui myapp-ctl <command> --help sull\'host.' },
+  'Compatibility note: myapp-ctl agent add and myapp-ctl agent register remain old aliases; new docs use agent-node add / register.': { de: 'Kompatibilitätshinweis: myapp-ctl agent add und myapp-ctl agent register bleiben alte Aliasse; die neue Dokumentation verwendet agent-node add / register.', es: 'Nota de compatibilidad: myapp-ctl agent add y myapp-ctl agent register siguen siendo alias antiguos; la nueva documentación usa agent-node add / register.', fr: 'Note de compatibilité : myapp-ctl agent add et myapp-ctl agent register restent d\'anciens alias ; la nouvelle documentation utilise agent-node add / register.', pt: 'Nota de compatibilidade: myapp-ctl agent add e myapp-ctl agent register continuam a ser aliases antigos; a nova documentação usa agent-node add / register.', ca: 'Nota de compatibilitat: myapp-ctl agent add i myapp-ctl agent register continuen com a àlies antics; la documentació nova fa servir agent-node add / register.', hi: 'संगतता नोट: myapp-ctl agent add और myapp-ctl agent register पुराने उपनाम के रूप में बने रहते हैं; नए दस्तावेज़ agent-node add / register का उपयोग करते हैं।', ko: '호환성 참고: myapp-ctl agent add와 myapp-ctl agent register는 이전 별칭으로 유지됩니다. 새 문서에서는 agent-node add / register를 사용합니다.', ja: '互換性に関する注意: myapp-ctl agent add と myapp-ctl agent register は旧来のエイリアスとして残っています。新しいドキュメントでは agent-node add / register を使用します。', it: 'Nota di compatibilità: myapp-ctl agent add e myapp-ctl agent register restano vecchi alias; la nuova documentazione usa agent-node add / register.' },
+  'Public Agent Nodes': { de: 'Öffentliche Agent Nodes', es: 'Agent Nodes públicos', fr: 'Agent Nodes publics', pt: 'Agent Nodes públicos', ca: 'Agent Nodes públics', hi: 'सार्वजनिक Agent Node', ko: '공용 Agent Node', ja: 'パブリック Agent Node', it: 'Agent Node pubblici' },
+  'Multi-host agents use pull mode': { de: 'Multi-Host-Agents verwenden den Pull-Modus', es: 'Los agentes multihost usan el modo pull', fr: 'Les agents multi-hôtes utilisent le mode pull', pt: 'Os agentes multi-host usam o modo pull', ca: 'Els agents multi-host fan servir el mode pull', hi: 'मल्टी-होस्ट एजेंट pull मोड का उपयोग करते हैं', ko: '멀티 호스트 에이전트는 풀 모드를 사용합니다', ja: 'マルチホストのエージェントはプルモードを使用する', it: 'Gli agenti multi-host usano la modalità pull' },
+  'The default architecture is pull-based: agent-node polls the backend for work, while client SSE remains client -> backend. A secondary agent host only needs outbound access to the backend and no public inbound port. Node registration lives in Postgres; queues and heartbeats use Redis.': { de: 'Die Standardarchitektur ist pull-basiert: agent-node fragt das Backend nach Aufgaben ab, während der Client-SSE-Verkehr Client -> Backend bleibt. Ein sekundärer Agent-Host benötigt nur ausgehenden Zugriff auf das Backend und keinen öffentlichen eingehenden Port. Die Node-Registrierung liegt in Postgres; Queues und Heartbeats nutzen Redis.', es: 'La arquitectura por defecto se basa en pull: agent-node consulta el backend en busca de trabajo, mientras que el SSE del cliente sigue siendo cliente -> backend. Un host de agente secundario solo necesita acceso de salida al backend y ningún puerto público de entrada. El registro de nodos reside en Postgres; las colas y los heartbeats usan Redis.', fr: 'L\'architecture par défaut est basée sur le pull : agent-node interroge le backend pour récupérer du travail, tandis que le SSE client reste client -> backend. Un hôte d\'agent secondaire n\'a besoin que d\'un accès sortant vers le backend et d\'aucun port entrant public. L\'enregistrement des nœuds réside dans Postgres ; les files et les heartbeats utilisent Redis.', pt: 'A arquitetura predefinida é baseada em pull: o agent-node consulta o backend à procura de trabalho, enquanto o SSE do cliente continua a ser cliente -> backend. Um host de agente secundário só precisa de acesso de saída ao backend e de nenhuma porta de entrada pública. O registo de nós reside no Postgres; as filas e os heartbeats usam o Redis.', ca: 'L\'arquitectura per defecte es basa en pull: agent-node consulta el backend per obtenir feina, mentre que el SSE del client continua sent client -> backend. Un host d\'agent secundari només necessita accés de sortida cap al backend i cap port d\'entrada públic. El registre de nodes resideix a Postgres; les cues i els batecs (heartbeats) utilitzen Redis.', hi: 'डिफ़ॉल्ट आर्किटेक्चर pull-आधारित है: agent-node काम के लिए बैकएंड को पोल करता है, जबकि क्लाइंट SSE client -> backend ही रहता है। एक द्वितीयक एजेंट होस्ट को केवल बैकएंड तक आउटबाउंड पहुँच चाहिए और किसी सार्वजनिक इनबाउंड पोर्ट की ज़रूरत नहीं। नोड रजिस्ट्रेशन Postgres में रहता है; क्यू और हार्टबीट Redis का उपयोग करते हैं।', ko: '기본 아키텍처는 풀 기반입니다. agent-node가 백엔드에서 작업을 폴링하고, 클라이언트 SSE는 클라이언트 -> 백엔드를 유지합니다. 보조 에이전트 호스트는 백엔드로의 아웃바운드 접근만 필요하며 공개 인바운드 포트는 필요 없습니다. 노드 등록은 Postgres에 저장되고, 큐와 하트비트는 Redis를 사용합니다.', ja: 'デフォルトのアーキテクチャはプルベースです。agent-node がバックエンドにジョブをポーリングし、クライアントの SSE は client -> backend のままです。セカンダリのエージェントホストはバックエンドへの送信アクセスのみが必要で、公開受信ポートは不要です。ノードの登録は Postgres に保存され、キューとハートビートは Redis を使用します。', it: 'L\'architettura predefinita è basata sul pull: agent-node interroga il backend per i lavori, mentre l\'SSE del client resta client -> backend. Un host agente secondario necessita solo di accesso in uscita verso il backend e di nessuna porta pubblica in entrata. La registrazione dei nodi risiede in Postgres; code e heartbeat usano Redis.' },
+  'Generate join command on master': { de: 'Beitrittsbefehl auf dem Master generieren', es: 'Generar el comando de unión en el nodo maestro', fr: 'Générer la commande de jonction sur le master', pt: 'Gerar comando de adesão no master', ca: 'Genera l\'ordre d\'incorporació al màster', hi: 'मास्टर पर join कमांड जेनरेट करें', ko: '마스터에서 조인 명령 생성', ja: 'マスターで参加コマンドを生成する', it: 'Genera il comando di join sul master' },
+  'Node operations': { de: 'Node-Betrieb', es: 'Operaciones de nodo', fr: 'Opérations sur les nœuds', pt: 'Operações de nós', ca: 'Operacions de nodes', hi: 'नोड संचालन', ko: '노드 운영', ja: 'ノード運用', it: 'Operazioni sui nodi' },
+  'Backend sends provider config; agent-node mints one-time proxy tokens.': { de: 'Das Backend sendet die Anbieter-Konfiguration; agent-node erzeugt einmalige Proxy-Tokens.', es: 'El backend envía la configuración del proveedor; agent-node genera tokens de proxy de un solo uso.', fr: 'Le backend envoie la configuration du fournisseur ; agent-node génère des jetons de proxy à usage unique.', pt: 'O backend envia a configuração do fornecedor; o agent-node gera tokens de proxy de utilização única.', ca: 'El backend envia la configuració del proveïdor; agent-node encunya tokens de proxy d\'un sol ús.', hi: 'बैकएंड प्रोवाइडर कॉन्फ़िग भेजता है; agent-node एक बार उपयोग होने वाले प्रॉक्सी टोकन बनाता है।', ko: '백엔드는 제공자 설정을 전송하고, agent-node는 일회용 프록시 토큰을 발급합니다.', ja: 'バックエンドがプロバイダー構成を送信し、agent-node が 1 回限りのプロキシトークンを発行します。', it: 'Il backend invia la configurazione del provider; agent-node genera token proxy monouso.' },
+  'Provider keys stay in the agent host local ai-providers.env.': { de: 'Anbieter-Schlüssel verbleiben in der lokalen Datei ai-providers.env des Agent-Hosts.', es: 'Las claves de proveedor permanecen en el archivo local ai-providers.env del host del agente.', fr: 'Les clés de fournisseur restent dans le fichier ai-providers.env local à l\'hôte de l\'agent.', pt: 'As chaves de fornecedor ficam no ai-providers.env local do host do agente.', ca: 'Les claus del proveïdor es queden al fitxer local ai-providers.env del host de l\'agent.', hi: 'प्रोवाइडर की एजेंट होस्ट की लोकल ai-providers.env में रहती हैं।', ko: '제공자 키는 에이전트 호스트의 로컬 ai-providers.env에 보관됩니다.', ja: 'プロバイダーキーはエージェントホストのローカルの ai-providers.env に保持されます。', it: 'Le chiavi provider restano nel file locale ai-providers.env dell\'host agente.' },
+  'Current runs, max concurrency, current queue and max queue.': { de: 'Aktuelle Läufe, maximale Parallelität, aktuelle Queue und maximale Queue.', es: 'Ejecuciones actuales, concurrencia máxima, cola actual y cola máxima.', fr: 'Exécutions en cours, concurrence maximale, file actuelle et file maximale.', pt: 'Execuções atuais, concorrência máxima, fila atual e fila máxima.', ca: 'Execucions actuals, concurrència màxima, cua actual i cua màxima.', hi: 'वर्तमान रन, अधिकतम समवर्तीता, वर्तमान क्यू और अधिकतम क्यू।', ko: '현재 실행 수, 최대 동시 실행 수, 현재 큐, 최대 큐.', ja: '現在の実行数、最大同時実行数、現在のキュー、最大キュー。', it: 'Run correnti, concorrenza massima, coda corrente e coda massima.' },
+  'Session affinity': { de: 'Sitzungsaffinität', es: 'Afinidad de sesión', fr: 'Affinité de session', pt: 'Afinidade de sessão', ca: 'Afinitat de sessió', hi: 'सेशन एफ़िनिटी', ko: '세션 어피니티', ja: 'セッションアフィニティ', it: 'Affinità di sessione' },
+  'Later turns of one session prefer the same online node.': { de: 'Spätere Schritte einer Sitzung bevorzugen dieselbe Online-Node.', es: 'Los turnos posteriores de una misma sesión prefieren el mismo nodo en línea.', fr: 'Les tours suivants d\'une même session privilégient le même nœud en ligne.', pt: 'Os turnos seguintes de uma sessão preferem o mesmo nó online.', ca: 'Els torns posteriors d\'una mateixa sessió prefereixen el mateix node en línia.', hi: 'किसी सेशन के बाद के टर्न उसी ऑनलाइन नोड को प्राथमिकता देते हैं।', ko: '한 세션의 이후 턴은 동일한 온라인 노드를 우선합니다.', ja: '同一セッションの後続ターンは、同じオンラインノードを優先します。', it: 'I turni successivi di una sessione preferiscono lo stesso nodo online.' },
+  'User-private Agent Nodes': { de: 'Benutzerprivate Agent Nodes', es: 'Agent Nodes privados del usuario', fr: 'Agent Nodes privés à l\'utilisateur', pt: 'Agent Nodes privados do utilizador', ca: 'Agent Nodes privats d\'usuari', hi: 'उपयोगकर्ता-निजी Agent Node', ko: '사용자 전용 Agent Node', ja: 'ユーザー専用 Agent Node', it: 'Agent Node privati dell\'utente' },
+  'Users can attach their own agent host and provider keys': { de: 'Nutzer können ihren eigenen Agent-Host und ihre eigenen Anbieter-Schlüssel anbinden', es: 'Los usuarios pueden vincular su propio host de agente y sus claves de proveedor', fr: 'Les utilisateurs peuvent attacher leur propre hôte d\'agent et leurs clés de fournisseur', pt: 'Os utilizadores podem associar o seu próprio host de agente e chaves de fornecedor', ca: 'Els usuaris poden vincular el seu propi host d\'agent i les seves claus de proveïdor', hi: 'उपयोगकर्ता अपना स्वयं का एजेंट होस्ट और प्रोवाइडर की जोड़ सकते हैं', ko: '사용자는 자신의 에이전트 호스트와 제공자 키를 연결할 수 있습니다', ja: 'ユーザーは自分のエージェントホストとプロバイダーキーを接続できます', it: 'Gli utenti possono collegare il proprio host agente e le proprie chiavi provider' },
+  'Private nodes serve only their owner. The user creates a one-time join token in app settings, then configures provider keys locally on the node. Long-lived provider keys are never uploaded to the backend. When the client switches to private routing, it shows only providers reported by that user’s private nodes.': { de: 'Private Nodes bedienen nur ihren Eigentümer. Der Nutzer erstellt in den App-Einstellungen ein einmaliges Beitritts-Token und konfiguriert dann die Anbieter-Schlüssel lokal auf der Node. Langlebige Anbieter-Schlüssel werden niemals zum Backend hochgeladen. Wenn der Client auf privates Routing umschaltet, zeigt er nur Anbieter an, die von den privaten Nodes dieses Nutzers gemeldet werden.', es: 'Los nodos privados sirven únicamente a su propietario. El usuario crea un token de unión de un solo uso en los ajustes de la app y luego configura las claves de proveedor localmente en el nodo. Las claves de proveedor de larga duración nunca se suben al backend. Cuando el cliente cambia al enrutamiento privado, solo muestra los proveedores notificados por los nodos privados de ese usuario.', fr: 'Les nœuds privés ne servent que leur propriétaire. L\'utilisateur crée un jeton de jonction à usage unique dans les paramètres de l\'app, puis configure les clés de fournisseur localement sur le nœud. Les clés de fournisseur à longue durée de vie ne sont jamais téléversées vers le backend. Lorsque le client bascule en routage privé, il n\'affiche que les fournisseurs signalés par les nœuds privés de cet utilisateur.', pt: 'Os nós privados servem apenas o seu proprietário. O utilizador cria um token de adesão de utilização única nas definições da app e depois configura as chaves de fornecedor localmente no nó. As chaves de fornecedor de longa duração nunca são carregadas para o backend. Quando o cliente muda para o encaminhamento privado, mostra apenas os fornecedores reportados pelos nós privados desse utilizador.', ca: 'Els nodes privats només serveixen el seu propietari. L\'usuari crea un token d\'incorporació d\'un sol ús a la configuració de l\'app i després configura les claus del proveïdor localment al node. Les claus de proveïdor de llarga durada no es pugen mai al backend. Quan el client canvia a l\'enrutament privat, només mostra els proveïdors reportats pels nodes privats d\'aquest usuari.', hi: 'निजी नोड केवल अपने मालिक की सेवा करते हैं। उपयोगकर्ता ऐप सेटिंग में एक बार उपयोग होने वाला join टोकन बनाता है, फिर नोड पर लोकल रूप से प्रोवाइडर की कॉन्फ़िगर करता है। दीर्घकालिक प्रोवाइडर की कभी बैकएंड पर अपलोड नहीं की जाती। जब क्लाइंट निजी रूटिंग पर स्विच करता है, तो वह केवल उस उपयोगकर्ता के निजी नोड द्वारा रिपोर्ट किए गए प्रोवाइडर दिखाता है।', ko: '프라이빗 노드는 소유자에게만 서비스를 제공합니다. 사용자는 앱 설정에서 일회용 조인 토큰을 생성한 뒤 노드에서 로컬로 제공자 키를 설정합니다. 장기 제공자 키는 백엔드로 절대 업로드되지 않습니다. 클라이언트가 프라이빗 라우팅으로 전환되면 해당 사용자의 프라이빗 노드가 보고한 제공자만 표시됩니다.', ja: 'プライベートノードは所有者のみにサービスを提供します。ユーザーはアプリ設定で 1 回限りの参加トークンを作成し、その後ノード上でローカルにプロバイダーキーを設定します。長期間有効なプロバイダーキーがバックエンドにアップロードされることはありません。クライアントがプライベートルーティングに切り替わると、そのユーザーのプライベートノードが報告したプロバイダーのみが表示されます。', it: 'I nodi privati servono solo il loro proprietario. L\'utente crea un token di join monouso nelle impostazioni dell\'app, poi configura le chiavi provider localmente sul nodo. Le chiavi provider a lunga durata non vengono mai caricate sul backend. Quando il client passa al routing privato, mostra solo i provider segnalati dai nodi privati di quell\'utente.' },
+  'User flow': { de: 'Nutzerablauf', es: 'Flujo del usuario', fr: 'Parcours utilisateur', pt: 'Fluxo do utilizador', ca: 'Flux d\'usuari', hi: 'उपयोगकर्ता प्रवाह', ko: '사용자 흐름', ja: 'ユーザーフロー', it: 'Flusso utente' },
+  'Sign in to the app and open Private Agent Node in settings.': { de: 'Melden Sie sich in der App an und öffnen Sie in den Einstellungen die Private Agent Node.', es: 'Inicia sesión en la app y abre Agent Node privado en los ajustes.', fr: 'Connectez-vous à l\'app et ouvrez Agent Node privé dans les paramètres.', pt: 'Inicie sessão na app e abra o Agent Node privado nas definições.', ca: 'Inicia la sessió a l\'app i obre Agent Node privat a la configuració.', hi: 'ऐप में साइन इन करें और सेटिंग में Private Agent Node खोलें।', ko: '앱에 로그인한 뒤 설정에서 프라이빗 Agent Node를 엽니다.', ja: 'アプリにサインインし、設定でプライベート Agent Node を開きます。', it: 'Accedi all\'app e apri Agent Node privato nelle impostazioni.' },
+  'Confirm the current provider / agent and routing mode in settings, then create a join command.': { de: 'Bestätigen Sie in den Einstellungen den aktuellen Anbieter / Agent und den Routing-Modus und erstellen Sie dann einen Beitrittsbefehl.', es: 'Confirma el proveedor / agente actual y el modo de enrutamiento en los ajustes y luego crea un comando de unión.', fr: 'Confirmez le fournisseur / agent actuel et le mode de routage dans les paramètres, puis créez une commande de jonction.', pt: 'Confirme o fornecedor / agente atual e o modo de encaminhamento nas definições e depois crie um comando de adesão.', ca: 'Confirma el proveïdor / agent actual i el mode d\'enrutament a la configuració i, tot seguit, crea una ordre d\'incorporació.', hi: 'सेटिंग में वर्तमान प्रोवाइडर / एजेंट और रूटिंग मोड की पुष्टि करें, फिर एक join कमांड बनाएँ।', ko: '설정에서 현재 제공자 / 에이전트와 라우팅 모드를 확인한 뒤 조인 명령을 생성합니다.', ja: '設定で現在のプロバイダー / エージェントとルーティングモードを確認してから、参加コマンドを作成します。', it: 'Conferma il provider / agente attuale e la modalità di routing nelle impostazioni, poi crea un comando di join.' },
+  'Enter a node name and copy the join command.': { de: 'Geben Sie einen Node-Namen ein und kopieren Sie den Beitrittsbefehl.', es: 'Introduce un nombre de nodo y copia el comando de unión.', fr: 'Saisissez un nom de nœud et copiez la commande de jonction.', pt: 'Introduza um nome de nó e copie o comando de adesão.', ca: 'Introdueix un nom de node i copia l\'ordre d\'incorporació.', hi: 'एक नोड नाम दर्ज करें और join कमांड कॉपी करें।', ko: '노드 이름을 입력하고 조인 명령을 복사합니다.', ja: 'ノード名を入力し、参加コマンドをコピーします。', it: 'Inserisci un nome per il nodo e copia il comando di join.' },
+  'Install myapp-ctl on your own host and run the join command.': { de: 'Installieren Sie myapp-ctl auf Ihrem eigenen Host und führen Sie den Beitrittsbefehl aus.', es: 'Instala myapp-ctl en tu propio host y ejecuta el comando de unión.', fr: 'Installez myapp-ctl sur votre propre hôte et exécutez la commande de jonction.', pt: 'Instale o myapp-ctl no seu próprio host e execute o comando de adesão.', ca: 'Instal·la myapp-ctl al teu propi host i executa l\'ordre d\'incorporació.', hi: 'अपने स्वयं के होस्ट पर myapp-ctl इंस्टॉल करें और join कमांड चलाएँ।', ko: '자신의 호스트에 myapp-ctl을 설치하고 조인 명령을 실행합니다.', ja: '自分のホストに myapp-ctl をインストールし、参加コマンドを実行します。', it: 'Installa myapp-ctl sul tuo host ed esegui il comando di join.' },
+  'Enter this node’s own DeepSeek / MiniMax / custom provider configuration.': { de: 'Geben Sie die eigene DeepSeek-/MiniMax-/benutzerdefinierte Anbieter-Konfiguration dieser Node ein.', es: 'Introduce la configuración propia de DeepSeek / MiniMax / proveedor personalizado de este nodo.', fr: 'Saisissez la configuration de fournisseur DeepSeek / MiniMax / personnalisée propre à ce nœud.', pt: 'Introduza a configuração própria de fornecedor DeepSeek / MiniMax / personalizado deste nó.', ca: 'Introdueix la configuració de proveïdor DeepSeek / MiniMax / personalitzat propi d\'aquest node.', hi: 'इस नोड का अपना DeepSeek / MiniMax / कस्टम प्रोवाइडर कॉन्फ़िगरेशन दर्ज करें।', ko: '이 노드 고유의 DeepSeek / MiniMax / 사용자 지정 제공자 설정을 입력합니다.', ja: 'このノード独自の DeepSeek / MiniMax / カスタムプロバイダーの構成を入力します。', it: 'Inserisci la configurazione provider DeepSeek / MiniMax / personalizzata propria di questo nodo.' },
+  'Switch Agent routing to private in the app; only your nodes are used.': { de: 'Stellen Sie das Agent-Routing in der App auf privat um; es werden nur Ihre Nodes verwendet.', es: 'Cambia el enrutamiento del Agent a privado en la app; solo se usan tus nodos.', fr: 'Basculez le routage Agent en privé dans l\'app ; seuls vos nœuds sont utilisés.', pt: 'Mude o encaminhamento do Agent para privado na app; só são usados os seus nós.', ca: 'Canvia l\'enrutament de l\'Agent a privat dins de l\'app; només es fan servir els teus nodes.', hi: 'ऐप में Agent रूटिंग को private पर स्विच करें; केवल आपके नोड का उपयोग होता है।', ko: '앱에서 Agent 라우팅을 프라이빗으로 전환하면 자신의 노드만 사용됩니다.', ja: 'アプリで Agent ルーティングをプライベートに切り替えます。自分のノードのみが使用されます。', it: 'Imposta il routing degli Agent su privato nell\'app; vengono usati solo i tuoi nodi.' },
+  'Private node join': { de: 'Beitritt einer privaten Node', es: 'Unión de nodo privado', fr: 'Jonction d\'un nœud privé', pt: 'Adesão de nó privado', ca: 'Incorporació de node privat', hi: 'निजी नोड join', ko: '프라이빗 노드 조인', ja: 'プライベートノードの参加', it: 'Join del nodo privato' },
+  'Client routing currently has only public and private modes. public uses the platform pool; private uses only the signed-in user’s private nodes and does not automatically fall back to public when offline.': { de: 'Das Client-Routing kennt derzeit nur die Modi public und private. public nutzt den Plattform-Pool; private nutzt ausschließlich die privaten Nodes des angemeldeten Nutzers und fällt im Offline-Fall nicht automatisch auf public zurück.', es: 'El enrutamiento del cliente solo tiene actualmente los modos público y privado. public usa el pool de la plataforma; private usa únicamente los nodos privados del usuario que ha iniciado sesión y no recurre automáticamente a public cuando están sin conexión.', fr: 'Le routage client ne propose actuellement que les modes public et private. public utilise le pool de la plateforme ; private utilise uniquement les nœuds privés de l\'utilisateur connecté et ne bascule pas automatiquement vers public en cas de mise hors ligne.', pt: 'O encaminhamento do cliente tem atualmente apenas os modos público e privado. O público usa o pool da plataforma; o privado usa apenas os nós privados do utilizador com sessão iniciada e não recorre automaticamente ao público quando estes estão offline.', ca: 'L\'enrutament del client actualment només té els modes public i private. public utilitza el grup de la plataforma; private utilitza només els nodes privats de l\'usuari amb sessió iniciada i no torna automàticament a public quan està fora de línia.', hi: 'क्लाइंट रूटिंग में फ़िलहाल केवल public और private मोड हैं। public प्लेटफ़ॉर्म पूल का उपयोग करता है; private केवल साइन इन किए गए उपयोगकर्ता के निजी नोड का उपयोग करता है और ऑफ़लाइन होने पर स्वतः public पर वापस नहीं जाता।', ko: '클라이언트 라우팅에는 현재 public과 private 모드만 있습니다. public은 플랫폼 풀을 사용하고, private은 로그인한 사용자의 프라이빗 노드만 사용하며 오프라인일 때 자동으로 public으로 폴백하지 않습니다.', ja: 'クライアントのルーティングには現在 public と private の 2 つのモードのみがあります。public はプラットフォームのプールを使用し、private はサインイン中のユーザーのプライベートノードのみを使用し、オフライン時に自動的に public へフォールバックすることはありません。', it: 'Il routing del client attualmente prevede solo le modalità public e private. public usa il pool della piattaforma; private usa solo i nodi privati dell\'utente connesso e non torna automaticamente a public quando questi sono offline.' },
+  'The website is the Vite project under website. Deploy website/dist to Cloudflare Pages; do not confuse it with the Flutter Web client build/web output.': { de: 'Die Website ist das Vite-Projekt unter website. Stellen Sie website/dist auf Cloudflare Pages bereit; verwechseln Sie sie nicht mit dem build/web-Output des Flutter-Web-Clients.', es: 'El sitio web es el proyecto Vite ubicado en website. Despliega website/dist en Cloudflare Pages; no lo confundas con la salida build/web del cliente Flutter Web.', fr: 'Le site web est le projet Vite sous website. Déployez website/dist sur Cloudflare Pages ; ne le confondez pas avec la sortie build/web du client Flutter Web.', pt: 'O site é o projeto Vite em website. Implemente website/dist no Cloudflare Pages; não o confunda com o resultado build/web do cliente Flutter Web.', ca: 'El lloc web és el projecte Vite dins de website. Desplega website/dist a Cloudflare Pages; no el confonguis amb la sortida build/web del client Flutter Web.', hi: 'वेबसाइट website के अंतर्गत Vite प्रोजेक्ट है। website/dist को Cloudflare Pages पर परिनियोजित करें; इसे Flutter Web क्लाइंट के build/web आउटपुट के साथ भ्रमित न करें।', ko: '웹사이트는 website 아래의 Vite 프로젝트입니다. website/dist를 Cloudflare Pages에 배포하세요. Flutter Web 클라이언트의 build/web 출력과 혼동하지 마세요.', ja: 'ウェブサイトは website 配下の Vite プロジェクトです。website/dist を Cloudflare Pages にデプロイしてください。Flutter Web クライアントの build/web 出力と混同しないでください。', it: 'Il sito web è il progetto Vite nella cartella website. Distribuisci website/dist su Cloudflare Pages; non confonderlo con l\'output build/web del client Flutter Web.' },
+};
+function tl(lang: Lang, zh: string, en: string): string {
+  if (lang === 'zh') return zh;
+  return docsI18n[en]?.[lang] ?? en;
+}
+
 function PhonePreview({ compact = false }: { compact?: boolean }) {
   return (
     <div className={`phoneStage ${compact ? 'compact' : ''}`} aria-label="MyApp live web preview">
@@ -993,46 +1134,45 @@ function TerminalBox({ lines }: { lines: string[] }) {
 }
 
 function ArchitectureDiagram({ lang }: { lang: Lang }) {
-  const zh = lang === 'zh';
   const groups = [
     {
-      title: zh ? '入口' : 'Entry',
+      title: tl(lang, '入口', 'Entry'),
       icon: Smartphone,
       nodes: [
-        [zh ? 'Web 客户端' : 'Web client', 'Cloudflare Pages / Flutter Web'],
-        [zh ? 'iOS / Android' : 'iOS / Android', 'TestFlight / APK / Play'],
+        [tl(lang, 'Web 客户端', 'Web client'), 'Cloudflare Pages / Flutter Web'],
+        [tl(lang, 'iOS / Android', 'iOS / Android'), 'TestFlight / APK / Play'],
       ],
     },
     {
-      title: zh ? '运行时' : 'Runtime',
+      title: tl(lang, '运行时', 'Runtime'),
       icon: Layers3,
       nodes: [
-        [zh ? 'JSON DSL 解释器' : 'JSON DSL interpreter', zh ? '只组合已编译能力' : 'compiled capabilities only'],
-        [zh ? 'IM / 游戏 / 媒体 atoms' : 'IM / game / media atoms', zh ? '通用能力层' : 'general capability layer'],
+        [tl(lang, 'JSON DSL 解释器', 'JSON DSL interpreter'), tl(lang, '只组合已编译能力', 'compiled capabilities only')],
+        [tl(lang, 'IM / 游戏 / 媒体 atoms', 'IM / game / media atoms'), tl(lang, '通用能力层', 'general capability layer')],
       ],
     },
     {
-      title: zh ? '后端' : 'Backend',
+      title: tl(lang, '后端', 'Backend'),
       icon: Server,
       nodes: [
-        [zh ? 'Flask API + SSE' : 'Flask API + SSE', zh ? '会话、鉴权、恢复' : 'sessions, auth, recovery'],
-        [zh ? 'AI Worker Queue' : 'AI worker queue', zh ? 'Redis 队列 + Agent 执行' : 'Redis queue + agents'],
+        [tl(lang, 'Flask API + SSE', 'Flask API + SSE'), tl(lang, '会话、鉴权、恢复', 'sessions, auth, recovery')],
+        [tl(lang, 'AI Worker Queue', 'AI worker queue'), tl(lang, 'Redis 队列 + Agent 执行', 'Redis queue + agents')],
       ],
     },
     {
-      title: zh ? '平台服务' : 'Platform services',
+      title: tl(lang, '平台服务', 'Platform services'),
       icon: Network,
       nodes: [
-        [zh ? 'Registry / Config Center' : 'Registry / config center', zh ? 'JSON App、版本、APK' : 'JSON Apps, versions, APK'],
-        [zh ? 'User Center / OpenIM' : 'User center / OpenIM', zh ? '用户、好友、消息' : 'users, friends, messages'],
+        [tl(lang, 'Registry / Config Center', 'Registry / config center'), tl(lang, 'JSON App、版本、APK', 'JSON Apps, versions, APK')],
+        [tl(lang, 'User Center / OpenIM', 'User center / OpenIM'), tl(lang, '用户、好友、消息', 'users, friends, messages')],
       ],
     },
     {
-      title: zh ? '数据与资产' : 'Data and assets',
+      title: tl(lang, '数据与资产', 'Data and assets'),
       icon: Database,
       nodes: [
-        ['Postgres / Redis', zh ? '业务数据、队列、会话' : 'business data, queues, sessions'],
-        ['OSS / MinIO', zh ? 'JSON、图片、安装包' : 'JSON, media, release files'],
+        ['Postgres / Redis', tl(lang, '业务数据、队列、会话', 'business data, queues, sessions')],
+        ['OSS / MinIO', tl(lang, 'JSON、图片、安装包', 'JSON, media, release files')],
       ],
     },
   ];
@@ -1041,8 +1181,8 @@ function ArchitectureDiagram({ lang }: { lang: Lang }) {
     <div className="architecturePanel">
       <div className="archHeader">
         <div>
-          <p className="eyebrow">{zh ? '系统架构' : 'System architecture'}</p>
-          <h3>{zh ? '客户端解释 JSON，后端负责生成、分发和恢复任务' : 'Clients interpret JSON; backend generates, distributes and resumes work'}</h3>
+          <p className="eyebrow">{tl(lang, '系统架构', 'System architecture')}</p>
+          <h3>{tl(lang, '客户端解释 JSON，后端负责生成、分发和恢复任务', 'Clients interpret JSON; backend generates, distributes and resumes work')}</h3>
         </div>
         {GITHUB_PUBLIC ? (
           <a className="inlineLink" href={GITHUB_URL} target="_blank" rel="noreferrer">
@@ -1052,11 +1192,11 @@ function ArchitectureDiagram({ lang }: { lang: Lang }) {
         ) : (
           <span className="inlineLink disabledLink">
             <Github size={16} />
-            {zh ? 'GitHub 即将公开' : 'GitHub coming soon'}
+            {tl(lang, 'GitHub 即将公开', 'GitHub coming soon')}
           </span>
         )}
       </div>
-      <div className="archDiagram" aria-label={zh ? 'MyApp 系统架构图' : 'MyApp system architecture diagram'}>
+      <div className="archDiagram" aria-label={tl(lang, 'MyApp 系统架构图', 'MyApp system architecture diagram')}>
         {groups.map((group, index) => {
           const Icon = group.icon;
           return (
@@ -1083,20 +1223,19 @@ function ArchitectureDiagram({ lang }: { lang: Lang }) {
         })}
       </div>
       <div className="archLegend">
-        <span>{zh ? '声明式 JSON App' : 'Declarative JSON Apps'}</span>
-        <span>{zh ? '通用 Flutter 能力层' : 'General Flutter capability layer'}</span>
-        <span>{zh ? '可私有部署后端' : 'Self-hostable backend'}</span>
+        <span>{tl(lang, '声明式 JSON App', 'Declarative JSON Apps')}</span>
+        <span>{tl(lang, '通用 Flutter 能力层', 'General Flutter capability layer')}</span>
+        <span>{tl(lang, '可私有部署后端', 'Self-hostable backend')}</span>
       </div>
     </div>
   );
 }
 
 function ValueArchitecture({ lang }: { lang: Lang }) {
-  const zh = lang === 'zh';
   const steps = [
-    [zh ? '描述需求' : 'Describe an idea', zh ? '用户说清楚要什么工具、游戏或页面。' : 'User describes a tool, game or screen.'],
-    [zh ? '生成 JSON App' : 'Generate JSON App', zh ? 'AI 输出声明式 JSON，并通过校验。' : 'AI produces declarative JSON and validation passes.'],
-    [zh ? '跨端运行' : 'Run everywhere', zh ? '同一份 JSON 在 Web、iOS、Android 运行时中渲染。' : 'One JSON renders in Web, iOS and Android runtimes.'],
+    [tl(lang, '描述需求', 'Describe an idea'), tl(lang, '用户说清楚要什么工具、游戏或页面。', 'User describes a tool, game or screen.')],
+    [tl(lang, '生成 JSON App', 'Generate JSON App'), tl(lang, 'AI 输出声明式 JSON，并通过校验。', 'AI produces declarative JSON and validation passes.')],
+    [tl(lang, '跨端运行', 'Run everywhere'), tl(lang, '同一份 JSON 在 Web、iOS、Android 运行时中渲染。', 'One JSON renders in Web, iOS and Android runtimes.')],
   ];
 
   return (
@@ -1113,11 +1252,13 @@ function ValueArchitecture({ lang }: { lang: Lang }) {
       <div className="valueArchProof">
         <ShieldCheck size={22} />
         <div>
-          <strong>{zh ? '审核友好的边界' : 'Review-friendly boundary'}</strong>
+          <strong>{tl(lang, '审核友好的边界', 'Review-friendly boundary')}</strong>
           <span>
-            {zh
-              ? 'AI 只能组合已编译进客户端的通用控件和动作，不能下发原生代码、插件或二进制。'
-              : 'AI can only compose compiled widgets and actions. It cannot ship native code, plugins or binaries.'}
+            {tl(
+              lang,
+              'AI 只能组合已编译进客户端的通用控件和动作，不能下发原生代码、插件或二进制。',
+              'AI can only compose compiled widgets and actions. It cannot ship native code, plugins or binaries.',
+            )}
           </span>
         </div>
       </div>
@@ -1126,315 +1267,233 @@ function ValueArchitecture({ lang }: { lang: Lang }) {
 }
 
 function DocsPage({ lang }: { lang: Lang }) {
-  const zh = lang === 'zh';
   // myapp-ctl supports all 11 framework languages, so show the visitor's own code in CLI examples
   const cliLang = lang;
   const docs = {
-    badge: zh ? 'myapp-ctl 部署手册' : 'myapp-ctl deployment guide',
-    title: zh ? '用 myapp-ctl 安装、部署、更新和扩展 MyApp' : 'Install, deploy, update and extend MyApp with myapp-ctl',
-    subtitle: zh
-      ? '当前后端统一走 deploy/production 下的 myapp-ctl。旧 bootstrap、裸跑服务和手工迁移路径已经废弃。'
-      : 'The backend is now managed through myapp-ctl under deploy/production. Legacy bootstrap scripts, bare services and one-off migration paths are deprecated.',
-    quickTitle: zh ? '最快全新部署' : 'Fast fresh deploy',
-    quickBody: zh
-      ? '准备一台 Ubuntu 主机、Docker 和仓库源码。先安装 myapp-ctl，再配置密钥，最后部署整套后端并把客户端环境 JSON 导入 App。'
-      : 'Prepare an Ubuntu host, Docker and a source checkout. Install myapp-ctl, configure secrets, deploy the stack, then import the client environment JSON into the app.',
-    backendTitle: zh ? '后端安装和首次配置' : 'Backend install and first setup',
-    backendBody: zh
-      ? 'myapp-ctl 负责安装控制入口、生成基础密钥、管理 AI/SMTP/推送配置、部署 Docker 服务并输出客户端导入二维码。生产密钥只写入 /etc/myapp 和 data root，不进入 Git。'
-      : 'myapp-ctl installs the control entrypoint, generates base secrets, manages AI/SMTP/push configuration, deploys Docker services and prints a client import QR code. Production secrets stay under /etc/myapp and the data root, never Git.',
-    clientTitle: zh ? '客户端接入' : 'Client connection',
-    clientBody: zh
-      ? 'Web、iOS TestFlight、Android APK 都可以连接私有后端。打开 Service Environment 页面，扫码或粘贴 myapp-ctl 输出的 JSON，保存后重新登录。'
-      : 'Web, iOS TestFlight and Android APK can all connect to a private backend. Open Service Environment, scan or paste the JSON printed by myapp-ctl, save and sign in again.',
-    buildTitle: zh ? '客户端和官网构建' : 'Client and website builds',
-    websiteTitle: zh ? '官网发布' : 'Website deployment',
-    releaseTitle: zh ? '发布和分发' : 'Release and distribution',
-    releaseBody: zh
-      ? 'JSON App 通过 Registry 发布并存到 OSS/MinIO；Android APK 走配置中心上传到固定对象路径；Flutter Web 客户端构建到 build/web；官网是 website 目录下的 Vite 站点。iOS 通过 TestFlight 分发。'
-      : 'JSON Apps are published through Registry and stored in OSS/MinIO. Android APK uploads through config center to a fixed object path. Flutter Web client builds to build/web; this marketing website is the Vite app under website. iOS is distributed through TestFlight.',
-    configTitle: zh ? '配置和安全边界' : 'Configuration and security boundary',
-    configBody: zh
-      ? 'AI 生成的是声明式 JSON，不下发 Dart、Swift、Kotlin、插件或二进制。运行时只解释客户端已经编译进包内的通用控件、动作和媒体能力。'
-      : 'AI produces declarative JSON, not Dart, Swift, Kotlin, plugins or binaries. The runtime only interprets generic widgets, actions and media capabilities already compiled into the client.',
+    badge: tl(lang, 'myapp-ctl 部署手册', 'myapp-ctl deployment guide'),
+    title: tl(lang, '用 myapp-ctl 安装、部署、更新和扩展 MyApp', 'Install, deploy, update and extend MyApp with myapp-ctl'),
+    subtitle: tl(
+      lang,
+      '当前后端统一走 deploy/production 下的 myapp-ctl。旧 bootstrap、裸跑服务和手工迁移路径已经废弃。',
+      'The backend is now managed through myapp-ctl under deploy/production. Legacy bootstrap scripts, bare services and one-off migration paths are deprecated.',
+    ),
+    quickTitle: tl(lang, '最快全新部署', 'Fast fresh deploy'),
+    quickBody: tl(
+      lang,
+      '准备一台 Ubuntu 主机、Docker 和仓库源码。先安装 myapp-ctl，再配置密钥，最后部署整套后端并把客户端环境 JSON 导入 App。',
+      'Prepare an Ubuntu host, Docker and a source checkout. Install myapp-ctl, configure secrets, deploy the stack, then import the client environment JSON into the app.',
+    ),
+    backendTitle: tl(lang, '后端安装和首次配置', 'Backend install and first setup'),
+    backendBody: tl(
+      lang,
+      'myapp-ctl 负责安装控制入口、生成基础密钥、管理 AI/SMTP/推送配置、部署 Docker 服务并输出客户端导入二维码。生产密钥只写入 /etc/myapp 和 data root，不进入 Git。',
+      'myapp-ctl installs the control entrypoint, generates base secrets, manages AI/SMTP/push configuration, deploys Docker services and prints a client import QR code. Production secrets stay under /etc/myapp and the data root, never Git.',
+    ),
+    clientTitle: tl(lang, '客户端接入', 'Client connection'),
+    clientBody: tl(
+      lang,
+      'Web、iOS TestFlight、Android APK 都可以连接私有后端。打开 Service Environment 页面，扫码或粘贴 myapp-ctl 输出的 JSON，保存后重新登录。',
+      'Web, iOS TestFlight and Android APK can all connect to a private backend. Open Service Environment, scan or paste the JSON printed by myapp-ctl, save and sign in again.',
+    ),
+    buildTitle: tl(lang, '客户端和官网构建', 'Client and website builds'),
+    websiteTitle: tl(lang, '官网发布', 'Website deployment'),
+    releaseTitle: tl(lang, '发布和分发', 'Release and distribution'),
+    releaseBody: tl(
+      lang,
+      'JSON App 通过 Registry 发布并存到 OSS/MinIO；Android APK 走配置中心上传到固定对象路径；Flutter Web 客户端构建到 build/web；官网是 website 目录下的 Vite 站点。iOS 通过 TestFlight 分发。',
+      'JSON Apps are published through Registry and stored in OSS/MinIO. Android APK uploads through config center to a fixed object path. Flutter Web client builds to build/web; this marketing website is the Vite app under website. iOS is distributed through TestFlight.',
+    ),
+    configTitle: tl(lang, '配置和安全边界', 'Configuration and security boundary'),
+    configBody: tl(
+      lang,
+      'AI 生成的是声明式 JSON，不下发 Dart、Swift、Kotlin、插件或二进制。运行时只解释客户端已经编译进包内的通用控件、动作和媒体能力。',
+      'AI produces declarative JSON, not Dart, Swift, Kotlin, plugins or binaries. The runtime only interprets generic widgets, actions and media capabilities already compiled into the client.',
+    ),
   };
-  const quickSteps = zh
-    ? [
-        ['安装控制器', '在源码根目录运行 install_ctl.sh，myapp-ctl 会记录当前 checkout 作为 build context。'],
-        ['交互配置', 'setup 会配置语言、data root、AI 供应商、SMTP、APNs、FCM、GeTui 等。'],
-        ['部署服务', 'deploy --build 从源码构建；deploy --pull 使用已发布镜像。'],
-        ['连接客户端', 'client-env 输出 JSON 和二维码，客户端导入后重新登录。'],
-      ]
-    : [
-        ['Install control CLI', 'Run install_ctl.sh from the source root; myapp-ctl records that checkout as the build context.'],
-        ['Configure secrets', 'setup configures language, data root, AI providers, SMTP, APNs, FCM and GeTui.'],
-        ['Deploy services', 'deploy --build builds from source; deploy --pull uses published images.'],
-        ['Connect clients', 'client-env prints JSON and a QR code; import it in the client and sign in again.'],
-      ];
-  const stackItems = zh
-    ? [
-        ['核心服务', 'backend、ai-worker、Registry、Config Center、User Center'],
-        ['基础设施', 'JSON App Postgres、AI Redis、App MinIO、Supabase、OpenIM'],
-        ['AI 执行', 'agent-node 调度 Docker runtime，Claude/Codex 在 Ubuntu 隔离容器中运行'],
-        ['持久数据', '默认 data root 是 /mnt/myapp，数据库和对象存储都走本地 path bind mount'],
-      ]
-    : [
-        ['Core services', 'backend, ai-worker, Registry, Config Center and User Center'],
-        ['Infrastructure', 'JSON App Postgres, AI Redis, App MinIO, Supabase and OpenIM'],
-        ['AI execution', 'agent-node schedules Docker runtimes; Claude/Codex run inside isolated Ubuntu containers'],
-        ['Persistent data', 'Default data root is /mnt/myapp; databases and object stores use local bind mounts'],
-      ];
-  const updateItems = zh
-    ? [
-        ['更新控制器', ['myapp-ctl update']],
-        ['只改后端路由', ['myapp-ctl deploy backend --build --no-setup --no-test-user']],
-        ['改 worker / prompt / validator', ['myapp-ctl deploy backend ai-worker --build --no-setup --no-test-user']],
-        ['改 agent-node', ['myapp-ctl agent ls', 'myapp-ctl deploy agent-node --build --no-setup --no-test-user']],
-        ['改 runtime 镜像', ['myapp-ctl deploy agent-runtime --build --no-setup --no-test-user']],
-        ['镜像部署主机', ['myapp-ctl update', 'myapp-ctl deploy backend ai-worker --pull --no-setup --no-test-user']],
-      ]
-    : [
-        ['Refresh control files', ['myapp-ctl update']],
-        ['Backend routes only', ['myapp-ctl deploy backend --build --no-setup --no-test-user']],
-        ['Worker / prompts / validators', ['myapp-ctl deploy backend ai-worker --build --no-setup --no-test-user']],
-        ['agent-node changes', ['myapp-ctl agent ls', 'myapp-ctl deploy agent-node --build --no-setup --no-test-user']],
-        ['Runtime image changes', ['myapp-ctl deploy agent-runtime --build --no-setup --no-test-user']],
-        ['Image-based host', ['myapp-ctl update', 'myapp-ctl deploy backend ai-worker --pull --no-setup --no-test-user']],
-      ];
-  const opsGroups = zh
-    ? [
-        {
-          title: '服务运维',
-          lines: [
-            'myapp-ctl status',
-            'myapp-ctl status backend ai-worker agent-node',
-            'myapp-ctl restart backend ai-worker',
-            'myapp-ctl log backend -f -n 120',
-          ],
-        },
-        {
-          title: '密钥和配置',
-          lines: [
-            'myapp-ctl secret ls',
-            'myapp-ctl secret get <group> <key> --show',
-            'myapp-ctl secret set <group> KEY=value',
-            'myapp-ctl config view',
-          ],
-        },
-        {
-          title: '备份和恢复',
-          lines: [
-            'myapp-ctl config export --out /root/myapp-config.json',
-            'myapp-ctl config export --redacted --out /root/myapp-config.redacted.json',
-            'myapp-ctl config import /root/myapp-config.json --yes',
-          ],
-        },
-        {
-          title: '清理环境',
-          lines: [
-            'myapp-ctl uninstall --yes',
-            '# 配置和 data root 不会自动删除；确认销毁时手动 rm -rf /mnt/myapp',
-          ],
-        },
-      ]
-    : [
-        {
-          title: 'Service operations',
-          lines: [
-            'myapp-ctl status',
-            'myapp-ctl status backend ai-worker agent-node',
-            'myapp-ctl restart backend ai-worker',
-            'myapp-ctl log backend -f -n 120',
-          ],
-        },
-        {
-          title: 'Secrets and config',
-          lines: [
-            'myapp-ctl secret ls',
-            'myapp-ctl secret get <group> <key> --show',
-            'myapp-ctl secret set <group> KEY=value',
-            'myapp-ctl config view',
-          ],
-        },
-        {
-          title: 'Backup and restore',
-          lines: [
-            'myapp-ctl config export --out /root/myapp-config.json',
-            'myapp-ctl config export --redacted --out /root/myapp-config.redacted.json',
-            'myapp-ctl config import /root/myapp-config.json --yes',
-          ],
-        },
-        {
-          title: 'Uninstall',
-          lines: [
-            'myapp-ctl uninstall --yes',
-            '# config and data root are preserved; manually rm -rf /mnt/myapp only when destroying data',
-          ],
-        },
-      ];
-  const commandReferenceGroups = zh
-    ? [
-        {
-          title: '生命周期和服务',
-          body: '部署、更新、重启、日志和卸载。targets 可以是服务名，也可以配合 --group 使用 infra / supabase / openim / agent / core。',
-          lines: [
-            'myapp-ctl status [service ...] [--json]',
-            'myapp-ctl deploy [target ...] [--build|--pull|--plan|--dry-run]',
-            'myapp-ctl deploy --group infra|supabase|openim|agent|core --pull',
-            'myapp-ctl restart [service ...]',
-            'myapp-ctl log <service> [-n 120] [-f]',
-            'myapp-ctl update [--source <checkout>] [--no-pull]',
-            'myapp-ctl uninstall --yes [--volumes] [--images] [--remove-ctl]',
-          ],
-        },
-        {
-          title: '首次配置和密钥',
-          body: 'setup 是交互式入口；secret 用来查看、生成、设置和删除服务器本机密钥。生产密钥不要写入 Git。',
-          lines: [
-            'myapp-ctl setup [--host <host>] [--data-root /mnt/myapp] [--force]',
-            'myapp-ctl setup [--no-ai] [--no-asr] [--no-email] [--no-push]',
-            'myapp-ctl secret init-stack [--host <host>] [--data-root /mnt/myapp] [--force]',
-            'myapp-ctl secret ls',
-            'myapp-ctl secret get <group> <key> [--show]',
-            'myapp-ctl secret set <group> KEY=value [KEY2=value2 ...]',
-            'myapp-ctl secret generate <group> KEY [KEY2 ...] [--bytes 32]',
-            'myapp-ctl secret rm <group> KEY [KEY2 ...]',
-          ],
-        },
-        {
-          title: '配置、域名和客户端环境',
-          body: '配置包可用于迁移和恢复；client-env 会输出客户端可导入的环境 JSON 和二维码。',
-          lines: [
-            'myapp-ctl config view [--show-secrets]',
-            'myapp-ctl config export --out <path.json|path.yaml> [--redacted]',
-            'myapp-ctl config import <path.json|path.yaml> --yes',
-            'myapp-ctl config lang [zh|en|de|es|fr|pt|ca|hi|ko|ja|it]',
-            'myapp-ctl domain ls',
-            'myapp-ctl domain set <name> <url>',
-            'myapp-ctl domain rm <name>',
-            'myapp-ctl client-env [--host <host>] [--name <name>] [--json] [--terminal-qr]',
-          ],
-        },
-        {
-          title: '镜像',
-          body: '镜像目标目前是 all、backend、agent-node、agent-runtime。--build 走源码，--pull 走已发布镜像。',
-          lines: [
-            'myapp-ctl image ls',
-            'myapp-ctl image build [all|backend|agent-node|agent-runtime]',
-            'myapp-ctl image pull [all|backend|agent-node|agent-runtime]',
-            'myapp-ctl image push [all|backend|agent-node|agent-runtime]',
-          ],
-        },
-        {
-          title: '公共 Agent Node',
-          body: 'agent-node ls 是集群视角；agent ls 只看当前机器正在跑的 agent 容器。',
-          lines: [
-            'myapp-ctl agent ls',
-            'myapp-ctl agent-node ls [--namespace public|all|<user-id>] [--json] [--no-probe]',
-            'myapp-ctl agent-node status [node-id] [--namespace public|all|<user-id>] [--json] [--no-probe]',
-            'myapp-ctl agent-node add --backend <url> --host <host> --node-id <id> --name <name> [--pull|--build]',
-            'myapp-ctl agent-node join --backend <url> --node-id <id> --name <name> --agent-token <token> --registration-token <token>',
-            'myapp-ctl agent-node register --backend <url> --node-id <id> --url <url>',
-            'myapp-ctl agent-node pause [node-id] [--reason <text>]',
-            'myapp-ctl agent-node resume [node-id]',
-            'myapp-ctl agent-node capacity <n> [--queue-max <n>]',
-            'myapp-ctl agent-node limits --capacity <n> --queue-max <n>',
-            'myapp-ctl agent-node rm <node-id>',
-          ],
-        },
-        {
-          title: '用户私有 Agent Node',
-          body: '私有节点只服务所属用户，长效 provider key 留在节点本地。App 设置页会生成一次性 join token 和 join command。',
-          lines: [
-            'MYAPP_PRIVATE_AGENT_JOIN_TOKEN=<token> myapp-ctl agent-node private join --backend <url> --node-id <id> --name <name> --pull',
-            'myapp-ctl agent-node private join --backend <url> --node-id <id> --name <name> --provider deepseek --agent claude --capacity 2 --queue-max 10',
-            'myapp-ctl agent-node private ls',
-            'myapp-ctl agent-node private status [node-id]',
-            'myapp-ctl agent-node private ls --auth-token <user-token>',
-          ],
-        },
-      ]
-    : [
-        {
-          title: 'Lifecycle and services',
-          body: 'Deploy, update, restart, logs and uninstall. Targets can be service names, or use --group with infra / supabase / openim / agent / core.',
-          lines: [
-            'myapp-ctl status [service ...] [--json]',
-            'myapp-ctl deploy [target ...] [--build|--pull|--plan|--dry-run]',
-            'myapp-ctl deploy --group infra|supabase|openim|agent|core --pull',
-            'myapp-ctl restart [service ...]',
-            'myapp-ctl log <service> [-n 120] [-f]',
-            'myapp-ctl update [--source <checkout>] [--no-pull]',
-            'myapp-ctl uninstall --yes [--volumes] [--images] [--remove-ctl]',
-          ],
-        },
-        {
-          title: 'Setup and secrets',
-          body: 'setup is the interactive entrypoint; secret manages host-local credentials. Do not put production secrets in Git.',
-          lines: [
-            'myapp-ctl setup [--host <host>] [--data-root /mnt/myapp] [--force]',
-            'myapp-ctl setup [--no-ai] [--no-asr] [--no-email] [--no-push]',
-            'myapp-ctl secret init-stack [--host <host>] [--data-root /mnt/myapp] [--force]',
-            'myapp-ctl secret ls',
-            'myapp-ctl secret get <group> <key> [--show]',
-            'myapp-ctl secret set <group> KEY=value [KEY2=value2 ...]',
-            'myapp-ctl secret generate <group> KEY [KEY2 ...] [--bytes 32]',
-            'myapp-ctl secret rm <group> KEY [KEY2 ...]',
-          ],
-        },
-        {
-          title: 'Config, domains and client env',
-          body: 'Config bundles are used for migration and recovery; client-env prints importable client JSON and QR codes.',
-          lines: [
-            'myapp-ctl config view [--show-secrets]',
-            'myapp-ctl config export --out <path.json|path.yaml> [--redacted]',
-            'myapp-ctl config import <path.json|path.yaml> --yes',
-            'myapp-ctl config lang [zh|en|de|es|fr|pt|ca|hi|ko|ja|it]',
-            'myapp-ctl domain ls',
-            'myapp-ctl domain set <name> <url>',
-            'myapp-ctl domain rm <name>',
-            'myapp-ctl client-env [--host <host>] [--name <name>] [--json] [--terminal-qr]',
-          ],
-        },
-        {
-          title: 'Images',
-          body: 'Current image targets are all, backend, agent-node and agent-runtime. --build uses source; --pull uses published images.',
-          lines: [
-            'myapp-ctl image ls',
-            'myapp-ctl image build [all|backend|agent-node|agent-runtime]',
-            'myapp-ctl image pull [all|backend|agent-node|agent-runtime]',
-            'myapp-ctl image push [all|backend|agent-node|agent-runtime]',
-          ],
-        },
-        {
-          title: 'Public Agent Node',
-          body: 'agent-node ls is the cluster view; agent ls is local-only and shows running agent containers on this host.',
-          lines: [
-            'myapp-ctl agent ls',
-            'myapp-ctl agent-node ls [--namespace public|all|<user-id>] [--json] [--no-probe]',
-            'myapp-ctl agent-node status [node-id] [--namespace public|all|<user-id>] [--json] [--no-probe]',
-            'myapp-ctl agent-node add --backend <url> --host <host> --node-id <id> --name <name> [--pull|--build]',
-            'myapp-ctl agent-node join --backend <url> --node-id <id> --name <name> --agent-token <token> --registration-token <token>',
-            'myapp-ctl agent-node register --backend <url> --node-id <id> --url <url>',
-            'myapp-ctl agent-node pause [node-id] [--reason <text>]',
-            'myapp-ctl agent-node resume [node-id]',
-            'myapp-ctl agent-node capacity <n> [--queue-max <n>]',
-            'myapp-ctl agent-node limits --capacity <n> --queue-max <n>',
-            'myapp-ctl agent-node rm <node-id>',
-          ],
-        },
-        {
-          title: 'User-private Agent Node',
-          body: 'Private nodes serve only their owner, and long-lived provider keys stay on the node host. The app settings page creates a one-time join token and command.',
-          lines: [
-            'MYAPP_PRIVATE_AGENT_JOIN_TOKEN=<token> myapp-ctl agent-node private join --backend <url> --node-id <id> --name <name> --pull',
-            'myapp-ctl agent-node private join --backend <url> --node-id <id> --name <name> --provider deepseek --agent claude --capacity 2 --queue-max 10',
-            'myapp-ctl agent-node private ls',
-            'myapp-ctl agent-node private status [node-id]',
-            'myapp-ctl agent-node private ls --auth-token <user-token>',
-          ],
-        },
-      ];
+  const quickSteps = [
+    [
+      tl(lang, '安装控制器', 'Install control CLI'),
+      tl(lang, '在源码根目录运行 install_ctl.sh，myapp-ctl 会记录当前 checkout 作为 build context。', 'Run install_ctl.sh from the source root; myapp-ctl records that checkout as the build context.'),
+    ],
+    [
+      tl(lang, '交互配置', 'Configure secrets'),
+      tl(lang, 'setup 会配置语言、data root、AI 供应商、SMTP、APNs、FCM、GeTui 等。', 'setup configures language, data root, AI providers, SMTP, APNs, FCM and GeTui.'),
+    ],
+    [
+      tl(lang, '部署服务', 'Deploy services'),
+      tl(lang, 'deploy --build 从源码构建；deploy --pull 使用已发布镜像。', 'deploy --build builds from source; deploy --pull uses published images.'),
+    ],
+    [
+      tl(lang, '连接客户端', 'Connect clients'),
+      tl(lang, 'client-env 输出 JSON 和二维码，客户端导入后重新登录。', 'client-env prints JSON and a QR code; import it in the client and sign in again.'),
+    ],
+  ];
+  const stackItems = [
+    [
+      tl(lang, '核心服务', 'Core services'),
+      tl(lang, 'backend、ai-worker、Registry、Config Center、User Center', 'backend, ai-worker, Registry, Config Center and User Center'),
+    ],
+    [
+      tl(lang, '基础设施', 'Infrastructure'),
+      tl(lang, 'JSON App Postgres、AI Redis、App MinIO、Supabase、OpenIM', 'JSON App Postgres, AI Redis, App MinIO, Supabase and OpenIM'),
+    ],
+    [
+      tl(lang, 'AI 执行', 'AI execution'),
+      tl(lang, 'agent-node 调度 Docker runtime，Claude/Codex 在 Ubuntu 隔离容器中运行', 'agent-node schedules Docker runtimes; Claude/Codex run inside isolated Ubuntu containers'),
+    ],
+    [
+      tl(lang, '持久数据', 'Persistent data'),
+      tl(lang, '默认 data root 是 /mnt/myapp，数据库和对象存储都走本地 path bind mount', 'Default data root is /mnt/myapp; databases and object stores use local bind mounts'),
+    ],
+  ];
+  const updateItems = [
+    [tl(lang, '更新控制器', 'Refresh control files'), ['myapp-ctl update']],
+    [tl(lang, '只改后端路由', 'Backend routes only'), ['myapp-ctl deploy backend --build --no-setup --no-test-user']],
+    [tl(lang, '改 worker / prompt / validator', 'Worker / prompts / validators'), ['myapp-ctl deploy backend ai-worker --build --no-setup --no-test-user']],
+    [tl(lang, '改 agent-node', 'agent-node changes'), ['myapp-ctl agent ls', 'myapp-ctl deploy agent-node --build --no-setup --no-test-user']],
+    [tl(lang, '改 runtime 镜像', 'Runtime image changes'), ['myapp-ctl deploy agent-runtime --build --no-setup --no-test-user']],
+    [tl(lang, '镜像部署主机', 'Image-based host'), ['myapp-ctl update', 'myapp-ctl deploy backend ai-worker --pull --no-setup --no-test-user']],
+  ];
+  const opsGroups = [
+    {
+      title: tl(lang, '服务运维', 'Service operations'),
+      lines: [
+        'myapp-ctl status',
+        'myapp-ctl status backend ai-worker agent-node',
+        'myapp-ctl restart backend ai-worker',
+        'myapp-ctl log backend -f -n 120',
+      ],
+    },
+    {
+      title: tl(lang, '密钥和配置', 'Secrets and config'),
+      lines: [
+        'myapp-ctl secret ls',
+        'myapp-ctl secret get <group> <key> --show',
+        'myapp-ctl secret set <group> KEY=value',
+        'myapp-ctl config view',
+      ],
+    },
+    {
+      title: tl(lang, '备份和恢复', 'Backup and restore'),
+      lines: [
+        'myapp-ctl config export --out /root/myapp-config.json',
+        'myapp-ctl config export --redacted --out /root/myapp-config.redacted.json',
+        'myapp-ctl config import /root/myapp-config.json --yes',
+      ],
+    },
+    {
+      title: tl(lang, '清理环境', 'Uninstall'),
+      lines: [
+        'myapp-ctl uninstall --yes',
+        tl(lang, '# 配置和 data root 不会自动删除；确认销毁时手动 rm -rf /mnt/myapp', '# config and data root are preserved; manually rm -rf /mnt/myapp only when destroying data'),
+      ],
+    },
+  ];
+  const commandReferenceGroups = [
+    {
+      title: tl(lang, '生命周期和服务', 'Lifecycle and services'),
+      body: tl(
+        lang,
+        '部署、更新、重启、日志和卸载。targets 可以是服务名，也可以配合 --group 使用 infra / supabase / openim / agent / core。',
+        'Deploy, update, restart, logs and uninstall. Targets can be service names, or use --group with infra / supabase / openim / agent / core.',
+      ),
+      lines: [
+        'myapp-ctl status [service ...] [--json]',
+        'myapp-ctl deploy [target ...] [--build|--pull|--plan|--dry-run]',
+        'myapp-ctl deploy --group infra|supabase|openim|agent|core --pull',
+        'myapp-ctl restart [service ...]',
+        'myapp-ctl log <service> [-n 120] [-f]',
+        'myapp-ctl update [--source <checkout>] [--no-pull]',
+        'myapp-ctl uninstall --yes [--volumes] [--images] [--remove-ctl]',
+      ],
+    },
+    {
+      title: tl(lang, '首次配置和密钥', 'Setup and secrets'),
+      body: tl(
+        lang,
+        'setup 是交互式入口；secret 用来查看、生成、设置和删除服务器本机密钥。生产密钥不要写入 Git。',
+        'setup is the interactive entrypoint; secret manages host-local credentials. Do not put production secrets in Git.',
+      ),
+      lines: [
+        'myapp-ctl setup [--host <host>] [--data-root /mnt/myapp] [--force]',
+        'myapp-ctl setup [--no-ai] [--no-asr] [--no-email] [--no-push]',
+        'myapp-ctl secret init-stack [--host <host>] [--data-root /mnt/myapp] [--force]',
+        'myapp-ctl secret ls',
+        'myapp-ctl secret get <group> <key> [--show]',
+        'myapp-ctl secret set <group> KEY=value [KEY2=value2 ...]',
+        'myapp-ctl secret generate <group> KEY [KEY2 ...] [--bytes 32]',
+        'myapp-ctl secret rm <group> KEY [KEY2 ...]',
+      ],
+    },
+    {
+      title: tl(lang, '配置、域名和客户端环境', 'Config, domains and client env'),
+      body: tl(
+        lang,
+        '配置包可用于迁移和恢复；client-env 会输出客户端可导入的环境 JSON 和二维码。',
+        'Config bundles are used for migration and recovery; client-env prints importable client JSON and QR codes.',
+      ),
+      lines: [
+        'myapp-ctl config view [--show-secrets]',
+        'myapp-ctl config export --out <path.json|path.yaml> [--redacted]',
+        'myapp-ctl config import <path.json|path.yaml> --yes',
+        'myapp-ctl config lang [zh|en|de|es|fr|pt|ca|hi|ko|ja|it]',
+        'myapp-ctl domain ls',
+        'myapp-ctl domain set <name> <url>',
+        'myapp-ctl domain rm <name>',
+        'myapp-ctl client-env [--host <host>] [--name <name>] [--json] [--terminal-qr]',
+      ],
+    },
+    {
+      title: tl(lang, '镜像', 'Images'),
+      body: tl(
+        lang,
+        '镜像目标目前是 all、backend、agent-node、agent-runtime。--build 走源码，--pull 走已发布镜像。',
+        'Current image targets are all, backend, agent-node and agent-runtime. --build uses source; --pull uses published images.',
+      ),
+      lines: [
+        'myapp-ctl image ls',
+        'myapp-ctl image build [all|backend|agent-node|agent-runtime]',
+        'myapp-ctl image pull [all|backend|agent-node|agent-runtime]',
+        'myapp-ctl image push [all|backend|agent-node|agent-runtime]',
+      ],
+    },
+    {
+      title: tl(lang, '公共 Agent Node', 'Public Agent Node'),
+      body: tl(
+        lang,
+        'agent-node ls 是集群视角；agent ls 只看当前机器正在跑的 agent 容器。',
+        'agent-node ls is the cluster view; agent ls is local-only and shows running agent containers on this host.',
+      ),
+      lines: [
+        'myapp-ctl agent ls',
+        'myapp-ctl agent-node ls [--namespace public|all|<user-id>] [--json] [--no-probe]',
+        'myapp-ctl agent-node status [node-id] [--namespace public|all|<user-id>] [--json] [--no-probe]',
+        'myapp-ctl agent-node add --backend <url> --host <host> --node-id <id> --name <name> [--pull|--build]',
+        'myapp-ctl agent-node join --backend <url> --node-id <id> --name <name> --agent-token <token> --registration-token <token>',
+        'myapp-ctl agent-node register --backend <url> --node-id <id> --url <url>',
+        'myapp-ctl agent-node pause [node-id] [--reason <text>]',
+        'myapp-ctl agent-node resume [node-id]',
+        'myapp-ctl agent-node capacity <n> [--queue-max <n>]',
+        'myapp-ctl agent-node limits --capacity <n> --queue-max <n>',
+        'myapp-ctl agent-node rm <node-id>',
+      ],
+    },
+    {
+      title: tl(lang, '用户私有 Agent Node', 'User-private Agent Node'),
+      body: tl(
+        lang,
+        '私有节点只服务所属用户，长效 provider key 留在节点本地。App 设置页会生成一次性 join token 和 join command。',
+        'Private nodes serve only their owner, and long-lived provider keys stay on the node host. The app settings page creates a one-time join token and command.',
+      ),
+      lines: [
+        'MYAPP_PRIVATE_AGENT_JOIN_TOKEN=<token> myapp-ctl agent-node private join --backend <url> --node-id <id> --name <name> --pull',
+        'myapp-ctl agent-node private join --backend <url> --node-id <id> --name <name> --provider deepseek --agent claude --capacity 2 --queue-max 10',
+        'myapp-ctl agent-node private ls',
+        'myapp-ctl agent-node private status [node-id]',
+        'myapp-ctl agent-node private ls --auth-token <user-token>',
+      ],
+    },
+  ];
 
   return (
     <>
@@ -1456,12 +1515,12 @@ function DocsPage({ lang }: { lang: Lang }) {
               ) : (
                 <span className="button secondary unavailable">
                   <Github size={17} />
-                  {zh ? 'GitHub 即将公开' : 'GitHub coming soon'}
+                  {tl(lang, 'GitHub 即将公开', 'GitHub coming soon')}
                 </span>
               )}
               <a className="button secondary" href={WEB_APP_URL} target="_blank" rel="noreferrer">
                 <Play size={17} />
-                {zh ? '打开 Web 版' : 'Open Web app'}
+                {tl(lang, '打开 Web 版', 'Open Web app')}
               </a>
             </div>
           </div>
@@ -1482,18 +1541,18 @@ function DocsPage({ lang }: { lang: Lang }) {
         <div className="shell docsLayout">
           <aside className="docsToc">
             <a href="#quick-start">{docs.quickTitle}</a>
-            <a href="#architecture-docs">{zh ? '架构图' : 'Architecture'}</a>
-            <a href="#install">{zh ? '安装部署' : 'Install'}</a>
-            <a href="#operations">{zh ? '更新运维' : 'Operations'}</a>
-            <a href="#cli-reference">{zh ? 'CLI 命令' : 'CLI reference'}</a>
-            <a href="#agent-nodes">{zh ? 'Agent Node' : 'Agent Node'}</a>
-            <a href="#private-agent">{zh ? '私有节点' : 'Private nodes'}</a>
-            <a href="#clients">{zh ? '客户端' : 'Clients'}</a>
+            <a href="#architecture-docs">{tl(lang, '架构图', 'Architecture')}</a>
+            <a href="#install">{tl(lang, '安装部署', 'Install')}</a>
+            <a href="#operations">{tl(lang, '更新运维', 'Operations')}</a>
+            <a href="#cli-reference">{tl(lang, 'CLI 命令', 'CLI reference')}</a>
+            <a href="#agent-nodes">{tl(lang, 'Agent Node', 'Agent Node')}</a>
+            <a href="#private-agent">{tl(lang, '私有节点', 'Private nodes')}</a>
+            <a href="#clients">{tl(lang, '客户端', 'Clients')}</a>
             <a href="#release">{docs.releaseTitle}</a>
           </aside>
           <div className="docsContent">
             <article className="docsBlock">
-              <p className="eyebrow">{zh ? '推荐流程' : 'Recommended flow'}</p>
+              <p className="eyebrow">{tl(lang, '推荐流程', 'Recommended flow')}</p>
               <h2>{docs.quickTitle}</h2>
               <p>{docs.quickBody}</p>
               <div className="docsSteps">
@@ -1508,9 +1567,11 @@ function DocsPage({ lang }: { lang: Lang }) {
               <div className="docsBoundaryNote">
                 <ShieldCheck size={18} />
                 <p>
-                  {zh
-                    ? '官网、Flutter Web 客户端和后端是三条不同发布路径：官网构建 website/dist，Flutter Web 客户端构建 build/web，后端通过 deploy/production 和 myapp-ctl 部署。'
-                    : 'The website, Flutter Web client and backend are three separate release paths: website builds website/dist, Flutter Web client builds build/web, and backend deployment runs through deploy/production and myapp-ctl.'}
+                  {tl(
+                    lang,
+                    '官网、Flutter Web 客户端和后端是三条不同发布路径：官网构建 website/dist，Flutter Web 客户端构建 build/web，后端通过 deploy/production 和 myapp-ctl 部署。',
+                    'The website, Flutter Web client and backend are three separate release paths: website builds website/dist, Flutter Web client builds build/web, and backend deployment runs through deploy/production and myapp-ctl.',
+                  )}
                 </p>
               </div>
             </article>
@@ -1520,12 +1581,12 @@ function DocsPage({ lang }: { lang: Lang }) {
             </article>
 
             <article className="docsBlock" id="install">
-              <p className="eyebrow">{zh ? '后端控制面' : 'Backend control plane'}</p>
+              <p className="eyebrow">{tl(lang, '后端控制面', 'Backend control plane')}</p>
               <h2>{docs.backendTitle}</h2>
               <p>{docs.backendBody}</p>
               <div className="docsGrid">
                 <div>
-                  <h3>{zh ? '全新安装' : 'Fresh install'}</h3>
+                  <h3>{tl(lang, '全新安装', 'Fresh install')}</h3>
                   <TerminalBox
                     lines={[
                       '$ git clone <repository-url> ai-app',
@@ -1538,7 +1599,7 @@ function DocsPage({ lang }: { lang: Lang }) {
                   />
                 </div>
                 <div>
-                  <h3>{zh ? '镜像部署' : 'Image-based deploy'}</h3>
+                  <h3>{tl(lang, '镜像部署', 'Image-based deploy')}</h3>
                   <TerminalBox
                     lines={[
                       '$ ./deploy/production/install_ctl.sh',
@@ -1560,20 +1621,24 @@ function DocsPage({ lang }: { lang: Lang }) {
               <div className="docsCallout">
                 <LockKeyhole size={18} />
                 <p>
-                  {zh
-                    ? 'setup 会要求填写 AI 供应商。DeepSeek、MiniMax 或自定义 Anthropic-compatible provider 都通过环境变量写入服务器专用 env 文件；APNs、FCM、GeTui、SMTP 可跳过，跳过只影响对应通道。'
-                    : 'setup asks for AI providers. DeepSeek, MiniMax or custom Anthropic-compatible providers are written into server-local env files. APNs, FCM, GeTui and SMTP are optional; skipping them only disables that channel.'}
+                  {tl(
+                    lang,
+                    'setup 会要求填写 AI 供应商。DeepSeek、MiniMax 或自定义 Anthropic-compatible provider 都通过环境变量写入服务器专用 env 文件；APNs、FCM、GeTui、SMTP 可跳过，跳过只影响对应通道。',
+                    'setup asks for AI providers. DeepSeek, MiniMax or custom Anthropic-compatible providers are written into server-local env files. APNs, FCM, GeTui and SMTP are optional; skipping them only disables that channel.',
+                  )}
                 </p>
               </div>
             </article>
 
             <article className="docsBlock" id="operations">
-              <p className="eyebrow">{zh ? '日常更新' : 'Routine updates'}</p>
-              <h2>{zh ? '按改动面部署，不要每次全量重启' : 'Deploy only the changed surface'}</h2>
+              <p className="eyebrow">{tl(lang, '日常更新', 'Routine updates')}</p>
+              <h2>{tl(lang, '按改动面部署，不要每次全量重启', 'Deploy only the changed surface')}</h2>
               <p>
-                {zh
-                  ? '常规代码更新先运行 myapp-ctl update，再按改动范围重建或拉取对应组件。鉴权、Redis、Postgres、OpenIM、Supabase、MinIO 不需要因为普通后端或 agent 改动而重启。'
-                  : 'For routine code updates, run myapp-ctl update first, then rebuild or pull only the changed components. Auth, Redis, Postgres, OpenIM, Supabase and MinIO should stay up for ordinary backend or agent changes.'}
+                {tl(
+                  lang,
+                  '常规代码更新先运行 myapp-ctl update，再按改动范围重建或拉取对应组件。鉴权、Redis、Postgres、OpenIM、Supabase、MinIO 不需要因为普通后端或 agent 改动而重启。',
+                  'For routine code updates, run myapp-ctl update first, then rebuild or pull only the changed components. Auth, Redis, Postgres, OpenIM, Supabase and MinIO should stay up for ordinary backend or agent changes.',
+                )}
               </p>
               <div className="docsCommandList">
                 {updateItems.map(([title, lines]) => (
@@ -1594,12 +1659,14 @@ function DocsPage({ lang }: { lang: Lang }) {
             </article>
 
             <article className="docsBlock" id="cli-reference">
-              <p className="eyebrow">{zh ? '命令参考' : 'Command reference'}</p>
-              <h2>{zh ? '常用二级命令和关键参数' : 'Common subcommands and key flags'}</h2>
+              <p className="eyebrow">{tl(lang, '命令参考', 'Command reference')}</p>
+              <h2>{tl(lang, '常用二级命令和关键参数', 'Common subcommands and key flags')}</h2>
               <p>
-                {zh
-                  ? '下面是官网内置的精简参考，覆盖当前主线最常用的二级命令。更细的参数以服务器上 myapp-ctl <命令> --help 为准。'
-                  : 'This is the compact reference embedded in the website. For the full argument list, run myapp-ctl <command> --help on the host.'}
+                {tl(
+                  lang,
+                  '下面是官网内置的精简参考，覆盖当前主线最常用的二级命令。更细的参数以服务器上 myapp-ctl <命令> --help 为准。',
+                  'This is the compact reference embedded in the website. For the full argument list, run myapp-ctl <command> --help on the host.',
+                )}
               </p>
               <div className="docsCommandList">
                 {commandReferenceGroups.map((item) => (
@@ -1613,24 +1680,28 @@ function DocsPage({ lang }: { lang: Lang }) {
               <div className="docsBoundaryNote">
                 <ShieldCheck size={18} />
                 <p>
-                  {zh
-                    ? '兼容说明：myapp-ctl agent add 和 myapp-ctl agent register 仍是旧别名，新文档统一使用 agent-node add / register。'
-                    : 'Compatibility note: myapp-ctl agent add and myapp-ctl agent register remain old aliases; new docs use agent-node add / register.'}
+                  {tl(
+                    lang,
+                    '兼容说明：myapp-ctl agent add 和 myapp-ctl agent register 仍是旧别名，新文档统一使用 agent-node add / register。',
+                    'Compatibility note: myapp-ctl agent add and myapp-ctl agent register remain old aliases; new docs use agent-node add / register.',
+                  )}
                 </p>
               </div>
             </article>
 
             <article className="docsBlock" id="agent-nodes">
-              <p className="eyebrow">{zh ? '公共 Agent Node' : 'Public Agent Nodes'}</p>
-              <h2>{zh ? '多机器 Agent 采用 pull 模式' : 'Multi-host agents use pull mode'}</h2>
+              <p className="eyebrow">{tl(lang, '公共 Agent Node', 'Public Agent Nodes')}</p>
+              <h2>{tl(lang, '多机器 Agent 采用 pull 模式', 'Multi-host agents use pull mode')}</h2>
               <p>
-                {zh
-                  ? '默认架构是 agent-node 主动轮询后端获取任务，客户端 SSE 仍然是 client -> backend。第二台 agent 机器只需要能出站访问后端，不需要公网入站端口。节点注册信息在 Postgres，运行队列和心跳在 Redis。'
-                  : 'The default architecture is pull-based: agent-node polls the backend for work, while client SSE remains client -> backend. A secondary agent host only needs outbound access to the backend and no public inbound port. Node registration lives in Postgres; queues and heartbeats use Redis.'}
+                {tl(
+                  lang,
+                  '默认架构是 agent-node 主动轮询后端获取任务，客户端 SSE 仍然是 client -> backend。第二台 agent 机器只需要能出站访问后端，不需要公网入站端口。节点注册信息在 Postgres，运行队列和心跳在 Redis。',
+                  'The default architecture is pull-based: agent-node polls the backend for work, while client SSE remains client -> backend. A secondary agent host only needs outbound access to the backend and no public inbound port. Node registration lives in Postgres; queues and heartbeats use Redis.',
+                )}
               </p>
               <div className="docsGrid">
                 <div>
-                  <h3>{zh ? '主节点生成加入命令' : 'Generate join command on master'}</h3>
+                  <h3>{tl(lang, '主节点生成加入命令', 'Generate join command on master')}</h3>
                   <TerminalBox
                     lines={[
                       '$ myapp-ctl agent-node add \\',
@@ -1645,7 +1716,7 @@ function DocsPage({ lang }: { lang: Lang }) {
                   />
                 </div>
                 <div>
-                  <h3>{zh ? '节点运维' : 'Node operations'}</h3>
+                  <h3>{tl(lang, '节点运维', 'Node operations')}</h3>
                   <TerminalBox
                     lines={[
                       '$ myapp-ctl agent-node ls',
@@ -1658,19 +1729,12 @@ function DocsPage({ lang }: { lang: Lang }) {
                 </div>
               </div>
               <div className="docsPillList">
-                {(zh
-                  ? [
-                      ['KEY_SRC=master', '后端发送 provider 配置，agent-node 只拿一次性代理 token。'],
-                      ['KEY_SRC=local', 'provider key 留在 agent 机器本地 ai-providers.env。'],
-                      ['RUNS / CAP / QUEUE / QMAX', '分别表示当前运行、最大并发、当前队列和最大队列。'],
-                      ['同会话亲和', '同一个 session 后续打磨优先回到同一个在线节点。'],
-                    ]
-                  : [
-                      ['KEY_SRC=master', 'Backend sends provider config; agent-node mints one-time proxy tokens.'],
-                      ['KEY_SRC=local', 'Provider keys stay in the agent host local ai-providers.env.'],
-                      ['RUNS / CAP / QUEUE / QMAX', 'Current runs, max concurrency, current queue and max queue.'],
-                      ['Session affinity', 'Later turns of one session prefer the same online node.'],
-                    ]).map(([title, body]) => (
+                {[
+                  ['KEY_SRC=master', tl(lang, '后端发送 provider 配置，agent-node 只拿一次性代理 token。', 'Backend sends provider config; agent-node mints one-time proxy tokens.')],
+                  ['KEY_SRC=local', tl(lang, 'provider key 留在 agent 机器本地 ai-providers.env。', 'Provider keys stay in the agent host local ai-providers.env.')],
+                  ['RUNS / CAP / QUEUE / QMAX', tl(lang, '分别表示当前运行、最大并发、当前队列和最大队列。', 'Current runs, max concurrency, current queue and max queue.')],
+                  [tl(lang, '同会话亲和', 'Session affinity'), tl(lang, '同一个 session 后续打磨优先回到同一个在线节点。', 'Later turns of one session prefer the same online node.')],
+                ].map(([title, body]) => (
                   <div className="docsPill" key={title}>
                     <strong>{title}</strong>
                     <span>{body}</span>
@@ -1680,40 +1744,33 @@ function DocsPage({ lang }: { lang: Lang }) {
             </article>
 
             <article className="docsBlock" id="private-agent">
-              <p className="eyebrow">{zh ? '用户私有 Agent Node' : 'User-private Agent Nodes'}</p>
-              <h2>{zh ? '普通用户可以接入自己的 agent 机器和 provider key' : 'Users can attach their own agent host and provider keys'}</h2>
+              <p className="eyebrow">{tl(lang, '用户私有 Agent Node', 'User-private Agent Nodes')}</p>
+              <h2>{tl(lang, '普通用户可以接入自己的 agent 机器和 provider key', 'Users can attach their own agent host and provider keys')}</h2>
               <p>
-                {zh
-                  ? '私有节点只服务所属用户。用户在 App 设置页生成一次性加入 token，节点本地交互填写 provider；长效 provider key 不上传到后端。客户端切换到私有调度时，只显示该用户私有节点上报的供应商。'
-                  : 'Private nodes serve only their owner. The user creates a one-time join token in app settings, then configures provider keys locally on the node. Long-lived provider keys are never uploaded to the backend. When the client switches to private routing, it shows only providers reported by that user’s private nodes.'}
+                {tl(
+                  lang,
+                  '私有节点只服务所属用户。用户在 App 设置页生成一次性加入 token，节点本地交互填写 provider；长效 provider key 不上传到后端。客户端切换到私有调度时，只显示该用户私有节点上报的供应商。',
+                  'Private nodes serve only their owner. The user creates a one-time join token in app settings, then configures provider keys locally on the node. Long-lived provider keys are never uploaded to the backend. When the client switches to private routing, it shows only providers reported by that user’s private nodes.',
+                )}
               </p>
               <div className="docsGrid">
                 <div>
-                  <h3>{zh ? '用户侧流程' : 'User flow'}</h3>
+                  <h3>{tl(lang, '用户侧流程', 'User flow')}</h3>
                   <ol className="docsOrdered">
-                    {(zh
-                      ? [
-                          '登录 App，打开设置里的 Private Agent Node 页面。',
-                          '在设置里确认当前 provider / agent 和调度模式，然后创建加入命令。',
-                          '输入节点名称并复制 join command。',
-                          '在自己的机器上安装 myapp-ctl，执行 join command。',
-                          '按提示输入本节点自己的 DeepSeek / MiniMax / 自定义 provider 配置。',
-                          '回到 App，把 Agent 调度切到 private，只使用自己的节点。',
-                        ]
-                      : [
-                          'Sign in to the app and open Private Agent Node in settings.',
-                          'Confirm the current provider / agent and routing mode in settings, then create a join command.',
-                          'Enter a node name and copy the join command.',
-                          'Install myapp-ctl on your own host and run the join command.',
-                          'Enter this node’s own DeepSeek / MiniMax / custom provider configuration.',
-                          'Switch Agent routing to private in the app; only your nodes are used.',
-                        ]).map((item) => (
+                    {[
+                      tl(lang, '登录 App，打开设置里的 Private Agent Node 页面。', 'Sign in to the app and open Private Agent Node in settings.'),
+                      tl(lang, '在设置里确认当前 provider / agent 和调度模式，然后创建加入命令。', 'Confirm the current provider / agent and routing mode in settings, then create a join command.'),
+                      tl(lang, '输入节点名称并复制 join command。', 'Enter a node name and copy the join command.'),
+                      tl(lang, '在自己的机器上安装 myapp-ctl，执行 join command。', 'Install myapp-ctl on your own host and run the join command.'),
+                      tl(lang, '按提示输入本节点自己的 DeepSeek / MiniMax / 自定义 provider 配置。', 'Enter this node’s own DeepSeek / MiniMax / custom provider configuration.'),
+                      tl(lang, '回到 App，把 Agent 调度切到 private，只使用自己的节点。', 'Switch Agent routing to private in the app; only your nodes are used.'),
+                    ].map((item) => (
                       <li key={item}>{item}</li>
                     ))}
                   </ol>
                 </div>
                 <div>
-                  <h3>{zh ? '私有节点加入' : 'Private node join'}</h3>
+                  <h3>{tl(lang, '私有节点加入', 'Private node join')}</h3>
                   <TerminalBox
                     lines={[
                       "$ export MYAPP_PRIVATE_AGENT_JOIN_TOKEN='<copied from app>'",
@@ -1731,9 +1788,11 @@ function DocsPage({ lang }: { lang: Lang }) {
               <div className="docsBoundaryNote">
                 <ShieldCheck size={18} />
                 <p>
-                  {zh
-                    ? '当前客户端调度只有 public 和 private 两种。public 使用公开节点池；private 只使用当前登录用户的私有节点，私有节点离线时不会自动回落公开节点。'
-                    : 'Client routing currently has only public and private modes. public uses the platform pool; private uses only the signed-in user’s private nodes and does not automatically fall back to public when offline.'}
+                  {tl(
+                    lang,
+                    '当前客户端调度只有 public 和 private 两种。public 使用公开节点池；private 只使用当前登录用户的私有节点，私有节点离线时不会自动回落公开节点。',
+                    'Client routing currently has only public and private modes. public uses the platform pool; private uses only the signed-in user’s private nodes and does not automatically fall back to public when offline.',
+                  )}
                 </p>
               </div>
             </article>
@@ -1755,9 +1814,11 @@ function DocsPage({ lang }: { lang: Lang }) {
                 <div>
                   <h2>{docs.websiteTitle}</h2>
                   <p>
-                    {zh
-                      ? '官网是 website 目录下的 Vite 项目。发布到 Cloudflare Pages 时应构建 website/dist，不要和 Flutter Web 客户端的 build/web 混用。'
-                      : 'The website is the Vite project under website. Deploy website/dist to Cloudflare Pages; do not confuse it with the Flutter Web client build/web output.'}
+                    {tl(
+                      lang,
+                      '官网是 website 目录下的 Vite 项目。发布到 Cloudflare Pages 时应构建 website/dist，不要和 Flutter Web 客户端的 build/web 混用。',
+                      'The website is the Vite project under website. Deploy website/dist to Cloudflare Pages; do not confuse it with the Flutter Web client build/web output.',
+                    )}
                   </p>
                   <TerminalBox
                     lines={[
