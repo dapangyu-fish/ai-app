@@ -1,0 +1,257 @@
+{
+  "dsl": "3.3",
+  "appid": "dd690e59-53f4-4bab-b6a6-ff48024dce8a",
+  "meta": {
+    "name": "demo-media",
+    "version": "1.0.0",
+    "description": "演示 image_picker + image 控件：选择图片、展示网络图片/GIF",
+    "author": "fish",
+    "type": "app"
+  },
+  "global": {
+    "variables": {
+      "pickedImage": "",
+      "pickedPhoto": ""
+    },
+    "functions": {
+      "clearImage": {
+        "params": [
+          "varName"
+        ],
+        "return": "None",
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "{{ params.varName }}",
+              "value": ""
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    {
+      "call": "@print",
+      "args": {
+        "value": "图片 Demo 启动"
+      }
+    }
+  ],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "图片选择器 & 展示",
+        "layout": "column",
+        "padding": 20,
+        "backgroundColor": "#F8F9FE",
+        "children": [
+          {
+            "type": "text",
+            "value": "1. 图片选择器",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "从相册选择图片，自动预览：",
+            "style": {
+              "fontSize": 14,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "image_picker",
+            "bind": "global.pickedImage",
+            "source": "gallery",
+            "placeholder": "点击从相册选择图片",
+            "height": 220,
+            "borderRadius": 16
+          },
+          {
+            "type": "text",
+            "value": "已选路径：{{ global.pickedImage }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999",
+              "maxLines": 1,
+              "overflow": "ellipsis"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "text",
+            "value": "2. 网络图片展示",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "image",
+                "url": "https://picsum.photos/200/150",
+                "width": 150,
+                "height": 100,
+                "borderRadius": 12,
+                "fit": "cover",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "image",
+                "url": "https://picsum.photos/201/150",
+                "width": 150,
+                "height": 100,
+                "borderRadius": 12,
+                "fit": "cover",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "text",
+            "value": "3. GIF 动图展示",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "image",
+            "url": "https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif",
+            "height": 200,
+            "borderRadius": 12,
+            "fit": "contain"
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "button",
+            "label": "查看视频播放器 Demo →",
+            "variant": "outlined",
+            "icon": "video",
+            "action": {
+              "type": "navigate",
+              "screen": "video_demo"
+            }
+          }
+        ]
+      },
+      {
+        "id": "video_demo",
+        "title": "视频播放器",
+        "layout": "column",
+        "padding": 20,
+        "backgroundColor": "#1A1A2E",
+        "children": [
+          {
+            "type": "text",
+            "value": "视频播放器 Demo",
+            "style": {
+              "fontSize": 22,
+              "fontWeight": "bold",
+              "color": "#FFFFFF"
+            }
+          },
+          {
+            "type": "text",
+            "value": "支持网络视频 / HLS 流媒体 / 本地文件",
+            "style": {
+              "fontSize": 14,
+              "color": "#AAAAAA"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "text",
+            "value": "▶ 本地视频 (via 流媒体服务器)",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold",
+              "color": "#E0E0E0"
+            }
+          },
+          {
+            "type": "text",
+            "value": "需先启动: python3 tools/video_server.py --dir ~/Movies",
+            "style": {
+              "fontSize": 12,
+              "color": "#888888"
+            }
+          },
+          {
+            "type": "video",
+            "url": "http://localhost:8080/output1.mp4",
+            "autoplay": false,
+            "looping": false,
+            "aspectRatio": 1.78,
+            "borderRadius": 12
+          },
+          {
+            "type": "spacer",
+            "height": 20
+          },
+          {
+            "type": "text",
+            "value": "▶ HLS 流媒体",
+            "style": {
+              "fontSize": 16,
+              "fontWeight": "bold",
+              "color": "#E0E0E0"
+            }
+          },
+          {
+            "type": "video",
+            "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+            "autoplay": false,
+            "looping": false,
+            "aspectRatio": 2.39,
+            "borderRadius": 12
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "button",
+            "label": "← 返回图片 Demo",
+            "variant": "outlined",
+            "icon": "back",
+            "style": {
+              "textColor": "#FFFFFF"
+            },
+            "action": {
+              "type": "navigate",
+              "screen": "home"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

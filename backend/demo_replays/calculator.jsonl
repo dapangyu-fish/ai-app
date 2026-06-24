@@ -1,0 +1,10 @@
+{"status": "init", "message": "status.ai_engine_started"}
+{"status": "running", "message": "AI 已开始生成…"}
+{"thinking": "这是个纯前端工具，用网格按钮 + 表达式求值即可，无需后端。"}
+{"status": "tool_preparing", "message": "规划页面结构与交互…"}
+{"status": "command_execution", "message": "生成前端 JSON-DSL…"}
+{"content": "做了一个计算器：数字/运算符网格、实时表达式、等号求值、清除与退格。"}
+{"status": "repairing", "message": "校验并修复 JSON…"}
+{"content": "\n计算器已生成 ✅ 支持四则运算、百分比、清除/退格，纯前端运行。"}
+{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/calculator.json"}}
+{"_demo_final": {"final_text": "计算器已生成 ✅ 支持四则运算、百分比、清除/退格，纯前端运行。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/calculator.json"}]}}

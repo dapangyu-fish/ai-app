@@ -1,0 +1,881 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "native-quality-crm",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "高质量 CRM/联系人类 JSON 模板：统计、搜索、状态筛选、客户列表、详情、表单。",
+    "author": "fish",
+    "displayName": "Native CRM Template"
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "searchQuery": "",
+      "selectedStatus": "全部",
+      "customers": [
+        {
+          "id": "c1",
+          "name": "林青",
+          "initial": "林",
+          "company": "北辰科技",
+          "phone": "138 0000 1201",
+          "status": "待跟进",
+          "nextStep": "明天 10:00 回访预算",
+          "note": "关注部署周期和售后响应，希望本周拿到报价。",
+          "accent": "#2563EB",
+          "tint": "#EAF1FF"
+        },
+        {
+          "id": "c2",
+          "name": "周远",
+          "initial": "周",
+          "company": "恒泰贸易",
+          "phone": "139 0000 2302",
+          "status": "洽谈中",
+          "nextStep": "周五发送试用账号",
+          "note": "团队 12 人，核心诉求是移动端审批和客户数据沉淀。",
+          "accent": "#D97706",
+          "tint": "#FFF4DE"
+        },
+        {
+          "id": "c3",
+          "name": "陈白",
+          "initial": "陈",
+          "company": "云谷设计",
+          "phone": "137 0000 4503",
+          "status": "已成交",
+          "nextStep": "下月复盘续费计划",
+          "note": "已完成首单，后续可能扩展到第二部门。",
+          "accent": "#059669",
+          "tint": "#E8F7F0"
+        }
+      ],
+      "currentName": "",
+      "currentCompany": "",
+      "currentPhone": "",
+      "currentStatus": "",
+      "currentNextStep": "",
+      "currentNote": "",
+      "currentAccent": "#2563EB",
+      "currentTint": "#EAF1FF",
+      "formName": "",
+      "formPhone": "",
+      "formCompany": ""
+    },
+    "functions": {
+      "startCreate": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formName",
+              "value": ""
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "customer_form"
+            }
+          }
+        ]
+      },
+      "viewCustomer": {
+        "params": [
+          "customerName",
+          "company",
+          "phone",
+          "status",
+          "nextStep",
+          "note",
+          "accent",
+          "tint"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentName",
+              "value": "{{ params.customerName }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentCompany",
+              "value": "{{ params.company }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentPhone",
+              "value": "{{ params.phone }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentStatus",
+              "value": "{{ params.status }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentNextStep",
+              "value": "{{ params.nextStep }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentNote",
+              "value": "{{ params.note }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentAccent",
+              "value": "{{ params.accent }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentTint",
+              "value": "{{ params.tint }}"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "customer_detail"
+            }
+          }
+        ]
+      },
+      "saveCustomer": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "模板示例：这里接入客户保存逻辑"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "home"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "客户",
+        "layout": "column",
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 14,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "people",
+                          "size": 18,
+                          "color": "#2563EB"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "客户总数",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "128",
+                      "style": {
+                        "fontSize": 21,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 14,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "clock",
+                          "size": 18,
+                          "color": "#D97706"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "待跟进",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "18",
+                      "style": {
+                        "fontSize": 21,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 14,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "check_circle",
+                          "size": 18,
+                          "color": "#059669"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "已成交",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "42",
+                      "style": {
+                        "fontSize": 21,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "margin": 8
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "icon",
+                "name": "search",
+                "size": 18,
+                "color": "#8E8E93"
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "搜索姓名、公司、电话",
+                "bind": "global.searchQuery",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
+                "style": {
+                  "fontSize": 15,
+                  "borderRadius": 10
+                }
+              }
+            ],
+            "padding": 10,
+            "margin": 12,
+            "color": "#F7F8FA",
+            "borderRadius": 14,
+            "crossAxisAlignment": "center"
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "全部",
+                    "variant": "choice",
+                    "bind": "global.selectedStatus",
+                    "value": "全部",
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "待跟进",
+                    "variant": "choice",
+                    "bind": "global.selectedStatus",
+                    "value": "待跟进",
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "洽谈中",
+                    "variant": "choice",
+                    "bind": "global.selectedStatus",
+                    "value": "洽谈中",
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "已成交",
+                    "variant": "choice",
+                    "bind": "global.selectedStatus",
+                    "value": "已成交",
+                    "color": "#2563EB"
+                  }
+                ]
+              }
+            ],
+            "padding": 12,
+            "margin": 8,
+            "color": "#FFFFFF",
+            "borderRadius": 14
+          },
+          {
+            "type": "list",
+            "source": "{{ global.customers }}",
+            "emptyText": "暂无客户，先新增第一位客户",
+            "item_template": {
+              "type": "card",
+              "layout": "column",
+              "color": "#FFFFFF",
+              "padding": 14,
+              "margin": 8,
+              "elevation": 0,
+              "borderRadius": 16,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "avatar",
+                      "text": "{{ loop.item.initial }}",
+                      "size": 46,
+                      "color": "{{ loop.item.tint }}",
+                      "textColor": "{{ loop.item.accent }}"
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 12
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.name }}",
+                          "style": {
+                            "fontSize": 16,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1,
+                            "overflow": "ellipsis"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 5
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.status }} · {{ loop.item.company }} · {{ loop.item.phone }}",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280",
+                            "maxLines": 1,
+                            "overflow": "ellipsis"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "calendar",
+                              "size": 15,
+                              "color": "#9CA3AF"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 5
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.nextStep }}",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#4B5563"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        }
+                      ],
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      }
+                    }
+                  ],
+                  "crossAxisAlignment": "start"
+                }
+              ],
+              "onTap": {
+                "call": "@global.viewCustomer",
+                "args": {
+                  "customerName": "{{ loop.item.name }}",
+                  "company": "{{ loop.item.company }}",
+                  "phone": "{{ loop.item.phone }}",
+                  "status": "{{ loop.item.status }}",
+                  "nextStep": "{{ loop.item.nextStep }}",
+                  "note": "{{ loop.item.note }}",
+                  "accent": "{{ loop.item.accent }}",
+                  "tint": "{{ loop.item.tint }}"
+                }
+              }
+            }
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "button",
+                "label": "新增客户",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.startCreate",
+                  "args": {}
+                },
+                "icon": "add",
+                "style": {
+                  "backgroundColor": "#2563EB",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 16,
+                  "fontSize": 15,
+                  "paddingV": 12
+                }
+              }
+            ],
+            "padding": 12,
+            "color": "#F4F6F8"
+          }
+        ],
+        "backgroundColor": "#F4F6F8",
+        "appBar": {
+          "title": "客户",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.startCreate",
+                "args": {}
+              },
+              "icon": "add",
+              "style": {
+                "textColor": "#2563EB",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "customer_detail",
+        "title": "客户详情",
+        "layout": "column",
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 18,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "avatar",
+                    "text": "{{ global.currentName }}",
+                    "size": 56,
+                    "color": "{{ global.currentTint }}",
+                    "textColor": "{{ global.currentAccent }}"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 14
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentName }}",
+                        "style": {
+                          "fontSize": 23,
+                          "fontWeight": "bold",
+                          "color": "#111827"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 4
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentCompany }}",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#6B7280"
+                        }
+                      }
+                    ],
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 18
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "phone",
+                    "size": 18,
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.currentPhone }}",
+                    "style": {
+                      "fontSize": 15,
+                      "color": "#374151"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "calendar",
+                    "size": 18,
+                    "color": "#D97706"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.currentNextStep }}",
+                    "style": {
+                      "fontSize": 15,
+                      "color": "#374151"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "text",
+                "value": "{{ global.currentNote }}",
+                "style": {
+                  "fontSize": 15,
+                  "color": "#4B5563",
+                  "lineHeight": 1.5
+                }
+              }
+            ]
+          }
+        ],
+        "backgroundColor": "#F4F6F8",
+        "appBar": {
+          "title": "客户详情",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.startCreate",
+                "args": {}
+              },
+              "icon": "edit",
+              "style": {
+                "textColor": "#2563EB",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "customer_form",
+        "title": "编辑客户",
+        "layout": "column",
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 18,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "text",
+                "value": "姓名",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "客户姓名",
+                "bind": "global.formName"
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "text",
+                "value": "电话",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "手机号或座机",
+                "bind": "global.formPhone"
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "text",
+                "value": "公司",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "公司名称",
+                "bind": "global.formCompany"
+              },
+              {
+                "type": "spacer",
+                "height": 18
+              },
+              {
+                "type": "button",
+                "label": "保存客户",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.saveCustomer",
+                  "args": {}
+                },
+                "icon": "save",
+                "style": {
+                  "backgroundColor": "#2563EB",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 14
+                }
+              }
+            ]
+          }
+        ],
+        "backgroundColor": "#F4F6F8",
+        "appBar": {
+          "title": "编辑客户",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0
+        }
+      }
+    ]
+  },
+  "appid": "5ef21f4d-cffa-4b8a-bc41-66375a76ac07"
+}

@@ -1,0 +1,451 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "framework-quality-ops-dashboard",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "框架能力模板：运营数据看板，展示 chart、tab_view、dropdown、progress。",
+    "author": "fish",
+    "displayName": "Framework Ops Dashboard"
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "range": "本周",
+      "lineData": [
+        {
+          "x": 0,
+          "y": 12
+        },
+        {
+          "x": 1,
+          "y": 18
+        },
+        {
+          "x": 2,
+          "y": 16
+        },
+        {
+          "x": 3,
+          "y": 24
+        },
+        {
+          "x": 4,
+          "y": 28
+        },
+        {
+          "x": 5,
+          "y": 31
+        },
+        {
+          "x": 6,
+          "y": 36
+        }
+      ],
+      "barData": [
+        {
+          "label": "Mon",
+          "value": 18
+        },
+        {
+          "label": "Tue",
+          "value": 24
+        },
+        {
+          "label": "Wed",
+          "value": 21
+        },
+        {
+          "label": "Thu",
+          "value": 33
+        },
+        {
+          "label": "Fri",
+          "value": 29
+        }
+      ],
+      "pieData": [
+        {
+          "label": "搜索",
+          "value": 42,
+          "color": "#2563EB"
+        },
+        {
+          "label": "推荐",
+          "value": 31,
+          "color": "#059669"
+        },
+        {
+          "label": "分享",
+          "value": 18,
+          "color": "#D97706"
+        },
+        {
+          "label": "其它",
+          "value": 9,
+          "color": "#7C3AED"
+        }
+      ]
+    },
+    "functions": {
+      "refresh": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "数据已刷新"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "运营看板",
+        "layout": "column",
+        "children": [
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "实时增长概览",
+                "style": {
+                  "fontSize": 19,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "text",
+                "value": "图表和筛选直接使用框架控件，不再伪装成记录列表。",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#6B7280",
+                  "lineHeight": 1.35
+                }
+              }
+            ],
+            "margin": 12
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 16,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "text",
+                "value": "今日活跃",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#6B7280"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 5
+              },
+              {
+                "type": "text",
+                "value": "42,860",
+                "style": {
+                  "fontSize": 32,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "dropdown",
+                "bind": "global.range",
+                "options": [
+                  "今天",
+                  "本周",
+                  "本月"
+                ],
+                "label": "时间范围",
+                "prefixIcon": "calendar",
+                "color": "#2563EB"
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "chart",
+                "kind": "line",
+                "data": "{{ global.lineData }}",
+                "height": 190,
+                "color": "#2563EB"
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 16,
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "analytics",
+                      "size": 20,
+                      "color": "#059669"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "value": "12.8%",
+                      "style": {
+                        "fontSize": 22,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "text",
+                      "value": "转化率",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#6B7280"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 16,
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "payment",
+                      "size": 20,
+                      "color": "#D97706"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "value": "¥186",
+                      "style": {
+                        "fontSize": 22,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "text",
+                      "value": "客单价",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#6B7280"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 16,
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "warning",
+                      "size": 20,
+                      "color": "#DC2626"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "value": "7",
+                      "style": {
+                        "fontSize": 22,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "text",
+                      "value": "风险工单",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#6B7280"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "margin": 8
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 12,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "tab_view",
+                "height": 330,
+                "color": "#2563EB",
+                "tabs": [
+                  {
+                    "label": "渠道",
+                    "icon": "analytics",
+                    "content": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "chart",
+                          "kind": "bar",
+                          "data": "{{ global.barData }}",
+                          "height": 220,
+                          "color": "#2563EB"
+                        },
+                        {
+                          "type": "text",
+                          "value": "周四投放带来峰值，搜索渠道仍是主力。",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "label": "来源",
+                    "icon": "share",
+                    "content": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "chart",
+                          "kind": "pie",
+                          "data": "{{ global.pieData }}",
+                          "height": 230
+                        },
+                        {
+                          "type": "text",
+                          "value": "推荐流量质量更稳定，适合加码复购入口。",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "backgroundColor": "#F6F7FB",
+        "appBar": {
+          "title": "运营看板",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.refresh",
+                "args": {}
+              },
+              "icon": "refresh",
+              "style": {
+                "textColor": "#2563EB",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "appid": "9b82a9da-af09-47e3-b7db-27e3a09acc62"
+}

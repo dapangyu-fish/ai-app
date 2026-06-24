@@ -1,0 +1,10 @@
+{"status": "init", "message": "status.ai_engine_started"}
+{"status": "running", "message": "AI 已开始生成…"}
+{"thinking": "多 tab 应用：底部导航 + 5 个独立页面，用 tab_view 组织。"}
+{"status": "tool_preparing", "message": "规划页面结构与交互…"}
+{"status": "command_execution", "message": "生成前端 JSON-DSL…"}
+{"content": "搭了一个 5 页面的应用骨架：底部导航在首页/列表/详情/表单/我的之间切换。"}
+{"status": "repairing", "message": "校验并修复 JSON…"}
+{"content": "\n多页面 App 已生成 ✅ 底部导航 + 5 个页面，纯前端运行。"}
+{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/demo_5pages.json"}}
+{"_demo_final": {"final_text": "多页面 App 已生成 ✅ 底部导航 + 5 个页面，纯前端运行。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/demo_5pages.json"}]}}

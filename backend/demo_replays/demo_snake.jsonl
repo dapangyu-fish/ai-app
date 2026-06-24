@@ -1,0 +1,10 @@
+{"status": "init", "message": "status.ai_engine_started"}
+{"status": "running", "message": "AI 已开始生成…"}
+{"thinking": "贪吃蛇：方向控制、吃食增长、碰撞结束、计分。"}
+{"status": "tool_preparing", "message": "规划页面结构与交互…"}
+{"status": "command_execution", "message": "生成前端 JSON-DSL…"}
+{"content": "做了一个贪吃蛇：方向键控制、吃食变长、撞墙/自身结束。"}
+{"status": "repairing", "message": "校验并修复 JSON…"}
+{"content": "\n贪吃蛇已生成 ✅ 控制 + 计分 + 重开。"}
+{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/demo_snake.json"}}
+{"_demo_final": {"final_text": "贪吃蛇已生成 ✅ 控制 + 计分 + 重开。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/demo_snake.json"}]}}

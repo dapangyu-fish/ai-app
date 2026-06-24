@@ -1,0 +1,10 @@
+{"status": "init", "message": "status.ai_engine_started"}
+{"status": "running", "message": "AI 已开始生成…"}
+{"thinking": "三消游戏：网格 + 交换匹配消除 + 计分，纯 DSL 实现。"}
+{"status": "tool_preparing", "message": "规划页面结构与交互…"}
+{"status": "command_execution", "message": "生成前端 JSON-DSL…"}
+{"content": "做了一个像素三消：拖动交换、三连消除、连击计分。"}
+{"status": "repairing", "message": "校验并修复 JSON…"}
+{"content": "\n像素三消游戏已生成 ✅ 交换消除 + 计分。"}
+{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/match3-pixel.json"}}
+{"_demo_final": {"final_text": "像素三消游戏已生成 ✅ 交换消除 + 计分。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/match3-pixel.json"}]}}

@@ -1,0 +1,10 @@
+{"status": "init", "message": "status.ai_engine_started"}
+{"status": "running", "message": "AI 已开始生成…"}
+{"thinking": "Flappy：点击上升、重力下落、管道障碍、计分。"}
+{"status": "tool_preparing", "message": "规划页面结构与交互…"}
+{"status": "command_execution", "message": "生成前端 JSON-DSL…"}
+{"content": "做了一个 Flappy Bird：点击拍翅、躲管道、计分与重开。"}
+{"status": "repairing", "message": "校验并修复 JSON…"}
+{"content": "\nFlappy Bird 已生成 ✅ 点击飞行 + 计分。"}
+{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/demo_flappy_bird.json"}}
+{"_demo_final": {"final_text": "Flappy Bird 已生成 ✅ 点击飞行 + 计分。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/demo_flappy_bird.json"}]}}

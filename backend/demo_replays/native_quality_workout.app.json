@@ -1,0 +1,780 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "native-quality-workout",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "高质量健身训练类 JSON UI 模板：本周统计、训练列表、详情、记录入口。",
+    "author": "fish",
+    "displayName": "Native Workout Template"
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "searchQuery": "",
+      "selectedType": "全部",
+      "workouts": [
+        {
+          "id": "w1",
+          "title": "上肢力量 A",
+          "duration": "48 分钟",
+          "summary": "卧推 4 组、划船 4 组、肩推 3 组。",
+          "highlight": "卧推 70kg x 5",
+          "accent": "#EA580C",
+          "tint": "#FFF1E8"
+        },
+        {
+          "id": "w2",
+          "title": "腿部训练",
+          "duration": "55 分钟",
+          "summary": "深蹲、罗马尼亚硬拉、箭步蹲，重点控制动作节奏。",
+          "highlight": "深蹲 90kg x 3",
+          "accent": "#2563EB",
+          "tint": "#EAF1FF"
+        },
+        {
+          "id": "w3",
+          "title": "有氧恢复",
+          "duration": "32 分钟",
+          "summary": "椭圆机中低强度，结束后拉伸 12 分钟。",
+          "highlight": "心率区间 2",
+          "accent": "#059669",
+          "tint": "#E8F7F0"
+        }
+      ],
+      "currentTitle": "",
+      "currentDuration": "",
+      "currentSummary": "",
+      "currentHighlight": "",
+      "currentAccent": "#EA580C",
+      "currentTint": "#FFF1E8",
+      "formTitle": ""
+    },
+    "functions": {
+      "startCreate": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "workout_form"
+            }
+          }
+        ]
+      },
+      "viewWorkout": {
+        "params": [
+          "workoutTitle",
+          "duration",
+          "summary",
+          "highlight",
+          "accent",
+          "tint"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentTitle",
+              "value": "{{ params.workoutTitle }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentDuration",
+              "value": "{{ params.duration }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentSummary",
+              "value": "{{ params.summary }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentHighlight",
+              "value": "{{ params.highlight }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentAccent",
+              "value": "{{ params.accent }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentTint",
+              "value": "{{ params.tint }}"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "workout_detail"
+            }
+          }
+        ]
+      },
+      "saveWorkout": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "模板示例：这里接入训练保存逻辑"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "home"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "训练",
+        "layout": "column",
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 14,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "calendar",
+                          "size": 18,
+                          "color": "#EA580C"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "本周训练",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "4",
+                      "style": {
+                        "fontSize": 21,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 14,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "list",
+                          "size": 18,
+                          "color": "#2563EB"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "总组数",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "62",
+                      "style": {
+                        "fontSize": 21,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 14,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "trophy",
+                          "size": 18,
+                          "color": "#F59E0B"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "新纪录",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "3",
+                      "style": {
+                        "fontSize": 21,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "margin": 8
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "icon",
+                "name": "search",
+                "size": 18,
+                "color": "#8E8E93"
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "搜索训练、动作、重量",
+                "bind": "global.searchQuery",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
+                "style": {
+                  "fontSize": 15,
+                  "borderRadius": 10
+                }
+              }
+            ],
+            "padding": 10,
+            "margin": 12,
+            "color": "#F7F8FA",
+            "borderRadius": 14,
+            "crossAxisAlignment": "center"
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "全部",
+                    "variant": "choice",
+                    "bind": "global.selectedType",
+                    "value": "全部",
+                    "color": "#EA580C"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "力量",
+                    "variant": "choice",
+                    "bind": "global.selectedType",
+                    "value": "力量",
+                    "color": "#EA580C"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "有氧",
+                    "variant": "choice",
+                    "bind": "global.selectedType",
+                    "value": "有氧",
+                    "color": "#EA580C"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "恢复",
+                    "variant": "choice",
+                    "bind": "global.selectedType",
+                    "value": "恢复",
+                    "color": "#EA580C"
+                  }
+                ]
+              }
+            ],
+            "padding": 12,
+            "margin": 8,
+            "color": "#FFFFFF",
+            "borderRadius": 14
+          },
+          {
+            "type": "list",
+            "source": "{{ global.workouts }}",
+            "emptyText": "暂无训练记录，先完成一次训练",
+            "item_template": {
+              "type": "card",
+              "layout": "column",
+              "color": "#FFFFFF",
+              "padding": 14,
+              "margin": 8,
+              "elevation": 0,
+              "borderRadius": 16,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "play",
+                          "size": 20,
+                          "color": "{{ loop.item.accent }}"
+                        }
+                      ],
+                      "width": 42,
+                      "height": 42,
+                      "color": "{{ loop.item.tint }}",
+                      "borderRadius": 12,
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 12
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.title }}",
+                              "position": {
+                                "type": "flex",
+                                "flex": 1
+                              },
+                              "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "color": "#111827",
+                                "maxLines": 1,
+                                "overflow": "ellipsis"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.duration }}",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#9CA3AF"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.summary }}",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280",
+                            "maxLines": 2,
+                            "overflow": "ellipsis"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "trophy",
+                              "size": 15,
+                              "color": "#F59E0B"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 5
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.highlight }}",
+                              "style": {
+                                "fontSize": 12,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        }
+                      ],
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      }
+                    }
+                  ],
+                  "crossAxisAlignment": "center"
+                }
+              ],
+              "onTap": {
+                "call": "@global.viewWorkout",
+                "args": {
+                  "workoutTitle": "{{ loop.item.title }}",
+                  "duration": "{{ loop.item.duration }}",
+                  "summary": "{{ loop.item.summary }}",
+                  "highlight": "{{ loop.item.highlight }}",
+                  "accent": "{{ loop.item.accent }}",
+                  "tint": "{{ loop.item.tint }}"
+                }
+              }
+            }
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "button",
+                "label": "记录训练",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.startCreate",
+                  "args": {}
+                },
+                "icon": "add",
+                "style": {
+                  "backgroundColor": "#EA580C",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 16,
+                  "fontSize": 15,
+                  "paddingV": 12
+                }
+              }
+            ],
+            "padding": 12,
+            "color": "#F8F5F2"
+          }
+        ],
+        "backgroundColor": "#F8F5F2",
+        "appBar": {
+          "title": "训练",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.startCreate",
+                "args": {}
+              },
+              "icon": "add",
+              "style": {
+                "textColor": "#EA580C",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        }
+      },
+      {
+        "id": "workout_detail",
+        "title": "训练详情",
+        "layout": "column",
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 20,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "play",
+                    "size": 28,
+                    "color": "{{ global.currentAccent }}"
+                  }
+                ],
+                "width": 58,
+                "height": 58,
+                "color": "{{ global.currentTint }}",
+                "borderRadius": 18,
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "text",
+                "value": "{{ global.currentTitle }}",
+                "style": {
+                  "fontSize": 24,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "{{ global.currentDuration }}",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#6B7280"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "text",
+                "value": "{{ global.currentSummary }}",
+                "style": {
+                  "fontSize": 15,
+                  "color": "#374151",
+                  "lineHeight": 1.5
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "trophy",
+                    "size": 18,
+                    "color": "#F59E0B"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.currentHighlight }}",
+                    "style": {
+                      "fontSize": 15,
+                      "fontWeight": "600",
+                      "color": "#92400E"
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              }
+            ],
+            "crossAxisAlignment": "center"
+          }
+        ],
+        "backgroundColor": "#F8F5F2",
+        "appBar": {
+          "title": "训练详情",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0
+        }
+      },
+      {
+        "id": "workout_form",
+        "title": "记录训练",
+        "layout": "column",
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 18,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "text",
+                "value": "训练名称",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "例如 上肢力量 A",
+                "bind": "global.formTitle"
+              },
+              {
+                "type": "spacer",
+                "height": 18
+              },
+              {
+                "type": "button",
+                "label": "保存训练",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.saveWorkout",
+                  "args": {}
+                },
+                "icon": "save",
+                "style": {
+                  "backgroundColor": "#EA580C",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 14
+                }
+              }
+            ]
+          }
+        ],
+        "backgroundColor": "#F8F5F2",
+        "appBar": {
+          "title": "记录训练",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0
+        }
+      }
+    ]
+  },
+  "appid": "84a2ebef-2c02-4730-afbf-4f9193d758c3"
+}

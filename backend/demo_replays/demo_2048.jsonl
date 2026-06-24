@@ -1,0 +1,10 @@
+{"status": "init", "message": "status.ai_engine_started"}
+{"status": "running", "message": "AI 已开始生成…"}
+{"thinking": "2048：4x4 网格、滑动合并、计分与最高分。"}
+{"status": "tool_preparing", "message": "规划页面结构与交互…"}
+{"status": "command_execution", "message": "生成前端 JSON-DSL…"}
+{"content": "做了一个 2048：上下左右滑动合并、实时计分、最高分。"}
+{"status": "repairing", "message": "校验并修复 JSON…"}
+{"content": "\n2048 游戏已生成 ✅ 滑动合并 + 计分。"}
+{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/demo_2048.json"}}
+{"_demo_final": {"final_text": "2048 游戏已生成 ✅ 滑动合并 + 计分。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/demo_2048.json"}]}}

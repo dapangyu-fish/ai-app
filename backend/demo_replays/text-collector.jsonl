@@ -1,0 +1,10 @@
+{"status": "init", "message": "status.ai_engine_started"}
+{"status": "running", "message": "AI 已开始生成…"}
+{"thinking": "速记工具：输入即存、列表展示、一键复制。"}
+{"status": "tool_preparing", "message": "规划页面结构与交互…"}
+{"status": "command_execution", "message": "生成前端 JSON-DSL…"}
+{"content": "做了一个文本收集器：快速记录、片段列表、复制分享。"}
+{"status": "repairing", "message": "校验并修复 JSON…"}
+{"content": "\n文本收集器已生成 ✅ 记录 + 列表 + 复制。"}
+{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/text-collector.json"}}
+{"_demo_final": {"final_text": "文本收集器已生成 ✅ 记录 + 列表 + 复制。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/text-collector.json"}]}}

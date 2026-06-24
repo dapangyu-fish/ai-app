@@ -1,0 +1,10 @@
+{"status": "init", "message": "status.ai_engine_started"}
+{"status": "running", "message": "AI 已开始生成…"}
+{"thinking": "笔记：列表 + 编辑器 + 搜索过滤。"}
+{"status": "tool_preparing", "message": "规划页面结构与交互…"}
+{"status": "command_execution", "message": "生成前端 JSON-DSL…"}
+{"content": "做了一个笔记 App：笔记列表、编辑页、关键词搜索。"}
+{"status": "repairing", "message": "校验并修复 JSON…"}
+{"content": "\n笔记 App 已生成 ✅ 新建/编辑/搜索。"}
+{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/native_quality_notes.json"}}
+{"_demo_final": {"final_text": "笔记 App 已生成 ✅ 新建/编辑/搜索。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/native_quality_notes.json"}]}}

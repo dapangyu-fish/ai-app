@@ -1,0 +1,10 @@
+{"status": "init", "message": "status.ai_engine_started"}
+{"status": "running", "message": "AI 已开始生成…"}
+{"thinking": "训练：计划列表、动作计时器、训练记录。"}
+{"status": "tool_preparing", "message": "规划页面结构与交互…"}
+{"status": "command_execution", "message": "生成前端 JSON-DSL…"}
+{"content": "做了一个健身 App：训练计划、组间计时、历史记录。"}
+{"status": "repairing", "message": "校验并修复 JSON…"}
+{"content": "\n健身训练 App 已生成 ✅ 计划 + 计时 + 记录。"}
+{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/native_quality_workout.json"}}
+{"_demo_final": {"final_text": "健身训练 App 已生成 ✅ 计划 + 计时 + 记录。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/native_quality_workout.json"}]}}

@@ -1,0 +1,10 @@
+{"status": "init", "message": "status.ai_engine_started"}
+{"status": "running", "message": "AI 已开始生成…"}
+{"thinking": "记账：录入收支、分类汇总、预算进度。"}
+{"status": "tool_preparing", "message": "规划页面结构与交互…"}
+{"status": "command_execution", "message": "生成前端 JSON-DSL…"}
+{"content": "做了一个记账 App：收支流水、分类饼图、预算进度。"}
+{"status": "repairing", "message": "校验并修复 JSON…"}
+{"content": "\n记账 App 已生成 ✅ 收支 + 分类 + 预算。"}
+{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/native_quality_budget.json"}}
+{"_demo_final": {"final_text": "记账 App 已生成 ✅ 收支 + 分类 + 预算。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/native_quality_budget.json"}]}}

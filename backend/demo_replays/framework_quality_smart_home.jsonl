@@ -1,0 +1,10 @@
+{"status": "init", "message": "status.ai_engine_started"}
+{"status": "running", "message": "AI 已开始生成…"}
+{"thinking": "家居面板：开关/滑块控制设备，场景一键切换。"}
+{"status": "tool_preparing", "message": "规划页面结构与交互…"}
+{"status": "command_execution", "message": "生成前端 JSON-DSL…"}
+{"content": "做了一个智能家居面板：设备开关、温度滑块、场景快捷。"}
+{"status": "repairing", "message": "校验并修复 JSON…"}
+{"content": "\n智能家居面板已生成 ✅ 灯光/空调/场景控制。"}
+{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/framework_quality_smart_home.json"}}
+{"_demo_final": {"final_text": "智能家居面板已生成 ✅ 灯光/空调/场景控制。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/framework_quality_smart_home.json"}]}}
