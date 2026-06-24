@@ -170,11 +170,18 @@ EDGE_ROUTE_SPECS = [
     },
 ]
 _LANG = "en"
-_LANGUAGES = {
+_LANGUAGES = {  # AUTONYM_FR_MARKER
     "zh": "中文",
     "en": "English",
     "de": "Deutsch",
     "es": "Español",
+    "fr": "Français",
+    "pt": "Português",
+    "ca": "Català",
+    "hi": "हिन्दी",
+    "ko": "한국어",
+    "ja": "日本語",
+    "it": "Italiano",
 }
 _MESSAGES = {
     "language_prompt": {
@@ -182,442 +189,611 @@ _MESSAGES = {
         "en": "Choose the myapp-ctl language",
         "de": "Sprache fuer myapp-ctl waehlen",
         "es": "Elige el idioma de myapp-ctl",
+        "fr": "Choisissez la langue de myapp-ctl",
+        "pt": "Escolha o idioma do myapp-ctl",
+        "ca": "Trieu l'idioma de myapp-ctl",
+        "hi": "myapp-ctl की भाषा चुनें",
+        "ko": "myapp-ctl 언어를 선택하세요",
+        "ja": "myapp-ctl の言語を選択してください",
+        "it": "Scegli la lingua di myapp-ctl",
     },
     "language_saved": {
         "zh": "已保存语言: {language}",
         "en": "Saved language: {language}",
         "de": "Sprache gespeichert: {language}",
         "es": "Idioma guardado: {language}",
+        "fr": "Langue enregistrée : {language}",
+        "pt": "Idioma guardado: {language}",
+        "ca": "Idioma desat: {language}",
+        "hi": "भाषा सहेजी गई: {language}",
+        "ko": "저장된 언어: {language}",
+        "ja": "保存された言語: {language}",
+        "it": "Lingua salvata: {language}",
     },
     "required_value": {
         "zh": "必填，请输入一个值",
         "en": "required; please enter a value",
         "de": "Pflichtfeld; bitte einen Wert eingeben",
         "es": "obligatorio; introduce un valor",
+        "fr": "obligatoire ; veuillez saisir une valeur",
+        "pt": "obrigatório; introduza um valor",
+        "ca": "obligatori; introduïu un valor",
+        "hi": "आवश्यक; कृपया एक मान दर्ज करें",
+        "ko": "필수 항목입니다. 값을 입력하세요",
+        "ja": "必須です。値を入力してください",
+        "it": "obbligatorio; inserisci un valore",
     },
     "enter_yes_no": {
         "zh": "请输入 y 或 n",
         "en": "enter y or n",
         "de": "bitte y oder n eingeben",
         "es": "introduce y o n",
+        "fr": "saisissez y ou n",
+        "pt": "introduza y ou n",
+        "ca": "introduïu y o n",
+        "hi": "y या n दर्ज करें",
+        "ko": "y 또는 n을 입력하세요",
+        "ja": "y または n を入力してください",
+        "it": "inserisci y o n",
     },
     "input_file_or_paste_keep": {
         "zh": "输入服务器上的文件路径，或粘贴新内容后输入 EOF 结束。第一行直接回车表示保留现有值。",
         "en": "Enter a server file path, or paste new content and finish with EOF. Press Enter on the first line to keep existing.",
         "de": "Server-Dateipfad eingeben oder neuen Inhalt einfuegen und mit EOF beenden. Enter in der ersten Zeile behaelt den bestehenden Wert.",
         "es": "Introduce una ruta de archivo del servidor, o pega contenido nuevo y termina con EOF. Pulsa Enter en la primera linea para conservar el valor actual.",
+        "fr": "Saisissez un chemin de fichier serveur, ou collez un nouveau contenu et terminez par EOF. Appuyez sur Entrée à la première ligne pour conserver l'existant.",
+        "pt": "Introduza um caminho de ficheiro no servidor, ou cole novo conteúdo e termine com EOF. Prima Enter na primeira linha para manter o existente.",
+        "ca": "Introduïu un camí de fitxer del servidor, o enganxeu contingut nou i acabeu amb EOF. Premeu Retorn a la primera línia per mantenir l'existent.",
+        "hi": "सर्वर फ़ाइल पथ दर्ज करें, या नई सामग्री पेस्ट करें और EOF से समाप्त करें। मौजूदा को बनाए रखने के लिए पहली पंक्ति पर Enter दबाएँ।",
+        "ko": "서버 파일 경로를 입력하거나, 새 내용을 붙여넣고 EOF로 마치세요. 기존 값을 유지하려면 첫 줄에서 Enter를 누르세요.",
+        "ja": "サーバーのファイルパスを入力するか、新しい内容を貼り付けて EOF で終了してください。既存の内容を保持するには最初の行で Enter を押してください。",
+        "it": "Inserisci il percorso di un file sul server, oppure incolla il nuovo contenuto e termina con EOF. Premi Invio sulla prima riga per mantenere l'esistente.",
     },
     "input_file_or_paste_required": {
         "zh": "输入服务器上的文件路径，或粘贴内容后输入 EOF 结束。",
         "en": "Enter a server file path, or paste content and finish with EOF.",
         "de": "Server-Dateipfad eingeben oder Inhalt einfuegen und mit EOF beenden.",
         "es": "Introduce una ruta de archivo del servidor, o pega contenido y termina con EOF.",
+        "fr": "Saisissez un chemin de fichier serveur, ou collez le contenu et terminez par EOF.",
+        "pt": "Introduza um caminho de ficheiro no servidor, ou cole o conteúdo e termine com EOF.",
+        "ca": "Introduïu un camí de fitxer del servidor, o enganxeu el contingut i acabeu amb EOF.",
+        "hi": "सर्वर फ़ाइल पथ दर्ज करें, या सामग्री पेस्ट करें और EOF से समाप्त करें।",
+        "ko": "서버 파일 경로를 입력하거나, 내용을 붙여넣고 EOF로 마치세요.",
+        "ja": "サーバーのファイルパスを入力するか、内容を貼り付けて EOF で終了してください。",
+        "it": "Inserisci il percorso di un file sul server, oppure incolla il contenuto e termina con EOF.",
     },
     "input_file_or_paste_skip": {
         "zh": "输入服务器上的文件路径，或粘贴内容后输入 EOF 结束。第一行直接回车表示跳过。",
         "en": "Enter a server file path, or paste content and finish with EOF. Press Enter on the first line to skip.",
         "de": "Server-Dateipfad eingeben oder Inhalt einfuegen und mit EOF beenden. Enter in der ersten Zeile ueberspringt.",
         "es": "Introduce una ruta de archivo del servidor, o pega contenido y termina con EOF. Pulsa Enter en la primera linea para omitir.",
+        "fr": "Saisissez un chemin de fichier serveur, ou collez le contenu et terminez par EOF. Appuyez sur Entrée à la première ligne pour ignorer.",
+        "pt": "Introduza um caminho de ficheiro no servidor, ou cole o conteúdo e termine com EOF. Prima Enter na primeira linha para ignorar.",
+        "ca": "Introduïu un camí de fitxer del servidor, o enganxeu el contingut i acabeu amb EOF. Premeu Retorn a la primera línia per ometre-ho.",
+        "hi": "सर्वर फ़ाइल पथ दर्ज करें, या सामग्री पेस्ट करें और EOF से समाप्त करें। छोड़ने के लिए पहली पंक्ति पर Enter दबाएँ।",
+        "ko": "서버 파일 경로를 입력하거나, 내용을 붙여넣고 EOF로 마치세요. 건너뛰려면 첫 줄에서 Enter를 누르세요.",
+        "ja": "サーバーのファイルパスを入力するか、内容を貼り付けて EOF で終了してください。スキップするには最初の行で Enter を押してください。",
+        "it": "Inserisci il percorso di un file sul server, oppure incolla il contenuto e termina con EOF. Premi Invio sulla prima riga per saltare.",
     },
     "file_read_error": {
         "zh": "无法读取文件 {path}: {error}",
         "en": "cannot read file {path}: {error}",
         "de": "Datei {path} kann nicht gelesen werden: {error}",
         "es": "no se puede leer el archivo {path}: {error}",
+        "fr": "impossible de lire le fichier {path} : {error}",
+        "pt": "não é possível ler o ficheiro {path}: {error}",
+        "ca": "no es pot llegir el fitxer {path}: {error}",
+        "hi": "फ़ाइल {path} नहीं पढ़ी जा सकी: {error}",
+        "ko": "파일 {path}을(를) 읽을 수 없습니다: {error}",
+        "ja": "ファイル {path} を読み込めません: {error}",
+        "it": "impossibile leggere il file {path}: {error}",
     },
     "required_multiline": {
         "zh": "必填；请输入文件路径，或粘贴内容并用 EOF 结束",
         "en": "required; enter a file path, or paste content and finish with EOF",
         "de": "Pflichtfeld; Dateipfad eingeben oder Inhalt einfuegen und mit EOF beenden",
         "es": "obligatorio; introduce una ruta o pega contenido y termina con EOF",
+        "fr": "obligatoire ; saisissez un chemin de fichier, ou collez le contenu et terminez par EOF",
+        "pt": "obrigatório; introduza um caminho de ficheiro, ou cole o conteúdo e termine com EOF",
+        "ca": "obligatori; introduïu un camí de fitxer, o enganxeu el contingut i acabeu amb EOF",
+        "hi": "आवश्यक; फ़ाइल पथ दर्ज करें, या सामग्री पेस्ट करें और EOF से समाप्त करें",
+        "ko": "필수 항목입니다. 파일 경로를 입력하거나, 내용을 붙여넣고 EOF로 마치세요",
+        "ja": "必須です。ファイルパスを入力するか、内容を貼り付けて EOF で終了してください",
+        "it": "obbligatorio; inserisci il percorso di un file, oppure incolla il contenuto e termina con EOF",
     },
     "running": {
         "zh": "仍在运行",
         "en": "still running",
         "de": "laeuft noch",
         "es": "sigue ejecutandose",
+        "fr": "en cours d'exécution",
+        "pt": "ainda em execução",
+        "ca": "encara en execució",
+        "hi": "अभी भी चल रहा है",
+        "ko": "아직 실행 중",
+        "ja": "まだ実行中",
+        "it": "ancora in esecuzione",
     },
     "setup_ai_title": {
         "zh": "AI 供应商配置",
         "en": "AI provider setup",
         "de": "KI-Anbieter einrichten",
         "es": "Configuracion del proveedor de IA",
+        "fr": "Configuration du fournisseur AI",
+        "pt": "Configuração do fornecedor de AI",
+        "ca": "Configuració del proveïdor d'AI",
+        "hi": "AI प्रदाता सेटअप",
+        "ko": "AI 공급자 설정",
+        "ja": "AI プロバイダーのセットアップ",
+        "it": "Configurazione del provider AI",
     },
     "optional_push_title": {
         "zh": "可选推送配置。不需要的通道可以跳过。",
         "en": "Optional push setup. Skip a channel if it is not needed now.",
         "de": "Optionale Push-Konfiguration. Nicht benoetigte Kanaele koennen uebersprungen werden.",
         "es": "Configuracion opcional de push. Omite los canales que no necesites ahora.",
+        "fr": "Configuration push optionnelle. Ignorez un canal s'il n'est pas nécessaire pour l'instant.",
+        "pt": "Configuração de push opcional. Ignore um canal se não for necessário agora.",
+        "ca": "Configuració de push opcional. Ometeu un canal si ara no cal.",
+        "hi": "वैकल्पिक push सेटअप। यदि अभी किसी चैनल की आवश्यकता नहीं है तो उसे छोड़ दें।",
+        "ko": "선택적 push 설정. 지금 필요하지 않은 채널은 건너뛰세요.",
+        "ja": "任意の push セットアップ。今必要のないチャネルはスキップしてください。",
+        "it": "Configurazione push opzionale. Salta un canale se non serve ora.",
     },
     "optional_asr_title": {
         "zh": "可选语音识别配置。",
         "en": "Optional speech recognition setup.",
         "de": "Optionale Spracherkennung einrichten.",
         "es": "Configuracion opcional de reconocimiento de voz.",
+        "fr": "Configuration optionnelle de la reconnaissance vocale.",
+        "pt": "Configuração opcional de reconhecimento de voz.",
+        "ca": "Configuració opcional del reconeixement de veu.",
+        "hi": "वैकल्पिक स्पीच रिकग्निशन (ASR) सेटअप।",
+        "ko": "선택적 음성 인식(ASR) 설정.",
+        "ja": "任意の音声認識 (ASR) セットアップ。",
+        "it": "Configurazione opzionale del riconoscimento vocale.",
     },
     "optional_email_title": {
         "zh": "可选邮箱 SMTP 配置。用于注册验证、找回密码等邮件能力。",
         "en": "Optional SMTP email setup. Used for signup verification, password recovery, and auth mail.",
         "de": "Optionale SMTP-E-Mail-Konfiguration fuer Registrierung, Passwort-Wiederherstellung und Auth-Mails.",
         "es": "Configuracion SMTP opcional para verificacion de registro, recuperacion de contrasena y correo de auth.",
+        "fr": "Configuration SMTP e-mail optionnelle. Utilisée pour la vérification d'inscription, la récupération de mot de passe et les e-mails d'authentification.",
+        "pt": "Configuração opcional de e-mail SMTP. Usada para verificação de registo, recuperação de palavra-passe e e-mails de autenticação.",
+        "ca": "Configuració opcional de correu SMTP. S'utilitza per a la verificació de registre, la recuperació de contrasenya i el correu d'autenticació.",
+        "hi": "वैकल्पिक SMTP ईमेल सेटअप। साइनअप सत्यापन, पासवर्ड रिकवरी और auth मेल के लिए उपयोग होता है।",
+        "ko": "선택적 SMTP 이메일 설정. 가입 인증, 비밀번호 복구 및 인증 메일에 사용됩니다.",
+        "ja": "任意の SMTP メールセットアップ。サインアップ認証、パスワード復旧、認証メールに使用されます。",
+        "it": "Configurazione email SMTP opzionale. Usata per la verifica della registrazione, il recupero password e le email di autenticazione.",
     },
     "configure_smtp_prompt": {
         "zh": "配置 SMTP 邮箱服务器？",
         "en": "configure SMTP email server?",
         "de": "SMTP-Mailserver konfigurieren?",
         "es": "configurar servidor SMTP?",
+        "fr": "configurer le serveur e-mail SMTP ?",
+        "pt": "configurar o servidor de e-mail SMTP?",
+        "ca": "voleu configurar el servidor de correu SMTP?",
+        "hi": "SMTP ईमेल सर्वर कॉन्फ़िगर करें?",
+        "ko": "SMTP 이메일 서버를 구성하시겠습니까?",
+        "ja": "SMTP メールサーバーを構成しますか？",
+        "it": "configurare il server email SMTP?",
     },
     "enable_email_signup_prompt": {
         "zh": "启用邮箱注册？",
         "en": "enable email signup?",
         "de": "E-Mail-Registrierung aktivieren?",
         "es": "activar registro por correo?",
+        "fr": "activer l'inscription par e-mail ?",
+        "pt": "ativar registo por e-mail?",
+        "ca": "voleu activar el registre per correu electrònic?",
+        "hi": "ईमेल साइनअप सक्षम करें?",
+        "ko": "이메일 가입을 활성화하시겠습니까?",
+        "ja": "メールサインアップを有効にしますか？",
+        "it": "abilitare la registrazione via email?",
     },
     "email_autoconfirm_prompt": {
         "zh": "自动确认邮箱注册并跳过邮件验证？",
         "en": "auto-confirm email signup and skip verification mail?",
         "de": "E-Mail-Registrierung automatisch bestaetigen und Verifizierungs-Mail ueberspringen?",
         "es": "confirmar automaticamente el registro por correo y omitir verificacion?",
+        "fr": "confirmer automatiquement l'inscription par e-mail et ignorer l'e-mail de vérification ?",
+        "pt": "confirmar automaticamente o registo por e-mail e ignorar o e-mail de verificação?",
+        "ca": "voleu confirmar automàticament el registre per correu i ometre el correu de verificació?",
+        "hi": "ईमेल साइनअप को स्वतः-पुष्टि करें और सत्यापन मेल छोड़ें?",
+        "ko": "이메일 가입을 자동 확인하고 인증 메일을 건너뛰시겠습니까?",
+        "ja": "メールサインアップを自動確認し、認証メールをスキップしますか？",
+        "it": "confermare automaticamente la registrazione via email e saltare l'email di verifica?",
     },
     "smtp_admin_email_prompt": {
         "zh": "SMTP 发件邮箱",
         "en": "SMTP admin/from email",
         "de": "SMTP Absender-E-Mail",
         "es": "correo remitente SMTP",
+        "fr": "e-mail admin/expéditeur SMTP",
+        "pt": "e-mail de admin/remetente SMTP",
+        "ca": "correu d'admin/remitent SMTP",
+        "hi": "SMTP admin/from ईमेल",
+        "ko": "SMTP 관리자/발신 이메일",
+        "ja": "SMTP 管理者/送信元メール",
+        "it": "email admin/mittente SMTP",
     },
     "smtp_host_prompt": {
         "zh": "SMTP 服务器地址",
         "en": "SMTP host",
         "de": "SMTP-Host",
         "es": "host SMTP",
+        "fr": "hôte SMTP",
+        "pt": "anfitrião SMTP",
+        "ca": "amfitrió SMTP",
+        "hi": "SMTP होस्ट",
+        "ko": "SMTP 호스트",
+        "ja": "SMTP ホスト",
+        "it": "host SMTP",
     },
     "smtp_port_prompt": {
         "zh": "SMTP 端口",
         "en": "SMTP port",
         "de": "SMTP-Port",
         "es": "puerto SMTP",
+        "fr": "port SMTP",
+        "pt": "porta SMTP",
+        "ca": "port SMTP",
+        "hi": "SMTP पोर्ट",
+        "ko": "SMTP 포트",
+        "ja": "SMTP ポート",
+        "it": "porta SMTP",
     },
     "smtp_user_prompt": {
         "zh": "SMTP 用户名",
         "en": "SMTP user",
         "de": "SMTP-Benutzer",
         "es": "usuario SMTP",
+        "fr": "utilisateur SMTP",
+        "pt": "utilizador SMTP",
+        "ca": "usuari SMTP",
+        "hi": "SMTP उपयोगकर्ता",
+        "ko": "SMTP 사용자",
+        "ja": "SMTP ユーザー",
+        "it": "utente SMTP",
     },
     "smtp_pass_prompt": {
         "zh": "SMTP 密码或授权码",
         "en": "SMTP password/app password",
         "de": "SMTP-Passwort/App-Passwort",
         "es": "contrasena SMTP o de aplicacion",
+        "fr": "mot de passe SMTP / mot de passe d'application",
+        "pt": "palavra-passe SMTP/palavra-passe de aplicação",
+        "ca": "contrasenya SMTP/contrasenya d'aplicació",
+        "hi": "SMTP पासवर्ड/ऐप पासवर्ड",
+        "ko": "SMTP 비밀번호/앱 비밀번호",
+        "ja": "SMTP パスワード/アプリパスワード",
+        "it": "password SMTP/password app",
     },
     "smtp_sender_name_prompt": {
         "zh": "SMTP 发件人名称",
         "en": "SMTP sender name",
         "de": "SMTP-Absendername",
         "es": "nombre del remitente SMTP",
+        "fr": "nom de l'expéditeur SMTP",
+        "pt": "nome do remetente SMTP",
+        "ca": "nom del remitent SMTP",
+        "hi": "SMTP प्रेषक नाम",
+        "ko": "SMTP 발신자 이름",
+        "ja": "SMTP 送信者名",
+        "it": "nome mittente SMTP",
     },
     "smtp_config_skipped": {
         "zh": "已跳过 SMTP 邮箱配置",
         "en": "SMTP email config skipped",
         "de": "SMTP-E-Mail-Konfiguration uebersprungen",
         "es": "configuracion SMTP omitida",
+        "fr": "Configuration e-mail SMTP ignorée",
+        "pt": "Configuração de e-mail SMTP ignorada",
+        "ca": "Configuració de correu SMTP omesa",
+        "hi": "SMTP ईमेल कॉन्फ़िग छोड़ी गई",
+        "ko": "SMTP 이메일 설정 건너뜀",
+        "ja": "SMTP メール設定をスキップしました",
+        "it": "Configurazione email SMTP saltata",
     },
     "smtp_config_updated": {
         "zh": "已更新 SMTP 邮箱配置",
         "en": "updated optional SMTP email config",
         "de": "Optionale SMTP-E-Mail-Konfiguration aktualisiert",
         "es": "configuracion SMTP opcional actualizada",
+        "fr": "configuration e-mail SMTP optionnelle mise à jour",
+        "pt": "configuração opcional de e-mail SMTP atualizada",
+        "ca": "configuració opcional de correu SMTP actualitzada",
+        "hi": "वैकल्पिक SMTP ईमेल कॉन्फ़िग अपडेट की गई",
+        "ko": "선택적 SMTP 이메일 설정 업데이트됨",
+        "ja": "任意の SMTP メール設定を更新しました",
+        "it": "configurazione email SMTP opzionale aggiornata",
     },
     "client_env_json": {
         "zh": "环境 JSON: {path}",
         "en": "Environment JSON: {path}",
         "de": "Umgebungs-JSON: {path}",
         "es": "JSON de entorno: {path}",
+        "fr": "JSON d'environnement : {path}",
+        "pt": "JSON de ambiente: {path}",
+        "ca": "JSON d'entorn: {path}",
+        "hi": "एनवायरनमेंट JSON: {path}",
+        "ko": "환경 JSON: {path}",
+        "ja": "環境 JSON: {path}",
+        "it": "JSON dell'ambiente: {path}",
     },
     "client_env_qr": {
         "zh": "二维码 PNG: {path}",
         "en": "QR PNG: {path}",
         "de": "QR-PNG: {path}",
         "es": "PNG QR: {path}",
+        "fr": "PNG QR : {path}",
+        "pt": "PNG do QR: {path}",
+        "ca": "PNG del QR: {path}",
+        "hi": "QR PNG: {path}",
+        "ko": "QR PNG: {path}",
+        "ja": "QR PNG: {path}",
+        "it": "PNG del QR: {path}",
     },
     "copy_json": {
         "zh": "复制 JSON:",
         "en": "Copy JSON:",
         "de": "JSON kopieren:",
         "es": "Copiar JSON:",
+        "fr": "Copier le JSON :",
+        "pt": "Copiar JSON:",
+        "ca": "Copia el JSON:",
+        "hi": "JSON कॉपी करें:",
+        "ko": "JSON 복사:",
+        "ja": "JSON をコピー:",
+        "it": "Copia JSON:",
     },
     "client_env_summary": {
         "zh": "客户端环境导入信息",
         "en": "Client environment import",
         "de": "Client-Umgebungsimport",
         "es": "Importacion de entorno del cliente",
+        "fr": "Import de l'environnement client",
+        "pt": "Importação do ambiente do cliente",
+        "ca": "Importació de l'entorn del client",
+        "hi": "क्लाइंट एनवायरनमेंट इम्पोर्ट",
+        "ko": "클라이언트 환경 가져오기",
+        "ja": "クライアント環境のインポート",
+        "it": "Importazione ambiente client",
     },
     "config_exported": {
         "zh": "已导出配置: {path}",
         "en": "Exported config: {path}",
         "de": "Konfiguration exportiert: {path}",
         "es": "Configuracion exportada: {path}",
+        "fr": "Configuration exportée : {path}",
+        "pt": "Configuração exportada: {path}",
+        "ca": "Configuració exportada: {path}",
+        "hi": "कॉन्फ़िग एक्सपोर्ट की गई: {path}",
+        "ko": "설정 내보냄: {path}",
+        "ja": "設定をエクスポートしました: {path}",
+        "it": "Configurazione esportata: {path}",
     },
     "config_imported": {
         "zh": "已恢复配置: {path}",
         "en": "Imported config: {path}",
         "de": "Konfiguration importiert: {path}",
         "es": "Configuracion importada: {path}",
+        "fr": "Configuration importée : {path}",
+        "pt": "Configuração importada: {path}",
+        "ca": "Configuració importada: {path}",
+        "hi": "कॉन्फ़िग इम्पोर्ट की गई: {path}",
+        "ko": "설정 가져옴: {path}",
+        "ja": "設定をインポートしました: {path}",
+        "it": "Configurazione importata: {path}",
     },
     "refuse_import_without_yes": {
         "zh": "恢复配置会覆盖本机配置和密钥；请添加 --yes 确认",
         "en": "config import overwrites local config and secrets; pass --yes to confirm",
         "de": "config import ueberschreibt lokale Konfiguration und Secrets; mit --yes bestaetigen",
         "es": "config import sobrescribe configuracion y secretos locales; usa --yes para confirmar",
+        "fr": "l'import de configuration écrase la config et les secrets locaux ; passez --yes pour confirmer",
+        "pt": "a importação de configuração substitui a config e os segredos locais; passe --yes para confirmar",
+        "ca": "la importació de configuració sobreescriu la config i els secrets locals; passeu --yes per confirmar",
+        "hi": "कॉन्फ़िग इम्पोर्ट स्थानीय कॉन्फ़िग और secrets को अधिलेखित कर देता है; पुष्टि के लिए --yes पास करें",
+        "ko": "설정 가져오기는 로컬 설정과 secrets를 덮어씁니다. 확인하려면 --yes를 전달하세요",
+        "ja": "設定のインポートはローカルの設定と secrets を上書きします。確認するには --yes を渡してください",
+        "it": "l'importazione della configurazione sovrascrive config e secrets locali; passa --yes per confermare",
     },
     "create_test_user_prompt": {
         "zh": "创建/更新测试用户 test@example.com？",
         "en": "create/update test user test@example.com?",
         "de": "Testbenutzer test@example.com erstellen/aktualisieren?",
         "es": "crear/actualizar usuario de prueba test@example.com?",
+        "fr": "créer/mettre à jour l'utilisateur de test test@example.com ?",
+        "pt": "criar/atualizar o utilizador de teste test@example.com?",
+        "ca": "voleu crear/actualitzar l'usuari de prova test@example.com?",
+        "hi": "टेस्ट उपयोगकर्ता test@example.com बनाएँ/अपडेट करें?",
+        "ko": "테스트 사용자 test@example.com을 생성/업데이트하시겠습니까?",
+        "ja": "テストユーザー test@example.com を作成/更新しますか？",
+        "it": "creare/aggiornare l'utente di test test@example.com?",
     },
     "test_user_password_prompt": {
         "zh": "测试用户密码",
         "en": "test user password",
         "de": "Testbenutzer-Passwort",
         "es": "contrasena del usuario de prueba",
+        "fr": "mot de passe de l'utilisateur de test",
+        "pt": "palavra-passe do utilizador de teste",
+        "ca": "contrasenya de l'usuari de prova",
+        "hi": "टेस्ट उपयोगकर्ता पासवर्ड",
+        "ko": "테스트 사용자 비밀번호",
+        "ja": "テストユーザーのパスワード",
+        "it": "password dell'utente di test",
     },
     "test_user_password_confirm_prompt": {
         "zh": "再次输入测试用户密码",
         "en": "confirm test user password",
         "de": "Testbenutzer-Passwort bestaetigen",
         "es": "confirma la contrasena del usuario de prueba",
+        "fr": "confirmez le mot de passe de l'utilisateur de test",
+        "pt": "confirme a palavra-passe do utilizador de teste",
+        "ca": "confirmeu la contrasenya de l'usuari de prova",
+        "hi": "टेस्ट उपयोगकर्ता पासवर्ड की पुष्टि करें",
+        "ko": "테스트 사용자 비밀번호 확인",
+        "ja": "テストユーザーのパスワードを確認",
+        "it": "conferma la password dell'utente di test",
     },
     "password_too_short": {
         "zh": "密码至少需要 {min_len} 位",
         "en": "password must be at least {min_len} characters",
         "de": "Passwort muss mindestens {min_len} Zeichen lang sein",
         "es": "la contrasena debe tener al menos {min_len} caracteres",
+        "fr": "le mot de passe doit comporter au moins {min_len} caractères",
+        "pt": "a palavra-passe deve ter pelo menos {min_len} caracteres",
+        "ca": "la contrasenya ha de tenir com a mínim {min_len} caràcters",
+        "hi": "पासवर्ड कम से कम {min_len} वर्णों का होना चाहिए",
+        "ko": "비밀번호는 최소 {min_len}자 이상이어야 합니다",
+        "ja": "パスワードは少なくとも {min_len} 文字必要です",
+        "it": "la password deve avere almeno {min_len} caratteri",
     },
     "password_mismatch": {
         "zh": "两次输入的密码不一致",
         "en": "passwords do not match",
         "de": "Passwoerter stimmen nicht ueberein",
         "es": "las contrasenas no coinciden",
+        "fr": "les mots de passe ne correspondent pas",
+        "pt": "as palavras-passe não coincidem",
+        "ca": "les contrasenyes no coincideixen",
+        "hi": "पासवर्ड मेल नहीं खाते",
+        "ko": "비밀번호가 일치하지 않습니다",
+        "ja": "パスワードが一致しません",
+        "it": "le password non corrispondono",
     },
     "test_user_skipped_noninteractive": {
         "zh": "跳过测试用户创建：当前不是交互式终端",
         "en": "skipped test user creation: stdin is not interactive",
         "de": "Testbenutzer uebersprungen: stdin ist nicht interaktiv",
         "es": "usuario de prueba omitido: stdin no es interactivo",
+        "fr": "création de l'utilisateur de test ignorée : stdin n'est pas interactif",
+        "pt": "criação do utilizador de teste ignorada: stdin não é interativo",
+        "ca": "creació de l'usuari de prova omesa: stdin no és interactiu",
+        "hi": "टेस्ट उपयोगकर्ता निर्माण छोड़ा गया: stdin इंटरैक्टिव नहीं है",
+        "ko": "테스트 사용자 생성 건너뜀: stdin이 대화형이 아닙니다",
+        "ja": "テストユーザーの作成をスキップしました: stdin が対話型ではありません",
+        "it": "creazione dell'utente di test saltata: stdin non è interattivo",
     },
     "test_user_skipped": {
         "zh": "已跳过测试用户创建",
         "en": "test user creation skipped",
         "de": "Testbenutzer-Erstellung uebersprungen",
         "es": "creacion de usuario de prueba omitida",
+        "fr": "création de l'utilisateur de test ignorée",
+        "pt": "criação do utilizador de teste ignorada",
+        "ca": "creació de l'usuari de prova omesa",
+        "hi": "टेस्ट उपयोगकर्ता निर्माण छोड़ा गया",
+        "ko": "테스트 사용자 생성 건너뜀",
+        "ja": "テストユーザーの作成をスキップしました",
+        "it": "creazione dell'utente di test saltata",
     },
     "test_user_created": {
         "zh": "已创建测试用户: {email}",
         "en": "created test user: {email}",
         "de": "Testbenutzer erstellt: {email}",
         "es": "usuario de prueba creado: {email}",
+        "fr": "utilisateur de test créé : {email}",
+        "pt": "utilizador de teste criado: {email}",
+        "ca": "usuari de prova creat: {email}",
+        "hi": "टेस्ट उपयोगकर्ता बनाया गया: {email}",
+        "ko": "테스트 사용자 생성됨: {email}",
+        "ja": "テストユーザーを作成しました: {email}",
+        "it": "utente di test creato: {email}",
     },
     "test_user_updated": {
         "zh": "已更新测试用户密码/资料: {email}",
         "en": "updated test user password/profile: {email}",
         "de": "Testbenutzer-Passwort/Profil aktualisiert: {email}",
         "es": "contrasena/perfil del usuario de prueba actualizado: {email}",
+        "fr": "mot de passe/profil de l'utilisateur de test mis à jour : {email}",
+        "pt": "palavra-passe/perfil do utilizador de teste atualizado: {email}",
+        "ca": "contrasenya/perfil de l'usuari de prova actualitzat: {email}",
+        "hi": "टेस्ट उपयोगकर्ता पासवर्ड/प्रोफ़ाइल अपडेट किया गया: {email}",
+        "ko": "테스트 사용자 비밀번호/프로필 업데이트됨: {email}",
+        "ja": "テストユーザーのパスワード/プロフィールを更新しました: {email}",
+        "it": "password/profilo dell'utente di test aggiornato: {email}",
     },
     "test_user_missing_supabase": {
         "zh": "缺少 Supabase 管理配置，无法创建测试用户",
         "en": "missing Supabase admin config; cannot create test user",
         "de": "Supabase-Admin-Konfiguration fehlt; Testbenutzer kann nicht erstellt werden",
         "es": "falta configuracion admin de Supabase; no se puede crear usuario de prueba",
+        "fr": "config admin Supabase manquante ; impossible de créer l'utilisateur de test",
+        "pt": "configuração de admin Supabase em falta; não é possível criar o utilizador de teste",
+        "ca": "falta la configuració d'admin de Supabase; no es pot crear l'usuari de prova",
+        "hi": "Supabase admin कॉन्फ़िग अनुपस्थित है; टेस्ट उपयोगकर्ता नहीं बनाया जा सकता",
+        "ko": "Supabase 관리자 설정이 없습니다. 테스트 사용자를 생성할 수 없습니다",
+        "ja": "Supabase 管理者設定がありません。テストユーザーを作成できません",
+        "it": "configurazione admin Supabase mancante; impossibile creare l'utente di test",
     },
     "main_help": {
-        "zh": """MyApp 后端控制台
-
-用法:
-  myapp-ctl <命令> [参数]
-  myapp-ctl --lang zh <命令> [参数]
-
-常用命令:
-  status [service]              查看所有服务或单个服务状态
-  deploy [all|service|group]    部署全部、某个组件或某个分组
-  update                        从 Git 仓库拉取最新代码并刷新 myapp-ctl
-  log <service> [-f]            查看服务日志
-  restart [service|group]       重启组件或分组
-  client-env [--terminal-qr]    生成客户端环境 JSON 和二维码
-
-配置与密钥:
-  setup                         首次交互配置 AI/SMTP/推送等
-  secret ls|get|set|generate    管理本机密钥文件
-  config view|export|import     查看、备份、恢复 ctl 配置
-  config lang <zh|en|de|es>     切换 CLI 语言
-  domain ls|set|rm              管理服务域名覆盖
-  registry upstream <url>       配置 App Registry 上游回源仓库
-
-镜像与 Agent:
-  image ls|build|pull|push      管理 Docker 镜像
-  agent ls                      查看当前机器正在运行的 Agent
-  agent-node ls|status|register 管理集群 Agent 物理节点
-  faas ls|node|disable|mode     管理 AI 生成的 FaaS 后端（服务 / 节点）
-  ingress <命令>                管理 Docker 化 edge-nginx 入口
-  uninstall --yes               停止部署；保留配置和 data root 数据
-
-示例:
-  myapp-ctl status
-  myapp-ctl update
-  myapp-ctl deploy --pull
-  myapp-ctl deploy --group core --build
-  myapp-ctl log backend -f -n 120
-  myapp-ctl config lang zh
-
-查看命令详情:
-  myapp-ctl <命令> --help
-""",
-        "en": """MyApp backend control console
-
-Usage:
-  myapp-ctl <command> [options]
-  myapp-ctl --lang en <command> [options]
-
-Common commands:
-  status [service]              Show all service status or one service
-  deploy [all|service|group]    Deploy all, one component, or one group
-  update                        Pull latest Git source and refresh myapp-ctl
-  log <service> [-f]            Show service logs
-  restart [service|group]       Restart a component or group
-  client-env [--terminal-qr]    Generate client environment JSON and QR
-
-Configuration and secrets:
-  setup                         First-run AI/SMTP/push setup wizard
-  secret ls|get|set|generate    Manage host-local secret files
-  config view|export|import     View, back up, or restore ctl config
-  config lang <zh|en|de|es>     Change CLI language
-  domain ls|set|rm              Manage service domain overrides
-  registry upstream <url>       Configure App Registry upstream mirror
-
-Images and agents:
-  image ls|build|pull|push      Manage Docker images
-  agent ls                      Inspect running agents on this host
-  agent-node ls|status|register Manage cluster agent hosts
-  faas ls|node|disable|mode     Manage generated FaaS backends (services / nodes)
-  ingress <command>             Manage Docker-based edge-nginx ingress
-  uninstall --yes               Stop deployment; preserve config and data root
-
-Examples:
-  myapp-ctl status
-  myapp-ctl update
-  myapp-ctl deploy --pull
-  myapp-ctl deploy --group core --build
-  myapp-ctl log backend -f -n 120
-  myapp-ctl config lang en
-
-Command help:
-  myapp-ctl <command> --help
-""",
-        "de": """MyApp Backend-Steuerkonsole
-
-Verwendung:
-  myapp-ctl <Befehl> [Optionen]
-  myapp-ctl --lang de <Befehl> [Optionen]
-
-Wichtige Befehle:
-  status [service]              Status aller Dienste oder eines Dienstes
-  deploy [all|service|group]    Alles, eine Komponente oder Gruppe deployen
-  update                        Neueste Git-Quelle holen und myapp-ctl aktualisieren
-  log <service> [-f]            Dienst-Logs anzeigen
-  restart [service|group]       Komponente oder Gruppe neu starten
-  client-env [--terminal-qr]    Client-Umgebungs-JSON und QR erzeugen
-
-Konfiguration und Secrets:
-  setup                         Ersteinrichtung fuer AI/SMTP/Push
-  secret ls|get|set|generate    Host-lokale Secret-Dateien verwalten
-  config view|export|import     ctl-Konfiguration anzeigen/sichern/wiederherstellen
-  config lang <zh|en|de|es>     CLI-Sprache wechseln
-  domain ls|set|rm              Domain-Overrides verwalten
-  registry upstream <url>       App-Registry Upstream-Mirror konfigurieren
-
-Images und Agents:
-  image ls|build|pull|push      Docker-Images verwalten
-  agent ls                      Laufende Agents auf diesem Host anzeigen
-  agent-node ls|status|register Cluster-Agent-Hosts verwalten
-  faas ls|node|disable|mode     Generierte FaaS-Backends verwalten (Dienste / Nodes)
-  ingress <Befehl>              Docker-basiertes edge-nginx Ingress verwalten
-  uninstall --yes               Deployment stoppen; Konfiguration und data root behalten
-
-Beispiele:
-  myapp-ctl status
-  myapp-ctl update
-  myapp-ctl deploy --pull
-  myapp-ctl deploy --group core --build
-  myapp-ctl log backend -f -n 120
-  myapp-ctl config lang de
-
-Hilfe zu Befehlen:
-  myapp-ctl <Befehl> --help
-""",
-        "es": """Consola de control del backend MyApp
-
-Uso:
-  myapp-ctl <comando> [opciones]
-  myapp-ctl --lang es <comando> [opciones]
-
-Comandos comunes:
-  status [service]              Muestra el estado de servicios
-  deploy [all|service|group]    Despliega todo, un componente o un grupo
-  update                        Hace git pull y actualiza myapp-ctl
-  log <service> [-f]            Muestra logs del servicio
-  restart [service|group]       Reinicia un componente o grupo
-  client-env [--terminal-qr]    Genera JSON de entorno del cliente y QR
-
-Configuracion y secretos:
-  setup                         Configuracion inicial de AI/SMTP/push
-  secret ls|get|set|generate    Gestiona secretos locales del host
-  config view|export|import     Ver, respaldar o restaurar config de ctl
-  config lang <zh|en|de|es>     Cambia el idioma del CLI
-  domain ls|set|rm              Gestiona dominios de servicios
-  registry upstream <url>       Configurar mirror upstream de App Registry
-
-Imagenes y agentes:
-  image ls|build|pull|push      Gestiona imagenes Docker
-  agent ls                      Consulta agents activos en este host
-  agent-node ls|status|register Gestiona hosts agent del cluster
-  faas ls|node|disable|mode     Gestiona backends FaaS generados (servicios / nodos)
-  ingress <comando>             Gestiona ingress edge-nginx basado en Docker
-  uninstall --yes               Detiene el despliegue; conserva configuracion y data root
-
-Ejemplos:
-  myapp-ctl status
-  myapp-ctl update
-  myapp-ctl deploy --pull
-  myapp-ctl deploy --group core --build
-  myapp-ctl log backend -f -n 120
-  myapp-ctl config lang es
-
-Ayuda de un comando:
-  myapp-ctl <comando> --help
-""",
+        "zh": "MyApp 后端控制台\n\n用法:\n  myapp-ctl <命令> [参数]\n  myapp-ctl --lang zh <命令> [参数]\n\n常用命令:\n  status [service]              查看所有服务或单个服务状态\n  deploy [all|service|group]    部署全部、某个组件或某个分组\n  update                        从 Git 仓库拉取最新代码并刷新 myapp-ctl\n  log <service> [-f]            查看服务日志\n  restart [service|group]       重启组件或分组\n  client-env [--terminal-qr]    生成客户端环境 JSON 和二维码\n\n配置与密钥:\n  setup                         首次交互配置 AI/SMTP/推送等\n  secret ls|get|set|generate    管理本机密钥文件\n  config view|export|import     查看、备份、恢复 ctl 配置\n  config lang <zh|en|de|es|fr|pt|ca|hi|ko|ja|it>     切换 CLI 语言\n  domain ls|set|rm              管理服务域名覆盖\n  registry upstream <url>       配置 App Registry 上游回源仓库\n\n镜像与 Agent:\n  image ls|build|pull|push      管理 Docker 镜像\n  agent ls                      查看当前机器正在运行的 Agent\n  agent-node ls|status|register 管理集群 Agent 物理节点\n  faas ls|node|disable|mode     管理 AI 生成的 FaaS 后端（服务 / 节点）\n  ingress <命令>                管理 Docker 化 edge-nginx 入口\n  uninstall --yes               停止部署；保留配置和 data root 数据\n\n示例:\n  myapp-ctl status\n  myapp-ctl update\n  myapp-ctl deploy --pull\n  myapp-ctl deploy --group core --build\n  myapp-ctl log backend -f -n 120\n  myapp-ctl config lang zh\n\n查看命令详情:\n  myapp-ctl <命令> --help\n",
+        "en": "MyApp backend control console\n\nUsage:\n  myapp-ctl <command> [options]\n  myapp-ctl --lang en <command> [options]\n\nCommon commands:\n  status [service]              Show all service status or one service\n  deploy [all|service|group]    Deploy all, one component, or one group\n  update                        Pull latest Git source and refresh myapp-ctl\n  log <service> [-f]            Show service logs\n  restart [service|group]       Restart a component or group\n  client-env [--terminal-qr]    Generate client environment JSON and QR\n\nConfiguration and secrets:\n  setup                         First-run AI/SMTP/push setup wizard\n  secret ls|get|set|generate    Manage host-local secret files\n  config view|export|import     View, back up, or restore ctl config\n  config lang <zh|en|de|es|fr|pt|ca|hi|ko|ja|it>     Change CLI language\n  domain ls|set|rm              Manage service domain overrides\n  registry upstream <url>       Configure App Registry upstream mirror\n\nImages and agents:\n  image ls|build|pull|push      Manage Docker images\n  agent ls                      Inspect running agents on this host\n  agent-node ls|status|register Manage cluster agent hosts\n  faas ls|node|disable|mode     Manage generated FaaS backends (services / nodes)\n  ingress <command>             Manage Docker-based edge-nginx ingress\n  uninstall --yes               Stop deployment; preserve config and data root\n\nExamples:\n  myapp-ctl status\n  myapp-ctl update\n  myapp-ctl deploy --pull\n  myapp-ctl deploy --group core --build\n  myapp-ctl log backend -f -n 120\n  myapp-ctl config lang en\n\nCommand help:\n  myapp-ctl <command> --help\n",
+        "de": "MyApp Backend-Steuerkonsole\n\nVerwendung:\n  myapp-ctl <Befehl> [Optionen]\n  myapp-ctl --lang de <Befehl> [Optionen]\n\nWichtige Befehle:\n  status [service]              Status aller Dienste oder eines Dienstes\n  deploy [all|service|group]    Alles, eine Komponente oder Gruppe deployen\n  update                        Neueste Git-Quelle holen und myapp-ctl aktualisieren\n  log <service> [-f]            Dienst-Logs anzeigen\n  restart [service|group]       Komponente oder Gruppe neu starten\n  client-env [--terminal-qr]    Client-Umgebungs-JSON und QR erzeugen\n\nKonfiguration und Secrets:\n  setup                         Ersteinrichtung fuer AI/SMTP/Push\n  secret ls|get|set|generate    Host-lokale Secret-Dateien verwalten\n  config view|export|import     ctl-Konfiguration anzeigen/sichern/wiederherstellen\n  config lang <zh|en|de|es|fr|pt|ca|hi|ko|ja|it>     CLI-Sprache wechseln\n  domain ls|set|rm              Domain-Overrides verwalten\n  registry upstream <url>       App-Registry Upstream-Mirror konfigurieren\n\nImages und Agents:\n  image ls|build|pull|push      Docker-Images verwalten\n  agent ls                      Laufende Agents auf diesem Host anzeigen\n  agent-node ls|status|register Cluster-Agent-Hosts verwalten\n  faas ls|node|disable|mode     Generierte FaaS-Backends verwalten (Dienste / Nodes)\n  ingress <Befehl>              Docker-basiertes edge-nginx Ingress verwalten\n  uninstall --yes               Deployment stoppen; Konfiguration und data root behalten\n\nBeispiele:\n  myapp-ctl status\n  myapp-ctl update\n  myapp-ctl deploy --pull\n  myapp-ctl deploy --group core --build\n  myapp-ctl log backend -f -n 120\n  myapp-ctl config lang de\n\nHilfe zu Befehlen:\n  myapp-ctl <Befehl> --help\n",
+        "es": "Consola de control del backend MyApp\n\nUso:\n  myapp-ctl <comando> [opciones]\n  myapp-ctl --lang es <comando> [opciones]\n\nComandos comunes:\n  status [service]              Muestra el estado de servicios\n  deploy [all|service|group]    Despliega todo, un componente o un grupo\n  update                        Hace git pull y actualiza myapp-ctl\n  log <service> [-f]            Muestra logs del servicio\n  restart [service|group]       Reinicia un componente o grupo\n  client-env [--terminal-qr]    Genera JSON de entorno del cliente y QR\n\nConfiguracion y secretos:\n  setup                         Configuracion inicial de AI/SMTP/push\n  secret ls|get|set|generate    Gestiona secretos locales del host\n  config view|export|import     Ver, respaldar o restaurar config de ctl\n  config lang <zh|en|de|es|fr|pt|ca|hi|ko|ja|it>     Cambia el idioma del CLI\n  domain ls|set|rm              Gestiona dominios de servicios\n  registry upstream <url>       Configurar mirror upstream de App Registry\n\nImagenes y agentes:\n  image ls|build|pull|push      Gestiona imagenes Docker\n  agent ls                      Consulta agents activos en este host\n  agent-node ls|status|register Gestiona hosts agent del cluster\n  faas ls|node|disable|mode     Gestiona backends FaaS generados (servicios / nodos)\n  ingress <comando>             Gestiona ingress edge-nginx basado en Docker\n  uninstall --yes               Detiene el despliegue; conserva configuracion y data root\n\nEjemplos:\n  myapp-ctl status\n  myapp-ctl update\n  myapp-ctl deploy --pull\n  myapp-ctl deploy --group core --build\n  myapp-ctl log backend -f -n 120\n  myapp-ctl config lang es\n\nAyuda de un comando:\n  myapp-ctl <comando> --help\n",
+        "fr": "Console de contrôle backend MyApp\n\nUtilisation :\n  myapp-ctl <command> [options]\n  myapp-ctl --lang en <command> [options]\n\nCommandes courantes :\n  status [service]              Afficher l'état de tous les services ou d'un service\n  deploy [all|service|group]    Déployer tout, un composant ou un groupe\n  update                        Récupérer la dernière source Git et actualiser myapp-ctl\n  log <service> [-f]            Afficher les journaux d'un service\n  restart [service|group]       Redémarrer un composant ou un groupe\n  client-env [--terminal-qr]    Générer le JSON d'environnement client et le QR\n\nConfiguration et secrets :\n  setup                         Assistant de configuration AI/SMTP/push au premier lancement\n  secret ls|get|set|generate    Gérer les fichiers de secrets locaux\n  config view|export|import     Afficher, sauvegarder ou restaurer la config ctl\n  config lang <zh|en|de|es|fr|pt|ca|hi|ko|ja|it>     Changer la langue du CLI\n  domain ls|set|rm              Gérer les surcharges de domaine de service\n  registry upstream <url>       Configurer le miroir amont du App Registry\n\nImages et agents :\n  image ls|build|pull|push      Gérer les images Docker\n  agent ls                      Inspecter les agents en cours sur cet hôte\n  agent-node ls|status|register Gérer les hôtes agents du cluster\n  faas ls|node|disable|mode     Gérer les backends FaaS générés (services / nœuds)\n  ingress <command>             Gérer l'ingress edge-nginx basé sur Docker\n  uninstall --yes               Arrêter le déploiement ; conserver la config et la racine de données\n\nExemples :\n  myapp-ctl status\n  myapp-ctl update\n  myapp-ctl deploy --pull\n  myapp-ctl deploy --group core --build\n  myapp-ctl log backend -f -n 120\n  myapp-ctl config lang en\n\nAide des commandes :\n  myapp-ctl <command> --help\n",
+        "pt": "Consola de controlo do backend MyApp\n\nUtilização:\n  myapp-ctl <command> [options]\n  myapp-ctl --lang en <command> [options]\n\nComandos comuns:\n  status [service]              Mostrar o estado de todos os serviços ou de um serviço\n  deploy [all|service|group]    Implementar tudo, um componente ou um grupo\n  update                        Obter a fonte Git mais recente e atualizar o myapp-ctl\n  log <service> [-f]            Mostrar os registos do serviço\n  restart [service|group]       Reiniciar um componente ou grupo\n  client-env [--terminal-qr]    Gerar o JSON de ambiente do cliente e o QR\n\nConfiguração e segredos:\n  setup                         Assistente de configuração AI/SMTP/push na primeira execução\n  secret ls|get|set|generate    Gerir os ficheiros de segredos locais\n  config view|export|import     Ver, fazer cópia ou restaurar a config do ctl\n  config lang <zh|en|de|es|fr|pt|ca|hi|ko|ja|it>     Alterar o idioma do CLI\n  domain ls|set|rm              Gerir substituições de domínio de serviço\n  registry upstream <url>       Configurar o espelho a montante do App Registry\n\nImagens e agentes:\n  image ls|build|pull|push      Gerir imagens Docker\n  agent ls                      Inspecionar os agentes em execução neste anfitrião\n  agent-node ls|status|register Gerir os anfitriões de agentes do cluster\n  faas ls|node|disable|mode     Gerir os backends FaaS gerados (serviços / nós)\n  ingress <command>             Gerir o ingress edge-nginx baseado em Docker\n  uninstall --yes               Parar a implementação; preservar a config e a raiz de dados\n\nExemplos:\n  myapp-ctl status\n  myapp-ctl update\n  myapp-ctl deploy --pull\n  myapp-ctl deploy --group core --build\n  myapp-ctl log backend -f -n 120\n  myapp-ctl config lang en\n\nAjuda dos comandos:\n  myapp-ctl <command> --help\n",
+        "ca": "Consola de control del backend de MyApp\n\nÚs:\n  myapp-ctl <command> [options]\n  myapp-ctl --lang en <command> [options]\n\nOrdres habituals:\n  status [service]              Mostra l'estat de tots els serveis o d'un servei\n  deploy [all|service|group]    Desplega-ho tot, un component o un grup\n  update                        Obté la darrera font de Git i actualitza myapp-ctl\n  log <service> [-f]            Mostra els registres del servei\n  restart [service|group]       Reinicia un component o grup\n  client-env [--terminal-qr]    Genera el JSON d'entorn del client i el QR\n\nConfiguració i secrets:\n  setup                         Assistent de configuració AI/SMTP/push a la primera execució\n  secret ls|get|set|generate    Gestiona els fitxers de secrets locals\n  config view|export|import     Mostra, fes còpia o restaura la config de ctl\n  config lang <zh|en|de|es|fr|pt|ca|hi|ko|ja|it>     Canvia l'idioma del CLI\n  domain ls|set|rm              Gestiona les substitucions de domini de servei\n  registry upstream <url>       Configura el mirall amunt de l'App Registry\n\nImatges i agents:\n  image ls|build|pull|push      Gestiona les imatges de Docker\n  agent ls                      Inspecciona els agents en execució en aquest amfitrió\n  agent-node ls|status|register Gestiona els amfitrions d'agents del clúster\n  faas ls|node|disable|mode     Gestiona els backends FaaS generats (serveis / nodes)\n  ingress <command>             Gestiona l'ingress edge-nginx basat en Docker\n  uninstall --yes               Atura el desplegament; conserva la config i l'arrel de dades\n\nExemples:\n  myapp-ctl status\n  myapp-ctl update\n  myapp-ctl deploy --pull\n  myapp-ctl deploy --group core --build\n  myapp-ctl log backend -f -n 120\n  myapp-ctl config lang en\n\nAjuda de les ordres:\n  myapp-ctl <command> --help\n",
+        "hi": "MyApp बैकएंड कंट्रोल कंसोल\n\nउपयोग:\n  myapp-ctl <command> [options]\n  myapp-ctl --lang en <command> [options]\n\nसामान्य कमांड:\n  status [service]              सभी सेवाओं या एक सेवा की स्थिति दिखाएँ\n  deploy [all|service|group]    सब कुछ, एक कंपोनेंट, या एक ग्रुप डिप्लॉय करें\n  update                        नवीनतम Git स्रोत खींचें और myapp-ctl रिफ़्रेश करें\n  log <service> [-f]            सेवा के लॉग दिखाएँ\n  restart [service|group]       कंपोनेंट या ग्रुप रीस्टार्ट करें\n  client-env [--terminal-qr]    क्लाइंट एनवायरनमेंट JSON और QR जनरेट करें\n\nकॉन्फ़िगरेशन और secrets:\n  setup                         पहली बार चलने पर AI/SMTP/push सेटअप विज़ार्ड\n  secret ls|get|set|generate    होस्ट-लोकल secret फ़ाइलें प्रबंधित करें\n  config view|export|import     ctl कॉन्फ़िग देखें, बैकअप करें या पुनर्स्थापित करें\n  config lang <zh|en|de|es|fr|pt|ca|hi|ko|ja|it>     CLI भाषा बदलें\n  domain ls|set|rm              सेवा डोमेन ओवरराइड प्रबंधित करें\n  registry upstream <url>       App Registry अपस्ट्रीम मिरर कॉन्फ़िगर करें\n\nImages और agents:\n  image ls|build|pull|push      Docker इमेज प्रबंधित करें\n  agent ls                      इस होस्ट पर चल रहे agents का निरीक्षण करें\n  agent-node ls|status|register क्लस्टर agent होस्ट प्रबंधित करें\n  faas ls|node|disable|mode     जनरेट किए गए FaaS बैकएंड प्रबंधित करें (services / nodes)\n  ingress <command>             Docker-आधारित edge-nginx ingress प्रबंधित करें\n  uninstall --yes               डिप्लॉयमेंट रोकें; कॉन्फ़िग और डेटा रूट सुरक्षित रखें\n\nउदाहरण:\n  myapp-ctl status\n  myapp-ctl update\n  myapp-ctl deploy --pull\n  myapp-ctl deploy --group core --build\n  myapp-ctl log backend -f -n 120\n  myapp-ctl config lang en\n\nकमांड सहायता:\n  myapp-ctl <command> --help\n",
+        "ko": "MyApp 백엔드 제어 콘솔\n\n사용법:\n  myapp-ctl <command> [options]\n  myapp-ctl --lang en <command> [options]\n\n일반 명령:\n  status [service]              모든 서비스 또는 단일 서비스 상태 표시\n  deploy [all|service|group]    전체, 단일 컴포넌트 또는 단일 그룹 배포\n  update                        최신 Git 소스를 받아 myapp-ctl 갱신\n  log <service> [-f]            서비스 로그 표시\n  restart [service|group]       컴포넌트 또는 그룹 재시작\n  client-env [--terminal-qr]    클라이언트 환경 JSON과 QR 생성\n\n구성 및 secrets:\n  setup                         최초 실행 시 AI/SMTP/push 설정 마법사\n  secret ls|get|set|generate    호스트 로컬 secret 파일 관리\n  config view|export|import     ctl 설정 보기, 백업 또는 복원\n  config lang <zh|en|de|es|fr|pt|ca|hi|ko|ja|it>     CLI 언어 변경\n  domain ls|set|rm              서비스 도메인 재정의 관리\n  registry upstream <url>       App Registry 업스트림 미러 구성\n\n이미지 및 에이전트:\n  image ls|build|pull|push      Docker 이미지 관리\n  agent ls                      이 호스트에서 실행 중인 에이전트 검사\n  agent-node ls|status|register 클러스터 에이전트 호스트 관리\n  faas ls|node|disable|mode     생성된 FaaS 백엔드 관리 (services / nodes)\n  ingress <command>             Docker 기반 edge-nginx ingress 관리\n  uninstall --yes               배포 중지. 설정과 데이터 루트는 보존\n\n예시:\n  myapp-ctl status\n  myapp-ctl update\n  myapp-ctl deploy --pull\n  myapp-ctl deploy --group core --build\n  myapp-ctl log backend -f -n 120\n  myapp-ctl config lang en\n\n명령 도움말:\n  myapp-ctl <command> --help\n",
+        "ja": "MyApp バックエンド制御コンソール\n\n使い方:\n  myapp-ctl <command> [options]\n  myapp-ctl --lang en <command> [options]\n\n一般的なコマンド:\n  status [service]              すべてのサービスまたは単一サービスの状態を表示\n  deploy [all|service|group]    全体、単一コンポーネント、または単一グループをデプロイ\n  update                        最新の Git ソースを取得して myapp-ctl を更新\n  log <service> [-f]            サービスのログを表示\n  restart [service|group]       コンポーネントまたはグループを再起動\n  client-env [--terminal-qr]    クライアント環境 JSON と QR を生成\n\n設定と secrets:\n  setup                         初回実行時の AI/SMTP/push セットアップウィザード\n  secret ls|get|set|generate    ホストローカルの secret ファイルを管理\n  config view|export|import     ctl 設定の表示、バックアップ、復元\n  config lang <zh|en|de|es|fr|pt|ca|hi|ko|ja|it>     CLI の言語を変更\n  domain ls|set|rm              サービスドメインの上書きを管理\n  registry upstream <url>       App Registry アップストリームミラーを構成\n\nイメージとエージェント:\n  image ls|build|pull|push      Docker イメージを管理\n  agent ls                      このホストで実行中のエージェントを確認\n  agent-node ls|status|register クラスターのエージェントホストを管理\n  faas ls|node|disable|mode     生成された FaaS バックエンドを管理 (services / nodes)\n  ingress <command>             Docker ベースの edge-nginx ingress を管理\n  uninstall --yes               デプロイを停止。設定とデータルートは保持\n\n例:\n  myapp-ctl status\n  myapp-ctl update\n  myapp-ctl deploy --pull\n  myapp-ctl deploy --group core --build\n  myapp-ctl log backend -f -n 120\n  myapp-ctl config lang en\n\nコマンドのヘルプ:\n  myapp-ctl <command> --help\n",
+        "it": "Console di controllo del backend MyApp\n\nUso:\n  myapp-ctl <command> [options]\n  myapp-ctl --lang en <command> [options]\n\nComandi comuni:\n  status [service]              Mostra lo stato di tutti i servizi o di un servizio\n  deploy [all|service|group]    Distribuisci tutto, un componente o un gruppo\n  update                        Scarica l'ultima sorgente Git e aggiorna myapp-ctl\n  log <service> [-f]            Mostra i log del servizio\n  restart [service|group]       Riavvia un componente o gruppo\n  client-env [--terminal-qr]    Genera il JSON dell'ambiente client e il QR\n\nConfigurazione e secrets:\n  setup                         Procedura guidata AI/SMTP/push al primo avvio\n  secret ls|get|set|generate    Gestisci i file di secret locali dell'host\n  config view|export|import     Visualizza, esegui il backup o ripristina la config di ctl\n  config lang <zh|en|de|es|fr|pt|ca|hi|ko|ja|it>     Cambia la lingua del CLI\n  domain ls|set|rm              Gestisci le sostituzioni di dominio dei servizi\n  registry upstream <url>       Configura il mirror upstream dell'App Registry\n\nImmagini e agenti:\n  image ls|build|pull|push      Gestisci le immagini Docker\n  agent ls                      Ispeziona gli agenti in esecuzione su questo host\n  agent-node ls|status|register Gestisci gli host agente del cluster\n  faas ls|node|disable|mode     Gestisci i backend FaaS generati (services / nodes)\n  ingress <command>             Gestisci l'ingress edge-nginx basato su Docker\n  uninstall --yes               Arresta la distribuzione; conserva config e root dei dati\n\nEsempi:\n  myapp-ctl status\n  myapp-ctl update\n  myapp-ctl deploy --pull\n  myapp-ctl deploy --group core --build\n  myapp-ctl log backend -f -n 120\n  myapp-ctl config lang en\n\nGuida ai comandi:\n  myapp-ctl <command> --help\n",
     },
     "update_running": {
         "zh": "更新 myapp-ctl：{source}",
         "en": "Updating myapp-ctl: {source}",
         "de": "Aktualisiere myapp-ctl: {source}",
         "es": "Actualizando myapp-ctl: {source}",
+        "fr": "Mise à jour de myapp-ctl : {source}",
+        "pt": "A atualizar o myapp-ctl: {source}",
+        "ca": "Actualitzant myapp-ctl: {source}",
+        "hi": "myapp-ctl अपडेट हो रहा है: {source}",
+        "ko": "myapp-ctl 업데이트 중: {source}",
+        "ja": "myapp-ctl を更新中: {source}",
+        "it": "Aggiornamento di myapp-ctl: {source}",
     },
     "update_done": {
         "zh": "myapp-ctl 已更新",
         "en": "myapp-ctl updated",
         "de": "myapp-ctl aktualisiert",
         "es": "myapp-ctl actualizado",
+        "fr": "myapp-ctl mis à jour",
+        "pt": "myapp-ctl atualizado",
+        "ca": "myapp-ctl actualitzat",
+        "hi": "myapp-ctl अपडेट किया गया",
+        "ko": "myapp-ctl 업데이트됨",
+        "ja": "myapp-ctl を更新しました",
+        "it": "myapp-ctl aggiornato",
     },
     "update_missing_source": {
         "zh": "找不到源码目录: {source}",
         "en": "source directory not found: {source}",
         "de": "Quellverzeichnis nicht gefunden: {source}",
         "es": "directorio de codigo no encontrado: {source}",
+        "fr": "répertoire source introuvable : {source}",
+        "pt": "diretório de origem não encontrado: {source}",
+        "ca": "directori d'origen no trobat: {source}",
+        "hi": "स्रोत निर्देशिका नहीं मिली: {source}",
+        "ko": "소스 디렉터리를 찾을 수 없습니다: {source}",
+        "ja": "ソースディレクトリが見つかりません: {source}",
+        "it": "directory di origine non trovata: {source}",
     },
     "update_missing_install": {
         "zh": "找不到安装脚本: {path}",
         "en": "install script not found: {path}",
         "de": "Installationsskript nicht gefunden: {path}",
         "es": "script de instalacion no encontrado: {path}",
+        "fr": "script d'installation introuvable : {path}",
+        "pt": "script de instalação não encontrado: {path}",
+        "ca": "script d'instal·lació no trobat: {path}",
+        "hi": "इंस्टॉल स्क्रिप्ट नहीं मिली: {path}",
+        "ko": "설치 스크립트를 찾을 수 없습니다: {path}",
+        "ja": "インストールスクリプトが見つかりません: {path}",
+        "it": "script di installazione non trovato: {path}",
     },
 }
 
@@ -4439,7 +4615,7 @@ def cmd_config(args) -> int:
             return 0
         lang = _normalize_lang(args.language)
         if not lang:
-            print("language must be one of: zh, en, de, es", file=sys.stderr)
+            print("language must be one of: zh, en, de, es, fr, pt, ca, hi, ko, ja, it", file=sys.stderr)
             return 2
         cfg = _cfg()
         _write_language_preference(lang, cfg)
@@ -7058,10 +7234,10 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["zh", "en", "de", "es"],
         metavar="LANG",
         help=_tx(
-            "override CLI language for this command: zh, en, de, es",
-            zh="覆盖本次命令语言: zh, en, de, es",
-            de="CLI-Sprache fuer diesen Befehl setzen: zh, en, de, es",
-            es="cambiar el idioma de este comando: zh, en, de, es",
+            "override CLI language for this command: zh, en, de, es, fr, pt, ca, hi, ko, ja, it",
+            zh="覆盖本次命令语言: zh, en, de, es, fr, pt, ca, hi, ko, ja, it",
+            de="CLI-Sprache fuer diesen Befehl setzen: zh, en, de, es, fr, pt, ca, hi, ko, ja, it",
+            es="cambiar el idioma de este comando: zh, en, de, es, fr, pt, ca, hi, ko, ja, it",
         ),
     )
     sub = _add_subcommands(parser, "cmd", required=False)
@@ -7254,7 +7430,7 @@ def build_parser() -> argparse.ArgumentParser:
     config_import.add_argument("path", help=_tx("bundle created by myapp-ctl config export", zh="由 myapp-ctl config export 创建的配置包", de="Bundle von myapp-ctl config export", es="paquete creado por myapp-ctl config export"))
     config_import.add_argument("--yes", action="store_true", help=_tx("confirm overwriting local config and secrets", zh="确认覆盖本地配置和密钥", de="Ueberschreiben lokaler Konfiguration und Secrets bestaetigen", es="confirmar sobrescritura de config y secretos locales"))
     config_import.set_defaults(func=cmd_config)
-    config_lang = config_sub.add_parser("lang", help=_tx("view or set CLI language", zh="查看或设置 CLI 语言", de="CLI-Sprache anzeigen oder setzen", es="ver o establecer idioma del CLI"), usage=_tx("myapp-ctl config lang [zh|en|de|es]", zh="myapp-ctl config lang [zh|en|de|es]", de="myapp-ctl config lang [zh|en|de|es]", es="myapp-ctl config lang [zh|en|de|es]"))
+    config_lang = config_sub.add_parser("lang", help=_tx("view or set CLI language", zh="查看或设置 CLI 语言", de="CLI-Sprache anzeigen oder setzen", es="ver o establecer idioma del CLI"), usage=_tx("myapp-ctl config lang [zh|en|de|es|fr|pt|ca|hi|ko|ja|it]", zh="myapp-ctl config lang [zh|en|de|es|fr|pt|ca|hi|ko|ja|it]", de="myapp-ctl config lang [zh|en|de|es|fr|pt|ca|hi|ko|ja|it]", es="myapp-ctl config lang [zh|en|de|es|fr|pt|ca|hi|ko|ja|it]"))
     config_lang.add_argument("language", nargs="?", help=_tx("zh, en, de, or es", zh="zh、en、de 或 es", de="zh, en, de oder es", es="zh, en, de o es"))
     config_lang.set_defaults(func=cmd_config)
     domain = sub.add_parser("domain", help=_tx("manage service domain overrides", zh="管理服务域名覆盖", de="Dienst-Domain-Overrides verwalten", es="gestionar overrides de dominio de servicios"), usage=_tx("myapp-ctl domain <command> [args]", zh="myapp-ctl domain <命令> [参数]", de="myapp-ctl domain <Befehl> [Argumente]", es="myapp-ctl domain <comando> [args]"))

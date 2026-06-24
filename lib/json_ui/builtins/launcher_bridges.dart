@@ -440,14 +440,16 @@ class LauncherBridges {
   // 框架 UI 不会跟着切。launcher 替代了原生主页，用户在 launcher 设置里切
   // "Deutsch" 期望整个 app（包括框架 UI）一起切，所以另开一对桥接：
 
-  /// @get_framework_locale → 'zh'/'en'/'de'/'es' 或 'system'（跟随系统时）
+  /// @get_framework_locale → 'zh'/'en'/'de'/'es'/'fr'/'pt'/'ca'/'hi'/'ko'/'ja'/'it'
+  /// 或 'system'（跟随系统时）
   static String _getFrameworkLocale() {
     final v = appLocale.value;
     if (v == null) return 'system';
     return v.languageCode;
   }
 
-  /// @set_framework_locale({value: 'zh'|'en'|'de'|'es'|'system'}) → bool
+  /// @set_framework_locale({value: 'zh'|'en'|'de'|'es'|'fr'|'pt'|'ca'|'hi'|'ko'|'ja'|'it'|'system'}) → bool
+  /// （value 接受任意框架支持的语言简码，见 framework_strings.dart 的 supportedLocales）
   /// 同步 LocaleController.setLocale + interpreter.global.locale，
   /// MaterialApp 跟着 appLocale 重建，JSON-APP 模板 {{ t('xxx') }} 也跟着切。
   static Future<bool> _setFrameworkLocale(

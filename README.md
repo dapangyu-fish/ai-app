@@ -135,7 +135,8 @@ permissions. The full deployment and `myapp-ctl` command reference is
 [`deploy/production/README.md`](deploy/production/README.md).
 
 The first interactive `myapp-ctl` run asks for a CLI language once (`zh`, `en`,
-`de`, `es`); later changes use `myapp-ctl config lang <lang>`. The setup wizard
+`de`, `es`, `fr`, `pt`, `ca`, `hi`, `ko`, `ja`, `it`); later changes use
+`myapp-ctl config lang <lang>`. The setup wizard
 asks for AI provider credentials and optional ASR, SMTP email, APNs, FCM, and
 GeTui config. A full deploy prints the client environment JSON and QR, and can
 create/update an interactive `test@example.com` test account; rerun

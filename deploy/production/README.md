@@ -536,7 +536,7 @@ myapp-ctl secret rm <group> KEY [KEY2 ...]
 myapp-ctl config view [--show-secrets]
 myapp-ctl config export --out <path.json|path.yaml> [--redacted]
 myapp-ctl config import <path.json|path.yaml> --yes
-myapp-ctl config lang [zh|en|de|es]
+myapp-ctl config lang [zh|en|de|es|fr|pt|ca|hi|ko|ja|it]
 myapp-ctl domain ls
 myapp-ctl domain set <name> <url>
 myapp-ctl domain rm <name>
