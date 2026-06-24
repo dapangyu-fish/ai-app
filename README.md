@@ -1,8 +1,8 @@
 # MyApp
 
-> **AI describe → server-driven mobile app → instantly running on user's phone.**
+> **AI describe → full-stack app (UI + backend + database) → instantly running on user's phone. No build step, no app-store review.**
 >
-> A Flutter runtime that interprets JSON-DSL into native UI + business logic. Users tell AI what they want, AI emits JSON, and the app renders it inside a precompiled capability set.
+> A Flutter runtime that interprets JSON-DSL into native UI + business logic. Users tell AI what they want; AI emits the JSON front-end **and, when the app needs one, a real Python/Flask backend with its own isolated Postgres database** — then it renders and runs instantly inside a precompiled capability set. Other AI app builders hand you front-end code to wire up and deploy yourself; MyApp ships the whole stack, already running.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
@@ -17,7 +17,7 @@
 Three things in one repo:
 
 1. **A Flutter Server-Driven UI engine** (`lib/`) — renders any JSON-DSL config into a real cross-platform app at runtime
-2. **A Python backend stack** (`backend/`, `user_center/`, `config_center/`) — auth (Supabase), IM (OpenIM), push (APNs + FCM), AI chat proxy, package registry, user admin
+2. **A full-stack AI generator** (`backend/`, `user_center/`, `config_center/`) — AI generates the JSON front-end **and a matching FaaS backend + isolated Postgres database** when the app needs one, on top of auth (Supabase), IM (OpenIM), push (APNs + FCM), AI chat proxy, package registry, and user admin
 3. **A package ecosystem** (`templates/`) — example JSON-APPs (IM, games, user profile, calculator…) you can install on top of the runtime
 
 The name **MyApp** is intentional: each user can create, install, and operate "my app" on top of the shared runtime.
@@ -66,6 +66,7 @@ Most JSON-DSL apps work across all platforms. Platform-specific features gracefu
 
 ## Why is this interesting?
 
+- **Full-stack in one shot — the differentiator.** Most AI app builders (v0, Lovable, Bolt, …) generate *front-end* code that you still have to wire to a backend and deploy yourself. MyApp generates the front-end **and** a real Python/Flask FaaS backend — each with its own isolated Postgres database, per-app permission model, and per-caller data isolation — then runs the whole thing instantly. No separate backend project, no deploy step, no store submission.
 - **Server-driven** — ship UI and behavior data through a fixed, precompiled runtime boundary. See [App Store compliance notes](docs/APP_STORE_COMPLIANCE.md).
 - **AI-native** — the DSL is designed to be LLM-friendly. The included AI chat (Claude / DeepSeek / MiniMax) generates apps that actually render.
 - **Batteries included** — IM with push, AI proxy, package registry, namespaces, mirroring, user center, environment switching — all wired together. Not "yet another low-code framework that punts on auth".
@@ -308,6 +309,7 @@ Drop this through the AI generation flow, or `flutter run` and pick the JSON fil
 - Per-app authorization gate for sensitive capabilities (auth token, profile)
 
 ### Backend
+- **AI-generated FaaS full-stack** — AI emits a validated Python/Flask backend per "service group" (1 function service + optional Postgres DB), deployed to a self-managed Docker FaaS runtime (one container per service, scale-to-zero + cold-wake). Per-app schema isolation, unforgeable in-group pseudonymous identity, backend-mediated per-caller data access (function code never holds a DB connection), container hardening, and a revocable 3-tier access policy.
 - Supabase auth integration
 - AI chat with provider-scoped queues and isolated agent execution (Claude-compatible providers / DeepSeek / MiniMax)
 - Channel-agnostic push (APNs + FCM, easy to add more)
