@@ -1,0 +1,9 @@
+{"status": "init", "message": "status.ai_engine_started"}
+{"status": "running", "message": "AI 已开始生成…"}
+{"thinking": "番茄钟是纯前端计时应用，不需要后端/FaaS。"}
+{"content": "我来做一个纯前端番茄钟，25 分钟倒计时 + 开始/暂停/重置。\n"}
+{"status": "command_execution", "message": "生成前端 JSON-DSL 与计时逻辑…"}
+{"status": "repairing", "message": "校验并修复 JSON…"}
+{"content": "\n番茄钟已生成，纯前端运行，无需后端。"}
+{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/pomodoro.json"}}
+{"_demo_final": {"final_text": "番茄钟已生成 ✅ 点击下方按钮即可运行。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/pomodoro.json"}]}}

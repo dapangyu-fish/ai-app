@@ -1,0 +1,15 @@
+{"status": "init", "message": "status.ai_engine_started"}
+{"status": "running", "message": "AI 已开始生成…"}
+{"thinking": "用户要一个论坛/贴吧类 App：用户个人页、真实头像、讨论区（吧）、发帖、评论。"}
+{"thinking": "这是带自定义数据的社交应用，需要 FaaS 后端 + Postgres：boards / threads / posts / users 表。"}
+{"status": "tool_preparing", "message": "规划数据模型与页面结构…"}
+{"content": "我来帮你创建一个论坛类 App，包含吧列表、帖子、楼层评论和个人主页。\n"}
+{"status": "command_execution", "message": "生成 schema.sql（boards / threads / posts，含 owner 列）…"}
+{"status": "command_execution", "message": "生成 Python/Flask FaaS 函数（发帖/评论/读取）…"}
+{"status": "command_execution", "message": "部署服务组并初始化数据库…"}
+{"client_action": {"type": "faas_service_ready", "service_id": "svc-demo-forum", "invoke_url": "/api/faas/services/svc-demo-forum/invoke"}}
+{"status": "command_execution", "message": "生成前端 JSON-DSL：吧列表 / 帖子详情 / 发帖 / 个人页…"}
+{"status": "repairing", "message": "校验并修复 JSON…"}
+{"content": "\n论坛 App 已生成：底部三个 tab（吧 / 我的），可创建讨论区、发帖、楼层评论，个人页显示头像与发帖记录。"}
+{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/forum.json"}}
+{"_demo_final": {"final_text": "论坛 App 已生成并部署完成 ✅ 点击下方按钮即可运行。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/forum.json"}]}}

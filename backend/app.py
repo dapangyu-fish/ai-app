@@ -60,6 +60,7 @@ def create_app():
     app.add_url_rule("/api/auth/verify", methods=["POST"], view_func=auth.verify_otp)
     app.add_url_rule("/api/auth/resend", methods=["POST"], view_func=auth.resend_verification)
     app.add_url_rule("/api/auth/login", methods=["POST"], view_func=auth.login)
+    app.add_url_rule("/api/auth/demo", methods=["POST"], view_func=auth.demo_login)
     app.add_url_rule("/api/auth/refresh", methods=["POST"], view_func=auth.refresh_token)
     app.add_url_rule("/api/auth/logout", methods=["POST"], view_func=auth.logout)
     app.add_url_rule("/api/auth/user", methods=["GET"], view_func=auth.get_user)

@@ -1,0 +1,70 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "demo-forum",
+    "version": "1.0.0",
+    "type": "app",
+    "displayName": {
+      "zh": "演示论坛",
+      "en": "Demo Forum"
+    }
+  },
+  "global": {
+    "variables": {
+      "boards": [
+        {
+          "name": "灌水吧",
+          "desc": "随便聊聊"
+        },
+        {
+          "name": "技术吧",
+          "desc": "代码与折腾"
+        },
+        {
+          "name": "美食吧",
+          "desc": "今天吃什么"
+        }
+      ]
+    }
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "演示论坛",
+        "children": [
+          {
+            "type": "text",
+            "value": "🎉 这是 Demo 模式生成的论坛 App",
+            "fontSize": 16,
+            "margin": 12
+          },
+          {
+            "type": "list",
+            "source": "{{ global.boards }}",
+            "item_template": {
+              "type": "container",
+              "layout": "column",
+              "padding": 12,
+              "margin": 6,
+              "children": [
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.name }}",
+                  "fontSize": 16,
+                  "fontWeight": "w600"
+                },
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.desc }}",
+                  "fontSize": 13,
+                  "color": "#888888"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "demo-pomodoro",
+    "version": "1.0.0",
+    "type": "app",
+    "displayName": {
+      "zh": "番茄钟",
+      "en": "Pomodoro"
+    }
+  },
+  "global": {
+    "variables": {
+      "minutes": 25
+    }
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "番茄钟",
+        "children": [
+          {
+            "type": "center",
+            "child": {
+              "type": "text",
+              "value": "{{ global.minutes }}:00",
+              "fontSize": 48,
+              "fontWeight": "w700"
+            }
+          },
+          {
+            "type": "text",
+            "value": "Demo 模式生成的纯前端番茄钟",
+            "fontSize": 13,
+            "color": "#888888",
+            "margin": 12
+          }
+        ]
+      }
+    ]
+  }
+}
