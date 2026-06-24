@@ -69,7 +69,7 @@ const copy = {
     phoneCaption: '真实客户端同一套运行时：Web 立即打开，移动端可接入自部署后端。',
     heroConsoleTitle: '从提示词到可运行应用',
     heroConsoleLines: [
-      '$ tell ai "生成一个露营装备打包 App"',
+      '$ tell ai "生成一个贴吧式论坛 App"',
       '→ AI builds a JSON App',
       '→ personalize the experience',
       '→ run it on Web / iOS / Android',
@@ -150,7 +150,7 @@ const copy = {
     phoneCaption: 'One real runtime across clients: open Web now, or connect mobile builds to your backend.',
     heroConsoleTitle: 'Prompt to runnable app',
     heroConsoleLines: [
-      '$ tell ai "build a camping packing app"',
+      '$ tell ai "build a forum app"',
       '→ AI builds a JSON App',
       '→ personalize the experience',
       '→ run it on Web / iOS / Android',
@@ -231,7 +231,7 @@ const copy = {
     phoneCaption: 'Web-Client-Vorschau. Für die echte Nutzung die gehostete Web-App öffnen.',
     heroConsoleTitle: 'Vom Prompt zur laufenden App',
     heroConsoleLines: [
-      '$ tell ai "build an inventory app"',
+      '$ tell ai "baue eine Forum-App"',
       '→ validate JSON DSL',
       '→ prepare config + assets',
       '→ run on Web / iOS / Android',
@@ -312,7 +312,7 @@ const copy = {
     phoneCaption: 'Vista previa del cliente Web. Abre la Web hospedada para usarlo.',
     heroConsoleTitle: 'De prompt a app ejecutable',
     heroConsoleLines: [
-      '$ tell ai "build an inventory app"',
+      '$ tell ai "crea una app de foro"',
       '→ validate JSON DSL',
       '→ prepare config + assets',
       '→ run on Web / iOS / Android',
@@ -393,7 +393,7 @@ const copy = {
     phoneCaption: 'Un seul runtime réel sur tous les clients : ouvrez le Web maintenant, ou connectez les builds mobiles à votre backend.',
     heroConsoleTitle: 'Du prompt à l\'application exécutable',
     heroConsoleLines: [
-      '$ tell ai "build a camping packing app"',
+      '$ tell ai "crée une app de forum"',
       '→ AI builds a JSON App',
       '→ personalize the experience',
       '→ run it on Web / iOS / Android',
@@ -474,7 +474,7 @@ const copy = {
     phoneCaption: 'Um único runtime real em todos os clientes: abra a Web agora, ou ligue as builds móveis ao seu backend.',
     heroConsoleTitle: 'Do prompt à aplicação executável',
     heroConsoleLines: [
-      '$ tell ai "build a camping packing app"',
+      '$ tell ai "cria uma app de fórum"',
       '→ AI builds a JSON App',
       '→ personalize the experience',
       '→ run it on Web / iOS / Android',
@@ -555,7 +555,7 @@ const copy = {
     phoneCaption: 'Un sol runtime real a tots els clients: obre el Web ara, o connecta les builds mòbils al teu backend.',
     heroConsoleTitle: 'Del prompt a l\'aplicació executable',
     heroConsoleLines: [
-      '$ tell ai "build a camping packing app"',
+      '$ tell ai "crea una app de fòrum"',
       '→ AI builds a JSON App',
       '→ personalize the experience',
       '→ run it on Web / iOS / Android',
@@ -636,7 +636,7 @@ const copy = {
     phoneCaption: 'सभी क्लाइंट पर एक ही वास्तविक रनटाइम: अभी Web खोलें, या मोबाइल बिल्ड को अपने बैकएंड से जोड़ें।',
     heroConsoleTitle: 'प्रॉम्प्ट से चलने योग्य ऐप तक',
     heroConsoleLines: [
-      '$ tell ai "build a camping packing app"',
+      '$ tell ai "एक फ़ोरम ऐप बनाओ"',
       '→ AI builds a JSON App',
       '→ personalize the experience',
       '→ run it on Web / iOS / Android',
@@ -717,7 +717,7 @@ const copy = {
     phoneCaption: '모든 클라이언트에서 하나의 실제 런타임: 지금 Web을 열거나 모바일 빌드를 백엔드에 연결하세요.',
     heroConsoleTitle: '프롬프트에서 실행 가능한 앱으로',
     heroConsoleLines: [
-      '$ tell ai "build a camping packing app"',
+      '$ tell ai "포럼 앱을 만들어줘"',
       '→ AI builds a JSON App',
       '→ personalize the experience',
       '→ run it on Web / iOS / Android',
@@ -798,7 +798,7 @@ const copy = {
     phoneCaption: 'すべてのクライアントで一つの実際のランタイム：今すぐ Web を開くか、モバイルビルドをバックエンドに接続します。',
     heroConsoleTitle: 'プロンプトから実行可能なアプリへ',
     heroConsoleLines: [
-      '$ tell ai "build a camping packing app"',
+      '$ tell ai "掲示板アプリを作って"',
       '→ AI builds a JSON App',
       '→ personalize the experience',
       '→ run it on Web / iOS / Android',
@@ -879,7 +879,7 @@ const copy = {
     phoneCaption: 'Un solo runtime reale su tutti i client: apri il Web ora, o collega le build mobile al tuo backend.',
     heroConsoleTitle: 'Dal prompt all\'app eseguibile',
     heroConsoleLines: [
-      '$ tell ai "build a camping packing app"',
+      '$ tell ai "crea una app forum"',
       '→ AI builds a JSON App',
       '→ personalize the experience',
       '→ run it on Web / iOS / Android',
