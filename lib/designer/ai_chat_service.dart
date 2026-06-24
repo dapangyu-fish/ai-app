@@ -801,6 +801,29 @@ class AiChatService {
     return fresh;
   }
 
+  /// Demo 模式：创建一个 id 固定为特殊 UUID 的会话并设为 active。
+  /// 之后正常 sendStream → _postStart 会把 body['session_id'] 设成该 UUID，
+  /// 服务端识别后走 demo 回放（不路由 agent-node、不建 FaaS）。
+  Future<SessionMeta> createDemoSession(String demoUuid) async {
+    abortLocal();
+    _aborting = false;
+    _lastEntryId = '0';
+    _sessions.removeWhere((s) => !s.committed);
+    _sessions.removeWhere((s) => s.id == demoUuid); // 同一个 demo 不堆积
+    final fresh = SessionMeta(
+      id: demoUuid,
+      providerId: _selectedProvider,
+      agentId: selectedAgentForProvider(_selectedProvider),
+      agentScope: _selectedAgentScope,
+    );
+    _sessions.add(fresh);
+    _activeSessionId = fresh.id;
+    await _syncDefaultsFromActive();
+    await _persistSessions();
+    debugPrint('[AI_CHAT] createDemoSession: sid=$demoUuid');
+    return fresh;
+  }
+
   /// 切换 active session。老流只关本地，不杀后端 worker。
   Future<void> switchToSession(String sid) async {
     if (sid == _activeSessionId) return;

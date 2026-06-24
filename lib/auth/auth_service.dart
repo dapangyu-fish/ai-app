@@ -27,11 +27,15 @@ class AuthService {
   // 上一次成功登录的 email；切账号检测的依据。
   // 复用历史上 AuthPage 用来"prefill 上次邮箱"的同名 key（值语义一致：上次登录成功的 email）。
   static const String _lastEmailKey = 'auth_last_email';
+  // Demo 模式：登录的是预置的专用假账号（真实可验证 JWT）。与 guest 不同（guest 无 token）。
+  // 退出登录或冷启动都会退出 demo。
+  static const String _demoKey = 'auth_demo_mode';
 
   static String? _accessToken;
   static String? _refreshToken;
   static Map<String, dynamic>? _user;
   static bool _guestMode = false;
+  static bool _demoMode = false;
 
   // 检测到切换账号时缓存的 pending 数据。等用户确认/取消后才落地。
   // 不变量：_pendingAuthData != null 时，prefs 里**没有**对应的 token；
@@ -58,6 +62,8 @@ class AuthService {
 
   static bool get isLoggedIn => _accessToken != null;
   static bool get isGuestMode => _guestMode && !isLoggedIn;
+  // 当前是否为 demo 会话（已用假账号登录，isLoggedIn 也为 true）。
+  static bool get isDemoMode => _demoMode;
   static Map<String, dynamic>? get currentUser {
     if (_user == null) return null;
     final u = Map<String, dynamic>.from(_user!);
@@ -80,6 +86,11 @@ class AuthService {
   /// 从本地存储恢复登录状态（App 启动时调用）
   static Future<void> restoreSession() async {
     final prefs = await SharedPreferences.getInstance();
+    // Demo 会话不跨冷启动：上次是 demo → 清掉假账号，回到登录页。
+    if (prefs.getBool(_demoKey) ?? false) {
+      await _clearLocal();
+      return;
+    }
     _guestMode = prefs.getBool(_guestKey) ?? false;
     _accessToken = prefs.getString(_tokenKey);
     _refreshToken = prefs.getString(_refreshKey);
@@ -135,9 +146,34 @@ class AuthService {
     _refreshToken = null;
     _user = null;
     _guestMode = false;
+    _demoMode = false;
     await prefs.remove(_guestKey);
+    await prefs.remove(_demoKey);
     authNotifier.value = false;
     guestNotifier.value = false;
+  }
+
+  /// Demo 模式登录：调后端 /api/auth/demo 拿到预置假账号的真实可验证 JWT，直接落地。
+  /// 绕过 _commitOrStashAuth（不触发切账号确认、不写 _lastEmailKey），标记为 demo 会话。
+  /// 退出登录（signOut）或冷启动（restoreSession）都会自动退出 demo。
+  static Future<void> enterDemoMode() async {
+    final resp = await http
+        .post(
+          Uri.parse('$_baseUrl/api/auth/demo'),
+          headers: {'Content-Type': 'application/json'},
+        )
+        .timeout(const Duration(seconds: 15));
+    final data = json.decode(resp.body);
+    if (resp.statusCode >= 400 || data['access_token'] == null) {
+      throw Exception(data['error'] ?? 'demo 模式暂不可用');
+    }
+    _accessToken = data['access_token'];
+    _refreshToken = data['refresh_token'];
+    _user = data['user'];
+    _demoMode = true;
+    await _saveLocal(); // 持久化 token/refresh/user + 翻 authNotifier=true
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_demoKey, true);
   }
 
   static Future<void> continueAsGuest() async {
@@ -376,6 +412,12 @@ class AuthService {
 
   /// 登出
   static Future<void> signOut() async {
+    // Demo 会话：跳过 APNs 注销和真实 /logout（共享假账号，登出会影响其它 demo 用户的会话），
+    // 只清本地状态即退出 demo。
+    if (_demoMode) {
+      await _clearLocal();
+      return;
+    }
     // 先注销 device token 再调 supabase logout —— supabase 那边登出会让 access_token
     // 失效，到时候我们后端 require_auth 会拒，DELETE 就来不及发了
     try {

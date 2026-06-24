@@ -1081,16 +1081,142 @@ class _DesignerBallState extends State<DesignerBall>
   // 对话模式
   // ════════════════════════════════════════════════════════
 
+  // 未登录时按住悬浮球：给两个选项 —— 请登录 / Demo 体验模式。
   void _showLoginRequired() {
-    final ctx = JsonDslApp.navigatorKey.currentContext ?? context;
-    final messenger = ScaffoldMessenger.maybeOf(ctx);
-    messenger?.hideCurrentSnackBar();
-    messenger?.showSnackBar(
-      SnackBar(
-        content: Text(T.current.chatErrPleaseLogin),
-        duration: const Duration(seconds: 2),
-      ),
+    final navContext = JsonDslApp.navigatorKey.currentContext ?? context;
+    showModalBottomSheet<void>(
+      context: navContext,
+      showDragHandle: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Text(
+                  '用 AI 创建应用',
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.login_rounded, color: cs.primary),
+                title: Text(T.current.chatErrPleaseLogin), // 请登录
+                subtitle: const Text('用真实账号创建并保存你的应用'),
+                onTap: () => Navigator.of(ctx).pop(),
+                // 未登录时 AuthGate 已经把登录页显示在底层，pop 即可看到登录表单
+              ),
+              ListTile(
+                leading: Icon(Icons.play_circle_outline, color: cs.primary),
+                title: const Text('Demo 体验模式'),
+                subtitle: const Text('免登录，点一下示例需求即可生成可运行的 App'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  unawaited(_enterDemoAndPrompt());
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  // Demo：登录预置假账号 → 进入对话模式 → 弹示例需求列表。
+  Future<void> _enterDemoAndPrompt() async {
+    final navContext = JsonDslApp.navigatorKey.currentContext ?? context;
+    try {
+      await AuthService.enterDemoMode();
+    } catch (e) {
+      ScaffoldMessenger.maybeOf(navContext)?.showSnackBar(
+        SnackBar(content: Text('Demo 模式暂不可用：$e')),
+      );
+      return;
+    }
+    await _enterChatMode(); // 此时已登录，门禁通过
+    _showDemoPromptList();
+  }
+
+  // Demo 示例需求：每条对应一个特殊 UUID，服务端识别后走预录回放。
+  // UUID 必须与后端 demo_replay.DEMO_SESSIONS 一致。
+  static const List<Map<String, String>> _demoPrompts = [
+    {
+      'uuid': '00000000-0000-0000-0000-000000000001',
+      'title': '论坛 / 贴吧类 App（全栈）',
+      'prompt':
+          '创建一个论坛类型的 App：要有用户个人页面（显示真实头像）、可以创建讨论区（类似贴吧的「吧」）、可以发帖、评论、点赞。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000002',
+      'title': '番茄钟（纯前端）',
+      'prompt': '做一个番茄钟：25 分钟倒计时，开始 / 暂停 / 重置，结束提醒。',
+    },
+  ];
+
+  void _showDemoPromptList() {
+    final navContext = JsonDslApp.navigatorKey.currentContext ?? context;
+    showModalBottomSheet<void>(
+      context: navContext,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.7,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      '选择一个示例需求（Demo）',
+                      style: Theme.of(ctx).textTheme.titleMedium,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    children: [
+                      for (final p in _demoPrompts)
+                        ListTile(
+                          leading: Icon(Icons.auto_awesome, color: cs.primary),
+                          title: Text(p['title']!),
+                          subtitle: Text(
+                            p['prompt']!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          onTap: () {
+                            Navigator.of(ctx).pop();
+                            unawaited(_fireDemoTask(p['uuid']!, p['prompt']!));
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 触发一个 demo 任务：把 active session 的 id 固定成特殊 UUID 再正常发送，
+  // 服务端据此走回放（不路由 agent-node、不建 FaaS）。
+  Future<void> _fireDemoTask(String uuid, String promptText) async {
+    await _chatService.createDemoSession(uuid);
+    _sendTextToAi(promptText);
   }
 
   Future<void> _enterChatMode() async {
@@ -1201,6 +1327,11 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   void _startListening() {
+    // Demo 模式不做语音识别，改弹示例需求列表（点一条即假装触发 AI 任务）。
+    if (AuthService.isDemoMode) {
+      _showDemoPromptList();
+      return;
+    }
     _recordStartPos = Offset(_left, _top);
     _dragCancelling = false;
     _accumulatedTranscript = ''; // 清空累积文本
