@@ -67,6 +67,7 @@ Future<void> showLanguagePicker(BuildContext context) async {
   await showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
+    isScrollControlled: true, // 11 种语言 + 系统，列表可能高于默认半屏；允许更高并滚动
     builder: (sheetCtx) {
       return SafeArea(
         child: ValueListenableBuilder<Locale?>(
@@ -94,33 +95,48 @@ Future<void> showLanguagePicker(BuildContext context) async {
               );
             }
 
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Text(
-                      t.settingsLanguage,
-                      style: Theme.of(sheetCtx).textTheme.titleMedium,
+            final tiles = <Widget>[
+              tile(const Locale('zh', 'CN'), t.settingsLanguageZh),
+              tile(const Locale('en', 'US'), t.settingsLanguageEn),
+              tile(const Locale('de', 'DE'), t.settingsLanguageDe),
+              tile(const Locale('es', 'ES'), t.settingsLanguageEs),
+              tile(const Locale('fr', 'FR'), t.settingsLanguageFr),
+              tile(const Locale('pt', 'PT'), t.settingsLanguagePt),
+              tile(const Locale('ca', 'ES'), t.settingsLanguageCa),
+              tile(const Locale('hi', 'IN'), t.settingsLanguageHi),
+              tile(const Locale('ko', 'KR'), t.settingsLanguageKo),
+              tile(const Locale('ja', 'JP'), t.settingsLanguageJa),
+              tile(const Locale('it', 'IT'), t.settingsLanguageIt),
+              tile(null, t.settingsLanguageSystem),
+            ];
+            return ConstrainedBox(
+              // 上限 80% 屏高；超出时列表内部滚动（修复宽屏/横屏看不到下方项）
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(sheetCtx).size.height * 0.8,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        t.settingsLanguage,
+                        style: Theme.of(sheetCtx).textTheme.titleMedium,
+                      ),
                     ),
                   ),
-                ),
-                tile(const Locale('zh', 'CN'), t.settingsLanguageZh),
-                tile(const Locale('en', 'US'), t.settingsLanguageEn),
-                tile(const Locale('de', 'DE'), t.settingsLanguageDe),
-                tile(const Locale('es', 'ES'), t.settingsLanguageEs),
-                tile(const Locale('fr', 'FR'), t.settingsLanguageFr),
-                tile(const Locale('pt', 'PT'), t.settingsLanguagePt),
-                tile(const Locale('ca', 'ES'), t.settingsLanguageCa),
-                tile(const Locale('hi', 'IN'), t.settingsLanguageHi),
-                tile(const Locale('ko', 'KR'), t.settingsLanguageKo),
-                tile(const Locale('ja', 'JP'), t.settingsLanguageJa),
-                tile(const Locale('it', 'IT'), t.settingsLanguageIt),
-                tile(null, t.settingsLanguageSystem),
-                const SizedBox(height: 8),
-              ],
+                  Flexible(
+                    child: ListView(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      children: tiles,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
             );
           },
         ),
