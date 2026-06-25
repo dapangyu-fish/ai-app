@@ -54,10 +54,15 @@ DEMO_SESSIONS = {
     "00000000-0000-0000-0000-000000000022": "demo_flappy_bird",
 }
 
-# 每条事件之间的 sleep，制造「很快的真实生成」体感；可用环境变量调
-_REPLAY_SLEEP = float(os.environ.get("AI_DEMO_REPLAY_SLEEP", "0.15"))
+# 每条事件之间的 sleep。略慢一点更贴近真实「逐字吐」的体感（可用环境变量覆盖）。
+_REPLAY_SLEEP = float(os.environ.get("AI_DEMO_REPLAY_SLEEP", "0.30"))
 
 DEMO_PROVIDER = "demo"
+
+# Demo 专用对象存储桶：所有 demo 的 app.json 预先固定上传到这里（public-read），
+# 回放时直接返回固定公共 URL，不再每次临时上传/预签名 → 更快、链接稳定不过期。
+# 桶的创建/上传由 myapp-ctl 部署后步骤负责（集群初始化的一部分），见 scripts/myapp_ctl.py。
+DEMO_BUCKET = os.environ.get("AI_DEMO_BUCKET", "demo")
 
 
 def is_demo_uuid(session_id) -> bool:
@@ -95,6 +100,102 @@ def start(session_id: str, user_id: str):
         "generation_pipeline": "demo_replay",
         "queue_position": 0,
     })
+
+
+def _minio_client():
+    from minio import Minio
+    return Minio(
+        ai_session.MINIO_ENDPOINT,
+        access_key=ai_session.MINIO_ACCESS_KEY,
+        secret_key=ai_session.MINIO_SECRET_KEY,
+        secure=ai_session.MINIO_SECURE,
+    )
+
+
+def _demo_public_policy() -> dict:
+    return {
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"AWS": ["*"]},
+            "Action": ["s3:GetObject"],
+            "Resource": [f"arn:aws:s3:::{DEMO_BUCKET}/*"],
+        }],
+    }
+
+
+def ensure_demo_assets(force: bool = False) -> dict:
+    """确保 demo 桶存在、public-read，并把每个 <base>.app.json 固定上传成 <base>.json。
+    幂等：内容未变（按 size+md5/etag 比对）则跳过上传。返回 {base: 是否本次上传}。
+    后端启动后由 myapp-ctl 部署步骤调用（集群初始化的一部分），首个回放也会兜底调用。
+    MinIO 不可用时抛异常，由调用方决定降级。"""
+    import hashlib
+    import io
+    import json as _json
+
+    if not ai_session.MINIO_ACCESS_KEY or not ai_session.MINIO_SECRET_KEY:
+        raise RuntimeError("backend MinIO credentials are not configured")
+
+    client = _minio_client()
+    if not client.bucket_exists(DEMO_BUCKET):
+        client.make_bucket(DEMO_BUCKET)
+    try:
+        client.set_bucket_policy(DEMO_BUCKET, _json.dumps(_demo_public_policy()))
+    except Exception as e:  # 策略设置失败不致命（桶可能已是 public）
+        logger.warning("[DEMO] set public policy failed bucket=%s: %s", DEMO_BUCKET, e)
+
+    result = {}
+    for base in sorted(set(DEMO_SESSIONS.values())):
+        app_path = _path(base, "app.json")
+        if not os.path.exists(app_path):
+            continue  # 纯前端内嵌 demo 无随包 app.json
+        with open(app_path, "rb") as f:
+            data = f.read()
+        key = f"{base}.json"
+        need = True
+        if not force:
+            try:
+                st = client.stat_object(DEMO_BUCKET, key)
+                if st.size == len(data) and (st.etag or "").strip('"') == hashlib.md5(data).hexdigest():
+                    need = False  # 内容未变 → 跳过
+            except Exception:
+                need = True
+        if need:
+            client.put_object(
+                DEMO_BUCKET, key, io.BytesIO(data), len(data),
+                content_type="application/json",
+            )
+        result[base] = need
+    logger.info("[DEMO] assets ensured bucket=%s uploaded=%d/%d",
+                DEMO_BUCKET, sum(1 for v in result.values() if v), len(result))
+    return result
+
+
+def _demo_public_url(base: str) -> str:
+    """固定公共 URL（demo 桶 public-read，path-style 直取，无需预签名）。"""
+    return f"{ai_session.MINIO_PUBLIC_URL.rstrip('/')}/{DEMO_BUCKET}/{base}.json"
+
+
+# None=未探测；True=demo 桶就绪用固定 URL；False=不可用，降级到旧的临时预签名上传
+_assets_ready = None
+
+
+def _resolve_app_url(base: str):
+    """回放交付链接：优先固定公共 URL（不每次上传）；demo 桶不可用时降级回临时上传。
+    没有随包 app.json（纯前端内嵌）→ 返回 None，沿用录制里的原链接。"""
+    if not os.path.exists(_path(base, "app.json")):
+        return None
+    global _assets_ready
+    if _assets_ready is None:
+        try:
+            ensure_demo_assets()
+            _assets_ready = True
+        except Exception as e:
+            logger.warning("[DEMO] ensure_demo_assets unavailable, fall back to temp upload: %s", e)
+            _assets_ready = False
+    if _assets_ready:
+        return _demo_public_url(base)
+    return _mint_fresh_url(base)
 
 
 def _mint_fresh_url(base: str):
@@ -142,7 +243,7 @@ def _rewrite_actions_url(actions, fresh: str):
 def _replay_worker(session_id: str, base: str):
     store = ai_session.SessionStore()
     jsonl = _path(base, "jsonl")
-    fresh = _mint_fresh_url(base)
+    fresh = _resolve_app_url(base)
     final = {}
     try:
         with open(jsonl, encoding="utf-8") as f:
