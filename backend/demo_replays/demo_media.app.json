@@ -3,518 +3,201 @@
   "meta": {
     "name": "media-showcase",
     "version": "1.0.0",
-    "displayName": "Media Gallery",
-    "description": "A media showcase app for browsing images and playing videos",
-    "author": "fish",
-    "type": "app"
+    "type": "app",
+    "description": "媒体展示 Demo: 视频播放 + 图片网格全屏查看 + 多 Tab 导航",
+    "author": "fish"
   },
+  "dependencies": {},
   "global": {
     "variables": {
-      "mediaItems": [
+      "videos": [
         {
-          "id": "img-1",
-          "type": "image",
-          "title": "Mountain Sunrise",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/mtnsun/400/300",
-          "url": "https://picsum.photos/seed/mtnsun/1200/800"
-        },
-        {
-          "id": "img-2",
-          "type": "image",
-          "title": "Ocean Waves",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/oceanw/400/300",
-          "url": "https://picsum.photos/seed/oceanw/1200/800"
-        },
-        {
-          "id": "img-3",
-          "type": "image",
-          "title": "Cherry Blossom",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/cherryb/400/300",
-          "url": "https://picsum.photos/seed/cherryb/1200/800"
-        },
-        {
-          "id": "img-4",
-          "type": "image",
-          "title": "Forest Trail",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/forestt/400/300",
-          "url": "https://picsum.photos/seed/forestt/1200/800"
-        },
-        {
-          "id": "img-5",
-          "type": "image",
-          "title": "Desert Dunes",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/desertd/400/300",
-          "url": "https://picsum.photos/seed/desertd/1200/800"
-        },
-        {
-          "id": "img-6",
-          "type": "image",
-          "title": "City Skyline",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/citysk/400/300",
-          "url": "https://picsum.photos/seed/citysk/1200/800"
-        },
-        {
-          "id": "img-7",
-          "type": "image",
-          "title": "Night Bridge",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/nbridge/400/300",
-          "url": "https://picsum.photos/seed/nbridge/1200/800"
-        },
-        {
-          "id": "img-8",
-          "type": "image",
-          "title": "Modern Architecture",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/modarch/400/300",
-          "url": "https://picsum.photos/seed/modarch/1200/800"
-        },
-        {
-          "id": "img-9",
-          "type": "image",
-          "title": "Street Art",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/start/400/300",
-          "url": "https://picsum.photos/seed/start/1200/800"
-        },
-        {
-          "id": "img-10",
-          "type": "image",
-          "title": "Canal View",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/canalv/400/300",
-          "url": "https://picsum.photos/seed/canalv/1200/800"
-        },
-        {
-          "id": "vid-1",
-          "type": "video",
+          "id": "v1",
           "title": "Big Buck Bunny",
-          "category": "Animation",
-          "thumb": "https://picsum.photos/seed/bunny/400/300",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          "category": "动画 / 10 s",
+          "src": "W3Schools 公开示例短片",
+          "url": "https://www.w3schools.com/html/mov_bbb.mp4"
         },
         {
-          "id": "vid-2",
-          "type": "video",
-          "title": "Elephant's Dream",
-          "category": "Animation",
-          "thumb": "https://picsum.photos/seed/elephant/400/300",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
+          "id": "v2",
+          "title": "Flowers 短片",
+          "category": "W3Schools 公开示例",
+          "src": "W3Schools 公开示例短片",
+          "url": "https://www.w3schools.com/html/movie.mp4"
         },
         {
-          "id": "vid-3",
-          "type": "video",
-          "title": "For Bigger Blazes",
-          "category": "Abstract",
-          "thumb": "https://picsum.photos/seed/blazes/400/300",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+          "id": "v3",
+          "title": "Sintel 预告",
+          "category": "W3C 媒体库",
+          "src": "W3C 开源电影预告",
+          "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
         },
         {
-          "id": "vid-4",
-          "type": "video",
-          "title": "Tears of Steel",
-          "category": "Sci-Fi",
-          "thumb": "https://picsum.photos/seed/tears/400/300",
-          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8"
+          "id": "v4",
+          "title": "Bunny 预告",
+          "category": "W3C 媒体库",
+          "src": "Big Buck Bunny 预告",
+          "url": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+        },
+        {
+          "id": "v5",
+          "title": "Bunny 完整版",
+          "category": "W3C 媒体库",
+          "src": "Big Buck Bunny 完整版",
+          "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+        },
+        {
+          "id": "v6",
+          "title": "Mango 开源动画",
+          "category": "W3C 媒体库",
+          "src": "Mango 开源短片",
+          "url": "https://media.w3.org/2010/05/video/movie_300.mp4"
+        },
+        {
+          "id": "v7",
+          "title": "Elephants Dream 预告",
+          "category": "W3C 媒体库",
+          "src": "Blender 基金会开源电影",
+          "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+        },
+        {
+          "id": "v8",
+          "title": "标准测试短片",
+          "category": "W3C 媒体库",
+          "src": "标准测试视频",
+          "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
         }
       ],
-      "allItems": [
+      "photos": [
         {
-          "id": "img-1",
-          "type": "image",
-          "title": "Mountain Sunrise",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/mtnsun/400/300",
-          "url": "https://picsum.photos/seed/mtnsun/1200/800"
+          "seed": "forest",
+          "title": "静谧森林",
+          "category": "自然",
+          "url": "https://picsum.photos/seed/forest/900/900"
         },
         {
-          "id": "img-2",
-          "type": "image",
-          "title": "Ocean Waves",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/oceanw/400/300",
-          "url": "https://picsum.photos/seed/oceanw/1200/800"
+          "seed": "lake",
+          "title": "高山湖",
+          "category": "自然",
+          "url": "https://picsum.photos/seed/lake/900/900"
         },
         {
-          "id": "img-3",
-          "type": "image",
-          "title": "Cherry Blossom",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/cherryb/400/300",
-          "url": "https://picsum.photos/seed/cherryb/1200/800"
+          "seed": "city",
+          "title": "都市夜景",
+          "category": "城市",
+          "url": "https://picsum.photos/seed/city/900/900"
         },
         {
-          "id": "img-4",
-          "type": "image",
-          "title": "Forest Trail",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/forestt/400/300",
-          "url": "https://picsum.photos/seed/forestt/1200/800"
+          "seed": "desert",
+          "title": "沙漠日落",
+          "category": "自然",
+          "url": "https://picsum.photos/seed/desert/900/900"
         },
         {
-          "id": "img-5",
-          "type": "image",
-          "title": "Desert Dunes",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/desertd/400/300",
-          "url": "https://picsum.photos/seed/desertd/1200/800"
+          "seed": "aurora",
+          "title": "极光之夜",
+          "category": "自然",
+          "url": "https://picsum.photos/seed/aurora/900/900"
         },
         {
-          "id": "img-6",
-          "type": "image",
-          "title": "City Skyline",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/citysk/400/300",
-          "url": "https://picsum.photos/seed/citysk/1200/800"
+          "seed": "cafe",
+          "title": "咖啡时光",
+          "category": "生活",
+          "url": "https://picsum.photos/seed/cafe/900/900"
         },
         {
-          "id": "img-7",
-          "type": "image",
-          "title": "Night Bridge",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/nbridge/400/300",
-          "url": "https://picsum.photos/seed/nbridge/1200/800"
+          "seed": "mountain",
+          "title": "雪山远眺",
+          "category": "自然",
+          "url": "https://picsum.photos/seed/mountain/900/900"
         },
         {
-          "id": "img-8",
-          "type": "image",
-          "title": "Modern Architecture",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/modarch/400/300",
-          "url": "https://picsum.photos/seed/modarch/1200/800"
+          "seed": "rainbow",
+          "title": "彩虹山",
+          "category": "自然",
+          "url": "https://picsum.photos/seed/rainbow/900/900"
         },
         {
-          "id": "img-9",
-          "type": "image",
-          "title": "Street Art",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/start/400/300",
-          "url": "https://picsum.photos/seed/start/1200/800"
+          "seed": "ocean",
+          "title": "海岸线",
+          "category": "自然",
+          "url": "https://picsum.photos/seed/ocean/900/900"
         },
         {
-          "id": "img-10",
-          "type": "image",
-          "title": "Canal View",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/canalv/400/300",
-          "url": "https://picsum.photos/seed/canalv/1200/800"
+          "seed": "macro",
+          "title": "微距花蕊",
+          "category": "自然",
+          "url": "https://picsum.photos/seed/macro/900/900"
         },
         {
-          "id": "vid-1",
-          "type": "video",
-          "title": "Big Buck Bunny",
-          "category": "Animation",
-          "thumb": "https://picsum.photos/seed/bunny/400/300",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+          "seed": "snow",
+          "title": "雪国小镇",
+          "category": "城市",
+          "url": "https://picsum.photos/seed/snow/900/900"
         },
         {
-          "id": "vid-2",
-          "type": "video",
-          "title": "Elephant's Dream",
-          "category": "Animation",
-          "thumb": "https://picsum.photos/seed/elephant/400/300",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
-        },
-        {
-          "id": "vid-3",
-          "type": "video",
-          "title": "For Bigger Blazes",
-          "category": "Abstract",
-          "thumb": "https://picsum.photos/seed/blazes/400/300",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-        },
-        {
-          "id": "vid-4",
-          "type": "video",
-          "title": "Tears of Steel",
-          "category": "Sci-Fi",
-          "thumb": "https://picsum.photos/seed/tears/400/300",
-          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8"
+          "seed": "zen",
+          "title": "晨光禅意",
+          "category": "生活",
+          "url": "https://picsum.photos/seed/zen/900/900"
         }
       ],
-      "filteredItems": [
-        {
-          "id": "img-1",
-          "type": "image",
-          "title": "Mountain Sunrise",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/mtnsun/400/300",
-          "url": "https://picsum.photos/seed/mtnsun/1200/800"
-        },
-        {
-          "id": "img-2",
-          "type": "image",
-          "title": "Ocean Waves",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/oceanw/400/300",
-          "url": "https://picsum.photos/seed/oceanw/1200/800"
-        },
-        {
-          "id": "img-3",
-          "type": "image",
-          "title": "Cherry Blossom",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/cherryb/400/300",
-          "url": "https://picsum.photos/seed/cherryb/1200/800"
-        },
-        {
-          "id": "img-4",
-          "type": "image",
-          "title": "Forest Trail",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/forestt/400/300",
-          "url": "https://picsum.photos/seed/forestt/1200/800"
-        },
-        {
-          "id": "img-5",
-          "type": "image",
-          "title": "Desert Dunes",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/desertd/400/300",
-          "url": "https://picsum.photos/seed/desertd/1200/800"
-        },
-        {
-          "id": "img-6",
-          "type": "image",
-          "title": "City Skyline",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/citysk/400/300",
-          "url": "https://picsum.photos/seed/citysk/1200/800"
-        },
-        {
-          "id": "img-7",
-          "type": "image",
-          "title": "Night Bridge",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/nbridge/400/300",
-          "url": "https://picsum.photos/seed/nbridge/1200/800"
-        },
-        {
-          "id": "img-8",
-          "type": "image",
-          "title": "Modern Architecture",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/modarch/400/300",
-          "url": "https://picsum.photos/seed/modarch/1200/800"
-        },
-        {
-          "id": "img-9",
-          "type": "image",
-          "title": "Street Art",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/start/400/300",
-          "url": "https://picsum.photos/seed/start/1200/800"
-        },
-        {
-          "id": "img-10",
-          "type": "image",
-          "title": "Canal View",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/canalv/400/300",
-          "url": "https://picsum.photos/seed/canalv/1200/800"
-        },
-        {
-          "id": "vid-1",
-          "type": "video",
-          "title": "Big Buck Bunny",
-          "category": "Animation",
-          "thumb": "https://picsum.photos/seed/bunny/400/300",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-        },
-        {
-          "id": "vid-2",
-          "type": "video",
-          "title": "Elephant's Dream",
-          "category": "Animation",
-          "thumb": "https://picsum.photos/seed/elephant/400/300",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
-        },
-        {
-          "id": "vid-3",
-          "type": "video",
-          "title": "For Bigger Blazes",
-          "category": "Abstract",
-          "thumb": "https://picsum.photos/seed/blazes/400/300",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-        },
-        {
-          "id": "vid-4",
-          "type": "video",
-          "title": "Tears of Steel",
-          "category": "Sci-Fi",
-          "thumb": "https://picsum.photos/seed/tears/400/300",
-          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8"
-        }
-      ],
-      "mediaMap": {
-        "img-1": {
-          "id": "img-1",
-          "type": "image",
-          "title": "Mountain Sunrise",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/mtnsun/400/300",
-          "url": "https://picsum.photos/seed/mtnsun/1200/800"
-        },
-        "img-2": {
-          "id": "img-2",
-          "type": "image",
-          "title": "Ocean Waves",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/oceanw/400/300",
-          "url": "https://picsum.photos/seed/oceanw/1200/800"
-        },
-        "img-3": {
-          "id": "img-3",
-          "type": "image",
-          "title": "Cherry Blossom",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/cherryb/400/300",
-          "url": "https://picsum.photos/seed/cherryb/1200/800"
-        },
-        "img-4": {
-          "id": "img-4",
-          "type": "image",
-          "title": "Forest Trail",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/forestt/400/300",
-          "url": "https://picsum.photos/seed/forestt/1200/800"
-        },
-        "img-5": {
-          "id": "img-5",
-          "type": "image",
-          "title": "Desert Dunes",
-          "category": "Nature",
-          "thumb": "https://picsum.photos/seed/desertd/400/300",
-          "url": "https://picsum.photos/seed/desertd/1200/800"
-        },
-        "img-6": {
-          "id": "img-6",
-          "type": "image",
-          "title": "City Skyline",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/citysk/400/300",
-          "url": "https://picsum.photos/seed/citysk/1200/800"
-        },
-        "img-7": {
-          "id": "img-7",
-          "type": "image",
-          "title": "Night Bridge",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/nbridge/400/300",
-          "url": "https://picsum.photos/seed/nbridge/1200/800"
-        },
-        "img-8": {
-          "id": "img-8",
-          "type": "image",
-          "title": "Modern Architecture",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/modarch/400/300",
-          "url": "https://picsum.photos/seed/modarch/1200/800"
-        },
-        "img-9": {
-          "id": "img-9",
-          "type": "image",
-          "title": "Street Art",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/start/400/300",
-          "url": "https://picsum.photos/seed/start/1200/800"
-        },
-        "img-10": {
-          "id": "img-10",
-          "type": "image",
-          "title": "Canal View",
-          "category": "Urban",
-          "thumb": "https://picsum.photos/seed/canalv/400/300",
-          "url": "https://picsum.photos/seed/canalv/1200/800"
-        },
-        "vid-1": {
-          "id": "vid-1",
-          "type": "video",
-          "title": "Big Buck Bunny",
-          "category": "Animation",
-          "thumb": "https://picsum.photos/seed/bunny/400/300",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-        },
-        "vid-2": {
-          "id": "vid-2",
-          "type": "video",
-          "title": "Elephant's Dream",
-          "category": "Animation",
-          "thumb": "https://picsum.photos/seed/elephant/400/300",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
-        },
-        "vid-3": {
-          "id": "vid-3",
-          "type": "video",
-          "title": "For Bigger Blazes",
-          "category": "Abstract",
-          "thumb": "https://picsum.photos/seed/blazes/400/300",
-          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-        },
-        "vid-4": {
-          "id": "vid-4",
-          "type": "video",
-          "title": "Tears of Steel",
-          "category": "Sci-Fi",
-          "thumb": "https://picsum.photos/seed/tears/400/300",
-          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8"
-        }
-      },
-      "activeCategory": "All",
-      "selectedItemId": ""
+      "currentVideoId": "",
+      "currentVideoTitle": "",
+      "currentVideoUrl": "",
+      "currentPhotoSeed": "",
+      "currentPhotoTitle": "",
+      "currentPhotoCategory": "",
+      "currentPhotoUrl": ""
     },
     "functions": {
-      "playMedia": {
+      "playVideo": {
         "params": [
-          "itemId"
+          "id",
+          "title",
+          "url"
         ],
         "return": "None",
         "logic": [
           {
             "call": "@set",
             "args": {
-              "var": "global.selectedItemId",
-              "value": "{{ params.itemId }}"
+              "var": "global.currentVideoId",
+              "value": "{{ params.id }}"
             }
           },
           {
-            "if": [
-              {
-                "==": [
-                  {
-                    "var": "global.mediaMap.{{ params.itemId }}.type"
-                  },
-                  "image"
-                ]
-              },
-              [
-                {
-                  "call": "@navigate",
-                  "args": {
-                    "screen": "image_viewer"
-                  }
-                }
-              ],
-              [
-                {
-                  "call": "@navigate",
-                  "args": {
-                    "screen": "video_player"
-                  }
-                }
-              ]
-            ]
+            "call": "@set",
+            "args": {
+              "var": "global.currentVideoTitle",
+              "value": "{{ params.title }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentVideoUrl",
+              "value": "{{ params.url }}"
+            }
+          },
+          {
+            "call": "@print",
+            "args": {
+              "value": "开始播放: {{ params.title }}"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "player"
+            }
           }
         ]
       },
-      "filterMedia": {
+      "openPhoto": {
         "params": [
+          "seed",
+          "title",
           "category"
         ],
         "return": "None",
@@ -522,46 +205,41 @@
           {
             "call": "@set",
             "args": {
-              "var": "global.activeCategory",
+              "var": "global.currentPhotoSeed",
+              "value": "{{ params.seed }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentPhotoTitle",
+              "value": "{{ params.title }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentPhotoCategory",
               "value": "{{ params.category }}"
             }
           },
           {
             "call": "@set",
             "args": {
-              "var": "global.filteredItems",
-              "value": {
-                "if": [
-                  {
-                    "==": [
-                      {
-                        "var": "params.category"
-                      },
-                      "All"
-                    ]
-                  },
-                  {
-                    "var": "global.allItems"
-                  },
-                  {
-                    "filter": [
-                      {
-                        "var": "global.allItems"
-                      },
-                      {
-                        "==": [
-                          {
-                            "var": "category"
-                          },
-                          {
-                            "var": "params.category"
-                          }
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              }
+              "var": "global.currentPhotoUrl",
+              "value": "https://picsum.photos/seed/{{ params.seed }}/1600/1600"
+            }
+          },
+          {
+            "call": "@print",
+            "args": {
+              "value": "全屏查看: {{ params.title }}"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "viewer"
             }
           }
         ]
@@ -572,364 +250,912 @@
     {
       "call": "@print",
       "args": {
-        "value": "Media Gallery started"
+        "value": "媒体展厅启动"
       }
     }
   ],
   "ui": {
     "screens": [
       {
-        "id": "gallery",
-        "title": "Media Gallery",
+        "id": "home",
+        "title": "媒体展厅",
         "layout": "column",
-        "backgroundColor": "#111118",
         "children": [
           {
-            "type": "container",
-            "padding": 16,
-            "layout": "column",
-            "children": [
+            "type": "tab_view",
+            "backgroundColor": "#FFFFFF",
+            "color": "#2563EB",
+            "isScrollable": false,
+            "initialIndex": 0,
+            "height": 780,
+            "tabs": [
               {
-                "type": "text",
-                "value": "Media Gallery",
-                "style": {
-                  "fontSize": 26,
-                  "fontWeight": "bold",
-                  "color": "#FFFFFF"
-                }
-              },
-              {
-                "type": "text",
-                "value": "Browse stunning images and videos",
-                "style": {
-                  "fontSize": 14,
-                  "color": "#888888"
-                }
-              }
-            ]
-          },
-          {
-            "type": "container",
-            "layout": "row",
-            "scrollable": true,
-            "padding": 8,
-            "children": [
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "text",
-                    "value": "All",
-                    "style": {
-                      "fontSize": 13,
-                      "fontWeight": "w600",
-                      "color": "{{ global.activeCategory == 'All' ? '#FFFFFF' : '#666666' }}"
-                    }
-                  }
-                ],
-                "padding": 10,
-                "borderRadius": 20,
-                "color": "{{ global.activeCategory == 'All' ? '#6C5CE7' : '#1E1E2A' }}",
-                "margin": 4,
-                "onTap": {
-                  "call": "@global.filterMedia",
-                  "args": {
-                    "category": "All"
-                  }
-                }
-              },
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "text",
-                    "value": "Nature",
-                    "style": {
-                      "fontSize": 13,
-                      "fontWeight": "w600",
-                      "color": "{{ global.activeCategory == 'Nature' ? '#FFFFFF' : '#666666' }}"
-                    }
-                  }
-                ],
-                "padding": 10,
-                "borderRadius": 20,
-                "color": "{{ global.activeCategory == 'Nature' ? '#6C5CE7' : '#1E1E2A' }}",
-                "margin": 4,
-                "onTap": {
-                  "call": "@global.filterMedia",
-                  "args": {
-                    "category": "Nature"
-                  }
-                }
-              },
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "text",
-                    "value": "Urban",
-                    "style": {
-                      "fontSize": 13,
-                      "fontWeight": "w600",
-                      "color": "{{ global.activeCategory == 'Urban' ? '#FFFFFF' : '#666666' }}"
-                    }
-                  }
-                ],
-                "padding": 10,
-                "borderRadius": 20,
-                "color": "{{ global.activeCategory == 'Urban' ? '#6C5CE7' : '#1E1E2A' }}",
-                "margin": 4,
-                "onTap": {
-                  "call": "@global.filterMedia",
-                  "args": {
-                    "category": "Urban"
-                  }
-                }
-              },
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "text",
-                    "value": "Animation",
-                    "style": {
-                      "fontSize": 13,
-                      "fontWeight": "w600",
-                      "color": "{{ global.activeCategory == 'Animation' ? '#FFFFFF' : '#666666' }}"
-                    }
-                  }
-                ],
-                "padding": 10,
-                "borderRadius": 20,
-                "color": "{{ global.activeCategory == 'Animation' ? '#6C5CE7' : '#1E1E2A' }}",
-                "margin": 4,
-                "onTap": {
-                  "call": "@global.filterMedia",
-                  "args": {
-                    "category": "Animation"
-                  }
-                }
-              },
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "text",
-                    "value": "Abstract",
-                    "style": {
-                      "fontSize": 13,
-                      "fontWeight": "w600",
-                      "color": "{{ global.activeCategory == 'Abstract' ? '#FFFFFF' : '#666666' }}"
-                    }
-                  }
-                ],
-                "padding": 10,
-                "borderRadius": 20,
-                "color": "{{ global.activeCategory == 'Abstract' ? '#6C5CE7' : '#1E1E2A' }}",
-                "margin": 4,
-                "onTap": {
-                  "call": "@global.filterMedia",
-                  "args": {
-                    "category": "Abstract"
-                  }
-                }
-              },
-              {
-                "type": "container",
-                "layout": "column",
-                "children": [
-                  {
-                    "type": "text",
-                    "value": "Sci-Fi",
-                    "style": {
-                      "fontSize": 13,
-                      "fontWeight": "w600",
-                      "color": "{{ global.activeCategory == 'Sci-Fi' ? '#FFFFFF' : '#666666' }}"
-                    }
-                  }
-                ],
-                "padding": 10,
-                "borderRadius": 20,
-                "color": "{{ global.activeCategory == 'Sci-Fi' ? '#6C5CE7' : '#1E1E2A' }}",
-                "margin": 4,
-                "onTap": {
-                  "call": "@global.filterMedia",
-                  "args": {
-                    "category": "Sci-Fi"
-                  }
-                }
-              }
-            ]
-          },
-          {
-            "type": "list",
-            "source": "{{ global.filteredItems }}",
-            "item_template": {
-              "type": "card",
-              "borderRadius": 16,
-              "color": "#1A1A28",
-              "margin": 8,
-              "children": [
-                {
+                "label": "视频库",
+                "icon": "video",
+                "content": {
                   "type": "container",
-                  "layout": "row",
-                  "padding": 0,
+                  "layout": "column",
                   "children": [
                     {
-                      "type": "image",
-                      "url": "{{ loop.item.thumb }}",
-                      "width": 120,
-                      "height": 90,
-                      "borderRadius": 12,
-                      "fit": "cover"
-                    },
-                    {
                       "type": "container",
-                      "layout": "column",
-                      "padding": 12,
-                      "position": {
-                        "type": "flex",
-                        "flex": 1
-                      },
+                      "layout": "row",
                       "children": [
-                        {
-                          "type": "text",
-                          "value": "{{ loop.item.title }}",
-                          "style": {
-                            "fontSize": 16,
-                            "fontWeight": "w600",
-                            "color": "#EAEAEA"
-                          }
-                        },
-                        {
-                          "type": "container",
-                          "height": 4
-                        },
                         {
                           "type": "container",
                           "layout": "row",
                           "children": [
                             {
-                              "type": "container",
-                              "padding": 4,
-                              "borderRadius": 4,
-                              "color": "{{ loop.item.type == 'video' ? '#3D1A1A' : '#1A1A3D' }}",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "value": "{{ loop.item.type == 'video' ? 'Video' : 'Photo' }}",
-                                  "style": {
-                                    "fontSize": 11,
-                                    "color": "{{ loop.item.type == 'video' ? '#FF6B6B' : '#6C5CE7' }}",
-                                    "fontWeight": "w600"
-                                  }
-                                }
-                              ]
-                            },
+                              "type": "icon",
+                              "name": "video",
+                              "size": 22,
+                              "color": "#2563EB"
+                            }
+                          ],
+                          "crossAxisAlignment": "center",
+                          "mainAxisAlignment": "center",
+                          "width": 44,
+                          "height": 44,
+                          "borderRadius": 12,
+                          "color": "#DBEAFE",
+                          "margin": 4
+                        },
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
                             {
-                              "type": "container",
-                              "width": 8
+                              "type": "text",
+                              "value": "视频库",
+                              "style": {
+                                "fontSize": 18,
+                                "fontWeight": "bold",
+                                "color": "#0F172A"
+                              }
                             },
                             {
                               "type": "text",
-                              "value": "{{ loop.item.category }}",
+                              "value": "点击任意视频开始播放，集成 Chewie 全屏控件",
                               "style": {
                                 "fontSize": 12,
-                                "color": "#666666"
+                                "color": "#64748B"
                               }
                             }
+                          ],
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          },
+                          "margin": 4
+                        }
+                      ],
+                      "padding": 14,
+                      "borderRadius": 14,
+                      "color": "#EFF6FF",
+                      "margin": 8,
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "总数",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#94A3B8"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "8 部",
+                              "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "color": "#0F172A"
+                              }
+                            }
+                          ],
+                          "padding": 12,
+                          "borderRadius": 12,
+                          "color": "#F1F5F9",
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          }
+                        },
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "分类",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#94A3B8"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "动画 / 短片",
+                              "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "color": "#0F172A"
+                              }
+                            }
+                          ],
+                          "padding": 12,
+                          "borderRadius": 12,
+                          "color": "#F1F5F9",
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          }
+                        },
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "状态",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#94A3B8"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "已就绪",
+                              "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "color": "#0F172A"
+                              }
+                            }
+                          ],
+                          "padding": 12,
+                          "borderRadius": 12,
+                          "color": "#F1F5F9",
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          }
+                        }
+                      ],
+                      "padding": 4,
+                      "margin": 8,
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "text",
+                      "value": "热门推荐",
+                      "style": {
+                        "fontSize": 16,
+                        "fontWeight": "bold",
+                        "color": "#0F172A"
+                      },
+                      "margin": 8
+                    },
+                    {
+                      "type": "list",
+                      "source": "{{ global.videos }}",
+                      "shrinkWrap": true,
+                      "item_template": {
+                        "type": "container",
+                        "layout": "row",
+                        "padding": 12,
+                        "borderRadius": 14,
+                        "color": "#FFFFFF",
+                        "margin": 8,
+                        "crossAxisAlignment": "center",
+                        "children": [
+                          {
+                            "type": "container",
+                            "layout": "row",
+                            "children": [
+                              {
+                                "type": "icon",
+                                "name": "play",
+                                "size": 38,
+                                "color": "#FFFFFF"
+                              }
+                            ],
+                            "crossAxisAlignment": "center",
+                            "mainAxisAlignment": "center",
+                            "width": 120,
+                            "height": 70,
+                            "borderRadius": 10,
+                            "color": "#1E293B"
+                          },
+                          {
+                            "type": "container",
+                            "layout": "column",
+                            "children": [
+                              {
+                                "type": "text",
+                                "value": "{{ loop.item.title }}",
+                                "style": {
+                                  "fontSize": 15,
+                                  "fontWeight": "bold",
+                                  "color": "#0F172A"
+                                },
+                                "maxLines": 1,
+                                "overflow": "ellipsis"
+                              },
+                              {
+                                "type": "spacer",
+                                "height": 4
+                              },
+                              {
+                                "type": "text",
+                                "value": "{{ loop.item.category }}",
+                                "style": {
+                                  "fontSize": 12,
+                                  "color": "#64748B"
+                                }
+                              },
+                              {
+                                "type": "spacer",
+                                "height": 2
+                              },
+                              {
+                                "type": "text",
+                                "value": "{{ loop.item.src }}",
+                                "style": {
+                                  "fontSize": 11,
+                                  "color": "#94A3B8"
+                                },
+                                "maxLines": 1,
+                                "overflow": "ellipsis"
+                              },
+                              {
+                                "type": "spacer",
+                                "height": 8
+                              },
+                              {
+                                "type": "button",
+                                "label": "立即播放",
+                                "variant": "filled",
+                                "action": {
+                                  "call": "@global.playVideo",
+                                  "args": {
+                                    "id": "{{ loop.item.id }}",
+                                    "title": "{{ loop.item.title }}",
+                                    "url": "{{ loop.item.url }}"
+                                  }
+                                },
+                                "icon": "play",
+                                "style": {
+                                  "backgroundColor": "#2563EB",
+                                  "textColor": "#FFFFFF",
+                                  "borderRadius": 8,
+                                  "fontSize": 13,
+                                  "paddingH": 14,
+                                  "paddingV": 8
+                                }
+                              }
+                            ],
+                            "position": {
+                              "type": "flex",
+                              "flex": 1
+                            },
+                            "margin": 4
+                          }
+                        ]
+                      },
+                      "emptyText": "暂无视频"
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "图片墙",
+                "icon": "image",
+                "content": {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "image",
+                              "size": 22,
+                              "color": "#0EA5E9"
+                            }
+                          ],
+                          "crossAxisAlignment": "center",
+                          "mainAxisAlignment": "center",
+                          "width": 44,
+                          "height": 44,
+                          "borderRadius": 12,
+                          "color": "#E0F2FE",
+                          "margin": 4
+                        },
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "图片墙",
+                              "style": {
+                                "fontSize": 18,
+                                "fontWeight": "bold",
+                                "color": "#0F172A"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "点击图片进入全屏查看器",
+                              "style": {
+                                "fontSize": 12,
+                                "color": "#64748B"
+                              }
+                            }
+                          ],
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          },
+                          "margin": 4
+                        }
+                      ],
+                      "padding": 14,
+                      "borderRadius": 14,
+                      "color": "#F0F9FF",
+                      "margin": 8,
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "图片",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#94A3B8"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "12 张",
+                              "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "color": "#0F172A"
+                              }
+                            }
+                          ],
+                          "padding": 12,
+                          "borderRadius": 12,
+                          "color": "#F1F5F9",
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          }
+                        },
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "分类",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#94A3B8"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "自然 / 城市 / 生活",
+                              "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "color": "#0F172A"
+                              }
+                            }
+                          ],
+                          "padding": 12,
+                          "borderRadius": 12,
+                          "color": "#F1F5F9",
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          }
+                        },
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "来源",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#94A3B8"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "picsum.photos",
+                              "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "color": "#0F172A"
+                              }
+                            }
+                          ],
+                          "padding": 12,
+                          "borderRadius": 12,
+                          "color": "#F1F5F9",
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          }
+                        }
+                      ],
+                      "padding": 4,
+                      "margin": 8,
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "grid",
+                      "source": "{{ global.photos }}",
+                      "crossAxisCount": 2,
+                      "crossAxisSpacing": 0,
+                      "mainAxisSpacing": 0,
+                      "childAspectRatio": 1.0,
+                      "padding": 8,
+                      "shrinkWrap": true,
+                      "emptyText": "暂无图片",
+                      "item_template": {
+                        "type": "gesture_detector",
+                        "child": {
+                          "type": "container",
+                          "layout": "row",
+                          "width": 200,
+                          "height": 140,
+                          "borderRadius": 12,
+                          "margin": 6,
+                          "color": "#1E293B",
+                          "children": [
+                            {
+                              "type": "image",
+                              "url": "https://picsum.photos/seed/{{ loop.item.seed }}/600/600",
+                              "fit": "cover",
+                              "width": 200,
+                              "height": 140,
+                              "borderRadius": 12,
+                              "paddingV": 0
+                            }
                           ]
+                        },
+                        "onTap": {
+                          "call": "@global.openPhoto",
+                          "args": {
+                            "seed": "{{ loop.item.seed }}",
+                            "title": "{{ loop.item.title }}",
+                            "category": "{{ loop.item.category }}"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "提示：点击图片进入全屏查看",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#94A3B8",
+                        "textAlign": "center"
+                      },
+                      "margin": 8
+                    }
+                  ]
+                }
+              },
+              {
+                "label": "关于",
+                "icon": "info",
+                "content": {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "关于「媒体展厅」",
+                      "style": {
+                        "fontSize": 22,
+                        "fontWeight": "bold",
+                        "color": "#0F172A"
+                      },
+                      "margin": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "这是一个示例媒体展示 App，演示如何用 JSON-DSL 同时集成视频播放、图片网格、点击全屏与多 Tab 导航。",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#475569"
+                      },
+                      "margin": 8
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 12
+                    },
+                    {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 16,
+                      "margin": 8,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "video",
+                              "size": 20,
+                              "color": "#2563EB"
+                            },
+                            {
+                              "type": "text",
+                              "value": "视频播放",
+                              "style": {
+                                "fontSize": 15,
+                                "fontWeight": "bold",
+                                "color": "#0F172A"
+                              },
+                              "position": {
+                                "type": "flex",
+                                "flex": 1
+                              },
+                              "margin": 4
+                            },
+                            {
+                              "type": "icon",
+                              "name": "check_circle",
+                              "size": 18,
+                              "color": "#10B981"
+                            }
+                          ],
+                          "crossAxisAlignment": "center",
+                          "padding": 4
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "text",
+                          "value": "使用 video_player + chewie，支持网络 mp4 / 进度条 / 全屏切换。",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#64748B"
+                          }
                         }
                       ]
                     },
                     {
-                      "type": "icon",
-                      "name": "{{ loop.item.type == 'video' ? 'play' : 'chevron_right' }}",
-                      "size": 22,
-                      "color": "{{ loop.item.type == 'video' ? '#FF6B6B' : '#444444' }}"
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 16,
+                      "margin": 8,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "image",
+                              "size": 20,
+                              "color": "#0EA5E9"
+                            },
+                            {
+                              "type": "text",
+                              "value": "图片网格 + 全屏",
+                              "style": {
+                                "fontSize": 15,
+                                "fontWeight": "bold",
+                                "color": "#0F172A"
+                              },
+                              "position": {
+                                "type": "flex",
+                                "flex": 1
+                              },
+                              "margin": 4
+                            },
+                            {
+                              "type": "icon",
+                              "name": "check_circle",
+                              "size": 18,
+                              "color": "#10B981"
+                            }
+                          ],
+                          "crossAxisAlignment": "center",
+                          "padding": 4
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "text",
+                          "value": "grid 控件 + gesture_detector，点击进入全屏查看器。",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#64748B"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 16,
+                      "margin": 8,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "layers",
+                              "size": 20,
+                              "color": "#8B5CF6"
+                            },
+                            {
+                              "type": "text",
+                              "value": "多 Tab 导航",
+                              "style": {
+                                "fontSize": 15,
+                                "fontWeight": "bold",
+                                "color": "#0F172A"
+                              },
+                              "position": {
+                                "type": "flex",
+                                "flex": 1
+                              },
+                              "margin": 4
+                            },
+                            {
+                              "type": "icon",
+                              "name": "check_circle",
+                              "size": 18,
+                              "color": "#10B981"
+                            }
+                          ],
+                          "crossAxisAlignment": "center",
+                          "padding": 4
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "text",
+                          "value": "tab_view 集成视频库 / 图片墙 / 关于，三个独立面板。",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#64748B"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 16
+                    },
+                    {
+                      "type": "text",
+                      "value": "© 2026 媒体展厅 Demo · Powered by JSON-DSL",
+                      "style": {
+                        "fontSize": 11,
+                        "color": "#94A3B8"
+                      },
+                      "margin": 8
                     }
-                  ]
-                }
-              ],
-              "onTap": {
-                "call": "@global.playMedia",
-                "args": {
-                  "itemId": "{{ loop.item.id }}"
-                }
-              }
-            },
-            "shrinkWrap": true,
-            "padding": 16
-          }
-        ]
-      },
-      {
-        "id": "image_viewer",
-        "title": "{{ global.mediaMap[global.selectedItemId].title }}",
-        "layout": "column",
-        "backgroundColor": "#000000",
-        "children": [
-          {
-            "type": "container",
-            "layout": "row",
-            "padding": 12,
-            "children": [
-              {
-                "type": "button",
-                "label": "Back",
-                "icon": "back",
-                "variant": "text",
-                "style": {
-                  "textColor": "#FFFFFF"
-                },
-                "action": {
-                  "call": "@navigate",
-                  "args": {
-                    "screen": "gallery"
-                  }
-                }
-              },
-              {
-                "type": "container",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                }
-              },
-              {
-                "type": "text",
-                "value": "{{ global.mediaMap[global.selectedItemId].title }}",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "w600",
-                  "color": "#FFFFFF"
-                }
-              },
-              {
-                "type": "container",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
+                  ],
+                  "padding": 8
                 }
               }
             ]
-          },
+          }
+        ],
+        "backgroundColor": "#F8FAFC"
+      },
+      {
+        "id": "player",
+        "title": "{{ global.currentVideoTitle }}",
+        "layout": "column",
+        "children": [
           {
-            "type": "expanded",
-            "child": {
-              "type": "image",
-              "url": "{{ global.mediaMap[global.selectedItemId].url }}",
-              "fit": "contain"
-            }
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "{{ global.currentVideoTitle }}",
+                "style": {
+                  "fontSize": 18,
+                  "fontWeight": "bold",
+                  "color": "#FFFFFF"
+                },
+                "maxLines": 1,
+                "overflow": "ellipsis"
+              },
+              {
+                "type": "spacer",
+                "height": 2
+              },
+              {
+                "type": "text",
+                "value": "{{ global.currentVideoUrl }}",
+                "style": {
+                  "fontSize": 11,
+                  "color": "#94A3B8"
+                },
+                "maxLines": 1,
+                "overflow": "ellipsis"
+              }
+            ],
+            "padding": 12,
+            "color": "#0F172A"
           },
           {
             "type": "container",
-            "padding": 16,
+            "layout": "column",
+            "children": [
+              {
+                "type": "video",
+                "url": "{{ global.currentVideoUrl }}",
+                "autoplay": true,
+                "looping": false,
+                "aspectRatio": 1.78,
+                "borderRadius": 0
+              }
+            ],
+            "color": "#000000"
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "theaters",
+                    "size": 18,
+                    "color": "#F59E0B"
+                  },
+                  {
+                    "type": "text",
+                    "value": "操作提示",
+                    "style": {
+                      "fontSize": 14,
+                      "fontWeight": "bold",
+                      "color": "#0F172A"
+                    },
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "margin": 4
+                  }
+                ],
+                "crossAxisAlignment": "center",
+                "padding": 4
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "text",
+                "value": "• 视频自动播放，可用控制条暂停/拖动/全屏。",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#475569"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 2
+              },
+              {
+                "type": "text",
+                "value": "• 加载慢可等待 2-5 秒；失败可点重试。",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#475569"
+                }
+              }
+            ],
+            "padding": 10,
+            "borderRadius": 12,
+            "color": "#FEF3C7",
+            "margin": 12
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "button",
+                "label": "返回视频库",
+                "variant": "filled",
+                "action": {
+                  "type": "navigate",
+                  "screen": "home"
+                },
+                "icon": "back",
+                "style": {
+                  "backgroundColor": "#FFFFFF",
+                  "textColor": "#0F172A",
+                  "borderRadius": 10,
+                  "paddingH": 18,
+                  "paddingV": 12,
+                  "fontSize": 14,
+                  "fontWeight": "bold"
+                },
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              }
+            ],
+            "padding": 12
+          }
+        ],
+        "backgroundColor": "#0F172A"
+      },
+      {
+        "id": "viewer",
+        "title": "{{ global.currentPhotoTitle }}",
+        "layout": "column",
+        "children": [
+          {
+            "type": "container",
             "layout": "column",
             "children": [
               {
@@ -939,89 +1165,64 @@
                   {
                     "type": "icon",
                     "name": "image",
-                    "size": 14,
-                    "color": "#6C5CE7"
-                  },
-                  {
-                    "type": "container",
-                    "width": 6
+                    "size": 18,
+                    "color": "#0EA5E9"
                   },
                   {
                     "type": "text",
-                    "value": "Photo · {{ global.mediaMap[global.selectedItemId].category }}",
+                    "value": "{{ global.currentPhotoTitle }}",
                     "style": {
-                      "fontSize": 13,
-                      "color": "#888888"
+                      "fontSize": 16,
+                      "fontWeight": "bold",
+                      "color": "#FFFFFF"
+                    },
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "margin": 4
+                  },
+                  {
+                    "type": "button",
+                    "label": "",
+                    "icon": "close",
+                    "variant": "text",
+                    "action": {
+                      "type": "navigate",
+                      "screen": "home"
+                    },
+                    "style": {
+                      "textColor": "#FFFFFF",
+                      "paddingH": 10,
+                      "paddingV": 10
                     }
                   }
-                ]
+                ],
+                "crossAxisAlignment": "center",
+                "padding": 12
               }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "video_player",
-        "title": "{{ global.mediaMap[global.selectedItemId].title }}",
-        "layout": "column",
-        "backgroundColor": "#000000",
-        "children": [
+            ],
+            "color": "#000000"
+          },
           {
             "type": "container",
-            "layout": "row",
-            "padding": 12,
+            "layout": "column",
             "children": [
               {
-                "type": "button",
-                "label": "Back",
-                "icon": "back",
-                "variant": "text",
-                "style": {
-                  "textColor": "#FFFFFF"
-                },
-                "action": {
-                  "call": "@navigate",
-                  "args": {
-                    "screen": "gallery"
-                  }
-                }
-              },
-              {
-                "type": "container",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                }
-              },
-              {
-                "type": "text",
-                "value": "{{ global.mediaMap[global.selectedItemId].title }}",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "w600",
-                  "color": "#FFFFFF"
-                }
-              },
-              {
-                "type": "container",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                }
+                "type": "image",
+                "url": "{{ global.currentPhotoUrl }}",
+                "fit": "contain",
+                "paddingV": 0
               }
-            ]
-          },
-          {
-            "type": "video",
-            "url": "{{ global.mediaMap[global.selectedItemId].url }}",
-            "autoplay": true,
-            "looping": false,
-            "aspectRatio": 1.78,
-            "borderRadius": 0
+            ],
+            "color": "#000000",
+            "position": {
+              "type": "flex",
+              "flex": 1
+            }
           },
           {
             "type": "container",
-            "padding": 16,
             "layout": "column",
             "children": [
               {
@@ -1030,27 +1231,66 @@
                 "children": [
                   {
                     "type": "icon",
-                    "name": "video",
-                    "size": 14,
-                    "color": "#FF6B6B"
-                  },
-                  {
-                    "type": "container",
-                    "width": 6
+                    "name": "info",
+                    "size": 16,
+                    "color": "#94A3B8"
                   },
                   {
                     "type": "text",
-                    "value": "Video · {{ global.mediaMap[global.selectedItemId].category }}",
+                    "value": "分类: {{ global.currentPhotoCategory }}",
                     "style": {
-                      "fontSize": 13,
-                      "color": "#888888"
-                    }
+                      "fontSize": 12,
+                      "color": "#CBD5E1"
+                    },
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "margin": 4
                   }
-                ]
+                ],
+                "crossAxisAlignment": "center",
+                "padding": 4
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "link",
+                    "size": 16,
+                    "color": "#94A3B8"
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.currentPhotoUrl }}",
+                    "style": {
+                      "fontSize": 11,
+                      "color": "#94A3B8"
+                    },
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "margin": 4,
+                    "maxLines": 1,
+                    "overflow": "ellipsis"
+                  }
+                ],
+                "crossAxisAlignment": "center",
+                "padding": 4
               }
-            ]
+            ],
+            "padding": 12,
+            "color": "#0F172A"
           }
-        ]
+        ],
+        "backgroundColor": "#000000"
       }
     ]
   }

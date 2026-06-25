@@ -1,260 +1,1255 @@
 {
   "dsl": "3.3",
+  "appid": "3f7c8a92-1a2b-4c5d-9e8f-7a6b5c4d3e2f",
   "meta": {
-    "name": "video-browser",
+    "name": "video-browser-app",
+    "displayName": "StreamHub 视频浏览器",
     "version": "1.0.0",
     "type": "app",
-    "description": "视频浏览 App：列表 + 点进去播放",
-    "author": "ai",
-    "displayName": "视频浏览"
+    "description": "视频浏览 App：分类、搜索、真实公网 mp4 播放",
+    "author": "fish"
   },
   "dependencies": {},
   "global": {
     "variables": {
-      "videos": [
+      "allVideos": [
         {
           "id": "v1",
           "title": "Big Buck Bunny",
-          "desc": "经典开源动画短片，阳光明媚的草地故事",
-          "duration": "10:35",
-          "url": "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4",
-          "thumbnail": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Big_buck_bunny_poster_big.jpg/320px-Big_buck_bunny_poster_big.jpg"
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "9:56",
+          "durationSec": 596,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+          "director": "Sacha Goedegebure",
+          "year": "2008",
+          "views": "24.3M",
+          "likes": "512K",
+          "rating": "8.4",
+          "description": "Big Buck Bunny 讲述了一只体型庞大的兔子在森林里对三只欺凌它的老鼠展开报复的搞笑故事。本片采用 Blender 渲染，是开放内容社区最经典的演示短片之一。"
         },
         {
           "id": "v2",
-          "title": "Tears of Steel",
-          "desc": "Blender 基金会科幻短片，真人+CG 合成",
-          "duration": "12:14",
-          "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
-          "thumbnail": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Tears_of_Steel_poster.jpg/320px-Tears_of_Steel_poster.jpg"
+          "title": "Elephant Dream",
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "10:53",
+          "durationSec": 653,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ElephantsDream.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+          "director": "Bassam Kurdali",
+          "year": "2006",
+          "views": "12.7M",
+          "likes": "287K",
+          "rating": "7.6",
+          "description": "Elephant Dream 是 Blender 基金会的第一部开源电影，讲述了主角 Emo 和 Proog 在一个奇异工业世界中的相遇与探索。"
         },
         {
           "id": "v3",
-          "title": "Sintel",
-          "desc": "Blender 基金会奇幻动画，少女与龙的冒险",
-          "duration": "14:48",
-          "url": "https://test-videos.co.uk/vids/sintel/mp4/h264/360/Sintel_360_10s_1MB.mp4",
-          "thumbnail": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Sintel_poster.jpg/320px-Sintel_poster.jpg"
+          "title": "For Bigger Blazes",
+          "category": "tech",
+          "categoryLabel": "科技",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "8.2M",
+          "likes": "45K",
+          "rating": "7.0",
+          "description": "Google Cast 广告系列短片，演示通过 Chromecast 把火焰和光影投到客厅大屏上的神奇效果。"
         },
         {
           "id": "v4",
-          "title": "Elephants Dream",
-          "desc": "全球首部全开源 3D 动画短片",
-          "duration": "10:54",
-          "url": "https://test-videos.co.uk/vids/elephantsdream/mp4/h264/360/Elephants_Dream_360_10s_1MB.mp4",
-          "thumbnail": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Elephants_Dream_cover.jpg/320px-Elephants_Dream_cover.jpg"
+          "title": "For Bigger Escape",
+          "category": "tech",
+          "categoryLabel": "科技",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "6.1M",
+          "likes": "32K",
+          "rating": "7.2",
+          "description": "在悬崖边俯瞰云海，体验把任何小屏幕瞬间变成逃生舱的感觉。"
         },
         {
           "id": "v5",
-          "title": "Jellyfish 水母",
-          "desc": "海底水母演示片，色彩绚丽生动",
-          "duration": "0:30",
-          "url": "https://test-videos.co.uk/vids/jellyfish/mp4/h264/360/Jellyfish_360_10s_1MB.mp4",
-          "thumbnail": "https://test-videos.co.uk/vids/jellyfish/mp4/h264/360/Jellyfish_360_10s_1MB.mp4"
+          "title": "For Bigger Fun",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "1:00",
+          "durationSec": 60,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "9.8M",
+          "likes": "57K",
+          "rating": "7.8",
+          "description": "和家人朋友一起看片、一起大笑，把客厅变成欢乐的游乐场。"
         },
         {
           "id": "v6",
-          "title": "Sample Video",
-          "desc": "标准测试视频，兼容性良好",
-          "duration": "0:10",
-          "url": "https://www.w3schools.com/html/mov_bbb.mp4",
-          "thumbnail": "https://www.w3schools.com/html/pic_trulli.jpg"
+          "title": "For Bigger Joyrides",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerJoyrides.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "5.4M",
+          "likes": "28K",
+          "rating": "7.1",
+          "description": "把车载导航画面投到副驾屏幕，开启一段充满乐趣的公路之旅。"
+        },
+        {
+          "id": "v7",
+          "title": "For Bigger Meltdowns",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerMeltdowns.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "4.2M",
+          "likes": "21K",
+          "rating": "6.9",
+          "description": "记录一个普通的家庭周末，把每一个尴尬瞬间都放得更大。"
+        },
+        {
+          "id": "v8",
+          "title": "Sintel",
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "14:48",
+          "durationSec": 888,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/Sintel.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+          "director": "Colin Levy",
+          "year": "2010",
+          "views": "16.5M",
+          "likes": "342K",
+          "rating": "8.0",
+          "description": "Sintel 是一部以龙为主题的开源奇幻短片，讲述女战士 Sintel 寻找被她照顾过的幼龙 Scales 的故事。"
+        },
+        {
+          "id": "v9",
+          "title": "Subaru Outback On Street And Dirt",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "1:01",
+          "durationSec": 61,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/SubaruOutbackOnStreetAndDirt.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+          "director": "Subaru",
+          "year": "2014",
+          "views": "2.3M",
+          "likes": "11K",
+          "rating": "6.5",
+          "description": "斯巴鲁 Outback 穿越城市与泥土路的对比测试短片。"
+        },
+        {
+          "id": "v10",
+          "title": "Tears of Steel",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "12:14",
+          "durationSec": 734,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/TearsOfSteel.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+          "director": "Ian Hubert",
+          "year": "2012",
+          "views": "20.1M",
+          "likes": "488K",
+          "rating": "7.4",
+          "description": "Tears of Steel 是一部以未来阿姆斯特丹为背景的科幻短片，全部采用 Blender 开源工具链制作。"
+        },
+        {
+          "id": "v11",
+          "title": "Volkswagen GTI Review",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "0:34",
+          "durationSec": 34,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/VolkswagenGTIReview.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4",
+          "director": "TheStraightPipes",
+          "year": "2014",
+          "views": "1.8M",
+          "likes": "9K",
+          "rating": "6.8",
+          "description": "大众 GTI 经典小钢炮的简评短片。"
+        },
+        {
+          "id": "v12",
+          "title": "We Are Going On Bullrun",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "0:47",
+          "durationSec": 47,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/WeAreGoingOnBullrun.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "3.2M",
+          "likes": "15K",
+          "rating": "6.6",
+          "description": "记录 Bullrun 公路赛沿途的风景与故事。"
+        },
+        {
+          "id": "v13",
+          "title": "What Car Can You Get For A Grand",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "0:32",
+          "durationSec": 32,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/WhatCarCanYouGetForAGrand.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4",
+          "director": "TheStraightPipes",
+          "year": "2014",
+          "views": "5.1M",
+          "likes": "24K",
+          "rating": "7.0",
+          "description": "用一千美元预算能买到什么样的车？实测告诉你答案。"
+        },
+        {
+          "id": "v14",
+          "title": "For Bigger Escapes",
+          "category": "tech",
+          "categoryLabel": "科技",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "1.9M",
+          "likes": "8K",
+          "rating": "6.7",
+          "description": "把电影级画面投进你的客厅沙发里，开启另一段逃离现实的旅程。"
+        },
+        {
+          "id": "v15",
+          "title": "Spring 海岸音乐会",
+          "category": "music",
+          "categoryLabel": "音乐",
+          "duration": "3:42",
+          "durationSec": 222,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+          "director": "Coast Live",
+          "year": "2024",
+          "views": "1.2M",
+          "likes": "32K",
+          "rating": "8.1",
+          "description": "在初春的海边搭建舞台，记录一场充满阳光与海风的独立音乐会现场。"
+        },
+        {
+          "id": "v16",
+          "title": "山间回声纪录片片段",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "0:32",
+          "durationSec": 32,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/SubaruOutbackOnStreetAndDirt.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+          "director": "Echo Studio",
+          "year": "2023",
+          "views": "640K",
+          "likes": "18K",
+          "rating": "7.5",
+          "description": "在海拔 3000 米的山谷里，摄制组跟随一位声学研究者记录自然回声的衰减过程。"
         }
       ],
-      "currentTitle": "",
-      "currentDesc": "",
-      "currentDuration": "",
-      "currentUrl": "",
-      "currentThumbnail": ""
+      "filteredVideos": [
+        {
+          "id": "v1",
+          "title": "Big Buck Bunny",
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "9:56",
+          "durationSec": 596,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+          "director": "Sacha Goedegebure",
+          "year": "2008",
+          "views": "24.3M",
+          "likes": "512K",
+          "rating": "8.4",
+          "description": "Big Buck Bunny 讲述了一只体型庞大的兔子在森林里对三只欺凌它的老鼠展开报复的搞笑故事。本片采用 Blender 渲染，是开放内容社区最经典的演示短片之一。"
+        },
+        {
+          "id": "v2",
+          "title": "Elephant Dream",
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "10:53",
+          "durationSec": 653,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ElephantsDream.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+          "director": "Bassam Kurdali",
+          "year": "2006",
+          "views": "12.7M",
+          "likes": "287K",
+          "rating": "7.6",
+          "description": "Elephant Dream 是 Blender 基金会的第一部开源电影，讲述了主角 Emo 和 Proog 在一个奇异工业世界中的相遇与探索。"
+        },
+        {
+          "id": "v3",
+          "title": "For Bigger Blazes",
+          "category": "tech",
+          "categoryLabel": "科技",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "8.2M",
+          "likes": "45K",
+          "rating": "7.0",
+          "description": "Google Cast 广告系列短片，演示通过 Chromecast 把火焰和光影投到客厅大屏上的神奇效果。"
+        },
+        {
+          "id": "v4",
+          "title": "For Bigger Escape",
+          "category": "tech",
+          "categoryLabel": "科技",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "6.1M",
+          "likes": "32K",
+          "rating": "7.2",
+          "description": "在悬崖边俯瞰云海，体验把任何小屏幕瞬间变成逃生舱的感觉。"
+        },
+        {
+          "id": "v5",
+          "title": "For Bigger Fun",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "1:00",
+          "durationSec": 60,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "9.8M",
+          "likes": "57K",
+          "rating": "7.8",
+          "description": "和家人朋友一起看片、一起大笑，把客厅变成欢乐的游乐场。"
+        },
+        {
+          "id": "v6",
+          "title": "For Bigger Joyrides",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerJoyrides.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "5.4M",
+          "likes": "28K",
+          "rating": "7.1",
+          "description": "把车载导航画面投到副驾屏幕，开启一段充满乐趣的公路之旅。"
+        },
+        {
+          "id": "v7",
+          "title": "For Bigger Meltdowns",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerMeltdowns.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "4.2M",
+          "likes": "21K",
+          "rating": "6.9",
+          "description": "记录一个普通的家庭周末，把每一个尴尬瞬间都放得更大。"
+        },
+        {
+          "id": "v8",
+          "title": "Sintel",
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "14:48",
+          "durationSec": 888,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/Sintel.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+          "director": "Colin Levy",
+          "year": "2010",
+          "views": "16.5M",
+          "likes": "342K",
+          "rating": "8.0",
+          "description": "Sintel 是一部以龙为主题的开源奇幻短片，讲述女战士 Sintel 寻找被她照顾过的幼龙 Scales 的故事。"
+        },
+        {
+          "id": "v9",
+          "title": "Subaru Outback On Street And Dirt",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "1:01",
+          "durationSec": 61,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/SubaruOutbackOnStreetAndDirt.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+          "director": "Subaru",
+          "year": "2014",
+          "views": "2.3M",
+          "likes": "11K",
+          "rating": "6.5",
+          "description": "斯巴鲁 Outback 穿越城市与泥土路的对比测试短片。"
+        },
+        {
+          "id": "v10",
+          "title": "Tears of Steel",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "12:14",
+          "durationSec": 734,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/TearsOfSteel.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+          "director": "Ian Hubert",
+          "year": "2012",
+          "views": "20.1M",
+          "likes": "488K",
+          "rating": "7.4",
+          "description": "Tears of Steel 是一部以未来阿姆斯特丹为背景的科幻短片，全部采用 Blender 开源工具链制作。"
+        },
+        {
+          "id": "v11",
+          "title": "Volkswagen GTI Review",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "0:34",
+          "durationSec": 34,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/VolkswagenGTIReview.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4",
+          "director": "TheStraightPipes",
+          "year": "2014",
+          "views": "1.8M",
+          "likes": "9K",
+          "rating": "6.8",
+          "description": "大众 GTI 经典小钢炮的简评短片。"
+        },
+        {
+          "id": "v12",
+          "title": "We Are Going On Bullrun",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "0:47",
+          "durationSec": 47,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/WeAreGoingOnBullrun.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "3.2M",
+          "likes": "15K",
+          "rating": "6.6",
+          "description": "记录 Bullrun 公路赛沿途的风景与故事。"
+        },
+        {
+          "id": "v13",
+          "title": "What Car Can You Get For A Grand",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "0:32",
+          "durationSec": 32,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/WhatCarCanYouGetForAGrand.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4",
+          "director": "TheStraightPipes",
+          "year": "2014",
+          "views": "5.1M",
+          "likes": "24K",
+          "rating": "7.0",
+          "description": "用一千美元预算能买到什么样的车？实测告诉你答案。"
+        },
+        {
+          "id": "v14",
+          "title": "For Bigger Escapes",
+          "category": "tech",
+          "categoryLabel": "科技",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "1.9M",
+          "likes": "8K",
+          "rating": "6.7",
+          "description": "把电影级画面投进你的客厅沙发里，开启另一段逃离现实的旅程。"
+        },
+        {
+          "id": "v15",
+          "title": "Spring 海岸音乐会",
+          "category": "music",
+          "categoryLabel": "音乐",
+          "duration": "3:42",
+          "durationSec": 222,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+          "director": "Coast Live",
+          "year": "2024",
+          "views": "1.2M",
+          "likes": "32K",
+          "rating": "8.1",
+          "description": "在初春的海边搭建舞台，记录一场充满阳光与海风的独立音乐会现场。"
+        },
+        {
+          "id": "v16",
+          "title": "山间回声纪录片片段",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "0:32",
+          "durationSec": 32,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/SubaruOutbackOnStreetAndDirt.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+          "director": "Echo Studio",
+          "year": "2023",
+          "views": "640K",
+          "likes": "18K",
+          "rating": "7.5",
+          "description": "在海拔 3000 米的山谷里，摄制组跟随一位声学研究者记录自然回声的衰减过程。"
+        }
+      ],
+      "filteredCount": 16,
+      "featured": [
+        {
+          "id": "v16",
+          "title": "山间回声纪录片片段",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "0:32",
+          "durationSec": 32,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/SubaruOutbackOnStreetAndDirt.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+          "director": "Echo Studio",
+          "year": "2023",
+          "views": "640K",
+          "likes": "18K",
+          "rating": "7.5",
+          "description": "在海拔 3000 米的山谷里，摄制组跟随一位声学研究者记录自然回声的衰减过程。"
+        },
+        {
+          "id": "v1",
+          "title": "Big Buck Bunny",
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "9:56",
+          "durationSec": 596,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+          "director": "Sacha Goedegebure",
+          "year": "2008",
+          "views": "24.3M",
+          "likes": "512K",
+          "rating": "8.4",
+          "description": "Big Buck Bunny 讲述了一只体型庞大的兔子在森林里对三只欺凌它的老鼠展开报复的搞笑故事。本片采用 Blender 渲染，是开放内容社区最经典的演示短片之一。"
+        },
+        {
+          "id": "v10",
+          "title": "Tears of Steel",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "12:14",
+          "durationSec": 734,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/TearsOfSteel.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+          "director": "Ian Hubert",
+          "year": "2012",
+          "views": "20.1M",
+          "likes": "488K",
+          "rating": "7.4",
+          "description": "Tears of Steel 是一部以未来阿姆斯特丹为背景的科幻短片，全部采用 Blender 开源工具链制作。"
+        },
+        {
+          "id": "v8",
+          "title": "Sintel",
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "14:48",
+          "durationSec": 888,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/Sintel.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+          "director": "Colin Levy",
+          "year": "2010",
+          "views": "16.5M",
+          "likes": "342K",
+          "rating": "8.0",
+          "description": "Sintel 是一部以龙为主题的开源奇幻短片，讲述女战士 Sintel 寻找被她照顾过的幼龙 Scales 的故事。"
+        },
+        {
+          "id": "v2",
+          "title": "Elephant Dream",
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "10:53",
+          "durationSec": 653,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ElephantsDream.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+          "director": "Bassam Kurdali",
+          "year": "2006",
+          "views": "12.7M",
+          "likes": "287K",
+          "rating": "7.6",
+          "description": "Elephant Dream 是 Blender 基金会的第一部开源电影，讲述了主角 Emo 和 Proog 在一个奇异工业世界中的相遇与探索。"
+        },
+        {
+          "id": "v5",
+          "title": "For Bigger Fun",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "1:00",
+          "durationSec": 60,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "9.8M",
+          "likes": "57K",
+          "rating": "7.8",
+          "description": "和家人朋友一起看片、一起大笑，把客厅变成欢乐的游乐场。"
+        }
+      ],
+      "selectedCategory": "all",
+      "selectedCategoryLabel": "全部",
+      "searchQuery": "",
+      "searchResults": [
+        {
+          "id": "v1",
+          "title": "Big Buck Bunny",
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "9:56",
+          "durationSec": 596,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+          "director": "Sacha Goedegebure",
+          "year": "2008",
+          "views": "24.3M",
+          "likes": "512K",
+          "rating": "8.4",
+          "description": "Big Buck Bunny 讲述了一只体型庞大的兔子在森林里对三只欺凌它的老鼠展开报复的搞笑故事。本片采用 Blender 渲染，是开放内容社区最经典的演示短片之一。"
+        },
+        {
+          "id": "v2",
+          "title": "Elephant Dream",
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "10:53",
+          "durationSec": 653,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ElephantsDream.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+          "director": "Bassam Kurdali",
+          "year": "2006",
+          "views": "12.7M",
+          "likes": "287K",
+          "rating": "7.6",
+          "description": "Elephant Dream 是 Blender 基金会的第一部开源电影，讲述了主角 Emo 和 Proog 在一个奇异工业世界中的相遇与探索。"
+        },
+        {
+          "id": "v3",
+          "title": "For Bigger Blazes",
+          "category": "tech",
+          "categoryLabel": "科技",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "8.2M",
+          "likes": "45K",
+          "rating": "7.0",
+          "description": "Google Cast 广告系列短片，演示通过 Chromecast 把火焰和光影投到客厅大屏上的神奇效果。"
+        },
+        {
+          "id": "v4",
+          "title": "For Bigger Escape",
+          "category": "tech",
+          "categoryLabel": "科技",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "6.1M",
+          "likes": "32K",
+          "rating": "7.2",
+          "description": "在悬崖边俯瞰云海，体验把任何小屏幕瞬间变成逃生舱的感觉。"
+        },
+        {
+          "id": "v5",
+          "title": "For Bigger Fun",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "1:00",
+          "durationSec": 60,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "9.8M",
+          "likes": "57K",
+          "rating": "7.8",
+          "description": "和家人朋友一起看片、一起大笑，把客厅变成欢乐的游乐场。"
+        },
+        {
+          "id": "v6",
+          "title": "For Bigger Joyrides",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerJoyrides.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "5.4M",
+          "likes": "28K",
+          "rating": "7.1",
+          "description": "把车载导航画面投到副驾屏幕，开启一段充满乐趣的公路之旅。"
+        },
+        {
+          "id": "v7",
+          "title": "For Bigger Meltdowns",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerMeltdowns.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "4.2M",
+          "likes": "21K",
+          "rating": "6.9",
+          "description": "记录一个普通的家庭周末，把每一个尴尬瞬间都放得更大。"
+        },
+        {
+          "id": "v8",
+          "title": "Sintel",
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "14:48",
+          "durationSec": 888,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/Sintel.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+          "director": "Colin Levy",
+          "year": "2010",
+          "views": "16.5M",
+          "likes": "342K",
+          "rating": "8.0",
+          "description": "Sintel 是一部以龙为主题的开源奇幻短片，讲述女战士 Sintel 寻找被她照顾过的幼龙 Scales 的故事。"
+        },
+        {
+          "id": "v9",
+          "title": "Subaru Outback On Street And Dirt",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "1:01",
+          "durationSec": 61,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/SubaruOutbackOnStreetAndDirt.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+          "director": "Subaru",
+          "year": "2014",
+          "views": "2.3M",
+          "likes": "11K",
+          "rating": "6.5",
+          "description": "斯巴鲁 Outback 穿越城市与泥土路的对比测试短片。"
+        },
+        {
+          "id": "v10",
+          "title": "Tears of Steel",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "12:14",
+          "durationSec": 734,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/TearsOfSteel.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+          "director": "Ian Hubert",
+          "year": "2012",
+          "views": "20.1M",
+          "likes": "488K",
+          "rating": "7.4",
+          "description": "Tears of Steel 是一部以未来阿姆斯特丹为背景的科幻短片，全部采用 Blender 开源工具链制作。"
+        },
+        {
+          "id": "v11",
+          "title": "Volkswagen GTI Review",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "0:34",
+          "durationSec": 34,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/VolkswagenGTIReview.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/VolkswagenGTIReview.mp4",
+          "director": "TheStraightPipes",
+          "year": "2014",
+          "views": "1.8M",
+          "likes": "9K",
+          "rating": "6.8",
+          "description": "大众 GTI 经典小钢炮的简评短片。"
+        },
+        {
+          "id": "v12",
+          "title": "We Are Going On Bullrun",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "0:47",
+          "durationSec": 47,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/WeAreGoingOnBullrun.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "3.2M",
+          "likes": "15K",
+          "rating": "6.6",
+          "description": "记录 Bullrun 公路赛沿途的风景与故事。"
+        },
+        {
+          "id": "v13",
+          "title": "What Car Can You Get For A Grand",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "0:32",
+          "durationSec": 32,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/WhatCarCanYouGetForAGrand.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WhatCarCanYouGetForAGrand.mp4",
+          "director": "TheStraightPipes",
+          "year": "2014",
+          "views": "5.1M",
+          "likes": "24K",
+          "rating": "7.0",
+          "description": "用一千美元预算能买到什么样的车？实测告诉你答案。"
+        },
+        {
+          "id": "v14",
+          "title": "For Bigger Escapes",
+          "category": "tech",
+          "categoryLabel": "科技",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "1.9M",
+          "likes": "8K",
+          "rating": "6.7",
+          "description": "把电影级画面投进你的客厅沙发里，开启另一段逃离现实的旅程。"
+        },
+        {
+          "id": "v15",
+          "title": "Spring 海岸音乐会",
+          "category": "music",
+          "categoryLabel": "音乐",
+          "duration": "3:42",
+          "durationSec": 222,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+          "director": "Coast Live",
+          "year": "2024",
+          "views": "1.2M",
+          "likes": "32K",
+          "rating": "8.1",
+          "description": "在初春的海边搭建舞台，记录一场充满阳光与海风的独立音乐会现场。"
+        },
+        {
+          "id": "v16",
+          "title": "山间回声纪录片片段",
+          "category": "doc",
+          "categoryLabel": "纪录片",
+          "duration": "0:32",
+          "durationSec": 32,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/SubaruOutbackOnStreetAndDirt.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
+          "director": "Echo Studio",
+          "year": "2023",
+          "views": "640K",
+          "likes": "18K",
+          "rating": "7.5",
+          "description": "在海拔 3000 米的山谷里，摄制组跟随一位声学研究者记录自然回声的衰减过程。"
+        }
+      ],
+      "currentVideo": {
+        "id": "v1",
+        "title": "Big Buck Bunny",
+        "category": "animation",
+        "categoryLabel": "动画",
+        "duration": "9:56",
+        "durationSec": 596,
+        "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg",
+        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+        "director": "Sacha Goedegebure",
+        "year": "2008",
+        "views": "24.3M",
+        "likes": "512K",
+        "rating": "8.4",
+        "description": "Big Buck Bunny 讲述了一只体型庞大的兔子在森林里对三只欺凌它的老鼠展开报复的搞笑故事。本片采用 Blender 渲染，是开放内容社区最经典的演示短片之一。"
+      },
+      "relatedVideos": [
+        {
+          "id": "v2",
+          "title": "Elephant Dream",
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "10:53",
+          "durationSec": 653,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ElephantsDream.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+          "director": "Bassam Kurdali",
+          "year": "2006",
+          "views": "12.7M",
+          "likes": "287K",
+          "rating": "7.6",
+          "description": "Elephant Dream 是 Blender 基金会的第一部开源电影，讲述了主角 Emo 和 Proog 在一个奇异工业世界中的相遇与探索。"
+        },
+        {
+          "id": "v3",
+          "title": "For Bigger Blazes",
+          "category": "tech",
+          "categoryLabel": "科技",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "8.2M",
+          "likes": "45K",
+          "rating": "7.0",
+          "description": "Google Cast 广告系列短片，演示通过 Chromecast 把火焰和光影投到客厅大屏上的神奇效果。"
+        },
+        {
+          "id": "v4",
+          "title": "For Bigger Escape",
+          "category": "tech",
+          "categoryLabel": "科技",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "6.1M",
+          "likes": "32K",
+          "rating": "7.2",
+          "description": "在悬崖边俯瞰云海，体验把任何小屏幕瞬间变成逃生舱的感觉。"
+        },
+        {
+          "id": "v5",
+          "title": "For Bigger Fun",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "1:00",
+          "durationSec": 60,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerFun.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "9.8M",
+          "likes": "57K",
+          "rating": "7.8",
+          "description": "和家人朋友一起看片、一起大笑，把客厅变成欢乐的游乐场。"
+        },
+        {
+          "id": "v6",
+          "title": "For Bigger Joyrides",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerJoyrides.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "5.4M",
+          "likes": "28K",
+          "rating": "7.1",
+          "description": "把车载导航画面投到副驾屏幕，开启一段充满乐趣的公路之旅。"
+        },
+        {
+          "id": "v7",
+          "title": "For Bigger Meltdowns",
+          "category": "film",
+          "categoryLabel": "电影",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerMeltdowns.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "4.2M",
+          "likes": "21K",
+          "rating": "6.9",
+          "description": "记录一个普通的家庭周末，把每一个尴尬瞬间都放得更大。"
+        }
+      ],
+      "favorites": [
+        {
+          "id": "v1",
+          "title": "Big Buck Bunny",
+          "category": "animation",
+          "categoryLabel": "动画",
+          "duration": "9:56",
+          "durationSec": 596,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+          "director": "Sacha Goedegebure",
+          "year": "2008",
+          "views": "24.3M",
+          "likes": "512K",
+          "rating": "8.4",
+          "description": "Big Buck Bunny 讲述了一只体型庞大的兔子在森林里对三只欺凌它的老鼠展开报复的搞笑故事。本片采用 Blender 渲染，是开放内容社区最经典的演示短片之一。"
+        },
+        {
+          "id": "v4",
+          "title": "For Bigger Escape",
+          "category": "tech",
+          "categoryLabel": "科技",
+          "duration": "0:15",
+          "durationSec": 15,
+          "cover": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerEscapes.jpg",
+          "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+          "director": "Google",
+          "year": "2014",
+          "views": "6.1M",
+          "likes": "32K",
+          "rating": "7.2",
+          "description": "在悬崖边俯瞰云海，体验把任何小屏幕瞬间变成逃生舱的感觉。"
+        }
+      ]
     },
     "functions": {
-      "selectVideo": {
+      "openVideo": {
         "params": [
-          "title",
-          "desc",
-          "duration",
-          "url",
-          "thumbnail"
+          "id"
         ],
+        "return": "None",
         "logic": [
           {
-            "call": "@set_global",
+            "call": "@for_each",
             "args": {
-              "key": "currentTitle",
-              "value": {
-                "var": "title"
-              }
+              "source": {
+                "var": "global.allVideos"
+              },
+              "body": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        {
+                          "var": "loop.item.id"
+                        },
+                        {
+                          "var": "params.id"
+                        }
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.currentVideo",
+                          "value": "{{ loop.item }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
             }
           },
           {
-            "call": "@set_global",
+            "call": "@set",
             "args": {
-              "key": "currentDesc",
+              "var": "global.relatedVideos",
               "value": {
-                "var": "desc"
-              }
-            }
-          },
-          {
-            "call": "@set_global",
-            "args": {
-              "key": "currentDuration",
-              "value": {
-                "var": "duration"
-              }
-            }
-          },
-          {
-            "call": "@set_global",
-            "args": {
-              "key": "currentUrl",
-              "value": {
-                "var": "url"
-              }
-            }
-          },
-          {
-            "call": "@set_global",
-            "args": {
-              "key": "currentThumbnail",
-              "value": {
-                "var": "thumbnail"
+                "filter": [
+                  {
+                    "var": "global.allVideos"
+                  },
+                  {
+                    "!=": [
+                      {
+                        "var": ""
+                      },
+                      {
+                        "var": "global.currentVideo"
+                      }
+                    ]
+                  }
+                ]
               }
             }
           },
           {
             "call": "@navigate",
             "args": {
-              "screen": "video_player"
+              "screen": "player"
             }
           }
         ]
       },
-      "goBack": {
-        "params": [],
+      "selectCategory": {
+        "params": [
+          "key",
+          "label"
+        ],
+        "return": "None",
         "logic": [
           {
-            "call": "@navigate_back",
+            "call": "@set",
+            "args": {
+              "var": "global.selectedCategory",
+              "value": "{{ params.key }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.selectedCategoryLabel",
+              "value": "{{ params.label }}"
+            }
+          },
+          {
+            "call": "@global.applyFilter",
             "args": {}
           }
         ]
-      }
-    }
-  },
-  "steps": [],
-  "ui": {
-    "screens": [
-      {
-        "id": "video_list",
-        "title": "视频浏览",
-        "layout": "column",
-        "backgroundColor": "#F3F4F6",
-        "appBar": {
-          "title": "视频浏览",
-          "centerTitle": true,
-          "backgroundColor": "#FFFFFF",
-          "color": "#111827",
-          "elevation": 0
-        },
-        "children": [
+      },
+      "setSearch": {
+        "params": [
+          "q"
+        ],
+        "return": "None",
+        "logic": [
           {
-            "type": "list",
-            "source": "{{ global.videos }}",
-            "item_template": {
-              "type": "gesture_detector",
-              "action": {
-                "call": "@global.selectVideo",
-                "args": {
-                  "title": "{{ loop.item.title }}",
-                  "desc": "{{ loop.item.desc }}",
-                  "duration": "{{ loop.item.duration }}",
-                  "url": "{{ loop.item.url }}",
-                  "thumbnail": "{{ loop.item.thumbnail }}"
-                }
-              },
-              "child": {
-                "type": "card",
-                "layout": "row",
-                "color": "#FFFFFF",
-                "padding": 10,
-                "margin": 8,
-                "elevation": 0,
-                "borderRadius": 14,
-                "crossAxisAlignment": "center",
-                "children": [
+            "call": "@set",
+            "args": {
+              "var": "global.searchQuery",
+              "value": "{{ params.q }}"
+            }
+          },
+          {
+            "call": "@global.applyFilter",
+            "args": {}
+          }
+        ]
+      },
+      "clearSearch": {
+        "params": [],
+        "return": "None",
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.searchQuery",
+              "value": ""
+            }
+          },
+          {
+            "call": "@global.applyFilter",
+            "args": {}
+          }
+        ]
+      },
+      "applyFilter": {
+        "params": [],
+        "return": "None",
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.filteredVideos",
+              "value": {
+                "filter": [
                   {
-                    "type": "container",
-                    "width": 120,
-                    "height": 76,
-                    "borderRadius": 10,
-                    "child": {
-                      "type": "image",
-                      "url": "{{ loop.item.thumbnail }}",
-                      "fit": "cover",
-                      "borderRadius": 10
-                    }
+                    "var": "global.allVideos"
                   },
                   {
-                    "type": "spacer",
-                    "width": 12
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "position": {
-                      "type": "flex",
-                      "flex": 1
-                    },
-                    "children": [
+                    "and": [
                       {
-                        "type": "text",
-                        "value": "{{ loop.item.title }}",
-                        "style": {
-                          "fontSize": 16,
-                          "fontWeight": "bold",
-                          "color": "#111827"
-                        }
-                      },
-                      {
-                        "type": "spacer",
-                        "height": 4
-                      },
-                      {
-                        "type": "text",
-                        "value": "{{ loop.item.desc }}",
-                        "style": {
-                          "fontSize": 12,
-                          "color": "#6B7280"
-                        },
-                        "maxLines": 1,
-                        "overflow": "ellipsis"
-                      },
-                      {
-                        "type": "spacer",
-                        "height": 6
-                      },
-                      {
-                        "type": "container",
-                        "layout": "row",
-                        "crossAxisAlignment": "center",
-                        "children": [
+                        "if": [
                           {
-                            "type": "icon",
-                            "name": "play",
-                            "size": 14,
-                            "color": "#EA580C"
+                            "==": [
+                              {
+                                "var": "global.selectedCategory"
+                              },
+                              "all"
+                            ]
                           },
+                          true,
                           {
-                            "type": "spacer",
-                            "width": 4
+                            "==": [
+                              {
+                                "var": "loop.item.category"
+                              },
+                              {
+                                "var": "global.selectedCategory"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "if": [
+                          {
+                            "str_contains": [
+                              {
+                                "str_lower": [
+                                  {
+                                    "cat": [
+                                      {
+                                        "var": "loop.item.title"
+                                      },
+                                      " ",
+                                      {
+                                        "var": "loop.item.director"
+                                      },
+                                      " ",
+                                      {
+                                        "var": "loop.item.categoryLabel"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "str_lower": [
+                                  {
+                                    "var": "global.searchQuery"
+                                  }
+                                ]
+                              }
+                            ]
                           },
+                          true,
                           {
-                            "type": "text",
-                            "value": "{{ loop.item.duration }}",
-                            "style": {
-                              "fontSize": 12,
-                              "color": "#9CA3AF"
-                            }
+                            "==": [
+                              {
+                                "var": "global.searchQuery"
+                              },
+                              ""
+                            ]
                           }
                         ]
                       }
@@ -263,61 +1258,982 @@
                 ]
               }
             }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.filteredCount",
+              "value": {
+                "length": [
+                  {
+                    "var": "global.filteredVideos"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.searchResults",
+              "value": {
+                "var": "global.filteredVideos"
+              }
+            }
+          }
+        ]
+      },
+      "toggleFavorite": {
+        "params": [
+          "id"
+        ],
+        "return": "None",
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "in": [
+                  {
+                    "var": "params.id"
+                  },
+                  {
+                    "map": [
+                      {
+                        "var": "global.favorites"
+                      },
+                      {
+                        "var": "id"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@global.removeFavorite",
+                  "args": {
+                    "id": "{{ params.id }}"
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@for_each",
+                  "args": {
+                    "source": {
+                      "var": "global.allVideos"
+                    },
+                    "body": [
+                      {
+                        "call": "@if",
+                        "args": {
+                          "condition": {
+                            "==": [
+                              {
+                                "var": "loop.item.id"
+                              },
+                              {
+                                "var": "params.id"
+                              }
+                            ]
+                          },
+                          "then": [
+                            {
+                              "call": "@list_add",
+                              "args": {
+                                "var": "global.favorites",
+                                "item": "{{ loop.item }}"
+                              }
+                            },
+                            {
+                              "call": "@show_toast",
+                              "args": {
+                                "message": "已加入收藏"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "removeFavorite": {
+        "params": [
+          "id"
+        ],
+        "return": "None",
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.favorites",
+              "value": {
+                "filter": [
+                  {
+                    "var": "global.favorites"
+                  },
+                  {
+                    "!=": [
+                      {
+                        "var": "id"
+                      },
+                      {
+                        "var": "params.id"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "已从收藏移除"
+            }
+          }
+        ]
+      },
+      "shareVideo": {
+        "params": [],
+        "return": "None",
+        "logic": [
+          {
+            "call": "@share",
+            "args": {
+              "text": "来看看这部 {{ global.currentVideo.title }}，非常精彩！"
+            }
+          }
+        ]
+      },
+      "followCreator": {
+        "params": [],
+        "return": "None",
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "已关注 {{ global.currentVideo.director }}"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [
+    {
+      "call": "@global.applyFilter",
+      "args": {}
+    }
+  ],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "视频浏览器",
+        "layout": "column",
+        "backgroundColor": "#F8FAFC",
+        "appBar": {
+          "title": "StreamHub 视频",
+          "centerTitle": false,
+          "backgroundColor": "#0F172A",
+          "color": "#FFFFFF",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "icon": "search",
+              "variant": "text",
+              "action": {
+                "type": "navigate",
+                "screen": "search"
+              },
+              "style": {
+                "textColor": "#FFFFFF"
+              }
+            },
+            {
+              "type": "button",
+              "icon": "favorite",
+              "variant": "text",
+              "action": {
+                "type": "navigate",
+                "screen": "favorites"
+              },
+              "style": {
+                "textColor": "#FFFFFF"
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "container",
+            "children": [
+              {
+                "type": "icon",
+                "name": "search",
+                "size": 18,
+                "color": "#9CA3AF"
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "搜索视频标题、导演...",
+                "bind": "global.searchQuery",
+                "maxLines": 1,
+                "style": {
+                  "fontSize": 14,
+                  "fillColor": "#F3F4F6",
+                  "borderRadius": 12
+                }
+              }
+            ],
+            "layout": "row",
+            "crossAxisAlignment": "center",
+            "padding": 12,
+            "margin": 16,
+            "color": "#F3F4F6",
+            "borderRadius": 14
+          },
+          {
+            "type": "container",
+            "children": [
+              {
+                "type": "button",
+                "label": "全部",
+                "action": {
+                  "call": "@global.selectCategory",
+                  "args": {
+                    "key": "all",
+                    "label": "全部"
+                  }
+                },
+                "icon": "grid_3x3",
+                "variant": "filled",
+                "style": {
+                  "backgroundColor": "#1F2937",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 20,
+                  "paddingH": 14,
+                  "paddingV": 8,
+                  "fontSize": 13
+                }
+              },
+              {
+                "type": "button",
+                "label": "动画",
+                "action": {
+                  "call": "@global.selectCategory",
+                  "args": {
+                    "key": "animation",
+                    "label": "动画"
+                  }
+                },
+                "icon": "auto_awesome",
+                "variant": "filled",
+                "style": {
+                  "backgroundColor": "#F3F4F6",
+                  "textColor": "#374151",
+                  "borderRadius": 20,
+                  "paddingH": 14,
+                  "paddingV": 8,
+                  "fontSize": 13
+                }
+              },
+              {
+                "type": "button",
+                "label": "电影",
+                "action": {
+                  "call": "@global.selectCategory",
+                  "args": {
+                    "key": "film",
+                    "label": "电影"
+                  }
+                },
+                "icon": "video",
+                "variant": "filled",
+                "style": {
+                  "backgroundColor": "#F3F4F6",
+                  "textColor": "#374151",
+                  "borderRadius": 20,
+                  "paddingH": 14,
+                  "paddingV": 8,
+                  "fontSize": 13
+                }
+              },
+              {
+                "type": "button",
+                "label": "音乐",
+                "action": {
+                  "call": "@global.selectCategory",
+                  "args": {
+                    "key": "music",
+                    "label": "音乐"
+                  }
+                },
+                "icon": "audio",
+                "variant": "filled",
+                "style": {
+                  "backgroundColor": "#F3F4F6",
+                  "textColor": "#374151",
+                  "borderRadius": 20,
+                  "paddingH": 14,
+                  "paddingV": 8,
+                  "fontSize": 13
+                }
+              },
+              {
+                "type": "button",
+                "label": "纪录片",
+                "action": {
+                  "call": "@global.selectCategory",
+                  "args": {
+                    "key": "doc",
+                    "label": "纪录片"
+                  }
+                },
+                "icon": "history",
+                "variant": "filled",
+                "style": {
+                  "backgroundColor": "#F3F4F6",
+                  "textColor": "#374151",
+                  "borderRadius": 20,
+                  "paddingH": 14,
+                  "paddingV": 8,
+                  "fontSize": 13
+                }
+              },
+              {
+                "type": "button",
+                "label": "科技",
+                "action": {
+                  "call": "@global.selectCategory",
+                  "args": {
+                    "key": "tech",
+                    "label": "科技"
+                  }
+                },
+                "icon": "bolt",
+                "variant": "filled",
+                "style": {
+                  "backgroundColor": "#F3F4F6",
+                  "textColor": "#374151",
+                  "borderRadius": 20,
+                  "paddingH": 14,
+                  "paddingV": 8,
+                  "fontSize": 13
+                }
+              }
+            ],
+            "layout": "row",
+            "spacing": 8,
+            "padding": 16
+          },
+          {
+            "type": "container",
+            "children": [
+              {
+                "type": "text",
+                "value": "🔥 今日精选",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "bold",
+                  "color": "#0F172A"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "list",
+                    "source": "{{ global.featured }}",
+                    "shrinkWrap": true,
+                    "separator": "none",
+                    "scrollDirection": "horizontal",
+                    "item_template": {
+                      "type": "container",
+                      "margin": 12,
+                      "onTap": {
+                        "call": "@global.openVideo",
+                        "args": {
+                          "id": "{{ loop.item.id }}"
+                        }
+                      },
+                      "children": [
+                        {
+                          "type": "image",
+                          "url": "{{ loop.item.cover }}",
+                          "fit": "cover",
+                          "width": 320,
+                          "height": 180,
+                          "borderRadius": 14
+                        },
+                        {
+                          "type": "container",
+                          "color": "#CC000000",
+                          "borderRadius": 4,
+                          "padding": 4,
+                          "position": {
+                            "type": "absolute",
+                            "right": 10,
+                            "top": 10
+                          },
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.duration }}",
+                              "style": {
+                                "fontSize": 10,
+                                "fontWeight": "bold",
+                                "color": "#FFFFFF"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "container",
+                          "color": "#1F2937CC",
+                          "borderRadius": 4,
+                          "padding": 4,
+                          "position": {
+                            "type": "absolute",
+                            "left": 10,
+                            "top": 10
+                          },
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.categoryLabel }}",
+                              "style": {
+                                "fontSize": 10,
+                                "fontWeight": "bold",
+                                "color": "#FFFFFF"
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "layout": "row"
+              }
+            ],
+            "layout": "column",
+            "padding": 16
+          },
+          {
+            "type": "container",
+            "children": [
+              {
+                "type": "text",
+                "value": "📺 全部视频",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "bold",
+                  "color": "#0F172A"
+                }
+              },
+              {
+                "type": "spacer",
+                "flex": 1
+              },
+              {
+                "type": "text",
+                "value": "共 {{ global.filteredCount }} 部",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#6B7280"
+                }
+              }
+            ],
+            "layout": "row",
+            "crossAxisAlignment": "center",
+            "padding": 16
+          },
+          {
+            "type": "grid",
+            "source": "{{ global.filteredVideos }}",
+            "crossAxisCount": 2,
+            "childAspectRatio": 0.72,
+            "mainAxisSpacing": 12,
+            "crossAxisSpacing": 12,
+            "padding": 16,
+            "shrinkWrap": true,
+            "emptyText": "没有匹配的视频",
+            "item_template": {
+              "type": "container",
+              "onTap": {
+                "call": "@global.openVideo",
+                "args": {
+                  "id": "{{ loop.item.id }}"
+                }
+              },
+              "padding": 0,
+              "children": [
+                {
+                  "type": "image",
+                  "url": "{{ loop.item.cover }}",
+                  "fit": "cover",
+                  "width": 200,
+                  "height": 112,
+                  "borderRadius": 10
+                },
+                {
+                  "type": "container",
+                  "color": "#CC000000",
+                  "borderRadius": 4,
+                  "padding": 4,
+                  "position": {
+                    "type": "absolute",
+                    "right": 6,
+                    "top": 6
+                  },
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.duration }}",
+                      "style": {
+                        "fontSize": 10,
+                        "fontWeight": "bold",
+                        "color": "#FFFFFF"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "spacer",
+                  "height": 8
+                },
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.title }}",
+                  "style": {
+                    "fontSize": 13,
+                    "fontWeight": "bold",
+                    "color": "#1F2937",
+                    "maxLines": 2,
+                    "overflow": "ellipsis",
+                    "lineHeight": 1.3
+                  }
+                },
+                {
+                  "type": "spacer",
+                  "height": 4
+                },
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.categoryLabel }} · {{ loop.item.views }}",
+                  "style": {
+                    "fontSize": 11,
+                    "color": "#6B7280",
+                    "maxLines": 1,
+                    "overflow": "ellipsis"
+                  }
+                }
+              ]
+            }
           }
         ]
       },
       {
-        "id": "video_player",
-        "title": "播放",
+        "id": "search",
+        "title": "搜索",
+        "layout": "column",
+        "backgroundColor": "#F8FAFC",
+        "appBar": {
+          "title": "搜索视频",
+          "centerTitle": true,
+          "backgroundColor": "#0F172A",
+          "color": "#FFFFFF",
+          "elevation": 0
+        },
+        "children": [
+          {
+            "type": "container",
+            "children": [
+              {
+                "type": "icon",
+                "name": "search",
+                "size": 18,
+                "color": "#9CA3AF"
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "输入视频标题、导演、分类...",
+                "bind": "global.searchQuery",
+                "maxLines": 1,
+                "style": {
+                  "fontSize": 14,
+                  "fillColor": "#F3F4F6",
+                  "borderRadius": 12
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "button",
+                "icon": "close",
+                "variant": "text",
+                "action": {
+                  "call": "@global.clearSearch",
+                  "args": {}
+                },
+                "style": {
+                  "textColor": "#9CA3AF"
+                }
+              }
+            ],
+            "layout": "row",
+            "crossAxisAlignment": "center",
+            "padding": 12,
+            "margin": 16,
+            "color": "#F3F4F6",
+            "borderRadius": 14
+          },
+          {
+            "type": "container",
+            "children": [
+              {
+                "type": "text",
+                "value": "热门搜索",
+                "style": {
+                  "fontSize": 13,
+                  "fontWeight": "bold",
+                  "color": "#6B7280"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "button",
+                    "label": "Big Buck Bunny",
+                    "variant": "outlined",
+                    "action": {
+                      "call": "@global.setSearch",
+                      "args": {
+                        "q": "Big Buck Bunny"
+                      }
+                    },
+                    "style": {
+                      "textColor": "#374151",
+                      "borderRadius": 18,
+                      "paddingH": 12,
+                      "paddingV": 6,
+                      "fontSize": 12
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "Sintel",
+                    "variant": "outlined",
+                    "action": {
+                      "call": "@global.setSearch",
+                      "args": {
+                        "q": "Sintel"
+                      }
+                    },
+                    "style": {
+                      "textColor": "#374151",
+                      "borderRadius": 18,
+                      "paddingH": 12,
+                      "paddingV": 6,
+                      "fontSize": 12
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "Google 演示",
+                    "variant": "outlined",
+                    "action": {
+                      "call": "@global.setSearch",
+                      "args": {
+                        "q": "Google 演示"
+                      }
+                    },
+                    "style": {
+                      "textColor": "#374151",
+                      "borderRadius": 18,
+                      "paddingH": 12,
+                      "paddingV": 6,
+                      "fontSize": 12
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "电影",
+                    "variant": "outlined",
+                    "action": {
+                      "call": "@global.setSearch",
+                      "args": {
+                        "q": "电影"
+                      }
+                    },
+                    "style": {
+                      "textColor": "#374151",
+                      "borderRadius": 18,
+                      "paddingH": 12,
+                      "paddingV": 6,
+                      "fontSize": 12
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "动画",
+                    "variant": "outlined",
+                    "action": {
+                      "call": "@global.setSearch",
+                      "args": {
+                        "q": "动画"
+                      }
+                    },
+                    "style": {
+                      "textColor": "#374151",
+                      "borderRadius": 18,
+                      "paddingH": 12,
+                      "paddingV": 6,
+                      "fontSize": 12
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "纪录片",
+                    "variant": "outlined",
+                    "action": {
+                      "call": "@global.setSearch",
+                      "args": {
+                        "q": "纪录片"
+                      }
+                    },
+                    "style": {
+                      "textColor": "#374151",
+                      "borderRadius": 18,
+                      "paddingH": 12,
+                      "paddingV": 6,
+                      "fontSize": 12
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "Blender",
+                    "variant": "outlined",
+                    "action": {
+                      "call": "@global.setSearch",
+                      "args": {
+                        "q": "Blender"
+                      }
+                    },
+                    "style": {
+                      "textColor": "#374151",
+                      "borderRadius": 18,
+                      "paddingH": 12,
+                      "paddingV": 6,
+                      "fontSize": 12
+                    }
+                  }
+                ]
+              }
+            ],
+            "padding": 16
+          },
+          {
+            "type": "divider",
+            "color": "#E5E7EB",
+            "height": 1,
+            "thickness": 1
+          },
+          {
+            "type": "container",
+            "children": [
+              {
+                "type": "text",
+                "value": "搜索结果",
+                "style": {
+                  "fontSize": 13,
+                  "fontWeight": "bold",
+                  "color": "#6B7280"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "list",
+                "source": "{{ global.searchResults }}",
+                "shrinkWrap": true,
+                "separator": "divider",
+                "emptyText": "没有匹配 \"{{ global.searchQuery }}\" 的视频，试试其他关键词",
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "padding": 10,
+                  "onTap": {
+                    "call": "@global.openVideo",
+                    "args": {
+                      "id": "{{ loop.item.id }}"
+                    }
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "url": "{{ loop.item.cover }}",
+                      "fit": "cover",
+                      "width": 96,
+                      "height": 56,
+                      "borderRadius": 6
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      },
+                      "padding": 12,
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.title }}",
+                          "style": {
+                            "fontSize": 14,
+                            "fontWeight": "bold",
+                            "color": "#1F2937",
+                            "maxLines": 1,
+                            "overflow": "ellipsis"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 4
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.director }} · {{ loop.item.year }}",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#6B7280",
+                            "maxLines": 1,
+                            "overflow": "ellipsis"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 4
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.categoryLabel }} · {{ loop.item.duration }} · {{ loop.item.views }} 次播放",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#9CA3AF",
+                            "maxLines": 1,
+                            "overflow": "ellipsis"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "icon",
+                      "name": "chevron_right",
+                      "size": 18,
+                      "color": "#9CA3AF"
+                    }
+                  ]
+                }
+              }
+            ],
+            "padding": 16
+          }
+        ]
+      },
+      {
+        "id": "player",
+        "title": "正在播放",
         "layout": "column",
         "backgroundColor": "#0F172A",
         "appBar": {
-          "title": "{{ global.currentTitle }}",
-          "centerTitle": true,
+          "title": "{{ global.currentVideo.title }}",
           "backgroundColor": "#0F172A",
           "color": "#FFFFFF",
           "elevation": 0,
           "leading": {
-            "type": "icon_button",
             "icon": "back",
             "action": {
-              "call": "@global.goBack",
-              "args": {}
+              "type": "back"
+            }
+          },
+          "actions": [
+            {
+              "type": "button",
+              "icon": "share",
+              "variant": "text",
+              "action": {
+                "call": "@global.shareVideo",
+                "args": {}
+              },
+              "style": {
+                "textColor": "#FFFFFF"
+              }
             },
-            "color": "#FFFFFF"
-          }
+            {
+              "type": "button",
+              "icon": "favorite_outline",
+              "variant": "text",
+              "action": {
+                "call": "@global.toggleFavorite",
+                "args": {
+                  "id": "{{ global.currentVideo.id }}"
+                }
+              },
+              "style": {
+                "textColor": "#FFFFFF"
+              }
+            }
+          ]
         },
         "children": [
           {
-            "type": "card",
-            "layout": "column",
-            "color": "#000000",
-            "padding": 0,
-            "margin": 0,
-            "elevation": 0,
-            "borderRadius": 0,
-            "children": [
-              {
-                "type": "video",
-                "url": "{{ global.currentUrl }}",
-                "aspectRatio": 1.78,
-                "autoplay": true,
-                "borderRadius": 0
-              }
-            ]
+            "type": "video",
+            "url": "{{ global.currentVideo.url }}",
+            "autoplay": true,
+            "looping": false,
+            "aspectRatio": 1.78,
+            "borderRadius": 0
           },
           {
-            "type": "card",
-            "layout": "column",
-            "color": "#1E293B",
-            "padding": 16,
-            "margin": 12,
-            "elevation": 0,
-            "borderRadius": 16,
+            "type": "container",
             "children": [
               {
                 "type": "text",
-                "value": "{{ global.currentTitle }}",
+                "value": "{{ global.currentVideo.title }}",
                 "style": {
                   "fontSize": 20,
                   "fontWeight": "bold",
@@ -330,66 +2246,468 @@
               },
               {
                 "type": "container",
-                "layout": "row",
-                "crossAxisAlignment": "center",
                 "children": [
                   {
                     "type": "container",
-                    "color": "#EA580C",
-                    "borderRadius": 4,
-                    "padding": 8,
-                    "child": {
-                      "type": "text",
-                      "value": "{{ global.currentDuration }}",
-                      "style": {
-                        "fontSize": 12,
-                        "color": "#FFFFFF",
-                        "fontWeight": "bold"
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "star",
+                        "size": 14,
+                        "color": "#FBBF24"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 4
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentVideo.rating }}",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#F3F4F6"
+                        }
                       }
-                    }
+                    ],
+                    "layout": "row",
+                    "crossAxisAlignment": "center"
                   },
                   {
                     "type": "spacer",
-                    "width": 8
+                    "width": 16
                   },
                   {
-                    "type": "icon",
-                    "name": "video",
-                    "size": 16,
-                    "color": "#94A3B8"
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "visibility",
+                        "size": 14,
+                        "color": "#9CA3AF"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 4
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentVideo.views }} 次播放",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "layout": "row",
+                    "crossAxisAlignment": "center"
                   },
                   {
                     "type": "spacer",
-                    "width": 4
+                    "width": 16
                   },
                   {
-                    "type": "text",
-                    "value": "高清视频",
-                    "style": {
-                      "fontSize": 13,
-                      "color": "#94A3B8"
-                    }
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "favorite",
+                        "size": 14,
+                        "color": "#F87171"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 4
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentVideo.likes }}",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "layout": "row",
+                    "crossAxisAlignment": "center"
                   }
-                ]
+                ],
+                "layout": "row",
+                "crossAxisAlignment": "center"
               },
               {
                 "type": "spacer",
                 "height": 12
               },
               {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentVideo.categoryLabel }}",
+                        "style": {
+                          "fontSize": 11,
+                          "color": "#E0E7FF"
+                        }
+                      }
+                    ],
+                    "color": "#1E40AF",
+                    "borderRadius": 6,
+                    "padding": 8
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 6
+                  },
+                  {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentVideo.year }}",
+                        "style": {
+                          "fontSize": 11,
+                          "color": "#E0E7FF"
+                        }
+                      }
+                    ],
+                    "color": "#312E81",
+                    "borderRadius": 6,
+                    "padding": 8
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 6
+                  },
+                  {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentVideo.duration }}",
+                        "style": {
+                          "fontSize": 11,
+                          "color": "#E0E7FF"
+                        }
+                      }
+                    ],
+                    "color": "#312E81",
+                    "borderRadius": 6,
+                    "padding": 8
+                  }
+                ],
+                "layout": "row",
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentVideo.director.[0] }}",
+                        "style": {
+                          "fontSize": 14,
+                          "fontWeight": "bold",
+                          "color": "#FFFFFF"
+                        }
+                      }
+                    ],
+                    "color": "#4338CA",
+                    "borderRadius": 20,
+                    "width": 36,
+                    "height": 36,
+                    "crossAxisAlignment": "center",
+                    "mainAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 10
+                  },
+                  {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentVideo.director }}",
+                        "style": {
+                          "fontSize": 14,
+                          "fontWeight": "bold",
+                          "color": "#FFFFFF"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 2
+                      },
+                      {
+                        "type": "text",
+                        "value": "导演 / 制作方",
+                        "style": {
+                          "fontSize": 11,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "layout": "column",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "+ 关注",
+                    "action": {
+                      "call": "@global.followCreator",
+                      "args": {}
+                    },
+                    "variant": "outlined",
+                    "style": {
+                      "textColor": "#FFFFFF",
+                      "borderRadius": 18,
+                      "paddingH": 14,
+                      "paddingV": 6,
+                      "fontSize": 12
+                    }
+                  }
+                ],
+                "layout": "row",
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 18
+              },
+              {
                 "type": "text",
-                "value": "{{ global.currentDesc }}",
+                "value": "简介",
                 "style": {
                   "fontSize": 14,
+                  "fontWeight": "bold",
+                  "color": "#FFFFFF"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "{{ global.currentVideo.description }}",
+                "style": {
+                  "fontSize": 13,
                   "color": "#CBD5E1",
-                  "lineHeight": 1.6
+                  "lineHeight": 1.5
                 }
               }
-            ]
+            ],
+            "padding": 16
+          },
+          {
+            "type": "container",
+            "children": [
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "相关推荐",
+                    "style": {
+                      "fontSize": 15,
+                      "fontWeight": "bold",
+                      "color": "#FFFFFF"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "flex": 1
+                  },
+                  {
+                    "type": "text",
+                    "value": "查看全部 ›",
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#60A5FA"
+                    }
+                  }
+                ],
+                "layout": "row",
+                "crossAxisAlignment": "center",
+                "padding": 16
+              },
+              {
+                "type": "grid",
+                "source": "{{ global.relatedVideos }}",
+                "crossAxisCount": 2,
+                "childAspectRatio": 0.72,
+                "mainAxisSpacing": 12,
+                "crossAxisSpacing": 12,
+                "padding": 24,
+                "shrinkWrap": true,
+                "item_template": {
+                  "type": "container",
+                  "onTap": {
+                    "call": "@global.openVideo",
+                    "args": {
+                      "id": "{{ loop.item.id }}"
+                    }
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "url": "{{ loop.item.cover }}",
+                      "fit": "cover",
+                      "width": 200,
+                      "height": 112,
+                      "borderRadius": 10
+                    },
+                    {
+                      "type": "container",
+                      "color": "#CC000000",
+                      "borderRadius": 4,
+                      "padding": 4,
+                      "position": {
+                        "type": "absolute",
+                        "right": 6,
+                        "top": 6
+                      },
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.duration }}",
+                          "style": {
+                            "fontSize": 10,
+                            "fontWeight": "bold",
+                            "color": "#FFFFFF"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.title }}",
+                      "style": {
+                        "fontSize": 12,
+                        "fontWeight": "bold",
+                        "color": "#F1F5F9",
+                        "maxLines": 2,
+                        "overflow": "ellipsis"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "backgroundColor": "#0F172A"
+          }
+        ]
+      },
+      {
+        "id": "favorites",
+        "title": "我的收藏",
+        "layout": "column",
+        "backgroundColor": "#F8FAFC",
+        "appBar": {
+          "title": "我的收藏",
+          "centerTitle": true,
+          "backgroundColor": "#0F172A",
+          "color": "#FFFFFF",
+          "elevation": 0
+        },
+        "children": [
+          {
+            "type": "list",
+            "source": "{{ global.favorites }}",
+            "shrinkWrap": true,
+            "separator": "divider",
+            "emptyText": "还没有收藏任何视频\n点开视频详情后点击 ♥ 收藏",
+            "item_template": {
+              "type": "container",
+              "layout": "row",
+              "padding": 10,
+              "onTap": {
+                "call": "@global.openVideo",
+                "args": {
+                  "id": "{{ loop.item.id }}"
+                }
+              },
+              "children": [
+                {
+                  "type": "image",
+                  "url": "{{ loop.item.cover }}",
+                  "fit": "cover",
+                  "width": 96,
+                  "height": 56,
+                  "borderRadius": 6
+                },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "position": {
+                    "type": "flex",
+                    "flex": 1
+                  },
+                  "padding": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.title }}",
+                      "style": {
+                        "fontSize": 14,
+                        "fontWeight": "bold",
+                        "color": "#1F2937",
+                        "maxLines": 1,
+                        "overflow": "ellipsis"
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.categoryLabel }} · {{ loop.item.duration }}",
+                      "style": {
+                        "fontSize": 11,
+                        "color": "#6B7280",
+                        "maxLines": 1,
+                        "overflow": "ellipsis"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "button",
+                  "icon": "delete",
+                  "variant": "text",
+                  "action": {
+                    "call": "@global.removeFavorite",
+                    "args": {
+                      "id": "{{ loop.item.id }}"
+                    }
+                  },
+                  "style": {
+                    "textColor": "#EF4444"
+                  }
+                }
+              ]
+            }
           }
         ]
       }
     ]
-  },
-  "appid": null
+  }
 }
