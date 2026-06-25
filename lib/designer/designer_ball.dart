@@ -419,7 +419,107 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   @override
+  // ── 打字机缓冲（AI 回复平滑吐字）──────────────────────────────────────
+  // 真实生成里 codex/opencode 等按「整条消息」吐文本（非 token deltas），加上 SSE 成批投递，
+  // 直接整段上屏会「一大段一大段」跳。这里把「已收到全文」(_typeFull) 与「已显示长度」
+  // (_typeShown) 解耦，用一个 ~60fps timer 平滑地把显示推进到目标，体感像逐字流式。
+  // 对所有 provider/agent + demo 回放都生效，且免疫 SSE 突发。
+  Timer? _typeTimer;
+  String _typeFull = '';
+  int _typeShown = 0;
+  bool _typeIsThinking = false;
+  int _typeScrollTick = 0;
+
+  // 设置打字机目标（目标只增不减，_typeShown 持续往后吐）
+  void _setTypewriterTarget(String full) {
+    _typeFull = full;
+    if (_typeShown > _typeFull.length) _typeShown = _typeFull.length;
+    if (_typeShown < _typeFull.length) _ensureTypeTimer();
+  }
+
+  void _ensureTypeTimer() {
+    _typeTimer ??= Timer.periodic(
+      const Duration(milliseconds: 16),
+      (_) => _tickTypewriter(),
+    );
+  }
+
+  void _tickTypewriter() {
+    if (!mounted || _typeTimer == null) return;
+    if (_typeShown >= _typeFull.length) {
+      // 追平 → 停掉省电，下个目标到来再起
+      _typeTimer?.cancel();
+      _typeTimer = null;
+      return;
+    }
+    final remaining = _typeFull.length - _typeShown;
+    // 自适应速率：落后越多吐越快（保证不拖尾），每帧 1~40 字
+    int step;
+    if (remaining <= 3) {
+      step = remaining;
+    } else {
+      step = remaining ~/ 6;
+      if (step < 1) step = 1;
+      if (step > 40) step = 40;
+    }
+    _typeShown += step;
+    if (_typeShown > _typeFull.length) _typeShown = _typeFull.length;
+    // 不要把 emoji（UTF-16 代理对）切一半，否则会闪一帧 �
+    if (_typeShown < _typeFull.length) {
+      final unit = _typeFull.codeUnitAt(_typeShown - 1);
+      if (unit >= 0xD800 && unit <= 0xDBFF) _typeShown += 1;
+    }
+    if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+      setState(() {
+        _messages.last = ChatMessage(
+          role: 'assistant',
+          content: _typeFull.substring(0, _typeShown),
+        );
+      });
+      if (_typeScrollTick++ % 4 == 0) _scrollToBottom();
+    }
+  }
+
+  // 立即补全并停掉打字机（流结束/出错/切流时调用），保证最终文本完整。
+  // 只改 _messages，不自带 setState —— 由调用方所在的 setState/重建负责刷新。
+  void _flushTypewriter() {
+    _typeTimer?.cancel();
+    _typeTimer = null;
+    if (_typeFull.isNotEmpty &&
+        _typeShown < _typeFull.length &&
+        _messages.isNotEmpty &&
+        _messages.last.role == 'assistant') {
+      _typeShown = _typeFull.length;
+      _messages.last = ChatMessage(role: 'assistant', content: _typeFull);
+    }
+  }
+
+  // 复位打字机（新一轮 / 切流 / 出错）
+  void _resetTypewriter() {
+    _typeTimer?.cancel();
+    _typeTimer = null;
+    _typeFull = '';
+    _typeShown = 0;
+    _typeIsThinking = false;
+  }
+
+  // 思考→正文：补全思考气泡，再开一个空正文气泡，打字机从 0 指向正文。
+  // 只改 _messages，由调用方的 setState 刷新。
+  void _startContentBubbleAfterThinking(String content) {
+    _typeTimer?.cancel();
+    _typeTimer = null;
+    if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+      _messages.last = ChatMessage(role: 'assistant', content: _typeFull); // 思考补全
+    }
+    _messages.add(ChatMessage(role: 'assistant', content: ''));
+    _typeIsThinking = false;
+    _typeFull = content;
+    _typeShown = 0;
+    _ensureTypeTimer();
+  }
+
   void dispose() {
+    _typeTimer?.cancel();
     _longPressTimer?.cancel();
     _streamSub?.cancel();
     _appResumeFollowUpTimer?.cancel();
@@ -601,6 +701,8 @@ class _DesignerBallState extends State<DesignerBall>
   }) {
     final sub = _streamSub;
     _streamEpoch++;
+    _flushTypewriter(); // 切后台前补全已收到全文，commitPartial 才能存到完整内容
+    _resetTypewriter();
     if (sub != null) {
       debugPrint('[DesignerBall] $reason: detach local AI stream');
       if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
@@ -1622,6 +1724,8 @@ class _DesignerBallState extends State<DesignerBall>
         //    backend 把 error 和 needs_retry:true 一起塞过来）
         if (event.needsRetry) {
           setState(() {
+            _flushTypewriter(); // 补全已流出的 partial，再挂中断/重试
+            _typeIsThinking = false;
             _isThinking = false;
             _isGeneratingJson = false;
             _generatingStatusMessage = T.current.chatStatusGenerating;
@@ -1656,6 +1760,7 @@ class _DesignerBallState extends State<DesignerBall>
           return;
         }
         if (event.error != null && event.content == null) {
+          _resetTypewriter(); // 停掉打字机，避免下一帧覆盖错误文案
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
@@ -1700,44 +1805,34 @@ class _DesignerBallState extends State<DesignerBall>
         }
 
         if (event.thinking != null) {
-          // 思考过程 → 只更新最后一条消息（如果是空的或思考消息）
-          setState(() {
-            _isThinking = false;
-            // ⚠️ 不要在这里关 _isGeneratingJson：后端在 thinking 块开始时
-            // 会主动发 status="thinking" 让转圈亮起来；如果这里关掉，转圈
-            // 会被 thinking_delta 第一帧立刻熄掉，用户体感"无反应"。
-            // 转圈的关闭由真正的内容到达（event.content）或 onDone 负责。
-            if (_messages.isNotEmpty &&
-                _messages.last.role == 'assistant' &&
-                (_messages.last.content.isEmpty ||
-                    _messages.last.content.startsWith('💭'))) {
-              _messages.last = ChatMessage(
-                role: 'assistant',
-                content: '💭 ${event.thinking!}',
-              );
-            }
-          });
-          _scrollToBottom();
+          // 思考过程 → 经打字机平滑吐字（仍只更新空气泡或思考气泡）。
+          // ⚠️ 不要在这里关 _isGeneratingJson：后端在 thinking 块开始时会主动发
+          // status="thinking" 让转圈亮起来；这里关掉会被第一帧立刻熄掉，体感"无反应"。
+          final eligible = _messages.isNotEmpty &&
+              _messages.last.role == 'assistant' &&
+              (_typeIsThinking || _messages.last.content.isEmpty);
+          if (eligible) {
+            setState(() => _isThinking = false);
+            _typeIsThinking = true;
+            _setTypewriterTarget('💭 ${event.thinking!}');
+          }
           return;
         }
         if (event.content != null) {
+          final wasThinking = _typeIsThinking;
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
-            if (_messages.isNotEmpty &&
-                _messages.last.role == 'assistant' &&
-                _messages.last.content.startsWith('💭')) {
-              _messages.add(
-                ChatMessage(role: 'assistant', content: event.content!),
-              );
-            } else if (_messages.isNotEmpty &&
-                _messages.last.role == 'assistant') {
-              _messages.last = ChatMessage(
-                role: 'assistant',
-                content: event.content!,
-              );
+            if (wasThinking) {
+              // 思考→正文：补全思考气泡 + 开新正文气泡 + 打字机指向正文
+              _startContentBubbleAfterThinking(event.content!);
             }
           });
+          if (!wasThinking &&
+              _messages.isNotEmpty &&
+              _messages.last.role == 'assistant') {
+            _setTypewriterTarget(event.content!);
+          }
           _scrollToBottom();
         }
         if (event.quota != null) {
@@ -1747,6 +1842,7 @@ class _DesignerBallState extends State<DesignerBall>
       onError: (e) {
         if (!isCurrentStream()) return;
         _streamSub = null;
+        _resetTypewriter(); // 停掉打字机，避免下一帧覆盖错误文案
         setState(() {
           _isThinking = false;
           _isGeneratingJson = false;
@@ -1778,6 +1874,8 @@ class _DesignerBallState extends State<DesignerBall>
           'pendingJsonApp=${pendingJsonApp != null}',
         );
         setState(() {
+          _flushTypewriter(); // 补全正文，停掉打字机
+          _typeIsThinking = false;
           _isGeneratingJson = false;
           _generatingStatusMessage = T.current.chatStatusGenerating;
 
@@ -2318,6 +2416,8 @@ class _DesignerBallState extends State<DesignerBall>
   /// 但 _isGeneratingJson 没被清，B 的视图还在转圈。
   void _cancelCurrentStream() {
     _streamEpoch++;
+    _flushTypewriter(); // 把已收到的全文补全到气泡，再复位（下面 commitPartial 才存到完整内容）
+    _resetTypewriter();
     if (_streamSub != null) {
       // 保存已收到的部分回复到对话历史
       if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
