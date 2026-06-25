@@ -54,9 +54,9 @@ DEMO_SESSIONS = {
     "00000000-0000-0000-0000-000000000022": "demo_flappy_bird",
 }
 
-# 每条事件之间的 sleep。保留「逐字吐」体感，但事件已精简（去重/去重复通道/合并），
-# 故整体很快（多数 demo 2-4s）。可用环境变量覆盖。
-_REPLAY_SLEEP = float(os.environ.get("AI_DEMO_REPLAY_SLEEP", "0.18"))
+# 每条事件之间的 sleep。客户端已有打字机缓冲做平滑，这里放慢事件投递节奏更像真实生成
+# 的「分段产出」。可用环境变量覆盖。
+_REPLAY_SLEEP = float(os.environ.get("AI_DEMO_REPLAY_SLEEP", "0.90"))
 
 DEMO_PROVIDER = "demo"
 
