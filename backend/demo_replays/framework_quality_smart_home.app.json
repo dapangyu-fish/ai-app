@@ -1,50 +1,76 @@
 {
   "dsl": "3.3",
   "meta": {
-    "name": "framework-quality-smart-home",
+    "name": "smart-home-panel",
     "version": "1.0.0",
     "type": "app",
-    "description": "框架能力模板：智能家居控制台，展示 switch、slider、grid、progress、chip。",
+    "description": "智能家居控制面板：灯光、空调、场景一键控制",
     "author": "fish",
-    "displayName": "Framework Smart Home"
+    "displayName": "智能家居"
   },
   "dependencies": {},
   "global": {
     "variables": {
       "awayMode": false,
-      "livingLight": true,
-      "nightMode": false,
-      "brightness": 68,
-      "temperature": 24,
-      "airQuality": 0.82,
+      "livingRoomLight": true,
+      "bedroomLight": true,
+      "kitchenLight": false,
+      "bathroomLight": false,
+      "studyLight": true,
+      "diningLight": true,
+      "brightness": 72,
+      "temperature": 25,
+      "acPower": true,
+      "acMode": "cool",
+      "acModeLabel": "制冷",
+      "fanSpeed": "auto",
+      "fanSpeedLabel": "自动",
+      "airQuality": 87,
+      "devicesOnline": 8,
+      "currentSceneLabel": "回家模式",
+      "ecoMode": false,
       "roomTiles": [
         {
           "name": "客厅",
-          "device": "灯光 · 空调 · 窗帘",
+          "device": "灯·空调·窗帘",
           "icon": "home",
           "accent": "#2563EB",
           "tint": "#EAF1FF"
         },
         {
-          "name": "卧室",
-          "device": "睡眠模式 · 加湿器",
-          "icon": "dark_mode",
+          "name": "主卧",
+          "device": "灯·加湿器·空调",
+          "icon": "king_bed",
           "accent": "#7C3AED",
           "tint": "#F1EAFF"
         },
         {
           "name": "厨房",
-          "device": "烟感 · 净水器",
-          "icon": "warning",
+          "device": "灯·烟感·净水器",
+          "icon": "kitchen",
           "accent": "#D97706",
           "tint": "#FFF4DE"
         },
         {
-          "name": "门厅",
-          "device": "门锁 · 摄像头",
-          "icon": "lock",
+          "name": "餐厅",
+          "device": "灯·音响",
+          "icon": "weekend",
           "accent": "#059669",
           "tint": "#E8F7F0"
+        },
+        {
+          "name": "书房",
+          "device": "灯·电脑·打印机",
+          "icon": "lightbulb",
+          "accent": "#DC2626",
+          "tint": "#FEE2E2"
+        },
+        {
+          "name": "卫生间",
+          "device": "灯·排风·热水器",
+          "icon": "bathroom",
+          "accent": "#0891B2",
+          "tint": "#E0F2FE"
         }
       ]
     },
@@ -55,18 +81,631 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已同步 12 台设备"
+              "message": "已同步 12 台设备，全部在线"
             }
           }
         ]
       },
-      "scene": {
+      "sceneHome": {
         "params": [],
         "logic": [
           {
+            "call": "@set_var",
+            "args": {
+              "path": "global.awayMode",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.livingRoomLight",
+              "value": true
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.bedroomLight",
+              "value": true
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.kitchenLight",
+              "value": true
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.bathroomLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.studyLight",
+              "value": true
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.diningLight",
+              "value": true
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.brightness",
+              "value": 75
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.temperature",
+              "value": 25
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acPower",
+              "value": true
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acMode",
+              "value": "cool"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acModeLabel",
+              "value": "制冷"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.currentSceneLabel",
+              "value": "回家模式"
+            }
+          },
+          {
             "call": "@show_toast",
             "args": {
-              "message": "场景已下发"
+              "message": "已切换到回家模式"
+            }
+          }
+        ]
+      },
+      "sceneAway": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.awayMode",
+              "value": true
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.livingRoomLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.bedroomLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.kitchenLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.bathroomLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.studyLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.diningLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acPower",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.currentSceneLabel",
+              "value": "离家模式"
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "已切换到离家模式，所有设备已关闭"
+            }
+          }
+        ]
+      },
+      "sceneSleep": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.awayMode",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.livingRoomLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.bedroomLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.kitchenLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.bathroomLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.studyLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.diningLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.brightness",
+              "value": 10
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.temperature",
+              "value": 26
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acPower",
+              "value": true
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acMode",
+              "value": "cool"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acModeLabel",
+              "value": "制冷"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.currentSceneLabel",
+              "value": "睡眠模式"
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "已切换到睡眠模式，晚安"
+            }
+          }
+        ]
+      },
+      "sceneMovie": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.awayMode",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.livingRoomLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.bedroomLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.kitchenLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.bathroomLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.studyLight",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.diningLight",
+              "value": true
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.brightness",
+              "value": 25
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.temperature",
+              "value": 24
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acPower",
+              "value": true
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acMode",
+              "value": "cool"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acModeLabel",
+              "value": "制冷"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.currentSceneLabel",
+              "value": "观影模式"
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "已切换到观影模式"
+            }
+          }
+        ]
+      },
+      "sceneClean": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.awayMode",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.livingRoomLight",
+              "value": true
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.kitchenLight",
+              "value": true
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.bathroomLight",
+              "value": true
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.brightness",
+              "value": 100
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acPower",
+              "value": false
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.currentSceneLabel",
+              "value": "清洁模式"
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "已切换到清洁模式"
+            }
+          }
+        ]
+      },
+      "setAcCool": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acMode",
+              "value": "cool"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acModeLabel",
+              "value": "制冷"
+            }
+          }
+        ]
+      },
+      "setAcHeat": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acMode",
+              "value": "heat"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acModeLabel",
+              "value": "制热"
+            }
+          }
+        ]
+      },
+      "setAcFan": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acMode",
+              "value": "fan"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acModeLabel",
+              "value": "送风"
+            }
+          }
+        ]
+      },
+      "setAcDry": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acMode",
+              "value": "dry"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.acModeLabel",
+              "value": "除湿"
+            }
+          }
+        ]
+      },
+      "setFanAuto": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.fanSpeed",
+              "value": "auto"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.fanSpeedLabel",
+              "value": "自动"
+            }
+          }
+        ]
+      },
+      "setFanLow": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.fanSpeed",
+              "value": "low"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.fanSpeedLabel",
+              "value": "低风"
+            }
+          }
+        ]
+      },
+      "setFanMedium": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.fanSpeed",
+              "value": "medium"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.fanSpeedLabel",
+              "value": "中风"
+            }
+          }
+        ]
+      },
+      "setFanHigh": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.fanSpeed",
+              "value": "high"
+            }
+          },
+          {
+            "call": "@set_var",
+            "args": {
+              "path": "global.fanSpeedLabel",
+              "value": "高风"
+            }
+          }
+        ]
+      },
+      "toggleEco": {
+        "params": [],
+        "logic": [
+          {
+            "if": [
+              {
+                "var": "global.ecoMode"
+              },
+              {
+                "call": "@set_var",
+                "args": {
+                  "path": "global.ecoMode",
+                  "value": false
+                }
+              },
+              {
+                "call": "@set_var",
+                "args": {
+                  "path": "global.ecoMode",
+                  "value": true
+                }
+              }
+            ]
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "{{ global.ecoMode ? '已开启节能模式' : '已关闭节能模式' }}"
             }
           }
         ]
@@ -78,18 +717,20 @@
     "screens": [
       {
         "id": "home",
-        "title": "全屋控制",
+        "title": "智能家居",
         "layout": "column",
+        "backgroundColor": "#F5F7FA",
         "children": [
           {
             "type": "container",
             "layout": "column",
+            "margin": 0,
             "children": [
               {
                 "type": "text",
-                "value": "晚上好，客厅已进入舒适区",
+                "value": "{{ global.awayMode ? '已离家' : '欢迎回家' }}",
                 "style": {
-                  "fontSize": 19,
+                  "fontSize": 20,
                   "fontWeight": "bold",
                   "color": "#111827"
                 }
@@ -100,19 +741,18 @@
               },
               {
                 "type": "text",
-                "value": "温度、灯光和安防在同一页完成控制，不需要进入列表详情。",
+                "value": "当前场景：{{ global.currentSceneLabel }} · {{ global.devicesOnline }} 台设备在线",
                 "style": {
                   "fontSize": 13,
-                  "color": "#6B7280",
-                  "lineHeight": 1.35
+                  "color": "#6B7280"
                 }
               }
-            ],
-            "margin": 12
+            ]
           },
           {
             "type": "container",
             "layout": "row",
+            "margin": 0,
             "children": [
               {
                 "type": "expanded",
@@ -127,7 +767,7 @@
                   "children": [
                     {
                       "type": "icon",
-                      "name": "wifi",
+                      "name": "devices",
                       "size": 20,
                       "color": "#2563EB"
                     },
@@ -137,7 +777,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "12",
+                      "value": "{{ global.devicesOnline }}",
                       "style": {
                         "fontSize": 22,
                         "fontWeight": "bold",
@@ -162,7 +802,7 @@
               },
               {
                 "type": "spacer",
-                "width": 8
+                "width": 4
               },
               {
                 "type": "expanded",
@@ -177,7 +817,7 @@
                   "children": [
                     {
                       "type": "icon",
-                      "name": "light_mode",
+                      "name": "thermostat",
                       "size": 20,
                       "color": "#D97706"
                     },
@@ -201,7 +841,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "室温",
+                      "value": "室内温度",
                       "style": {
                         "fontSize": 12,
                         "color": "#6B7280"
@@ -212,7 +852,7 @@
               },
               {
                 "type": "spacer",
-                "width": 8
+                "width": 4
               },
               {
                 "type": "expanded",
@@ -227,7 +867,7 @@
                   "children": [
                     {
                       "type": "icon",
-                      "name": "check_circle",
+                      "name": "air",
                       "size": 20,
                       "color": "#059669"
                     },
@@ -237,7 +877,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "82%",
+                      "value": "{{ global.airQuality }}%",
                       "style": {
                         "fontSize": 22,
                         "fontWeight": "bold",
@@ -260,25 +900,26 @@
                   ]
                 }
               }
-            ],
-            "margin": 8
+            ]
           },
           {
             "type": "card",
             "layout": "column",
             "color": "#FFFFFF",
             "padding": 16,
-            "margin": 12,
+            "margin": 0,
             "elevation": 0,
             "borderRadius": 18,
             "children": [
               {
                 "type": "container",
                 "layout": "row",
+                "mainAxisAlignment": "spaceBetween",
+                "crossAxisAlignment": "center",
                 "children": [
                   {
                     "type": "text",
-                    "value": "场景",
+                    "value": "场景控制",
                     "style": {
                       "fontSize": 17,
                       "fontWeight": "bold",
@@ -290,23 +931,24 @@
                     "label": "一键离家",
                     "variant": "filled",
                     "action": {
-                      "call": "@global.scene",
+                      "call": "@global.sceneAway",
                       "args": {}
                     },
                     "icon": "lock",
                     "style": {
                       "backgroundColor": "#111827",
                       "textColor": "#FFFFFF",
-                      "borderRadius": 16
+                      "fontSize": 12,
+                      "paddingH": 10,
+                      "paddingV": 4,
+                      "borderRadius": 12
                     }
                   }
-                ],
-                "mainAxisAlignment": "spaceBetween",
-                "crossAxisAlignment": "center"
+                ]
               },
               {
                 "type": "spacer",
-                "height": 10
+                "height": 12
               },
               {
                 "type": "wrap",
@@ -317,31 +959,47 @@
                     "type": "chip",
                     "label": "回家",
                     "icon": "home",
-                    "color": "#EAF1FF"
+                    "color": "#DCFCE7",
+                    "action": {
+                      "call": "@global.sceneHome",
+                      "args": {}
+                    }
                   },
                   {
                     "type": "chip",
                     "label": "观影",
-                    "icon": "video",
-                    "color": "#F1EAFF"
+                    "icon": "theaters",
+                    "color": "#EDE9FE",
+                    "action": {
+                      "call": "@global.sceneMovie",
+                      "args": {}
+                    }
                   },
                   {
                     "type": "chip",
                     "label": "睡眠",
                     "icon": "dark_mode",
-                    "color": "#EEF2FF"
+                    "color": "#DBEAFE",
+                    "action": {
+                      "call": "@global.sceneSleep",
+                      "args": {}
+                    }
                   },
                   {
                     "type": "chip",
                     "label": "清洁",
-                    "icon": "refresh",
-                    "color": "#E8F7F0"
+                    "icon": "auto_awesome",
+                    "color": "#E0F2FE",
+                    "action": {
+                      "call": "@global.sceneClean",
+                      "args": {}
+                    }
                   }
                 ]
               },
               {
                 "type": "spacer",
-                "height": 14
+                "height": 10
               },
               {
                 "type": "switch",
@@ -350,13 +1008,78 @@
               },
               {
                 "type": "switch",
-                "label": "客厅主灯",
-                "bind": "global.livingLight"
+                "label": "节能模式",
+                "bind": "global.ecoMode"
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 16,
+            "margin": 0,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "spaceBetween",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "灯光控制",
+                    "style": {
+                      "fontSize": 17,
+                      "fontWeight": "bold",
+                      "color": "#111827"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 10
               },
               {
                 "type": "switch",
-                "label": "夜间勿扰",
-                "bind": "global.nightMode"
+                "label": "客厅主灯",
+                "bind": "global.livingRoomLight"
+              },
+              {
+                "type": "switch",
+                "label": "卧室灯光",
+                "bind": "global.bedroomLight"
+              },
+              {
+                "type": "switch",
+                "label": "餐厅灯光",
+                "bind": "global.diningLight"
+              },
+              {
+                "type": "switch",
+                "label": "书房灯光",
+                "bind": "global.studyLight"
+              },
+              {
+                "type": "switch",
+                "label": "厨房灯光",
+                "bind": "global.kitchenLight"
+              },
+              {
+                "type": "switch",
+                "label": "卫生间灯",
+                "bind": "global.bathroomLight"
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "divider",
+                "color": "#E5E7EB"
               },
               {
                 "type": "spacer",
@@ -364,7 +1087,7 @@
               },
               {
                 "type": "text",
-                "value": "灯光亮度 {{ global.brightness }}%",
+                "value": "全局亮度 {{ global.brightness }}%",
                 "style": {
                   "fontSize": 14,
                   "color": "#4B5563"
@@ -377,6 +1100,111 @@
                 "max": 100,
                 "divisions": 20,
                 "color": "#2563EB"
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 16,
+            "margin": 0,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "spaceBetween",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "空调控制",
+                    "style": {
+                      "fontSize": 17,
+                      "fontWeight": "bold",
+                      "color": "#111827"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "switch",
+                "label": "空调开关",
+                "bind": "global.acPower"
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "运行模式",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "bold",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "制冷",
+                    "icon": "ac_unit",
+                    "color": "#DBEAFE",
+                    "action": {
+                      "call": "@global.setAcCool",
+                      "args": {}
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "制热",
+                    "icon": "wb_sunny",
+                    "color": "#FEF3C7",
+                    "action": {
+                      "call": "@global.setAcHeat",
+                      "args": {}
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "送风",
+                    "icon": "air",
+                    "color": "#DCFCE7",
+                    "action": {
+                      "call": "@global.setAcFan",
+                      "args": {}
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "除湿",
+                    "icon": "water_drop",
+                    "color": "#E0F2FE",
+                    "action": {
+                      "call": "@global.setAcDry",
+                      "args": {}
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 12
               },
               {
                 "type": "text",
@@ -393,6 +1221,89 @@
                 "max": 30,
                 "divisions": 12,
                 "color": "#D97706"
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "风速",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "bold",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "自动",
+                    "icon": "settings",
+                    "color": "#E8F7F0",
+                    "action": {
+                      "call": "@global.setFanAuto",
+                      "args": {}
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "低风",
+                    "icon": "bolt",
+                    "color": "#EEF2FF",
+                    "action": {
+                      "call": "@global.setFanLow",
+                      "args": {}
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "中风",
+                    "icon": "bolt",
+                    "color": "#FEF7E0",
+                    "action": {
+                      "call": "@global.setFanMedium",
+                      "args": {}
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "高风",
+                    "icon": "bolt",
+                    "color": "#FEE2E2",
+                    "action": {
+                      "call": "@global.setFanHigh",
+                      "args": {}
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "当前：{{ global.acModeLabel }} · 风速 {{ global.fanSpeedLabel }} · {{ global.acPower ? '运行中' : '已关闭' }}",
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#9CA3AF"
+                    }
+                  }
+                ]
               }
             ]
           },
@@ -401,7 +1312,7 @@
             "layout": "column",
             "color": "#FFFFFF",
             "padding": 16,
-            "margin": 12,
+            "margin": 0,
             "elevation": 0,
             "borderRadius": 18,
             "children": [
@@ -423,21 +1334,24 @@
                 "source": "{{ global.roomTiles }}",
                 "crossAxisCount": 2,
                 "spacing": 10,
-                "childAspectRatio": 1.55,
+                "childAspectRatio": 1.6,
                 "shrinkWrap": true,
                 "item_template": {
                   "type": "container",
                   "layout": "column",
+                  "padding": 14,
+                  "color": "{{ loop.item.tint }}",
+                  "borderRadius": 16,
                   "children": [
                     {
                       "type": "icon",
                       "name": "{{ loop.item.icon }}",
-                      "size": 22,
+                      "size": 24,
                       "color": "{{ loop.item.accent }}"
                     },
                     {
                       "type": "spacer",
-                      "height": 8
+                      "height": 10
                     },
                     {
                       "type": "text",
@@ -462,18 +1376,14 @@
                         "overflow": "ellipsis"
                       }
                     }
-                  ],
-                  "padding": 12,
-                  "color": "{{ loop.item.tint }}",
-                  "borderRadius": 16
+                  ]
                 }
               }
             ]
           }
         ],
-        "backgroundColor": "#F5F7FA",
         "appBar": {
-          "title": "全屋控制",
+          "title": "智能家居",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -499,6 +1409,5 @@
         }
       }
     ]
-  },
-  "appid": "c8ce97f0-589f-4d27-9f7b-0dbb74ab45cb"
+  }
 }

@@ -1,22 +1,29 @@
 {
   "dsl": "3.3",
   "meta": {
-    "name": "native-quality-notes",
+    "name": "notes-app",
     "version": "1.0.0",
     "type": "app",
-    "description": "高质量原生记录类 APP JSON 模板：摘要、搜索、筛选、列表、详情、表单。",
+    "description": "笔记应用：新建、编辑、列表、搜索",
     "author": "fish",
-    "displayName": "Native Notes Template"
+    "displayName": "我的笔记"
   },
   "dependencies": {},
   "global": {
     "variables": {
       "searchQuery": "",
       "selectedTag": "全部",
+      "editingId": "",
+      "formTitle": "",
+      "formContent": "",
+      "formTag": "工作",
+      "formScreenTitle": "新建笔记",
+      "totalCount": "4",
+      "weekCount": "2",
       "notes": [
         {
           "id": "n1",
-          "title": "产品想法整理",
+          "heading": "产品想法整理",
           "tag": "工作",
           "date": "今天 09:30",
           "excerpt": "把待验证的功能拆成三组：核心流程、付费触点、次要体验。",
@@ -26,9 +33,9 @@
         },
         {
           "id": "n2",
-          "title": "周末阅读清单",
+          "heading": "周末阅读清单",
           "tag": "生活",
-          "date": "昨天",
+          "date": "昨天 14:20",
           "excerpt": "系统设计、交互心理学、一本短篇小说。控制在 3 小时内。",
           "content": "系统设计、交互心理学、一本短篇小说。控制在 3 小时内。\n\n读完只记录能落到实践里的结论。",
           "accent": "#059669",
@@ -36,29 +43,179 @@
         },
         {
           "id": "n3",
-          "title": "旅行备忘",
+          "heading": "旅行备忘",
           "tag": "灵感",
-          "date": "5月28日",
+          "date": "6月20日",
           "excerpt": "证件、充电器、降噪耳机、备用银行卡。出发前一天再检查。",
           "content": "证件、充电器、降噪耳机、备用银行卡。出发前一天再检查。\n\n酒店确认邮件和路线截图都放到同一个文件夹。",
           "accent": "#D97706",
           "tint": "#FFF4DE"
+        },
+        {
+          "id": "n4",
+          "heading": "React 性能优化笔记",
+          "tag": "学习",
+          "date": "6月18日",
+          "excerpt": "useMemo、useCallback 使用场景，避免不必要的重渲染。",
+          "content": "useMemo、useCallback 使用场景。\n\n1. 列表虚拟化用 react-window\n2. 图片懒加载\n3. Code splitting",
+          "accent": "#7C3AED",
+          "tint": "#F3EDFF"
         }
       ],
-      "currentTitle": "",
-      "currentTag": "",
-      "currentDate": "",
-      "currentContent": "",
-      "currentAccent": "#2563EB",
-      "currentTint": "#EAF1FF",
-      "formTitle": "",
-      "formContent": "",
-      "formTag": "工作"
+      "filteredNotes": [
+        {
+          "id": "n1",
+          "heading": "产品想法整理",
+          "tag": "工作",
+          "date": "今天 09:30",
+          "excerpt": "把待验证的功能拆成三组：核心流程、付费触点、次要体验。",
+          "content": "把待验证的功能拆成三组：核心流程、付费触点、次要体验。\n\n下次评审前需要补齐用户路径截图和失败状态。",
+          "accent": "#2563EB",
+          "tint": "#EAF1FF"
+        },
+        {
+          "id": "n2",
+          "heading": "周末阅读清单",
+          "tag": "生活",
+          "date": "昨天 14:20",
+          "excerpt": "系统设计、交互心理学、一本短篇小说。控制在 3 小时内。",
+          "content": "系统设计、交互心理学、一本短篇小说。控制在 3 小时内。\n\n读完只记录能落到实践里的结论。",
+          "accent": "#059669",
+          "tint": "#E8F7F0"
+        },
+        {
+          "id": "n3",
+          "heading": "旅行备忘",
+          "tag": "灵感",
+          "date": "6月20日",
+          "excerpt": "证件、充电器、降噪耳机、备用银行卡。出发前一天再检查。",
+          "content": "证件、充电器、降噪耳机、备用银行卡。出发前一天再检查。\n\n酒店确认邮件和路线截图都放到同一个文件夹。",
+          "accent": "#D97706",
+          "tint": "#FFF4DE"
+        },
+        {
+          "id": "n4",
+          "heading": "React 性能优化笔记",
+          "tag": "学习",
+          "date": "6月18日",
+          "excerpt": "useMemo、useCallback 使用场景，避免不必要的重渲染。",
+          "content": "useMemo、useCallback 使用场景。\n\n1. 列表虚拟化用 react-window\n2. 图片懒加载\n3. Code splitting",
+          "accent": "#7C3AED",
+          "tint": "#F3EDFF"
+        }
+      ],
+      "_nextSeq": 5,
+      "_tmpAccent": "#2563EB",
+      "_tmpTint": "#EAF1FF"
     },
     "functions": {
+      "refreshList": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.filteredNotes",
+              "value": {
+                "filter": {
+                  "and": [
+                    {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "var": "global.selectedTag"
+                            },
+                            "全部"
+                          ]
+                        },
+                        true,
+                        {
+                          "==": [
+                            {
+                              "var": "loop.item.tag"
+                            },
+                            {
+                              "var": "global.selectedTag"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "or": [
+                        {
+                          "==": [
+                            {
+                              "var": "global.searchQuery"
+                            },
+                            ""
+                          ]
+                        },
+                        {
+                          "in": [
+                            {
+                              "var": "global.searchQuery"
+                            },
+                            {
+                              "var": "loop.item.heading"
+                            }
+                          ]
+                        },
+                        {
+                          "in": [
+                            {
+                              "var": "global.searchQuery"
+                            },
+                            {
+                              "var": "loop.item.content"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "source": "global.notes",
+                "item": "loop.item"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.totalCount",
+              "value": {
+                "reduce": [
+                  {
+                    "var": "global.notes"
+                  },
+                  0,
+                  {
+                    "+": [
+                      {
+                        "var": "accumulator"
+                      },
+                      1
+                    ]
+                  },
+                  "accumulator"
+                ]
+              }
+            }
+          }
+        ]
+      },
       "startCreate": {
         "params": [],
         "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.editingId",
+              "value": ""
+            }
+          },
           {
             "call": "@set",
             "args": {
@@ -74,6 +231,20 @@
             }
           },
           {
+            "call": "@set",
+            "args": {
+              "var": "global.formTag",
+              "value": "工作"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formScreenTitle",
+              "value": "新建笔记"
+            }
+          },
+          {
             "call": "@navigate",
             "args": {
               "screen": "note_form"
@@ -81,73 +252,345 @@
           }
         ]
       },
-      "viewNote": {
+      "startEdit": {
         "params": [
-          "title",
-          "tag",
-          "date",
-          "content",
-          "accent",
-          "tint"
+          "id"
         ],
         "logic": [
           {
             "call": "@set",
             "args": {
-              "var": "global.currentTitle",
-              "value": "{{ params.title }}"
+              "var": "global.editingId",
+              "value": "{{ params.id }}"
             }
           },
           {
             "call": "@set",
             "args": {
-              "var": "global.currentTag",
-              "value": "{{ params.tag }}"
+              "var": "global.formScreenTitle",
+              "value": "编辑笔记"
             }
           },
           {
             "call": "@set",
             "args": {
-              "var": "global.currentDate",
-              "value": "{{ params.date }}"
+              "var": "global._editHeading",
+              "value": {
+                "var": {
+                  "filter": {
+                    "==": [
+                      {
+                        "var": "loop.item.id"
+                      },
+                      {
+                        "var": "global.editingId"
+                      }
+                    ]
+                  },
+                  "source": "global.notes",
+                  "item": "loop.item",
+                  "first": true
+                }
+              }
             }
           },
           {
             "call": "@set",
             "args": {
-              "var": "global.currentContent",
-              "value": "{{ params.content }}"
+              "var": "global.formTitle",
+              "value": "{{ global._editHeading.heading }}"
             }
           },
           {
             "call": "@set",
             "args": {
-              "var": "global.currentAccent",
-              "value": "{{ params.accent }}"
+              "var": "global.formContent",
+              "value": "{{ global._editHeading.content }}"
             }
           },
           {
             "call": "@set",
             "args": {
-              "var": "global.currentTint",
-              "value": "{{ params.tint }}"
+              "var": "global.formTag",
+              "value": "{{ global._editHeading.tag }}"
             }
           },
           {
             "call": "@navigate",
             "args": {
-              "screen": "note_detail"
+              "screen": "note_form"
             }
           }
         ]
       },
-      "saveDraft": {
+      "saveNote": {
         "params": [],
         "logic": [
           {
+            "call": "@set",
+            "args": {
+              "var": "global._nextSeq",
+              "value": {
+                "+": [
+                  {
+                    "var": "global._nextSeq"
+                  },
+                  1
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._tmpAccent",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var": "global.formTag"
+                      },
+                      "工作"
+                    ]
+                  },
+                  "#2563EB",
+                  {
+                    "if": [
+                      {
+                        "==": [
+                          {
+                            "var": "global.formTag"
+                          },
+                          "生活"
+                        ]
+                      },
+                      "#059669",
+                      {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "var": "global.formTag"
+                              },
+                              "灵感"
+                            ]
+                          },
+                          "#D97706",
+                          "#7C3AED"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._tmpTint",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var": "global.formTag"
+                      },
+                      "工作"
+                    ]
+                  },
+                  "#EAF1FF",
+                  {
+                    "if": [
+                      {
+                        "==": [
+                          {
+                            "var": "global.formTag"
+                          },
+                          "生活"
+                        ]
+                      },
+                      "#E8F7F0",
+                      {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "var": "global.formTag"
+                              },
+                              "灵感"
+                            ]
+                          },
+                          "#FFF4DE",
+                          "#F3EDFF"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._builtNote",
+              "value": {
+                "id": {
+                  "if": [
+                    {
+                      "==": [
+                        {
+                          "var": "global.editingId"
+                        },
+                        ""
+                      ]
+                    },
+                    {
+                      "+": [
+                        "n",
+                        {
+                          "var": "global._nextSeq"
+                        }
+                      ]
+                    },
+                    {
+                      "var": "global.editingId"
+                    }
+                  ]
+                },
+                "heading": {
+                  "var": "global.formTitle"
+                },
+                "tag": {
+                  "var": "global.formTag"
+                },
+                "date": "刚刚",
+                "excerpt": {
+                  "substr": [
+                    {
+                      "var": "global.formContent"
+                    },
+                    0,
+                    60
+                  ]
+                },
+                "content": {
+                  "var": "global.formContent"
+                },
+                "accent": {
+                  "var": "global._tmpAccent"
+                },
+                "tint": {
+                  "var": "global._tmpTint"
+                }
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.notes",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var": "global.editingId"
+                      },
+                      ""
+                    ]
+                  },
+                  {
+                    "push": [
+                      {
+                        "var": "global.notes"
+                      },
+                      {
+                        "var": "global._builtNote"
+                      }
+                    ]
+                  },
+                  {
+                    "map": {
+                      "source": "global.notes",
+                      "item": "loop.item",
+                      "body": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "var": "loop.item.id"
+                              },
+                              {
+                                "var": "global.editingId"
+                              }
+                            ]
+                          },
+                          {
+                            "var": "global._builtNote"
+                          },
+                          {
+                            "var": "loop.item"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@global.refreshList",
+            "args": {}
+          },
+          {
             "call": "@show_toast",
             "args": {
-              "message": "模板示例：这里接入保存逻辑"
+              "message": "笔记已保存"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "home"
+            }
+          }
+        ]
+      },
+      "deleteNote": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.notes",
+              "value": {
+                "filter": {
+                  "!=": [
+                    {
+                      "var": "loop.item.id"
+                    },
+                    {
+                      "var": "global.editingId"
+                    }
+                  ]
+                },
+                "source": "global.notes",
+                "item": "loop.item"
+              }
+            }
+          },
+          {
+            "call": "@global.refreshList",
+            "args": {}
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "笔记已删除"
             }
           },
           {
@@ -160,13 +603,44 @@
       }
     }
   },
-  "steps": [],
+  "steps": [
+    {
+      "call": "@global.refreshList",
+      "args": {}
+    }
+  ],
   "ui": {
     "screens": [
       {
         "id": "home",
         "title": "笔记",
         "layout": "column",
+        "backgroundColor": "#F4F6F8",
+        "appBar": {
+          "title": "笔记",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.startCreate",
+                "args": {}
+              },
+              "icon": "add",
+              "style": {
+                "textColor": "#2563EB",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        },
         "children": [
           {
             "type": "container",
@@ -189,7 +663,7 @@
                       "children": [
                         {
                           "type": "icon",
-                          "name": "file",
+                          "name": "notes",
                           "size": 18,
                           "color": "#2563EB"
                         },
@@ -214,7 +688,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "24",
+                      "value": "{{ global.totalCount }}",
                       "style": {
                         "fontSize": 21,
                         "fontWeight": "bold",
@@ -246,64 +720,7 @@
                       "children": [
                         {
                           "type": "icon",
-                          "name": "star",
-                          "size": 18,
-                          "color": "#F59E0B"
-                        },
-                        {
-                          "type": "spacer",
-                          "width": 8
-                        },
-                        {
-                          "type": "text",
-                          "value": "置顶",
-                          "style": {
-                            "fontSize": 13,
-                            "color": "#6B7280"
-                          }
-                        }
-                      ],
-                      "crossAxisAlignment": "center"
-                    },
-                    {
-                      "type": "spacer",
-                      "height": 8
-                    },
-                    {
-                      "type": "text",
-                      "value": "3",
-                      "style": {
-                        "fontSize": 21,
-                        "fontWeight": "bold",
-                        "color": "#111827",
-                        "maxLines": 1
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "type": "spacer",
-                "width": 8
-              },
-              {
-                "type": "expanded",
-                "child": {
-                  "type": "card",
-                  "layout": "column",
-                  "color": "#FFFFFF",
-                  "padding": 14,
-                  "margin": 6,
-                  "elevation": 0,
-                  "borderRadius": 14,
-                  "children": [
-                    {
-                      "type": "container",
-                      "layout": "row",
-                      "children": [
-                        {
-                          "type": "icon",
-                          "name": "calendar",
+                          "name": "today",
                           "size": 18,
                           "color": "#10B981"
                         },
@@ -328,7 +745,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "8",
+                      "value": "{{ global.weekCount }}",
                       "style": {
                         "fontSize": 21,
                         "fontWeight": "bold",
@@ -358,7 +775,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "搜索标题、内容、标签",
+                "placeholder": "搜索标题或内容",
                 "bind": "global.searchQuery",
                 "position": {
                   "type": "flex",
@@ -367,6 +784,19 @@
                 "style": {
                   "fontSize": 15,
                   "borderRadius": 10
+                }
+              },
+              {
+                "type": "button",
+                "label": "搜索",
+                "variant": "text",
+                "action": {
+                  "call": "@global.refreshList",
+                  "args": {}
+                },
+                "style": {
+                  "textColor": "#2563EB",
+                  "fontSize": 14
                 }
               }
             ],
@@ -416,6 +846,14 @@
                     "bind": "global.selectedTag",
                     "value": "灵感",
                     "color": "#2563EB"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "学习",
+                    "variant": "choice",
+                    "bind": "global.selectedTag",
+                    "value": "学习",
+                    "color": "#2563EB"
                   }
                 ]
               }
@@ -427,8 +865,8 @@
           },
           {
             "type": "list",
-            "source": "{{ global.notes }}",
-            "emptyText": "暂无笔记，先创建第一条记录",
+            "source": "{{ global.filteredNotes }}",
+            "emptyText": "暂无笔记，点击下方按钮创建第一条",
             "item_template": {
               "type": "card",
               "layout": "column",
@@ -448,7 +886,7 @@
                       "children": [
                         {
                           "type": "icon",
-                          "name": "file",
+                          "name": "notes",
                           "size": 20,
                           "color": "{{ loop.item.accent }}"
                         }
@@ -474,17 +912,17 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "{{ loop.item.title }}",
-                              "position": {
-                                "type": "flex",
-                                "flex": 1
-                              },
+                              "value": "{{ loop.item.heading }}",
                               "style": {
                                 "fontSize": 16,
                                 "fontWeight": "bold",
                                 "color": "#111827",
                                 "maxLines": 1,
                                 "overflow": "ellipsis"
+                              },
+                              "position": {
+                                "type": "flex",
+                                "flex": 1
                               }
                             },
                             {
@@ -531,37 +969,26 @@
                                   "style": {
                                     "fontSize": 12,
                                     "fontWeight": "600",
-                                    "color": "{{ loop.item.accent }}",
-                                    "paddingH": 2,
-                                    "paddingV": 0
+                                    "color": "{{ loop.item.accent }}"
                                   }
                                 }
                               ],
                               "padding": 6,
-                              "color": "{{ loop.item.tint }}",
-                              "borderRadius": 12
+                              "borderRadius": 12,
+                              "color": "{{ loop.item.tint }}"
                             },
                             {
                               "type": "spacer",
-                              "width": 8
+                              "position": {
+                                "type": "flex",
+                                "flex": 1
+                              }
                             },
                             {
                               "type": "icon",
-                              "name": "check_circle",
-                              "size": 15,
-                              "color": "#10B981"
-                            },
-                            {
-                              "type": "spacer",
-                              "width": 4
-                            },
-                            {
-                              "type": "text",
-                              "value": "已同步",
-                              "style": {
-                                "fontSize": 12,
-                                "color": "#9CA3AF"
-                              }
+                              "name": "chevron_right",
+                              "size": 16,
+                              "color": "#C4C4C8"
                             }
                           ],
                           "crossAxisAlignment": "center"
@@ -577,14 +1004,9 @@
                 }
               ],
               "onTap": {
-                "call": "@global.viewNote",
+                "call": "@global.startEdit",
                 "args": {
-                  "title": "{{ loop.item.title }}",
-                  "tag": "{{ loop.item.tag }}",
-                  "date": "{{ loop.item.date }}",
-                  "content": "{{ loop.item.content }}",
-                  "accent": "{{ loop.item.accent }}",
-                  "tint": "{{ loop.item.tint }}"
+                  "id": "{{ loop.item.id }}"
                 }
               }
             }
@@ -614,155 +1036,38 @@
             "padding": 12,
             "color": "#F4F6F8"
           }
-        ],
-        "backgroundColor": "#F4F6F8",
-        "appBar": {
-          "title": "笔记",
-          "centerTitle": true,
-          "backgroundColor": "#FFFFFF",
-          "color": "#111827",
-          "elevation": 0,
-          "actions": [
-            {
-              "type": "button",
-              "label": "",
-              "variant": "text",
-              "action": {
-                "call": "@global.startCreate",
-                "args": {}
-              },
-              "icon": "add",
-              "style": {
-                "textColor": "#2563EB",
-                "fontSize": 18,
-                "paddingH": 10,
-                "paddingV": 8
-              }
-            }
-          ]
-        }
-      },
-      {
-        "id": "note_detail",
-        "title": "笔记详情",
-        "layout": "column",
-        "children": [
-          {
-            "type": "card",
-            "layout": "column",
-            "color": "#FFFFFF",
-            "padding": 18,
-            "margin": 12,
-            "elevation": 0,
-            "borderRadius": 18,
-            "children": [
-              {
-                "type": "container",
-                "layout": "row",
-                "children": [
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "icon",
-                        "name": "file",
-                        "size": 24,
-                        "color": "{{ global.currentAccent }}"
-                      }
-                    ],
-                    "width": 48,
-                    "height": 48,
-                    "color": "{{ global.currentTint }}",
-                    "borderRadius": 14,
-                    "mainAxisAlignment": "center",
-                    "crossAxisAlignment": "center"
-                  },
-                  {
-                    "type": "spacer",
-                    "width": 12
-                  },
-                  {
-                    "type": "container",
-                    "layout": "column",
-                    "children": [
-                      {
-                        "type": "text",
-                        "value": "{{ global.currentTitle }}",
-                        "style": {
-                          "fontSize": 22,
-                          "fontWeight": "bold",
-                          "color": "#111827"
-                        }
-                      },
-                      {
-                        "type": "spacer",
-                        "height": 4
-                      },
-                      {
-                        "type": "text",
-                        "value": "{{ global.currentTag }} · {{ global.currentDate }}",
-                        "style": {
-                          "fontSize": 13,
-                          "color": "#6B7280"
-                        }
-                      }
-                    ],
-                    "position": {
-                      "type": "flex",
-                      "flex": 1
-                    }
-                  }
-                ],
-                "crossAxisAlignment": "center"
-              },
-              {
-                "type": "spacer",
-                "height": 18
-              },
-              {
-                "type": "text",
-                "value": "{{ global.currentContent }}",
-                "style": {
-                  "fontSize": 16,
-                  "color": "#374151",
-                  "lineHeight": 1.65
-                }
-              }
-            ]
-          }
-        ],
-        "backgroundColor": "#F4F6F8",
-        "appBar": {
-          "title": "笔记详情",
-          "centerTitle": true,
-          "backgroundColor": "#FFFFFF",
-          "color": "#111827",
-          "elevation": 0,
-          "actions": [
-            {
-              "type": "button",
-              "label": "",
-              "variant": "text",
-              "action": {
-                "call": "@global.startCreate",
-                "args": {}
-              },
-              "icon": "edit",
-              "style": {
-                "textColor": "#2563EB",
-                "fontSize": 18,
-                "paddingH": 10,
-                "paddingV": 8
-              }
-            }
-          ]
-        }
+        ]
       },
       {
         "id": "note_form",
-        "title": "编辑笔记",
+        "title": "{{ global.formScreenTitle }}",
         "layout": "column",
+        "backgroundColor": "#F4F6F8",
+        "appBar": {
+          "title": "{{ global.formScreenTitle }}",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.deleteNote",
+                "args": {}
+              },
+              "icon": "delete",
+              "style": {
+                "textColor": "#EF4444",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        },
         "children": [
           {
             "type": "card",
@@ -789,7 +1094,75 @@
               {
                 "type": "input",
                 "placeholder": "输入笔记标题",
-                "bind": "global.formTitle"
+                "bind": "global.formTitle",
+                "style": {
+                  "fontSize": 16
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "text",
+                "value": "标签",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "wrap",
+                    "spacing": 8,
+                    "runSpacing": 8,
+                    "children": [
+                      {
+                        "type": "chip",
+                        "label": "工作",
+                        "variant": "choice",
+                        "bind": "global.formTag",
+                        "value": "工作",
+                        "color": "#2563EB"
+                      },
+                      {
+                        "type": "chip",
+                        "label": "生活",
+                        "variant": "choice",
+                        "bind": "global.formTag",
+                        "value": "生活",
+                        "color": "#2563EB"
+                      },
+                      {
+                        "type": "chip",
+                        "label": "灵感",
+                        "variant": "choice",
+                        "bind": "global.formTag",
+                        "value": "灵感",
+                        "color": "#2563EB"
+                      },
+                      {
+                        "type": "chip",
+                        "label": "学习",
+                        "variant": "choice",
+                        "bind": "global.formTag",
+                        "value": "学习",
+                        "color": "#2563EB"
+                      }
+                    ]
+                  }
+                ],
+                "padding": 10,
+                "color": "#F9FAFB",
+                "borderRadius": 12
               },
               {
                 "type": "spacer",
@@ -810,42 +1183,39 @@
               },
               {
                 "type": "input",
-                "placeholder": "记录想法、任务或灵感",
+                "placeholder": "记录想法、任务或灵感…",
                 "bind": "global.formContent",
-                "maxLines": 8
+                "maxLines": 10,
+                "style": {
+                  "fontSize": 15,
+                  "minHeight": 160
+                }
               },
               {
                 "type": "spacer",
-                "height": 18
+                "height": 20
               },
               {
                 "type": "button",
-                "label": "保存",
+                "label": "保存笔记",
                 "variant": "filled",
                 "action": {
-                  "call": "@global.saveDraft",
+                  "call": "@global.saveNote",
                   "args": {}
                 },
                 "icon": "save",
                 "style": {
                   "backgroundColor": "#2563EB",
                   "textColor": "#FFFFFF",
-                  "borderRadius": 14
+                  "borderRadius": 14,
+                  "fontSize": 15,
+                  "paddingV": 13
                 }
               }
             ]
           }
-        ],
-        "backgroundColor": "#F4F6F8",
-        "appBar": {
-          "title": "编辑笔记",
-          "centerTitle": true,
-          "backgroundColor": "#FFFFFF",
-          "color": "#111827",
-          "elevation": 0
-        }
+        ]
       }
     ]
-  },
-  "appid": "370e919b-c51d-4cdd-8b3d-87063c666076"
+  }
 }

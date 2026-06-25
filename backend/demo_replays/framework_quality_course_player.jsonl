@@ -1,10 +1,9 @@
 {"status": "init", "message": "status.ai_engine_started"}
-{"status": "running", "message": "AI 已开始生成…"}
-{"thinking": "课程应用：章节列表、视频播放、进度条与已学标记。"}
-{"status": "tool_preparing", "message": "规划页面结构与交互…"}
-{"status": "command_execution", "message": "生成前端 JSON-DSL…"}
-{"content": "做了一个课程播放器：左侧章节、主区视频、底部进度。"}
-{"status": "repairing", "message": "校验并修复 JSON…"}
-{"content": "\n课程播放器已生成 ✅ 章节 + 播放 + 进度。"}
-{"client_action": {"type": "json_app_ready", "url": "https://placeholder.invalid/demo/framework_quality_course_player.json"}}
-{"_demo_final": {"final_text": "课程播放器已生成 ✅ 章节 + 播放 + 进度。", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://placeholder.invalid/demo/framework_quality_course_player.json"}]}}
+{"thinking": "C\",\n    \"tabs\": [\n        {\n            \"label\": \"目录\",\n            \"icon\": \"list\",\n            \"content\": { ... }\n        }\n    ]\n}\n```\n\nThe `content` is a widget tree rendered inside the tab. This is"}
+{"thinking": " important.\n\nNow let me structure the full app:\n\n**Global Variables:**\n```python\n{\n    \"currentLessonIndex\": 0,\n    \"currentTitle\": \"01 Python 简介与环境搭建\",\n    \"currentDuration\": \"15:30\",\n    \"currentPro"}
+{"thinking": "gress\": 1.0,\n    \"currentVideoUrl\": \"...\",\n    \"currentStateLabel\": \"已完成\",\n    \"totalLessons\": 8,\n    \"completedCount\": 1,\n    \"overallProgress\": 0.125,\n    \"lessons\": [...]\n}\n```\n\nWait, I realize I s"}
+{"thinking": "hould start with lesson 1 already completed (progress 1.0) and lesson 2 as \"in progress\" (progress 0.46), as the template shows. This makes the demo look more realistic.\n\nActually for a demo, let me s"}
+{"thinking": "et:\n- Lesson 1: completed (progress: 1.0)\n- Lesson 2: in progress (progress: 0.46) \n- Lesson 3-8: pending (progress: 0.0)\n- Current lesson: 1 (index, i.e., second lesson)\n\nThen the current video shows"}
+{"thinking": " for lesson 2 (the one in progress).\n\nHmm, but `currentLessonIndex` would be 1 (the second lesson), and the video would be loaded for that lesson.\n\nLet me write this out now. I'll initialize global va"}
+{"client_action": {"type": "json_app_ready", "url": "https://myapp-pre-de-oss-endpoint.dapangyu.work/ai-chat-temp/79db3d73831343bbbf49f084d19cd18c.json?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=appf689babac5db597b%2F20260625%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260625T015726Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=81935da4d8e6dbd34bfb52bab8027342f0075db4db58e3ca00b11398020dfac3"}}
+{"_demo_final": {"final_text": "", "final_thinking": "", "client_actions": [{"type": "json_app_ready", "url": "https://myapp-pre-de-oss-endpoint.dapangyu.work/ai-chat-temp/79db3d73831343bbbf49f084d19cd18c.json?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=appf689babac5db597b%2F20260625%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260625T015726Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=81935da4d8e6dbd34bfb52bab8027342f0075db4db58e3ca00b11398020dfac3"}]}}

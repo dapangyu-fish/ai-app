@@ -1,30 +1,37 @@
 {
   "dsl": "3.3",
-  "appid": "fc61e069-731e-42a6-83ab-f8b7105bf248",
   "meta": {
-    "name": "demo-5pages",
+    "name": "five-tab-app",
     "version": "1.0.0",
-    "description": "5页演示：首页导航 + 新建笔记 + 笔记列表 + 搜索 + 关于",
+    "type": "app",
+    "description": "一个包含五个页面和底部导航的多页面应用",
     "author": "fish",
-    "type": "app"
+    "displayName": "五页导航"
   },
+  "dependencies": {},
   "global": {
     "variables": {
-      "noteTitle": "",
-      "noteContent": "",
-      "searchKeyword": "",
+      "noteInput": "",
       "notes": [],
-      "searchResults": [],
-      "noteCount": "0"
+      "noteFilter": "all",
+      "noteSearch": "",
+      "taskInput": "",
+      "tasks": [],
+      "taskFilter": "all",
+      "statsMode": "weekly",
+      "userName": "用户",
+      "userBio": "这个人很懒，什么都没写"
     },
     "functions": {
       "addNote": {
-        "params": [
-          "title",
-          "content"
-        ],
-        "return": "None",
+        "params": [],
         "logic": [
+          {
+            "call": "@print",
+            "args": {
+              "value": "addNote called, noteInput={{ global.noteInput }}"
+            }
+          },
           {
             "call": "@set",
             "args": {
@@ -34,7 +41,11 @@
                   {
                     "var": "global.notes"
                   },
-                  "{{ params.title }} | {{ params.content }}"
+                  [
+                    {
+                      "var": "global.noteInput"
+                    }
+                  ]
                 ]
               }
             }
@@ -42,21 +53,14 @@
           {
             "call": "@set",
             "args": {
-              "var": "global.noteTitle",
+              "var": "global.noteInput",
               "value": ""
             }
           },
           {
-            "call": "@set",
+            "call": "@show_toast",
             "args": {
-              "var": "global.noteContent",
-              "value": ""
-            }
-          },
-          {
-            "call": "@print",
-            "args": {
-              "value": "已添加笔记：{{ params.title }}"
+              "message": "笔记已添加"
             }
           }
         ]
@@ -65,7 +69,6 @@
         "params": [
           "index"
         ],
-        "return": "None",
         "logic": [
           {
             "call": "@list_remove_at",
@@ -75,29 +78,202 @@
             }
           },
           {
-            "call": "@print",
+            "call": "@show_toast",
             "args": {
-              "value": "已删除第 {{ params.index }} 条笔记"
+              "message": "笔记已删除"
             }
           }
         ]
       },
-      "clearAllNotes": {
-        "params": [],
-        "return": "None",
+      "editNote": {
+        "params": [
+          "index"
+        ],
         "logic": [
           {
             "call": "@set",
             "args": {
-              "var": "global.notes",
-              "value": []
+              "var": "global.editingNoteIndex",
+              "value": "{{ params.index }}"
             }
           },
           {
+            "call": "@navigate",
+            "args": {
+              "screen": "edit_note"
+            }
+          }
+        ]
+      },
+      "setNoteFilter": {
+        "params": [
+          "filter"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.noteFilter",
+              "value": "{{ params.filter }}"
+            }
+          }
+        ]
+      },
+      "searchNotes": {
+        "params": [],
+        "logic": [
+          {
             "call": "@print",
             "args": {
-              "value": "已清空所有笔记"
+              "value": "searchNotes: {{ global.noteSearch }}"
             }
+          }
+        ]
+      },
+      "addTask": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tasks",
+              "value": {
+                "merge": [
+                  {
+                    "var": "global.tasks"
+                  },
+                  [
+                    {
+                      "title": "{{ global.taskInput }}",
+                      "done": false
+                    }
+                  ]
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.taskInput",
+              "value": ""
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "任务已添加"
+            }
+          }
+        ]
+      },
+      "toggleTask": {
+        "params": [
+          "index"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tasks.{{ params.index }}.done",
+              "value": {
+                "!": {
+                  "var": "global.tasks.{{ params.index }}.done"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "deleteTask": {
+        "params": [
+          "index"
+        ],
+        "logic": [
+          {
+            "call": "@list_remove_at",
+            "args": {
+              "var": "global.tasks",
+              "index": "{{ params.index }}"
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "任务已删除"
+            }
+          }
+        ]
+      },
+      "setTaskFilter": {
+        "params": [
+          "filter"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.taskFilter",
+              "value": "{{ params.filter }}"
+            }
+          }
+        ]
+      },
+      "setStatsMode": {
+        "params": [
+          "mode"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.statsMode",
+              "value": "{{ params.mode }}"
+            }
+          }
+        ]
+      },
+      "saveProfile": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@storage_set",
+            "args": {
+              "key": "userName",
+              "value": "{{ global.userName }}"
+            }
+          },
+          {
+            "call": "@storage_set",
+            "args": {
+              "key": "userBio",
+              "value": "{{ global.userBio }}"
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "个人资料已保存"
+            }
+          }
+        ]
+      },
+      "loadProfile": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@storage_get",
+            "args": {
+              "key": "userName"
+            },
+            "assign": "global.userName"
+          },
+          {
+            "call": "@storage_get",
+            "args": {
+              "key": "userBio"
+            },
+            "assign": "global.userBio"
           }
         ]
       }
@@ -105,655 +281,1629 @@
   },
   "steps": [
     {
+      "call": "@global.loadProfile",
+      "args": {}
+    },
+    {
       "call": "@print",
       "args": {
-        "value": "个人记事本启动完成"
+        "value": "五页导航应用已启动"
       }
     }
   ],
   "ui": {
     "screens": [
       {
-        "id": "home",
-        "title": "个人记事本",
-        "layout": "column",
-        "padding": 24,
-        "backgroundColor": "#F8F9FE",
-        "children": [
+        "id": "main",
+        "title": "五页导航",
+        "backgroundColor": "#F4F6F8",
+        "tabs": [
           {
-            "type": "text",
-            "value": "个人记事本",
-            "position": {
-              "type": "relative"
-            },
-            "style": {
-              "fontSize": 28,
-              "fontWeight": "bold"
-            }
-          },
-          {
-            "type": "text",
-            "value": "随时记录你的想法和灵感",
-            "position": {
-              "type": "relative"
-            },
-            "style": {
-              "fontSize": 16,
-              "color": "#888888"
-            }
-          },
-          {
-            "type": "container",
-            "layout": "column",
+            "label": "首页",
+            "icon": "home",
+            "title": "首页",
+            "backgroundColor": "#F4F6F8",
             "padding": 16,
-            "color": "#F0F4FF",
-            "position": {
-              "type": "relative"
-            },
             "children": [
               {
-                "type": "text",
-                "value": "快速入口",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 18,
-                  "fontWeight": "bold"
-                }
-              }
-            ]
-          },
-          {
-            "type": "container",
-            "layout": "row",
-            "position": {
-              "type": "relative"
-            },
-            "children": [
-              {
-                "type": "button",
-                "label": "新建笔记",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "action": {
-                  "type": "navigate",
-                  "screen": "add_note"
-                }
-              },
-              {
-                "type": "button",
-                "label": "笔记列表",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "action": {
-                  "type": "navigate",
-                  "screen": "note_list"
-                }
-              }
-            ]
-          },
-          {
-            "type": "container",
-            "layout": "row",
-            "position": {
-              "type": "relative"
-            },
-            "children": [
-              {
-                "type": "button",
-                "label": "搜索笔记",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "action": {
-                  "type": "navigate",
-                  "screen": "search"
-                }
-              },
-              {
-                "type": "button",
-                "label": "关于",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "action": {
-                  "type": "navigate",
-                  "screen": "about"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "add_note",
-        "title": "新建笔记",
-        "layout": "column",
-        "padding": 24,
-        "backgroundColor": "#FFFFF0",
-        "children": [
-          {
-            "type": "text",
-            "value": "新建笔记",
-            "position": {
-              "type": "relative"
-            },
-            "style": {
-              "fontSize": 24,
-              "fontWeight": "bold"
-            }
-          },
-          {
-            "type": "text",
-            "value": "填写标题和内容后点击保存",
-            "position": {
-              "type": "relative"
-            },
-            "style": {
-              "fontSize": 14,
-              "color": "#888888"
-            }
-          },
-          {
-            "type": "input",
-            "placeholder": "请输入笔记标题...",
-            "bind": "global.noteTitle",
-            "position": {
-              "type": "relative"
-            }
-          },
-          {
-            "type": "input",
-            "placeholder": "请输入笔记内容...",
-            "bind": "global.noteContent",
-            "position": {
-              "type": "relative"
-            }
-          },
-          {
-            "type": "container",
-            "layout": "column",
-            "padding": 12,
-            "color": "#FFFBE6",
-            "position": {
-              "type": "relative"
-            },
-            "children": [
-              {
-                "type": "text",
-                "value": "预览",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 14,
-                  "fontWeight": "bold",
-                  "color": "#B8860B"
-                }
-              },
-              {
-                "type": "text",
-                "value": "标题：{{ global.noteTitle }}",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 16
-                }
-              },
-              {
-                "type": "text",
-                "value": "内容：{{ global.noteContent }}",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 14,
-                  "color": "#666666"
-                }
-              }
-            ]
-          },
-          {
-            "type": "container",
-            "layout": "row",
-            "position": {
-              "type": "relative"
-            },
-            "children": [
-              {
-                "type": "button",
-                "label": "保存笔记",
-                "position": {
-                  "type": "flex",
-                  "flex": 2
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.addNote",
-                  "args": {
-                    "title": "{{ global.noteTitle }}",
-                    "content": "{{ global.noteContent }}"
-                  }
-                }
-              },
-              {
-                "type": "button",
-                "label": "返回首页",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "action": {
-                  "type": "navigate",
-                  "screen": "home"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "note_list",
-        "title": "笔记列表",
-        "layout": "column",
-        "padding": 20,
-        "backgroundColor": "#F0F8FF",
-        "children": [
-          {
-            "type": "container",
-            "layout": "row",
-            "position": {
-              "type": "relative"
-            },
-            "children": [
-              {
-                "type": "text",
-                "value": "我的笔记",
-                "position": {
-                  "type": "flex",
-                  "flex": 3
-                },
-                "style": {
-                  "fontSize": 22,
-                  "fontWeight": "bold"
-                }
-              },
-              {
-                "type": "button",
-                "label": "清空",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.clearAllNotes",
-                  "args": {}
-                }
-              }
-            ]
-          },
-          {
-            "type": "list",
-            "source": "{{ global.notes }}",
-            "position": {
-              "type": "relative"
-            },
-            "item_template": {
-              "type": "container",
-              "layout": "row",
-              "padding": 8,
-              "children": [
-                {
-                  "type": "text",
-                  "value": "{{ loop.item }}",
-                  "position": {
-                    "type": "flex",
-                    "flex": 4
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "你好, {{ global.userName }} 👋",
+                    "style": {
+                      "fontSize": 22,
+                      "fontWeight": "bold",
+                      "color": "#111827"
+                    }
                   },
-                  "style": {
-                    "fontSize": 15,
-                    "color": "#1A1A1A"
-                  }
-                },
-                {
-                  "type": "button",
-                  "label": "删除",
-                  "position": {
-                    "type": "flex",
-                    "flex": 1
+                  {
+                    "type": "spacer",
+                    "height": 4
                   },
-                  "action": {
-                    "type": "call",
-                    "call": "@global.deleteNote",
-                    "args": {
-                      "index": "{{ loop.index }}"
+                  {
+                    "type": "text",
+                    "value": "今天想做什么？",
+                    "style": {
+                      "fontSize": 14,
+                      "color": "#6B7280"
                     }
                   }
-                }
-              ]
-            }
-          },
-          {
-            "type": "container",
-            "layout": "row",
-            "position": {
-              "type": "relative"
-            },
-            "children": [
-              {
-                "type": "button",
-                "label": "新建笔记",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "action": {
-                  "type": "navigate",
-                  "screen": "add_note"
-                }
+                ],
+                "margin": 4
               },
               {
-                "type": "button",
-                "label": "返回首页",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "action": {
-                  "type": "navigate",
-                  "screen": "home"
-                }
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "notes",
+                              "size": 18,
+                              "color": "#2563EB"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "笔记数",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ global.notes | length }}",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "check_circle",
+                              "size": 18,
+                              "color": "#22C55E"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "任务数",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ global.tasks | length }}",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "margin": 8
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "快捷入口",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "600",
+                      "color": "#111827"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 10
+                  },
+                  {
+                    "type": "grid",
+                    "columns": 2,
+                    "spacing": 10,
+                    "shrinkWrap": true,
+                    "children": [
+                      {
+                        "type": "card",
+                        "layout": "column",
+                        "color": "#FFFFFF",
+                        "padding": 16,
+                        "margin": 8,
+                        "elevation": 0,
+                        "borderRadius": 14,
+                        "children": [
+                          {
+                            "type": "icon",
+                            "name": "edit",
+                            "size": 24,
+                            "color": "#2563EB"
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 8
+                          },
+                          {
+                            "type": "text",
+                            "value": "写笔记",
+                            "style": {
+                              "fontSize": 14,
+                              "fontWeight": "600",
+                              "color": "#111827"
+                            }
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 2
+                          },
+                          {
+                            "type": "text",
+                            "value": "记录想法",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#9CA3AF"
+                            }
+                          }
+                        ],
+                        "action": {
+                          "call": "@navigate",
+                          "args": {
+                            "tab": 1
+                          }
+                        }
+                      },
+                      {
+                        "type": "card",
+                        "layout": "column",
+                        "color": "#FFFFFF",
+                        "padding": 16,
+                        "margin": 8,
+                        "elevation": 0,
+                        "borderRadius": 14,
+                        "children": [
+                          {
+                            "type": "icon",
+                            "name": "check_circle",
+                            "size": 24,
+                            "color": "#22C55E"
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 8
+                          },
+                          {
+                            "type": "text",
+                            "value": "新任务",
+                            "style": {
+                              "fontSize": 14,
+                              "fontWeight": "600",
+                              "color": "#111827"
+                            }
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 2
+                          },
+                          {
+                            "type": "text",
+                            "value": "添加待办",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#9CA3AF"
+                            }
+                          }
+                        ],
+                        "action": {
+                          "call": "@navigate",
+                          "args": {
+                            "tab": 2
+                          }
+                        }
+                      },
+                      {
+                        "type": "card",
+                        "layout": "column",
+                        "color": "#FFFFFF",
+                        "padding": 16,
+                        "margin": 8,
+                        "elevation": 0,
+                        "borderRadius": 14,
+                        "children": [
+                          {
+                            "type": "icon",
+                            "name": "analytics",
+                            "size": 24,
+                            "color": "#F59E0B"
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 8
+                          },
+                          {
+                            "type": "text",
+                            "value": "查看统计",
+                            "style": {
+                              "fontSize": 14,
+                              "fontWeight": "600",
+                              "color": "#111827"
+                            }
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 2
+                          },
+                          {
+                            "type": "text",
+                            "value": "数据概览",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#9CA3AF"
+                            }
+                          }
+                        ],
+                        "action": {
+                          "call": "@navigate",
+                          "args": {
+                            "tab": 3
+                          }
+                        }
+                      },
+                      {
+                        "type": "card",
+                        "layout": "column",
+                        "color": "#FFFFFF",
+                        "padding": 16,
+                        "margin": 8,
+                        "elevation": 0,
+                        "borderRadius": 14,
+                        "children": [
+                          {
+                            "type": "icon",
+                            "name": "person",
+                            "size": 24,
+                            "color": "#8B5CF6"
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 8
+                          },
+                          {
+                            "type": "text",
+                            "value": "个人中心",
+                            "style": {
+                              "fontSize": 14,
+                              "fontWeight": "600",
+                              "color": "#111827"
+                            }
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 2
+                          },
+                          {
+                            "type": "text",
+                            "value": "管理资料",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#9CA3AF"
+                            }
+                          }
+                        ],
+                        "action": {
+                          "call": "@navigate",
+                          "args": {
+                            "tab": 4
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "margin": 8
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "最近笔记",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "600",
+                      "color": "#111827"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 8
+                  },
+                  {
+                    "type": "list",
+                    "source": "{{ global.notes[:3] }}",
+                    "shrinkWrap": true,
+                    "emptyText": "还没有笔记，去写一条吧",
+                    "item_template": {
+                      "type": "container",
+                      "layout": "row",
+                      "padding": 10,
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "notes",
+                          "size": 16,
+                          "color": "#2563EB"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 10
+                        },
+                        {
+                          "type": "expanded",
+                          "flex": 1,
+                          "child": {
+                            "type": "text",
+                            "value": "{{ loop.item }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#374151",
+                              "maxLines": 1
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "margin": 8,
+                "padding": 16,
+                "color": "#FFFFFF",
+                "borderRadius": 14
               }
             ]
-          }
-        ]
-      },
-      {
-        "id": "search",
-        "title": "搜索笔记",
-        "layout": "column",
-        "padding": 24,
-        "backgroundColor": "#F0FFF0",
-        "children": [
-          {
-            "type": "text",
-            "value": "搜索笔记",
-            "position": {
-              "type": "relative"
-            },
-            "style": {
-              "fontSize": 24,
-              "fontWeight": "bold"
-            }
           },
           {
-            "type": "text",
-            "value": "输入关键词查找笔记内容",
-            "position": {
-              "type": "relative"
-            },
-            "style": {
-              "fontSize": 14,
-              "color": "#888888"
-            }
-          },
-          {
-            "type": "input",
-            "placeholder": "输入搜索关键词...",
-            "bind": "global.searchKeyword",
-            "position": {
-              "type": "relative"
-            }
-          },
-          {
-            "type": "container",
-            "layout": "column",
+            "label": "笔记",
+            "icon": "edit",
+            "title": "我的笔记",
+            "backgroundColor": "#F4F6F8",
             "padding": 16,
-            "color": "#F0FFF0",
-            "position": {
-              "type": "relative"
-            },
             "children": [
               {
-                "type": "text",
-                "value": "当前关键词：{{ global.searchKeyword }}",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 16
-                }
+                "type": "card",
+                "layout": "column",
+                "color": "#FFFFFF",
+                "padding": 12,
+                "margin": 4,
+                "elevation": 0,
+                "borderRadius": 14,
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "input",
+                        "placeholder": "写点什么...",
+                        "bind": "global.noteInput",
+                        "position": {
+                          "type": "flex",
+                          "flex": 1
+                        },
+                        "style": {
+                          "fontSize": 15,
+                          "borderRadius": 10
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 8
+                      },
+                      {
+                        "type": "button",
+                        "label": "添加",
+                        "variant": "filled",
+                        "action": {
+                          "call": "@global.addNote",
+                          "args": {}
+                        },
+                        "icon": "add",
+                        "style": {
+                          "backgroundColor": "#2563EB",
+                          "textColor": "#FFFFFF",
+                          "borderRadius": 12,
+                          "fontSize": 14,
+                          "paddingH": 14,
+                          "paddingV": 10
+                        }
+                      }
+                    ],
+                    "crossAxisAlignment": "center"
+                  }
+                ]
               },
               {
-                "type": "text",
-                "value": "提示：在笔记列表中浏览全部笔记",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 13,
-                  "color": "#666666"
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "全部",
+                    "variant": "choice",
+                    "bind": "global.noteFilter",
+                    "value": "all",
+                    "color": "#2563EB",
+                    "action": {
+                      "call": "@global.setNoteFilter",
+                      "args": {
+                        "filter": "{{ global.noteFilter }}"
+                      }
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "最近",
+                    "variant": "choice",
+                    "bind": "global.noteFilter",
+                    "value": "recent",
+                    "color": "#2563EB",
+                    "action": {
+                      "call": "@global.setNoteFilter",
+                      "args": {
+                        "filter": "{{ global.noteFilter }}"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "list",
+                "source": "{{ global.notes | reverse }}",
+                "emptyText": "还没有笔记，在上方输入框写一条吧",
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "padding": 14,
+                  "crossAxisAlignment": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "notes",
+                      "size": 20,
+                      "color": "#2563EB"
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 12
+                    },
+                    {
+                      "type": "expanded",
+                      "flex": 1,
+                      "child": {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item }}",
+                            "style": {
+                              "fontSize": 15,
+                              "color": "#111827",
+                              "maxLines": 2
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "label": "",
+                      "variant": "text",
+                      "action": {
+                        "call": "@global.deleteNote",
+                        "args": {
+                          "index": "{{ loop.index }}"
+                        }
+                      },
+                      "icon": "delete",
+                      "style": {
+                        "textColor": "#EF4444",
+                        "fontSize": 18,
+                        "paddingH": 8,
+                        "paddingV": 8
+                      }
+                    }
+                  ]
                 }
               }
             ]
           },
           {
-            "type": "container",
-            "layout": "row",
-            "position": {
-              "type": "relative"
-            },
-            "children": [
-              {
-                "type": "button",
-                "label": "查看全部笔记",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "action": {
-                  "type": "navigate",
-                  "screen": "note_list"
-                }
-              },
-              {
-                "type": "button",
-                "label": "返回首页",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "action": {
-                  "type": "navigate",
-                  "screen": "home"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "about",
-        "title": "关于",
-        "layout": "column",
-        "padding": 24,
-        "backgroundColor": "#FFF8F0",
-        "children": [
-          {
-            "type": "text",
-            "value": "关于 个人记事本",
-            "position": {
-              "type": "relative"
-            },
-            "style": {
-              "fontSize": 24,
-              "fontWeight": "bold"
-            }
-          },
-          {
-            "type": "container",
-            "layout": "column",
+            "label": "任务",
+            "icon": "check_circle",
+            "title": "待办任务",
+            "backgroundColor": "#F4F6F8",
             "padding": 16,
-            "color": "#F5F5F5",
-            "position": {
-              "type": "relative"
-            },
             "children": [
               {
-                "type": "text",
-                "value": "版本：v1.0.0",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 16
-                }
+                "type": "card",
+                "layout": "column",
+                "color": "#FFFFFF",
+                "padding": 12,
+                "margin": 4,
+                "elevation": 0,
+                "borderRadius": 14,
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "input",
+                        "placeholder": "添加新任务...",
+                        "bind": "global.taskInput",
+                        "position": {
+                          "type": "flex",
+                          "flex": 1
+                        },
+                        "style": {
+                          "fontSize": 15,
+                          "borderRadius": 10
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 8
+                      },
+                      {
+                        "type": "button",
+                        "label": "添加",
+                        "variant": "filled",
+                        "action": {
+                          "call": "@global.addTask",
+                          "args": {}
+                        },
+                        "icon": "add",
+                        "style": {
+                          "backgroundColor": "#22C55E",
+                          "textColor": "#FFFFFF",
+                          "borderRadius": 12,
+                          "fontSize": 14,
+                          "paddingH": 14,
+                          "paddingV": 10
+                        }
+                      }
+                    ],
+                    "crossAxisAlignment": "center"
+                  }
+                ]
               },
               {
-                "type": "text",
-                "value": "引擎：JSON DSL v3.2",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 16
-                }
+                "type": "spacer",
+                "height": 10
               },
               {
-                "type": "text",
-                "value": "平台：Flutter 跨平台",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 16
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "全部",
+                    "variant": "choice",
+                    "bind": "global.taskFilter",
+                    "value": "all",
+                    "color": "#22C55E",
+                    "action": {
+                      "call": "@global.setTaskFilter",
+                      "args": {
+                        "filter": "{{ global.taskFilter }}"
+                      }
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "未完成",
+                    "variant": "choice",
+                    "bind": "global.taskFilter",
+                    "value": "schedule",
+                    "color": "#22C55E",
+                    "action": {
+                      "call": "@global.setTaskFilter",
+                      "args": {
+                        "filter": "{{ global.taskFilter }}"
+                      }
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "已完成",
+                    "variant": "choice",
+                    "bind": "global.taskFilter",
+                    "value": "done",
+                    "color": "#22C55E",
+                    "action": {
+                      "call": "@global.setTaskFilter",
+                      "args": {
+                        "filter": "{{ global.taskFilter }}"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "list",
+                "source": "{{ global.tasks | reverse }}",
+                "emptyText": "暂无任务，在上方添加一个吧",
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "padding": 14,
+                  "crossAxisAlignment": "center",
+                  "children": [
+                    {
+                      "type": "button",
+                      "label": "",
+                      "variant": "text",
+                      "action": {
+                        "call": "@global.toggleTask",
+                        "args": {
+                          "index": "{{ loop.index }}"
+                        }
+                      },
+                      "icon": "check_circle",
+                      "style": {
+                        "textColor": "{{ '#22C55E' if loop.item.done else '#D1D5DB' }}",
+                        "fontSize": 22,
+                        "paddingH": 4,
+                        "paddingV": 4
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 10
+                    },
+                    {
+                      "type": "expanded",
+                      "flex": 1,
+                      "child": {
+                        "type": "text",
+                        "value": "{{ loop.item.title }}",
+                        "style": {
+                          "fontSize": 15,
+                          "color": "{{ '#9CA3AF' if loop.item.done else '#111827' }}",
+                          "decoration": "{{ 'line-through' if loop.item.done else 'none' }}"
+                        }
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "label": "",
+                      "variant": "text",
+                      "action": {
+                        "call": "@global.deleteTask",
+                        "args": {
+                          "index": "{{ loop.index }}"
+                        }
+                      },
+                      "icon": "delete",
+                      "style": {
+                        "textColor": "#EF4444",
+                        "fontSize": 18,
+                        "paddingH": 8,
+                        "paddingV": 8
+                      }
+                    }
+                  ]
                 }
               }
             ]
           },
           {
-            "type": "container",
-            "layout": "column",
+            "label": "统计",
+            "icon": "analytics",
+            "title": "数据统计",
+            "backgroundColor": "#F4F6F8",
             "padding": 16,
-            "color": "#FFF0F0",
-            "position": {
-              "type": "relative"
-            },
             "children": [
               {
-                "type": "text",
-                "value": "功能特性",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 18,
-                  "fontWeight": "bold"
-                }
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "wrap",
+                    "spacing": 8,
+                    "runSpacing": 8,
+                    "children": [
+                      {
+                        "type": "chip",
+                        "label": "本周",
+                        "variant": "choice",
+                        "bind": "global.statsMode",
+                        "value": "weekly",
+                        "color": "#F59E0B",
+                        "action": {
+                          "call": "@global.setStatsMode",
+                          "args": {
+                            "mode": "{{ global.statsMode }}"
+                          }
+                        }
+                      },
+                      {
+                        "type": "chip",
+                        "label": "本月",
+                        "variant": "choice",
+                        "bind": "global.statsMode",
+                        "value": "monthly",
+                        "color": "#F59E0B",
+                        "action": {
+                          "call": "@global.setStatsMode",
+                          "args": {
+                            "mode": "{{ global.statsMode }}"
+                          }
+                        }
+                      },
+                      {
+                        "type": "chip",
+                        "label": "全部",
+                        "variant": "choice",
+                        "bind": "global.statsMode",
+                        "value": "all",
+                        "color": "#F59E0B",
+                        "action": {
+                          "call": "@global.setStatsMode",
+                          "args": {
+                            "mode": "{{ global.statsMode }}"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "margin": 4
               },
               {
-                "type": "text",
-                "value": "- 纯 JSON 配置驱动 UI 渲染",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 14
-                }
+                "type": "spacer",
+                "height": 12
               },
               {
-                "type": "text",
-                "value": "- 支持新建、查看、删除笔记",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 14
-                }
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "notes",
+                              "size": 18,
+                              "color": "#2563EB"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "总笔记",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ global.notes | length }}",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "check_circle",
+                              "size": 18,
+                              "color": "#22C55E"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "总任务",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ global.tasks | length }}",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "margin": 8
               },
               {
-                "type": "text",
-                "value": "- 双向数据绑定 + 实时预览",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 14
-                }
+                "type": "spacer",
+                "height": 10
               },
               {
-                "type": "text",
-                "value": "- 支持多页面导航跳转",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 14
-                }
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "check_circle",
+                              "size": 18,
+                              "color": "#22C55E"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "任务完成",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ (global.tasks | selectattr('done', 'true') | list) | length }}",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "schedule",
+                              "size": 18,
+                              "color": "#EF4444"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "待完成",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ (global.tasks | rejectattr('done', 'true') | list) | length }}",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ],
+                "margin": 8
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "card",
+                "layout": "column",
+                "color": "#FFFFFF",
+                "padding": 20,
+                "margin": 8,
+                "elevation": 0,
+                "borderRadius": 14,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "任务完成率",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "600",
+                      "color": "#111827"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 10
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ ((global.tasks | selectattr('done', 'true') | list) | length / (global.tasks | length or 1) * 100) | int }}%",
+                        "style": {
+                          "fontSize": 36,
+                          "fontWeight": "bold",
+                          "color": "#2563EB"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 4
+                      },
+                      {
+                        "type": "text",
+                        "value": "继续加油！",
+                        "style": {
+                          "fontSize": 13,
+                          "color": "#6B7280"
+                        }
+                      }
+                    ],
+                    "crossAxisAlignment": "center",
+                    "mainAxisAlignment": "center",
+                    "padding": 16
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "card",
+                "layout": "column",
+                "color": "#FFFFFF",
+                "padding": 20,
+                "margin": 8,
+                "elevation": 0,
+                "borderRadius": 14,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "使用概览",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "600",
+                      "color": "#111827"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 12
+                  },
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "icon",
+                            "name": "notes",
+                            "size": 28,
+                            "color": "#2563EB"
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 6
+                          },
+                          {
+                            "type": "text",
+                            "value": "{{ global.notes | length }}",
+                            "style": {
+                              "fontSize": 20,
+                              "fontWeight": "bold",
+                              "color": "#111827"
+                            }
+                          },
+                          {
+                            "type": "text",
+                            "value": "笔记",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#6B7280"
+                            }
+                          }
+                        ],
+                        "crossAxisAlignment": "center",
+                        "padding": 12
+                      },
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "icon",
+                            "name": "check_circle",
+                            "size": 28,
+                            "color": "#22C55E"
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 6
+                          },
+                          {
+                            "type": "text",
+                            "value": "{{ global.tasks | length }}",
+                            "style": {
+                              "fontSize": 20,
+                              "fontWeight": "bold",
+                              "color": "#111827"
+                            }
+                          },
+                          {
+                            "type": "text",
+                            "value": "任务",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#6B7280"
+                            }
+                          }
+                        ],
+                        "crossAxisAlignment": "center",
+                        "padding": 12
+                      },
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "icon",
+                            "name": "star",
+                            "size": 28,
+                            "color": "#F59E0B"
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 6
+                          },
+                          {
+                            "type": "text",
+                            "value": "{{ (global.tasks | selectattr('done', 'true') | list) | length }}",
+                            "style": {
+                              "fontSize": 20,
+                              "fontWeight": "bold",
+                              "color": "#111827"
+                            }
+                          },
+                          {
+                            "type": "text",
+                            "value": "已完成",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#6B7280"
+                            }
+                          }
+                        ],
+                        "crossAxisAlignment": "center",
+                        "padding": 12
+                      }
+                    ],
+                    "mainAxisAlignment": "spaceAround"
+                  }
+                ]
               }
             ]
           },
           {
-            "type": "container",
-            "layout": "column",
+            "label": "我的",
+            "icon": "person",
+            "title": "个人中心",
+            "backgroundColor": "#F4F6F8",
             "padding": 16,
-            "color": "#F0F0FF",
-            "position": {
-              "type": "relative"
-            },
             "children": [
               {
-                "type": "text",
-                "value": "技术栈",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 18,
-                  "fontWeight": "bold"
-                }
+                "type": "card",
+                "layout": "column",
+                "color": "#FFFFFF",
+                "padding": 20,
+                "margin": 4,
+                "elevation": 0,
+                "borderRadius": 14,
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "icon",
+                            "name": "person",
+                            "size": 48,
+                            "color": "#FFFFFF"
+                          }
+                        ],
+                        "padding": 16,
+                        "color": "#8B5CF6",
+                        "borderRadius": 40,
+                        "crossAxisAlignment": "center",
+                        "mainAxisAlignment": "center"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 16
+                      },
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "input",
+                            "bind": "global.userName",
+                            "style": {
+                              "fontSize": 20,
+                              "fontWeight": "bold",
+                              "color": "#111827"
+                            }
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 4
+                          },
+                          {
+                            "type": "input",
+                            "bind": "global.userBio",
+                            "placeholder": "写一句个性签名...",
+                            "style": {
+                              "fontSize": 13,
+                              "color": "#6B7280"
+                            }
+                          }
+                        ]
+                      }
+                    ],
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 12
+                  },
+                  {
+                    "type": "button",
+                    "label": "保存资料",
+                    "variant": "filled",
+                    "action": {
+                      "call": "@global.saveProfile",
+                      "args": {}
+                    },
+                    "icon": "save",
+                    "style": {
+                      "backgroundColor": "#8B5CF6",
+                      "textColor": "#FFFFFF",
+                      "borderRadius": 12,
+                      "fontSize": 14,
+                      "paddingH": 16,
+                      "paddingV": 10
+                    }
+                  }
+                ]
               },
               {
-                "type": "text",
-                "value": "Flutter + Riverpod + Dio",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 14
-                }
+                "type": "spacer",
+                "height": 16
               },
               {
-                "type": "text",
-                "value": "Server-Driven UI 架构",
-                "position": {
-                  "type": "relative"
-                },
-                "style": {
-                  "fontSize": 14
-                }
+                "type": "card",
+                "layout": "column",
+                "color": "#FFFFFF",
+                "padding": 16,
+                "margin": 4,
+                "elevation": 0,
+                "borderRadius": 14,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "设置",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "600",
+                      "color": "#111827"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 12
+                  },
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "notification",
+                        "size": 20,
+                        "color": "#6B7280"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 12
+                      },
+                      {
+                        "type": "expanded",
+                        "flex": 1,
+                        "child": {
+                          "type": "text",
+                          "value": "消息通知",
+                          "style": {
+                            "fontSize": 15,
+                            "color": "#374151"
+                          }
+                        }
+                      },
+                      {
+                        "type": "icon",
+                        "name": "check",
+                        "size": 18,
+                        "color": "#9CA3AF"
+                      }
+                    ],
+                    "crossAxisAlignment": "center",
+                    "padding": 10
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "height": 1,
+                    "color": "#F3F4F6",
+                    "margin": 4
+                  },
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "dark_mode",
+                        "size": 20,
+                        "color": "#6B7280"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 12
+                      },
+                      {
+                        "type": "expanded",
+                        "flex": 1,
+                        "child": {
+                          "type": "text",
+                          "value": "深色模式",
+                          "style": {
+                            "fontSize": 15,
+                            "color": "#374151"
+                          }
+                        }
+                      },
+                      {
+                        "type": "icon",
+                        "name": "dark_mode",
+                        "size": 18,
+                        "color": "#9CA3AF"
+                      }
+                    ],
+                    "crossAxisAlignment": "center",
+                    "padding": 10
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "height": 1,
+                    "color": "#F3F4F6",
+                    "margin": 4
+                  },
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "info",
+                        "size": 20,
+                        "color": "#6B7280"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 12
+                      },
+                      {
+                        "type": "expanded",
+                        "flex": 1,
+                        "child": {
+                          "type": "text",
+                          "value": "关于应用",
+                          "style": {
+                            "fontSize": 15,
+                            "color": "#374151"
+                          }
+                        }
+                      },
+                      {
+                        "type": "icon",
+                        "name": "info",
+                        "size": 18,
+                        "color": "#9CA3AF"
+                      }
+                    ],
+                    "crossAxisAlignment": "center",
+                    "padding": 10
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "card",
+                "layout": "column",
+                "color": "#FFFFFF",
+                "padding": 20,
+                "margin": 4,
+                "elevation": 0,
+                "borderRadius": 14,
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "MyApp",
+                        "style": {
+                          "fontSize": 16,
+                          "fontWeight": "bold",
+                          "color": "#111827"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 4
+                      },
+                      {
+                        "type": "text",
+                        "value": "版本 1.0.0",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#9CA3AF"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 2
+                      },
+                      {
+                        "type": "text",
+                        "value": "一个五页底部导航示例应用",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "crossAxisAlignment": "center",
+                    "padding": 12
+                  }
+                ]
               }
             ]
-          },
-          {
-            "type": "button",
-            "label": "返回首页",
-            "position": {
-              "type": "relative"
-            },
-            "action": {
-              "type": "navigate",
-              "screen": "home"
-            }
           }
         ]
       }

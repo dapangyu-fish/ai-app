@@ -1,89 +1,183 @@
 {
   "dsl": "3.3",
   "meta": {
-    "name": "framework-quality-ops-dashboard",
+    "name": "ops-dashboard",
     "version": "1.0.0",
     "type": "app",
-    "description": "框架能力模板：运营数据看板，展示 chart、tab_view、dropdown、progress。",
+    "description": "运维数据仪表盘：服务状态、指标图表、告警列表",
     "author": "fish",
-    "displayName": "Framework Ops Dashboard"
+    "displayName": "运维数据仪表盘"
   },
   "dependencies": {},
   "global": {
     "variables": {
-      "range": "本周",
-      "lineData": [
+      "range": "最近1小时",
+      "cpuLineData": [
         {
           "x": 0,
-          "y": 12
+          "y": 42
         },
         {
           "x": 1,
-          "y": 18
+          "y": 38
         },
         {
           "x": 2,
-          "y": 16
+          "y": 45
         },
         {
           "x": 3,
-          "y": 24
+          "y": 52
         },
         {
           "x": 4,
-          "y": 28
+          "y": 48
         },
         {
           "x": 5,
-          "y": 31
+          "y": 56
         },
         {
           "x": 6,
-          "y": 36
+          "y": 51
+        },
+        {
+          "x": 7,
+          "y": 59
+        },
+        {
+          "x": 8,
+          "y": 63
+        },
+        {
+          "x": 9,
+          "y": 58
+        },
+        {
+          "x": 10,
+          "y": 65
+        },
+        {
+          "x": 11,
+          "y": 71
+        },
+        {
+          "x": 12,
+          "y": 68
+        },
+        {
+          "x": 13,
+          "y": 74
+        },
+        {
+          "x": 14,
+          "y": 70
+        },
+        {
+          "x": 15,
+          "y": 77
+        },
+        {
+          "x": 16,
+          "y": 73
+        },
+        {
+          "x": 17,
+          "y": 80
+        },
+        {
+          "x": 18,
+          "y": 76
+        },
+        {
+          "x": 19,
+          "y": 82
         }
       ],
-      "barData": [
+      "qpsBarData": [
         {
-          "label": "Mon",
-          "value": 18
+          "label": "API网关",
+          "value": 2850
         },
         {
-          "label": "Tue",
-          "value": 24
+          "label": "用户服务",
+          "value": 1920
         },
         {
-          "label": "Wed",
-          "value": 21
+          "label": "订单服务",
+          "value": 1640
         },
         {
-          "label": "Thu",
-          "value": 33
+          "label": "支付服务",
+          "value": 980
         },
         {
-          "label": "Fri",
-          "value": 29
+          "label": "通知服务",
+          "value": 720
         }
       ],
-      "pieData": [
+      "resourcePieData": [
         {
-          "label": "搜索",
+          "label": "计算",
           "value": 42,
           "color": "#2563EB"
         },
         {
-          "label": "推荐",
-          "value": 31,
+          "label": "存储",
+          "value": 28,
           "color": "#059669"
         },
         {
-          "label": "分享",
+          "label": "网络",
           "value": 18,
           "color": "#D97706"
         },
         {
-          "label": "其它",
-          "value": 9,
+          "label": "其他",
+          "value": 12,
           "color": "#7C3AED"
+        }
+      ],
+      "alerts": [
+        {
+          "id": "1",
+          "severity": "critical",
+          "title": "API 网关延迟超过阈值",
+          "service": "API 网关",
+          "time": "10分钟前",
+          "acknowledged": false
+        },
+        {
+          "id": "2",
+          "severity": "warning",
+          "title": "数据库连接池使用率 85%",
+          "service": "数据库",
+          "time": "25分钟前",
+          "acknowledged": false
+        },
+        {
+          "id": "3",
+          "severity": "warning",
+          "title": "Redis 内存使用接近上限",
+          "service": "缓存服务",
+          "time": "1小时前",
+          "acknowledged": false
+        },
+        {
+          "id": "4",
+          "severity": "info",
+          "title": "定时备份任务完成",
+          "service": "存储服务",
+          "time": "2小时前",
+          "acknowledged": true
+        },
+        {
+          "id": "5",
+          "severity": "info",
+          "title": "SSL 证书将于 30 天后过期",
+          "service": "API 网关",
+          "time": "3小时前",
+          "acknowledged": false
         }
       ]
     },
@@ -98,6 +192,54 @@
             }
           }
         ]
+      },
+      "ackAlert": {
+        "params": [
+          {
+            "name": "alertId",
+            "type": "string"
+          }
+        ],
+        "logic": [
+          {
+            "set": "global.alerts",
+            "value": {
+              "map": [
+                {
+                  "var": "global.alerts"
+                },
+                {
+                  "if": [
+                    {
+                      "==": [
+                        {
+                          "var": "item.id"
+                        },
+                        {
+                          "var": "params.alertId"
+                        }
+                      ]
+                    },
+                    {
+                      "merge": [
+                        {
+                          "var": "item"
+                        },
+                        {
+                          "acknowledged": true
+                        }
+                      ]
+                    },
+                    {
+                      "var": "item"
+                    }
+                  ]
+                },
+                "item"
+              ]
+            }
+          }
+        ]
       }
     }
   },
@@ -106,7 +248,7 @@
     "screens": [
       {
         "id": "home",
-        "title": "运营看板",
+        "title": "运维数据仪表盘",
         "layout": "column",
         "children": [
           {
@@ -115,55 +257,9 @@
             "children": [
               {
                 "type": "text",
-                "value": "实时增长概览",
+                "value": "服务状态",
                 "style": {
-                  "fontSize": 19,
-                  "fontWeight": "bold",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 4
-              },
-              {
-                "type": "text",
-                "value": "图表和筛选直接使用框架控件，不再伪装成记录列表。",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#6B7280",
-                  "lineHeight": 1.35
-                }
-              }
-            ],
-            "margin": 12
-          },
-          {
-            "type": "card",
-            "layout": "column",
-            "color": "#FFFFFF",
-            "padding": 16,
-            "margin": 12,
-            "elevation": 0,
-            "borderRadius": 18,
-            "children": [
-              {
-                "type": "text",
-                "value": "今日活跃",
-                "style": {
-                  "fontSize": 13,
-                  "color": "#6B7280"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 5
-              },
-              {
-                "type": "text",
-                "value": "42,860",
-                "style": {
-                  "fontSize": 32,
+                  "fontSize": 16,
                   "fontWeight": "bold",
                   "color": "#111827"
                 }
@@ -173,199 +269,482 @@
                 "height": 8
               },
               {
-                "type": "dropdown",
-                "bind": "global.range",
-                "options": [
-                  "今天",
-                  "本周",
-                  "本月"
-                ],
-                "label": "时间范围",
-                "prefixIcon": "calendar",
-                "color": "#2563EB"
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 12,
+                      "margin": 4,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "router",
+                          "size": 20,
+                          "color": "#059669"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "API 网关",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#6B7280",
+                            "maxLines": 1
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 4
+                        },
+                        {
+                          "type": "text",
+                          "value": "正常",
+                          "style": {
+                            "fontSize": 14,
+                            "fontWeight": "bold",
+                            "color": "#059669",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 12,
+                      "margin": 4,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "dashboard",
+                          "size": 20,
+                          "color": "#059669"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "数据库",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#6B7280",
+                            "maxLines": 1
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 4
+                        },
+                        {
+                          "type": "text",
+                          "value": "正常",
+                          "style": {
+                            "fontSize": 14,
+                            "fontWeight": "bold",
+                            "color": "#059669",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 12,
+                      "margin": 4,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "sync",
+                          "size": 20,
+                          "color": "#D97706"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "缓存服务",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#6B7280",
+                            "maxLines": 1
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 4
+                        },
+                        {
+                          "type": "text",
+                          "value": "异常",
+                          "style": {
+                            "fontSize": 14,
+                            "fontWeight": "bold",
+                            "color": "#D97706",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ],
+            "margin": 0
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "monitor_heart",
+                              "size": 18,
+                              "color": "#2563EB"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "CPU 使用率",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "74%",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "layers",
+                              "size": 18,
+                              "color": "#059669"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "内存使用率",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "62%",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
               },
               {
                 "type": "spacer",
-                "height": 6
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "sync",
+                              "size": 18,
+                              "color": "#7C3AED"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "磁盘 IO",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "128 MB/s",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "wifi",
+                              "size": 18,
+                              "color": "#D97706"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "网络流量",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "3.2 Gbps",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ],
+            "margin": 0
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 14,
+            "margin": 0,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "CPU 使用趋势",
+                    "style": {
+                      "fontSize": 15,
+                      "fontWeight": "bold",
+                      "color": "#111827"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "flex": 1
+                  },
+                  {
+                    "type": "dropdown",
+                    "bind": "global.range",
+                    "options": [
+                      "最近1小时",
+                      "最近6小时",
+                      "最近24小时"
+                    ],
+                    "prefixIcon": "schedule",
+                    "color": "#2563EB"
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 8
               },
               {
                 "type": "chart",
                 "kind": "line",
-                "data": "{{ global.lineData }}",
-                "height": 190,
+                "data": "{{ global.cpuLineData }}",
+                "height": 180,
                 "color": "#2563EB"
               }
             ]
-          },
-          {
-            "type": "container",
-            "layout": "row",
-            "children": [
-              {
-                "type": "expanded",
-                "child": {
-                  "type": "card",
-                  "layout": "column",
-                  "color": "#FFFFFF",
-                  "padding": 14,
-                  "margin": 6,
-                  "elevation": 0,
-                  "borderRadius": 16,
-                  "children": [
-                    {
-                      "type": "icon",
-                      "name": "analytics",
-                      "size": 20,
-                      "color": "#059669"
-                    },
-                    {
-                      "type": "spacer",
-                      "height": 10
-                    },
-                    {
-                      "type": "text",
-                      "value": "12.8%",
-                      "style": {
-                        "fontSize": 22,
-                        "fontWeight": "bold",
-                        "color": "#111827",
-                        "maxLines": 1
-                      }
-                    },
-                    {
-                      "type": "spacer",
-                      "height": 4
-                    },
-                    {
-                      "type": "text",
-                      "value": "转化率",
-                      "style": {
-                        "fontSize": 12,
-                        "color": "#6B7280"
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "type": "spacer",
-                "width": 8
-              },
-              {
-                "type": "expanded",
-                "child": {
-                  "type": "card",
-                  "layout": "column",
-                  "color": "#FFFFFF",
-                  "padding": 14,
-                  "margin": 6,
-                  "elevation": 0,
-                  "borderRadius": 16,
-                  "children": [
-                    {
-                      "type": "icon",
-                      "name": "payment",
-                      "size": 20,
-                      "color": "#D97706"
-                    },
-                    {
-                      "type": "spacer",
-                      "height": 10
-                    },
-                    {
-                      "type": "text",
-                      "value": "¥186",
-                      "style": {
-                        "fontSize": 22,
-                        "fontWeight": "bold",
-                        "color": "#111827",
-                        "maxLines": 1
-                      }
-                    },
-                    {
-                      "type": "spacer",
-                      "height": 4
-                    },
-                    {
-                      "type": "text",
-                      "value": "客单价",
-                      "style": {
-                        "fontSize": 12,
-                        "color": "#6B7280"
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "type": "spacer",
-                "width": 8
-              },
-              {
-                "type": "expanded",
-                "child": {
-                  "type": "card",
-                  "layout": "column",
-                  "color": "#FFFFFF",
-                  "padding": 14,
-                  "margin": 6,
-                  "elevation": 0,
-                  "borderRadius": 16,
-                  "children": [
-                    {
-                      "type": "icon",
-                      "name": "warning",
-                      "size": 20,
-                      "color": "#DC2626"
-                    },
-                    {
-                      "type": "spacer",
-                      "height": 10
-                    },
-                    {
-                      "type": "text",
-                      "value": "7",
-                      "style": {
-                        "fontSize": 22,
-                        "fontWeight": "bold",
-                        "color": "#111827",
-                        "maxLines": 1
-                      }
-                    },
-                    {
-                      "type": "spacer",
-                      "height": 4
-                    },
-                    {
-                      "type": "text",
-                      "value": "风险工单",
-                      "style": {
-                        "fontSize": 12,
-                        "color": "#6B7280"
-                      }
-                    }
-                  ]
-                }
-              }
-            ],
-            "margin": 8
           },
           {
             "type": "card",
             "layout": "column",
             "color": "#FFFFFF",
             "padding": 12,
-            "margin": 12,
+            "margin": 0,
             "elevation": 0,
             "borderRadius": 18,
             "children": [
               {
                 "type": "tab_view",
-                "height": 330,
+                "height": 310,
                 "color": "#2563EB",
                 "tabs": [
                   {
-                    "label": "渠道",
+                    "label": "QPS 分布",
                     "icon": "analytics",
                     "content": {
                       "type": "container",
@@ -374,15 +753,19 @@
                         {
                           "type": "chart",
                           "kind": "bar",
-                          "data": "{{ global.barData }}",
-                          "height": 220,
+                          "data": "{{ global.qpsBarData }}",
+                          "height": 200,
                           "color": "#2563EB"
                         },
                         {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
                           "type": "text",
-                          "value": "周四投放带来峰值，搜索渠道仍是主力。",
+                          "value": "各服务近 5 分钟平均 QPS，API 网关承载主要流量。",
                           "style": {
-                            "fontSize": 13,
+                            "fontSize": 12,
                             "color": "#6B7280"
                           }
                         }
@@ -390,7 +773,7 @@
                     }
                   },
                   {
-                    "label": "来源",
+                    "label": "资源占比",
                     "icon": "share",
                     "content": {
                       "type": "container",
@@ -399,14 +782,18 @@
                         {
                           "type": "chart",
                           "kind": "pie",
-                          "data": "{{ global.pieData }}",
-                          "height": 230
+                          "data": "{{ global.resourcePieData }}",
+                          "height": 200
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
                         },
                         {
                           "type": "text",
-                          "value": "推荐流量质量更稳定，适合加码复购入口。",
+                          "value": "计算资源占用最高，建议关注存储扩容窗口。",
                           "style": {
-                            "fontSize": 13,
+                            "fontSize": 12,
                             "color": "#6B7280"
                           }
                         }
@@ -416,11 +803,232 @@
                 ]
               }
             ]
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "告警列表",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "bold",
+                      "color": "#111827"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "flex": 1
+                  },
+                  {
+                    "type": "text",
+                    "value": "5 条告警",
+                    "style": {
+                      "fontSize": 13,
+                      "color": "#6B7280"
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "list",
+                "shrinkWrap": true,
+                "source": "{{ global.alerts }}",
+                "itemKey": "id",
+                "separator": {
+                  "type": "spacer",
+                  "height": 8
+                },
+                "emptyText": "暂无告警",
+                "item_template": {
+                  "data": {
+                    "ackLabel": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "var": "item.acknowledged"
+                            },
+                            true
+                          ]
+                        },
+                        "已确认",
+                        "确认"
+                      ]
+                    },
+                    "ackVariant": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "var": "item.acknowledged"
+                            },
+                            true
+                          ]
+                        },
+                        "text",
+                        "filled"
+                      ]
+                    },
+                    "ackTextColor": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "var": "item.acknowledged"
+                            },
+                            true
+                          ]
+                        },
+                        "#9CA3AF",
+                        "#FFFFFF"
+                      ]
+                    }
+                  },
+                  "type": "card",
+                  "layout": "row",
+                  "color": {
+                    "if": [
+                      {
+                        "==": [
+                          {
+                            "var": "item.acknowledged"
+                          },
+                          true
+                        ]
+                      },
+                      "#F9FAFB",
+                      {
+                        "switch": [
+                          {
+                            "var": "item.severity"
+                          },
+                          {
+                            "critical": "#FEF2F2",
+                            "warning": "#FFFBEB",
+                            "info": "#EFF6FF"
+                          },
+                          "#FFFFFF"
+                        ]
+                      }
+                    ]
+                  },
+                  "padding": 12,
+                  "margin": 0,
+                  "elevation": 0,
+                  "borderRadius": 12,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "crossAxisAlignment": "center",
+                      "mainAxisAlignment": "start",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": {
+                            "switch": [
+                              {
+                                "var": "item.severity"
+                              },
+                              {
+                                "critical": "error",
+                                "warning": "warning_amber",
+                                "info": "info"
+                              },
+                              "info"
+                            ]
+                          },
+                          "size": 22,
+                          "color": {
+                            "switch": [
+                              {
+                                "var": "item.severity"
+                              },
+                              {
+                                "critical": "#DC2626",
+                                "warning": "#D97706",
+                                "info": "#2563EB"
+                              },
+                              "#6B7280"
+                            ]
+                          }
+                        }
+                      ],
+                      "width": 40
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 10
+                    },
+                    {
+                      "type": "expanded",
+                      "child": {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ item.title }}",
+                            "style": {
+                              "fontSize": 14,
+                              "fontWeight": "bold",
+                              "color": "#111827",
+                              "maxLines": 2
+                            }
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 4
+                          },
+                          {
+                            "type": "text",
+                            "value": "{{ item.service }} · {{ item.time }}",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#6B7280"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "label": "{{ item.ackLabel }}",
+                      "variant": "{{ item.ackVariant }}",
+                      "action": {
+                        "call": "@global.ackAlert",
+                        "args": {
+                          "alertId": "{{ item.id }}"
+                        }
+                      },
+                      "style": {
+                        "textColor": "{{ item.ackTextColor }}",
+                        "fontSize": 12,
+                        "paddingH": 10,
+                        "paddingV": 6
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "margin": 0
           }
         ],
         "backgroundColor": "#F6F7FB",
         "appBar": {
-          "title": "运营看板",
+          "title": "运维数据仪表盘",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -446,6 +1054,5 @@
         }
       }
     ]
-  },
-  "appid": "9b82a9da-af09-47e3-b7db-27e3a09acc62"
+  }
 }

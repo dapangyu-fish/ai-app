@@ -1,82 +1,35 @@
 {
   "dsl": "3.3",
-  "appid": "77e19726-ec43-4e25-aaed-eb9a084521b1",
   "meta": {
     "name": "calculator",
     "version": "1.0.0",
     "type": "app",
-    "description": "计算器 - 支持加减乘除、百分比、正负切换",
-    "author": "fish"
+    "description": "支持加减乘除、百分比和清除的计算器",
+    "author": "fish",
+    "displayName": "计算器"
   },
+  "dependencies": {},
   "global": {
     "variables": {
       "display": "0",
-      "expressionText": "",
-      "firstOperand": 0,
-      "operator": "",
-      "waitingForSecond": false
+      "expression": "",
+      "prev": 0,
+      "op": "",
+      "resetFlag": false
     },
     "functions": {
-      "pressDigit": {
+      "digit": {
         "params": [
-          "digit"
+          "d"
         ],
-        "return": "None",
         "logic": [
           {
             "call": "@if",
             "args": {
               "condition": {
-                "or": [
-                  {
-                    "==": [
-                      {
-                        "var": "global.waitingForSecond"
-                      },
-                      true
-                    ]
-                  },
-                  {
-                    "==": [
-                      {
-                        "var": "global.display"
-                      },
-                      "0"
-                    ]
-                  },
-                  {
-                    "==": [
-                      {
-                        "var": "global.display"
-                      },
-                      "Error"
-                    ]
-                  }
-                ]
+                "var": "global.resetFlag"
               },
               "then": [
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global.display",
-                    "value": {
-                      "to_string": [
-                        {
-                          "var": "params.digit"
-                        }
-                      ]
-                    }
-                  }
-                },
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global.waitingForSecond",
-                    "value": false
-                  }
-                }
-              ],
-              "else": [
                 {
                   "call": "@set",
                   "args": {
@@ -84,413 +37,31 @@
                     "value": {
                       "cat": [
                         {
-                          "var": "global.display"
+                          "var": "params.d"
                         },
-                        {
-                          "to_string": [
-                            {
-                              "var": "params.digit"
-                            }
-                          ]
-                        }
+                        ""
                       ]
                     }
                   }
-                }
-              ]
-            }
-          }
-        ]
-      },
-      "pressOperator": {
-        "params": [
-          "op"
-        ],
-        "return": "None",
-        "logic": [
-          {
-            "call": "@if",
-            "args": {
-              "condition": {
-                "!=": [
-                  {
-                    "var": "global.display"
-                  },
-                  "Error"
-                ]
-              },
-              "then": [
-                {
-                  "call": "@if",
-                  "args": {
-                    "condition": {
-                      "and": [
-                        {
-                          "!=": [
-                            {
-                              "var": "global.operator"
-                            },
-                            ""
-                          ]
-                        },
-                        {
-                          "==": [
-                            {
-                              "var": "global.waitingForSecond"
-                            },
-                            false
-                          ]
-                        }
-                      ]
-                    },
-                    "then": [
-                      {
-                        "call": "@global.calculate",
-                        "args": {}
-                      }
-                    ],
-                    "else": []
-                  }
-                },
-                {
-                  "call": "@to_double",
-                  "args": {
-                    "value": "{{ global.display }}"
-                  },
-                  "assign": "global.firstOperand"
                 },
                 {
                   "call": "@set",
                   "args": {
-                    "var": "global.expressionText",
-                    "value": "{{ global.display }} {{ params.op }}"
-                  }
-                },
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global.operator",
-                    "value": "{{ params.op }}"
-                  }
-                },
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global.waitingForSecond",
-                    "value": true
+                    "var": "global.resetFlag",
+                    "value": false
                   }
                 }
               ],
-              "else": []
-            }
-          }
-        ]
-      },
-      "pressEquals": {
-        "params": [],
-        "return": "None",
-        "logic": [
-          {
-            "call": "@if",
-            "args": {
-              "condition": {
-                "and": [
-                  {
-                    "!=": [
-                      {
-                        "var": "global.display"
-                      },
-                      "Error"
-                    ]
-                  },
-                  {
-                    "!=": [
-                      {
-                        "var": "global.operator"
-                      },
-                      ""
-                    ]
-                  },
-                  {
-                    "==": [
-                      {
-                        "var": "global.waitingForSecond"
-                      },
-                      false
-                    ]
-                  }
-                ]
-              },
-              "then": [
-                {
-                  "call": "@global.calculate",
-                  "args": {}
-                },
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global.operator",
-                    "value": ""
-                  }
-                },
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global.expressionText",
-                    "value": ""
-                  }
-                }
-              ],
-              "else": []
-            }
-          }
-        ]
-      },
-      "pressClear": {
-        "params": [],
-        "return": "None",
-        "logic": [
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.display",
-              "value": "0"
-            }
-          },
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.expressionText",
-              "value": ""
-            }
-          },
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.firstOperand",
-              "value": 0
-            }
-          },
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.operator",
-              "value": ""
-            }
-          },
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.waitingForSecond",
-              "value": false
-            }
-          }
-        ]
-      },
-      "pressDecimal": {
-        "params": [],
-        "return": "None",
-        "logic": [
-          {
-            "call": "@if",
-            "args": {
-              "condition": {
-                "!=": [
-                  {
-                    "var": "global.display"
-                  },
-                  "Error"
-                ]
-              },
-              "then": [
+              "else": [
                 {
                   "call": "@if",
                   "args": {
                     "condition": {
                       "==": [
                         {
-                          "var": "global.waitingForSecond"
-                        },
-                        true
-                      ]
-                    },
-                    "then": [
-                      {
-                        "call": "@set",
-                        "args": {
-                          "var": "global.display",
-                          "value": "0."
-                        }
-                      },
-                      {
-                        "call": "@set",
-                        "args": {
-                          "var": "global.waitingForSecond",
-                          "value": false
-                        }
-                      }
-                    ],
-                    "else": [
-                      {
-                        "call": "@if",
-                        "args": {
-                          "condition": {
-                            "!": [
-                              {
-                                "str_contains": [
-                                  {
-                                    "var": "global.display"
-                                  },
-                                  "."
-                                ]
-                              }
-                            ]
-                          },
-                          "then": [
-                            {
-                              "call": "@set",
-                              "args": {
-                                "var": "global.display",
-                                "value": {
-                                  "cat": [
-                                    {
-                                      "var": "global.display"
-                                    },
-                                    "."
-                                  ]
-                                }
-                              }
-                            }
-                          ],
-                          "else": []
-                        }
-                      }
-                    ]
-                  }
-                }
-              ],
-              "else": []
-            }
-          }
-        ]
-      },
-      "pressBackspace": {
-        "params": [],
-        "return": "None",
-        "logic": [
-          {
-            "call": "@if",
-            "args": {
-              "condition": {
-                "or": [
-                  {
-                    "==": [
-                      {
-                        "var": "global.display"
-                      },
-                      "0"
-                    ]
-                  },
-                  {
-                    "==": [
-                      {
-                        "var": "global.display"
-                      },
-                      "Error"
-                    ]
-                  },
-                  {
-                    "<=": [
-                      {
-                        "str_len": [
-                          {
-                            "var": "global.display"
-                          }
-                        ]
-                      },
-                      1
-                    ]
-                  }
-                ]
-              },
-              "then": [
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global.display",
-                    "value": "0"
-                  }
-                }
-              ],
-              "else": [
-                {
-                  "call": "@set",
-                  "args": {
-                    "var": "global.display",
-                    "value": {
-                      "substr": [
-                        {
                           "var": "global.display"
                         },
-                        0,
-                        {
-                          "-": [
-                            {
-                              "str_len": [
-                                {
-                                  "var": "global.display"
-                                }
-                              ]
-                            },
-                            1
-                          ]
-                        }
-                      ]
-                    }
-                  }
-                }
-              ]
-            }
-          }
-        ]
-      },
-      "toggleSign": {
-        "params": [],
-        "return": "None",
-        "logic": [
-          {
-            "call": "@if",
-            "args": {
-              "condition": {
-                "and": [
-                  {
-                    "!=": [
-                      {
-                        "var": "global.display"
-                      },
-                      "0"
-                    ]
-                  },
-                  {
-                    "!=": [
-                      {
-                        "var": "global.display"
-                      },
-                      "Error"
-                    ]
-                  }
-                ]
-              },
-              "then": [
-                {
-                  "call": "@if",
-                  "args": {
-                    "condition": {
-                      "str_contains": [
-                        {
-                          "var": "global.display"
-                        },
-                        "-"
+                        "0"
                       ]
                     },
                     "then": [
@@ -499,11 +70,11 @@
                         "args": {
                           "var": "global.display",
                           "value": {
-                            "substr": [
+                            "cat": [
                               {
-                                "var": "global.display"
+                                "var": "params.d"
                               },
-                              1
+                              ""
                             ]
                           }
                         }
@@ -516,308 +87,14 @@
                           "var": "global.display",
                           "value": {
                             "cat": [
-                              "-",
                               {
                                 "var": "global.display"
-                              }
-                            ]
-                          }
-                        }
-                      }
-                    ]
-                  }
-                }
-              ],
-              "else": []
-            }
-          }
-        ]
-      },
-      "pressPercent": {
-        "params": [],
-        "return": "None",
-        "logic": [
-          {
-            "call": "@if",
-            "args": {
-              "condition": {
-                "and": [
-                  {
-                    "!=": [
-                      {
-                        "var": "global.display"
-                      },
-                      "Error"
-                    ]
-                  },
-                  {
-                    "!=": [
-                      {
-                        "var": "global.display"
-                      },
-                      "0"
-                    ]
-                  }
-                ]
-              },
-              "then": [
-                {
-                  "call": "@to_double",
-                  "args": {
-                    "value": "{{ global.display }}"
-                  },
-                  "assign": "global._pctVal"
-                },
-                {
-                  "expression": {
-                    "/": [
-                      {
-                        "var": "global._pctVal"
-                      },
-                      100
-                    ]
-                  },
-                  "assign": "global._pctVal"
-                },
-                {
-                  "call": "@if",
-                  "args": {
-                    "condition": {
-                      "==": [
-                        {
-                          "%": [
-                            {
-                              "var": "global._pctVal"
-                            },
-                            1
-                          ]
-                        },
-                        0
-                      ]
-                    },
-                    "then": [
-                      {
-                        "call": "@set",
-                        "args": {
-                          "var": "global.display",
-                          "value": {
-                            "to_string": [
-                              {
-                                "to_int": [
-                                  {
-                                    "var": "global._pctVal"
-                                  }
-                                ]
-                              }
-                            ]
-                          }
-                        }
-                      }
-                    ],
-                    "else": [
-                      {
-                        "call": "@set",
-                        "args": {
-                          "var": "global.display",
-                          "value": {
-                            "to_string": [
-                              {
-                                "var": "global._pctVal"
-                              }
-                            ]
-                          }
-                        }
-                      }
-                    ]
-                  }
-                }
-              ],
-              "else": []
-            }
-          }
-        ]
-      },
-      "calculate": {
-        "params": [],
-        "return": "None",
-        "logic": [
-          {
-            "call": "@to_double",
-            "args": {
-              "value": "{{ global.display }}"
-            },
-            "assign": "global._second"
-          },
-          {
-            "call": "@set",
-            "args": {
-              "var": "global._hasError",
-              "value": false
-            }
-          },
-          {
-            "call": "@if",
-            "args": {
-              "condition": {
-                "==": [
-                  {
-                    "var": "global.operator"
-                  },
-                  "+"
-                ]
-              },
-              "then": [
-                {
-                  "expression": {
-                    "+": [
-                      {
-                        "var": "global.firstOperand"
-                      },
-                      {
-                        "var": "global._second"
-                      }
-                    ]
-                  },
-                  "assign": "global._result"
-                }
-              ],
-              "else": [
-                {
-                  "call": "@if",
-                  "args": {
-                    "condition": {
-                      "==": [
-                        {
-                          "var": "global.operator"
-                        },
-                        "-"
-                      ]
-                    },
-                    "then": [
-                      {
-                        "expression": {
-                          "-": [
-                            {
-                              "var": "global.firstOperand"
-                            },
-                            {
-                              "var": "global._second"
-                            }
-                          ]
-                        },
-                        "assign": "global._result"
-                      }
-                    ],
-                    "else": [
-                      {
-                        "call": "@if",
-                        "args": {
-                          "condition": {
-                            "==": [
-                              {
-                                "var": "global.operator"
                               },
-                              "*"
-                            ]
-                          },
-                          "then": [
-                            {
-                              "expression": {
-                                "*": [
-                                  {
-                                    "var": "global.firstOperand"
-                                  },
-                                  {
-                                    "var": "global._second"
-                                  }
-                                ]
-                              },
-                              "assign": "global._result"
-                            }
-                          ],
-                          "else": [
-                            {
-                              "call": "@if",
-                              "args": {
-                                "condition": {
-                                  "==": [
-                                    {
-                                      "var": "global.operator"
-                                    },
-                                    "/"
-                                  ]
-                                },
-                                "then": [
-                                  {
-                                    "call": "@if",
-                                    "args": {
-                                      "condition": {
-                                        "==": [
-                                          {
-                                            "var": "global._second"
-                                          },
-                                          0
-                                        ]
-                                      },
-                                      "then": [
-                                        {
-                                          "call": "@set",
-                                          "args": {
-                                            "var": "global.display",
-                                            "value": "Error"
-                                          }
-                                        },
-                                        {
-                                          "call": "@set",
-                                          "args": {
-                                            "var": "global._hasError",
-                                            "value": true
-                                          }
-                                        },
-                                        {
-                                          "call": "@set",
-                                          "args": {
-                                            "var": "global.operator",
-                                            "value": ""
-                                          }
-                                        },
-                                        {
-                                          "call": "@set",
-                                          "args": {
-                                            "var": "global.firstOperand",
-                                            "value": 0
-                                          }
-                                        },
-                                        {
-                                          "call": "@set",
-                                          "args": {
-                                            "var": "global.waitingForSecond",
-                                            "value": false
-                                          }
-                                        }
-                                      ],
-                                      "else": [
-                                        {
-                                          "expression": {
-                                            "/": [
-                                              {
-                                                "var": "global.firstOperand"
-                                              },
-                                              {
-                                                "var": "global._second"
-                                              }
-                                            ]
-                                          },
-                                          "assign": "global._result"
-                                        }
-                                      ]
-                                    }
-                                  }
-                                ],
-                                "else": []
+                              {
+                                "var": "params.d"
                               }
-                            }
-                          ]
+                            ]
+                          }
                         }
                       }
                     ]
@@ -825,16 +102,414 @@
                 }
               ]
             }
-          },
+          }
+        ]
+      },
+      "doAdd": {
+        "params": [
+          "_"
+        ],
+        "logic": [
           {
             "call": "@if",
             "args": {
               "condition": {
-                "==": [
+                "!=": [
                   {
-                    "var": "global._hasError"
+                    "var": "global.op"
                   },
-                  false
+                  ""
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.prev",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.prev"
+                        },
+                        {
+                          "*": [
+                            1,
+                            {
+                              "var": "global.display"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.prev",
+                    "value": {
+                      "*": [
+                        1,
+                        {
+                          "var": "global.display"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.display",
+              "value": {
+                "cat": [
+                  {
+                    "var": "global.prev"
+                  },
+                  ""
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.op",
+              "value": "+"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.expression",
+              "value": {
+                "cat": [
+                  {
+                    "var": "global.display"
+                  },
+                  " ",
+                  "+"
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.resetFlag",
+              "value": true
+            }
+          }
+        ]
+      },
+      "doSubtract": {
+        "params": [
+          "_"
+        ],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "!=": [
+                  {
+                    "var": "global.op"
+                  },
+                  ""
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.prev",
+                    "value": {
+                      "-": [
+                        {
+                          "var": "global.prev"
+                        },
+                        {
+                          "var": "global.display"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.prev",
+                    "value": {
+                      "*": [
+                        1,
+                        {
+                          "var": "global.display"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.display",
+              "value": {
+                "cat": [
+                  {
+                    "var": "global.prev"
+                  },
+                  ""
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.op",
+              "value": "-"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.expression",
+              "value": {
+                "cat": [
+                  {
+                    "var": "global.display"
+                  },
+                  " ",
+                  "−"
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.resetFlag",
+              "value": true
+            }
+          }
+        ]
+      },
+      "doMultiply": {
+        "params": [
+          "_"
+        ],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "!=": [
+                  {
+                    "var": "global.op"
+                  },
+                  ""
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.prev",
+                    "value": {
+                      "*": [
+                        {
+                          "var": "global.prev"
+                        },
+                        {
+                          "var": "global.display"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.prev",
+                    "value": {
+                      "*": [
+                        1,
+                        {
+                          "var": "global.display"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.display",
+              "value": {
+                "cat": [
+                  {
+                    "var": "global.prev"
+                  },
+                  ""
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.op",
+              "value": "*"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.expression",
+              "value": {
+                "cat": [
+                  {
+                    "var": "global.display"
+                  },
+                  " ",
+                  "×"
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.resetFlag",
+              "value": true
+            }
+          }
+        ]
+      },
+      "doDivide": {
+        "params": [
+          "_"
+        ],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "!=": [
+                  {
+                    "var": "global.op"
+                  },
+                  ""
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.prev",
+                    "value": {
+                      "/": [
+                        {
+                          "var": "global.prev"
+                        },
+                        {
+                          "var": "global.display"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.prev",
+                    "value": {
+                      "*": [
+                        1,
+                        {
+                          "var": "global.display"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.display",
+              "value": {
+                "cat": [
+                  {
+                    "var": "global.prev"
+                  },
+                  ""
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.op",
+              "value": "/"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.expression",
+              "value": {
+                "cat": [
+                  {
+                    "var": "global.display"
+                  },
+                  " ",
+                  "÷"
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.resetFlag",
+              "value": true
+            }
+          }
+        ]
+      },
+      "doEquals": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "!=": [
+                  {
+                    "var": "global.op"
+                  },
+                  ""
                 ]
               },
               "then": [
@@ -844,59 +519,475 @@
                     "condition": {
                       "==": [
                         {
-                          "%": [
-                            {
-                              "var": "global._result"
-                            },
-                            1
-                          ]
+                          "var": "global.op"
                         },
-                        0
+                        "+"
                       ]
                     },
                     "then": [
                       {
                         "call": "@set",
                         "args": {
-                          "var": "global.display",
+                          "var": "global.expression",
                           "value": {
-                            "to_string": [
+                            "cat": [
                               {
-                                "to_int": [
+                                "cat": [
                                   {
-                                    "var": "global._result"
-                                  }
+                                    "var": "global.prev"
+                                  },
+                                  ""
                                 ]
-                              }
+                              },
+                              " ",
+                              "+",
+                              " ",
+                              {
+                                "var": "global.display"
+                              },
+                              " ="
                             ]
                           }
                         }
-                      }
-                    ],
-                    "else": [
+                      },
                       {
                         "call": "@set",
                         "args": {
                           "var": "global.display",
                           "value": {
-                            "to_string": [
+                            "cat": [
                               {
-                                "var": "global._result"
-                              }
+                                "+": [
+                                  {
+                                    "var": "global.prev"
+                                  },
+                                  {
+                                    "*": [
+                                      1,
+                                      {
+                                        "var": "global.display"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              ""
                             ]
                           }
                         }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.prev",
+                          "value": 0
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.op",
+                          "value": ""
+                        }
+                      }
+                    ],
+                    "else": {
+                      "call": "@if",
+                      "args": {
+                        "condition": {
+                          "==": [
+                            {
+                              "var": "global.op"
+                            },
+                            "-"
+                          ]
+                        },
+                        "then": [
+                          {
+                            "call": "@set",
+                            "args": {
+                              "var": "global.expression",
+                              "value": {
+                                "cat": [
+                                  {
+                                    "cat": [
+                                      {
+                                        "var": "global.prev"
+                                      },
+                                      ""
+                                    ]
+                                  },
+                                  " ",
+                                  "−",
+                                  " ",
+                                  {
+                                    "var": "global.display"
+                                  },
+                                  " ="
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "call": "@set",
+                            "args": {
+                              "var": "global.display",
+                              "value": {
+                                "cat": [
+                                  {
+                                    "-": [
+                                      {
+                                        "var": "global.prev"
+                                      },
+                                      {
+                                        "var": "global.display"
+                                      }
+                                    ]
+                                  },
+                                  ""
+                                ]
+                              }
+                            }
+                          },
+                          {
+                            "call": "@set",
+                            "args": {
+                              "var": "global.prev",
+                              "value": 0
+                            }
+                          },
+                          {
+                            "call": "@set",
+                            "args": {
+                              "var": "global.op",
+                              "value": ""
+                            }
+                          }
+                        ],
+                        "else": {
+                          "call": "@if",
+                          "args": {
+                            "condition": {
+                              "==": [
+                                {
+                                  "var": "global.op"
+                                },
+                                "*"
+                              ]
+                            },
+                            "then": [
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "global.expression",
+                                  "value": {
+                                    "cat": [
+                                      {
+                                        "cat": [
+                                          {
+                                            "var": "global.prev"
+                                          },
+                                          ""
+                                        ]
+                                      },
+                                      " ",
+                                      "×",
+                                      " ",
+                                      {
+                                        "var": "global.display"
+                                      },
+                                      " ="
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "global.display",
+                                  "value": {
+                                    "cat": [
+                                      {
+                                        "*": [
+                                          {
+                                            "var": "global.prev"
+                                          },
+                                          {
+                                            "var": "global.display"
+                                          }
+                                        ]
+                                      },
+                                      ""
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "global.prev",
+                                  "value": 0
+                                }
+                              },
+                              {
+                                "call": "@set",
+                                "args": {
+                                  "var": "global.op",
+                                  "value": ""
+                                }
+                              }
+                            ],
+                            "else": {
+                              "call": "@if",
+                              "args": {
+                                "condition": {
+                                  "==": [
+                                    {
+                                      "var": "global.op"
+                                    },
+                                    "/"
+                                  ]
+                                },
+                                "then": [
+                                  {
+                                    "call": "@set",
+                                    "args": {
+                                      "var": "global.expression",
+                                      "value": {
+                                        "cat": [
+                                          {
+                                            "cat": [
+                                              {
+                                                "var": "global.prev"
+                                              },
+                                              ""
+                                            ]
+                                          },
+                                          " ",
+                                          "÷",
+                                          " ",
+                                          {
+                                            "var": "global.display"
+                                          },
+                                          " ="
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "call": "@set",
+                                    "args": {
+                                      "var": "global.display",
+                                      "value": {
+                                        "cat": [
+                                          {
+                                            "/": [
+                                              {
+                                                "var": "global.prev"
+                                              },
+                                              {
+                                                "var": "global.display"
+                                              }
+                                            ]
+                                          },
+                                          ""
+                                        ]
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "call": "@set",
+                                    "args": {
+                                      "var": "global.prev",
+                                      "value": 0
+                                    }
+                                  },
+                                  {
+                                    "call": "@set",
+                                    "args": {
+                                      "var": "global.op",
+                                      "value": ""
+                                    }
+                                  }
+                                ],
+                                "else": []
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.expression",
+                    "value": {
+                      "cat": [
+                        {
+                          "var": "global.display"
+                        },
+                        " ="
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.resetFlag",
+              "value": true
+            }
+          }
+        ]
+      },
+      "doClear": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.display",
+              "value": "0"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.expression",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.prev",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.op",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.resetFlag",
+              "value": false
+            }
+          }
+        ]
+      },
+      "doPercent": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.display",
+              "value": {
+                "cat": [
+                  {
+                    "/": [
+                      {
+                        "*": [
+                          1,
+                          {
+                            "var": "global.display"
+                          }
+                        ]
+                      },
+                      100
+                    ]
+                  },
+                  ""
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.resetFlag",
+              "value": true
+            }
+          }
+        ]
+      },
+      "doNegate": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.display",
+              "value": {
+                "cat": [
+                  {
+                    "*": [
+                      -1,
+                      {
+                        "*": [
+                          1,
+                          {
+                            "var": "global.display"
+                          }
+                        ]
                       }
                     ]
+                  },
+                  ""
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "doDot": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "!": {
+                  "in": [
+                    ".",
+                    {
+                      "var": "global.display"
+                    }
+                  ]
+                }
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.display",
+                    "value": {
+                      "cat": [
+                        {
+                          "var": "global.display"
+                        },
+                        "."
+                      ]
+                    }
                   }
                 },
                 {
                   "call": "@set",
                   "args": {
-                    "var": "global.firstOperand",
-                    "value": {
-                      "var": "global._result"
-                    }
+                    "var": "global.resetFlag",
+                    "value": false
                   }
                 }
               ],
@@ -911,516 +1002,557 @@
   "ui": {
     "screens": [
       {
-        "id": "calculator",
+        "id": "main",
         "title": "计算器",
         "layout": "column",
-        "padding": 0,
-        "backgroundColor": "#000000",
         "children": [
           {
-            "type": "spacer",
-            "height": 40
-          },
-          {
             "type": "container",
-            "color": "#000000",
-            "padding": 24,
+            "layout": "column",
             "children": [
               {
                 "type": "text",
-                "value": "{{ global.expressionText }}",
+                "value": "{{ global.expression }}",
                 "style": {
-                  "fontSize": 20,
-                  "color": "#9E9E9E",
-                  "textAlign": "right"
+                  "fontSize": 16,
+                  "color": "#9CA3AF",
+                  "textAlign": "right",
+                  "maxLines": 1
                 }
               },
               {
                 "type": "spacer",
-                "height": 8
+                "height": 4
               },
               {
                 "type": "text",
                 "value": "{{ global.display }}",
                 "style": {
-                  "fontSize": 56,
+                  "fontSize": 44,
                   "fontWeight": "bold",
-                  "color": "#FFFFFF",
+                  "color": "#111827",
                   "textAlign": "right",
-                  "maxLines": 1,
-                  "overflow": "ellipsis"
+                  "maxLines": 1
                 }
               }
-            ]
-          },
-          {
-            "type": "spacer",
-            "height": 12
-          },
-          {
-            "type": "container",
-            "layout": "row",
-            "padding": 4,
-            "children": [
-              {
-                "type": "button",
-                "label": "C",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#A5A5A5",
-                  "textColor": "#000000",
-                  "fontSize": 22,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressClear",
-                  "args": {}
-                }
-              },
-              {
-                "type": "button",
-                "label": "DEL",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#A5A5A5",
-                  "textColor": "#000000",
-                  "fontSize": 18,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressBackspace",
-                  "args": {}
-                }
-              },
-              {
-                "type": "button",
-                "label": "%",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#A5A5A5",
-                  "textColor": "#000000",
-                  "fontSize": 22,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressPercent",
-                  "args": {}
-                }
-              },
-              {
-                "type": "button",
-                "label": "/",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#FF9500",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 24,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressOperator",
-                  "args": {
-                    "op": "/"
-                  }
-                }
-              }
-            ]
+            ],
+            "padding": 20,
+            "margin": 0,
+            "crossAxisAlignment": "end",
+            "mainAxisAlignment": "end"
           },
           {
             "type": "container",
             "layout": "row",
-            "padding": 4,
             "children": [
               {
-                "type": "button",
-                "label": "7",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#333333",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 24,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressDigit",
-                  "args": {
-                    "digit": "7"
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "C",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.doClear",
+                    "args": {}
+                  },
+                  "style": {
+                    "backgroundColor": "#E5E7EB",
+                    "textColor": "#374151",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
                   }
                 }
               },
               {
-                "type": "button",
-                "label": "8",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#333333",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 24,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressDigit",
-                  "args": {
-                    "digit": "8"
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "±",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.doNegate",
+                    "args": {}
+                  },
+                  "style": {
+                    "backgroundColor": "#E5E7EB",
+                    "textColor": "#374151",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
                   }
                 }
               },
               {
-                "type": "button",
-                "label": "9",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#333333",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 24,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressDigit",
-                  "args": {
-                    "digit": "9"
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "%",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.doPercent",
+                    "args": {}
+                  },
+                  "style": {
+                    "backgroundColor": "#E5E7EB",
+                    "textColor": "#374151",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
                   }
                 }
               },
               {
-                "type": "button",
-                "label": "x",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#FF9500",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 24,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressOperator",
-                  "args": {
-                    "op": "*"
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "÷",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.doDivide",
+                    "args": {}
+                  },
+                  "style": {
+                    "backgroundColor": "#2563EB",
+                    "textColor": "#FFFFFF",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
                   }
                 }
               }
-            ]
+            ],
+            "padding": 4
           },
           {
             "type": "container",
             "layout": "row",
-            "padding": 4,
             "children": [
               {
-                "type": "button",
-                "label": "4",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#333333",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 24,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressDigit",
-                  "args": {
-                    "digit": "4"
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "7",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.digit",
+                    "args": {
+                      "d": "7"
+                    }
+                  },
+                  "style": {
+                    "backgroundColor": "#F3F4F6",
+                    "textColor": "#111827",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
                   }
                 }
               },
               {
-                "type": "button",
-                "label": "5",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#333333",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 24,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressDigit",
-                  "args": {
-                    "digit": "5"
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "8",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.digit",
+                    "args": {
+                      "d": "8"
+                    }
+                  },
+                  "style": {
+                    "backgroundColor": "#F3F4F6",
+                    "textColor": "#111827",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
                   }
                 }
               },
               {
-                "type": "button",
-                "label": "6",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#333333",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 24,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressDigit",
-                  "args": {
-                    "digit": "6"
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "9",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.digit",
+                    "args": {
+                      "d": "9"
+                    }
+                  },
+                  "style": {
+                    "backgroundColor": "#F3F4F6",
+                    "textColor": "#111827",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
                   }
                 }
               },
               {
-                "type": "button",
-                "label": "-",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#FF9500",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 28,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressOperator",
-                  "args": {
-                    "op": "-"
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "×",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.doMultiply",
+                    "args": {}
+                  },
+                  "style": {
+                    "backgroundColor": "#2563EB",
+                    "textColor": "#FFFFFF",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
                   }
                 }
               }
-            ]
+            ],
+            "padding": 4
           },
           {
             "type": "container",
             "layout": "row",
-            "padding": 4,
             "children": [
               {
-                "type": "button",
-                "label": "1",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#333333",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 24,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressDigit",
-                  "args": {
-                    "digit": "1"
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "4",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.digit",
+                    "args": {
+                      "d": "4"
+                    }
+                  },
+                  "style": {
+                    "backgroundColor": "#F3F4F6",
+                    "textColor": "#111827",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
                   }
                 }
               },
               {
-                "type": "button",
-                "label": "2",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#333333",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 24,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressDigit",
-                  "args": {
-                    "digit": "2"
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "5",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.digit",
+                    "args": {
+                      "d": "5"
+                    }
+                  },
+                  "style": {
+                    "backgroundColor": "#F3F4F6",
+                    "textColor": "#111827",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
                   }
                 }
               },
               {
-                "type": "button",
-                "label": "3",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#333333",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 24,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressDigit",
-                  "args": {
-                    "digit": "3"
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "6",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.digit",
+                    "args": {
+                      "d": "6"
+                    }
+                  },
+                  "style": {
+                    "backgroundColor": "#F3F4F6",
+                    "textColor": "#111827",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
                   }
                 }
               },
               {
-                "type": "button",
-                "label": "+",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#FF9500",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 28,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressOperator",
-                  "args": {
-                    "op": "+"
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "−",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.doSubtract",
+                    "args": {}
+                  },
+                  "style": {
+                    "backgroundColor": "#2563EB",
+                    "textColor": "#FFFFFF",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
                   }
                 }
               }
-            ]
+            ],
+            "padding": 4
           },
           {
             "type": "container",
             "layout": "row",
-            "padding": 4,
             "children": [
               {
-                "type": "button",
-                "label": "+/-",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#333333",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 20,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.toggleSign",
-                  "args": {}
-                }
-              },
-              {
-                "type": "button",
-                "label": "0",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#333333",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 24,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressDigit",
-                  "args": {
-                    "digit": "0"
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "1",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.digit",
+                    "args": {
+                      "d": "1"
+                    }
+                  },
+                  "style": {
+                    "backgroundColor": "#F3F4F6",
+                    "textColor": "#111827",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
                   }
                 }
               },
               {
-                "type": "button",
-                "label": ".",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#333333",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 24,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressDecimal",
-                  "args": {}
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "2",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.digit",
+                    "args": {
+                      "d": "2"
+                    }
+                  },
+                  "style": {
+                    "backgroundColor": "#F3F4F6",
+                    "textColor": "#111827",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
+                  }
                 }
               },
               {
-                "type": "button",
-                "label": "=",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "backgroundColor": "#FF9500",
-                  "textColor": "#FFFFFF",
-                  "fontSize": 28,
-                  "borderRadius": 28,
-                  "paddingV": 18
-                },
-                "action": {
-                  "type": "call",
-                  "call": "@global.pressEquals",
-                  "args": {}
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "3",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.digit",
+                    "args": {
+                      "d": "3"
+                    }
+                  },
+                  "style": {
+                    "backgroundColor": "#F3F4F6",
+                    "textColor": "#111827",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
+                  }
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "+",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.doAdd",
+                    "args": {}
+                  },
+                  "style": {
+                    "backgroundColor": "#2563EB",
+                    "textColor": "#FFFFFF",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
+                  }
                 }
               }
-            ]
+            ],
+            "padding": 4
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "expanded",
+                "flex": 2,
+                "child": {
+                  "type": "button",
+                  "label": "0",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.digit",
+                    "args": {
+                      "d": "0"
+                    }
+                  },
+                  "style": {
+                    "backgroundColor": "#F3F4F6",
+                    "textColor": "#111827",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
+                  }
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": ".",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.doDot",
+                    "args": {}
+                  },
+                  "style": {
+                    "backgroundColor": "#F3F4F6",
+                    "textColor": "#111827",
+                    "fontSize": 22,
+                    "fontWeight": "500",
+                    "borderRadius": 16,
+                    "paddingV": 16
+                  }
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "button",
+                  "label": "=",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.doEquals",
+                    "args": {}
+                  },
+                  "style": {
+                    "backgroundColor": "#2563EB",
+                    "textColor": "#FFFFFF",
+                    "fontSize": 22,
+                    "fontWeight": "600",
+                    "borderRadius": 16,
+                    "paddingV": 16
+                  }
+                }
+              }
+            ],
+            "padding": 4
           }
-        ]
+        ],
+        "backgroundColor": "#F9FAFB"
       }
     ]
   }

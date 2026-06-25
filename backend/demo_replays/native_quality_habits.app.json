@@ -1,61 +1,3993 @@
 {
   "dsl": "3.3",
   "meta": {
-    "name": "native-quality-habits",
+    "name": "habit-tracker",
     "version": "1.0.0",
     "type": "app",
-    "description": "高质量习惯打卡类 JSON UI 模板：今日进度、习惯列表、详情、表单。",
-    "author": "fish",
-    "displayName": "Native Habits Template"
+    "description": "每日习惯打卡，连续天数统计，热力图可视化",
+    "author": "ai",
+    "displayName": "习惯打卡"
   },
   "dependencies": {},
   "global": {
     "variables": {
+      "todayDate": "2026-06-25",
       "searchQuery": "",
-      "selectedStatus": "全部",
+      "selectedFilter": "全部",
       "habits": [
         {
           "id": "h1",
-          "title": "晨间拉伸",
-          "status": "已完成",
-          "streak": "18",
-          "weekDone": "6",
-          "progress": 0.86,
+          "title": "晨间跑步 30 分钟",
+          "icon": "wb_sunny",
           "accent": "#059669",
-          "tint": "#E8F7F0"
+          "tint": "#E8F7F0",
+          "checkins": [
+            "2026-06-25",
+            "2026-06-24",
+            "2026-06-23",
+            "2026-06-22",
+            "2026-06-21",
+            "2026-06-20",
+            "2026-06-19",
+            "2026-06-18",
+            "2026-06-17",
+            "2026-06-16",
+            "2026-06-15",
+            "2026-06-14",
+            "2026-06-13",
+            "2026-06-12",
+            "2026-06-11",
+            "2026-06-10",
+            "2026-06-09",
+            "2026-06-08"
+          ],
+          "checkedToday": true,
+          "streak": 18,
+          "weekDone": 7,
+          "totalCheckins": 18,
+          "statusLabel": "已打卡",
+          "heatmap": [
+            {
+              "date": "2026-03-27",
+              "dayOfWeek": 4,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-28",
+              "dayOfWeek": 5,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-29",
+              "dayOfWeek": 6,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-30",
+              "dayOfWeek": 0,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-31",
+              "dayOfWeek": 1,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-01",
+              "dayOfWeek": 2,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-02",
+              "dayOfWeek": 3,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-03",
+              "dayOfWeek": 4,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-04",
+              "dayOfWeek": 5,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-05",
+              "dayOfWeek": 6,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-06",
+              "dayOfWeek": 0,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-07",
+              "dayOfWeek": 1,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-08",
+              "dayOfWeek": 2,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-09",
+              "dayOfWeek": 3,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-10",
+              "dayOfWeek": 4,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-11",
+              "dayOfWeek": 5,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-12",
+              "dayOfWeek": 6,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-13",
+              "dayOfWeek": 0,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-14",
+              "dayOfWeek": 1,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-15",
+              "dayOfWeek": 2,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-16",
+              "dayOfWeek": 3,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-17",
+              "dayOfWeek": 4,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-18",
+              "dayOfWeek": 5,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-19",
+              "dayOfWeek": 6,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-20",
+              "dayOfWeek": 0,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-21",
+              "dayOfWeek": 1,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-22",
+              "dayOfWeek": 2,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-23",
+              "dayOfWeek": 3,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-24",
+              "dayOfWeek": 4,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-25",
+              "dayOfWeek": 5,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-26",
+              "dayOfWeek": 6,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-27",
+              "dayOfWeek": 0,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-28",
+              "dayOfWeek": 1,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-29",
+              "dayOfWeek": 2,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-30",
+              "dayOfWeek": 3,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-01",
+              "dayOfWeek": 4,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-02",
+              "dayOfWeek": 5,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-03",
+              "dayOfWeek": 6,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-04",
+              "dayOfWeek": 0,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-05",
+              "dayOfWeek": 1,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-06",
+              "dayOfWeek": 2,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-07",
+              "dayOfWeek": 3,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-08",
+              "dayOfWeek": 4,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-09",
+              "dayOfWeek": 5,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-10",
+              "dayOfWeek": 6,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-11",
+              "dayOfWeek": 0,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-12",
+              "dayOfWeek": 1,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-13",
+              "dayOfWeek": 2,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-14",
+              "dayOfWeek": 3,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-15",
+              "dayOfWeek": 4,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-16",
+              "dayOfWeek": 5,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-17",
+              "dayOfWeek": 6,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-18",
+              "dayOfWeek": 0,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-19",
+              "dayOfWeek": 1,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-20",
+              "dayOfWeek": 2,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-21",
+              "dayOfWeek": 3,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-22",
+              "dayOfWeek": 4,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-23",
+              "dayOfWeek": 5,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-24",
+              "dayOfWeek": 6,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-25",
+              "dayOfWeek": 0,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-26",
+              "dayOfWeek": 1,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-27",
+              "dayOfWeek": 2,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-28",
+              "dayOfWeek": 3,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-29",
+              "dayOfWeek": 4,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-30",
+              "dayOfWeek": 5,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-31",
+              "dayOfWeek": 6,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-01",
+              "dayOfWeek": 0,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-02",
+              "dayOfWeek": 1,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-03",
+              "dayOfWeek": 2,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-04",
+              "dayOfWeek": 3,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-05",
+              "dayOfWeek": 4,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-06",
+              "dayOfWeek": 5,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-07",
+              "dayOfWeek": 6,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": 0,
+              "weekIdx": 2,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": 1,
+              "weekIdx": 2,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": 2,
+              "weekIdx": 2,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": 3,
+              "weekIdx": 2,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": 4,
+              "weekIdx": 1,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-13",
+              "dayOfWeek": 5,
+              "weekIdx": 1,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-14",
+              "dayOfWeek": 6,
+              "weekIdx": 1,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-15",
+              "dayOfWeek": 0,
+              "weekIdx": 1,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-16",
+              "dayOfWeek": 1,
+              "weekIdx": 1,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-17",
+              "dayOfWeek": 2,
+              "weekIdx": 1,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-18",
+              "dayOfWeek": 3,
+              "weekIdx": 1,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-19",
+              "dayOfWeek": 4,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-20",
+              "dayOfWeek": 5,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-21",
+              "dayOfWeek": 6,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-22",
+              "dayOfWeek": 0,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-23",
+              "dayOfWeek": 1,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-24",
+              "dayOfWeek": 2,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#059669"
+            },
+            {
+              "date": "2026-06-25",
+              "dayOfWeek": 3,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#059669"
+            }
+          ]
         },
         {
           "id": "h2",
           "title": "阅读 30 分钟",
-          "status": "待打卡",
-          "streak": "9",
-          "weekDone": "4",
-          "progress": 0.57,
+          "icon": "menu_book",
           "accent": "#2563EB",
-          "tint": "#EAF1FF"
+          "tint": "#EAF1FF",
+          "checkins": [
+            "2026-06-24",
+            "2026-06-23",
+            "2026-06-22",
+            "2026-06-21",
+            "2026-06-20",
+            "2026-06-19",
+            "2026-06-18"
+          ],
+          "checkedToday": false,
+          "streak": 0,
+          "weekDone": 6,
+          "totalCheckins": 7,
+          "statusLabel": "待打卡",
+          "heatmap": [
+            {
+              "date": "2026-03-27",
+              "dayOfWeek": 4,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-28",
+              "dayOfWeek": 5,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-29",
+              "dayOfWeek": 6,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-30",
+              "dayOfWeek": 0,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-31",
+              "dayOfWeek": 1,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-01",
+              "dayOfWeek": 2,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-02",
+              "dayOfWeek": 3,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-03",
+              "dayOfWeek": 4,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-04",
+              "dayOfWeek": 5,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-05",
+              "dayOfWeek": 6,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-06",
+              "dayOfWeek": 0,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-07",
+              "dayOfWeek": 1,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-08",
+              "dayOfWeek": 2,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-09",
+              "dayOfWeek": 3,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-10",
+              "dayOfWeek": 4,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-11",
+              "dayOfWeek": 5,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-12",
+              "dayOfWeek": 6,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-13",
+              "dayOfWeek": 0,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-14",
+              "dayOfWeek": 1,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-15",
+              "dayOfWeek": 2,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-16",
+              "dayOfWeek": 3,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-17",
+              "dayOfWeek": 4,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-18",
+              "dayOfWeek": 5,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-19",
+              "dayOfWeek": 6,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-20",
+              "dayOfWeek": 0,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-21",
+              "dayOfWeek": 1,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-22",
+              "dayOfWeek": 2,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-23",
+              "dayOfWeek": 3,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-24",
+              "dayOfWeek": 4,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-25",
+              "dayOfWeek": 5,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-26",
+              "dayOfWeek": 6,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-27",
+              "dayOfWeek": 0,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-28",
+              "dayOfWeek": 1,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-29",
+              "dayOfWeek": 2,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-30",
+              "dayOfWeek": 3,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-01",
+              "dayOfWeek": 4,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-02",
+              "dayOfWeek": 5,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-03",
+              "dayOfWeek": 6,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-04",
+              "dayOfWeek": 0,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-05",
+              "dayOfWeek": 1,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-06",
+              "dayOfWeek": 2,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-07",
+              "dayOfWeek": 3,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-08",
+              "dayOfWeek": 4,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-09",
+              "dayOfWeek": 5,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-10",
+              "dayOfWeek": 6,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-11",
+              "dayOfWeek": 0,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-12",
+              "dayOfWeek": 1,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-13",
+              "dayOfWeek": 2,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-14",
+              "dayOfWeek": 3,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-15",
+              "dayOfWeek": 4,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-16",
+              "dayOfWeek": 5,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-17",
+              "dayOfWeek": 6,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-18",
+              "dayOfWeek": 0,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-19",
+              "dayOfWeek": 1,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-20",
+              "dayOfWeek": 2,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-21",
+              "dayOfWeek": 3,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-22",
+              "dayOfWeek": 4,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-23",
+              "dayOfWeek": 5,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-24",
+              "dayOfWeek": 6,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-25",
+              "dayOfWeek": 0,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-26",
+              "dayOfWeek": 1,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-27",
+              "dayOfWeek": 2,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-28",
+              "dayOfWeek": 3,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-29",
+              "dayOfWeek": 4,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-30",
+              "dayOfWeek": 5,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-31",
+              "dayOfWeek": 6,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-01",
+              "dayOfWeek": 0,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-02",
+              "dayOfWeek": 1,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-03",
+              "dayOfWeek": 2,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-04",
+              "dayOfWeek": 3,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-05",
+              "dayOfWeek": 4,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-06",
+              "dayOfWeek": 5,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-07",
+              "dayOfWeek": 6,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": 0,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": 1,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": 2,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": 3,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": 4,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-13",
+              "dayOfWeek": 5,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-14",
+              "dayOfWeek": 6,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-15",
+              "dayOfWeek": 0,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-16",
+              "dayOfWeek": 1,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-17",
+              "dayOfWeek": 2,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-18",
+              "dayOfWeek": 3,
+              "weekIdx": 1,
+              "checked": true,
+              "color": "#2563EB"
+            },
+            {
+              "date": "2026-06-19",
+              "dayOfWeek": 4,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#2563EB"
+            },
+            {
+              "date": "2026-06-20",
+              "dayOfWeek": 5,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#2563EB"
+            },
+            {
+              "date": "2026-06-21",
+              "dayOfWeek": 6,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#2563EB"
+            },
+            {
+              "date": "2026-06-22",
+              "dayOfWeek": 0,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#2563EB"
+            },
+            {
+              "date": "2026-06-23",
+              "dayOfWeek": 1,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#2563EB"
+            },
+            {
+              "date": "2026-06-24",
+              "dayOfWeek": 2,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#2563EB"
+            },
+            {
+              "date": "2026-06-25",
+              "dayOfWeek": 3,
+              "weekIdx": 0,
+              "checked": false,
+              "color": "#E8ECF0"
+            }
+          ]
         },
         {
           "id": "h3",
-          "title": "晚上复盘",
-          "status": "21:30",
-          "streak": "12",
-          "weekDone": "5",
-          "progress": 0.71,
+          "title": "冥想 10 分钟",
+          "icon": "spa",
           "accent": "#7C3AED",
-          "tint": "#F1EAFF"
+          "tint": "#F1EAFF",
+          "checkins": [
+            "2026-06-25",
+            "2026-06-24",
+            "2026-06-23",
+            "2026-06-22",
+            "2026-06-21",
+            "2026-06-20",
+            "2026-06-19",
+            "2026-06-18",
+            "2026-06-17",
+            "2026-06-16",
+            "2026-06-15",
+            "2026-06-14"
+          ],
+          "checkedToday": true,
+          "streak": 12,
+          "weekDone": 7,
+          "totalCheckins": 12,
+          "statusLabel": "已打卡",
+          "heatmap": [
+            {
+              "date": "2026-03-27",
+              "dayOfWeek": 4,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-28",
+              "dayOfWeek": 5,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-29",
+              "dayOfWeek": 6,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-30",
+              "dayOfWeek": 0,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-31",
+              "dayOfWeek": 1,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-01",
+              "dayOfWeek": 2,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-02",
+              "dayOfWeek": 3,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-03",
+              "dayOfWeek": 4,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-04",
+              "dayOfWeek": 5,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-05",
+              "dayOfWeek": 6,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-06",
+              "dayOfWeek": 0,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-07",
+              "dayOfWeek": 1,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-08",
+              "dayOfWeek": 2,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-09",
+              "dayOfWeek": 3,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-10",
+              "dayOfWeek": 4,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-11",
+              "dayOfWeek": 5,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-12",
+              "dayOfWeek": 6,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-13",
+              "dayOfWeek": 0,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-14",
+              "dayOfWeek": 1,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-15",
+              "dayOfWeek": 2,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-16",
+              "dayOfWeek": 3,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-17",
+              "dayOfWeek": 4,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-18",
+              "dayOfWeek": 5,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-19",
+              "dayOfWeek": 6,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-20",
+              "dayOfWeek": 0,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-21",
+              "dayOfWeek": 1,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-22",
+              "dayOfWeek": 2,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-23",
+              "dayOfWeek": 3,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-24",
+              "dayOfWeek": 4,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-25",
+              "dayOfWeek": 5,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-26",
+              "dayOfWeek": 6,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-27",
+              "dayOfWeek": 0,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-28",
+              "dayOfWeek": 1,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-29",
+              "dayOfWeek": 2,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-30",
+              "dayOfWeek": 3,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-01",
+              "dayOfWeek": 4,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-02",
+              "dayOfWeek": 5,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-03",
+              "dayOfWeek": 6,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-04",
+              "dayOfWeek": 0,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-05",
+              "dayOfWeek": 1,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-06",
+              "dayOfWeek": 2,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-07",
+              "dayOfWeek": 3,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-08",
+              "dayOfWeek": 4,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-09",
+              "dayOfWeek": 5,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-10",
+              "dayOfWeek": 6,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-11",
+              "dayOfWeek": 0,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-12",
+              "dayOfWeek": 1,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-13",
+              "dayOfWeek": 2,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-14",
+              "dayOfWeek": 3,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-15",
+              "dayOfWeek": 4,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-16",
+              "dayOfWeek": 5,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-17",
+              "dayOfWeek": 6,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-18",
+              "dayOfWeek": 0,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-19",
+              "dayOfWeek": 1,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-20",
+              "dayOfWeek": 2,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-21",
+              "dayOfWeek": 3,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-22",
+              "dayOfWeek": 4,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-23",
+              "dayOfWeek": 5,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-24",
+              "dayOfWeek": 6,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-25",
+              "dayOfWeek": 0,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-26",
+              "dayOfWeek": 1,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-27",
+              "dayOfWeek": 2,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-28",
+              "dayOfWeek": 3,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-29",
+              "dayOfWeek": 4,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-30",
+              "dayOfWeek": 5,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-31",
+              "dayOfWeek": 6,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-01",
+              "dayOfWeek": 0,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-02",
+              "dayOfWeek": 1,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-03",
+              "dayOfWeek": 2,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-04",
+              "dayOfWeek": 3,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-05",
+              "dayOfWeek": 4,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-06",
+              "dayOfWeek": 5,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-07",
+              "dayOfWeek": 6,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": 0,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": 1,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": 2,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": 3,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": 4,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-13",
+              "dayOfWeek": 5,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-14",
+              "dayOfWeek": 6,
+              "weekIdx": 1,
+              "checked": true,
+              "color": "#7C3AED"
+            },
+            {
+              "date": "2026-06-15",
+              "dayOfWeek": 0,
+              "weekIdx": 1,
+              "checked": true,
+              "color": "#7C3AED"
+            },
+            {
+              "date": "2026-06-16",
+              "dayOfWeek": 1,
+              "weekIdx": 1,
+              "checked": true,
+              "color": "#7C3AED"
+            },
+            {
+              "date": "2026-06-17",
+              "dayOfWeek": 2,
+              "weekIdx": 1,
+              "checked": true,
+              "color": "#7C3AED"
+            },
+            {
+              "date": "2026-06-18",
+              "dayOfWeek": 3,
+              "weekIdx": 1,
+              "checked": true,
+              "color": "#7C3AED"
+            },
+            {
+              "date": "2026-06-19",
+              "dayOfWeek": 4,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#7C3AED"
+            },
+            {
+              "date": "2026-06-20",
+              "dayOfWeek": 5,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#7C3AED"
+            },
+            {
+              "date": "2026-06-21",
+              "dayOfWeek": 6,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#7C3AED"
+            },
+            {
+              "date": "2026-06-22",
+              "dayOfWeek": 0,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#7C3AED"
+            },
+            {
+              "date": "2026-06-23",
+              "dayOfWeek": 1,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#7C3AED"
+            },
+            {
+              "date": "2026-06-24",
+              "dayOfWeek": 2,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#7C3AED"
+            },
+            {
+              "date": "2026-06-25",
+              "dayOfWeek": 3,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#7C3AED"
+            }
+          ]
+        },
+        {
+          "id": "h4",
+          "title": "喝水 8 杯",
+          "icon": "water_drop",
+          "accent": "#0284C7",
+          "tint": "#E6F4FC",
+          "checkins": [
+            "2026-06-23",
+            "2026-06-22",
+            "2026-06-21"
+          ],
+          "checkedToday": false,
+          "streak": 0,
+          "weekDone": 3,
+          "totalCheckins": 3,
+          "statusLabel": "待打卡",
+          "heatmap": [
+            {
+              "date": "2026-03-27",
+              "dayOfWeek": 4,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-28",
+              "dayOfWeek": 5,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-29",
+              "dayOfWeek": 6,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-30",
+              "dayOfWeek": 0,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-03-31",
+              "dayOfWeek": 1,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-01",
+              "dayOfWeek": 2,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-02",
+              "dayOfWeek": 3,
+              "weekIdx": 12,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-03",
+              "dayOfWeek": 4,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-04",
+              "dayOfWeek": 5,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-05",
+              "dayOfWeek": 6,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-06",
+              "dayOfWeek": 0,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-07",
+              "dayOfWeek": 1,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-08",
+              "dayOfWeek": 2,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-09",
+              "dayOfWeek": 3,
+              "weekIdx": 11,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-10",
+              "dayOfWeek": 4,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-11",
+              "dayOfWeek": 5,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-12",
+              "dayOfWeek": 6,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-13",
+              "dayOfWeek": 0,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-14",
+              "dayOfWeek": 1,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-15",
+              "dayOfWeek": 2,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-16",
+              "dayOfWeek": 3,
+              "weekIdx": 10,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-17",
+              "dayOfWeek": 4,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-18",
+              "dayOfWeek": 5,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-19",
+              "dayOfWeek": 6,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-20",
+              "dayOfWeek": 0,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-21",
+              "dayOfWeek": 1,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-22",
+              "dayOfWeek": 2,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-23",
+              "dayOfWeek": 3,
+              "weekIdx": 9,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-24",
+              "dayOfWeek": 4,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-25",
+              "dayOfWeek": 5,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-26",
+              "dayOfWeek": 6,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-27",
+              "dayOfWeek": 0,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-28",
+              "dayOfWeek": 1,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-29",
+              "dayOfWeek": 2,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-04-30",
+              "dayOfWeek": 3,
+              "weekIdx": 8,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-01",
+              "dayOfWeek": 4,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-02",
+              "dayOfWeek": 5,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-03",
+              "dayOfWeek": 6,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-04",
+              "dayOfWeek": 0,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-05",
+              "dayOfWeek": 1,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-06",
+              "dayOfWeek": 2,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-07",
+              "dayOfWeek": 3,
+              "weekIdx": 7,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-08",
+              "dayOfWeek": 4,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-09",
+              "dayOfWeek": 5,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-10",
+              "dayOfWeek": 6,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-11",
+              "dayOfWeek": 0,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-12",
+              "dayOfWeek": 1,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-13",
+              "dayOfWeek": 2,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-14",
+              "dayOfWeek": 3,
+              "weekIdx": 6,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-15",
+              "dayOfWeek": 4,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-16",
+              "dayOfWeek": 5,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-17",
+              "dayOfWeek": 6,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-18",
+              "dayOfWeek": 0,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-19",
+              "dayOfWeek": 1,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-20",
+              "dayOfWeek": 2,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-21",
+              "dayOfWeek": 3,
+              "weekIdx": 5,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-22",
+              "dayOfWeek": 4,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-23",
+              "dayOfWeek": 5,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-24",
+              "dayOfWeek": 6,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-25",
+              "dayOfWeek": 0,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-26",
+              "dayOfWeek": 1,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-27",
+              "dayOfWeek": 2,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-28",
+              "dayOfWeek": 3,
+              "weekIdx": 4,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-29",
+              "dayOfWeek": 4,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-30",
+              "dayOfWeek": 5,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-05-31",
+              "dayOfWeek": 6,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-01",
+              "dayOfWeek": 0,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-02",
+              "dayOfWeek": 1,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-03",
+              "dayOfWeek": 2,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-04",
+              "dayOfWeek": 3,
+              "weekIdx": 3,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-05",
+              "dayOfWeek": 4,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-06",
+              "dayOfWeek": 5,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-07",
+              "dayOfWeek": 6,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-08",
+              "dayOfWeek": 0,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-09",
+              "dayOfWeek": 1,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-10",
+              "dayOfWeek": 2,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-11",
+              "dayOfWeek": 3,
+              "weekIdx": 2,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-12",
+              "dayOfWeek": 4,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-13",
+              "dayOfWeek": 5,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-14",
+              "dayOfWeek": 6,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-15",
+              "dayOfWeek": 0,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-16",
+              "dayOfWeek": 1,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-17",
+              "dayOfWeek": 2,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-18",
+              "dayOfWeek": 3,
+              "weekIdx": 1,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-19",
+              "dayOfWeek": 4,
+              "weekIdx": 0,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-20",
+              "dayOfWeek": 5,
+              "weekIdx": 0,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-21",
+              "dayOfWeek": 6,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#0284C7"
+            },
+            {
+              "date": "2026-06-22",
+              "dayOfWeek": 0,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#0284C7"
+            },
+            {
+              "date": "2026-06-23",
+              "dayOfWeek": 1,
+              "weekIdx": 0,
+              "checked": true,
+              "color": "#0284C7"
+            },
+            {
+              "date": "2026-06-24",
+              "dayOfWeek": 2,
+              "weekIdx": 0,
+              "checked": false,
+              "color": "#E8ECF0"
+            },
+            {
+              "date": "2026-06-25",
+              "dayOfWeek": 3,
+              "weekIdx": 0,
+              "checked": false,
+              "color": "#E8ECF0"
+            }
+          ]
         }
       ],
-      "currentTitle": "",
-      "currentStreak": "",
-      "currentStatus": "",
+      "combinedHeatmap": [
+        {
+          "date": "2026-03-27",
+          "dayOfWeek": 4,
+          "weekIdx": 12,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-03-28",
+          "dayOfWeek": 5,
+          "weekIdx": 12,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-03-29",
+          "dayOfWeek": 6,
+          "weekIdx": 12,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-03-30",
+          "dayOfWeek": 0,
+          "weekIdx": 12,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-03-31",
+          "dayOfWeek": 1,
+          "weekIdx": 12,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-01",
+          "dayOfWeek": 2,
+          "weekIdx": 12,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-02",
+          "dayOfWeek": 3,
+          "weekIdx": 12,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-03",
+          "dayOfWeek": 4,
+          "weekIdx": 11,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-04",
+          "dayOfWeek": 5,
+          "weekIdx": 11,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-05",
+          "dayOfWeek": 6,
+          "weekIdx": 11,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-06",
+          "dayOfWeek": 0,
+          "weekIdx": 11,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-07",
+          "dayOfWeek": 1,
+          "weekIdx": 11,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-08",
+          "dayOfWeek": 2,
+          "weekIdx": 11,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-09",
+          "dayOfWeek": 3,
+          "weekIdx": 11,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-10",
+          "dayOfWeek": 4,
+          "weekIdx": 10,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-11",
+          "dayOfWeek": 5,
+          "weekIdx": 10,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-12",
+          "dayOfWeek": 6,
+          "weekIdx": 10,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-13",
+          "dayOfWeek": 0,
+          "weekIdx": 10,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-14",
+          "dayOfWeek": 1,
+          "weekIdx": 10,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-15",
+          "dayOfWeek": 2,
+          "weekIdx": 10,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-16",
+          "dayOfWeek": 3,
+          "weekIdx": 10,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-17",
+          "dayOfWeek": 4,
+          "weekIdx": 9,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-18",
+          "dayOfWeek": 5,
+          "weekIdx": 9,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-19",
+          "dayOfWeek": 6,
+          "weekIdx": 9,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-20",
+          "dayOfWeek": 0,
+          "weekIdx": 9,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-21",
+          "dayOfWeek": 1,
+          "weekIdx": 9,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-22",
+          "dayOfWeek": 2,
+          "weekIdx": 9,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-23",
+          "dayOfWeek": 3,
+          "weekIdx": 9,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-24",
+          "dayOfWeek": 4,
+          "weekIdx": 8,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-25",
+          "dayOfWeek": 5,
+          "weekIdx": 8,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-26",
+          "dayOfWeek": 6,
+          "weekIdx": 8,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-27",
+          "dayOfWeek": 0,
+          "weekIdx": 8,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-28",
+          "dayOfWeek": 1,
+          "weekIdx": 8,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-29",
+          "dayOfWeek": 2,
+          "weekIdx": 8,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-30",
+          "dayOfWeek": 3,
+          "weekIdx": 8,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-01",
+          "dayOfWeek": 4,
+          "weekIdx": 7,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-02",
+          "dayOfWeek": 5,
+          "weekIdx": 7,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-03",
+          "dayOfWeek": 6,
+          "weekIdx": 7,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-04",
+          "dayOfWeek": 0,
+          "weekIdx": 7,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-05",
+          "dayOfWeek": 1,
+          "weekIdx": 7,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-06",
+          "dayOfWeek": 2,
+          "weekIdx": 7,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-07",
+          "dayOfWeek": 3,
+          "weekIdx": 7,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-08",
+          "dayOfWeek": 4,
+          "weekIdx": 6,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-09",
+          "dayOfWeek": 5,
+          "weekIdx": 6,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-10",
+          "dayOfWeek": 6,
+          "weekIdx": 6,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-11",
+          "dayOfWeek": 0,
+          "weekIdx": 6,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-12",
+          "dayOfWeek": 1,
+          "weekIdx": 6,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-13",
+          "dayOfWeek": 2,
+          "weekIdx": 6,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-14",
+          "dayOfWeek": 3,
+          "weekIdx": 6,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-15",
+          "dayOfWeek": 4,
+          "weekIdx": 5,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-16",
+          "dayOfWeek": 5,
+          "weekIdx": 5,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-17",
+          "dayOfWeek": 6,
+          "weekIdx": 5,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-18",
+          "dayOfWeek": 0,
+          "weekIdx": 5,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-19",
+          "dayOfWeek": 1,
+          "weekIdx": 5,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-20",
+          "dayOfWeek": 2,
+          "weekIdx": 5,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-21",
+          "dayOfWeek": 3,
+          "weekIdx": 5,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-22",
+          "dayOfWeek": 4,
+          "weekIdx": 4,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-23",
+          "dayOfWeek": 5,
+          "weekIdx": 4,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-24",
+          "dayOfWeek": 6,
+          "weekIdx": 4,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-25",
+          "dayOfWeek": 0,
+          "weekIdx": 4,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-26",
+          "dayOfWeek": 1,
+          "weekIdx": 4,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-27",
+          "dayOfWeek": 2,
+          "weekIdx": 4,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-28",
+          "dayOfWeek": 3,
+          "weekIdx": 4,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-29",
+          "dayOfWeek": 4,
+          "weekIdx": 3,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-30",
+          "dayOfWeek": 5,
+          "weekIdx": 3,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-31",
+          "dayOfWeek": 6,
+          "weekIdx": 3,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-01",
+          "dayOfWeek": 0,
+          "weekIdx": 3,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-02",
+          "dayOfWeek": 1,
+          "weekIdx": 3,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-03",
+          "dayOfWeek": 2,
+          "weekIdx": 3,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-04",
+          "dayOfWeek": 3,
+          "weekIdx": 3,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-05",
+          "dayOfWeek": 4,
+          "weekIdx": 2,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-06",
+          "dayOfWeek": 5,
+          "weekIdx": 2,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-07",
+          "dayOfWeek": 6,
+          "weekIdx": 2,
+          "count": 0,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-08",
+          "dayOfWeek": 0,
+          "weekIdx": 2,
+          "count": 1,
+          "color": "#A7F3D0"
+        },
+        {
+          "date": "2026-06-09",
+          "dayOfWeek": 1,
+          "weekIdx": 2,
+          "count": 1,
+          "color": "#A7F3D0"
+        },
+        {
+          "date": "2026-06-10",
+          "dayOfWeek": 2,
+          "weekIdx": 2,
+          "count": 1,
+          "color": "#A7F3D0"
+        },
+        {
+          "date": "2026-06-11",
+          "dayOfWeek": 3,
+          "weekIdx": 2,
+          "count": 1,
+          "color": "#A7F3D0"
+        },
+        {
+          "date": "2026-06-12",
+          "dayOfWeek": 4,
+          "weekIdx": 1,
+          "count": 1,
+          "color": "#A7F3D0"
+        },
+        {
+          "date": "2026-06-13",
+          "dayOfWeek": 5,
+          "weekIdx": 1,
+          "count": 1,
+          "color": "#A7F3D0"
+        },
+        {
+          "date": "2026-06-14",
+          "dayOfWeek": 6,
+          "weekIdx": 1,
+          "count": 2,
+          "color": "#6EE7B7"
+        },
+        {
+          "date": "2026-06-15",
+          "dayOfWeek": 0,
+          "weekIdx": 1,
+          "count": 2,
+          "color": "#6EE7B7"
+        },
+        {
+          "date": "2026-06-16",
+          "dayOfWeek": 1,
+          "weekIdx": 1,
+          "count": 2,
+          "color": "#6EE7B7"
+        },
+        {
+          "date": "2026-06-17",
+          "dayOfWeek": 2,
+          "weekIdx": 1,
+          "count": 2,
+          "color": "#6EE7B7"
+        },
+        {
+          "date": "2026-06-18",
+          "dayOfWeek": 3,
+          "weekIdx": 1,
+          "count": 3,
+          "color": "#34D399"
+        },
+        {
+          "date": "2026-06-19",
+          "dayOfWeek": 4,
+          "weekIdx": 0,
+          "count": 3,
+          "color": "#34D399"
+        },
+        {
+          "date": "2026-06-20",
+          "dayOfWeek": 5,
+          "weekIdx": 0,
+          "count": 3,
+          "color": "#34D399"
+        },
+        {
+          "date": "2026-06-21",
+          "dayOfWeek": 6,
+          "weekIdx": 0,
+          "count": 4,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-22",
+          "dayOfWeek": 0,
+          "weekIdx": 0,
+          "count": 4,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-23",
+          "dayOfWeek": 1,
+          "weekIdx": 0,
+          "count": 4,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-24",
+          "dayOfWeek": 2,
+          "weekIdx": 0,
+          "count": 3,
+          "color": "#34D399"
+        },
+        {
+          "date": "2026-06-25",
+          "dayOfWeek": 3,
+          "weekIdx": 0,
+          "count": 2,
+          "color": "#6EE7B7"
+        }
+      ],
+      "todayCompleted": "2/4",
+      "maxStreak": "18",
+      "currentHabitIdx": 0,
+      "currentTitle": "晨间跑步 30 分钟",
+      "currentIcon": "wb_sunny",
       "currentAccent": "#059669",
       "currentTint": "#E8F7F0",
-      "formTitle": ""
+      "currentStreak": 18,
+      "currentWeekDone": 7,
+      "currentTotalCheckins": 18,
+      "currentCheckedToday": true,
+      "currentStatusLabel": "已打卡",
+      "currentHeatmap": [
+        {
+          "date": "2026-03-27",
+          "dayOfWeek": 4,
+          "weekIdx": 12,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-03-28",
+          "dayOfWeek": 5,
+          "weekIdx": 12,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-03-29",
+          "dayOfWeek": 6,
+          "weekIdx": 12,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-03-30",
+          "dayOfWeek": 0,
+          "weekIdx": 12,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-03-31",
+          "dayOfWeek": 1,
+          "weekIdx": 12,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-01",
+          "dayOfWeek": 2,
+          "weekIdx": 12,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-02",
+          "dayOfWeek": 3,
+          "weekIdx": 12,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-03",
+          "dayOfWeek": 4,
+          "weekIdx": 11,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-04",
+          "dayOfWeek": 5,
+          "weekIdx": 11,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-05",
+          "dayOfWeek": 6,
+          "weekIdx": 11,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-06",
+          "dayOfWeek": 0,
+          "weekIdx": 11,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-07",
+          "dayOfWeek": 1,
+          "weekIdx": 11,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-08",
+          "dayOfWeek": 2,
+          "weekIdx": 11,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-09",
+          "dayOfWeek": 3,
+          "weekIdx": 11,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-10",
+          "dayOfWeek": 4,
+          "weekIdx": 10,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-11",
+          "dayOfWeek": 5,
+          "weekIdx": 10,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-12",
+          "dayOfWeek": 6,
+          "weekIdx": 10,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-13",
+          "dayOfWeek": 0,
+          "weekIdx": 10,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-14",
+          "dayOfWeek": 1,
+          "weekIdx": 10,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-15",
+          "dayOfWeek": 2,
+          "weekIdx": 10,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-16",
+          "dayOfWeek": 3,
+          "weekIdx": 10,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-17",
+          "dayOfWeek": 4,
+          "weekIdx": 9,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-18",
+          "dayOfWeek": 5,
+          "weekIdx": 9,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-19",
+          "dayOfWeek": 6,
+          "weekIdx": 9,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-20",
+          "dayOfWeek": 0,
+          "weekIdx": 9,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-21",
+          "dayOfWeek": 1,
+          "weekIdx": 9,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-22",
+          "dayOfWeek": 2,
+          "weekIdx": 9,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-23",
+          "dayOfWeek": 3,
+          "weekIdx": 9,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-24",
+          "dayOfWeek": 4,
+          "weekIdx": 8,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-25",
+          "dayOfWeek": 5,
+          "weekIdx": 8,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-26",
+          "dayOfWeek": 6,
+          "weekIdx": 8,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-27",
+          "dayOfWeek": 0,
+          "weekIdx": 8,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-28",
+          "dayOfWeek": 1,
+          "weekIdx": 8,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-29",
+          "dayOfWeek": 2,
+          "weekIdx": 8,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-04-30",
+          "dayOfWeek": 3,
+          "weekIdx": 8,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-01",
+          "dayOfWeek": 4,
+          "weekIdx": 7,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-02",
+          "dayOfWeek": 5,
+          "weekIdx": 7,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-03",
+          "dayOfWeek": 6,
+          "weekIdx": 7,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-04",
+          "dayOfWeek": 0,
+          "weekIdx": 7,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-05",
+          "dayOfWeek": 1,
+          "weekIdx": 7,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-06",
+          "dayOfWeek": 2,
+          "weekIdx": 7,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-07",
+          "dayOfWeek": 3,
+          "weekIdx": 7,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-08",
+          "dayOfWeek": 4,
+          "weekIdx": 6,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-09",
+          "dayOfWeek": 5,
+          "weekIdx": 6,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-10",
+          "dayOfWeek": 6,
+          "weekIdx": 6,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-11",
+          "dayOfWeek": 0,
+          "weekIdx": 6,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-12",
+          "dayOfWeek": 1,
+          "weekIdx": 6,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-13",
+          "dayOfWeek": 2,
+          "weekIdx": 6,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-14",
+          "dayOfWeek": 3,
+          "weekIdx": 6,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-15",
+          "dayOfWeek": 4,
+          "weekIdx": 5,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-16",
+          "dayOfWeek": 5,
+          "weekIdx": 5,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-17",
+          "dayOfWeek": 6,
+          "weekIdx": 5,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-18",
+          "dayOfWeek": 0,
+          "weekIdx": 5,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-19",
+          "dayOfWeek": 1,
+          "weekIdx": 5,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-20",
+          "dayOfWeek": 2,
+          "weekIdx": 5,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-21",
+          "dayOfWeek": 3,
+          "weekIdx": 5,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-22",
+          "dayOfWeek": 4,
+          "weekIdx": 4,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-23",
+          "dayOfWeek": 5,
+          "weekIdx": 4,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-24",
+          "dayOfWeek": 6,
+          "weekIdx": 4,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-25",
+          "dayOfWeek": 0,
+          "weekIdx": 4,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-26",
+          "dayOfWeek": 1,
+          "weekIdx": 4,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-27",
+          "dayOfWeek": 2,
+          "weekIdx": 4,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-28",
+          "dayOfWeek": 3,
+          "weekIdx": 4,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-29",
+          "dayOfWeek": 4,
+          "weekIdx": 3,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-30",
+          "dayOfWeek": 5,
+          "weekIdx": 3,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-05-31",
+          "dayOfWeek": 6,
+          "weekIdx": 3,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-01",
+          "dayOfWeek": 0,
+          "weekIdx": 3,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-02",
+          "dayOfWeek": 1,
+          "weekIdx": 3,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-03",
+          "dayOfWeek": 2,
+          "weekIdx": 3,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-04",
+          "dayOfWeek": 3,
+          "weekIdx": 3,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-05",
+          "dayOfWeek": 4,
+          "weekIdx": 2,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-06",
+          "dayOfWeek": 5,
+          "weekIdx": 2,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-07",
+          "dayOfWeek": 6,
+          "weekIdx": 2,
+          "checked": false,
+          "color": "#E8ECF0"
+        },
+        {
+          "date": "2026-06-08",
+          "dayOfWeek": 0,
+          "weekIdx": 2,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-09",
+          "dayOfWeek": 1,
+          "weekIdx": 2,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-10",
+          "dayOfWeek": 2,
+          "weekIdx": 2,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-11",
+          "dayOfWeek": 3,
+          "weekIdx": 2,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-12",
+          "dayOfWeek": 4,
+          "weekIdx": 1,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-13",
+          "dayOfWeek": 5,
+          "weekIdx": 1,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-14",
+          "dayOfWeek": 6,
+          "weekIdx": 1,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-15",
+          "dayOfWeek": 0,
+          "weekIdx": 1,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-16",
+          "dayOfWeek": 1,
+          "weekIdx": 1,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-17",
+          "dayOfWeek": 2,
+          "weekIdx": 1,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-18",
+          "dayOfWeek": 3,
+          "weekIdx": 1,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-19",
+          "dayOfWeek": 4,
+          "weekIdx": 0,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-20",
+          "dayOfWeek": 5,
+          "weekIdx": 0,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-21",
+          "dayOfWeek": 6,
+          "weekIdx": 0,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-22",
+          "dayOfWeek": 0,
+          "weekIdx": 0,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-23",
+          "dayOfWeek": 1,
+          "weekIdx": 0,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-24",
+          "dayOfWeek": 2,
+          "weekIdx": 0,
+          "checked": true,
+          "color": "#059669"
+        },
+        {
+          "date": "2026-06-25",
+          "dayOfWeek": 3,
+          "weekIdx": 0,
+          "checked": true,
+          "color": "#059669"
+        }
+      ],
+      "currentHeatmapTodayIdx": 90,
+      "formTitle": "",
+      "formSelectedIcon": "wb_sunny",
+      "formSelectedAccent": "#059669"
     },
     "functions": {
       "startCreate": {
         "params": [],
         "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formTitle",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formSelectedIcon",
+              "value": "wb_sunny"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formSelectedAccent",
+              "value": "#059669"
+            }
+          },
           {
             "call": "@navigate",
             "args": {
@@ -64,34 +3996,78 @@
           }
         ]
       },
-      "viewHabit": {
+      "selectFormIcon": {
         "params": [
-          "habitTitle",
-          "streak",
-          "status",
-          "accent",
-          "tint"
+          "iconName",
+          "accent"
         ],
         "logic": [
           {
             "call": "@set",
             "args": {
+              "var": "global.formSelectedIcon",
+              "value": "{{ params.iconName }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formSelectedAccent",
+              "value": "{{ params.accent }}"
+            }
+          }
+        ]
+      },
+      "saveHabit": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "习惯已创建！"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "home"
+            }
+          }
+        ]
+      },
+      "viewHabit": {
+        "params": [
+          "habitIdx",
+          "title",
+          "iconName",
+          "accent",
+          "tint",
+          "streak",
+          "weekDone",
+          "totalCheckins",
+          "checkedToday",
+          "statusLabel"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentHabitIdx",
+              "value": "{{ params.habitIdx }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
               "var": "global.currentTitle",
-              "value": "{{ params.habitTitle }}"
+              "value": "{{ params.title }}"
             }
           },
           {
             "call": "@set",
             "args": {
-              "var": "global.currentStreak",
-              "value": "{{ params.streak }}"
-            }
-          },
-          {
-            "call": "@set",
-            "args": {
-              "var": "global.currentStatus",
-              "value": "{{ params.status }}"
+              "var": "global.currentIcon",
+              "value": "{{ params.iconName }}"
             }
           },
           {
@@ -109,6 +4085,41 @@
             }
           },
           {
+            "call": "@set",
+            "args": {
+              "var": "global.currentStreak",
+              "value": "{{ params.streak }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentWeekDone",
+              "value": "{{ params.weekDone }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentTotalCheckins",
+              "value": "{{ params.totalCheckins }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentCheckedToday",
+              "value": "{{ params.checkedToday }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentStatusLabel",
+              "value": "{{ params.statusLabel }}"
+            }
+          },
+          {
             "call": "@navigate",
             "args": {
               "screen": "habit_detail"
@@ -116,15 +4127,117 @@
           }
         ]
       },
-      "saveHabit": {
+      "checkInToday": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentCheckedToday",
+              "value": {
+                "!": [
+                  {
+                    "var": "global.currentCheckedToday"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentStatusLabel",
+              "value": {
+                "if": [
+                  {
+                    "var": "global.currentCheckedToday"
+                  },
+                  "已打卡 ✓",
+                  "待打卡"
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentStreak",
+              "value": {
+                "if": [
+                  {
+                    "var": "global.currentCheckedToday"
+                  },
+                  {
+                    "+": [
+                      {
+                        "var": "global.currentStreak"
+                      },
+                      1
+                    ]
+                  },
+                  {
+                    "-": [
+                      {
+                        "var": "global.currentStreak"
+                      },
+                      1
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentWeekDone",
+              "value": {
+                "if": [
+                  {
+                    "var": "global.currentCheckedToday"
+                  },
+                  {
+                    "+": [
+                      {
+                        "var": "global.currentWeekDone"
+                      },
+                      1
+                    ]
+                  },
+                  {
+                    "-": [
+                      {
+                        "var": "global.currentWeekDone"
+                      },
+                      1
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "deleteHabit": {
         "params": [],
         "logic": [
           {
             "call": "@show_toast",
             "args": {
-              "message": "模板示例：这里接入习惯保存逻辑"
+              "message": "习惯已删除"
             }
           },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "home"
+            }
+          }
+        ]
+      },
+      "goBack": {
+        "params": [],
+        "logic": [
           {
             "call": "@navigate",
             "args": {
@@ -140,7 +4253,7 @@
     "screens": [
       {
         "id": "home",
-        "title": "习惯",
+        "title": "习惯打卡",
         "layout": "column",
         "children": [
           {
@@ -156,7 +4269,7 @@
                   "padding": 14,
                   "margin": 6,
                   "elevation": 0,
-                  "borderRadius": 14,
+                  "borderRadius": 16,
                   "children": [
                     {
                       "type": "container",
@@ -164,7 +4277,7 @@
                       "children": [
                         {
                           "type": "icon",
-                          "name": "check_circle",
+                          "name": "today",
                           "size": 18,
                           "color": "#059669"
                         },
@@ -185,13 +4298,13 @@
                     },
                     {
                       "type": "spacer",
-                      "height": 8
+                      "height": 6
                     },
                     {
                       "type": "text",
-                      "value": "5/7",
+                      "value": "{{ global.todayCompleted }}",
                       "style": {
-                        "fontSize": 21,
+                        "fontSize": 22,
                         "fontWeight": "bold",
                         "color": "#111827",
                         "maxLines": 1
@@ -213,7 +4326,7 @@
                   "padding": 14,
                   "margin": 6,
                   "elevation": 0,
-                  "borderRadius": 14,
+                  "borderRadius": 16,
                   "children": [
                     {
                       "type": "container",
@@ -221,7 +4334,7 @@
                       "children": [
                         {
                           "type": "icon",
-                          "name": "timeline",
+                          "name": "trophy",
                           "size": 18,
                           "color": "#7C3AED"
                         },
@@ -242,70 +4355,13 @@
                     },
                     {
                       "type": "spacer",
-                      "height": 8
+                      "height": 6
                     },
                     {
                       "type": "text",
-                      "value": "18",
+                      "value": "{{ global.maxStreak }} 天",
                       "style": {
-                        "fontSize": 21,
-                        "fontWeight": "bold",
-                        "color": "#111827",
-                        "maxLines": 1
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "type": "spacer",
-                "width": 8
-              },
-              {
-                "type": "expanded",
-                "child": {
-                  "type": "card",
-                  "layout": "column",
-                  "color": "#FFFFFF",
-                  "padding": 14,
-                  "margin": 6,
-                  "elevation": 0,
-                  "borderRadius": 14,
-                  "children": [
-                    {
-                      "type": "container",
-                      "layout": "row",
-                      "children": [
-                        {
-                          "type": "icon",
-                          "name": "analytics",
-                          "size": 18,
-                          "color": "#2563EB"
-                        },
-                        {
-                          "type": "spacer",
-                          "width": 8
-                        },
-                        {
-                          "type": "text",
-                          "value": "本周完成率",
-                          "style": {
-                            "fontSize": 13,
-                            "color": "#6B7280"
-                          }
-                        }
-                      ],
-                      "crossAxisAlignment": "center"
-                    },
-                    {
-                      "type": "spacer",
-                      "height": 8
-                    },
-                    {
-                      "type": "text",
-                      "value": "76%",
-                      "style": {
-                        "fontSize": 21,
+                        "fontSize": 22,
                         "fontWeight": "bold",
                         "color": "#111827",
                         "maxLines": 1
@@ -318,38 +4374,323 @@
             "margin": 8
           },
           {
-            "type": "container",
-            "layout": "row",
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 16,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
             "children": [
               {
-                "type": "icon",
-                "name": "search",
-                "size": 18,
-                "color": "#8E8E93"
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "calendar",
+                    "size": 16,
+                    "color": "#6B7280"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 6
+                  },
+                  {
+                    "type": "text",
+                    "value": "打卡热力图（近 91 天）",
+                    "style": {
+                      "fontSize": 14,
+                      "fontWeight": "600",
+                      "color": "#374151"
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
               },
               {
                 "type": "spacer",
-                "width": 8
+                "height": 10
               },
               {
-                "type": "input",
-                "placeholder": "搜索习惯",
-                "bind": "global.searchQuery",
-                "position": {
-                  "type": "flex",
-                  "flex": 1
-                },
-                "style": {
-                  "fontSize": 15,
-                  "borderRadius": 10
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "一",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 3
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "二",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 3
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "三",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 3
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "四",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 3
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "五",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 3
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "六",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 3
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "日",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "grid",
+                "source": "{{ global.combinedHeatmap }}",
+                "crossAxisCount": 7,
+                "spacing": 3,
+                "crossAxisSpacing": 3,
+                "mainAxisSpacing": 3,
+                "childAspectRatio": 1.0,
+                "shrinkWrap": true,
+                "item_template": {
+                  "type": "container",
+                  "width": 13,
+                  "height": 13,
+                  "color": "{{ loop.item.color }}",
+                  "borderRadius": 2
                 }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "少",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 4
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 12,
+                    "height": 12,
+                    "color": "#E8ECF0",
+                    "borderRadius": 2
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 2
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 12,
+                    "height": 12,
+                    "color": "#A7F3D0",
+                    "borderRadius": 2
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 2
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 12,
+                    "height": 12,
+                    "color": "#6EE7B7",
+                    "borderRadius": 2
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 2
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 12,
+                    "height": 12,
+                    "color": "#34D399",
+                    "borderRadius": 2
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 2
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 12,
+                    "height": 12,
+                    "color": "#059669",
+                    "borderRadius": 2
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 4
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "多",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "crossAxisAlignment": "center"
               }
-            ],
-            "padding": 10,
-            "margin": 12,
-            "color": "#F7F8FA",
-            "borderRadius": 14,
-            "crossAxisAlignment": "center"
+            ]
           },
           {
             "type": "container",
@@ -364,7 +4705,7 @@
                     "type": "chip",
                     "label": "全部",
                     "variant": "choice",
-                    "bind": "global.selectedStatus",
+                    "bind": "global.selectedFilter",
                     "value": "全部",
                     "color": "#7C3AED"
                   },
@@ -372,24 +4713,16 @@
                     "type": "chip",
                     "label": "待打卡",
                     "variant": "choice",
-                    "bind": "global.selectedStatus",
+                    "bind": "global.selectedFilter",
                     "value": "待打卡",
                     "color": "#7C3AED"
                   },
                   {
                     "type": "chip",
-                    "label": "已完成",
+                    "label": "已打卡",
                     "variant": "choice",
-                    "bind": "global.selectedStatus",
-                    "value": "已完成",
-                    "color": "#7C3AED"
-                  },
-                  {
-                    "type": "chip",
-                    "label": "晚间",
-                    "variant": "choice",
-                    "bind": "global.selectedStatus",
-                    "value": "晚间",
+                    "bind": "global.selectedFilter",
+                    "value": "已打卡",
                     "color": "#7C3AED"
                   }
                 ]
@@ -403,37 +4736,39 @@
           {
             "type": "list",
             "source": "{{ global.habits }}",
-            "emptyText": "暂无习惯，先创建一个可坚持的小目标",
+            "emptyText": "还没有习惯，点击下方按钮创建第一个吧",
+            "shrinkWrap": true,
             "item_template": {
               "type": "card",
               "layout": "column",
               "color": "#FFFFFF",
               "padding": 14,
-              "margin": 8,
+              "margin": 6,
               "elevation": 0,
               "borderRadius": 16,
               "children": [
                 {
                   "type": "container",
                   "layout": "row",
+                  "crossAxisAlignment": "center",
                   "children": [
                     {
                       "type": "container",
                       "layout": "column",
+                      "width": 44,
+                      "height": 44,
+                      "color": "{{ loop.item.tint }}",
+                      "borderRadius": 14,
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center",
                       "children": [
                         {
                           "type": "icon",
-                          "name": "check_circle",
-                          "size": 20,
+                          "name": "{{ loop.item.icon }}",
+                          "size": 22,
                           "color": "{{ loop.item.accent }}"
                         }
-                      ],
-                      "width": 42,
-                      "height": 42,
-                      "color": "{{ loop.item.tint }}",
-                      "borderRadius": 12,
-                      "mainAxisAlignment": "center",
-                      "crossAxisAlignment": "center"
+                      ]
                     },
                     {
                       "type": "spacer",
@@ -442,12 +4777,16 @@
                     {
                       "type": "container",
                       "layout": "column",
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      },
                       "children": [
                         {
                           "type": "text",
                           "value": "{{ loop.item.title }}",
                           "style": {
-                            "fontSize": 16,
+                            "fontSize": 15,
                             "fontWeight": "bold",
                             "color": "#111827",
                             "maxLines": 1,
@@ -456,13 +4795,13 @@
                         },
                         {
                           "type": "spacer",
-                          "height": 6
+                          "height": 4
                         },
                         {
                           "type": "text",
-                          "value": "{{ loop.item.status }} · 连续 {{ loop.item.streak }} 天 · 本周 {{ loop.item.weekDone }}/7",
+                          "value": "{{ loop.item.statusLabel }} · 连续 {{ loop.item.streak }} 天 · 本周 {{ loop.item.weekDone }}/7",
                           "style": {
-                            "fontSize": 13,
+                            "fontSize": 12,
                             "color": "#6B7280",
                             "maxLines": 1,
                             "overflow": "ellipsis"
@@ -474,29 +4813,40 @@
                         },
                         {
                           "type": "progress",
-                          "value": "{{ loop.item.progress }}",
+                          "value": "{{ loop.item.weekDone }}",
+                          "max": 7,
                           "color": "{{ loop.item.accent }}",
                           "backgroundColor": "#E5E7EB",
-                          "height": 6
+                          "height": 5
                         }
-                      ],
-                      "position": {
-                        "type": "flex",
-                        "flex": 1
-                      }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 8
+                    },
+                    {
+                      "type": "icon",
+                      "name": "chevron_right",
+                      "size": 20,
+                      "color": "#C4C4C8"
                     }
-                  ],
-                  "crossAxisAlignment": "center"
+                  ]
                 }
               ],
               "onTap": {
                 "call": "@global.viewHabit",
                 "args": {
-                  "habitTitle": "{{ loop.item.title }}",
-                  "streak": "{{ loop.item.streak }}",
-                  "status": "{{ loop.item.status }}",
+                  "habitIdx": "{{ loop.index }}",
+                  "title": "{{ loop.item.title }}",
+                  "iconName": "{{ loop.item.icon }}",
                   "accent": "{{ loop.item.accent }}",
-                  "tint": "{{ loop.item.tint }}"
+                  "tint": "{{ loop.item.tint }}",
+                  "streak": "{{ loop.item.streak }}",
+                  "weekDone": "{{ loop.item.weekDone }}",
+                  "totalCheckins": "{{ loop.item.totalCheckins }}",
+                  "checkedToday": "{{ loop.item.checkedToday }}",
+                  "statusLabel": "{{ loop.item.statusLabel }}"
                 }
               }
             }
@@ -529,7 +4879,7 @@
         ],
         "backgroundColor": "#F6F4FB",
         "appBar": {
-          "title": "习惯",
+          "title": "习惯打卡",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -563,28 +4913,28 @@
             "type": "card",
             "layout": "column",
             "color": "#FFFFFF",
-            "padding": 20,
+            "padding": 24,
             "margin": 12,
             "elevation": 0,
-            "borderRadius": 18,
+            "borderRadius": 20,
             "children": [
               {
                 "type": "container",
                 "layout": "column",
+                "width": 64,
+                "height": 64,
+                "color": "{{ global.currentTint }}",
+                "borderRadius": 20,
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center",
                 "children": [
                   {
                     "type": "icon",
-                    "name": "check_circle",
-                    "size": 28,
+                    "name": "{{ global.currentIcon }}",
+                    "size": 30,
                     "color": "{{ global.currentAccent }}"
                   }
-                ],
-                "width": 58,
-                "height": 58,
-                "color": "{{ global.currentTint }}",
-                "borderRadius": 18,
-                "mainAxisAlignment": "center",
-                "crossAxisAlignment": "center"
+                ]
               },
               {
                 "type": "spacer",
@@ -594,9 +4944,417 @@
                 "type": "text",
                 "value": "{{ global.currentTitle }}",
                 "style": {
-                  "fontSize": 24,
+                  "fontSize": 20,
                   "fontWeight": "bold",
                   "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "{{ global.currentStatusLabel }}",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "{{ global.currentAccent }}"
+                }
+              }
+            ],
+            "crossAxisAlignment": "center"
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 12,
+                  "margin": 4,
+                  "elevation": 0,
+                  "borderRadius": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "连续天数",
+                      "style": {
+                        "fontSize": 11,
+                        "color": "#6B7280"
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.currentStreak }}",
+                          "style": {
+                            "fontSize": 20,
+                            "fontWeight": "bold",
+                            "color": "#059669",
+                            "maxLines": 1
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 2
+                        },
+                        {
+                          "type": "text",
+                          "value": "天",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#9CA3AF"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "flex_end"
+                    }
+                  ],
+                  "crossAxisAlignment": "center"
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 12,
+                  "margin": 4,
+                  "elevation": 0,
+                  "borderRadius": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "本周完成",
+                      "style": {
+                        "fontSize": 11,
+                        "color": "#6B7280"
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.currentWeekDone }}",
+                          "style": {
+                            "fontSize": 20,
+                            "fontWeight": "bold",
+                            "color": "#2563EB",
+                            "maxLines": 1
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 2
+                        },
+                        {
+                          "type": "text",
+                          "value": "/7",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#9CA3AF"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "flex_end"
+                    }
+                  ],
+                  "crossAxisAlignment": "center"
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 12,
+                  "margin": 4,
+                  "elevation": 0,
+                  "borderRadius": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "总打卡",
+                      "style": {
+                        "fontSize": 11,
+                        "color": "#6B7280"
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.currentTotalCheckins }}",
+                          "style": {
+                            "fontSize": 20,
+                            "fontWeight": "bold",
+                            "color": "#7C3AED",
+                            "maxLines": 1
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 2
+                        },
+                        {
+                          "type": "text",
+                          "value": "次",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#9CA3AF"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "flex_end"
+                    }
+                  ],
+                  "crossAxisAlignment": "center"
+                }
+              }
+            ],
+            "margin": 8
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 16,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "grid_3x3",
+                    "size": 16,
+                    "color": "#6B7280"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 6
+                  },
+                  {
+                    "type": "text",
+                    "value": "打卡记录",
+                    "style": {
+                      "fontSize": 14,
+                      "fontWeight": "600",
+                      "color": "#374151"
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "一",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 3
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "二",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 3
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "三",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 3
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "四",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 3
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "五",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 3
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "六",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 3
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "日",
+                        "style": {
+                          "fontSize": 9,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "width": 13,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "grid",
+                "source": "{{ global.currentHeatmap }}",
+                "crossAxisCount": 7,
+                "spacing": 3,
+                "crossAxisSpacing": 3,
+                "mainAxisSpacing": 3,
+                "childAspectRatio": 1.0,
+                "shrinkWrap": true,
+                "item_template": {
+                  "type": "container",
+                  "width": 13,
+                  "height": 13,
+                  "color": "{{ loop.item.color }}",
+                  "borderRadius": 2
                 }
               },
               {
@@ -604,27 +5362,105 @@
                 "height": 8
               },
               {
-                "type": "text",
-                "value": "当前状态：{{ global.currentStatus }}",
-                "style": {
-                  "fontSize": 14,
-                  "color": "#6B7280"
-                }
-              },
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 12,
+                    "height": 12,
+                    "color": "#E8ECF0",
+                    "borderRadius": 2
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 4
+                  },
+                  {
+                    "type": "text",
+                    "value": "未打卡",
+                    "style": {
+                      "fontSize": 11,
+                      "color": "#9CA3AF"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 12
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 12,
+                    "height": 12,
+                    "color": "#059669",
+                    "borderRadius": 2
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 4
+                  },
+                  {
+                    "type": "text",
+                    "value": "已打卡",
+                    "style": {
+                      "fontSize": 11,
+                      "color": "#9CA3AF"
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
               {
-                "type": "spacer",
-                "height": 14
-              },
-              {
-                "type": "text",
-                "value": "已连续坚持 {{ global.currentStreak }} 天",
+                "type": "button",
+                "label": "今日打卡 ✓",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.checkInToday",
+                  "args": {}
+                },
+                "icon": "check_circle",
                 "style": {
-                  "fontSize": 18,
-                  "fontWeight": "bold",
-                  "color": "{{ global.currentAccent }}"
+                  "backgroundColor": "{{ global.currentAccent }}",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 16,
+                  "fontSize": 16,
+                  "paddingV": 14
                 }
               }
             ],
+            "padding": 8
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "button",
+                "label": "删除此习惯",
+                "variant": "text",
+                "action": {
+                  "call": "@global.deleteHabit",
+                  "args": {}
+                },
+                "icon": "delete",
+                "style": {
+                  "textColor": "#EF4444",
+                  "fontSize": 14,
+                  "paddingV": 8
+                }
+              }
+            ],
+            "padding": 8,
             "crossAxisAlignment": "center"
           }
         ],
@@ -639,7 +5475,7 @@
       },
       {
         "id": "habit_form",
-        "title": "编辑习惯",
+        "title": "新建习惯",
         "layout": "column",
         "children": [
           {
@@ -667,11 +5503,135 @@
               {
                 "type": "input",
                 "placeholder": "例如 每天步行 20 分钟",
-                "bind": "global.formTitle"
+                "bind": "global.formTitle",
+                "style": {
+                  "fontSize": 15,
+                  "borderRadius": 10
+                }
               },
               {
                 "type": "spacer",
-                "height": 18
+                "height": 20
+              },
+              {
+                "type": "text",
+                "value": "选择图标",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "晨间",
+                    "variant": "choice",
+                    "bind": "global.formSelectedIcon",
+                    "value": "wb_sunny",
+                    "color": "#059669"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "晚间",
+                    "variant": "choice",
+                    "bind": "global.formSelectedIcon",
+                    "value": "dark_mode",
+                    "color": "#7C3AED"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "阅读",
+                    "variant": "choice",
+                    "bind": "global.formSelectedIcon",
+                    "value": "menu_book",
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "运动",
+                    "variant": "choice",
+                    "bind": "global.formSelectedIcon",
+                    "value": "bolt",
+                    "color": "#EA580C"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "冥想",
+                    "variant": "choice",
+                    "bind": "global.formSelectedIcon",
+                    "value": "spa",
+                    "color": "#7C3AED"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "饮水",
+                    "variant": "choice",
+                    "bind": "global.formSelectedIcon",
+                    "value": "water_drop",
+                    "color": "#0284C7"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "健康",
+                    "variant": "choice",
+                    "bind": "global.formSelectedIcon",
+                    "value": "monitor_heart",
+                    "color": "#DC2626"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "饮食",
+                    "variant": "choice",
+                    "bind": "global.formSelectedIcon",
+                    "value": "restaurant",
+                    "color": "#CA8A04"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "日记",
+                    "variant": "choice",
+                    "bind": "global.formSelectedIcon",
+                    "value": "notes",
+                    "color": "#0891B2"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "学习",
+                    "variant": "choice",
+                    "bind": "global.formSelectedIcon",
+                    "value": "schedule",
+                    "color": "#4F46E5"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "用药",
+                    "variant": "choice",
+                    "bind": "global.formSelectedIcon",
+                    "value": "local_pharmacy",
+                    "color": "#DB2777"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "打卡",
+                    "variant": "choice",
+                    "bind": "global.formSelectedIcon",
+                    "value": "check_circle",
+                    "color": "#059669"
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 24
               },
               {
                 "type": "button",
@@ -685,7 +5645,9 @@
                 "style": {
                   "backgroundColor": "#7C3AED",
                   "textColor": "#FFFFFF",
-                  "borderRadius": 14
+                  "borderRadius": 14,
+                  "fontSize": 15,
+                  "paddingV": 12
                 }
               }
             ]
@@ -693,14 +5655,31 @@
         ],
         "backgroundColor": "#F6F4FB",
         "appBar": {
-          "title": "编辑习惯",
+          "title": "新建习惯",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
-          "elevation": 0
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.goBack",
+                "args": {}
+              },
+              "icon": "close",
+              "style": {
+                "textColor": "#6B7280",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
         }
       }
     ]
-  },
-  "appid": "e1c49e4f-ddf8-411c-b7f1-3f9cd8b784e5"
+  }
 }

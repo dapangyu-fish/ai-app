@@ -1,43 +1,1111 @@
 {
   "dsl": "3.3",
   "meta": {
-    "name": "framework-quality-camera-inspection",
+    "name": "photo-inspection",
     "version": "1.0.0",
     "type": "app",
-    "description": "框架能力模板：现场拍照检测，展示 image_picker(camera)、badge、checkbox、progress。",
+    "description": "拍照记录设备状态，生成巡检单",
     "author": "fish",
-    "displayName": "Framework Camera Inspection"
+    "displayName": "拍照巡检"
   },
   "dependencies": {},
   "global": {
     "variables": {
-      "photoPath": "",
-      "checks": [
+      "inspections": [],
+      "currentPhotoPath": "",
+      "currentEquipmentName": "",
+      "currentChecks": [
+        {
+          "label": "外观完好",
+          "ok": true
+        },
+        {
+          "label": "运行正常",
+          "ok": true
+        },
         {
           "label": "标签清晰",
           "ok": true
         },
         {
-          "label": "封口完整",
+          "label": "安全装置有效",
           "ok": true
         },
         {
-          "label": "批次匹配",
-          "ok": false
+          "label": "环境整洁",
+          "ok": true
         }
       ],
-      "autoEnhance": true,
-      "geoTag": true,
-      "score": 0.78
+      "currentNotes": "",
+      "photoStatusLabel": "请拍摄设备照片",
+      "photoStatusColor": "#DC2626",
+      "viewingIndex": -1,
+      "detailEquipmentName": "",
+      "detailDate": "",
+      "detailPhotoPath": "",
+      "detailScoreLabel": "",
+      "detailScoreColor": "#0F766E",
+      "detailNotesLabel": "",
+      "detailNotesColor": "#9CA3AF",
+      "dCheck0Label": "",
+      "dCheck0Icon": "check_circle",
+      "dCheck0IconColor": "#0F766E",
+      "dCheck0Result": "",
+      "dCheck0ResultColor": "#0F766E",
+      "dCheck0Bg": "#F0FAF6",
+      "dCheck1Label": "",
+      "dCheck1Icon": "check_circle",
+      "dCheck1IconColor": "#0F766E",
+      "dCheck1Result": "",
+      "dCheck1ResultColor": "#0F766E",
+      "dCheck1Bg": "#F0FAF6",
+      "dCheck2Label": "",
+      "dCheck2Icon": "check_circle",
+      "dCheck2IconColor": "#0F766E",
+      "dCheck2Result": "",
+      "dCheck2ResultColor": "#0F766E",
+      "dCheck2Bg": "#F0FAF6",
+      "dCheck3Label": "",
+      "dCheck3Icon": "check_circle",
+      "dCheck3IconColor": "#0F766E",
+      "dCheck3Result": "",
+      "dCheck3ResultColor": "#0F766E",
+      "dCheck3Bg": "#F0FAF6",
+      "dCheck4Label": "",
+      "dCheck4Icon": "check_circle",
+      "dCheck4IconColor": "#0F766E",
+      "dCheck4Result": "",
+      "dCheck4ResultColor": "#0F766E",
+      "dCheck4Bg": "#F0FAF6"
     },
     "functions": {
-      "submit": {
+      "startNewInspection": {
         "params": [],
         "logic": [
           {
+            "@set": {
+              "path": "global.currentPhotoPath",
+              "value": ""
+            }
+          },
+          {
+            "@set": {
+              "path": "global.currentEquipmentName",
+              "value": ""
+            }
+          },
+          {
+            "@set": {
+              "path": "global.currentChecks",
+              "value": [
+                {
+                  "label": "外观完好",
+                  "ok": true
+                },
+                {
+                  "label": "运行正常",
+                  "ok": true
+                },
+                {
+                  "label": "标签清晰",
+                  "ok": true
+                },
+                {
+                  "label": "安全装置有效",
+                  "ok": true
+                },
+                {
+                  "label": "环境整洁",
+                  "ok": true
+                }
+              ]
+            }
+          },
+          {
+            "@set": {
+              "path": "global.currentNotes",
+              "value": ""
+            }
+          },
+          {
+            "@set": {
+              "path": "global.photoStatusLabel",
+              "value": "请拍摄设备照片"
+            }
+          },
+          {
+            "@set": {
+              "path": "global.photoStatusColor",
+              "value": "#DC2626"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "new_inspection"
+            }
+          }
+        ]
+      },
+      "updatePhotoStatus": {
+        "params": [],
+        "logic": [
+          {
+            "@set": {
+              "path": "global.photoStatusLabel",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var_get": {
+                          "path": "global.currentPhotoPath"
+                        }
+                      },
+                      ""
+                    ]
+                  },
+                  "请拍摄设备照片",
+                  "已拍摄 ✓"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.photoStatusColor",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var_get": {
+                          "path": "global.currentPhotoPath"
+                        }
+                      },
+                      ""
+                    ]
+                  },
+                  "#DC2626",
+                  "#0F766E"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "submitInspection": {
+        "params": [],
+        "logic": [
+          {
+            "@set": {
+              "path": "global._rawScore",
+              "value": {
+                "+": [
+                  {
+                    "*": [
+                      {
+                        "/": [
+                          {
+                            "+": [
+                              {
+                                "var_get": {
+                                  "path": "global.currentChecks.0.ok"
+                                }
+                              },
+                              {
+                                "var_get": {
+                                  "path": "global.currentChecks.1.ok"
+                                }
+                              },
+                              {
+                                "var_get": {
+                                  "path": "global.currentChecks.2.ok"
+                                }
+                              },
+                              {
+                                "var_get": {
+                                  "path": "global.currentChecks.3.ok"
+                                }
+                              },
+                              {
+                                "var_get": {
+                                  "path": "global.currentChecks.4.ok"
+                                }
+                              }
+                            ]
+                          },
+                          5
+                        ]
+                      },
+                      100
+                    ]
+                  },
+                  0
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global._item",
+              "value": {
+                "id": "6fe6b994",
+                "date": "2026-06-25 01:56",
+                "equipmentName": {
+                  "var_get": {
+                    "path": "global.currentEquipmentName"
+                  }
+                },
+                "photoPath": {
+                  "var_get": {
+                    "path": "global.currentPhotoPath"
+                  }
+                },
+                "checks": {
+                  "var_get": {
+                    "path": "global.currentChecks"
+                  }
+                },
+                "notes": {
+                  "var_get": {
+                    "path": "global.currentNotes"
+                  }
+                },
+                "score": {
+                  "var_get": {
+                    "path": "global._rawScore"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global._item.scoreLabel",
+              "value": {
+                "if": [
+                  {
+                    ">": [
+                      {
+                        "var_get": {
+                          "path": "global._item.score"
+                        }
+                      },
+                      0
+                    ]
+                  },
+                  {
+                    "+": [
+                      {
+                        "str_substring": [
+                          {
+                            "+": [
+                              {
+                                "var_get": {
+                                  "path": "global._item.score"
+                                }
+                              },
+                              ""
+                            ]
+                          },
+                          0,
+                          2
+                        ]
+                      },
+                      "分"
+                    ]
+                  },
+                  "未评分"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global._item.scoreColor",
+              "value": {
+                "if": [
+                  {
+                    ">=": [
+                      {
+                        "var_get": {
+                          "path": "global._item.score"
+                        }
+                      },
+                      80
+                    ]
+                  },
+                  "#065F46",
+                  {
+                    "if": [
+                      {
+                        ">=": [
+                          {
+                            "var_get": {
+                              "path": "global._item.score"
+                            }
+                          },
+                          60
+                        ]
+                      },
+                      "#92400E",
+                      "#991B1B"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global._item.scoreBg",
+              "value": {
+                "if": [
+                  {
+                    ">=": [
+                      {
+                        "var_get": {
+                          "path": "global._item.score"
+                        }
+                      },
+                      80
+                    ]
+                  },
+                  "#D1FAE5",
+                  {
+                    "if": [
+                      {
+                        ">=": [
+                          {
+                            "var_get": {
+                              "path": "global._item.score"
+                            }
+                          },
+                          60
+                        ]
+                      },
+                      "#FEF3C7",
+                      "#FEE2E2"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global._item.photoLabel",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var_get": {
+                          "path": "global._item.photoPath"
+                        }
+                      },
+                      ""
+                    ]
+                  },
+                  "无照片",
+                  "有照片"
+                ]
+              }
+            }
+          },
+          {
+            "call": "@list_add",
+            "args": {
+              "list": "global.inspections",
+              "item": {
+                "var_get": {
+                  "path": "global._item"
+                }
+              }
+            }
+          },
+          {
             "call": "@show_toast",
             "args": {
-              "message": "检测报告已提交"
+              "message": "巡检单已提交"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "home"
+            }
+          }
+        ]
+      },
+      "viewInspection": {
+        "params": [
+          "index"
+        ],
+        "logic": [
+          {
+            "@set": {
+              "path": "global._viewItem",
+              "value": {
+                "var_get": {
+                  "path": "global.inspections",
+                  "index": {
+                    "var_get": {
+                      "path": "params.index"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.viewingIndex",
+              "value": {
+                "var_get": {
+                  "path": "params.index"
+                }
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.detailEquipmentName",
+              "value": {
+                "var_get": {
+                  "path": "global._viewItem.equipmentName"
+                }
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.detailDate",
+              "value": {
+                "var_get": {
+                  "path": "global._viewItem.date"
+                }
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.detailPhotoPath",
+              "value": {
+                "var_get": {
+                  "path": "global._viewItem.photoPath"
+                }
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.detailScoreLabel",
+              "value": {
+                "if": [
+                  {
+                    ">": [
+                      {
+                        "var_get": {
+                          "path": "global._viewItem.score"
+                        }
+                      },
+                      0
+                    ]
+                  },
+                  {
+                    "+": [
+                      {
+                        "str_substring": [
+                          {
+                            "+": [
+                              {
+                                "var_get": {
+                                  "path": "global._viewItem.score"
+                                }
+                              },
+                              ""
+                            ]
+                          },
+                          0,
+                          2
+                        ]
+                      },
+                      "分"
+                    ]
+                  },
+                  "未评分"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.detailScoreColor",
+              "value": {
+                "if": [
+                  {
+                    ">=": [
+                      {
+                        "var_get": {
+                          "path": "global._viewItem.score"
+                        }
+                      },
+                      80
+                    ]
+                  },
+                  "#065F46",
+                  {
+                    "if": [
+                      {
+                        ">=": [
+                          {
+                            "var_get": {
+                              "path": "global._viewItem.score"
+                            }
+                          },
+                          60
+                        ]
+                      },
+                      "#92400E",
+                      "#991B1B"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.detailNotesLabel",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var_get": {
+                          "path": "global._viewItem.notes"
+                        }
+                      },
+                      ""
+                    ]
+                  },
+                  "无备注",
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.notes"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.detailNotesColor",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var_get": {
+                          "path": "global._viewItem.notes"
+                        }
+                      },
+                      ""
+                    ]
+                  },
+                  "#9CA3AF",
+                  "#374151"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck0Label",
+              "value": {
+                "var_get": {
+                  "path": "global._viewItem.checks.0.label"
+                }
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck0Icon",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.0.ok"
+                    }
+                  },
+                  "check_circle",
+                  "cancel"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck0IconColor",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.0.ok"
+                    }
+                  },
+                  "#0F766E",
+                  "#DC2626"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck0Result",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.0.ok"
+                    }
+                  },
+                  "通过",
+                  "未通过"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck0ResultColor",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.0.ok"
+                    }
+                  },
+                  "#0F766E",
+                  "#DC2626"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck0Bg",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.0.ok"
+                    }
+                  },
+                  "#F0FAF6",
+                  "#FEF2F2"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck1Label",
+              "value": {
+                "var_get": {
+                  "path": "global._viewItem.checks.1.label"
+                }
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck1Icon",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.1.ok"
+                    }
+                  },
+                  "check_circle",
+                  "cancel"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck1IconColor",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.1.ok"
+                    }
+                  },
+                  "#0F766E",
+                  "#DC2626"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck1Result",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.1.ok"
+                    }
+                  },
+                  "通过",
+                  "未通过"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck1ResultColor",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.1.ok"
+                    }
+                  },
+                  "#0F766E",
+                  "#DC2626"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck1Bg",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.1.ok"
+                    }
+                  },
+                  "#F0FAF6",
+                  "#FEF2F2"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck2Label",
+              "value": {
+                "var_get": {
+                  "path": "global._viewItem.checks.2.label"
+                }
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck2Icon",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.2.ok"
+                    }
+                  },
+                  "check_circle",
+                  "cancel"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck2IconColor",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.2.ok"
+                    }
+                  },
+                  "#0F766E",
+                  "#DC2626"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck2Result",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.2.ok"
+                    }
+                  },
+                  "通过",
+                  "未通过"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck2ResultColor",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.2.ok"
+                    }
+                  },
+                  "#0F766E",
+                  "#DC2626"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck2Bg",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.2.ok"
+                    }
+                  },
+                  "#F0FAF6",
+                  "#FEF2F2"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck3Label",
+              "value": {
+                "var_get": {
+                  "path": "global._viewItem.checks.3.label"
+                }
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck3Icon",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.3.ok"
+                    }
+                  },
+                  "check_circle",
+                  "cancel"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck3IconColor",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.3.ok"
+                    }
+                  },
+                  "#0F766E",
+                  "#DC2626"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck3Result",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.3.ok"
+                    }
+                  },
+                  "通过",
+                  "未通过"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck3ResultColor",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.3.ok"
+                    }
+                  },
+                  "#0F766E",
+                  "#DC2626"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck3Bg",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.3.ok"
+                    }
+                  },
+                  "#F0FAF6",
+                  "#FEF2F2"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck4Label",
+              "value": {
+                "var_get": {
+                  "path": "global._viewItem.checks.4.label"
+                }
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck4Icon",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.4.ok"
+                    }
+                  },
+                  "check_circle",
+                  "cancel"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck4IconColor",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.4.ok"
+                    }
+                  },
+                  "#0F766E",
+                  "#DC2626"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck4Result",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.4.ok"
+                    }
+                  },
+                  "通过",
+                  "未通过"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck4ResultColor",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.4.ok"
+                    }
+                  },
+                  "#0F766E",
+                  "#DC2626"
+                ]
+              }
+            }
+          },
+          {
+            "@set": {
+              "path": "global.dCheck4Bg",
+              "value": {
+                "if": [
+                  {
+                    "var_get": {
+                      "path": "global._viewItem.checks.4.ok"
+                    }
+                  },
+                  "#F0FAF6",
+                  "#FEF2F2"
+                ]
+              }
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "inspection_detail"
+            }
+          }
+        ]
+      },
+      "deleteInspection": {
+        "params": [
+          "index"
+        ],
+        "logic": [
+          {
+            "call": "@list_remove_at",
+            "args": {
+              "list": "global.inspections",
+              "index": {
+                "var_get": {
+                  "path": "params.index"
+                }
+              }
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "巡检记录已删除"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "home"
             }
           }
         ]
@@ -49,38 +1117,312 @@
     "screens": [
       {
         "id": "home",
-        "title": "现场检测",
+        "title": "巡检记录",
         "layout": "column",
         "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 0,
+                  "elevation": 0,
+                  "borderRadius": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ global.inspections | @list_length }}",
+                      "style": {
+                        "fontSize": 24,
+                        "color": "#0F766E",
+                        "fontWeight": "bold"
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "text",
+                      "value": "巡检总数",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#6B7280"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 10
+              },
+              {
+                "type": "expanded",
+                "flex": 1,
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#EEF2FF",
+                  "padding": 14,
+                  "margin": 0,
+                  "elevation": 0,
+                  "borderRadius": 14,
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "—",
+                      "style": {
+                        "fontSize": 24,
+                        "color": "#2563EB",
+                        "fontWeight": "bold"
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "text",
+                      "value": "点击下方开始",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#6B7280"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "padding": 12,
+            "margin": 0
+          },
           {
             "type": "container",
             "layout": "column",
             "children": [
               {
-                "type": "text",
-                "value": "包装质检",
+                "type": "button",
+                "label": "开始新巡检",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.startNewInspection",
+                  "args": {}
+                },
                 "style": {
-                  "fontSize": 19,
+                  "borderRadius": 14,
+                  "fontSize": 15,
+                  "backgroundColor": "#2563EB",
+                  "textColor": "#FFFFFF",
+                  "paddingV": 14
+                },
+                "icon": "camera"
+              }
+            ],
+            "padding": 12,
+            "margin": 0
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "text",
+                "value": "巡检记录",
+                "style": {
+                  "fontSize": 17,
                   "fontWeight": "bold",
                   "color": "#111827"
                 }
               },
               {
                 "type": "spacer",
-                "height": 4
+                "width": 8
               },
               {
                 "type": "text",
-                "value": "拍照、打勾、提交，体现移动端采集类应用，而不是表单记录页。",
+                "value": "({{ global.inspections | @list_length }})",
                 "style": {
                   "fontSize": 13,
-                  "color": "#6B7280",
-                  "lineHeight": 1.35
+                  "color": "#9CA3AF"
                 }
               }
             ],
-            "margin": 12
+            "crossAxisAlignment": "center",
+            "padding": 12
           },
+          {
+            "type": "list",
+            "source": "{{ global.inspections }}",
+            "emptyText": "暂无巡检记录，点击上方按钮开始第一次巡检",
+            "item_template": {
+              "type": "card",
+              "layout": "row",
+              "color": "#FFFFFF",
+              "padding": 0,
+              "margin": 10,
+              "elevation": 0,
+              "borderRadius": 16,
+              "crossAxisAlignment": "center",
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "padding": 14,
+                  "position": {
+                    "type": "flex",
+                    "flex": 1
+                  },
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.equipmentName }}",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111827",
+                        "fontWeight": "600"
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "schedule",
+                          "size": 13,
+                          "color": "#9CA3AF"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 4
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.date }}",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#9CA3AF"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.scoreLabel }}",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "{{ loop.item.scoreColor }}",
+                                "fontWeight": "600"
+                              }
+                            }
+                          ],
+                          "padding": 5,
+                          "borderRadius": 6,
+                          "color": "{{ loop.item.scoreBg }}"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 6
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.photoLabel }}",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#9CA3AF"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "center"
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "button",
+                      "label": "",
+                      "variant": "text",
+                      "icon": "visibility",
+                      "action": {
+                        "call": "@global.viewInspection",
+                        "args": {
+                          "index": "{{ loop.index }}"
+                        }
+                      },
+                      "style": {
+                        "textColor": "#2563EB",
+                        "fontSize": 16,
+                        "paddingH": 6,
+                        "paddingV": 6
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "label": "",
+                      "variant": "text",
+                      "icon": "delete",
+                      "action": {
+                        "call": "@global.deleteInspection",
+                        "args": {
+                          "index": "{{ loop.index }}"
+                        }
+                      },
+                      "style": {
+                        "textColor": "#DC2626",
+                        "fontSize": 16,
+                        "paddingH": 6,
+                        "paddingV": 6
+                      }
+                    }
+                  ],
+                  "padding": 10
+                }
+              ]
+            }
+          }
+        ],
+        "backgroundColor": "#F3F7F6",
+        "appBar": {
+          "title": "拍照巡检",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0
+        }
+      },
+      {
+        "id": "new_inspection",
+        "title": "新建巡检",
+        "layout": "column",
+        "children": [
           {
             "type": "card",
             "layout": "column",
@@ -92,17 +1434,281 @@
             "children": [
               {
                 "type": "badge",
-                "label": "待提交",
+                "label": "必拍",
                 "color": "#DC2626",
                 "textColor": "#FFFFFF",
                 "child": {
                   "type": "image_picker",
                   "source": "camera",
-                  "bind": "global.photoPath",
-                  "placeholder": "点击拍摄包装正面",
+                  "bind": "global.currentPhotoPath",
+                  "placeholder": "点击拍摄设备照片",
                   "height": 220,
-                  "borderRadius": 18
+                  "borderRadius": 16,
+                  "onChange": {
+                    "call": "@global.updatePhotoStatus",
+                    "args": {}
+                  }
                 }
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "text",
+                "value": "{{ global.photoStatusLabel }}",
+                "style": {
+                  "fontSize": 12,
+                  "color": "{{ global.photoStatusColor }}"
+                }
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 14,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "text",
+                "value": "设备名称",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "600",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "输入设备名称或编号",
+                "bind": "global.currentEquipmentName",
+                "style": {
+                  "fontSize": 15,
+                  "borderRadius": 12,
+                  "backgroundColor": "#F9FAFB"
+                }
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 14,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "text",
+                "value": "检查项",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "600",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "grid",
+                "source": "{{ global.currentChecks }}",
+                "crossAxisCount": 1,
+                "childAspectRatio": 7.0,
+                "spacing": 8,
+                "shrinkWrap": true,
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "check_circle",
+                      "size": 18,
+                      "color": "#0F766E"
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 10
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.label }}",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#374151",
+                        "fontWeight": "500"
+                      }
+                    },
+                    {
+                      "type": "checkbox",
+                      "bind": "loop.item.ok"
+                    }
+                  ],
+                  "padding": 12,
+                  "color": "#F0FAF6",
+                  "borderRadius": 14,
+                  "crossAxisAlignment": "center"
+                }
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 14,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "text",
+                "value": "备注",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "600",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "补充说明或异常记录",
+                "bind": "global.currentNotes",
+                "maxLines": 3,
+                "style": {
+                  "fontSize": 14,
+                  "borderRadius": 12,
+                  "backgroundColor": "#F9FAFB"
+                }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "button",
+                "label": "提交巡检单",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.submitInspection",
+                  "args": {}
+                },
+                "style": {
+                  "borderRadius": 14,
+                  "fontSize": 15,
+                  "backgroundColor": "#0F766E",
+                  "textColor": "#FFFFFF",
+                  "paddingV": 14
+                },
+                "icon": "send"
+              }
+            ],
+            "padding": 12,
+            "margin": 0
+          }
+        ],
+        "backgroundColor": "#F3F7F6",
+        "appBar": {
+          "title": "新建巡检",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "leading": {
+            "type": "button",
+            "label": "",
+            "variant": "text",
+            "icon": "back",
+            "action": {
+              "call": "@navigate",
+              "args": {
+                "screen": "home"
+              }
+            },
+            "style": {
+              "textColor": "#111827",
+              "fontSize": 18,
+              "paddingH": 8,
+              "paddingV": 8
+            }
+          }
+        }
+      },
+      {
+        "id": "inspection_detail",
+        "title": "巡检详情",
+        "layout": "column",
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 12,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "image",
+                "source": "{{ global.detailPhotoPath }}",
+                "height": 240,
+                "placeholder": "无照片",
+                "borderRadius": 14
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 14,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "设备名称",
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#9CA3AF"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 2
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.detailEquipmentName }}",
+                    "style": {
+                      "fontSize": 18,
+                      "color": "#111827",
+                      "fontWeight": "bold"
+                    }
+                  }
+                ]
               },
               {
                 "type": "spacer",
@@ -113,39 +1719,73 @@
                 "layout": "row",
                 "children": [
                   {
-                    "type": "text",
-                    "value": "AI 预检分",
-                    "style": {
-                      "fontSize": 13,
-                      "color": "#6B7280"
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "巡检日期",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#9CA3AF"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 2
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ global.detailDate }}",
+                          "style": {
+                            "fontSize": 14,
+                            "color": "#374151",
+                            "fontWeight": "500"
+                          }
+                        }
+                      ]
                     }
                   },
                   {
-                    "type": "text",
-                    "value": "78",
-                    "style": {
-                      "fontSize": 32,
-                      "fontWeight": "bold",
-                      "color": "#0F766E"
-                    }
+                    "type": "spacer",
+                    "width": 16
                   },
                   {
-                    "type": "text",
-                    "value": "/100",
-                    "style": {
-                      "fontSize": 13,
-                      "color": "#9CA3AF"
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "评分",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#9CA3AF"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 2
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ global.detailScoreLabel }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "{{ global.detailScoreColor }}",
+                            "fontWeight": "bold"
+                          }
+                        }
+                      ]
                     }
                   }
                 ],
-                "crossAxisAlignment": "end"
-              },
-              {
-                "type": "progress",
-                "value": "{{ global.score }}",
-                "color": "#0F766E",
-                "backgroundColor": "#DDE7E4",
-                "height": 8
+                "crossAxisAlignment": "center"
               }
             ]
           },
@@ -153,146 +1793,340 @@
             "type": "card",
             "layout": "column",
             "color": "#FFFFFF",
-            "padding": 16,
+            "padding": 14,
             "margin": 12,
             "elevation": 0,
             "borderRadius": 20,
             "children": [
               {
                 "type": "text",
-                "value": "采集选项",
+                "value": "检查结果",
                 "style": {
-                  "fontSize": 17,
-                  "fontWeight": "bold",
+                  "fontSize": 15,
+                  "fontWeight": "600",
                   "color": "#111827"
                 }
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "padding": 12,
+                "color": "{{ global.dCheck0Bg }}",
+                "borderRadius": 14,
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "{{ global.dCheck0Icon }}",
+                    "size": 20,
+                    "color": "{{ global.dCheck0IconColor }}"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 10
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.dCheck0Label }}",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "style": {
+                      "fontSize": 14,
+                      "fontWeight": "500",
+                      "color": "#374151"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.dCheck0Result }}",
+                    "style": {
+                      "fontSize": 13,
+                      "fontWeight": "600",
+                      "color": "{{ global.dCheck0ResultColor }}"
+                    }
+                  }
+                ]
               },
               {
                 "type": "spacer",
                 "height": 8
               },
               {
-                "type": "switch",
-                "label": "自动增强图片",
-                "bind": "global.autoEnhance"
-              },
-              {
-                "type": "switch",
-                "label": "写入定位标签",
-                "bind": "global.geoTag"
+                "type": "container",
+                "layout": "row",
+                "padding": 12,
+                "color": "{{ global.dCheck1Bg }}",
+                "borderRadius": 14,
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "{{ global.dCheck1Icon }}",
+                    "size": 20,
+                    "color": "{{ global.dCheck1IconColor }}"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 10
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.dCheck1Label }}",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "style": {
+                      "fontSize": 14,
+                      "fontWeight": "500",
+                      "color": "#374151"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.dCheck1Result }}",
+                    "style": {
+                      "fontSize": 13,
+                      "fontWeight": "600",
+                      "color": "{{ global.dCheck1ResultColor }}"
+                    }
+                  }
+                ]
               },
               {
                 "type": "spacer",
-                "height": 6
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "padding": 12,
+                "color": "{{ global.dCheck2Bg }}",
+                "borderRadius": 14,
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "{{ global.dCheck2Icon }}",
+                    "size": 20,
+                    "color": "{{ global.dCheck2IconColor }}"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 10
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.dCheck2Label }}",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "style": {
+                      "fontSize": 14,
+                      "fontWeight": "500",
+                      "color": "#374151"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.dCheck2Result }}",
+                    "style": {
+                      "fontSize": 13,
+                      "fontWeight": "600",
+                      "color": "{{ global.dCheck2ResultColor }}"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "padding": 12,
+                "color": "{{ global.dCheck3Bg }}",
+                "borderRadius": 14,
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "{{ global.dCheck3Icon }}",
+                    "size": 20,
+                    "color": "{{ global.dCheck3IconColor }}"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 10
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.dCheck3Label }}",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "style": {
+                      "fontSize": 14,
+                      "fontWeight": "500",
+                      "color": "#374151"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.dCheck3Result }}",
+                    "style": {
+                      "fontSize": 13,
+                      "fontWeight": "600",
+                      "color": "{{ global.dCheck3ResultColor }}"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "padding": 12,
+                "color": "{{ global.dCheck4Bg }}",
+                "borderRadius": 14,
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "{{ global.dCheck4Icon }}",
+                    "size": 20,
+                    "color": "{{ global.dCheck4IconColor }}"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 10
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.dCheck4Label }}",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    },
+                    "style": {
+                      "fontSize": 14,
+                      "fontWeight": "500",
+                      "color": "#374151"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.dCheck4Result }}",
+                    "style": {
+                      "fontSize": 13,
+                      "fontWeight": "600",
+                      "color": "{{ global.dCheck4ResultColor }}"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 14,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "text",
+                "value": "备注",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "600",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
               },
               {
                 "type": "text",
-                "value": "质检项",
+                "value": "{{ global.detailNotesLabel }}",
                 "style": {
-                  "fontSize": 15,
-                  "fontWeight": "bold",
-                  "color": "#111827"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 8
-              },
-              {
-                "type": "grid",
-                "source": "{{ global.checks }}",
-                "crossAxisCount": 1,
-                "childAspectRatio": 6.2,
-                "spacing": 8,
-                "shrinkWrap": true,
-                "item_template": {
-                  "type": "container",
-                  "layout": "row",
-                  "children": [
-                    {
-                      "type": "icon",
-                      "name": "check_circle",
-                      "size": 20,
-                      "color": "#0F766E"
-                    },
-                    {
-                      "type": "spacer",
-                      "width": 10
-                    },
-                    {
-                      "type": "text",
-                      "value": "{{ loop.item.label }}",
-                      "position": {
-                        "type": "flex",
-                        "flex": 1
-                      },
-                      "style": {
-                        "fontSize": 15,
-                        "fontWeight": "600",
-                        "color": "#111827"
-                      }
-                    },
-                    {
-                      "type": "checkbox",
-                      "bind": "loop.item.ok"
-                    }
-                  ],
-                  "padding": 10,
-                  "color": "#EEF7F4",
-                  "borderRadius": 14,
-                  "crossAxisAlignment": "center"
-                }
-              },
-              {
-                "type": "spacer",
-                "height": 12
-              },
-              {
-                "type": "button",
-                "label": "提交检测",
-                "variant": "filled",
-                "action": {
-                  "call": "@global.submit",
-                  "args": {}
-                },
-                "icon": "send",
-                "style": {
-                  "backgroundColor": "#0F766E",
-                  "textColor": "#FFFFFF",
-                  "borderRadius": 16
+                  "fontSize": 14,
+                  "color": "{{ global.detailNotesColor }}",
+                  "lineHeight": 1.5
                 }
               }
             ]
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "button",
+                "label": "返回列表",
+                "variant": "outline",
+                "action": {
+                  "call": "@navigate",
+                  "args": {
+                    "screen": "home"
+                  }
+                },
+                "icon": "back",
+                "style": {
+                  "textColor": "#2563EB",
+                  "borderColor": "#2563EB",
+                  "borderRadius": 14,
+                  "fontSize": 15,
+                  "paddingV": 12
+                }
+              }
+            ],
+            "padding": 12,
+            "margin": 0
           }
         ],
         "backgroundColor": "#F3F7F6",
         "appBar": {
-          "title": "现场检测",
+          "title": "巡检详情",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
           "elevation": 0,
-          "actions": [
-            {
-              "type": "button",
-              "label": "",
-              "variant": "text",
-              "action": {
-                "call": "@global.submit",
-                "args": {}
-              },
-              "icon": "send",
-              "style": {
-                "textColor": "#0F766E",
-                "fontSize": 18,
-                "paddingH": 10,
-                "paddingV": 8
+          "leading": {
+            "type": "button",
+            "label": "",
+            "variant": "text",
+            "icon": "back",
+            "action": {
+              "call": "@navigate",
+              "args": {
+                "screen": "home"
               }
+            },
+            "style": {
+              "textColor": "#111827",
+              "fontSize": 18,
+              "paddingH": 8,
+              "paddingV": 8
             }
-          ]
+          }
         }
       }
     ]
-  },
-  "appid": "3b713f9d-2b4e-4f21-a6e4-38a3422824ed"
+  }
 }
