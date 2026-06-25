@@ -1231,6 +1231,16 @@ class AiChatService {
           )
           .timeout(const Duration(seconds: 8));
       if (resp.statusCode != 200) return const ResumeNothing();
+      // ⚠️ 这次 /status 网络调用期间，用户可能已经切换/新建了会话。若 active 不再是
+      // 当初要恢复的那条，绝不能把它的结果带出去——否则上层会用「活的」_messages
+      // getter 把这条旧会话的内容写进当前会话桶（串桶 bug）。
+      if (_active?.id != active.id) {
+        debugPrint(
+          '[AI_CHAT] tryResumeUnfinished: active 在 await 间隙已切换 '
+          '(${active.id} → ${_active?.id})，放弃恢复',
+        );
+        return const ResumeNothing();
+      }
       final data = json.decode(resp.body) as Map<String, dynamic>;
       final status = data['status'] as String? ?? '';
       final procAlive = data['process_alive'] == true;

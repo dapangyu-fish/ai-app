@@ -792,7 +792,14 @@ class _DesignerBallState extends State<DesignerBall>
     _sessionReconcileInFlight = true;
     try {
       final statusData = await _chatService.probeActiveSessionStatus();
-      if (!mounted || !_chatMode || _streamSub != null) return;
+      // await 期间用户可能切换/新建会话；sid 已不是当初对账的那条就直接放弃，
+      // 否则后面的 resume/flush 会落到错误的会话桶。
+      if (!mounted ||
+          !_chatMode ||
+          _streamSub != null ||
+          _chatService.sessionId != sid) {
+        return;
+      }
       if (statusData == null) return;
 
       final status = statusData['status'] as String? ?? '';
@@ -1947,6 +1954,9 @@ class _DesignerBallState extends State<DesignerBall>
   }) async {
     if (!mounted) return;
     if (_resumeInFlight) return;
+    // 捕获「要恢复的会话」。下面 tryResumeUnfinished 有网络 await，期间用户可能
+    // 切换/新建会话；恢复结果只能应用回这同一条会话，否则会串进别的会话桶。
+    final resumingSid = _chatService.sessionId;
     if (_streamSub != null) {
       if (!forceDetachLocalStream) return;
       _detachAiStreamForLifecycle(
@@ -1959,7 +1969,10 @@ class _DesignerBallState extends State<DesignerBall>
       final result = await _chatService.tryResumeUnfinished(
         forceDetachLocalClient: forceDetachLocalStream,
       );
-      if (!mounted) return;
+      // ⚠️ await 回来后 active 若已变（用户新开/切换了会话），丢弃结果——
+      // 这些 _ensureUserMessage/_upsertAssistantMessage 都走「活的」_messages
+      // getter，会写进当前会话桶，应用旧会话结果就是「消息跑到别的会话」的根因。
+      if (!mounted || _chatService.sessionId != resumingSid) return;
       switch (result) {
         case ResumeNothing():
           setState(() {
