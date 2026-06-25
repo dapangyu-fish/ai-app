@@ -128,7 +128,7 @@
       "focusMinutesDraft": 25,
       "breakMinutesDraft": 5,
       "primaryButtonLabel": "开始",
-      "primaryButtonIcon": "play",
+      "primaryButtonIcon": "play_arrow",
       "primaryButtonAction": {
         "call": "@global.start_timer",
         "args": {}
@@ -374,7 +374,7 @@
                     "var": "global.isRunning"
                   },
                   "pause",
-                  "play"
+                  "play_arrow"
                 ]
               }
             }
