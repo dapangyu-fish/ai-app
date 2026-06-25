@@ -19,6 +19,8 @@
 
 模板只用于学习字段和 action 调用，不要复制 demo 的关卡、坐标、素材路径或数值。
 
+**三消 / 宝石消消乐 / 糖果消除类**：必读 `docs/playbooks/match3-game.md`（交换→检测三连→消除→下落补位→连锁→计分的完整闭环，避免「静态网格点了没反应」），参考实现 `templates/match3-pixel.json`。
+
 ## 必须用生成器
 
 游戏通常必须写 `$AI_APP_WORKSPACE/generate_app.py`。优先使用：

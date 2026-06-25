@@ -55,7 +55,7 @@ DEMO_SESSIONS = {
 }
 
 # 每条事件之间的 sleep，制造「很快的真实生成」体感；可用环境变量调
-_REPLAY_SLEEP = float(os.environ.get("AI_DEMO_REPLAY_SLEEP", "0.05"))
+_REPLAY_SLEEP = float(os.environ.get("AI_DEMO_REPLAY_SLEEP", "0.15"))
 
 DEMO_PROVIDER = "demo"
 
