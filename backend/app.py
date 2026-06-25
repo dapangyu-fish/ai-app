@@ -15,7 +15,8 @@ eventlet.monkey_patch()
 
 import logging
 import secrets
-from flask import Flask
+import os
+from flask import Flask, request
 from flask_socketio import SocketIO
 from config import PORT, FLASK_SECRET_KEY
 import auth
@@ -54,6 +55,29 @@ def create_app():
     # async_mode='eventlet' 配合上面 monkey_patch + gunicorn eventlet worker，是 Flask-SocketIO
     # 官方推荐的生产组合（裸 WebSocket 客户端 → 必须协程 worker，gthread 撑不起）
     socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+
+    # ── CORS（Web 端跨域）──────────────────────────────────────────
+    # Web 客户端从自己的源请求后端，浏览器强制 CORS。后端（REST）此前没补 CORS 头，
+    # 导致 Flutter Web 切到本后端时预检/请求被浏览器拦下（移动端不受影响）。
+    # 给所有响应（含 Flask 自动处理的 OPTIONS 预检）补 Access-Control-* 头。
+    # CORS_ALLOWED_ORIGINS：逗号分隔的源白名单；为空或含 "*" → 反射任意 Origin（pre-de/demo 用）。
+    _cors_allow = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "*").split(",") if o.strip()]
+
+    @app.after_request
+    def _add_cors_headers(resp):
+        origin = request.headers.get("Origin")
+        if origin and ("*" in _cors_allow or origin in _cors_allow):
+            # 反射具体 Origin（而非 "*"），这样 Allow-Credentials 才生效、且支持带 token 的请求
+            resp.headers["Access-Control-Allow-Origin"] = origin
+            resp.headers.setdefault("Vary", "Origin")
+            resp.headers["Access-Control-Allow-Credentials"] = "true"
+            resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+            resp.headers["Access-Control-Allow-Headers"] = (
+                request.headers.get("Access-Control-Request-Headers")
+                or "Content-Type, Authorization, X-Requested-With"
+            )
+            resp.headers["Access-Control-Max-Age"] = "86400"
+        return resp
 
     # 注册 Auth 路由
     app.add_url_rule("/api/auth/register", methods=["POST"], view_func=auth.register)
