@@ -163,7 +163,14 @@ class AuthService {
           headers: {'Content-Type': 'application/json'},
         )
         .timeout(const Duration(seconds: 15));
-    final data = json.decode(resp.body);
+    // 后端没有 /api/auth/demo（如旧版后端）会返回 HTML 404，json.decode 会抛
+    // FormatException；这里统一转成可读提示，避免把 “<!doctype ...” 直接抛给用户。
+    Map<String, dynamic> data;
+    try {
+      data = json.decode(resp.body) as Map<String, dynamic>;
+    } on FormatException {
+      throw Exception('当前后端不支持 Demo 模式（HTTP ${resp.statusCode}）；请切换到已部署 Demo 的环境');
+    }
     if (resp.statusCode >= 400 || data['access_token'] == null) {
       throw Exception(data['error'] ?? 'demo 模式暂不可用');
     }
