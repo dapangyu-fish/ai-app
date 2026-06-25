@@ -63,6 +63,15 @@ def create_app():
     # CORS_ALLOWED_ORIGINS：逗号分隔的源白名单；为空或含 "*" → 反射任意 Origin（pre-de/demo 用）。
     _cors_allow = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "*").split(",") if o.strip()]
 
+    @app.before_request
+    def _cors_preflight():
+        # 跨域预检（带 Origin 的 OPTIONS）一律直接 204 放行，CORS 头由 after_request 补。
+        # 否则像 /api/faas/invoke/<svc>/<route> 这种只声明了 POST 的代理路由，预检会被当成
+        # 「未声明方法」返回 405 → 浏览器判定预检失败 → 报 CORS。这里在路由/鉴权之前短路掉。
+        if request.method == "OPTIONS" and request.headers.get("Origin"):
+            return ("", 204)
+        return None
+
     @app.after_request
     def _add_cors_headers(resp):
         origin = request.headers.get("Origin")
