@@ -241,6 +241,20 @@ def _rewrite_actions_url(actions, fresh: str):
     return out
 
 
+def _wake_sse(store, session_id: str):
+    """唤醒可能阻塞在 xread 上的 SSE 连接。
+
+    set_status 只更新 meta（HSET），不往 stream 写事件；而 SSE handler 此刻多半正阻塞在
+    `xread BLOCK` 上等新事件——状态变更不会让它返回（实测 eventlet 下 block 超时也迟迟不触发，
+    回放线程结束后那条连接会一直挂到客户端 20s idle 超时才重连）。这里补一条轻量 stream 事件，
+    让阻塞的 xread 立刻醒来；它下一轮即读到 terminal 状态并发 `[DONE]`，秒出「下载并运行」按钮。
+    必须在 set_status(terminal) 之后调用（Redis 单线程保证 HSET 先于 XADD 可见）。"""
+    try:
+        store.append_event(session_id, {"status": ai_session.STATUS_DONE})
+    except Exception:
+        logger.warning("[DEMO] wake-sse append failed sid=%s", session_id)
+
+
 def _replay_worker(session_id: str, base: str):
     store = ai_session.SessionStore()
     jsonl = _path(base, "jsonl")
@@ -263,10 +277,12 @@ def _replay_worker(session_id: str, base: str):
         logger.error("[DEMO] replay file missing: %s", jsonl)
         store.append_event(session_id, {"status": "error", "message": "demo replay 暂不可用"})
         store.set_status(session_id, ai_session.STATUS_FAILED, error="demo replay not available")
+        _wake_sse(store, session_id)
         return
     except Exception as e:
         logger.exception("[DEMO] replay failed sid=%s: %s", session_id, e)
         store.set_status(session_id, ai_session.STATUS_FAILED, error=str(e))
+        _wake_sse(store, session_id)
         return
 
     actions = _rewrite_actions_url(final.get("client_actions") or [], fresh)
@@ -277,4 +293,5 @@ def _replay_worker(session_id: str, base: str):
         final_thinking=final.get("final_thinking"),
         client_actions=actions,
     )
+    _wake_sse(store, session_id)
     logger.info("[DEMO] replay done sid=%s base=%s events_final=%s", session_id, base, bool(final))
