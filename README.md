@@ -68,7 +68,7 @@ Most JSON-DSL apps work across all platforms. Platform-specific features gracefu
 
 - **Full-stack in one shot — the differentiator.** Most AI app builders (v0, Lovable, Bolt, …) generate *front-end* code that you still have to wire to a backend and deploy yourself. MyApp generates the front-end **and** a real Python/Flask FaaS backend — each with its own isolated Postgres database, per-app permission model, and per-caller data isolation — then runs the whole thing instantly. No separate backend project, no deploy step, no store submission.
 - **Server-driven** — ship UI and behavior data through a fixed, precompiled runtime boundary. See [App Store compliance notes](docs/APP_STORE_COMPLIANCE.md).
-- **AI-native** — the DSL is designed to be LLM-friendly. The included AI chat (Claude / DeepSeek / MiniMax) generates apps that actually render.
+- **AI-native** — the DSL is designed to be LLM-friendly. The included AI chat runs multiple providers (DeepSeek, MiniMax, Volcengine aggregator with GLM / Kimi) through three pluggable agent runtimes (Claude Code, Codex, OpenCode), and generates apps that actually render — with generation playbooks and an in-run visual self-review pass to keep output runnable.
 - **Batteries included** — IM with push, AI proxy, package registry, namespaces, mirroring, user center, environment switching — all wired together. Not "yet another low-code framework that punts on auth".
 - **Self-hostable** — `myapp-ctl deploy` manages the backend stack, agent runtime, registry, config center, and service secrets from one host-level CLI.
 - **Cross-platform** — same JSON-DSL renders on iOS, Android, Web (production-tested), macOS (experimentally tested), Linux, Windows. Core features work across all platforms; platform-specific features (IM, push) gracefully degrade on unsupported platforms.
@@ -87,6 +87,8 @@ If you only want to try MyApp and run AI-generated JSON Apps:
    <https://myapp-oss-endpoint.dapangyu.work/myapp-releases/android/apk/latest.apk>
 4. Continue as guest to browse/run public apps, or sign in to generate apps,
    use IM/profile features, publish packages, and manage private Agent Nodes.
+5. No account? Tap the floating ball → **Demo** to watch AI build an app
+   end-to-end and run the real result, without signing in.
 
 The full product usage guide is [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
 
@@ -199,6 +201,9 @@ flowchart TB
   Backend --> Redis["Redis<br/>queue + stream + session meta"]
   Redis --> Worker["ai-worker"]
 
+  Backend -.->|special demo UUID, no login| DemoReplay["demo_replay<br/>SSE-replays a recorded session<br/>→ real runnable app, no agent-node"]
+  DemoReplay -.-> AIChat
+
   Worker -->|default compose| AgentPull["agent-pull"]
   Worker -->|configurable| AgentNodeDirect["agent-node direct"]
   Worker -->|configurable| LocalCLI["local CLI"]
@@ -206,7 +211,7 @@ flowchart TB
   AgentPull --> AgentNode["agent-node service"]
   AgentNode --> Docker["Docker runtime container"]
   Docker --> Runner["agent_runner.py"]
-  Runner --> CLI["Claude Code / Codex CLI"]
+  Runner --> CLI["Claude Code / Codex / OpenCode CLI"]
   CLI --> Actions["client_actions.json / app.json"]
   Actions --> Validate["repair_json_app.py + validate_json_app.py"]
   Validate --> TempMinIO["MinIO ai-chat-temp URL"]
@@ -245,7 +250,7 @@ flowchart TB
 | AI Worker Pool | `backend/ai_worker_daemon.py`, `backend/ai_session.py`, `backend/agent_node_service.py`, `deploy/production/agent_runner.py` | Moves accepted jobs through Redis, defaults to pull-mode agent-node execution, and can also run direct agent-node or local CLI paths depending on `AI_WORKER_EXECUTION_BACKEND` |
 | FaaS Backends | `backend/faas.py`, `backend/faas_store.py`, `backend/faas_push_worker.py`, `backend/faas_runtime_server.py` | AI-generated Python/Flask backends: strict bundle validation, isolated git push worker → `myapp-faas-services` (GitHub source of truth), self-managed Docker runtime (one container per service, control-plane-owned deploy/route/cold-wake/scale-to-zero — see `docs/faas-docker-runtime.md`), route-enforced `/api/faas/invoke` proxy, per-user quota + create-vs-append |
 | Registry | `backend/registry_server.py` | Package registry for JSON-APPs/components: `_index.json` + MinIO package files are the runtime resolve source; Postgres `registry_packages` is the market/detail/enrichment/social index |
-| Object Storage | MinIO / OSS | Public JSON packages under `json-component`, app media, asset packs under `json-app-assets`, and temporary AI-generated JSON URLs |
+| Object Storage | MinIO / OSS | Public JSON packages under `json-component`, app media, asset packs under `json-app-assets`, temporary AI-generated JSON URLs, and a public `demo` bucket of fixed zero-login demo apps |
 | OpenIM | `backend/openim/` | IM backend bridge. Native clients use OpenIM Flutter/native SDK; Web uses the WASM SDK bridge |
 | Supabase | `deploy/production/supabase/` | Self-hosted auth, database, and storage-compatible services configured through host-local secrets |
 | Config Center | `config_center/` | Remote config flags and environment-specific client configuration |
@@ -256,7 +261,7 @@ flowchart TB
 
 Core flows:
 
-1. **AI app generation**: client sends a chat task -> Backend writes queue/meta to Redis -> the current production default puts the job on the agent-pull path -> an agent-node starts an isolated runtime container -> `agent_runner.py` runs the configured Claude/Codex agent -> agent-node streams events/artifacts back -> backend validates/repairs/uploads generated JSON -> client receives a structured `json_app_ready` event through resumable SSE.
+1. **AI app generation**: client sends a chat task -> Backend writes queue/meta to Redis -> the current production default puts the job on the agent-pull path -> an agent-node starts an isolated runtime container -> `agent_runner.py` runs the configured agent (Claude Code / Codex / OpenCode) -> agent-node streams events/artifacts back -> backend validates/repairs/uploads generated JSON -> client receives a structured `json_app_ready` event through resumable SSE.
 2. **Package install**: client queries Registry with pagination/search or `/resolve(_appid)` -> Registry resolves through `_index.json` and MinIO package files -> client downloads JSON -> dependency loader resolves libraries and caches them locally. Market details, summaries, likes, and installs come from the Postgres `registry_packages` side index.
 3. **IM**: mobile uses the native OpenIM SDK path; Web uses `openim/wasm-client-sdk` through `web_openim_bridge`, with framework-level compatibility so JSON IM apps call one API shape.
 4. **Self-host backend**: `myapp-ctl secret` manages host-local credentials; `myapp-ctl deploy --pull` or `myapp-ctl deploy --build` starts the backend stack and agent runtime.
@@ -312,7 +317,8 @@ Drop this through the AI generation flow, or `flutter run` and pick the JSON fil
 ### Backend
 - **AI-generated FaaS full-stack** — AI emits a validated Python/Flask backend per "service group" (1 function service + optional Postgres DB), deployed to a self-managed Docker FaaS runtime (one container per service, scale-to-zero + cold-wake). Per-app schema isolation, unforgeable in-group pseudonymous identity, backend-mediated per-caller data access (function code never holds a DB connection), container hardening, and a revocable 3-tier access policy.
 - Supabase auth integration
-- AI chat with provider-scoped queues and isolated agent execution (Claude-compatible providers / DeepSeek / MiniMax)
+- AI chat with provider-scoped queues and isolated agent execution — providers (DeepSeek, MiniMax, Volcengine aggregator: GLM / Kimi) × three agent runtimes (Claude Code, Codex, OpenCode), plus generation playbooks and an in-run visual self-review pass
+- **Zero-login demo mode** — unauthenticated users tap the floating ball → Demo, fire a real-looking AI generation that SSE-replays a recorded session, and get an actually-runnable app (no agent-node, no FaaS creation) — instant taste of the full flow
 - Channel-agnostic push (APNs + FCM, easy to add more)
 - Package registry with namespaces + semver + dependency resolution
 - **Cross-instance mirror** — self-hosted instance can mirror packages from upstream (lazy file proxy + 10-minute index sync)
@@ -332,8 +338,8 @@ Drop this through the AI generation flow, or `flutter run` and pick the JSON fil
 
 | Area | State |
 |---|---|
-| Engine (Dart) | Production. 34k LOC. Powering a real app. |
-| Backend (Python) | Production. 7k LOC. Running real users. |
+| Engine (Dart) | Production. 65k LOC. Powering a real app. Client UI localized to 11 languages. |
+| Backend (Python) | Production. 32k LOC. Running real users. |
 | Tests | Widget smoke test plus JSON regression suite (`templates/regression-test.json`). PRs adding coverage very welcome. |
 | Docs | Mid (`JSON-DSL.md`, `deploy/production/README.md`, backend architecture notes). Improving. |
 | API stability | DSL v3.3 — minor breaking changes possible until v4. Backend HTTP API stable. |
@@ -389,8 +395,10 @@ licensed by their authors unless they explicitly say otherwise.
 - [ ] App share-link with QR (open AI-generated app via deep link)
 - [ ] Add CI (GitHub Actions: pub get, analyze, build APK)
 - [ ] More example JSON-APPs (todo, notes, fitness tracker)
-- [ ] Prompt system v2: split the long app-generation prompt into core rules + task cards, and move JSON validation into tooling
-- [ ] More agent runtime adapters beyond the current Claude/Codex execution paths
+- [x] Prompt system v2: the long generation prompt is split into an `index.md` router + per-task cards (`backend/prompts/generation/`) with layered pipelines, plus generation playbooks (`docs/playbooks/`); JSON validation/repair lives in `validate_json_app.py` / `repair_json_app.py` tooling
+- [x] Multi-agent + multi-provider generation: Claude Code / Codex / OpenCode agent runtimes × DeepSeek / MiniMax / Volcengine-aggregator (GLM, Kimi) providers, selectable per session
+- [x] Zero-login demo mode: SSE-replay of recorded generations so unauthenticated users get a real runnable app instantly (no agent-node / FaaS)
+- [ ] Add more agent runtimes / provider aggregators beyond the current three-agent set
 - [ ] Audio support for JSON-APPs (recording, playback, upload, and reusable audio UI/actions)
 - [x] FaaS support: AI conversations create Python/Flask backend functions, served by the self-managed Docker FaaS runtime (one container per service, control-plane-owned deploy/route/cold-wake/scale-to-zero) with strict bundle validation, GitHub source-of-truth (`myapp-faas-services`), an isolated git push worker, per-user quota + create-vs-append, and a route-enforced invoke proxy
 - [ ] FaaS scale-out: multi-node Docker FaaS + backend secondary routing (horizontal scale) and user-private faas nodes (reusing the agent-node registry pattern)
