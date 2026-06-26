@@ -429,9 +429,12 @@ class _DesignerBallState extends State<DesignerBall>
   int _typeShown = 0;
   bool _typeIsThinking = false;
   int _typeScrollTick = 0;
+  // 打字机归属的会话：与流同理，active 切走后不能再把这条流的文字写进别的会话桶。
+  String _typeOwnerSid = '';
 
   // 设置打字机目标（目标只增不减，_typeShown 持续往后吐）
   void _setTypewriterTarget(String full) {
+    _typeOwnerSid = _chatService.sessionId; // 调用点已过 isCurrentStream，等于流归属 sid
     _typeFull = full;
     if (_typeShown > _typeFull.length) _typeShown = _typeFull.length;
     if (_typeShown < _typeFull.length) _ensureTypeTimer();
@@ -446,6 +449,13 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _tickTypewriter() {
     if (!mounted || _typeTimer == null) return;
+    // 归属会话已不是当前 active（用户切走 / loadSession 改了 active）→ 停表，
+    // 不把这条流的文字写进别的会话桶。该会话内容靠切回时的 resume 复原。
+    if (_chatService.sessionId != _typeOwnerSid) {
+      _typeTimer?.cancel();
+      _typeTimer = null;
+      return;
+    }
     if (_typeShown >= _typeFull.length) {
       // 追平 → 停掉省电，下个目标到来再起
       _typeTimer?.cancel();
@@ -513,6 +523,7 @@ class _DesignerBallState extends State<DesignerBall>
     }
     _messages.add(ChatMessage(role: 'assistant', content: ''));
     _typeIsThinking = false;
+    _typeOwnerSid = _chatService.sessionId;
     _typeFull = content;
     _typeShown = 0;
     _ensureTypeTimer();
@@ -593,7 +604,9 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _schedulePersistActiveMessages() {
     final sid = _chatService.sessionId;
-    if (sid.isEmpty || !_isCommittedSession(sid)) return;
+    // 放宽落盘门禁：committed 或「桶非空」即可存。否则"发出后立刻切走"窗口里、尚未
+    // committed 的新会话桶一个字节都落不了盘，切回就全空（BUG2）。
+    if (sid.isEmpty || (!_isCommittedSession(sid) && _messages.isEmpty)) return;
     final snapshot = List<ChatMessage>.from(_messages);
     _messagePersistTimer?.cancel();
     _messagePersistTimer = Timer(const Duration(milliseconds: 350), () {
@@ -605,7 +618,7 @@ class _DesignerBallState extends State<DesignerBall>
     _messagePersistTimer?.cancel();
     _messagePersistTimer = null;
     final sid = _chatService.sessionId;
-    if (sid.isEmpty || !_isCommittedSession(sid)) return;
+    if (sid.isEmpty || (!_isCommittedSession(sid) && _messages.isEmpty)) return;
     await _persistMessagesForSession(sid, List<ChatMessage>.from(_messages));
   }
 
@@ -613,7 +626,7 @@ class _DesignerBallState extends State<DesignerBall>
     String sid,
     List<ChatMessage> messages,
   ) async {
-    if (sid.isEmpty || !_isCommittedSession(sid)) return;
+    if (sid.isEmpty || (!_isCommittedSession(sid) && messages.isEmpty)) return;
     final prefs = await SharedPreferences.getInstance();
     if (messages.isEmpty) {
       await prefs.remove(_messageBucketKey(sid));
@@ -1694,7 +1707,22 @@ class _DesignerBallState extends State<DesignerBall>
   void _attachAiStream(Stream<ChatEvent> stream) {
     _startSessionReconcileTimer();
     final streamEpoch = ++_streamEpoch;
-    bool isCurrentStream() => mounted && streamEpoch == _streamEpoch;
+    // 绑定这条流归属的会话。active 一旦在流存活期内被切走——用户新建/切换会话，或
+    // _onAuthChanged → loadSession 改了 _activeSessionId 却没 ++epoch——这条流的迟到
+    // 事件必须丢弃，绝不能写进当前 active 桶（BUG1 串桶根因：epoch 守卫挡不住"active
+    // 变了但 epoch 没变"）。
+    final streamSid = _chatService.sessionId;
+    bool isCurrentStream() {
+      if (!mounted || streamEpoch != _streamEpoch) return false;
+      if (_chatService.sessionId != streamSid) {
+        debugPrint(
+          '[DesignerBall] stream-sid-mismatch drop streamSid=$streamSid '
+          'active=${_chatService.sessionId}',
+        );
+        return false;
+      }
+      return true;
+    }
     // 用于累积流式事件中的指令，[DONE] 时统一处理
     Map<String, dynamic>? pendingJsonApp;
     String? pendingRequestAction;
@@ -2062,12 +2090,15 @@ class _DesignerBallState extends State<DesignerBall>
   void _upsertAssistantMessage(String content) {
     final displayContent = AiChatService.cleanAssistantDisplayText(content);
     if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+      // 别用更短的 final_text 覆盖本地已流式累积的更完整内容（"只剩用户+JSON"根因）
+      if (_messages.last.content.length > displayContent.length) return;
       _messages.last = ChatMessage(role: 'assistant', content: displayContent);
       return;
     }
     for (var i = _messages.length - 1; i >= 0; i--) {
       if (_messages[i].role == 'user') break;
       if (_messages[i].role == 'assistant') {
+        if (_messages[i].content.length > displayContent.length) return;
         _messages[i] = ChatMessage(role: 'assistant', content: displayContent);
         return;
       }
@@ -2492,7 +2523,22 @@ class _DesignerBallState extends State<DesignerBall>
     // 直接发送给 AI
     _cancelCurrentStream();
     final streamEpoch = ++_streamEpoch;
-    bool isCurrentStream() => mounted && streamEpoch == _streamEpoch;
+    // 绑定这条流归属的会话。active 一旦在流存活期内被切走——用户新建/切换会话，或
+    // _onAuthChanged → loadSession 改了 _activeSessionId 却没 ++epoch——这条流的迟到
+    // 事件必须丢弃，绝不能写进当前 active 桶（BUG1 串桶根因：epoch 守卫挡不住"active
+    // 变了但 epoch 没变"）。
+    final streamSid = _chatService.sessionId;
+    bool isCurrentStream() {
+      if (!mounted || streamEpoch != _streamEpoch) return false;
+      if (_chatService.sessionId != streamSid) {
+        debugPrint(
+          '[DesignerBall] stream-sid-mismatch drop streamSid=$streamSid '
+          'active=${_chatService.sessionId}',
+        );
+        return false;
+      }
+      return true;
+    }
     _streamSub = _chatService
         .sendStream(crashReport, contextMessages: _aiConversationPayload())
         .listen(
