@@ -275,6 +275,12 @@ class IMService {
       await _callAsync('addFriend', {'toUserID': userID, 'reqMsg': reqMsg});
       return true;
     } catch (e) {
+      if (_isAlreadyFriendsError(e)) {
+        debugPrint(
+          '[IM_WEB] friend relation already exists, treat as ok: $userID',
+        );
+        return true;
+      }
       debugPrint('[IM_WEB] addFriend failed: $e');
       return false;
     }
@@ -330,7 +336,49 @@ class IMService {
     final ids = userIDList.where((id) => id.isNotEmpty).toSet().toList();
     if (ids.isEmpty) return const {};
     final result = <String, Map<String, dynamic>>{};
-    for (final id in ids) {
+    try {
+      final token = AuthService.token;
+      final uri = Uri.parse(
+        '$_backendUrl/api/im/users/profiles',
+      ).replace(queryParameters: {'ids': ids.join(',')});
+      final resp = await http
+          .get(
+            uri,
+            headers: token == null ? null : {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        for (final raw in List<Map<String, dynamic>>.from(
+          data['users'] ?? const [],
+        )) {
+          final id = raw['im_user_id']?.toString() ?? '';
+          if (id.isEmpty) continue;
+          final face =
+              raw['face_url']?.toString() ??
+              raw['avatar_url']?.toString() ??
+              '';
+          result[id] = {
+            'im_user_id': id,
+            'nickname': raw['nickname']?.toString() ?? '',
+            'email': raw['email']?.toString() ?? '',
+            'face_url': face,
+            'avatar_url': face,
+          };
+        }
+      } else {
+        debugPrint(
+          '[IM_WEB] profiles lookup failed ${resp.statusCode}: ${resp.body}',
+        );
+      }
+    } catch (e) {
+      debugPrint('[IM_WEB] profiles lookup exception: $e');
+    }
+
+    final missingIds = ids.where((id) => !result.containsKey(id)).toList();
+    if (missingIds.isEmpty) return result;
+
+    for (final id in missingIds) {
       try {
         final hits = await searchUsers(id);
         for (final user in hits) {
@@ -357,7 +405,9 @@ class IMService {
   Future<List<Map<String, dynamic>>> getFriendListAsMaps() async {
     await login();
     final list = _asList(await _callAsync('getFriendList'));
-    return list.map((item) => _friendInfoToMap(_asMap(item))).toList();
+    final local = list.map((item) => _friendInfoToMap(_asMap(item))).toList();
+    final server = await _fetchServerFriendListAsMaps();
+    return _mergeFriendMaps(local, server);
   }
 
   Future<List<Map<String, dynamic>>>
@@ -415,6 +465,78 @@ class IMService {
     return _messageToMap(_asMap(sent));
   }
 
+  Future<Map<String, dynamic>?> sendImageByUrlAsMap({
+    required String conversationID,
+    required String url,
+    required String sourcePath,
+    required String uuid,
+    required int width,
+    required int height,
+    required int size,
+    String? thumbUrl,
+    required String userID,
+    String? groupID,
+    int conversationType = 1,
+  }) async {
+    await login();
+    final sent = await _callAsync('sendImageByUrl', {
+      'conversationID': conversationID,
+      'conversationType': conversationType,
+      'userID': userID,
+      'groupID': groupID ?? '',
+      'url': url,
+      'thumbUrl': thumbUrl ?? url,
+      'sourcePath': sourcePath,
+      'uuid': uuid,
+      'width': width,
+      'height': height,
+      'size': size,
+      'title': T.current.imPushNewMessage,
+    });
+    return _messageToMap(_asMap(sent));
+  }
+
+  Future<Map<String, dynamic>?> sendVideoByUrlAsMap({
+    required String conversationID,
+    required String videoUrl,
+    required String videoSourcePath,
+    required String videoUuid,
+    required String videoType,
+    required int videoSize,
+    required int duration,
+    String snapshotUrl = '',
+    String snapshotSourcePath = '',
+    String snapshotUuid = '',
+    int snapshotSize = 0,
+    int snapshotWidth = 0,
+    int snapshotHeight = 0,
+    required String userID,
+    String? groupID,
+    int conversationType = 1,
+  }) async {
+    await login();
+    final sent = await _callAsync('sendVideoByUrl', {
+      'conversationID': conversationID,
+      'conversationType': conversationType,
+      'userID': userID,
+      'groupID': groupID ?? '',
+      'videoUrl': videoUrl,
+      'videoSourcePath': videoSourcePath,
+      'videoUuid': videoUuid,
+      'videoType': videoType,
+      'videoSize': videoSize,
+      'duration': duration,
+      'snapshotUrl': snapshotUrl,
+      'snapshotSourcePath': snapshotSourcePath,
+      'snapshotUuid': snapshotUuid,
+      'snapshotSize': snapshotSize,
+      'snapshotWidth': snapshotWidth,
+      'snapshotHeight': snapshotHeight,
+      'title': T.current.imPushNewMessage,
+    });
+    return _messageToMap(_asMap(sent));
+  }
+
   Future<Object?> _callAsync(String method, [Object? arg]) async {
     return _bridge.callAsync(method, arg);
   }
@@ -449,6 +571,102 @@ class IMService {
     'face_url': f['faceURL']?.toString() ?? '',
     'remark': f['remark']?.toString() ?? '',
   };
+
+  Future<List<Map<String, dynamic>>> _fetchServerFriendListAsMaps() async {
+    try {
+      final token = AuthService.token;
+      if (token == null || token.isEmpty) return const [];
+      final resp = await http
+          .get(
+            Uri.parse('$_backendUrl/api/im/friends'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) {
+        debugPrint(
+          '[IM_WEB] server friend list failed ${resp.statusCode}: ${resp.body}',
+        );
+        return const [];
+      }
+
+      final data = json.decode(resp.body);
+      if (data is! Map<String, dynamic>) return const [];
+      final rawFriends = data['friends'];
+      if (rawFriends is! List) return const [];
+
+      final friends = <Map<String, dynamic>>[];
+      for (final raw in rawFriends) {
+        if (raw is! Map) continue;
+        final map = _asMap(raw);
+        final id =
+            map['user_id']?.toString() ?? map['im_user_id']?.toString() ?? '';
+        if (id.isEmpty) continue;
+        final face =
+            map['face_url']?.toString() ?? map['avatar_url']?.toString() ?? '';
+        friends.add({
+          'user_id': id,
+          'nickname': map['nickname']?.toString() ?? '',
+          'face_url': face,
+          'avatar_url': face,
+          'remark': map['remark']?.toString() ?? '',
+          'email': map['email']?.toString() ?? '',
+          'source': map['source']?.toString() ?? 'server',
+        });
+      }
+      return friends;
+    } catch (e) {
+      debugPrint('[IM_WEB] server friend list exception: $e');
+      return const [];
+    }
+  }
+
+  List<Map<String, dynamic>> _mergeFriendMaps(
+    List<Map<String, dynamic>> local,
+    List<Map<String, dynamic>> server,
+  ) {
+    final byId = <String, Map<String, dynamic>>{};
+    for (final item in [...local, ...server]) {
+      final id = item['user_id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+      final prev = byId[id];
+      if (prev == null) {
+        byId[id] = Map<String, dynamic>.from(item);
+        continue;
+      }
+      final merged = Map<String, dynamic>.from(prev);
+      for (final entry in item.entries) {
+        final value = entry.value;
+        if (value != null && value.toString().isNotEmpty) {
+          merged[entry.key] = value;
+        }
+      }
+      byId[id] = merged;
+    }
+    final result = byId.values.toList();
+    result.sort((a, b) {
+      final an =
+          ((a['remark']?.toString().isNotEmpty == true)
+                  ? a['remark']
+                  : a['nickname'])
+              ?.toString()
+              .toLowerCase();
+      final bn =
+          ((b['remark']?.toString().isNotEmpty == true)
+                  ? b['remark']
+                  : b['nickname'])
+              ?.toString()
+              .toLowerCase();
+      return (an ?? '').compareTo(bn ?? '');
+    });
+    return result;
+  }
+
+  bool _isAlreadyFriendsError(Object e) {
+    final text = e.toString().toLowerCase();
+    return text.contains('1304') ||
+        text.contains('relationshipalreadyerror') ||
+        text.contains('already friends');
+  }
 
   Map<String, dynamic> _friendApplicationToMap(Map<String, dynamic> a) => {
     'from_user_id': a['fromUserID']?.toString() ?? '',

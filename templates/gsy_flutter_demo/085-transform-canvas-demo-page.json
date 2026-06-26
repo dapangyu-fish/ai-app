@@ -1,0 +1,243 @@
+{
+  "dsl": "3.3",
+  "appid": "126e3c9f-7214-554f-8611-1e0fd0b29e71",
+  "meta": {
+    "name": "gsy_flutter_demo/085-transform-canvas-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "展示 canvas transform",
+      "en": "Canvas transform demo"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：展示 canvas transform",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "展示 canvas transform",
+      "sourcePath": "lib/widget/canvas/transform_canvas_demo_page.dart",
+      "deferredAlias": "transform_canvas_demo_page",
+      "widgetClass": "TransformCanvasDemoPage",
+      "category": "canvas",
+      "routeIndex": 85,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-source-canvas-transform-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "展示 canvas transform",
+      "upstreamSource": "lib/widget/canvas/transform_canvas_demo_page.dart",
+      "upstreamWidget": "TransformCanvasDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-source-canvas-transform-v1",
+      "angle": 0
+    },
+    "functions": {
+      "tick": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.angle",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.angle"
+                      },
+                      18
+                    ]
+                  },
+                  360
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "TransformCanvasDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "animated_canvas",
+                "width": 200,
+                "height": 200,
+                "backgroundColor": "#FFFFFF",
+                "speed": 1,
+                "durationMs": 6000,
+                "layers": [
+                  {
+                    "kind": "segments",
+                    "count": 1,
+                    "x1": {
+                      "+": [
+                        0,
+                        {
+                          "*": [
+                            -30,
+                            {
+                              "cos": 0
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "y1": -100,
+                    "x2": {
+                      "+": [
+                        0,
+                        {
+                          "*": [
+                            30,
+                            {
+                              "cos": 0
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "y2": -100,
+                    "color": "#FF5252",
+                    "alpha": 1,
+                    "strokeWidth": 30,
+                    "strokeCap": "round"
+                  },
+                  {
+                    "kind": "segments",
+                    "count": 1,
+                    "x1": {
+                      "+": [
+                        0,
+                        {
+                          "*": [
+                            -30,
+                            {
+                              "cos": "t"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "y1": 0,
+                    "x2": {
+                      "+": [
+                        0,
+                        {
+                          "*": [
+                            30,
+                            {
+                              "cos": "t"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "y2": 0,
+                    "color": "#FF5252",
+                    "alpha": 1,
+                    "strokeWidth": 30,
+                    "strokeCap": "round"
+                  },
+                  {
+                    "kind": "segments",
+                    "count": 1,
+                    "x1": {
+                      "+": [
+                        100,
+                        {
+                          "*": [
+                            -30,
+                            {
+                              "cos": 0
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "y1": 0,
+                    "x2": {
+                      "+": [
+                        100,
+                        {
+                          "*": [
+                            30,
+                            {
+                              "cos": 0
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "y2": 0,
+                    "color": "#FF5252",
+                    "alpha": 1,
+                    "strokeWidth": 30,
+                    "strokeCap": "round"
+                  },
+                  {
+                    "kind": "segments",
+                    "count": 1,
+                    "x1": {
+                      "+": [
+                        200,
+                        {
+                          "*": [
+                            -30,
+                            {
+                              "cos": "t"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "y1": 0,
+                    "x2": {
+                      "+": [
+                        200,
+                        {
+                          "*": [
+                            30,
+                            {
+                              "cos": "t"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "y2": 0,
+                    "color": "#FF5252",
+                    "alpha": 1,
+                    "strokeWidth": 30,
+                    "strokeCap": "round"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "appBar": {
+          "title": "TransformCanvasDemoPage"
+        }
+      }
+    ]
+  }
+}

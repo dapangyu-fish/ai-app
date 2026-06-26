@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "node": {
+    "id": "myapp-local",
+    "role": "single-node-lab",
+    "public_ip": "127.0.0.1"
+  },
+  "paths": {
+    "root": "/opt/myapp",
+    "source": "/opt/myapp/current",
+    "data_root": "/mnt/myapp",
+    "data_root_prompted": false,
+    "state": "/mnt/myapp/state",
+    "logs": "/mnt/myapp/logs",
+    "secrets_dir": "/etc/myapp/secrets.d",
+    "runtime_secrets_dir": "/mnt/myapp/secrets.d",
+    "agent_log_dir": "/mnt/myapp/agent-node/logs",
+    "config_bundle": "/mnt/myapp/myapp-config.json"
+  },
+  "registries": {
+    "docker_hub": {
+      "namespace": "dapangyu"
+    }
+  },
+  "images": {
+    "backend": "dapangyu/myapp-backend:agent-control-plane",
+    "faas_runtime": "dapangyu/myapp-faas-runtime:agent-control-plane",
+    "agent_node": "dapangyu/myapp-agent-node:agent-control-plane",
+    "agent_runtime": "dapangyu/myapp-agent-runtime:agent-control-plane",
+    "backend_base": "dapangyu/myapp-backend-base:agent-control-plane",
+    "faas_runtime_base": "dapangyu/myapp-faas-runtime-base:agent-control-plane",
+    "agent_node_base": "dapangyu/myapp-agent-node-base:agent-control-plane",
+    "agent_runtime_base": "dapangyu/myapp-agent-runtime-base:agent-control-plane"
+  },
+  "domains": {
+    "backend": "http://127.0.0.1:5566",
+    "registry": "http://127.0.0.1:3254",
+    "oss": "http://127.0.0.1:9000",
+    "config_center": "http://127.0.0.1:5000",
+    "openfaas": "http://127.0.0.1:5566",
+    "agent_node": "http://agent-node:5590"
+  }
+}

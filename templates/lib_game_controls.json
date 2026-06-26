@@ -3,9 +3,9 @@
   "appid": "435a779c-0f12-4993-b19c-0991b681cc7a",
   "meta": {
     "name": "game-controls",
-    "version": "1.0.0",
+    "version": "1.0.8",
     "type": "library",
-    "description": "Reusable JSON game controls: default PS-style joystick gamepad and D-pad presets built on generic virtual_gamepad atoms.",
+    "description": "Reusable JSON game controls composed from generic atoms: analog_stick, gesture_detector, floating_layer, stack, and button.",
     "author": "fish",
     "exports": [
       "psJoystickGamepad",
@@ -14,8 +14,7 @@
     "modes": [
       "psJoystickGamepad",
       "dpadGamepad",
-      "reserved:floatingJoystick",
-      "reserved:screenOriginJoystick"
+      "floatingLayer"
     ]
   },
   "ui": {
@@ -25,215 +24,1339 @@
           "moveInput",
           "moveEndInput",
           "jumpInput",
+          "jumpEndInput",
           "attackInput",
           "height",
           "backgroundColor"
         ],
         "root": {
-          "type": "virtual_gamepad",
-          "mode": "joystick",
-          "actionLayout": "ps",
-          "height": "{{ props.height }}",
-          "backgroundColor": "{{ props.backgroundColor }}",
-          "joystickSize": 122,
-          "actionClusterSize": 132,
-          "gap": 16,
-          "joystick": {
-            "backgroundColor": "#174F5F",
-            "knobColor": "#EAF7FF",
-            "deadZone": 0.08,
-            "onChange": {
-              "type": "call",
-              "call": "@flame_game_input",
-              "args": {
-                "input": "{{ props.moveInput }}",
-                "data": {
-                  "x": "{{ event.x }}",
-                  "y": "{{ event.y }}",
-                  "strength": "{{ event.strength }}",
-                  "angle": "{{ event.angle }}",
-                  "direction": "{{ event.direction }}"
-                }
-              }
-            },
-            "onEnd": {
-              "type": "call",
-              "call": "@flame_game_input",
-              "args": {
-                "input": "{{ props.moveEndInput }}",
-                "data": {
-                  "x": 0,
-                  "y": 0,
-                  "strength": 0,
-                  "angle": 0,
-                  "direction": "center"
-                }
-              }
-            }
-          },
-          "actions": [
+          "type": "stack",
+          "fit": "loose",
+          "clipBehavior": "none",
+          "children": [
             {
-              "id": "jump",
-              "label": "",
-              "symbol": "triangle",
-              "backgroundColor": "#1E222A",
-              "onDown": {
-                "type": "call",
-                "call": "@flame_game_input",
-                "args": {
-                  "input": "{{ props.jumpInput }}"
+              "type": "floating_layer",
+              "storageKey": "game-controls.psJoystickGamepad",
+              "enabled": {
+                "==": [
+                  {
+                    "var": "global._gamepadStyle"
+                  },
+                  "floating"
+                ]
+              },
+              "editing": {
+                "var": "global._gamepadEditing"
+              },
+              "resetRevision": "{{ global._gamepadReset }}",
+              "topRight": {
+                "type": "container",
+                "width": 78,
+                "padding": 4,
+                "borderRadius": 14,
+                "color": "#11182799",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "button",
+                    "label": "Edit",
+                    "icon": "edit",
+                    "visible": {
+                      "!": {
+                        "var": "global._gamepadEditing"
+                      }
+                    },
+                    "style": {
+                      "fontSize": 11,
+                      "paddingH": 6,
+                      "paddingV": 4,
+                      "borderRadius": 12,
+                      "backgroundColor": "#1F2937",
+                      "textColor": "#FFFFFF"
+                    },
+                    "action": {
+                      "call": "@set",
+                      "args": {
+                        "var": "global._gamepadEditing",
+                        "value": true
+                      }
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "Lock",
+                    "icon": "lock",
+                    "visible": {
+                      "var": "global._gamepadEditing"
+                    },
+                    "style": {
+                      "fontSize": 11,
+                      "paddingH": 6,
+                      "paddingV": 4,
+                      "borderRadius": 12,
+                      "backgroundColor": "#1F2937",
+                      "textColor": "#FFFFFF"
+                    },
+                    "action": {
+                      "call": "@set",
+                      "args": {
+                        "var": "global._gamepadEditing",
+                        "value": false
+                      }
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "Reset",
+                    "icon": "restart",
+                    "visible": {
+                      "var": "global._gamepadEditing"
+                    },
+                    "style": {
+                      "fontSize": 11,
+                      "paddingH": 6,
+                      "paddingV": 4,
+                      "borderRadius": 12,
+                      "backgroundColor": "#1F2937",
+                      "textColor": "#FFFFFF"
+                    },
+                    "action": {
+                      "call": "@set",
+                      "args": {
+                        "var": "global._gamepadReset",
+                        "value": {
+                          "+": [
+                            {
+                              "var": "global._gamepadReset"
+                            },
+                            1
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "Dock",
+                    "icon": "collapse",
+                    "style": {
+                      "fontSize": 11,
+                      "paddingH": 6,
+                      "paddingV": 4,
+                      "borderRadius": 12,
+                      "backgroundColor": "#1F2937",
+                      "textColor": "#FFFFFF"
+                    },
+                    "action": {
+                      "call": "@parallel",
+                      "args": {
+                        "steps": [
+                          {
+                            "call": "@set",
+                            "args": {
+                              "var": "global._gamepadStyle",
+                              "value": "default"
+                            }
+                          },
+                          {
+                            "call": "@set",
+                            "args": {
+                              "var": "global._gamepadEditing",
+                              "value": false
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ]
+              },
+              "items": [
+                {
+                  "id": "stick",
+                  "center": [
+                    0.22,
+                    0.78
+                  ],
+                  "size": 118,
+                  "opacity": 0.72,
+                  "child": {
+                    "type": "analog_stick",
+                    "backgroundColor": "#174F5F",
+                    "knobColor": "#EAF7FF",
+                    "deadZone": 0.08,
+                    "onChange": {
+                      "call": "@flame_game_input",
+                      "args": {
+                        "input": "{{ props.moveInput }}",
+                        "data": {
+                          "x": "{{ event.x }}",
+                          "y": "{{ event.y }}",
+                          "strength": "{{ event.strength }}",
+                          "angle": "{{ event.angle }}",
+                          "direction": "{{ event.direction }}"
+                        }
+                      }
+                    },
+                    "onEnd": {
+                      "call": "@flame_game_input",
+                      "args": {
+                        "input": {
+                          "or": [
+                            {
+                              "var": "props.moveEndInput"
+                            },
+                            {
+                              "var": "props.moveInput"
+                            }
+                          ]
+                        },
+                        "data": {
+                          "x": 0,
+                          "y": 0,
+                          "strength": 0,
+                          "angle": 0,
+                          "direction": "center"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "action_triangle",
+                  "center": [
+                    0.78,
+                    0.68
+                  ],
+                  "size": 48,
+                  "opacity": 0.72,
+                  "child": {
+                    "type": "gesture_detector",
+                    "onTapDown": {
+                      "call": "@flame_game_input",
+                      "args": {
+                        "input": "{{ props.jumpInput }}"
+                      }
+                    },
+                    "child": {
+                      "type": "container",
+                      "width": 48,
+                      "height": 48,
+                      "borderRadius": 24.0,
+                      "color": "#1E222A",
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "△",
+                          "style": {
+                            "color": "#FFFFFF",
+                            "fontSize": 22,
+                            "fontWeight": "bold",
+                            "paddingV": 0,
+                            "paddingH": 0,
+                            "lineHeight": 1.0,
+                            "textAlign": "center"
+                          }
+                        }
+                      ]
+                    },
+                    "onTapUp": {
+                      "call": "@flame_game_input",
+                      "args": {
+                        "input": {
+                          "or": [
+                            {
+                              "var": "props.jumpEndInput"
+                            },
+                            "jump_end"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "id": "action_circle",
+                  "center": [
+                    0.88,
+                    0.78
+                  ],
+                  "size": 48,
+                  "opacity": 0.72,
+                  "child": {
+                    "type": "gesture_detector",
+                    "onTapDown": {
+                      "call": "@flame_game_input",
+                      "args": {
+                        "input": "{{ props.attackInput }}"
+                      }
+                    },
+                    "child": {
+                      "type": "container",
+                      "width": 48,
+                      "height": 48,
+                      "borderRadius": 24.0,
+                      "color": "#1E222A",
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "○",
+                          "style": {
+                            "color": "#FFFFFF",
+                            "fontSize": 24,
+                            "fontWeight": "bold",
+                            "paddingV": 0,
+                            "paddingH": 0,
+                            "lineHeight": 1.0,
+                            "textAlign": "center"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "id": "action_cross",
+                  "center": [
+                    0.78,
+                    0.88
+                  ],
+                  "size": 48,
+                  "opacity": 0.72,
+                  "child": {
+                    "type": "container",
+                    "width": 48,
+                    "height": 48,
+                    "borderRadius": 24.0,
+                    "color": "#1E222A",
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "×",
+                        "style": {
+                          "color": "#FFFFFF",
+                          "fontSize": 22,
+                          "fontWeight": "bold",
+                          "paddingV": 0,
+                          "paddingH": 0,
+                          "lineHeight": 1.0,
+                          "textAlign": "center"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "action_square",
+                  "center": [
+                    0.68,
+                    0.78
+                  ],
+                  "size": 48,
+                  "opacity": 0.72,
+                  "child": {
+                    "type": "container",
+                    "width": 48,
+                    "height": 48,
+                    "borderRadius": 24.0,
+                    "color": "#1E222A",
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "□",
+                        "style": {
+                          "color": "#FFFFFF",
+                          "fontSize": 22,
+                          "fontWeight": "bold",
+                          "paddingV": 0,
+                          "paddingH": 0,
+                          "lineHeight": 1.0,
+                          "textAlign": "center"
+                        }
+                      }
+                    ]
+                  }
                 }
-              }
+              ]
             },
             {
-              "id": "attack",
-              "label": "",
-              "symbol": "circle",
-              "backgroundColor": "#1E222A",
-              "onDown": {
-                "type": "call",
-                "call": "@flame_game_input",
-                "args": {
-                  "input": "{{ props.attackInput }}"
+              "type": "container",
+              "visible": {
+                "!=": [
+                  {
+                    "var": "global._gamepadStyle"
+                  },
+                  "floating"
+                ]
+              },
+              "height": "{{ props.height }}",
+              "color": "{{ props.backgroundColor }}",
+              "padding": 12,
+              "layout": "row",
+              "crossAxisAlignment": "center",
+              "children": [
+                {
+                  "type": "container",
+                  "width": 122,
+                  "height": 122,
+                  "layout": "stack",
+                  "children": [
+                    {
+                      "type": "container",
+                      "visible": {
+                        "!=": [
+                          {
+                            "var": "global._gamepadStyle"
+                          },
+                          "dpad"
+                        ]
+                      },
+                      "width": 122,
+                      "height": 122,
+                      "children": [
+                        {
+                          "type": "analog_stick",
+                          "backgroundColor": "#174F5F",
+                          "knobColor": "#EAF7FF",
+                          "deadZone": 0.08,
+                          "onChange": {
+                            "call": "@flame_game_input",
+                            "args": {
+                              "input": "{{ props.moveInput }}",
+                              "data": {
+                                "x": "{{ event.x }}",
+                                "y": "{{ event.y }}",
+                                "strength": "{{ event.strength }}",
+                                "angle": "{{ event.angle }}",
+                                "direction": "{{ event.direction }}"
+                              }
+                            }
+                          },
+                          "onEnd": {
+                            "call": "@flame_game_input",
+                            "args": {
+                              "input": {
+                                "or": [
+                                  {
+                                    "var": "props.moveEndInput"
+                                  },
+                                  {
+                                    "var": "props.moveInput"
+                                  }
+                                ]
+                              },
+                              "data": {
+                                "x": 0,
+                                "y": 0,
+                                "strength": 0,
+                                "angle": 0,
+                                "direction": "center"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "container",
+                      "visible": {
+                        "==": [
+                          {
+                            "var": "global._gamepadStyle"
+                          },
+                          "dpad"
+                        ]
+                      },
+                      "width": 122,
+                      "height": 122,
+                      "layout": "stack",
+                      "children": [
+                        {
+                          "type": "gesture_detector",
+                          "onTapDown": {
+                            "call": "@flame_game_input",
+                            "args": {
+                              "input": "{{ props.moveInput }}",
+                              "data": {
+                                "x": 0,
+                                "y": -1,
+                                "strength": 1,
+                                "angle": -1.5707963268,
+                                "direction": "up"
+                              }
+                            }
+                          },
+                          "onTapUp": {
+                            "call": "@flame_game_input",
+                            "args": {
+                              "input": {
+                                "or": [
+                                  {
+                                    "var": "props.moveEndInput"
+                                  },
+                                  {
+                                    "var": "props.moveInput"
+                                  }
+                                ]
+                              },
+                              "data": {
+                                "x": 0,
+                                "y": 0,
+                                "strength": 0,
+                                "angle": 0,
+                                "direction": "center"
+                              }
+                            }
+                          },
+                          "child": {
+                            "type": "container",
+                            "width": 40,
+                            "height": 40,
+                            "borderRadius": 20.0,
+                            "color": "#236B7A",
+                            "mainAxisAlignment": "center",
+                            "crossAxisAlignment": "center",
+                            "children": [
+                              {
+                                "type": "text",
+                                "value": "↑",
+                                "style": {
+                                  "color": "#FFFFFF",
+                                  "fontSize": 20,
+                                  "fontWeight": "bold"
+                                }
+                              }
+                            ]
+                          },
+                          "position": {
+                            "type": "absolute",
+                            "left": 41,
+                            "top": 0
+                          }
+                        },
+                        {
+                          "type": "gesture_detector",
+                          "onTapDown": {
+                            "call": "@flame_game_input",
+                            "args": {
+                              "input": "{{ props.moveInput }}",
+                              "data": {
+                                "x": -1,
+                                "y": 0,
+                                "strength": 1,
+                                "angle": 3.1415926536,
+                                "direction": "left"
+                              }
+                            }
+                          },
+                          "onTapUp": {
+                            "call": "@flame_game_input",
+                            "args": {
+                              "input": {
+                                "or": [
+                                  {
+                                    "var": "props.moveEndInput"
+                                  },
+                                  {
+                                    "var": "props.moveInput"
+                                  }
+                                ]
+                              },
+                              "data": {
+                                "x": 0,
+                                "y": 0,
+                                "strength": 0,
+                                "angle": 0,
+                                "direction": "center"
+                              }
+                            }
+                          },
+                          "child": {
+                            "type": "container",
+                            "width": 40,
+                            "height": 40,
+                            "borderRadius": 20.0,
+                            "color": "#236B7A",
+                            "mainAxisAlignment": "center",
+                            "crossAxisAlignment": "center",
+                            "children": [
+                              {
+                                "type": "text",
+                                "value": "←",
+                                "style": {
+                                  "color": "#FFFFFF",
+                                  "fontSize": 20,
+                                  "fontWeight": "bold"
+                                }
+                              }
+                            ]
+                          },
+                          "position": {
+                            "type": "absolute",
+                            "left": 0,
+                            "top": 41
+                          }
+                        },
+                        {
+                          "type": "gesture_detector",
+                          "onTapDown": {
+                            "call": "@flame_game_input",
+                            "args": {
+                              "input": "{{ props.moveInput }}",
+                              "data": {
+                                "x": 1,
+                                "y": 0,
+                                "strength": 1,
+                                "angle": 0,
+                                "direction": "right"
+                              }
+                            }
+                          },
+                          "onTapUp": {
+                            "call": "@flame_game_input",
+                            "args": {
+                              "input": {
+                                "or": [
+                                  {
+                                    "var": "props.moveEndInput"
+                                  },
+                                  {
+                                    "var": "props.moveInput"
+                                  }
+                                ]
+                              },
+                              "data": {
+                                "x": 0,
+                                "y": 0,
+                                "strength": 0,
+                                "angle": 0,
+                                "direction": "center"
+                              }
+                            }
+                          },
+                          "child": {
+                            "type": "container",
+                            "width": 40,
+                            "height": 40,
+                            "borderRadius": 20.0,
+                            "color": "#236B7A",
+                            "mainAxisAlignment": "center",
+                            "crossAxisAlignment": "center",
+                            "children": [
+                              {
+                                "type": "text",
+                                "value": "→",
+                                "style": {
+                                  "color": "#FFFFFF",
+                                  "fontSize": 20,
+                                  "fontWeight": "bold"
+                                }
+                              }
+                            ]
+                          },
+                          "position": {
+                            "type": "absolute",
+                            "left": 82,
+                            "top": 41
+                          }
+                        },
+                        {
+                          "type": "gesture_detector",
+                          "onTapDown": {
+                            "call": "@flame_game_input",
+                            "args": {
+                              "input": "{{ props.moveInput }}",
+                              "data": {
+                                "x": 0,
+                                "y": 1,
+                                "strength": 1,
+                                "angle": 1.5707963268,
+                                "direction": "down"
+                              }
+                            }
+                          },
+                          "onTapUp": {
+                            "call": "@flame_game_input",
+                            "args": {
+                              "input": {
+                                "or": [
+                                  {
+                                    "var": "props.moveEndInput"
+                                  },
+                                  {
+                                    "var": "props.moveInput"
+                                  }
+                                ]
+                              },
+                              "data": {
+                                "x": 0,
+                                "y": 0,
+                                "strength": 0,
+                                "angle": 0,
+                                "direction": "center"
+                              }
+                            }
+                          },
+                          "child": {
+                            "type": "container",
+                            "width": 40,
+                            "height": 40,
+                            "borderRadius": 20.0,
+                            "color": "#236B7A",
+                            "mainAxisAlignment": "center",
+                            "crossAxisAlignment": "center",
+                            "children": [
+                              {
+                                "type": "text",
+                                "value": "↓",
+                                "style": {
+                                  "color": "#FFFFFF",
+                                  "fontSize": 20,
+                                  "fontWeight": "bold"
+                                }
+                              }
+                            ]
+                          },
+                          "position": {
+                            "type": "absolute",
+                            "left": 41,
+                            "top": 82
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "spacer"
+                },
+                {
+                  "type": "container",
+                  "width": 82,
+                  "height": 56,
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "dropdown",
+                      "bind": "global._gamepadStyle",
+                      "placeholder": "PS",
+                      "options": [
+                        {
+                          "label": "PS",
+                          "value": "default"
+                        },
+                        {
+                          "label": "D-pad",
+                          "value": "dpad"
+                        },
+                        {
+                          "label": "Float",
+                          "value": "floating"
+                        }
+                      ],
+                      "action": {
+                        "call": "@set",
+                        "args": {
+                          "var": "global._gamepadEditing",
+                          "value": false
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "spacer"
+                },
+                {
+                  "type": "container",
+                  "layout": "stack",
+                  "width": 138,
+                  "height": 138,
+                  "children": [
+                    {
+                      "type": "gesture_detector",
+                      "onTapDown": {
+                        "call": "@flame_game_input",
+                        "args": {
+                          "input": "{{ props.jumpInput }}"
+                        }
+                      },
+                      "child": {
+                        "type": "container",
+                        "width": 48,
+                        "height": 48,
+                        "borderRadius": 24.0,
+                        "color": "#1E222A",
+                        "mainAxisAlignment": "center",
+                        "crossAxisAlignment": "center",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "△",
+                            "style": {
+                              "color": "#FFFFFF",
+                              "fontSize": 22,
+                              "fontWeight": "bold",
+                              "paddingV": 0,
+                              "paddingH": 0,
+                              "lineHeight": 1.0,
+                              "textAlign": "center"
+                            }
+                          }
+                        ]
+                      },
+                      "onTapUp": {
+                        "call": "@flame_game_input",
+                        "args": {
+                          "input": {
+                            "or": [
+                              {
+                                "var": "props.jumpEndInput"
+                              },
+                              "jump_end"
+                            ]
+                          }
+                        }
+                      },
+                      "position": {
+                        "type": "absolute",
+                        "left": 45,
+                        "top": 0
+                      }
+                    },
+                    {
+                      "type": "gesture_detector",
+                      "onTapDown": {
+                        "call": "@flame_game_input",
+                        "args": {
+                          "input": "{{ props.attackInput }}"
+                        }
+                      },
+                      "child": {
+                        "type": "container",
+                        "width": 48,
+                        "height": 48,
+                        "borderRadius": 24.0,
+                        "color": "#1E222A",
+                        "mainAxisAlignment": "center",
+                        "crossAxisAlignment": "center",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "○",
+                            "style": {
+                              "color": "#FFFFFF",
+                              "fontSize": 24,
+                              "fontWeight": "bold",
+                              "paddingV": 0,
+                              "paddingH": 0,
+                              "lineHeight": 1.0,
+                              "textAlign": "center"
+                            }
+                          }
+                        ]
+                      },
+                      "position": {
+                        "type": "absolute",
+                        "left": 90,
+                        "top": 45
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "width": 48,
+                      "height": 48,
+                      "borderRadius": 24.0,
+                      "color": "#1E222A",
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "×",
+                          "style": {
+                            "color": "#FFFFFF",
+                            "fontSize": 22,
+                            "fontWeight": "bold",
+                            "paddingV": 0,
+                            "paddingH": 0,
+                            "lineHeight": 1.0,
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "position": {
+                        "type": "absolute",
+                        "left": 45,
+                        "top": 90
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "width": 48,
+                      "height": 48,
+                      "borderRadius": 24.0,
+                      "color": "#1E222A",
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "□",
+                          "style": {
+                            "color": "#FFFFFF",
+                            "fontSize": 22,
+                            "fontWeight": "bold",
+                            "paddingV": 0,
+                            "paddingH": 0,
+                            "lineHeight": 1.0,
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "position": {
+                        "type": "absolute",
+                        "left": 0,
+                        "top": 45
+                      }
+                    }
+                  ]
                 }
-              }
-            },
-            {
-              "id": "cross",
-              "label": "",
-              "symbol": "cross",
-              "backgroundColor": "#1E222A"
-            },
-            {
-              "id": "square",
-              "label": "",
-              "symbol": "square",
-              "backgroundColor": "#1E222A"
+              ]
             }
           ]
+        },
+        "defaultProps": {
+          "height": 176,
+          "backgroundColor": "#0B1020"
         }
       },
       "dpadGamepad": {
         "props": [
-          "moveDownInput",
-          "moveUpInput",
-          "jumpInput",
-          "attackInput",
+          "upInput",
+          "leftInput",
+          "rightInput",
+          "downInput",
+          "triangleInput",
+          "circleInput",
+          "crossInput",
+          "squareInput",
           "height",
           "backgroundColor"
         ],
+        "defaultProps": {
+          "height": 176,
+          "backgroundColor": "#0B1020"
+        },
         "root": {
-          "type": "virtual_gamepad",
-          "mode": "dpad",
-          "actionLayout": "ps",
+          "type": "container",
           "height": "{{ props.height }}",
-          "backgroundColor": "{{ props.backgroundColor }}",
-          "dpadSize": 122,
-          "actionClusterSize": 132,
-          "gap": 16,
-          "directions": [
+          "padding": 12,
+          "color": "{{ props.backgroundColor }}",
+          "layout": "row",
+          "children": [
             {
-              "id": "up",
-              "label": "↑",
-              "onDown": {
-                "type": "call",
-                "call": "@flame_game_input",
-                "args": {
-                  "input": "{{ props.jumpInput }}"
-                }
-              }
-            },
-            {
-              "id": "left",
-              "label": "←",
-              "onDown": {
-                "type": "call",
-                "call": "@flame_game_input",
-                "args": {
-                  "input": "{{ props.moveDownInput }}",
-                  "data": {
-                    "direction": "left"
+              "type": "container",
+              "width": 128,
+              "height": 128,
+              "layout": "stack",
+              "children": [
+                {
+                  "type": "gesture_detector",
+                  "position": {
+                    "type": "absolute",
+                    "left": 44,
+                    "top": 2
+                  },
+                  "visible": {
+                    "!=": [
+                      {
+                        "var": "props.upInput"
+                      },
+                      null
+                    ]
+                  },
+                  "onTapDown": {
+                    "call": "@flame_game_input",
+                    "args": {
+                      "input": "{{ props.upInput }}"
+                    }
+                  },
+                  "child": {
+                    "type": "container",
+                    "width": 40,
+                    "height": 40,
+                    "borderRadius": 20,
+                    "color": "#236B7A",
+                    "children": [
+                      {
+                        "type": "center",
+                        "child": {
+                          "type": "text",
+                          "value": "↑",
+                          "style": {
+                            "color": "#FFFFFF",
+                            "fontSize": 20,
+                            "fontWeight": "bold"
+                          }
+                        }
+                      }
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  }
+                },
+                {
+                  "type": "gesture_detector",
+                  "position": {
+                    "type": "absolute",
+                    "left": 2,
+                    "top": 44
+                  },
+                  "visible": {
+                    "!=": [
+                      {
+                        "var": "props.leftInput"
+                      },
+                      null
+                    ]
+                  },
+                  "onTapDown": {
+                    "call": "@flame_game_input",
+                    "args": {
+                      "input": "{{ props.leftInput }}"
+                    }
+                  },
+                  "child": {
+                    "type": "container",
+                    "width": 40,
+                    "height": 40,
+                    "borderRadius": 20,
+                    "color": "#236B7A",
+                    "children": [
+                      {
+                        "type": "center",
+                        "child": {
+                          "type": "text",
+                          "value": "←",
+                          "style": {
+                            "color": "#FFFFFF",
+                            "fontSize": 20,
+                            "fontWeight": "bold"
+                          }
+                        }
+                      }
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  }
+                },
+                {
+                  "type": "gesture_detector",
+                  "position": {
+                    "type": "absolute",
+                    "left": 86,
+                    "top": 44
+                  },
+                  "visible": {
+                    "!=": [
+                      {
+                        "var": "props.rightInput"
+                      },
+                      null
+                    ]
+                  },
+                  "onTapDown": {
+                    "call": "@flame_game_input",
+                    "args": {
+                      "input": "{{ props.rightInput }}"
+                    }
+                  },
+                  "child": {
+                    "type": "container",
+                    "width": 40,
+                    "height": 40,
+                    "borderRadius": 20,
+                    "color": "#236B7A",
+                    "children": [
+                      {
+                        "type": "center",
+                        "child": {
+                          "type": "text",
+                          "value": "→",
+                          "style": {
+                            "color": "#FFFFFF",
+                            "fontSize": 20,
+                            "fontWeight": "bold"
+                          }
+                        }
+                      }
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  }
+                },
+                {
+                  "type": "gesture_detector",
+                  "position": {
+                    "type": "absolute",
+                    "left": 44,
+                    "top": 86
+                  },
+                  "visible": {
+                    "!=": [
+                      {
+                        "var": "props.downInput"
+                      },
+                      null
+                    ]
+                  },
+                  "onTapDown": {
+                    "call": "@flame_game_input",
+                    "args": {
+                      "input": "{{ props.downInput }}"
+                    }
+                  },
+                  "child": {
+                    "type": "container",
+                    "width": 40,
+                    "height": 40,
+                    "borderRadius": 20,
+                    "color": "#236B7A",
+                    "children": [
+                      {
+                        "type": "center",
+                        "child": {
+                          "type": "text",
+                          "value": "↓",
+                          "style": {
+                            "color": "#FFFFFF",
+                            "fontSize": 20,
+                            "fontWeight": "bold"
+                          }
+                        }
+                      }
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
                   }
                 }
-              },
-              "onUp": {
-                "type": "call",
-                "call": "@flame_game_input",
-                "args": {
-                  "input": "{{ props.moveUpInput }}",
-                  "data": {
-                    "direction": "left"
+              ]
+            },
+            {
+              "type": "spacer"
+            },
+            {
+              "type": "container",
+              "width": 138,
+              "height": 138,
+              "layout": "stack",
+              "children": [
+                {
+                  "type": "gesture_detector",
+                  "position": {
+                    "type": "absolute",
+                    "left": 45,
+                    "top": 0
+                  },
+                  "visible": {
+                    "!=": [
+                      {
+                        "var": "props.triangleInput"
+                      },
+                      null
+                    ]
+                  },
+                  "onTapDown": {
+                    "call": "@flame_game_input",
+                    "args": {
+                      "input": "{{ props.triangleInput }}"
+                    }
+                  },
+                  "child": {
+                    "type": "container",
+                    "width": 48,
+                    "height": 48,
+                    "borderRadius": 24,
+                    "color": "#1E222A",
+                    "children": [
+                      {
+                        "type": "center",
+                        "child": {
+                          "type": "text",
+                          "value": "△",
+                          "style": {
+                            "color": "#FFFFFF",
+                            "fontSize": 22,
+                            "fontWeight": "bold",
+                            "paddingV": 0,
+                            "paddingH": 0,
+                            "lineHeight": 1.0,
+                            "textAlign": "center"
+                          }
+                        }
+                      }
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  }
+                },
+                {
+                  "type": "gesture_detector",
+                  "position": {
+                    "type": "absolute",
+                    "left": 90,
+                    "top": 45
+                  },
+                  "visible": {
+                    "!=": [
+                      {
+                        "var": "props.circleInput"
+                      },
+                      null
+                    ]
+                  },
+                  "onTapDown": {
+                    "call": "@flame_game_input",
+                    "args": {
+                      "input": "{{ props.circleInput }}"
+                    }
+                  },
+                  "child": {
+                    "type": "container",
+                    "width": 48,
+                    "height": 48,
+                    "borderRadius": 24,
+                    "color": "#1E222A",
+                    "children": [
+                      {
+                        "type": "center",
+                        "child": {
+                          "type": "text",
+                          "value": "○",
+                          "style": {
+                            "color": "#FFFFFF",
+                            "fontSize": 22,
+                            "fontWeight": "bold",
+                            "paddingV": 0,
+                            "paddingH": 0,
+                            "lineHeight": 1.0,
+                            "textAlign": "center"
+                          }
+                        }
+                      }
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  }
+                },
+                {
+                  "type": "gesture_detector",
+                  "position": {
+                    "type": "absolute",
+                    "left": 45,
+                    "top": 90
+                  },
+                  "visible": {
+                    "!=": [
+                      {
+                        "var": "props.crossInput"
+                      },
+                      null
+                    ]
+                  },
+                  "onTapDown": {
+                    "call": "@flame_game_input",
+                    "args": {
+                      "input": "{{ props.crossInput }}"
+                    }
+                  },
+                  "child": {
+                    "type": "container",
+                    "width": 48,
+                    "height": 48,
+                    "borderRadius": 24,
+                    "color": "#1E222A",
+                    "children": [
+                      {
+                        "type": "center",
+                        "child": {
+                          "type": "text",
+                          "value": "×",
+                          "style": {
+                            "color": "#FFFFFF",
+                            "fontSize": 22,
+                            "fontWeight": "bold",
+                            "paddingV": 0,
+                            "paddingH": 0,
+                            "lineHeight": 1.0,
+                            "textAlign": "center"
+                          }
+                        }
+                      }
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  }
+                },
+                {
+                  "type": "gesture_detector",
+                  "position": {
+                    "type": "absolute",
+                    "left": 0,
+                    "top": 45
+                  },
+                  "visible": {
+                    "!=": [
+                      {
+                        "var": "props.squareInput"
+                      },
+                      null
+                    ]
+                  },
+                  "onTapDown": {
+                    "call": "@flame_game_input",
+                    "args": {
+                      "input": "{{ props.squareInput }}"
+                    }
+                  },
+                  "child": {
+                    "type": "container",
+                    "width": 48,
+                    "height": 48,
+                    "borderRadius": 24,
+                    "color": "#1E222A",
+                    "children": [
+                      {
+                        "type": "center",
+                        "child": {
+                          "type": "text",
+                          "value": "□",
+                          "style": {
+                            "color": "#FFFFFF",
+                            "fontSize": 22,
+                            "fontWeight": "bold",
+                            "paddingV": 0,
+                            "paddingH": 0,
+                            "lineHeight": 1.0,
+                            "textAlign": "center"
+                          }
+                        }
+                      }
+                    ],
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
                   }
                 }
-              }
-            },
-            {
-              "id": "right",
-              "label": "→",
-              "onDown": {
-                "type": "call",
-                "call": "@flame_game_input",
-                "args": {
-                  "input": "{{ props.moveDownInput }}",
-                  "data": {
-                    "direction": "right"
-                  }
-                }
-              },
-              "onUp": {
-                "type": "call",
-                "call": "@flame_game_input",
-                "args": {
-                  "input": "{{ props.moveUpInput }}",
-                  "data": {
-                    "direction": "right"
-                  }
-                }
-              }
-            },
-            {
-              "id": "down",
-              "label": "↓"
-            }
-          ],
-          "actions": [
-            {
-              "id": "jump",
-              "label": "",
-              "symbol": "triangle",
-              "backgroundColor": "#1E222A",
-              "onDown": {
-                "type": "call",
-                "call": "@flame_game_input",
-                "args": {
-                  "input": "{{ props.jumpInput }}"
-                }
-              }
-            },
-            {
-              "id": "attack",
-              "label": "",
-              "symbol": "circle",
-              "backgroundColor": "#1E222A",
-              "onDown": {
-                "type": "call",
-                "call": "@flame_game_input",
-                "args": {
-                  "input": "{{ props.attackInput }}"
-                }
-              }
-            },
-            {
-              "id": "cross",
-              "label": "",
-              "symbol": "cross",
-              "backgroundColor": "#1E222A"
-            },
-            {
-              "id": "square",
-              "label": "",
-              "symbol": "square",
-              "backgroundColor": "#1E222A"
+              ]
             }
           ]
         }

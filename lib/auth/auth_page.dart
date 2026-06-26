@@ -290,6 +290,27 @@ class _AuthPageState extends State<AuthPage> {
                   ),
                 ),
 
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton(
+                    onPressed: _loading
+                        ? null
+                        : () async {
+                            await AuthService.continueAsGuest();
+                            widget.onAuthSuccess();
+                          },
+                    child: Text(t.authContinueAsGuest),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  t.authGuestModeHint,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                ),
+
                 // Success info
                 if (_info != null) ...[
                   const SizedBox(height: 16),

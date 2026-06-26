@@ -1,0 +1,257 @@
+{
+  "dsl": "3.3",
+  "appid": "aeddc5e9-4a54-532b-8e40-bb21b4f9f8ff",
+  "meta": {
+    "name": "gsy_flutter_demo/064-anim-scan-demo-page",
+    "version": "0.1.1",
+    "type": "app",
+    "displayName": {
+      "zh": "类似探探扫描的动画效果",
+      "en": "Tantan-style scan animation"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：类似探探扫描的动画效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "类似探探扫描的动画效果",
+      "sourcePath": "lib/widget/animation/anim_scan_demo_page.dart",
+      "deferredAlias": "anim_scan_demo_page",
+      "widgetClass": "AnimScanDemoPage",
+      "category": "animation",
+      "routeIndex": 64
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "类似探探扫描的动画效果",
+      "upstreamSource": "lib/widget/animation/anim_scan_demo_page.dart",
+      "upstreamWidget": "AnimScanDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v3",
+      "tick": 0,
+      "ripple": 0
+    },
+    "functions": {
+      "tick": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tick",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.tick"
+                      },
+                      1
+                    ]
+                  },
+                  36
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "ripple": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.ripple",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.ripple"
+                      },
+                      1
+                    ]
+                  },
+                  4
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "AnimScanDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "interval_action",
+              "intervalMs": 100,
+              "runImmediately": true,
+              "action": {
+                "call": "@global.tick",
+                "args": {}
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "color": "#FFFFFF"
+              }
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "stack",
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [],
+                  "width": 300,
+                  "height": 300,
+                  "shape": "circle",
+                  "border": {
+                    "color": "#33448AFF",
+                    "width": 1
+                  }
+                },
+                {
+                  "type": "animated_visibility",
+                  "visibleWhen": {
+                    ">=": [
+                      {
+                        "var": "global.ripple"
+                      },
+                      0
+                    ]
+                  },
+                  "durationMs": 400,
+                  "hiddenOffsetY": 0,
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 220,
+                    "height": 220,
+                    "shape": "circle",
+                    "border": {
+                      "color": "#66448AFF",
+                      "width": 1
+                    }
+                  }
+                },
+                {
+                  "type": "animated_visibility",
+                  "visibleWhen": {
+                    ">=": [
+                      {
+                        "var": "global.ripple"
+                      },
+                      1
+                    ]
+                  },
+                  "durationMs": 400,
+                  "hiddenOffsetY": 0,
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 260,
+                    "height": 260,
+                    "shape": "circle",
+                    "border": {
+                      "color": "#66448AFF",
+                      "width": 1
+                    }
+                  }
+                },
+                {
+                  "type": "animated_visibility",
+                  "visibleWhen": {
+                    ">=": [
+                      {
+                        "var": "global.ripple"
+                      },
+                      2
+                    ]
+                  },
+                  "durationMs": 400,
+                  "hiddenOffsetY": 0,
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 300,
+                    "height": 300,
+                    "shape": "circle",
+                    "border": {
+                      "color": "#66448AFF",
+                      "width": 1
+                    }
+                  }
+                },
+                {
+                  "type": "transform",
+                  "rotateZ": {
+                    "*": [
+                      {
+                        "var": "global.tick"
+                      },
+                      10
+                    ]
+                  },
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 150,
+                    "height": 2,
+                    "color": "#448AFF"
+                  }
+                },
+                {
+                  "type": "gesture_detector",
+                  "onTap": {
+                    "call": "@global.ripple",
+                    "args": {}
+                  },
+                  "child": {
+                    "type": "image",
+                    "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                    "fit": "cover",
+                    "width": 140,
+                    "height": 140,
+                    "borderRadius": 70,
+                    "paddingV": 0
+                  }
+                }
+              ],
+              "width": 300,
+              "height": 300,
+              "alignment": "center"
+            },
+            "left": 45,
+            "top": 220
+          }
+        ]
+      }
+    ]
+  }
+}

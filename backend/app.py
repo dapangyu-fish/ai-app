@@ -15,16 +15,20 @@ eventlet.monkey_patch()
 
 import logging
 import secrets
-from flask import Flask
+import os
+from flask import Flask, request
 from flask_socketio import SocketIO
 from config import PORT, FLASK_SECRET_KEY
 import auth
 # import ai_code_generator as chat  # DEPRECATED: 已废弃，使用 claude_chat 替代
 import claude_chat
+import ai_session
+import agent_nodes
 import store
 import im
 import im_media
 import ai_summary
+import faas
 from bytedance_asr_routes import register_asr_routes
 
 # 配置日志
@@ -52,11 +56,44 @@ def create_app():
     # 官方推荐的生产组合（裸 WebSocket 客户端 → 必须协程 worker，gthread 撑不起）
     socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
+    # ── CORS（Web 端跨域）──────────────────────────────────────────
+    # Web 客户端从自己的源请求后端，浏览器强制 CORS。后端（REST）此前没补 CORS 头，
+    # 导致 Flutter Web 切到本后端时预检/请求被浏览器拦下（移动端不受影响）。
+    # 给所有响应（含 Flask 自动处理的 OPTIONS 预检）补 Access-Control-* 头。
+    # CORS_ALLOWED_ORIGINS：逗号分隔的源白名单；为空或含 "*" → 反射任意 Origin（pre-de/demo 用）。
+    _cors_allow = [o.strip() for o in os.environ.get("CORS_ALLOWED_ORIGINS", "*").split(",") if o.strip()]
+
+    @app.before_request
+    def _cors_preflight():
+        # 跨域预检（带 Origin 的 OPTIONS）一律直接 204 放行，CORS 头由 after_request 补。
+        # 否则像 /api/faas/invoke/<svc>/<route> 这种只声明了 POST 的代理路由，预检会被当成
+        # 「未声明方法」返回 405 → 浏览器判定预检失败 → 报 CORS。这里在路由/鉴权之前短路掉。
+        if request.method == "OPTIONS" and request.headers.get("Origin"):
+            return ("", 204)
+        return None
+
+    @app.after_request
+    def _add_cors_headers(resp):
+        origin = request.headers.get("Origin")
+        if origin and ("*" in _cors_allow or origin in _cors_allow):
+            # 反射具体 Origin（而非 "*"），这样 Allow-Credentials 才生效、且支持带 token 的请求
+            resp.headers["Access-Control-Allow-Origin"] = origin
+            resp.headers.setdefault("Vary", "Origin")
+            resp.headers["Access-Control-Allow-Credentials"] = "true"
+            resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, PATCH, OPTIONS"
+            resp.headers["Access-Control-Allow-Headers"] = (
+                request.headers.get("Access-Control-Request-Headers")
+                or "Content-Type, Authorization, X-Requested-With"
+            )
+            resp.headers["Access-Control-Max-Age"] = "86400"
+        return resp
+
     # 注册 Auth 路由
     app.add_url_rule("/api/auth/register", methods=["POST"], view_func=auth.register)
     app.add_url_rule("/api/auth/verify", methods=["POST"], view_func=auth.verify_otp)
     app.add_url_rule("/api/auth/resend", methods=["POST"], view_func=auth.resend_verification)
     app.add_url_rule("/api/auth/login", methods=["POST"], view_func=auth.login)
+    app.add_url_rule("/api/auth/demo", methods=["POST"], view_func=auth.demo_login)
     app.add_url_rule("/api/auth/refresh", methods=["POST"], view_func=auth.refresh_token)
     app.add_url_rule("/api/auth/logout", methods=["POST"], view_func=auth.logout)
     app.add_url_rule("/api/auth/user", methods=["GET"], view_func=auth.get_user)
@@ -65,9 +102,6 @@ def create_app():
     app.add_url_rule("/api/auth/quota", methods=["GET"], view_func=auth.get_quota)
 
     # 注册 Chat 路由
-    # 老路径（保留兼容老客户端）：单一 /chat 端点直推 SSE，client 断 = 任务断
-    app.add_url_rule("/chat", methods=["POST"], view_func=claude_chat.chat)
-    app.add_url_rule("/api/ai/session_status", methods=["GET"], view_func=claude_chat.session_status)
     # 新路径（feat/ai-background-push）：worker 与 HTTP 解耦，支持后台续跑 + SSE 重连
     # 详见 backend/ARCHITECTURE.md §3
     app.add_url_rule("/api/ai/chat/start", methods=["POST"], view_func=claude_chat.chat_start)
@@ -77,9 +111,73 @@ def create_app():
     app.add_url_rule("/api/ai/chat/<session_id>/status", methods=["GET"], view_func=claude_chat.chat_status_v2)
     app.add_url_rule("/api/ai/chat/<session_id>/abort", methods=["POST"], view_func=claude_chat.chat_abort)
     app.add_url_rule("/api/ai/providers", methods=["GET"], view_func=claude_chat.list_providers)
+    app.add_url_rule("/api/ai/agents", methods=["GET"], view_func=claude_chat.list_agents)
+    app.add_url_rule("/api/ai/agent_nodes", methods=["GET"], view_func=agent_nodes.list_agent_nodes)
+    app.add_url_rule("/api/ai/agent_nodes/<node_id>", methods=["GET"], view_func=agent_nodes.get_agent_node)
+    app.add_url_rule("/api/ai/agent_nodes/<node_id>/pause", methods=["POST"], view_func=agent_nodes.pause_agent_node)
+    app.add_url_rule("/api/ai/agent_nodes/<node_id>/resume", methods=["POST"], view_func=agent_nodes.resume_agent_node)
+    app.add_url_rule("/api/ai/agent_nodes/<node_id>", methods=["DELETE"], view_func=agent_nodes.delete_agent_node)
+    app.add_url_rule("/api/ai/agent_nodes/register", methods=["POST"], view_func=agent_nodes.register_agent_node)
+    app.add_url_rule("/api/ai/private_agent/nodes", methods=["GET"], view_func=agent_nodes.list_private_agent_nodes)
+    app.add_url_rule("/api/ai/private_agent/nodes/self", methods=["GET"], view_func=agent_nodes.get_private_agent_node_self)
+    app.add_url_rule("/api/ai/private_agent/join_token", methods=["POST"], view_func=agent_nodes.create_private_agent_join_token)
+    app.add_url_rule("/api/ai/private_agent/nodes", methods=["POST"], view_func=agent_nodes.create_private_agent_node)
+    app.add_url_rule("/api/ai/private_agent/nodes/<node_id>", methods=["DELETE"], view_func=agent_nodes.delete_private_agent_node)
+    app.add_url_rule("/api/ai/private_agent/nodes/<node_id>/pause", methods=["POST"], view_func=agent_nodes.pause_private_agent_node)
+    app.add_url_rule("/api/ai/private_agent/nodes/<node_id>/resume", methods=["POST"], view_func=agent_nodes.resume_private_agent_node)
+    app.add_url_rule("/api/ai/private_agent/nodes/<node_id>/limits", methods=["POST"], view_func=agent_nodes.set_private_agent_node_limits)
+    app.add_url_rule("/api/ai/agent_pull/acquire", methods=["POST"], view_func=ai_session.agent_pull_acquire)
+    app.add_url_rule("/api/ai/agent_pull/jobs/<run_id>/events", methods=["POST"], view_func=ai_session.agent_pull_job_events)
+    app.add_url_rule("/api/ai/agent_pull/jobs/<run_id>/artifact", methods=["POST"], view_func=ai_session.agent_pull_job_artifact)
     app.add_url_rule("/api/ai/upload_url", methods=["GET"], view_func=store.get_ai_upload_url)
     # Registry 富化用的单次结构化摘要（内部接口，registry enrich worker 调，REGISTRY_ADMIN_TOKEN 鉴权）
     app.add_url_rule("/api/ai/summarize", methods=["POST"], view_func=ai_summary.summarize_endpoint)
+
+    # 用户生成后端服务：FaaS 控制面。当前 FaaS invoke 暂不强制鉴权；
+    # 管理接口在 FAAS_REQUIRE_AUTH=0 时也允许测试用 user_id 参数，后续可收紧。
+    app.add_url_rule("/api/faas/health", methods=["GET"], view_func=faas.health)
+    # B3-G1: backend-mediated data-access gateway for FaaS functions (myapp_data).
+    app.add_url_rule("/api/faas/data", methods=["POST"], view_func=faas.faas_data_gateway)
+    # B3-G8: owner-scoped Application management API (consumed by the client UI).
+    app.add_url_rule("/api/faas/apps", methods=["GET"], view_func=faas.list_my_applications)
+    app.add_url_rule("/api/faas/apps/<app_id>", methods=["GET"], view_func=faas.get_my_application)
+    app.add_url_rule("/api/faas/apps/<app_id>", methods=["DELETE"], view_func=faas.delete_my_application)
+    app.add_url_rule("/api/faas/apps/<app_id>/policy", methods=["POST"], view_func=faas.set_my_application_policy)
+    app.add_url_rule("/api/faas/apps/<app_id>/maintainers", methods=["POST"], view_func=faas.add_my_maintainer)
+    app.add_url_rule("/api/faas/apps/<app_id>/maintainers/<user_id>", methods=["DELETE"], view_func=faas.remove_my_maintainer)
+    app.add_url_rule("/api/faas/apps/<app_id>/grants", methods=["POST"], view_func=faas.grant_my_consumer)
+    app.add_url_rule("/api/faas/apps/<app_id>/grants/<user_id>", methods=["DELETE"], view_func=faas.revoke_my_consumer)
+    app.add_url_rule("/api/faas/audit", methods=["GET"], view_func=faas.list_my_audit)
+    app.add_url_rule("/api/faas/services", methods=["GET"], view_func=faas.list_user_services)
+    app.add_url_rule("/api/faas/services", methods=["POST"], view_func=faas.deploy_service)
+    app.add_url_rule("/api/faas/services/<service_id>", methods=["GET"], view_func=faas.get_user_service)
+    app.add_url_rule("/api/faas/services/<service_id>", methods=["DELETE"], view_func=faas.disable_user_service)
+    app.add_url_rule(
+        "/api/faas/services/<service_id>/archive",
+        methods=["GET"],
+        view_func=faas.download_service_archive,
+    )
+    app.add_url_rule(
+        "/api/faas/services/<service_id>/scale",
+        methods=["POST"],
+        view_func=faas.scale_user_service,
+    )
+    app.add_url_rule(
+        "/api/faas/runtime_bundle/<service_id>",
+        methods=["GET"],
+        view_func=faas.runtime_bundle,
+    )
+    app.add_url_rule(
+        "/api/faas/invoke/<service_id>",
+        defaults={"route_path": ""},
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        view_func=faas.invoke_service,
+    )
+    app.add_url_rule(
+        "/api/faas/invoke/<service_id>/<path:route_path>",
+        methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        view_func=faas.invoke_service,
+    )
 
     # 注册 Store 路由
     app.add_url_rule("/api/store/apps", methods=["GET"], view_func=store.store_apps)
@@ -90,8 +188,10 @@ def create_app():
 
     # 注册 OpenIM 桥接路由
     app.add_url_rule("/api/im/token", methods=["POST"], view_func=im.get_im_token)
+    app.add_url_rule("/api/im/friends", methods=["GET"], view_func=im.list_friends)
     app.add_url_rule("/api/im/users/lookup", methods=["GET"], view_func=im.lookup_user)
     app.add_url_rule("/api/im/users/search", methods=["GET"], view_func=im.search_users)
+    app.add_url_rule("/api/im/users/profiles", methods=["GET"], view_func=im.user_profiles)
     app.add_url_rule("/api/im/push_token", methods=["POST"], view_func=im.upload_push_token)
     app.add_url_rule("/api/im/push_token", methods=["DELETE"], view_func=im.remove_push_token)
     # IM 富媒体上传：客户端拿预签名 PUT 直传 MinIO，避免大文件经 Flask
@@ -118,14 +218,25 @@ def create_app():
 
 app, socketio = create_app()
 
+# Self-managed Docker FaaS: start the scale-to-zero reaper (flock-guarded so only
+# one worker reaps). Only in docker deploy mode; the invoke proxy cold-wakes.
+try:
+    from config import FAAS_DEPLOY_MODE as _FAAS_DEPLOY_MODE
+    if str(_FAAS_DEPLOY_MODE or "").strip().lower() in {"local-docker", "docker", "docker-local"}:
+        import threading as _threading
+        from faas_docker_reaper import run_loop as _faas_reaper_loop
+        _threading.Thread(target=_faas_reaper_loop, name="faas-docker-reaper", daemon=True).start()
+except Exception:
+    pass
+
 
 if __name__ == "__main__":
     logger = logging.getLogger(__name__)
     logger.info(f"🚀 JSON DSL Backend on http://0.0.0.0:{PORT}")
     logger.info("   Auth:  /api/auth/{register,login,verify,refresh,logout,user,avatar,quota}")
-    logger.info("   Chat:  POST /chat (SSE, quota-limited, DSL-aware)")
+    logger.info("   Chat:  /api/ai/chat/{start,stream,result,status,abort}")
     logger.info("   Store: /api/store/{apps,components,publish,delete}")
-    logger.info("   IM:    /api/im/{token,users/lookup,users/search,push_token,media/upload-url,after_send_msg,offline_push_hook}")
+    logger.info("   IM:    /api/im/{token,friends,users/lookup,users/search,push_token,media/upload-url,after_send_msg,offline_push_hook}")
     logger.info("   ASR:   WebSocket /socket.io (豆包语音识别)")
     logger.info("   ⚠️  本地开发模式（werkzeug）；生产用 gunicorn -k eventlet -w <N> app:app + ai_worker_daemon.py")
     socketio.run(app, host="0.0.0.0", port=PORT, allow_unsafe_werkzeug=True)

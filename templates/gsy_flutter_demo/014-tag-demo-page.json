@@ -1,0 +1,371 @@
+{
+  "dsl": "3.3",
+  "appid": "5b81c36c-8af4-520d-81f5-3246bc93af22",
+  "meta": {
+    "name": "gsy_flutter_demo/014-tag-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "Tag效果展示",
+      "en": "Tageffectdemo"
+    },
+    "description": "TagDemoPage：Tag 效果展示",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "Tag效果展示",
+      "sourcePath": "lib/widget/basic/tag_demo_page.dart",
+      "deferredAlias": "tag_demo_page",
+      "widgetClass": "TagDemoPage",
+      "category": "basic",
+      "routeIndex": 14
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {},
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "TagDemoPage",
+        "layout": "column",
+        "children": [
+          {
+            "type": "wrap",
+            "children": [
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "Start",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "FFFFFFF",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "TTTTTT",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "LL",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "JJJJJJJJ",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "PPPPP",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "OOOOOOOOOOOO",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "9999999",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "*&",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "5%%%%%",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "¥¥¥¥¥¥",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "UUUUUUUUUU",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "))@@@@@@",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "End",
+                    "style": {}
+                  }
+                ],
+                "layout": "column",
+                "padding": {
+                  "vertical": 2,
+                  "horizontal": 5
+                },
+                "margin": {
+                  "vertical": 5,
+                  "horizontal": 10
+                },
+                "color": "#3C448AFF",
+                "borderRadius": 5,
+                "crossAxisAlignment": "center",
+                "mainAxisAlignment": "center"
+              }
+            ],
+            "spacing": 0,
+            "runSpacing": 0
+          }
+        ],
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

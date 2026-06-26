@@ -1,0 +1,353 @@
+{
+  "dsl": "3.3",
+  "appid": "dbe0567d-2772-5ed4-aeaf-b193df417fb3",
+  "meta": {
+    "name": "gsy_flutter_demo/113-tai-chi-masterpiece",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "太极粒子",
+      "en": "Taichi particles"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：太极粒子",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "太极粒子",
+      "sourcePath": "lib/widget/visual/taichi_page.dart",
+      "deferredAlias": "taichi_page",
+      "widgetClass": "TaiChiMasterpiece",
+      "category": "visual",
+      "routeIndex": 113,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-taichi-mode-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "太极粒子",
+      "upstreamSource": "lib/widget/visual/taichi_page.dart",
+      "upstreamWidget": "TaiChiMasterpiece",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-taichi-mode-v1",
+      "sharpMode": false
+    },
+    "functions": {
+      "toggleMode": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sharpMode",
+              "value": {
+                "!": [
+                  {
+                    "var": "global.sharpMode"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "computed": {
+      "modeLabel": {
+        "if": [
+          {
+            "var": "global.sharpMode"
+          },
+          "当前: 几何S形",
+          "当前: 柔和圆"
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "animated_canvas",
+              "backgroundColor": "#000000",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "particles",
+                  "count": 1200,
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          "xx",
+                          "min",
+                          0.43
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          "yy",
+                          "min",
+                          0.43
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": 1.6,
+                  "color": "#FFFFFF",
+                  "alpha": 0.75,
+                  "blendMode": "plus",
+                  "locals": {
+                    "rnd": {
+                      "seed": {
+                        "*": [
+                          "i",
+                          78.233
+                        ]
+                      }
+                    },
+                    "rr": {
+                      "*": [
+                        {
+                          "sqrt": "rnd"
+                        },
+                        1.02
+                      ]
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "i",
+                            2.399963229728653
+                          ]
+                        },
+                        {
+                          "*": [
+                            "t",
+                            0.16
+                          ]
+                        }
+                      ]
+                    },
+                    "xx": {
+                      "*": [
+                        {
+                          "cos": "angle"
+                        },
+                        "rr"
+                      ]
+                    },
+                    "yy": {
+                      "*": [
+                        {
+                          "sin": "angle"
+                        },
+                        "rr"
+                      ]
+                    },
+                    "top": {
+                      "sqrt": {
+                        "+": [
+                          {
+                            "*": [
+                              "xx",
+                              "xx"
+                            ]
+                          },
+                          {
+                            "*": [
+                              {
+                                "-": [
+                                  "yy",
+                                  0.5
+                                ]
+                              },
+                              {
+                                "-": [
+                                  "yy",
+                                  0.5
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "bottom": {
+                      "sqrt": {
+                        "+": [
+                          {
+                            "*": [
+                              "xx",
+                              "xx"
+                            ]
+                          },
+                          {
+                            "*": [
+                              {
+                                "+": [
+                                  "yy",
+                                  0.5
+                                ]
+                              },
+                              {
+                                "+": [
+                                  "yy",
+                                  0.5
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "bright0": {
+                      "if": [
+                        {
+                          ">": [
+                            "xx",
+                            0
+                          ]
+                        },
+                        1,
+                        0.08
+                      ]
+                    },
+                    "bright1": {
+                      "if": [
+                        {
+                          "<": [
+                            "top",
+                            0.5
+                          ]
+                        },
+                        1,
+                        "bright0"
+                      ]
+                    },
+                    "bright2": {
+                      "if": [
+                        {
+                          "<": [
+                            "bottom",
+                            0.5
+                          ]
+                        },
+                        0.08,
+                        "bright1"
+                      ]
+                    },
+                    "bright3": {
+                      "if": [
+                        {
+                          "<": [
+                            "top",
+                            0.13
+                          ]
+                        },
+                        0.06,
+                        "bright2"
+                      ]
+                    },
+                    "bright": {
+                      "if": [
+                        {
+                          "<": [
+                            "bottom",
+                            0.13
+                          ]
+                        },
+                        1,
+                        "bright3"
+                      ]
+                    }
+                  },
+                  "skipWhen": {
+                    "<=": [
+                      "bright",
+                      0.2
+                    ]
+                  }
+                }
+              ]
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "right": 30,
+            "bottom": 50,
+            "child": {
+              "type": "container",
+              "layout": "row",
+              "alignment": "center",
+              "mainAxisAlignment": "center",
+              "padding": {
+                "horizontal": 18,
+                "vertical": 14
+              },
+              "color": "#FFFFFFFF",
+              "borderRadius": 28,
+              "onTap": {
+                "call": "@global.toggleMode",
+                "args": {}
+              },
+              "children": [
+                {
+                  "type": "icon",
+                  "name": "swap_calls",
+                  "size": 20,
+                  "color": "#000000"
+                },
+                {
+                  "type": "spacer",
+                  "width": 8
+                },
+                {
+                  "type": "text",
+                  "value": "{{ global.modeLabel }}",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#000000"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "appBar": {
+          "title": ""
+        }
+      }
+    ]
+  }
+}

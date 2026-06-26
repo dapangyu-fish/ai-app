@@ -1,0 +1,127 @@
+{
+  "dsl": "3.3",
+  "appid": "fb6ae12f-a6a4-56cb-98d9-c702940ecdcd",
+  "meta": {
+    "name": "gsy_flutter_demo/037-animation-container-demo-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "控件动画变形效果",
+      "en": "Morphing animation"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：控件动画变形效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "控件动画变形效果",
+      "sourcePath": "lib/widget/animation/animation_container_demo_page.dart",
+      "deferredAlias": "animation_container_demo_page",
+      "widgetClass": "AnimationContainerDemoPage",
+      "category": "animation",
+      "routeIndex": 37
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "控件动画变形效果",
+      "upstreamSource": "lib/widget/animation/animation_container_demo_page.dart",
+      "upstreamWidget": "AnimationContainerDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v1",
+      "boxWidth": 50,
+      "boxHeight": 50,
+      "boxRadius": 8,
+      "boxColor": "#4CAF50"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "AnimationContainerDemoPage Demo",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "animated_container",
+                "width": {
+                  "var": "global.boxWidth"
+                },
+                "height": {
+                  "var": "global.boxHeight"
+                },
+                "borderRadius": {
+                  "var": "global.boxRadius"
+                },
+                "color": "{{ global.boxColor }}",
+                "durationMs": 1000,
+                "curve": "fastOutSlowIn"
+              }
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#FFFFFF",
+        "floatingActionButton": {
+          "type": "floating_action_button",
+          "icon": "play",
+          "action": {
+            "call": "@parallel",
+            "args": {
+              "steps": [
+                {
+                  "call": "@random",
+                  "args": {
+                    "min": 0,
+                    "max": 299
+                  },
+                  "assign": "global.boxWidth"
+                },
+                {
+                  "call": "@random",
+                  "args": {
+                    "min": 0,
+                    "max": 299
+                  },
+                  "assign": "global.boxHeight"
+                },
+                {
+                  "call": "@random",
+                  "args": {
+                    "min": 0,
+                    "max": 99
+                  },
+                  "assign": "global.boxRadius"
+                },
+                {
+                  "call": "@random_pick",
+                  "args": {
+                    "list": [
+                      "#F44336",
+                      "#2196F3",
+                      "#4CAF50",
+                      "#FF9800",
+                      "#9C27B0",
+                      "#009688"
+                    ]
+                  },
+                  "assign": "global.boxColor"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  }
+}

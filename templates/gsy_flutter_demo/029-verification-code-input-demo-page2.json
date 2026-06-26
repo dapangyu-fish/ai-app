@@ -1,0 +1,111 @@
+{
+  "dsl": "3.3",
+  "appid": "21bc6c87-9a83-536e-8e9c-29e84f2b7806",
+  "meta": {
+    "name": "gsy_flutter_demo/029-verification-code-input-demo-page2",
+    "version": "0.1.5",
+    "type": "app",
+    "displayName": {
+      "zh": "验证码输入框2",
+      "en": "Verification code input2"
+    },
+    "description": "VerificationCodeInputDemoPage2：PIN 码输入控件",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "验证码输入框2",
+      "sourcePath": "lib/widget/basic/verification_code_input_demo_page2.dart",
+      "deferredAlias": "verification_code_input_demo_page2",
+      "widgetClass": "VerificationCodeInputDemoPage2",
+      "category": "basic",
+      "routeIndex": 29,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v2"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "code": "",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v2"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "VerificationCodeInputDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "margin": {
+                      "left": 50,
+                      "right": 50
+                    },
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "支付",
+                        "style": {
+                          "fontSize": 16,
+                          "fontWeight": "bold",
+                          "color": "#000000"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "flex": 1
+                      },
+                      {
+                        "type": "text",
+                        "value": "支付",
+                        "style": {
+                          "fontSize": 16,
+                          "color": "#000000"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 5
+                  },
+                  {
+                    "type": "code_input",
+                    "bind": "global.code",
+                    "length": 6,
+                    "keyboardType": "number",
+                    "style": "pin",
+                    "horizontalPadding": 50,
+                    "borderColor": "#979797",
+                    "textColor": "#000000"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

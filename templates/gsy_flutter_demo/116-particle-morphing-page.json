@@ -1,0 +1,471 @@
+{
+  "dsl": "3.3",
+  "appid": "66e38f85-1af7-560a-928f-6da6b02c8852",
+  "meta": {
+    "name": "gsy_flutter_demo/116-particle-morphing-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "骚气粒子效果",
+      "en": "骚气粒子effect"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：骚气粒子效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "骚气粒子效果",
+      "sourcePath": "lib/widget/animation/particle_morphing_page.dart",
+      "deferredAlias": "particle_morphing_page",
+      "widgetClass": "ParticleMorphingPage",
+      "category": "animation",
+      "routeIndex": 116,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-morph-controls-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "骚气粒子效果",
+      "upstreamSource": "lib/widget/animation/particle_morphing_page.dart",
+      "upstreamWidget": "ParticleMorphingPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-morph-controls-v1",
+      "structured": false,
+      "shapeIndex": 0
+    },
+    "functions": {
+      "toggleDistribution": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.structured",
+              "value": {
+                "!": [
+                  {
+                    "var": "global.structured"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "nextShape": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.shapeIndex",
+              "value": {
+                "min": [
+                  3,
+                  {
+                    "+": [
+                      {
+                        "var": "global.shapeIndex"
+                      },
+                      1
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "prevShape": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.shapeIndex",
+              "value": {
+                "max": [
+                  0,
+                  {
+                    "-": [
+                      {
+                        "var": "global.shapeIndex"
+                      },
+                      1
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "computed": {
+      "distributionLabel": {
+        "if": [
+          {
+            "var": "global.structured"
+          },
+          "当前: 有序网格",
+          "当前: 随机分布"
+        ]
+      },
+      "distributionIcon": {
+        "if": [
+          {
+            "var": "global.structured"
+          },
+          "grid_3x3",
+          "blur_on"
+        ]
+      },
+      "shapeLabel": {
+        "if": [
+          {
+            "==": [
+              {
+                "var": "global.shapeIndex"
+              },
+              0
+            ]
+          },
+          "SPHERE",
+          {
+            "if": [
+              {
+                "==": [
+                  {
+                    "var": "global.shapeIndex"
+                  },
+                  1
+                ]
+              },
+              "CUBE",
+              {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var": "global.shapeIndex"
+                      },
+                      2
+                    ]
+                  },
+                  "TORUS",
+                  "HEART"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#05050A",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "animated_canvas",
+              "backgroundColor": "#05050A",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "particles",
+                  "count": 1200,
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          "rx",
+                          "scale"
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          "yv",
+                          "scale"
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": 1.6,
+                  "color": "#00E5FF",
+                  "alpha": 0.65,
+                  "blendMode": "plus",
+                  "locals": {
+                    "q": {
+                      "+": [
+                        {
+                          "*": [
+                            "i",
+                            0.018
+                          ]
+                        },
+                        {
+                          "*": [
+                            "t",
+                            0.3
+                          ]
+                        }
+                      ]
+                    },
+                    "scale": {
+                      "*": [
+                        "min",
+                        0.18
+                      ]
+                    },
+                    "xv": {
+                      "*": [
+                        {
+                          "sin": {
+                            "*": [
+                              "q",
+                              1.7
+                            ]
+                          }
+                        },
+                        {
+                          "cos": {
+                            "*": [
+                              "q",
+                              0.41
+                            ]
+                          }
+                        },
+                        2.1
+                      ]
+                    },
+                    "yv": {
+                      "*": [
+                        {
+                          "sin": {
+                            "+": [
+                              {
+                                "*": [
+                                  "q",
+                                  1.13
+                                ]
+                              },
+                              {
+                                "sin": {
+                                  "*": [
+                                    "q",
+                                    0.23
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        2.0
+                      ]
+                    },
+                    "zv": {
+                      "*": [
+                        {
+                          "cos": {
+                            "*": [
+                              "q",
+                              0.71
+                            ]
+                          }
+                        },
+                        1.3
+                      ]
+                    },
+                    "rx": {
+                      "-": [
+                        {
+                          "*": [
+                            "xv",
+                            {
+                              "cos": {
+                                "*": [
+                                  "t",
+                                  0.3
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "zv",
+                            {
+                              "sin": {
+                                "*": [
+                                  "t",
+                                  0.3
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "left": 20,
+            "top": 0,
+            "bottom": 0,
+            "child": {
+              "type": "container",
+              "width": 56,
+              "alignment": "center",
+              "children": [
+                {
+                  "type": "container",
+                  "width": 48,
+                  "height": 48,
+                  "shape": "circle",
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.prevShape",
+                    "args": {}
+                  },
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "left",
+                      "size": 40,
+                      "color": "#3DFFFFFF"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "type": "positioned",
+            "right": 20,
+            "top": 0,
+            "bottom": 0,
+            "child": {
+              "type": "container",
+              "width": 56,
+              "alignment": "center",
+              "children": [
+                {
+                  "type": "container",
+                  "width": 48,
+                  "height": 48,
+                  "shape": "circle",
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.nextShape",
+                    "args": {}
+                  },
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "right",
+                      "size": 40,
+                      "color": "#3DFFFFFF"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "bottom": 50,
+            "child": {
+              "type": "text",
+              "value": "{{ global.shapeLabel }}",
+              "style": {
+                "fontSize": 24,
+                "color": "#4DFFFFFF",
+                "fontWeight": "w300",
+                "letterSpacing": 4,
+                "textAlign": "center"
+              }
+            }
+          },
+          {
+            "type": "positioned",
+            "right": 16,
+            "bottom": 24,
+            "child": {
+              "type": "container",
+              "layout": "row",
+              "alignment": "center",
+              "mainAxisAlignment": "center",
+              "padding": {
+                "horizontal": 18,
+                "vertical": 14
+              },
+              "color": "#1FFFFFFF",
+              "borderRadius": 28,
+              "onTap": {
+                "call": "@global.toggleDistribution",
+                "args": {}
+              },
+              "children": [
+                {
+                  "type": "icon",
+                  "name": "{{ global.distributionIcon }}",
+                  "size": 20,
+                  "color": "#FFFFFF"
+                },
+                {
+                  "type": "spacer",
+                  "width": 8
+                },
+                {
+                  "type": "text",
+                  "value": "{{ global.distributionLabel }}",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#FFFFFF"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "appBar": {
+          "title": ""
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,307 @@
+{
+  "dsl": "3.3",
+  "appid": "bc5c6d91-bcc5-5eb3-95b2-d004cf3f830a",
+  "meta": {
+    "name": "gsy_flutter_demo/081-card-perspective-demo-page",
+    "version": "0.1.1",
+    "type": "app",
+    "displayName": {
+      "zh": "3D 透视卡片",
+      "en": "3D perspective card"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：3D 透视卡片",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "3D 透视卡片",
+      "sourcePath": "lib/widget/visual/card_perspective_demo_page.dart",
+      "deferredAlias": "card_perspective_demo_page",
+      "widgetClass": "CardPerspectiveDemoPage",
+      "category": "visual",
+      "routeIndex": 81,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "3D 透视卡片",
+      "upstreamSource": "lib/widget/visual/card_perspective_demo_page.dart",
+      "upstreamWidget": "CardPerspectiveDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4",
+      "touchX": 0,
+      "touchY": 0,
+      "startTransform": false
+    },
+    "functions": {
+      "updatePerspective": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.startTransform",
+              "value": true
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.touchX",
+              "value": {
+                "/": [
+                  {
+                    "-": [
+                      150,
+                      {
+                        "var": "event.localX"
+                      }
+                    ]
+                  },
+                  6
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.touchY",
+              "value": {
+                "/": [
+                  {
+                    "-": [
+                      {
+                        "var": "event.localY"
+                      },
+                      200
+                    ]
+                  },
+                  8
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "resetPerspective": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.startTransform",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.touchX",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.touchY",
+              "value": 0
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "CardPerspectiveDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "children": [
+                {
+                  "type": "gesture_detector",
+                  "onPanUpdate": {
+                    "call": "@global.updatePerspective",
+                    "args": {}
+                  },
+                  "onPanEnd": {
+                    "call": "@global.resetPerspective",
+                    "args": {}
+                  },
+                  "onPanCancel": {
+                    "call": "@global.resetPerspective",
+                    "args": {}
+                  },
+                  "onTapUp": {
+                    "call": "@global.resetPerspective",
+                    "args": {}
+                  },
+                  "child": {
+                    "type": "transform",
+                    "perspective": 0.001,
+                    "rotateX": "{{ global.touchY }}",
+                    "rotateY": "{{ global.touchX }}",
+                    "child": {
+                      "type": "container",
+                      "children": [
+                        {
+                          "type": "transform",
+                          "translateX": {
+                            "*": [
+                              {
+                                "var": "global.touchX"
+                              },
+                              1.1
+                            ]
+                          },
+                          "translateY": {
+                            "*": [
+                              {
+                                "var": "global.touchY"
+                              },
+                              1.1
+                            ]
+                          },
+                          "child": {
+                            "type": "text",
+                            "value": "13",
+                            "style": {
+                              "fontSize": 80,
+                              "color": "#111111",
+                              "fontWeight": "w800",
+                              "gradient": [
+                                "#FFE500",
+                                "#111111"
+                              ],
+                              "gradientWidth": 200,
+                              "gradientHeight": 100
+                            }
+                          }
+                        },
+                        {
+                          "type": "container",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "MIUI 13",
+                              "style": {
+                                "fontSize": 29,
+                                "color": "#448AFF",
+                                "fontWeight": "bold"
+                              }
+                            }
+                          ],
+                          "layout": "column",
+                          "margin": {
+                            "top": 10,
+                            "bottom": 10
+                          }
+                        },
+                        {
+                          "type": "expanded",
+                          "child": {
+                            "type": "container",
+                            "children": [],
+                            "layout": "column"
+                          }
+                        },
+                        {
+                          "type": "container",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "新版本优化应用",
+                              "style": {
+                                "fontSize": 15,
+                                "color": "#FFFFFF",
+                                "fontWeight": "bold"
+                              }
+                            }
+                          ],
+                          "layout": "column",
+                          "margin": {
+                            "bottom": 10
+                          }
+                        },
+                        {
+                          "type": "transform",
+                          "translateX": {
+                            "*": [
+                              {
+                                "var": "global.touchX"
+                              },
+                              0.8
+                            ]
+                          },
+                          "translateY": {
+                            "*": [
+                              {
+                                "var": "global.touchY"
+                              },
+                              0.8
+                            ]
+                          },
+                          "child": {
+                            "type": "image",
+                            "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                            "width": 40,
+                            "height": 36,
+                            "fit": "contain",
+                            "paddingV": 0
+                          }
+                        }
+                      ],
+                      "layout": "column",
+                      "width": 300,
+                      "height": 400,
+                      "padding": 20,
+                      "borderRadius": 20,
+                      "gradient": {
+                        "colors": [
+                          "#FFFFFF",
+                          "#607D8B"
+                        ],
+                        "begin": "topCenter",
+                        "end": "bottomCenter"
+                      },
+                      "clipBehavior": "hardEdge",
+                      "crossAxisAlignment": "start"
+                    }
+                  }
+                }
+              ],
+              "layout": "column",
+              "gradient": {
+                "colors": [
+                  "#448AFF",
+                  "#FFFF8D"
+                ],
+                "begin": "topCenter",
+                "end": "bottomCenter"
+              },
+              "alignment": "center",
+              "mainAxisAlignment": "center"
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        ],
+        "appBar": {
+          "title": "CardPerspectiveDemoPage"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,4981 @@
+{
+  "dsl": "3.3",
+  "appid": "1dcbe0d8-fd15-5a56-a0c0-06ab56a04d18",
+  "meta": {
+    "name": "gsy_flutter_demo/114-akaza-compass-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "破坏杀·罗针",
+      "en": "Destructive Compass Needle"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：破坏杀·罗针",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "破坏杀·罗针",
+      "sourcePath": "lib/widget/basic/akaza_page.dart",
+      "deferredAlias": "akaza_page",
+      "widgetClass": "AkazaCompassPage",
+      "category": "basic",
+      "routeIndex": 114,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-akaza-compass-geometry-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "破坏杀·罗针",
+      "upstreamSource": "lib/widget/basic/akaza_page.dart",
+      "upstreamWidget": "AkazaCompassPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-akaza-compass-geometry-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#020008",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "animated_canvas",
+              "backgroundColor": "#020008",
+              "speed": 1,
+              "durationMs": 9000,
+              "layers": [
+                {
+                  "kind": "circle",
+                  "x": {
+                    "/": [
+                      "w",
+                      2
+                    ]
+                  },
+                  "y": {
+                    "/": [
+                      "h",
+                      2
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      "min",
+                      0.46
+                    ]
+                  },
+                  "style": "stroke",
+                  "strokeWidth": 2,
+                  "color": "#173B4A",
+                  "alpha": 0.35,
+                  "blurRadius": 18
+                },
+                {
+                  "kind": "circle",
+                  "x": {
+                    "/": [
+                      "w",
+                      2
+                    ]
+                  },
+                  "y": {
+                    "/": [
+                      "h",
+                      2
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      "min",
+                      0.18
+                    ]
+                  },
+                  "style": "stroke",
+                  "strokeWidth": 1,
+                  "color": "#153344",
+                  "alpha": 0.4,
+                  "blurRadius": 10
+                },
+                {
+                  "kind": "circle",
+                  "x": {
+                    "/": [
+                      "w",
+                      2
+                    ]
+                  },
+                  "y": {
+                    "/": [
+                      "h",
+                      2
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      "min",
+                      0.035
+                    ]
+                  },
+                  "style": "stroke",
+                  "strokeWidth": {
+                    "*": [
+                      "min",
+                      0.03
+                    ]
+                  },
+                  "color": "#C0F3F2",
+                  "alpha": 0.65,
+                  "blurRadius": 10
+                },
+                {
+                  "kind": "circle",
+                  "x": {
+                    "/": [
+                      "w",
+                      2
+                    ]
+                  },
+                  "y": {
+                    "/": [
+                      "h",
+                      2
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      "min",
+                      0.035
+                    ]
+                  },
+                  "style": "stroke",
+                  "strokeWidth": {
+                    "*": [
+                      "min",
+                      0.015
+                    ]
+                  },
+                  "color": "#71FFFD",
+                  "alpha": 1
+                },
+                {
+                  "kind": "segments",
+                  "count": 12,
+                  "x1": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          {
+                            "+": [
+                              "rCenter",
+                              {
+                                "/": [
+                                  "stroke",
+                                  2
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y1": {
+                    "+": [
+                      "cy",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          {
+                            "+": [
+                              "rCenter",
+                              {
+                                "/": [
+                                  "stroke",
+                                  2
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "x2": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          {
+                            "-": [
+                              "rHex",
+                              "hexHalf"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y2": {
+                    "+": [
+                      "cy",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          {
+                            "-": [
+                              "rHex",
+                              "hexHalf"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#C0F3F2",
+                  "alpha": 0.55,
+                  "strokeWidth": {
+                    "*": [
+                      "lineW",
+                      5
+                    ]
+                  },
+                  "strokeCap": "round",
+                  "blurRadius": 12,
+                  "locals": {
+                    "branch": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          1
+                        ]
+                      }
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "branch",
+                            {
+                              "/": [
+                                6.283185307179586,
+                                12
+                              ]
+                            }
+                          ]
+                        },
+                        -1.5707963267948966
+                      ]
+                    },
+                    "cx": {
+                      "/": [
+                        "w",
+                        2
+                      ]
+                    },
+                    "cy": {
+                      "/": [
+                        "h",
+                        2
+                      ]
+                    },
+                    "rCenter": {
+                      "*": [
+                        "min",
+                        0.035
+                      ]
+                    },
+                    "rShortHex": {
+                      "*": [
+                        "min",
+                        0.24
+                      ]
+                    },
+                    "rShortEnd": {
+                      "*": [
+                        "min",
+                        0.335
+                      ]
+                    },
+                    "rLongHex": {
+                      "*": [
+                        "min",
+                        0.35
+                      ]
+                    },
+                    "rLongEnd": {
+                      "*": [
+                        "min",
+                        0.43
+                      ]
+                    },
+                    "isLong": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "branch",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        1,
+                        0
+                      ]
+                    },
+                    "rHex": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongHex",
+                        "rShortHex"
+                      ]
+                    },
+                    "rEnd": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongEnd",
+                        "rShortEnd"
+                      ]
+                    },
+                    "hexSize": {
+                      "*": [
+                        "min",
+                        0.038
+                      ]
+                    },
+                    "hexHalf": {
+                      "+": [
+                        "hexSize",
+                        3
+                      ]
+                    },
+                    "endSize": {
+                      "*": [
+                        "min",
+                        0.0125
+                      ]
+                    },
+                    "stroke": {
+                      "*": [
+                        "min",
+                        0.0075
+                      ]
+                    },
+                    "lineW": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "stroke",
+                            1.5
+                          ]
+                        },
+                        "stroke"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 12,
+                  "x1": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          {
+                            "+": [
+                              "rCenter",
+                              {
+                                "/": [
+                                  "stroke",
+                                  2
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y1": {
+                    "+": [
+                      "cy",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          {
+                            "+": [
+                              "rCenter",
+                              {
+                                "/": [
+                                  "stroke",
+                                  2
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "x2": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          {
+                            "-": [
+                              "rHex",
+                              "hexHalf"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y2": {
+                    "+": [
+                      "cy",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          {
+                            "-": [
+                              "rHex",
+                              "hexHalf"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#71FFFD",
+                  "alpha": 1,
+                  "strokeWidth": {
+                    "*": [
+                      "lineW",
+                      1
+                    ]
+                  },
+                  "strokeCap": "round",
+                  "locals": {
+                    "branch": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          1
+                        ]
+                      }
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "branch",
+                            {
+                              "/": [
+                                6.283185307179586,
+                                12
+                              ]
+                            }
+                          ]
+                        },
+                        -1.5707963267948966
+                      ]
+                    },
+                    "cx": {
+                      "/": [
+                        "w",
+                        2
+                      ]
+                    },
+                    "cy": {
+                      "/": [
+                        "h",
+                        2
+                      ]
+                    },
+                    "rCenter": {
+                      "*": [
+                        "min",
+                        0.035
+                      ]
+                    },
+                    "rShortHex": {
+                      "*": [
+                        "min",
+                        0.24
+                      ]
+                    },
+                    "rShortEnd": {
+                      "*": [
+                        "min",
+                        0.335
+                      ]
+                    },
+                    "rLongHex": {
+                      "*": [
+                        "min",
+                        0.35
+                      ]
+                    },
+                    "rLongEnd": {
+                      "*": [
+                        "min",
+                        0.43
+                      ]
+                    },
+                    "isLong": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "branch",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        1,
+                        0
+                      ]
+                    },
+                    "rHex": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongHex",
+                        "rShortHex"
+                      ]
+                    },
+                    "rEnd": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongEnd",
+                        "rShortEnd"
+                      ]
+                    },
+                    "hexSize": {
+                      "*": [
+                        "min",
+                        0.038
+                      ]
+                    },
+                    "hexHalf": {
+                      "+": [
+                        "hexSize",
+                        3
+                      ]
+                    },
+                    "endSize": {
+                      "*": [
+                        "min",
+                        0.0125
+                      ]
+                    },
+                    "stroke": {
+                      "*": [
+                        "min",
+                        0.0075
+                      ]
+                    },
+                    "lineW": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "stroke",
+                            1.5
+                          ]
+                        },
+                        "stroke"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 12,
+                  "x1": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          {
+                            "+": [
+                              "rHex",
+                              "hexHalf"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y1": {
+                    "+": [
+                      "cy",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          {
+                            "+": [
+                              "rHex",
+                              "hexHalf"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "x2": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          {
+                            "-": [
+                              {
+                                "-": [
+                                  "rEnd",
+                                  "endSize"
+                                ]
+                              },
+                              {
+                                "/": [
+                                  "stroke",
+                                  2
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y2": {
+                    "+": [
+                      "cy",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          {
+                            "-": [
+                              {
+                                "-": [
+                                  "rEnd",
+                                  "endSize"
+                                ]
+                              },
+                              {
+                                "/": [
+                                  "stroke",
+                                  2
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#71FFFD",
+                  "color2": "#9E7CB0",
+                  "mix": 0.65,
+                  "alpha": 0.35,
+                  "strokeWidth": {
+                    "*": [
+                      "lineW",
+                      4
+                    ]
+                  },
+                  "strokeCap": "round",
+                  "blurRadius": 10,
+                  "locals": {
+                    "branch": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          1
+                        ]
+                      }
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "branch",
+                            {
+                              "/": [
+                                6.283185307179586,
+                                12
+                              ]
+                            }
+                          ]
+                        },
+                        -1.5707963267948966
+                      ]
+                    },
+                    "cx": {
+                      "/": [
+                        "w",
+                        2
+                      ]
+                    },
+                    "cy": {
+                      "/": [
+                        "h",
+                        2
+                      ]
+                    },
+                    "rCenter": {
+                      "*": [
+                        "min",
+                        0.035
+                      ]
+                    },
+                    "rShortHex": {
+                      "*": [
+                        "min",
+                        0.24
+                      ]
+                    },
+                    "rShortEnd": {
+                      "*": [
+                        "min",
+                        0.335
+                      ]
+                    },
+                    "rLongHex": {
+                      "*": [
+                        "min",
+                        0.35
+                      ]
+                    },
+                    "rLongEnd": {
+                      "*": [
+                        "min",
+                        0.43
+                      ]
+                    },
+                    "isLong": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "branch",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        1,
+                        0
+                      ]
+                    },
+                    "rHex": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongHex",
+                        "rShortHex"
+                      ]
+                    },
+                    "rEnd": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongEnd",
+                        "rShortEnd"
+                      ]
+                    },
+                    "hexSize": {
+                      "*": [
+                        "min",
+                        0.038
+                      ]
+                    },
+                    "hexHalf": {
+                      "+": [
+                        "hexSize",
+                        3
+                      ]
+                    },
+                    "endSize": {
+                      "*": [
+                        "min",
+                        0.0125
+                      ]
+                    },
+                    "stroke": {
+                      "*": [
+                        "min",
+                        0.0075
+                      ]
+                    },
+                    "lineW": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "stroke",
+                            1.5
+                          ]
+                        },
+                        "stroke"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 12,
+                  "x1": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          {
+                            "+": [
+                              "rHex",
+                              "hexHalf"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y1": {
+                    "+": [
+                      "cy",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          {
+                            "+": [
+                              "rHex",
+                              "hexHalf"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "x2": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          {
+                            "-": [
+                              {
+                                "-": [
+                                  "rEnd",
+                                  "endSize"
+                                ]
+                              },
+                              {
+                                "/": [
+                                  "stroke",
+                                  2
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y2": {
+                    "+": [
+                      "cy",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          {
+                            "-": [
+                              {
+                                "-": [
+                                  "rEnd",
+                                  "endSize"
+                                ]
+                              },
+                              {
+                                "/": [
+                                  "stroke",
+                                  2
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#9E7CB0",
+                  "color2": "#9E7CB0",
+                  "mix": 0.65,
+                  "alpha": 0.85,
+                  "strokeWidth": {
+                    "*": [
+                      "lineW",
+                      1
+                    ]
+                  },
+                  "strokeCap": "round",
+                  "locals": {
+                    "branch": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          1
+                        ]
+                      }
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "branch",
+                            {
+                              "/": [
+                                6.283185307179586,
+                                12
+                              ]
+                            }
+                          ]
+                        },
+                        -1.5707963267948966
+                      ]
+                    },
+                    "cx": {
+                      "/": [
+                        "w",
+                        2
+                      ]
+                    },
+                    "cy": {
+                      "/": [
+                        "h",
+                        2
+                      ]
+                    },
+                    "rCenter": {
+                      "*": [
+                        "min",
+                        0.035
+                      ]
+                    },
+                    "rShortHex": {
+                      "*": [
+                        "min",
+                        0.24
+                      ]
+                    },
+                    "rShortEnd": {
+                      "*": [
+                        "min",
+                        0.335
+                      ]
+                    },
+                    "rLongHex": {
+                      "*": [
+                        "min",
+                        0.35
+                      ]
+                    },
+                    "rLongEnd": {
+                      "*": [
+                        "min",
+                        0.43
+                      ]
+                    },
+                    "isLong": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "branch",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        1,
+                        0
+                      ]
+                    },
+                    "rHex": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongHex",
+                        "rShortHex"
+                      ]
+                    },
+                    "rEnd": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongEnd",
+                        "rShortEnd"
+                      ]
+                    },
+                    "hexSize": {
+                      "*": [
+                        "min",
+                        0.038
+                      ]
+                    },
+                    "hexHalf": {
+                      "+": [
+                        "hexSize",
+                        3
+                      ]
+                    },
+                    "endSize": {
+                      "*": [
+                        "min",
+                        0.0125
+                      ]
+                    },
+                    "stroke": {
+                      "*": [
+                        "min",
+                        0.0075
+                      ]
+                    },
+                    "lineW": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "stroke",
+                            1.5
+                          ]
+                        },
+                        "stroke"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 24,
+                  "x1": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          "forkR"
+                        ]
+                      }
+                    ]
+                  },
+                  "y1": {
+                    "+": [
+                      "cy",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          "forkR"
+                        ]
+                      }
+                    ]
+                  },
+                  "x2": {
+                    "+": [
+                      "vx",
+                      {
+                        "-": [
+                          {
+                            "*": [
+                              "localX",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "localY",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y2": {
+                    "+": [
+                      "vy",
+                      {
+                        "+": [
+                          {
+                            "*": [
+                              "localX",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "localY",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#C0F3F2",
+                  "alpha": 0.55,
+                  "strokeWidth": {
+                    "*": [
+                      "lineW",
+                      5
+                    ]
+                  },
+                  "strokeCap": "round",
+                  "blurRadius": 12,
+                  "locals": {
+                    "branch": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          2
+                        ]
+                      }
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "branch",
+                            {
+                              "/": [
+                                6.283185307179586,
+                                12
+                              ]
+                            }
+                          ]
+                        },
+                        -1.5707963267948966
+                      ]
+                    },
+                    "cx": {
+                      "/": [
+                        "w",
+                        2
+                      ]
+                    },
+                    "cy": {
+                      "/": [
+                        "h",
+                        2
+                      ]
+                    },
+                    "rCenter": {
+                      "*": [
+                        "min",
+                        0.035
+                      ]
+                    },
+                    "rShortHex": {
+                      "*": [
+                        "min",
+                        0.24
+                      ]
+                    },
+                    "rShortEnd": {
+                      "*": [
+                        "min",
+                        0.335
+                      ]
+                    },
+                    "rLongHex": {
+                      "*": [
+                        "min",
+                        0.35
+                      ]
+                    },
+                    "rLongEnd": {
+                      "*": [
+                        "min",
+                        0.43
+                      ]
+                    },
+                    "isLong": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "branch",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        1,
+                        0
+                      ]
+                    },
+                    "rHex": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongHex",
+                        "rShortHex"
+                      ]
+                    },
+                    "rEnd": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongEnd",
+                        "rShortEnd"
+                      ]
+                    },
+                    "hexSize": {
+                      "*": [
+                        "min",
+                        0.038
+                      ]
+                    },
+                    "hexHalf": {
+                      "+": [
+                        "hexSize",
+                        3
+                      ]
+                    },
+                    "endSize": {
+                      "*": [
+                        "min",
+                        0.0125
+                      ]
+                    },
+                    "stroke": {
+                      "*": [
+                        "min",
+                        0.0075
+                      ]
+                    },
+                    "lineW": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "stroke",
+                            1.5
+                          ]
+                        },
+                        "stroke"
+                      ]
+                    },
+                    "side": {
+                      "%": [
+                        "i",
+                        2
+                      ]
+                    },
+                    "rot": {
+                      "+": [
+                        "angle",
+                        1.5707963267948966
+                      ]
+                    },
+                    "forkR": {
+                      "-": [
+                        {
+                          "-": [
+                            "rHex",
+                            {
+                              "*": [
+                                "hexSize",
+                                1.9736842105263157
+                              ]
+                            }
+                          ]
+                        },
+                        6
+                      ]
+                    },
+                    "span": {
+                      "*": [
+                        "min",
+                        0.033
+                      ]
+                    },
+                    "localX": {
+                      "if": [
+                        {
+                          "==": [
+                            "side",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "span",
+                            -1
+                          ]
+                        },
+                        "span"
+                      ]
+                    },
+                    "localY": {
+                      "*": [
+                        "span",
+                        -1
+                      ]
+                    },
+                    "vx": {
+                      "+": [
+                        "cx",
+                        {
+                          "*": [
+                            {
+                              "cos": "angle"
+                            },
+                            "forkR"
+                          ]
+                        }
+                      ]
+                    },
+                    "vy": {
+                      "+": [
+                        "cy",
+                        {
+                          "*": [
+                            {
+                              "sin": "angle"
+                            },
+                            "forkR"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 24,
+                  "x1": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          "forkR"
+                        ]
+                      }
+                    ]
+                  },
+                  "y1": {
+                    "+": [
+                      "cy",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          "forkR"
+                        ]
+                      }
+                    ]
+                  },
+                  "x2": {
+                    "+": [
+                      "vx",
+                      {
+                        "-": [
+                          {
+                            "*": [
+                              "localX",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "localY",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y2": {
+                    "+": [
+                      "vy",
+                      {
+                        "+": [
+                          {
+                            "*": [
+                              "localX",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "localY",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#71FFFD",
+                  "alpha": 0.95,
+                  "strokeWidth": {
+                    "*": [
+                      "lineW",
+                      1.35
+                    ]
+                  },
+                  "strokeCap": "round",
+                  "locals": {
+                    "branch": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          2
+                        ]
+                      }
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "branch",
+                            {
+                              "/": [
+                                6.283185307179586,
+                                12
+                              ]
+                            }
+                          ]
+                        },
+                        -1.5707963267948966
+                      ]
+                    },
+                    "cx": {
+                      "/": [
+                        "w",
+                        2
+                      ]
+                    },
+                    "cy": {
+                      "/": [
+                        "h",
+                        2
+                      ]
+                    },
+                    "rCenter": {
+                      "*": [
+                        "min",
+                        0.035
+                      ]
+                    },
+                    "rShortHex": {
+                      "*": [
+                        "min",
+                        0.24
+                      ]
+                    },
+                    "rShortEnd": {
+                      "*": [
+                        "min",
+                        0.335
+                      ]
+                    },
+                    "rLongHex": {
+                      "*": [
+                        "min",
+                        0.35
+                      ]
+                    },
+                    "rLongEnd": {
+                      "*": [
+                        "min",
+                        0.43
+                      ]
+                    },
+                    "isLong": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "branch",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        1,
+                        0
+                      ]
+                    },
+                    "rHex": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongHex",
+                        "rShortHex"
+                      ]
+                    },
+                    "rEnd": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongEnd",
+                        "rShortEnd"
+                      ]
+                    },
+                    "hexSize": {
+                      "*": [
+                        "min",
+                        0.038
+                      ]
+                    },
+                    "hexHalf": {
+                      "+": [
+                        "hexSize",
+                        3
+                      ]
+                    },
+                    "endSize": {
+                      "*": [
+                        "min",
+                        0.0125
+                      ]
+                    },
+                    "stroke": {
+                      "*": [
+                        "min",
+                        0.0075
+                      ]
+                    },
+                    "lineW": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "stroke",
+                            1.5
+                          ]
+                        },
+                        "stroke"
+                      ]
+                    },
+                    "side": {
+                      "%": [
+                        "i",
+                        2
+                      ]
+                    },
+                    "rot": {
+                      "+": [
+                        "angle",
+                        1.5707963267948966
+                      ]
+                    },
+                    "forkR": {
+                      "-": [
+                        {
+                          "-": [
+                            "rHex",
+                            {
+                              "*": [
+                                "hexSize",
+                                1.9736842105263157
+                              ]
+                            }
+                          ]
+                        },
+                        6
+                      ]
+                    },
+                    "span": {
+                      "*": [
+                        "min",
+                        0.033
+                      ]
+                    },
+                    "localX": {
+                      "if": [
+                        {
+                          "==": [
+                            "side",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "span",
+                            -1
+                          ]
+                        },
+                        "span"
+                      ]
+                    },
+                    "localY": {
+                      "*": [
+                        "span",
+                        -1
+                      ]
+                    },
+                    "vx": {
+                      "+": [
+                        "cx",
+                        {
+                          "*": [
+                            {
+                              "cos": "angle"
+                            },
+                            "forkR"
+                          ]
+                        }
+                      ]
+                    },
+                    "vy": {
+                      "+": [
+                        "cy",
+                        {
+                          "*": [
+                            {
+                              "sin": "angle"
+                            },
+                            "forkR"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 24,
+                  "x1": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          "forkR"
+                        ]
+                      }
+                    ]
+                  },
+                  "y1": {
+                    "+": [
+                      "cy",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          "forkR"
+                        ]
+                      }
+                    ]
+                  },
+                  "x2": {
+                    "+": [
+                      "vx",
+                      {
+                        "-": [
+                          {
+                            "*": [
+                              "localX",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "localY",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y2": {
+                    "+": [
+                      "vy",
+                      {
+                        "+": [
+                          {
+                            "*": [
+                              "localX",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "localY",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#C0F3F2",
+                  "alpha": 0.55,
+                  "strokeWidth": {
+                    "*": [
+                      "lineW",
+                      5
+                    ]
+                  },
+                  "strokeCap": "round",
+                  "blurRadius": 12,
+                  "locals": {
+                    "branch": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          2
+                        ]
+                      }
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "branch",
+                            {
+                              "/": [
+                                6.283185307179586,
+                                12
+                              ]
+                            }
+                          ]
+                        },
+                        -1.5707963267948966
+                      ]
+                    },
+                    "cx": {
+                      "/": [
+                        "w",
+                        2
+                      ]
+                    },
+                    "cy": {
+                      "/": [
+                        "h",
+                        2
+                      ]
+                    },
+                    "rCenter": {
+                      "*": [
+                        "min",
+                        0.035
+                      ]
+                    },
+                    "rShortHex": {
+                      "*": [
+                        "min",
+                        0.24
+                      ]
+                    },
+                    "rShortEnd": {
+                      "*": [
+                        "min",
+                        0.335
+                      ]
+                    },
+                    "rLongHex": {
+                      "*": [
+                        "min",
+                        0.35
+                      ]
+                    },
+                    "rLongEnd": {
+                      "*": [
+                        "min",
+                        0.43
+                      ]
+                    },
+                    "isLong": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "branch",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        1,
+                        0
+                      ]
+                    },
+                    "rHex": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongHex",
+                        "rShortHex"
+                      ]
+                    },
+                    "rEnd": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongEnd",
+                        "rShortEnd"
+                      ]
+                    },
+                    "hexSize": {
+                      "*": [
+                        "min",
+                        0.038
+                      ]
+                    },
+                    "hexHalf": {
+                      "+": [
+                        "hexSize",
+                        3
+                      ]
+                    },
+                    "endSize": {
+                      "*": [
+                        "min",
+                        0.0125
+                      ]
+                    },
+                    "stroke": {
+                      "*": [
+                        "min",
+                        0.0075
+                      ]
+                    },
+                    "lineW": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "stroke",
+                            1.5
+                          ]
+                        },
+                        "stroke"
+                      ]
+                    },
+                    "side": {
+                      "%": [
+                        "i",
+                        2
+                      ]
+                    },
+                    "rot": {
+                      "+": [
+                        "angle",
+                        1.5707963267948966
+                      ]
+                    },
+                    "forkR": {
+                      "-": [
+                        {
+                          "-": [
+                            "rHex",
+                            {
+                              "*": [
+                                "hexSize",
+                                3.1578947368421053
+                              ]
+                            }
+                          ]
+                        },
+                        6
+                      ]
+                    },
+                    "span": {
+                      "*": [
+                        "min",
+                        0.055
+                      ]
+                    },
+                    "localX": {
+                      "if": [
+                        {
+                          "==": [
+                            "side",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "span",
+                            -1
+                          ]
+                        },
+                        "span"
+                      ]
+                    },
+                    "localY": {
+                      "*": [
+                        "span",
+                        -1
+                      ]
+                    },
+                    "vx": {
+                      "+": [
+                        "cx",
+                        {
+                          "*": [
+                            {
+                              "cos": "angle"
+                            },
+                            "forkR"
+                          ]
+                        }
+                      ]
+                    },
+                    "vy": {
+                      "+": [
+                        "cy",
+                        {
+                          "*": [
+                            {
+                              "sin": "angle"
+                            },
+                            "forkR"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 24,
+                  "x1": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          "forkR"
+                        ]
+                      }
+                    ]
+                  },
+                  "y1": {
+                    "+": [
+                      "cy",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          "forkR"
+                        ]
+                      }
+                    ]
+                  },
+                  "x2": {
+                    "+": [
+                      "vx",
+                      {
+                        "-": [
+                          {
+                            "*": [
+                              "localX",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "localY",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y2": {
+                    "+": [
+                      "vy",
+                      {
+                        "+": [
+                          {
+                            "*": [
+                              "localX",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "localY",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#71FFFD",
+                  "alpha": 0.95,
+                  "strokeWidth": {
+                    "*": [
+                      "lineW",
+                      1.35
+                    ]
+                  },
+                  "strokeCap": "round",
+                  "locals": {
+                    "branch": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          2
+                        ]
+                      }
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "branch",
+                            {
+                              "/": [
+                                6.283185307179586,
+                                12
+                              ]
+                            }
+                          ]
+                        },
+                        -1.5707963267948966
+                      ]
+                    },
+                    "cx": {
+                      "/": [
+                        "w",
+                        2
+                      ]
+                    },
+                    "cy": {
+                      "/": [
+                        "h",
+                        2
+                      ]
+                    },
+                    "rCenter": {
+                      "*": [
+                        "min",
+                        0.035
+                      ]
+                    },
+                    "rShortHex": {
+                      "*": [
+                        "min",
+                        0.24
+                      ]
+                    },
+                    "rShortEnd": {
+                      "*": [
+                        "min",
+                        0.335
+                      ]
+                    },
+                    "rLongHex": {
+                      "*": [
+                        "min",
+                        0.35
+                      ]
+                    },
+                    "rLongEnd": {
+                      "*": [
+                        "min",
+                        0.43
+                      ]
+                    },
+                    "isLong": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "branch",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        1,
+                        0
+                      ]
+                    },
+                    "rHex": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongHex",
+                        "rShortHex"
+                      ]
+                    },
+                    "rEnd": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongEnd",
+                        "rShortEnd"
+                      ]
+                    },
+                    "hexSize": {
+                      "*": [
+                        "min",
+                        0.038
+                      ]
+                    },
+                    "hexHalf": {
+                      "+": [
+                        "hexSize",
+                        3
+                      ]
+                    },
+                    "endSize": {
+                      "*": [
+                        "min",
+                        0.0125
+                      ]
+                    },
+                    "stroke": {
+                      "*": [
+                        "min",
+                        0.0075
+                      ]
+                    },
+                    "lineW": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "stroke",
+                            1.5
+                          ]
+                        },
+                        "stroke"
+                      ]
+                    },
+                    "side": {
+                      "%": [
+                        "i",
+                        2
+                      ]
+                    },
+                    "rot": {
+                      "+": [
+                        "angle",
+                        1.5707963267948966
+                      ]
+                    },
+                    "forkR": {
+                      "-": [
+                        {
+                          "-": [
+                            "rHex",
+                            {
+                              "*": [
+                                "hexSize",
+                                3.1578947368421053
+                              ]
+                            }
+                          ]
+                        },
+                        6
+                      ]
+                    },
+                    "span": {
+                      "*": [
+                        "min",
+                        0.055
+                      ]
+                    },
+                    "localX": {
+                      "if": [
+                        {
+                          "==": [
+                            "side",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "span",
+                            -1
+                          ]
+                        },
+                        "span"
+                      ]
+                    },
+                    "localY": {
+                      "*": [
+                        "span",
+                        -1
+                      ]
+                    },
+                    "vx": {
+                      "+": [
+                        "cx",
+                        {
+                          "*": [
+                            {
+                              "cos": "angle"
+                            },
+                            "forkR"
+                          ]
+                        }
+                      ]
+                    },
+                    "vy": {
+                      "+": [
+                        "cy",
+                        {
+                          "*": [
+                            {
+                              "sin": "angle"
+                            },
+                            "forkR"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 72,
+                  "x1": {
+                    "+": [
+                      "hx",
+                      {
+                        "-": [
+                          {
+                            "*": [
+                              "lx1",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "ly1",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y1": {
+                    "+": [
+                      "hy",
+                      {
+                        "+": [
+                          {
+                            "*": [
+                              "lx1",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "ly1",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "x2": {
+                    "+": [
+                      "hx",
+                      {
+                        "-": [
+                          {
+                            "*": [
+                              "lx2",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "ly2",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y2": {
+                    "+": [
+                      "hy",
+                      {
+                        "+": [
+                          {
+                            "*": [
+                              "lx2",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "ly2",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#C0F3F2",
+                  "alpha": 0.5,
+                  "strokeWidth": {
+                    "*": [
+                      "stroke",
+                      3
+                    ]
+                  },
+                  "strokeCap": "butt",
+                  "blurRadius": 10,
+                  "locals": {
+                    "branch": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          6
+                        ]
+                      }
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "branch",
+                            {
+                              "/": [
+                                6.283185307179586,
+                                12
+                              ]
+                            }
+                          ]
+                        },
+                        -1.5707963267948966
+                      ]
+                    },
+                    "cx": {
+                      "/": [
+                        "w",
+                        2
+                      ]
+                    },
+                    "cy": {
+                      "/": [
+                        "h",
+                        2
+                      ]
+                    },
+                    "rCenter": {
+                      "*": [
+                        "min",
+                        0.035
+                      ]
+                    },
+                    "rShortHex": {
+                      "*": [
+                        "min",
+                        0.24
+                      ]
+                    },
+                    "rShortEnd": {
+                      "*": [
+                        "min",
+                        0.335
+                      ]
+                    },
+                    "rLongHex": {
+                      "*": [
+                        "min",
+                        0.35
+                      ]
+                    },
+                    "rLongEnd": {
+                      "*": [
+                        "min",
+                        0.43
+                      ]
+                    },
+                    "isLong": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "branch",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        1,
+                        0
+                      ]
+                    },
+                    "rHex": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongHex",
+                        "rShortHex"
+                      ]
+                    },
+                    "rEnd": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongEnd",
+                        "rShortEnd"
+                      ]
+                    },
+                    "hexSize": {
+                      "*": [
+                        "min",
+                        0.038
+                      ]
+                    },
+                    "hexHalf": {
+                      "+": [
+                        "hexSize",
+                        3
+                      ]
+                    },
+                    "endSize": {
+                      "*": [
+                        "min",
+                        0.0125
+                      ]
+                    },
+                    "stroke": {
+                      "*": [
+                        "min",
+                        0.0075
+                      ]
+                    },
+                    "lineW": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "stroke",
+                            1.5
+                          ]
+                        },
+                        "stroke"
+                      ]
+                    },
+                    "side": {
+                      "%": [
+                        "i",
+                        6
+                      ]
+                    },
+                    "nextSide": {
+                      "%": [
+                        {
+                          "+": [
+                            "side",
+                            1
+                          ]
+                        },
+                        6
+                      ]
+                    },
+                    "rot": {
+                      "+": [
+                        "angle",
+                        1.5707963267948966
+                      ]
+                    },
+                    "hexW": {
+                      "*": [
+                        "hexSize",
+                        0.75
+                      ]
+                    },
+                    "sideY": {
+                      "+": [
+                        {
+                          "*": [
+                            "hexSize",
+                            0.5
+                          ]
+                        },
+                        3
+                      ]
+                    },
+                    "tipY": {
+                      "+": [
+                        "hexSize",
+                        3
+                      ]
+                    },
+                    "hx": {
+                      "+": [
+                        "cx",
+                        {
+                          "*": [
+                            {
+                              "cos": "angle"
+                            },
+                            "rHex"
+                          ]
+                        }
+                      ]
+                    },
+                    "hy": {
+                      "+": [
+                        "cy",
+                        {
+                          "*": [
+                            {
+                              "sin": "angle"
+                            },
+                            "rHex"
+                          ]
+                        }
+                      ]
+                    },
+                    "lx1": {
+                      "if": [
+                        {
+                          "==": [
+                            "side",
+                            0
+                          ]
+                        },
+                        0,
+                        {
+                          "if": [
+                            {
+                              "==": [
+                                "side",
+                                1
+                              ]
+                            },
+                            "hexW",
+                            {
+                              "if": [
+                                {
+                                  "==": [
+                                    "side",
+                                    2
+                                  ]
+                                },
+                                "hexW",
+                                {
+                                  "if": [
+                                    {
+                                      "==": [
+                                        "side",
+                                        3
+                                      ]
+                                    },
+                                    0,
+                                    {
+                                      "if": [
+                                        {
+                                          "==": [
+                                            "side",
+                                            4
+                                          ]
+                                        },
+                                        {
+                                          "*": [
+                                            "hexW",
+                                            -1
+                                          ]
+                                        },
+                                        {
+                                          "*": [
+                                            "hexW",
+                                            -1
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "ly1": {
+                      "if": [
+                        {
+                          "==": [
+                            "side",
+                            0
+                          ]
+                        },
+                        "tipY",
+                        {
+                          "if": [
+                            {
+                              "==": [
+                                "side",
+                                1
+                              ]
+                            },
+                            "sideY",
+                            {
+                              "if": [
+                                {
+                                  "==": [
+                                    "side",
+                                    2
+                                  ]
+                                },
+                                {
+                                  "*": [
+                                    "sideY",
+                                    -1
+                                  ]
+                                },
+                                {
+                                  "if": [
+                                    {
+                                      "==": [
+                                        "side",
+                                        3
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        "tipY",
+                                        -1
+                                      ]
+                                    },
+                                    {
+                                      "if": [
+                                        {
+                                          "==": [
+                                            "side",
+                                            4
+                                          ]
+                                        },
+                                        {
+                                          "*": [
+                                            "sideY",
+                                            -1
+                                          ]
+                                        },
+                                        "sideY"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "lx2": {
+                      "if": [
+                        {
+                          "==": [
+                            "nextSide",
+                            0
+                          ]
+                        },
+                        0,
+                        {
+                          "if": [
+                            {
+                              "==": [
+                                "nextSide",
+                                1
+                              ]
+                            },
+                            "hexW",
+                            {
+                              "if": [
+                                {
+                                  "==": [
+                                    "nextSide",
+                                    2
+                                  ]
+                                },
+                                "hexW",
+                                {
+                                  "if": [
+                                    {
+                                      "==": [
+                                        "nextSide",
+                                        3
+                                      ]
+                                    },
+                                    0,
+                                    {
+                                      "if": [
+                                        {
+                                          "==": [
+                                            "nextSide",
+                                            4
+                                          ]
+                                        },
+                                        {
+                                          "*": [
+                                            "hexW",
+                                            -1
+                                          ]
+                                        },
+                                        {
+                                          "*": [
+                                            "hexW",
+                                            -1
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "ly2": {
+                      "if": [
+                        {
+                          "==": [
+                            "nextSide",
+                            0
+                          ]
+                        },
+                        "tipY",
+                        {
+                          "if": [
+                            {
+                              "==": [
+                                "nextSide",
+                                1
+                              ]
+                            },
+                            "sideY",
+                            {
+                              "if": [
+                                {
+                                  "==": [
+                                    "nextSide",
+                                    2
+                                  ]
+                                },
+                                {
+                                  "*": [
+                                    "sideY",
+                                    -1
+                                  ]
+                                },
+                                {
+                                  "if": [
+                                    {
+                                      "==": [
+                                        "nextSide",
+                                        3
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        "tipY",
+                                        -1
+                                      ]
+                                    },
+                                    {
+                                      "if": [
+                                        {
+                                          "==": [
+                                            "nextSide",
+                                            4
+                                          ]
+                                        },
+                                        {
+                                          "*": [
+                                            "sideY",
+                                            -1
+                                          ]
+                                        },
+                                        "sideY"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 72,
+                  "x1": {
+                    "+": [
+                      "hx",
+                      {
+                        "-": [
+                          {
+                            "*": [
+                              "lx1",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "ly1",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y1": {
+                    "+": [
+                      "hy",
+                      {
+                        "+": [
+                          {
+                            "*": [
+                              "lx1",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "ly1",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "x2": {
+                    "+": [
+                      "hx",
+                      {
+                        "-": [
+                          {
+                            "*": [
+                              "lx2",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "ly2",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "y2": {
+                    "+": [
+                      "hy",
+                      {
+                        "+": [
+                          {
+                            "*": [
+                              "lx2",
+                              {
+                                "sin": "rot"
+                              }
+                            ]
+                          },
+                          {
+                            "*": [
+                              "ly2",
+                              {
+                                "cos": "rot"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#71FFFD",
+                  "alpha": 1,
+                  "strokeWidth": {
+                    "*": [
+                      "stroke",
+                      1
+                    ]
+                  },
+                  "strokeCap": "butt",
+                  "locals": {
+                    "branch": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          6
+                        ]
+                      }
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "branch",
+                            {
+                              "/": [
+                                6.283185307179586,
+                                12
+                              ]
+                            }
+                          ]
+                        },
+                        -1.5707963267948966
+                      ]
+                    },
+                    "cx": {
+                      "/": [
+                        "w",
+                        2
+                      ]
+                    },
+                    "cy": {
+                      "/": [
+                        "h",
+                        2
+                      ]
+                    },
+                    "rCenter": {
+                      "*": [
+                        "min",
+                        0.035
+                      ]
+                    },
+                    "rShortHex": {
+                      "*": [
+                        "min",
+                        0.24
+                      ]
+                    },
+                    "rShortEnd": {
+                      "*": [
+                        "min",
+                        0.335
+                      ]
+                    },
+                    "rLongHex": {
+                      "*": [
+                        "min",
+                        0.35
+                      ]
+                    },
+                    "rLongEnd": {
+                      "*": [
+                        "min",
+                        0.43
+                      ]
+                    },
+                    "isLong": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "branch",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        1,
+                        0
+                      ]
+                    },
+                    "rHex": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongHex",
+                        "rShortHex"
+                      ]
+                    },
+                    "rEnd": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongEnd",
+                        "rShortEnd"
+                      ]
+                    },
+                    "hexSize": {
+                      "*": [
+                        "min",
+                        0.038
+                      ]
+                    },
+                    "hexHalf": {
+                      "+": [
+                        "hexSize",
+                        3
+                      ]
+                    },
+                    "endSize": {
+                      "*": [
+                        "min",
+                        0.0125
+                      ]
+                    },
+                    "stroke": {
+                      "*": [
+                        "min",
+                        0.0075
+                      ]
+                    },
+                    "lineW": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "stroke",
+                            1.5
+                          ]
+                        },
+                        "stroke"
+                      ]
+                    },
+                    "side": {
+                      "%": [
+                        "i",
+                        6
+                      ]
+                    },
+                    "nextSide": {
+                      "%": [
+                        {
+                          "+": [
+                            "side",
+                            1
+                          ]
+                        },
+                        6
+                      ]
+                    },
+                    "rot": {
+                      "+": [
+                        "angle",
+                        1.5707963267948966
+                      ]
+                    },
+                    "hexW": {
+                      "*": [
+                        "hexSize",
+                        0.75
+                      ]
+                    },
+                    "sideY": {
+                      "+": [
+                        {
+                          "*": [
+                            "hexSize",
+                            0.5
+                          ]
+                        },
+                        3
+                      ]
+                    },
+                    "tipY": {
+                      "+": [
+                        "hexSize",
+                        3
+                      ]
+                    },
+                    "hx": {
+                      "+": [
+                        "cx",
+                        {
+                          "*": [
+                            {
+                              "cos": "angle"
+                            },
+                            "rHex"
+                          ]
+                        }
+                      ]
+                    },
+                    "hy": {
+                      "+": [
+                        "cy",
+                        {
+                          "*": [
+                            {
+                              "sin": "angle"
+                            },
+                            "rHex"
+                          ]
+                        }
+                      ]
+                    },
+                    "lx1": {
+                      "if": [
+                        {
+                          "==": [
+                            "side",
+                            0
+                          ]
+                        },
+                        0,
+                        {
+                          "if": [
+                            {
+                              "==": [
+                                "side",
+                                1
+                              ]
+                            },
+                            "hexW",
+                            {
+                              "if": [
+                                {
+                                  "==": [
+                                    "side",
+                                    2
+                                  ]
+                                },
+                                "hexW",
+                                {
+                                  "if": [
+                                    {
+                                      "==": [
+                                        "side",
+                                        3
+                                      ]
+                                    },
+                                    0,
+                                    {
+                                      "if": [
+                                        {
+                                          "==": [
+                                            "side",
+                                            4
+                                          ]
+                                        },
+                                        {
+                                          "*": [
+                                            "hexW",
+                                            -1
+                                          ]
+                                        },
+                                        {
+                                          "*": [
+                                            "hexW",
+                                            -1
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "ly1": {
+                      "if": [
+                        {
+                          "==": [
+                            "side",
+                            0
+                          ]
+                        },
+                        "tipY",
+                        {
+                          "if": [
+                            {
+                              "==": [
+                                "side",
+                                1
+                              ]
+                            },
+                            "sideY",
+                            {
+                              "if": [
+                                {
+                                  "==": [
+                                    "side",
+                                    2
+                                  ]
+                                },
+                                {
+                                  "*": [
+                                    "sideY",
+                                    -1
+                                  ]
+                                },
+                                {
+                                  "if": [
+                                    {
+                                      "==": [
+                                        "side",
+                                        3
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        "tipY",
+                                        -1
+                                      ]
+                                    },
+                                    {
+                                      "if": [
+                                        {
+                                          "==": [
+                                            "side",
+                                            4
+                                          ]
+                                        },
+                                        {
+                                          "*": [
+                                            "sideY",
+                                            -1
+                                          ]
+                                        },
+                                        "sideY"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "lx2": {
+                      "if": [
+                        {
+                          "==": [
+                            "nextSide",
+                            0
+                          ]
+                        },
+                        0,
+                        {
+                          "if": [
+                            {
+                              "==": [
+                                "nextSide",
+                                1
+                              ]
+                            },
+                            "hexW",
+                            {
+                              "if": [
+                                {
+                                  "==": [
+                                    "nextSide",
+                                    2
+                                  ]
+                                },
+                                "hexW",
+                                {
+                                  "if": [
+                                    {
+                                      "==": [
+                                        "nextSide",
+                                        3
+                                      ]
+                                    },
+                                    0,
+                                    {
+                                      "if": [
+                                        {
+                                          "==": [
+                                            "nextSide",
+                                            4
+                                          ]
+                                        },
+                                        {
+                                          "*": [
+                                            "hexW",
+                                            -1
+                                          ]
+                                        },
+                                        {
+                                          "*": [
+                                            "hexW",
+                                            -1
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "ly2": {
+                      "if": [
+                        {
+                          "==": [
+                            "nextSide",
+                            0
+                          ]
+                        },
+                        "tipY",
+                        {
+                          "if": [
+                            {
+                              "==": [
+                                "nextSide",
+                                1
+                              ]
+                            },
+                            "sideY",
+                            {
+                              "if": [
+                                {
+                                  "==": [
+                                    "nextSide",
+                                    2
+                                  ]
+                                },
+                                {
+                                  "*": [
+                                    "sideY",
+                                    -1
+                                  ]
+                                },
+                                {
+                                  "if": [
+                                    {
+                                      "==": [
+                                        "nextSide",
+                                        3
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        "tipY",
+                                        -1
+                                      ]
+                                    },
+                                    {
+                                      "if": [
+                                        {
+                                          "==": [
+                                            "nextSide",
+                                            4
+                                          ]
+                                        },
+                                        {
+                                          "*": [
+                                            "sideY",
+                                            -1
+                                          ]
+                                        },
+                                        "sideY"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "particles",
+                  "shape": "oval",
+                  "count": 12,
+                  "x": {
+                    "+": [
+                      "cx",
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          "rEnd"
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      "cy",
+                      {
+                        "*": [
+                          {
+                            "sin": "angle"
+                          },
+                          "rEnd"
+                        ]
+                      }
+                    ]
+                  },
+                  "width": {
+                    "*": [
+                      "endSize",
+                      2.3
+                    ]
+                  },
+                  "height": {
+                    "*": [
+                      "endSize",
+                      2.3
+                    ]
+                  },
+                  "radius": "endSize",
+                  "color": "#9E7CB0",
+                  "alpha": 0.8,
+                  "blurRadius": 2,
+                  "locals": {
+                    "branch": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          1
+                        ]
+                      }
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "branch",
+                            {
+                              "/": [
+                                6.283185307179586,
+                                12
+                              ]
+                            }
+                          ]
+                        },
+                        -1.5707963267948966
+                      ]
+                    },
+                    "cx": {
+                      "/": [
+                        "w",
+                        2
+                      ]
+                    },
+                    "cy": {
+                      "/": [
+                        "h",
+                        2
+                      ]
+                    },
+                    "rCenter": {
+                      "*": [
+                        "min",
+                        0.035
+                      ]
+                    },
+                    "rShortHex": {
+                      "*": [
+                        "min",
+                        0.24
+                      ]
+                    },
+                    "rShortEnd": {
+                      "*": [
+                        "min",
+                        0.335
+                      ]
+                    },
+                    "rLongHex": {
+                      "*": [
+                        "min",
+                        0.35
+                      ]
+                    },
+                    "rLongEnd": {
+                      "*": [
+                        "min",
+                        0.43
+                      ]
+                    },
+                    "isLong": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "branch",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        1,
+                        0
+                      ]
+                    },
+                    "rHex": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongHex",
+                        "rShortHex"
+                      ]
+                    },
+                    "rEnd": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        "rLongEnd",
+                        "rShortEnd"
+                      ]
+                    },
+                    "hexSize": {
+                      "*": [
+                        "min",
+                        0.038
+                      ]
+                    },
+                    "hexHalf": {
+                      "+": [
+                        "hexSize",
+                        3
+                      ]
+                    },
+                    "endSize": {
+                      "*": [
+                        "min",
+                        0.0125
+                      ]
+                    },
+                    "stroke": {
+                      "*": [
+                        "min",
+                        0.0075
+                      ]
+                    },
+                    "lineW": {
+                      "if": [
+                        {
+                          "!=": [
+                            "isLong",
+                            0
+                          ]
+                        },
+                        {
+                          "*": [
+                            "stroke",
+                            1.5
+                          ]
+                        },
+                        "stroke"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "text",
+                  "value": "拾弐",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": -1.5707963267948966
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  0,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": -1.5707963267948966
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  0,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "color": "#22DDDD",
+                  "alpha": 0.9,
+                  "fontSize": 14
+                },
+                {
+                  "kind": "text",
+                  "value": "壱",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": -1.0471975511965979
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  1,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": -1.0471975511965979
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  1,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "color": "#22DDDD",
+                  "alpha": 0.9,
+                  "fontSize": 14
+                },
+                {
+                  "kind": "text",
+                  "value": "弐",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": -0.5235987755982989
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  0,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": -0.5235987755982989
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  0,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "color": "#22DDDD",
+                  "alpha": 0.9,
+                  "fontSize": 14
+                },
+                {
+                  "kind": "text",
+                  "value": "参",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": 0.0
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  1,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": 0.0
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  1,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "color": "#22DDDD",
+                  "alpha": 0.9,
+                  "fontSize": 14
+                },
+                {
+                  "kind": "text",
+                  "value": "肆",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": 0.5235987755982987
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  0,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": 0.5235987755982987
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  0,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "color": "#22DDDD",
+                  "alpha": 0.9,
+                  "fontSize": 14
+                },
+                {
+                  "kind": "text",
+                  "value": "伍",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": 1.0471975511965979
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  1,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": 1.0471975511965979
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  1,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "color": "#22DDDD",
+                  "alpha": 0.9,
+                  "fontSize": 14
+                },
+                {
+                  "kind": "text",
+                  "value": "陆",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": 1.5707963267948966
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  0,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": 1.5707963267948966
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  0,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "color": "#22DDDD",
+                  "alpha": 0.9,
+                  "fontSize": 14
+                },
+                {
+                  "kind": "text",
+                  "value": "漆",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": 2.0943951023931953
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  1,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": 2.0943951023931953
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  1,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "color": "#22DDDD",
+                  "alpha": 0.9,
+                  "fontSize": 14
+                },
+                {
+                  "kind": "text",
+                  "value": "捌",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": 2.617993877991494
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  0,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": 2.617993877991494
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  0,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "color": "#22DDDD",
+                  "alpha": 0.9,
+                  "fontSize": 14
+                },
+                {
+                  "kind": "text",
+                  "value": "玖",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": 3.141592653589793
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  1,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": 3.141592653589793
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  1,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "color": "#22DDDD",
+                  "alpha": 0.9,
+                  "fontSize": 14
+                },
+                {
+                  "kind": "text",
+                  "value": "拾",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": 3.6651914291880923
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  0,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": 3.6651914291880923
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  0,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "color": "#22DDDD",
+                  "alpha": 0.9,
+                  "fontSize": 14
+                },
+                {
+                  "kind": "text",
+                  "value": "拾壱",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": 4.1887902047863905
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  1,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": 4.1887902047863905
+                          },
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  1,
+                                  0
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.35
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "min",
+                                  0.24
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      -10
+                    ]
+                  },
+                  "color": "#22DDDD",
+                  "alpha": 0.9,
+                  "fontSize": 14
+                },
+                {
+                  "kind": "circle",
+                  "x": {
+                    "/": [
+                      "w",
+                      2
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      -22
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      "min",
+                      0.055
+                    ]
+                  },
+                  "color": "#6FF3F2",
+                  "alpha": 0.26,
+                  "blurRadius": 20
+                }
+              ]
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "leftFactor": 0.5,
+            "leftOffset": -18,
+            "topFactor": 0.5,
+            "topOffset": -58,
+            "child": {
+              "type": "image",
+              "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/akaza.png",
+              "fit": "contain",
+              "width": 36,
+              "height": 62,
+              "paddingV": 0
+            }
+          }
+        ],
+        "appBar": {
+          "title": ""
+        }
+      }
+    ]
+  }
+}

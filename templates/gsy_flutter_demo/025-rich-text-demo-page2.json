@@ -1,0 +1,160 @@
+{
+  "dsl": "3.3",
+  "appid": "2067b91b-89c3-517d-897f-e1bc47ddcf55",
+  "meta": {
+    "name": "gsy_flutter_demo/025-rich-text-demo-page2",
+    "version": "0.1.4",
+    "type": "app",
+    "displayName": {
+      "zh": "官方实现富文本",
+      "en": "Official rich text implementation"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：官方实现富文本",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "官方实现富文本",
+      "sourcePath": "lib/widget/basic/rich_text_demo_page2.dart",
+      "deferredAlias": "rich_text_demo_page2",
+      "widgetClass": "RichTextDemoPage2",
+      "category": "basic",
+      "routeIndex": 25
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "官方实现富文本",
+      "upstreamSource": "lib/widget/basic/rich_text_demo_page2.dart",
+      "upstreamWidget": "RichTextDemoPage2",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2",
+      "imageSize": 50
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "RichTextDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "rich_text",
+                "selectable": true,
+                "spans": [
+                  {
+                    "text": "Flutter is"
+                  },
+                  {
+                    "type": "widget",
+                    "child": {
+                      "type": "container",
+                      "width": 120,
+                      "height": 50,
+                      "color": "#2196F3",
+                      "layout": "column",
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "Hello World!",
+                          "style": {
+                            "fontSize": 14,
+                            "color": "#000000"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "image",
+                    "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                    "width": {
+                      "var": "global.imageSize"
+                    },
+                    "height": {
+                      "var": "global.imageSize"
+                    }
+                  },
+                  {
+                    "text": "the best!"
+                  },
+                  {
+                    "type": "widget",
+                    "child": {
+                      "type": "text",
+                      "value": " not copy",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#000000"
+                      }
+                    },
+                    "selectable": false
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#FFFFFF",
+        "appBar": {
+          "title": "RichTextDemoPage",
+          "actions": [
+            {
+              "icon": "add_circle_outline",
+              "action": {
+                "call": "@set",
+                "args": {
+                  "var": "global.imageSize",
+                  "value": {
+                    "+": [
+                      {
+                        "var": "global.imageSize"
+                      },
+                      10
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "icon": "remove_circle_outline",
+              "action": {
+                "call": "@set",
+                "args": {
+                  "var": "global.imageSize",
+                  "value": {
+                    "max": [
+                      0,
+                      {
+                        "-": [
+                          {
+                            "var": "global.imageSize"
+                          },
+                          10
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

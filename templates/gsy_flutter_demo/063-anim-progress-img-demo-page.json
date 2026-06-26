@@ -1,0 +1,271 @@
+{
+  "dsl": "3.3",
+  "appid": "ebd6ff0f-e32e-5b12-b897-bfa1f17b6483",
+  "meta": {
+    "name": "gsy_flutter_demo/063-anim-progress-img-demo-page",
+    "version": "0.1.1",
+    "type": "app",
+    "displayName": {
+      "zh": "类似QQ发送图片的动画",
+      "en": "QQ-style image send animation"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：类似QQ发送图片的动画",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "类似QQ发送图片的动画",
+      "sourcePath": "lib/widget/animation/anim_progress_img_demo_page.dart",
+      "deferredAlias": "anim_progress_img_demo_page",
+      "widgetClass": "AnimProgressImgDemoPage",
+      "category": "animation",
+      "routeIndex": 63
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "类似QQ发送图片的动画",
+      "upstreamSource": "lib/widget/animation/anim_progress_img_demo_page.dart",
+      "upstreamWidget": "AnimProgressImgDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v3",
+      "progress": 0,
+      "running": false,
+      "finished": false
+    },
+    "functions": {
+      "start": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.progress",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.finished",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.running",
+              "value": true
+            }
+          }
+        ]
+      },
+      "tick": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "var": "global.running"
+              },
+              "then": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "<": [
+                        {
+                          "var": "global.progress"
+                        },
+                        100
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.progress",
+                          "value": {
+                            "+": [
+                              {
+                                "var": "global.progress"
+                              },
+                              4
+                            ]
+                          }
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.running",
+                          "value": false
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.finished",
+                          "value": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "AnimProgressImgDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "interval_action",
+              "intervalMs": 60,
+              "runImmediately": false,
+              "action": {
+                "call": "@global.tick",
+                "args": {}
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "color": "#FFFFFF"
+              }
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "stack",
+              "children": [
+                {
+                  "type": "image",
+                  "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                  "fit": "cover",
+                  "width": 300,
+                  "height": 200,
+                  "borderRadius": 6,
+                  "paddingV": 0
+                },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [],
+                  "color": "#99000000",
+                  "visible": {
+                    "or": [
+                      {
+                        "var": "global.running"
+                      },
+                      {
+                        "var": "global.finished"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "animated_visibility",
+                  "visibleWhen": {
+                    "var": "global.running"
+                  },
+                  "durationMs": 250,
+                  "hiddenOffsetY": 0.2,
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [],
+                        "width": 80,
+                        "height": 80,
+                        "shape": "circle",
+                        "border": {
+                          "color": "#FFFFFFFF",
+                          "width": 8
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.progress }}%",
+                        "style": {
+                          "fontSize": 18,
+                          "color": "#FFFFFF",
+                          "fontWeight": "bold",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "alignment": "center"
+                  }
+                },
+                {
+                  "type": "animated_visibility",
+                  "visibleWhen": {
+                    "var": "global.finished"
+                  },
+                  "durationMs": 300,
+                  "hiddenOffsetY": 0,
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "check_circle",
+                        "size": 64,
+                        "color": "#FFFFFF"
+                      }
+                    ],
+                    "alignment": "center"
+                  }
+                }
+              ],
+              "width": 300,
+              "height": 200,
+              "clipBehavior": "antiAlias"
+            },
+            "left": 45,
+            "top": 240
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "button",
+              "label": "▶",
+              "variant": "filled",
+              "action": {
+                "call": "@global.start",
+                "args": {}
+              }
+            },
+            "right": 24,
+            "bottom": 24
+          }
+        ]
+      }
+    ]
+  }
+}

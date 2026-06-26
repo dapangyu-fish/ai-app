@@ -1,0 +1,72 @@
+{
+  "dsl": "3.3",
+  "appid": "656523ad-8afc-5054-bb5f-66ed8e3e341c",
+  "meta": {
+    "name": "gsy_flutter_demo/016-slide-verify-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "滑动验证",
+      "en": "Slider verification"
+    },
+    "description": "SlideVerifyPage：滑动验证",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "滑动验证",
+      "sourcePath": "lib/widget/scroll/slider_verify_page.dart",
+      "deferredAlias": "slider_verify_page",
+      "widgetClass": "SlideVerifyPage",
+      "category": "scroll",
+      "routeIndex": 16,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "verified": false,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "SlideVerifyPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "slide_verify",
+                "width": 250,
+                "height": 60,
+                "bind": "global.verified",
+                "initialText": "滑动验证",
+                "successText": "验证成功",
+                "thumbImage": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                "backgroundColor": "#9E9E9E",
+                "fillColor": "#2196F3",
+                "borderColor": "#448AFF",
+                "initialTextColor": "#1F000000",
+                "successTextColor": "#FFFFFFFF"
+              }
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        ],
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

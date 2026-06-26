@@ -1,0 +1,124 @@
+{
+  "dsl": "3.3",
+  "appid": "5ef7f7cb-a80d-5253-8e74-eb568a83307e",
+  "meta": {
+    "name": "gsy_flutter_demo/015-honor-demo-page",
+    "version": "0.1.4",
+    "type": "app",
+    "displayName": {
+      "zh": "共享元素跳转效果",
+      "en": "Shared element transition"
+    },
+    "description": "HonorDemoPage：共享元素跳转效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "共享元素跳转效果",
+      "sourcePath": "lib/widget/basic/honor_demo_page.dart",
+      "deferredAlias": "honor_demo_page",
+      "widgetClass": "HonorDemoPage",
+      "category": "basic",
+      "routeIndex": 15,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "HonorDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "container",
+                "width": 100,
+                "height": 100,
+                "clipBehavior": "hardEdge",
+                "borderRadius": 4,
+                "onTap": {
+                  "call": "@navigate",
+                  "args": {
+                    "screen": "detail"
+                  }
+                },
+                "children": [
+                  {
+                    "type": "image",
+                    "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                    "width": 100,
+                    "height": 100,
+                    "fit": "cover",
+                    "paddingV": 0,
+                    "heroTag": "image"
+                  }
+                ],
+                "layout": "column",
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center"
+              }
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        ],
+        "backgroundColor": "#FFFFFF"
+      },
+      {
+        "id": "detail",
+        "title": "HonorDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "container",
+                "onTap": {
+                  "type": "back"
+                },
+                "children": [
+                  {
+                    "type": "image",
+                    "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                    "fit": "cover",
+                    "paddingV": 0,
+                    "widthFactor": 1,
+                    "heightFactor": 1,
+                    "heroTag": "image"
+                  }
+                ],
+                "layout": "column",
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center",
+                "alignment": "center"
+              }
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        ],
+        "appBar": false
+      }
+    ]
+  }
+}

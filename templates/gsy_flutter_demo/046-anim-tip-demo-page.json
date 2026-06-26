@@ -1,0 +1,128 @@
+{
+  "dsl": "3.3",
+  "appid": "3c20f621-ca2b-5893-84bc-d76ed50dd7b9",
+  "meta": {
+    "name": "gsy_flutter_demo/046-anim-tip-demo-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "点击弹出动画提示",
+      "en": "Tap animation tip"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：点击弹出动画提示",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "点击弹出动画提示",
+      "sourcePath": "lib/widget/animation/anim_tip_demo_page.dart",
+      "deferredAlias": "anim_tip_demo_page",
+      "widgetClass": "AnimTipDemoPage",
+      "category": "animation",
+      "routeIndex": 46
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "点击弹出动画提示",
+      "upstreamSource": "lib/widget/animation/anim_tip_demo_page.dart",
+      "upstreamWidget": "AnimTipDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2",
+      "showTip": false
+    },
+    "functions": {
+      "showTip": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.showTip",
+              "value": true
+            }
+          },
+          {
+            "call": "@delay",
+            "args": {
+              "ms": 1000
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.showTip",
+              "value": false
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "AnimTipDemoPage",
+        "layout": "column",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "animated_switcher",
+            "switchKey": "{{ global.showTip }}",
+            "transitionType": "slideDown",
+            "durationMs": 500,
+            "child": {
+              "type": "container",
+              "layout": "row",
+              "children": [
+                {
+                  "type": "icon",
+                  "name": "ac_unit",
+                  "size": 13,
+                  "color": "#FFFFFF"
+                },
+                {
+                  "type": "spacer",
+                  "width": 10
+                },
+                {
+                  "type": "text",
+                  "value": "StickText",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#FFFFFF"
+                  }
+                }
+              ],
+              "height": 70,
+              "color": "#FFC107",
+              "padding": {
+                "left": 10
+              },
+              "visible": {
+                "var": "global.showTip"
+              }
+            }
+          },
+          {
+            "type": "expanded",
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "button",
+                "variant": "text",
+                "label": "Click Me",
+                "action": {
+                  "call": "@global.showTip",
+                  "args": {}
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

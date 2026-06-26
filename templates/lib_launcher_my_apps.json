@@ -9,7 +9,14 @@
       "zh": "启动器组件 · 我的 APP",
       "en": "Launcher Component · My Apps",
       "de": "Launcher-Komponente · Meine Apps",
-      "es": "Componente launcher · Mis apps"
+      "es": "Componente launcher · Mis apps",
+      "fr": "Composant lanceur · Mes applis",
+      "pt": "Componente de lançador · As minhas aplicações",
+      "ca": "Component de llançador · Les meves aplicacions",
+      "hi": "लॉन्चर कॉम्पोनेंट · मेरे ऐप्स",
+      "ko": "런처 컴포넌트 · 내 앱",
+      "ja": "ランチャーコンポーネント・マイアプリ",
+      "it": "Componente launcher · Le mie app"
     },
     "description": "可嵌入的'我的 APP'组件库——从本地 JSON-APP 列表里一键启动。",
     "author": "fish",

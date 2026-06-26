@@ -1,0 +1,32 @@
+MyApp
+Copyright 2026 MyApp contributors
+
+This product includes software developed by the MyApp contributors and is
+licensed under the Apache License, Version 2.0, unless a file or package says
+otherwise.
+
+"MyApp" is the project name because each user can create, install, and operate
+their own apps on top of the runtime. The Apache-2.0 license covers the source
+code in this repository; it does not grant rights to use the MyApp name, logo,
+or other project branding in a confusing or misleading way.
+
+Third-party dependencies keep their own licenses. This includes Flutter/Dart
+packages, Python packages, Node packages, OpenIM server/client components,
+Supabase-related images/services, and other tools used by the build and deploy
+scripts. Check the corresponding package metadata and upstream repositories
+before redistribution.
+
+Flutter Web IM support uses runtime assets produced from the pinned
+@openim/wasm-client-sdk dependency under web_openim_bridge/. Those generated
+files are included only to make Web builds reproducible; the upstream OpenIM
+package and any files copied from it remain under their upstream license terms.
+
+Some example JSON apps reference third-party art or data assets:
+
+- The SuperDash demo uses assets and design references from
+  https://github.com/flutter/super_dash and keeps an in-app BSD-3-Clause
+  license notice.
+- Hosted Kenney asset packs are provided as CC0/public-domain-style game assets;
+  original license files should be kept with redistributed asset packs.
+- User-created JSON apps, uploaded assets, and marketplace packages are owned
+  and licensed by their authors unless they explicitly say otherwise.

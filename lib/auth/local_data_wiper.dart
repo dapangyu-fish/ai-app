@@ -4,6 +4,7 @@ import '../platform/native_fs.dart';
 import '../config/environment_service.dart';
 import '../im/apns_service.dart';
 import '../im/fcm_service.dart';
+import '../im/getui_service.dart';
 import '../im/im_service.dart';
 import '../json_ui/cache_manager.dart';
 import '../json_ui/drift_database.dart';
@@ -35,6 +36,12 @@ Future<void> wipeAllLocalAccountData() async {
     debugPrint('[Wipe] FcmService.unregister OK');
   } catch (e) {
     debugPrint('[Wipe] FcmService.unregister 失败 (忽略): $e');
+  }
+  try {
+    await GetuiService.instance.unregister();
+    debugPrint('[Wipe] GetuiService.unregister OK');
+  } catch (e) {
+    debugPrint('[Wipe] GetuiService.unregister 失败 (忽略): $e');
   }
 
   // 1. IM logout（清 SDK + im_* prefs；如果 SDK 没初始化会被忽略）

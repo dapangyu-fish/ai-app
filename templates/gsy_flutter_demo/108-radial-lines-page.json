@@ -1,0 +1,885 @@
+{
+  "dsl": "3.3",
+  "appid": "bbb97852-5b30-5918-ae69-e5191e4dee82",
+  "meta": {
+    "name": "gsy_flutter_demo/108-radial-lines-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "Radial lines",
+      "en": "Radial lines"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：Radial lines",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "Radial lines",
+      "sourcePath": "lib/widget/canvas/radial_lines_page.dart",
+      "deferredAlias": "radial_lines_page",
+      "widgetClass": "RadialLinesPage",
+      "category": "canvas",
+      "routeIndex": 108,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-cube-radial-lines-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "Radial lines",
+      "upstreamSource": "lib/widget/canvas/radial_lines_page.dart",
+      "upstreamWidget": "RadialLinesPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-cube-radial-lines-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#272727",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "animated_canvas",
+              "backgroundColor": "#272727",
+              "speed": 1,
+              "durationMs": 6000,
+              "layers": [
+                {
+                  "kind": "segments",
+                  "count": 2384,
+                  "x1": "axP",
+                  "y1": "ayP",
+                  "x2": "bxP",
+                  "y2": "byP",
+                  "color": "#EFEFEF",
+                  "color2": "#272727",
+                  "mix": "mixv",
+                  "alpha": 1,
+                  "strokeWidth": 1,
+                  "strokeCap": "butt",
+                  "locals": {
+                    "step": {
+                      "+": [
+                        {
+                          "floor": {
+                            "/": [
+                              "i",
+                              8
+                            ]
+                          }
+                        },
+                        1
+                      ]
+                    },
+                    "vertex": {
+                      "%": [
+                        "i",
+                        8
+                      ]
+                    },
+                    "sizeNow": {
+                      "+": [
+                        20,
+                        {
+                          "*": [
+                            "step",
+                            10
+                          ]
+                        }
+                      ]
+                    },
+                    "sizePrev": {
+                      "+": [
+                        10,
+                        {
+                          "*": [
+                            "step",
+                            10
+                          ]
+                        }
+                      ]
+                    },
+                    "globalY": {
+                      "*": [
+                        "t",
+                        0.72
+                      ]
+                    },
+                    "mixv": {
+                      "/": [
+                        "step",
+                        298
+                      ]
+                    },
+                    "as": {
+                      "/": [
+                        "sizeNow",
+                        2
+                      ]
+                    },
+                    "avxSign": {
+                      "if": [
+                        {
+                          "or": [
+                            {
+                              "<": [
+                                "vertex",
+                                2
+                              ]
+                            },
+                            {
+                              "and": [
+                                {
+                                  ">=": [
+                                    "vertex",
+                                    4
+                                  ]
+                                },
+                                {
+                                  "<": [
+                                    "vertex",
+                                    6
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        1,
+                        -1
+                      ]
+                    },
+                    "avySign": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "vertex",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        1,
+                        -1
+                      ]
+                    },
+                    "avzSign": {
+                      "if": [
+                        {
+                          "<": [
+                            "vertex",
+                            4
+                          ]
+                        },
+                        1,
+                        -1
+                      ]
+                    },
+                    "ax0": {
+                      "*": [
+                        "as",
+                        "avxSign"
+                      ]
+                    },
+                    "ay0": {
+                      "*": [
+                        "as",
+                        "avySign"
+                      ]
+                    },
+                    "az0": {
+                      "*": [
+                        "as",
+                        "avzSign"
+                      ]
+                    },
+                    "arx": {
+                      "*": [
+                        {
+                          "sin": {
+                            "+": [
+                              {
+                                "*": [
+                                  "sizeNow",
+                                  0.0045
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "t",
+                                  -0.22
+                                ]
+                              },
+                              1.7
+                            ]
+                          }
+                        },
+                        4.71238898038469
+                      ]
+                    },
+                    "ary": {
+                      "*": [
+                        {
+                          "sin": {
+                            "+": [
+                              {
+                                "*": [
+                                  "sizeNow",
+                                  0.0037
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "t",
+                                  -0.18
+                                ]
+                              },
+                              3.4
+                            ]
+                          }
+                        },
+                        4.71238898038469
+                      ]
+                    },
+                    "arz": {
+                      "*": [
+                        {
+                          "sin": {
+                            "+": [
+                              {
+                                "*": [
+                                  "sizeNow",
+                                  0.0052
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "t",
+                                  -0.2
+                                ]
+                              },
+                              5.1
+                            ]
+                          }
+                        },
+                        4.71238898038469
+                      ]
+                    },
+                    "axA": "ax0",
+                    "ayA": {
+                      "-": [
+                        {
+                          "*": [
+                            "ay0",
+                            {
+                              "cos": "arx"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "az0",
+                            {
+                              "sin": "arx"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "azA": {
+                      "+": [
+                        {
+                          "*": [
+                            "ay0",
+                            {
+                              "sin": "arx"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "az0",
+                            {
+                              "cos": "arx"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "axB": {
+                      "+": [
+                        {
+                          "*": [
+                            "axA",
+                            {
+                              "cos": "ary"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "azA",
+                            {
+                              "sin": "ary"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "ayB": "ayA",
+                    "azB": {
+                      "+": [
+                        {
+                          "*": [
+                            "azA",
+                            {
+                              "cos": "ary"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "axA",
+                            {
+                              "*": [
+                                -1,
+                                {
+                                  "sin": "ary"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "axC": {
+                      "-": [
+                        {
+                          "*": [
+                            "axB",
+                            {
+                              "cos": "arz"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "ayB",
+                            {
+                              "sin": "arz"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "ayC": {
+                      "+": [
+                        {
+                          "*": [
+                            "axB",
+                            {
+                              "sin": "arz"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "ayB",
+                            {
+                              "cos": "arz"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "azC": "azB",
+                    "axG": {
+                      "+": [
+                        {
+                          "*": [
+                            "axC",
+                            {
+                              "cos": "globalY"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "azC",
+                            {
+                              "sin": "globalY"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "ayG": "ayC",
+                    "azG": {
+                      "+": [
+                        {
+                          "*": [
+                            "azC",
+                            {
+                              "cos": "globalY"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "axC",
+                            {
+                              "*": [
+                                -1,
+                                {
+                                  "sin": "globalY"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "ascale": {
+                      "/": [
+                        300,
+                        {
+                          "+": [
+                            800,
+                            "azG"
+                          ]
+                        }
+                      ]
+                    },
+                    "axP": {
+                      "+": [
+                        {
+                          "/": [
+                            "w",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            "axG",
+                            "ascale"
+                          ]
+                        }
+                      ]
+                    },
+                    "ayP": {
+                      "+": [
+                        {
+                          "/": [
+                            "h",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            "ayG",
+                            "ascale"
+                          ]
+                        }
+                      ]
+                    },
+                    "bs": {
+                      "/": [
+                        "sizePrev",
+                        2
+                      ]
+                    },
+                    "bvxSign": {
+                      "if": [
+                        {
+                          "or": [
+                            {
+                              "<": [
+                                "vertex",
+                                2
+                              ]
+                            },
+                            {
+                              "and": [
+                                {
+                                  ">=": [
+                                    "vertex",
+                                    4
+                                  ]
+                                },
+                                {
+                                  "<": [
+                                    "vertex",
+                                    6
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        1,
+                        -1
+                      ]
+                    },
+                    "bvySign": {
+                      "if": [
+                        {
+                          "==": [
+                            {
+                              "%": [
+                                "vertex",
+                                2
+                              ]
+                            },
+                            0
+                          ]
+                        },
+                        1,
+                        -1
+                      ]
+                    },
+                    "bvzSign": {
+                      "if": [
+                        {
+                          "<": [
+                            "vertex",
+                            4
+                          ]
+                        },
+                        1,
+                        -1
+                      ]
+                    },
+                    "bx0": {
+                      "*": [
+                        "bs",
+                        "bvxSign"
+                      ]
+                    },
+                    "by0": {
+                      "*": [
+                        "bs",
+                        "bvySign"
+                      ]
+                    },
+                    "bz0": {
+                      "*": [
+                        "bs",
+                        "bvzSign"
+                      ]
+                    },
+                    "brx": {
+                      "*": [
+                        {
+                          "sin": {
+                            "+": [
+                              {
+                                "*": [
+                                  "sizePrev",
+                                  0.0045
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "t",
+                                  -0.22
+                                ]
+                              },
+                              1.7
+                            ]
+                          }
+                        },
+                        4.71238898038469
+                      ]
+                    },
+                    "bry": {
+                      "*": [
+                        {
+                          "sin": {
+                            "+": [
+                              {
+                                "*": [
+                                  "sizePrev",
+                                  0.0037
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "t",
+                                  -0.18
+                                ]
+                              },
+                              3.4
+                            ]
+                          }
+                        },
+                        4.71238898038469
+                      ]
+                    },
+                    "brz": {
+                      "*": [
+                        {
+                          "sin": {
+                            "+": [
+                              {
+                                "*": [
+                                  "sizePrev",
+                                  0.0052
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "t",
+                                  -0.2
+                                ]
+                              },
+                              5.1
+                            ]
+                          }
+                        },
+                        4.71238898038469
+                      ]
+                    },
+                    "bxA": "bx0",
+                    "byA": {
+                      "-": [
+                        {
+                          "*": [
+                            "by0",
+                            {
+                              "cos": "brx"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "bz0",
+                            {
+                              "sin": "brx"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "bzA": {
+                      "+": [
+                        {
+                          "*": [
+                            "by0",
+                            {
+                              "sin": "brx"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "bz0",
+                            {
+                              "cos": "brx"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "bxB": {
+                      "+": [
+                        {
+                          "*": [
+                            "bxA",
+                            {
+                              "cos": "bry"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "bzA",
+                            {
+                              "sin": "bry"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "byB": "byA",
+                    "bzB": {
+                      "+": [
+                        {
+                          "*": [
+                            "bzA",
+                            {
+                              "cos": "bry"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "bxA",
+                            {
+                              "*": [
+                                -1,
+                                {
+                                  "sin": "bry"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "bxC": {
+                      "-": [
+                        {
+                          "*": [
+                            "bxB",
+                            {
+                              "cos": "brz"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "byB",
+                            {
+                              "sin": "brz"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "byC": {
+                      "+": [
+                        {
+                          "*": [
+                            "bxB",
+                            {
+                              "sin": "brz"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "byB",
+                            {
+                              "cos": "brz"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "bzC": "bzB",
+                    "bxG": {
+                      "+": [
+                        {
+                          "*": [
+                            "bxC",
+                            {
+                              "cos": "globalY"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "bzC",
+                            {
+                              "sin": "globalY"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "byG": "byC",
+                    "bzG": {
+                      "+": [
+                        {
+                          "*": [
+                            "bzC",
+                            {
+                              "cos": "globalY"
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "bxC",
+                            {
+                              "*": [
+                                -1,
+                                {
+                                  "sin": "globalY"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "bscale": {
+                      "/": [
+                        300,
+                        {
+                          "+": [
+                            800,
+                            "bzG"
+                          ]
+                        }
+                      ]
+                    },
+                    "bxP": {
+                      "+": [
+                        {
+                          "/": [
+                            "w",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            "bxG",
+                            "bscale"
+                          ]
+                        }
+                      ]
+                    },
+                    "byP": {
+                      "+": [
+                        {
+                          "/": [
+                            "h",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            "byG",
+                            "bscale"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        ],
+        "appBar": {
+          "title": ""
+        }
+      }
+    ]
+  }
+}

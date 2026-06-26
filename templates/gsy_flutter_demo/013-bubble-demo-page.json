@@ -1,0 +1,127 @@
+{
+  "dsl": "3.3",
+  "appid": "cb2fa254-fea5-56c3-90cf-1cbb334bbbf9",
+  "meta": {
+    "name": "gsy_flutter_demo/013-bubble-demo-page",
+    "version": "0.1.4",
+    "type": "app",
+    "displayName": {
+      "zh": "气泡提示框",
+      "en": "Bubble tooltip"
+    },
+    "description": "BubbleDemoPage：气泡提示框",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "气泡提示框",
+      "sourcePath": "lib/widget/basic/bubble/bubble_demo_page.dart",
+      "deferredAlias": "bubble_demo_page",
+      "widgetClass": "BubbleDemoPage",
+      "category": "basic",
+      "routeIndex": 13,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v2"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v2"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "BubbleDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 15,
+            "top": 15,
+            "child": {
+              "type": "anchored_popover",
+              "text": "Test1",
+              "width": 120,
+              "height": 60,
+              "radius": 4,
+              "arrowLocation": "top",
+              "trigger": {
+                "type": "container",
+                "width": 88,
+                "height": 36,
+                "color": "#2196F3"
+              }
+            }
+          },
+          {
+            "type": "positioned",
+            "leftFactor": 0.5,
+            "top": 15,
+            "child": {
+              "type": "anchored_popover",
+              "text": "Test2",
+              "width": 120,
+              "height": 60,
+              "radius": 4,
+              "arrowLocation": "right",
+              "trigger": {
+                "type": "container",
+                "width": 88,
+                "height": 36,
+                "color": "#69F0AE"
+              }
+            }
+          },
+          {
+            "type": "positioned",
+            "leftFactor": 0.2,
+            "topFactor": 0.75,
+            "child": {
+              "type": "anchored_popover",
+              "text": "Test4",
+              "width": 120,
+              "height": 60,
+              "radius": 4,
+              "arrowLocation": "left",
+              "trigger": {
+                "type": "container",
+                "width": 88,
+                "height": 36,
+                "color": "#FFFF00"
+              }
+            }
+          },
+          {
+            "type": "positioned",
+            "leftFactor": 0.5,
+            "leftOffset": -44,
+            "topFactor": 0.5,
+            "subtractSafeTop": true,
+            "subtractToolbar": true,
+            "child": {
+              "type": "anchored_popover",
+              "text": "Test4",
+              "width": 120,
+              "height": 60,
+              "radius": 4,
+              "arrowLocation": "bottom",
+              "trigger": {
+                "type": "container",
+                "width": 88,
+                "height": 36,
+                "color": "#FF5252"
+              }
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

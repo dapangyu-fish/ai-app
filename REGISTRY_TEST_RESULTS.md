@@ -1,5 +1,9 @@
 # Registry 服务测试报告
 
+> 历史测试报告，不代表当前线上实时状态。当前 Registry 行为以
+> `backend/registry_server.py`、`backend/REGISTRY_README.md` 和
+> `deploy/production/README.md` 为准。
+
 ## 测试环境
 - **服务地址**: https://myapp-registry.dapangyu.work
 - **服务端口**: 3254

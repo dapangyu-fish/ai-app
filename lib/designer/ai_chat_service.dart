@@ -23,6 +23,7 @@ class ChatEvent {
   final String? failedJsonUrl; // 下载失败的 JSON URL
   final String? statusMessage; // 动态状态文案（思考中/阅读文件/写入代码/上传...）
   final String? pendingJsonUrl; // 待用户确认下载的 JSON URL（不自动下载）
+  final String? systemMessage; // 后端结构化动作产生的系统提示
   // worker 真死了（探活确认 process_alive=false），UI 应弹重试按钮
   // retryUserMessage 是上一条用户消息，UI 拿来调 retryLastTurn() 时备用（也可以从 service 里读）
   final bool needsRetry;
@@ -39,6 +40,7 @@ class ChatEvent {
     this.failedJsonUrl,
     this.statusMessage,
     this.pendingJsonUrl,
+    this.systemMessage,
     this.needsRetry = false,
     this.retryUserMessage,
   });
@@ -59,14 +61,39 @@ class ResumeCompleted extends ResumeResult {
   final String userMessage;
   final String assistantText;
   final String? thinking;
-  final String? jsonUrl; // 解析 [json_app_url] 标签得到
-  final String? requestAction; // 解析 [request_action] 标签得到（如 upload_current_app）
+  final List<Map<String, dynamic>> clientActions;
+
+  String? get jsonUrl {
+    for (final action in clientActions.reversed) {
+      if (action['type'] == 'json_app_ready') {
+        final url = action['url'];
+        if (url is String && url.isNotEmpty) return url;
+      }
+    }
+    return null;
+  }
+
+  String? get requestAction {
+    for (final action in clientActions) {
+      if (action['type'] == 'request_upload_current_app') {
+        return 'upload_current_app';
+      }
+    }
+    return null;
+  }
+
+  List<String> get systemMessages {
+    return clientActions
+        .map(AiChatService.systemMessageFromClientAction)
+        .whereType<String>()
+        .toList(growable: false);
+  }
+
   const ResumeCompleted({
     required this.userMessage,
     required this.assistantText,
     this.thinking,
-    this.jsonUrl,
-    this.requestAction,
+    this.clientActions = const [],
   });
 }
 
@@ -89,20 +116,50 @@ class AiProvider {
   final String name;
   final String description;
   final String defaultModel;
+  final List<String> supportedAgentIds;
 
   AiProvider({
     required this.id,
     required this.name,
     required this.description,
     required this.defaultModel,
+    required this.supportedAgentIds,
   });
 
   factory AiProvider.fromJson(Map<String, dynamic> json) {
+    final supportedAgents = json['supported_agents'] as List<dynamic>?;
     return AiProvider(
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String? ?? '',
       defaultModel: json['default_model'] as String? ?? '',
+      supportedAgentIds:
+          supportedAgents?.map((e) => e.toString()).toList() ??
+          const ['claude'],
+    );
+  }
+}
+
+/// AI 执行 Agent 信息
+class AiAgent {
+  final String id;
+  final String name;
+  final String description;
+  final bool configured;
+
+  AiAgent({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.configured,
+  });
+
+  factory AiAgent.fromJson(Map<String, dynamic> json) {
+    return AiAgent(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      description: json['description'] as String? ?? '',
+      configured: json['configured'] as bool? ?? true,
     );
   }
 }
@@ -112,6 +169,9 @@ class AiChatService {
   // 使用统一配置管理的后端地址
   static String get _baseUrl => AppConfig.backendUrl;
   static const String _providerKey = 'ai_provider';
+  static const String _agentKey = 'ai_agent';
+  static const String _agentByProviderKey = 'ai_agent_by_provider';
+  static const String _agentScopeKey = 'ai_agent_scope';
   // 多会话存储：列表 + 当前 active sid
   static const String _sessionsListKey = 'ai_sessions_list';
   static const String _activeSessionKey = 'ai_active_session_id';
@@ -121,14 +181,179 @@ class AiChatService {
   static const String _legacyLastUserMessageKey = 'ai_last_user_message';
 
   static String _selectedProvider = 'deepseek';
+  static String _selectedAgentScope = 'public';
+  static String _providersScope = '';
+  static final Map<String, String> _selectedAgentsByProvider = {};
   static List<AiProvider> _providers = [];
+  static List<AiAgent> _agents = [
+    AiAgent(
+      id: 'claude',
+      name: 'Claude Code',
+      description: 'Claude CLI runner',
+      configured: true,
+    ),
+  ];
 
   static String get selectedProvider => _selectedProvider;
+  static String get selectedAgentScope => _selectedAgentScope;
+  static String get providersScope => _providersScope;
+  static String get selectedAgent =>
+      selectedAgentForProvider(_selectedProvider);
   static List<AiProvider> get providers => _providers;
+  static List<AiAgent> get agents => _agents;
+
+  static AiProvider? providerById(String providerId) {
+    for (final provider in _providers) {
+      if (provider.id == providerId) return provider;
+    }
+    return null;
+  }
+
+  static AiAgent? agentById(String agentId) {
+    for (final agent in _agents) {
+      if (agent.id == agentId) return agent;
+    }
+    return null;
+  }
+
+  static List<String> _supportedAgentIdsFor(AiProvider? provider) {
+    if (provider == null || provider.supportedAgentIds.isEmpty) {
+      return const ['claude'];
+    }
+    return provider.supportedAgentIds;
+  }
+
+  static List<AiAgent> agentsForProvider(String providerId) {
+    final provider = providerById(providerId);
+    final ids = _supportedAgentIdsFor(provider);
+    return ids
+        .map((id) {
+          return agentById(id) ??
+              AiAgent(id: id, name: id, description: '', configured: true);
+        })
+        .toList(growable: false);
+  }
+
+  static bool providerSupportsAgent(String providerId, String agentId) {
+    if (agentId.isEmpty) return true;
+    final provider = providerById(providerId);
+    if (provider == null) return true;
+    return _supportedAgentIdsFor(provider).contains(agentId);
+  }
+
+  /// Assistant 文本必须原样展示；客户端动作只来自后端结构化 client_action 事件。
+  static String cleanAssistantDisplayText(String text) => text;
+
+  static const int _maxStartMessages = 16;
+  static const int _maxStartMessageChars = 5000;
+
+  static String _trimStartMessage(String text) {
+    final cleaned = text.replaceAll('\u0000', '').trim();
+    if (cleaned.length <= _maxStartMessageChars) return cleaned;
+    return '${cleaned.substring(0, _maxStartMessageChars)}\n...[truncated]';
+  }
+
+  static List<Map<String, String>> _buildStartMessages(
+    String userMessage,
+    List<Map<String, String>>? contextMessages,
+  ) {
+    final result = <Map<String, String>>[];
+    final source = contextMessages ?? const <Map<String, String>>[];
+    for (final item in source) {
+      final role = (item['role'] ?? '').trim().toLowerCase();
+      if (role != 'user' && role != 'assistant') continue;
+      final content = _trimStartMessage(item['content'] ?? '');
+      if (content.isEmpty) continue;
+      result.add({'role': role, 'content': content});
+    }
+    final latest = _trimStartMessage(userMessage);
+    final hasLatest =
+        result.isNotEmpty &&
+        result.last['role'] == 'user' &&
+        result.last['content'] == latest;
+    if (!hasLatest && latest.isNotEmpty) {
+      result.add({'role': 'user', 'content': latest});
+    }
+    if (result.length <= _maxStartMessages) return result;
+    return result.sublist(result.length - _maxStartMessages);
+  }
+
+  static ChatEvent? _eventFromClientAction(Map<String, dynamic> action) {
+    final type = action['type'] as String? ?? '';
+    switch (type) {
+      case 'request_upload_current_app':
+        return ChatEvent(requestAction: 'upload_current_app');
+      case 'json_app_ready':
+        final url = action['url'] as String? ?? '';
+        if (url.isEmpty) return null;
+        return ChatEvent(pendingJsonUrl: url);
+      case 'faas_service_ready':
+      case 'faas_service_failed':
+        final message = systemMessageFromClientAction(action);
+        if (message == null || message.isEmpty) return null;
+        return ChatEvent(systemMessage: message);
+    }
+    debugPrint('[AI_CHAT] 忽略未知 client_action: $action');
+    return null;
+  }
+
+  static String? systemMessageFromClientAction(Map<String, dynamic> action) {
+    final type = action['type'] as String? ?? '';
+    if (type == 'faas_service_ready') {
+      final serviceId = (action['service_id'] ?? '').toString().trim();
+      final invokeUrl = (action['invoke_url'] ?? '').toString().trim();
+      if (serviceId.isEmpty) return null;
+      if (invokeUrl.isNotEmpty) {
+        return '后端服务已部署：$serviceId\n调用地址：$invokeUrl';
+      }
+      return '后端服务已部署：$serviceId';
+    }
+    if (type == 'faas_service_failed') {
+      final path = (action['path'] ?? 'faas_bundle.json').toString().trim();
+      final error = (action['error'] ?? '').toString().trim();
+      if (error.isNotEmpty) {
+        return '后端服务部署失败：$path\n$error';
+      }
+      return '后端服务部署失败：$path';
+    }
+    return null;
+  }
+
+  static List<Map<String, dynamic>> _parseClientActions(dynamic raw) {
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map>()
+        .map(
+          (item) => item.map((key, value) => MapEntry(key.toString(), value)),
+        )
+        .toList(growable: false);
+  }
 
   static Future<void> loadProvider() async {
     final prefs = await SharedPreferences.getInstance();
     _selectedProvider = prefs.getString(_providerKey) ?? 'deepseek';
+    _selectedAgentScope = _normalizeAgentScope(
+      prefs.getString(_agentScopeKey) ?? 'public',
+    );
+    _selectedAgentsByProvider.clear();
+    final byProviderJson = prefs.getString(_agentByProviderKey);
+    if (byProviderJson != null && byProviderJson.isNotEmpty) {
+      try {
+        final decoded = json.decode(byProviderJson) as Map<String, dynamic>;
+        decoded.forEach((key, value) {
+          if (key.isNotEmpty && value is String && value.isNotEmpty) {
+            _selectedAgentsByProvider[key] = value;
+          }
+        });
+      } catch (_) {}
+    }
+    final legacyAgent = prefs.getString(_agentKey);
+    if (legacyAgent != null && legacyAgent.isNotEmpty) {
+      _selectedAgentsByProvider.putIfAbsent(
+        _selectedProvider,
+        () => legacyAgent,
+      );
+    }
   }
 
   static Future<void> setProvider(String providerId) async {
@@ -137,20 +362,161 @@ class AiChatService {
     await prefs.setString(_providerKey, providerId);
   }
 
-  static Future<List<AiProvider>> fetchProviders() async {
+  static String _normalizeAgentScope(String value) {
+    final normalized = value.trim().toLowerCase().replaceAll('_', '-');
+    return normalized == 'private' ? 'private' : 'public';
+  }
+
+  static String _selectionAgentScope(String? scope) {
+    return _normalizeAgentScope(
+      scope ??
+          (_providersScope.isNotEmpty ? _providersScope : _selectedAgentScope),
+    );
+  }
+
+  static Future<void> setAgentScope(String scope) async {
+    _selectedAgentScope = _normalizeAgentScope(scope);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_agentScopeKey, _selectedAgentScope);
+  }
+
+  /// 平台/私有 agent node 切换的全局信号。常驻的悬浮球(DesignerBall)永不重新 initState，
+  /// 监听它即可在设置页改完 scope 后立刻重建字幕选择器(对齐 AsrModePrefs.notifier 的修法)。
+  /// 用自增 revision 而非 scope 字符串：保证即使 scope 没变(仅 providers 刷新)也能通知。
+  static final ValueNotifier<int> agentRoutingRevision = ValueNotifier<int>(0);
+
+  /// 设置页切换 scope 的统一入口：写 scope → 拉新 scope 的 providers → 通知监听者。
+  static Future<void> switchAgentScope(String scope) async {
+    await setAgentScope(scope);
+    await fetchProviders(agentScope: _selectedAgentScope);
+    agentRoutingRevision.value = agentRoutingRevision.value + 1;
+  }
+
+  static Future<void> setAgent(String agentId) async {
+    await setAgentForProvider(_selectedProvider, agentId);
+  }
+
+  static Future<void> setAgentForProvider(
+    String providerId,
+    String agentId,
+  ) async {
+    _selectedAgentsByProvider[providerId] = agentId;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_agentKey, agentId);
+    await prefs.setString(
+      _agentByProviderKey,
+      json.encode(_selectedAgentsByProvider),
+    );
+  }
+
+  static String selectedAgentForProvider(String providerId) {
+    AiProvider? provider;
+    for (final candidate in _providers) {
+      if (candidate.id == providerId) {
+        provider = candidate;
+        break;
+      }
+    }
+    final supported = _supportedAgentIdsFor(provider);
+    final saved = _selectedAgentsByProvider[providerId];
+    if (saved != null && supported.contains(saved)) return saved;
+    if (supported.contains('claude')) return 'claude';
+    return supported.isNotEmpty ? supported.first : 'claude';
+  }
+
+  static Future<void> _reconcileSelectedProvider() async {
+    if (_providers.isEmpty) return;
+    final providerIds = _providers.map((provider) => provider.id).toSet();
+    if (!providerIds.contains(_selectedProvider)) {
+      await setProvider(_providers.first.id);
+    }
+    final provider = _providers.firstWhere(
+      (candidate) => candidate.id == _selectedProvider,
+      orElse: () => _providers.first,
+    );
+    var changedAgentCache = false;
+    _selectedAgentsByProvider.removeWhere((providerId, agentId) {
+      final provider = providerById(providerId);
+      final shouldRemove =
+          !providerIds.contains(providerId) ||
+          !_supportedAgentIdsFor(provider).contains(agentId);
+      if (shouldRemove) changedAgentCache = true;
+      return shouldRemove;
+    });
+    for (final provider in _providers) {
+      final supported = _supportedAgentIdsFor(provider);
+      final saved = _selectedAgentsByProvider[provider.id];
+      if (saved == null || !supported.contains(saved)) {
+        _selectedAgentsByProvider[provider.id] = selectedAgentForProvider(
+          provider.id,
+        );
+        changedAgentCache = true;
+      }
+    }
+    final agentId = selectedAgentForProvider(provider.id);
+    if (_selectedAgentsByProvider[provider.id] != agentId) {
+      _selectedAgentsByProvider[provider.id] = agentId;
+      changedAgentCache = true;
+    }
+    if (changedAgentCache) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _agentByProviderKey,
+        json.encode(_selectedAgentsByProvider),
+      );
+      await prefs.setString(
+        _agentKey,
+        selectedAgentForProvider(_selectedProvider),
+      );
+    }
+  }
+
+  static Future<List<AiProvider>> fetchProviders({String? agentScope}) async {
+    final scope = _normalizeAgentScope(agentScope ?? _selectedAgentScope);
     try {
+      final token = AuthService.token;
+      final headers = <String, String>{};
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
       final resp = await http
-          .get(Uri.parse('$_baseUrl/api/ai/providers'))
+          .get(
+            Uri.parse(
+              '$_baseUrl/api/ai/providers',
+            ).replace(queryParameters: {'agent_scope': scope}),
+            headers: headers,
+          )
           .timeout(const Duration(seconds: 10));
       if (resp.statusCode == 200) {
         final data = json.decode(resp.body) as Map<String, dynamic>;
         _providers = (data['providers'] as List<dynamic>)
             .map((e) => AiProvider.fromJson(e as Map<String, dynamic>))
             .toList();
+        _providersScope = scope;
+        await _reconcileSelectedProvider();
         return _providers;
       }
     } catch (_) {}
+    if (_providersScope != scope) {
+      _providers = [];
+    }
     return _providers;
+  }
+
+  static Future<List<AiAgent>> fetchAgents() async {
+    try {
+      final resp = await http
+          .get(Uri.parse('$_baseUrl/api/ai/agents'))
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        _agents = (data['agents'] as List<dynamic>)
+            .map((e) => AiAgent.fromJson(e as Map<String, dynamic>))
+            .toList();
+        return _agents;
+      }
+    } catch (_) {}
+    return _agents;
   }
 
   // ── 多会话状态 ──
@@ -175,6 +541,161 @@ class AiChatService {
   /// 对外暴露当前 active sid（后兼容老 designer_ball 调用）
   String get sessionId => _activeSessionId;
   String get lastUserMessage => _active?.lastUserMessage ?? '';
+  String get activeProvider {
+    final active = _active;
+    if (active == null) return _selectedProvider;
+    _ensureSessionRouting(active);
+    return active.providerId;
+  }
+
+  String get activeAgent {
+    final active = _active;
+    if (active == null) return selectedAgentForProvider(_selectedProvider);
+    _ensureSessionRouting(active);
+    return active.agentId;
+  }
+
+  String get activeAgentScope {
+    final active = _active;
+    if (active == null) return _selectedAgentScope;
+    _ensureSessionRouting(active);
+    return active.agentScope;
+  }
+
+  bool get activeAgentLocked {
+    final active = _active;
+    if (active == null) return false;
+    return active.committed ||
+        active.firstMessage.isNotEmpty ||
+        active.lastUserMessage.isNotEmpty;
+  }
+
+  void _ensureSessionRouting(SessionMeta session) {
+    session.agentScope = _normalizeAgentScope(
+      session.agentScope.isNotEmpty ? session.agentScope : _selectedAgentScope,
+    );
+    if (session.providerId.isEmpty) {
+      session.providerId = _selectedProvider;
+    }
+    final locked =
+        session.committed ||
+        session.firstMessage.isNotEmpty ||
+        session.lastUserMessage.isNotEmpty;
+    if (session.agentId.isEmpty ||
+        (!locked &&
+            !providerSupportsAgent(session.providerId, session.agentId))) {
+      session.agentId = selectedAgentForProvider(session.providerId);
+    }
+  }
+
+  SessionMeta _createSessionMeta() {
+    return SessionMeta(
+      id: _generateSessionId(),
+      providerId: _selectedProvider,
+      agentId: selectedAgentForProvider(_selectedProvider),
+      agentScope: _selectedAgentScope,
+    );
+  }
+
+  Future<void> _syncDefaultsFromActive() async {
+    final active = _active;
+    if (active == null) return;
+    _ensureSessionRouting(active);
+    _selectedProvider = active.providerId;
+    _selectedAgentScope = active.agentScope;
+    _selectedAgentsByProvider[active.providerId] = active.agentId;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_providerKey, _selectedProvider);
+    await prefs.setString(_agentScopeKey, _selectedAgentScope);
+    await prefs.setString(_agentKey, active.agentId);
+    await prefs.setString(
+      _agentByProviderKey,
+      json.encode(_selectedAgentsByProvider),
+    );
+  }
+
+  Future<bool> setActiveProvider(
+    String providerId, {
+    String? agentScope,
+  }) async {
+    if (_active == null) {
+      await createNewSession();
+    }
+    final active = _active!;
+    _ensureSessionRouting(active);
+    final targetScope = _selectionAgentScope(agentScope);
+    final locked = activeAgentLocked;
+    if (locked && !providerSupportsAgent(providerId, active.agentId)) {
+      return false;
+    }
+    active.agentScope = targetScope;
+    active.providerId = providerId;
+    if (!locked && !providerSupportsAgent(providerId, active.agentId)) {
+      active.agentId = selectedAgentForProvider(providerId);
+    }
+    active.updatedAt = DateTime.now().millisecondsSinceEpoch;
+    await _syncDefaultsFromActive();
+    await _persistSessions();
+    return true;
+  }
+
+  Future<bool> setActiveProviderAgent(
+    String providerId,
+    String agentId, {
+    String? agentScope,
+  }) async {
+    if (_active == null) {
+      await createNewSession();
+    }
+    final active = _active!;
+    _ensureSessionRouting(active);
+    if (activeAgentLocked) return false;
+    if (!providerSupportsAgent(providerId, agentId)) return false;
+    active.agentScope = _selectionAgentScope(agentScope);
+    active.providerId = providerId;
+    active.agentId = agentId;
+    active.updatedAt = DateTime.now().millisecondsSinceEpoch;
+    await _syncDefaultsFromActive();
+    await _persistSessions();
+    return true;
+  }
+
+  Future<bool> setActiveAgent(String agentId) async {
+    if (_active == null) {
+      await createNewSession();
+    }
+    final active = _active!;
+    _ensureSessionRouting(active);
+    if (activeAgentLocked) return false;
+    if (!providerSupportsAgent(active.providerId, agentId)) return false;
+    active.agentId = agentId;
+    active.updatedAt = DateTime.now().millisecondsSinceEpoch;
+    await _syncDefaultsFromActive();
+    await _persistSessions();
+    return true;
+  }
+
+  /// 全局 scope 切换后调用：把"未提交"的活跃会话迁到新 scope，并把 provider/agent
+  /// 收敛到新 scope 下合法取值。已提交（进行中）的会话保持不动——不能中途换节点。
+  /// 需先 fetchProviders(新 scope) 让 [_providers] 是新列表，再调用本方法。
+  Future<void> reconcileActiveScopeIfUnlocked() async {
+    final active = _active;
+    if (active == null) return;
+    if (activeAgentLocked) return;
+    active.agentScope = _selectedAgentScope;
+    final providerIds = _providers.map((p) => p.id).toSet();
+    if (_providers.isNotEmpty && !providerIds.contains(active.providerId)) {
+      active.providerId =
+          (_selectedProvider.isNotEmpty &&
+              providerIds.contains(_selectedProvider))
+          ? _selectedProvider
+          : _providers.first.id;
+    }
+    active.agentId = selectedAgentForProvider(active.providerId);
+    active.updatedAt = DateTime.now().millisecondsSinceEpoch;
+    await _syncDefaultsFromActive();
+    await _persistSessions();
+  }
 
   /// 当前所有 session（含未提交的内存占位），按 updatedAt 倒序
   List<SessionMeta> listSessions() {
@@ -237,11 +758,15 @@ class AiChatService {
     // 不变量：loadSession 返回后 sessionId 一定非空。调用方（designer_ball
     // _sendTextToAi 等）写 _messageBuckets 时直接拿 sessionId 作 key，不用兜底。
     if (_activeSessionId.isEmpty) {
-      final placeholder = SessionMeta(id: _generateSessionId());
+      final placeholder = _createSessionMeta();
       _sessions.add(placeholder);
       _activeSessionId = placeholder.id;
     }
 
+    for (final session in _sessions) {
+      _ensureSessionRouting(session);
+    }
+    await _syncDefaultsFromActive();
     await _persistSessions();
     debugPrint(
       '[AI_CHAT] loadSession: ${_sessions.length} 条，active=$_activeSessionId',
@@ -267,11 +792,35 @@ class AiChatService {
     _lastEntryId = '0';
     // 丢弃旧的未提交占位（最多只能存在一个）
     _sessions.removeWhere((s) => !s.committed);
-    final fresh = SessionMeta(id: _generateSessionId());
+    final fresh = _createSessionMeta();
     _sessions.add(fresh);
     _activeSessionId = fresh.id;
+    await _syncDefaultsFromActive();
     await _persistSessions();
     debugPrint('[AI_CHAT] createNewSession: sid=${fresh.id}');
+    return fresh;
+  }
+
+  /// Demo 模式：创建一个 id 固定为特殊 UUID 的会话并设为 active。
+  /// 之后正常 sendStream → _postStart 会把 body['session_id'] 设成该 UUID，
+  /// 服务端识别后走 demo 回放（不路由 agent-node、不建 FaaS）。
+  Future<SessionMeta> createDemoSession(String demoUuid) async {
+    abortLocal();
+    _aborting = false;
+    _lastEntryId = '0';
+    _sessions.removeWhere((s) => !s.committed);
+    _sessions.removeWhere((s) => s.id == demoUuid); // 同一个 demo 不堆积
+    final fresh = SessionMeta(
+      id: demoUuid,
+      providerId: _selectedProvider,
+      agentId: selectedAgentForProvider(_selectedProvider),
+      agentScope: _selectedAgentScope,
+    );
+    _sessions.add(fresh);
+    _activeSessionId = fresh.id;
+    await _syncDefaultsFromActive();
+    await _persistSessions();
+    debugPrint('[AI_CHAT] createDemoSession: sid=$demoUuid');
     return fresh;
   }
 
@@ -286,6 +835,7 @@ class AiChatService {
     _aborting = false;
     _lastEntryId = '0';
     _activeSessionId = sid;
+    await _syncDefaultsFromActive();
     await _persistSessions();
     debugPrint('[AI_CHAT] switchToSession: sid=$sid');
   }
@@ -301,7 +851,7 @@ class AiChatService {
 
     // 只对 committed 的发 /abort，未提交的占位 backend 上根本没记录
     if (wasCommitted) {
-      _abortBackend(sid);
+      _abortBackend(sid, intent: 'delete_session');
     }
 
     if (wasActive) {
@@ -313,11 +863,12 @@ class AiChatService {
         _activeSessionId = _sessions.first.id;
       } else {
         // 保持不变量：sessionId 永远非空。删完所有会话自动垫一条占位。
-        final placeholder = SessionMeta(id: _generateSessionId());
+        final placeholder = _createSessionMeta();
         _sessions.add(placeholder);
         _activeSessionId = placeholder.id;
       }
     }
+    await _syncDefaultsFromActive();
     await _persistSessions();
     debugPrint('[AI_CHAT] deleteSession: sid=$sid wasActive=$wasActive');
   }
@@ -377,10 +928,12 @@ class AiChatService {
   /// 用户主动"清空对话"/手动"停止"才用。app 后台 / 关浮层 / 发新消息都不该用。
   void abort() {
     abortLocal();
-    if (_activeSessionId.isNotEmpty) _abortBackend(_activeSessionId);
+    if (_activeSessionId.isNotEmpty) {
+      _abortBackend(_activeSessionId, intent: 'manual_stop');
+    }
   }
 
-  void _abortBackend(String sid) {
+  void _abortBackend(String sid, {required String intent}) {
     if (sid.isEmpty) return;
     final token = AuthService.token;
     if (token == null) return;
@@ -388,7 +941,11 @@ class AiChatService {
     http
         .post(
           Uri.parse('$_baseUrl/api/ai/chat/$sid/abort'),
-          headers: {'Authorization': 'Bearer $token'},
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+          body: json.encode({'intent': intent}),
         )
         .timeout(const Duration(seconds: 3))
         .catchError((e) {
@@ -404,6 +961,17 @@ class AiChatService {
     final data = await _probeSessionStatus(_activeSessionId);
     if (data == null) return false;
     return data['status'] == 'running' && data['process_alive'] == true;
+  }
+
+  Future<Map<String, dynamic>?> probeActiveSessionStatus() async {
+    final active = _active;
+    if (active == null) return null;
+    final data = await _probeSessionStatus(active.id);
+    if (data == null) return null;
+    active.lastKnownStatus = data['status'] as String?;
+    active.processAlive = data['process_alive'] == true;
+    await _persistSessions();
+    return data;
   }
 
   /// 探一条 session 的 /status；返回原始 JSON 或 null（任何失败都视为 null）。
@@ -454,7 +1022,10 @@ class AiChatService {
   ///   3. 网络断 / 切后台 → SSE 自然断 → 客户端拿 _lastEntryId 续读，
   ///      worker 仍在跑，不丢事件
   ///   4. 收到 [DONE] → 任务真的完成，退出
-  Stream<ChatEvent> sendStream(String userMessage) async* {
+  Stream<ChatEvent> sendStream(
+    String userMessage, {
+    List<Map<String, String>>? contextMessages,
+  }) async* {
     // 远程熔断：admin 在 config-center 把 pause_request 打开就立刻拒服务
     if (RemoteConfigService.instance.pauseRequest) {
       yield ChatEvent(error: T.current.errPauseRequest);
@@ -472,15 +1043,27 @@ class AiChatService {
       await createNewSession();
     }
     final active = _active!;
+    _ensureSessionRouting(active);
+    final providerId = active.providerId;
+    final agentId = active.agentId;
+    final agentScope = active.agentScope;
 
     debugPrint('[AI_CHAT] ========== 发送消息 ==========');
     debugPrint('[AI_CHAT] 消息内容: $userMessage');
     debugPrint('[AI_CHAT] Session ID: ${active.id}');
-    debugPrint('[AI_CHAT] Provider: $_selectedProvider');
+    debugPrint('[AI_CHAT] Provider: $providerId');
+    debugPrint('[AI_CHAT] Agent: $agentId');
     debugPrint('[AI_CHAT] ====================================');
 
     // ── 1. POST /start：起 worker ──
-    final startResult = await _postStart(userMessage, forceRestart: true);
+    final startResult = await _postStart(
+      userMessage,
+      forceRestart: true,
+      contextMessages: contextMessages,
+      providerId: providerId,
+      agentId: agentId,
+      agentScope: agentScope,
+    );
     if (startResult.error != null) {
       yield ChatEvent(error: startResult.error, quota: startResult.quota);
       return;
@@ -509,14 +1092,16 @@ class AiChatService {
   }
 
   /// 重试上一轮（worker 死了 / 用户主动重试）。复用 active session 的 sid，
-  /// CLI 通过 -r 参数继承对话上下文，所以不丢历史。
-  Stream<ChatEvent> retryLastTurn() async* {
+  /// 并把最近对话上下文显式交给后端，避免依赖第三方模型不稳定的 CLI resume。
+  Stream<ChatEvent> retryLastTurn({
+    List<Map<String, String>>? contextMessages,
+  }) async* {
     final msg = lastUserMessage;
     if (msg.isEmpty) {
       yield ChatEvent(error: T.current.chatErrNoRetryMessage);
       return;
     }
-    yield* sendStream(msg);
+    yield* sendStream(msg, contextMessages: contextMessages);
   }
 
   /// SSE 主循环：连 → 读 → 断了 → 探活 → 重连 / 报错。
@@ -547,6 +1132,14 @@ class AiChatService {
       if (alive == _AliveCheck.confirmedDead) {
         debugPrint('[AI_CHAT] /status 确认 worker 已死，弹重试按钮');
         yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
+        return;
+      }
+      final completed = await _fetchCompletedResult(sessionId);
+      if (completed is ResumeCompleted) {
+        debugPrint(
+          '[AI_CHAT] stream interrupted after completion; replay /result',
+        );
+        yield* _eventsFromCompleted(completed);
         return;
       }
       // alive 或 unknown → 继续重连（真活着 / 网络问题；都不该烧重试按钮）
@@ -611,16 +1204,23 @@ class AiChatService {
   ///  - ResumeCompleted：注入 user 气泡 + assistant 气泡 + 可能的下载按钮
   ///  - ResumeStreaming：注入 user 气泡 + 空 assistant 气泡 + listen stream
   ///  - ResumeNeedsRetry：注入 user 气泡 + "已中断，点击重试" 系统消息
-  Future<ResumeResult> tryResumeUnfinished() async {
+  Future<ResumeResult> tryResumeUnfinished({
+    bool forceDetachLocalClient = false,
+  }) async {
     final active = _active;
     if (active == null || active.lastUserMessage.isEmpty) {
       return const ResumeNothing();
     }
     // 防御：确保还没有正在跑的 stream
     if (_activeClient != null) {
-      debugPrint('[AI_CHAT] tryResumeUnfinished: 已有活跃 client，跳过');
-      return const ResumeNothing();
+      if (!forceDetachLocalClient) {
+        debugPrint('[AI_CHAT] tryResumeUnfinished: 已有活跃 client，跳过');
+        return const ResumeNothing();
+      }
+      debugPrint('[AI_CHAT] tryResumeUnfinished: 强制关闭半挂 client 后恢复');
+      abortLocal();
     }
+    if (forceDetachLocalClient) _aborting = false;
     try {
       final token = AuthService.token;
       if (token == null) return const ResumeNothing();
@@ -631,9 +1231,22 @@ class AiChatService {
           )
           .timeout(const Duration(seconds: 8));
       if (resp.statusCode != 200) return const ResumeNothing();
+      // ⚠️ 这次 /status 网络调用期间，用户可能已经切换/新建了会话。若 active 不再是
+      // 当初要恢复的那条，绝不能把它的结果带出去——否则上层会用「活的」_messages
+      // getter 把这条旧会话的内容写进当前会话桶（串桶 bug）。
+      if (_active?.id != active.id) {
+        debugPrint(
+          '[AI_CHAT] tryResumeUnfinished: active 在 await 间隙已切换 '
+          '(${active.id} → ${_active?.id})，放弃恢复',
+        );
+        return const ResumeNothing();
+      }
       final data = json.decode(resp.body) as Map<String, dynamic>;
       final status = data['status'] as String? ?? '';
       final procAlive = data['process_alive'] == true;
+      active.lastKnownStatus = status;
+      active.processAlive = procAlive;
+      unawaited(_persistSessions());
       debugPrint('[AI_CHAT] resume status=$status alive=$procAlive');
 
       if (status == 'failed' || status == 'aborted') {
@@ -774,13 +1387,15 @@ class AiChatService {
       yield ChatEvent(thinking: completed.thinking);
     }
     if (completed.assistantText.isNotEmpty) {
-      yield ChatEvent(content: completed.assistantText);
+      yield ChatEvent(
+        content: cleanAssistantDisplayText(completed.assistantText),
+      );
     }
-    final state = _StreamState()
-      ..accumulated = completed.assistantText
-      ..accumulatedThinking = completed.thinking ?? '';
-    await for (final ev in _emitTrailingTags(state)) {
-      yield ev;
+    for (final action in completed.clientActions) {
+      final event = _eventFromClientAction(action);
+      if (event != null) {
+        yield event;
+      }
     }
   }
 
@@ -813,6 +1428,14 @@ class AiChatService {
       if (alive == _AliveCheck.confirmedDead) {
         debugPrint('[AI_CHAT] /status 确认 worker 已死，弹重试按钮');
         yield ChatEvent(needsRetry: true, retryUserMessage: lastUserMessage);
+        return;
+      }
+      final completed = await _fetchCompletedResult(sessionId);
+      if (completed is ResumeCompleted) {
+        debugPrint(
+          '[AI_CHAT] Web EventSource interrupted after completion; replay /result',
+        );
+        yield* _eventsFromCompleted(completed);
         return;
       }
 
@@ -959,9 +1582,6 @@ class AiChatService {
         final dataStr = message.data.trimLeft();
         if (dataStr == '[DONE]') {
           debugPrint('[AI_CHAT] <<< Web EventSource [DONE]');
-          await for (final ev in _emitTrailingTags(state)) {
-            yield ev;
-          }
           state.outcome = _StreamOutcome.done;
           return;
         }
@@ -997,7 +1617,7 @@ class AiChatService {
     }
   }
 
-  /// 从 /result 拿到上一轮完成的最终文本，并解析其中的 [json_app_url] 标签
+  /// 从 /result 拿到上一轮完成的最终文本和结构化客户端动作。
   Future<ResumeResult> _fetchCompletedResult([String? sessionId]) async {
     final active = _active;
     if (active == null) return const ResumeNothing();
@@ -1015,33 +1635,16 @@ class AiChatService {
       final data = json.decode(resp.body) as Map<String, dynamic>;
       final finalText = data['final_text'] as String? ?? '';
       final thinking = data['final_thinking'] as String? ?? '';
-      if (finalText.isEmpty && thinking.isEmpty) return const ResumeNothing();
+      final clientActions = _parseClientActions(data['client_actions']);
+      if (finalText.isEmpty && thinking.isEmpty && clientActions.isEmpty) {
+        return const ResumeNothing();
+      }
 
-      // 解析 [json_app_url]…[/json_app_url]（与 _emitTrailingTags 同一份正则）
-      String? jsonUrl;
-      final urlMatch = RegExp(
-        r'\[json_app_url\]([^\[]+?)\[/json_app_url\]',
-      ).firstMatch(finalText);
-      if (urlMatch != null) {
-        final raw = urlMatch.group(1)!.trim();
-        final httpMatch = RegExp(r'https?://[^\s\)\]\(\<\>"]+').firstMatch(raw);
-        jsonUrl = httpMatch?.group(0) ?? raw;
-      }
-      // 解析 [request_action]xxx[/request_action]（之前漏了 → 杀进程后回来 UPLOAD 不出来 P0 bug）
-      String? requestAction;
-      final actionMatch = RegExp(
-        r'\[request_action\]([^\]]+)\[/request_action\]',
-      ).firstMatch(finalText);
-      if (actionMatch != null) {
-        final action = actionMatch.group(1)!.trim();
-        if (action.isNotEmpty) requestAction = action;
-      }
       return ResumeCompleted(
         userMessage: active.lastUserMessage,
         assistantText: finalText,
         thinking: thinking.isEmpty ? null : thinking,
-        jsonUrl: jsonUrl,
-        requestAction: requestAction,
+        clientActions: clientActions,
       );
     } catch (e) {
       debugPrint('[AI_CHAT] _fetchCompletedResult 异常: $e');
@@ -1144,10 +1747,6 @@ class AiChatService {
 
         if (dataStr == '[DONE]') {
           debugPrint('[AI_CHAT] <<< SSE [DONE]');
-          // 流结束后兜底解析累积文本里的标签
-          await for (final ev in _emitTrailingTags(state)) {
-            yield ev;
-          }
           state.outcome = _StreamOutcome.done;
           return;
         }
@@ -1201,7 +1800,7 @@ class AiChatService {
     }
   }
 
-  /// 处理单条业务事件（JSON shape 与老版本完全一致）
+  /// 处理单条业务事件。
   Stream<ChatEvent> _handleEvent(
     Map<String, dynamic> data,
     _StreamState state,
@@ -1215,8 +1814,17 @@ class AiChatService {
         data['generating_json'] == false) {
       return;
     }
-    if (data.containsKey('request_action')) {
-      yield ChatEvent(requestAction: data['request_action'] as String);
+    if (data.containsKey('client_action')) {
+      final raw = data['client_action'];
+      if (raw is Map<String, dynamic>) {
+        final event = _eventFromClientAction(raw);
+        if (event != null) yield event;
+      } else if (raw is Map) {
+        final event = _eventFromClientAction(
+          raw.map((key, value) => MapEntry(key.toString(), value)),
+        );
+        if (event != null) yield event;
+      }
       return;
     }
     if (data.containsKey('status')) {
@@ -1229,7 +1837,9 @@ class AiChatService {
         debugPrint('[AI_CHAT] 收到最终完整内容，长度: ${finalText.length}');
         if (finalText.length >= state.accumulated.length) {
           state.accumulated = finalText;
-          yield ChatEvent(content: state.accumulated);
+          yield ChatEvent(
+            content: cleanAssistantDisplayText(state.accumulated),
+          );
         } else {
           debugPrint('[AI_CHAT] final_content 比累积还短，忽略避免回退');
         }
@@ -1240,7 +1850,7 @@ class AiChatService {
       final chunk = data['assistant_content'] as String? ?? '';
       if (chunk.isNotEmpty) {
         if (!state.accumulated.contains(chunk)) state.accumulated += chunk;
-        yield ChatEvent(content: state.accumulated);
+        yield ChatEvent(content: cleanAssistantDisplayText(state.accumulated));
       }
       return;
     }
@@ -1322,75 +1932,7 @@ class AiChatService {
     final content = data['content'] as String? ?? '';
     if (content.isNotEmpty) {
       state.accumulated += content;
-      yield ChatEvent(content: state.accumulated);
-    }
-  }
-
-  /// 流真的结束（[DONE]）后兜底解析累积文本里的 [json_app_url] / [request_action] / ```json``` 标签。
-  /// 这是设计上的唯一解析点 —— 等 Claude 完全输出完毕后再决定客户端要做什么，与下载按钮（[json_app_url]）
-  /// 走完全相同的路。
-  Stream<ChatEvent> _emitTrailingTags(_StreamState state) async* {
-    final accumulated = state.accumulated;
-    final tail = accumulated.length > 300
-        ? accumulated.substring(accumulated.length - 300)
-        : accumulated;
-    debugPrint(
-      '[AI_CHAT] _emitTrailingTags 入口, accumulated.len=${accumulated.length}, '
-      '末 300 字符: $tail',
-    );
-
-    // 1. [json_app_url]…[/json_app_url] - 等用户确认下载
-    final urlRegex = RegExp(r'\[json_app_url\]([^\[]+?)\[/json_app_url\]');
-    final urlMatch = urlRegex.firstMatch(accumulated);
-    if (urlMatch != null) {
-      final raw = urlMatch.group(1)!.trim();
-      final httpMatch = RegExp(r'https?://[^\s\)\]\(\<\>"]+').firstMatch(raw);
-      final url = httpMatch?.group(0) ?? raw;
-      debugPrint('[AI_CHAT] 流结束，检测到 JSON URL: $url');
-      yield ChatEvent(pendingJsonUrl: url);
-    } else if (accumulated.contains('json_app_url')) {
-      debugPrint(
-        '[AI_CHAT] ⚠️ accumulated 里有 json_app_url 字样但 regex 未匹中，可能格式有变',
-      );
-    }
-
-    // 2. [request_action]xxx[/request_action]
-    // .trim() 防 AI 偶尔在 tag 内夹换行/空格，designer_ball 那边走 == 严格比较
-    final actionRegex = RegExp(
-      r'\[request_action\]([^\]]+)\[/request_action\]',
-    );
-    final actionMatch = actionRegex.firstMatch(accumulated);
-    if (actionMatch != null) {
-      final action = actionMatch.group(1)!.trim();
-      if (action.isNotEmpty) {
-        debugPrint(
-          '[AI_CHAT] 流结束，检测到 request_action: "$action" (len=${action.length})',
-        );
-        yield ChatEvent(requestAction: action);
-      } else {
-        debugPrint('[AI_CHAT] ⚠️ request_action regex 匹中但 trim 后为空');
-      }
-    } else if (accumulated.contains('request_action')) {
-      // 诊断：accumulated 里有 request_action 字样但正则没匹中，把闭合标签前后的 100 字节贴出来，方便排查
-      final idx = accumulated.lastIndexOf('request_action');
-      final from = (idx - 50).clamp(0, accumulated.length);
-      final to = (idx + 100).clamp(0, accumulated.length);
-      debugPrint(
-        '[AI_CHAT] ⚠️ accumulated 含 request_action 字样但正则没匹中，'
-        '上下文: "${accumulated.substring(from, to)}"',
-      );
-    }
-
-    // 3. 内联 ```json``` 块（仅当没有 url 时）
-    if (urlMatch == null) {
-      final jsonBlockRegex = RegExp(r'```json\s*(\{.*?\})\s*```', dotAll: true);
-      final match = jsonBlockRegex.firstMatch(accumulated);
-      if (match != null) {
-        try {
-          final parsed = json.decode(match.group(1)!) as Map<String, dynamic>;
-          yield ChatEvent(jsonApp: parsed);
-        } catch (_) {}
-      }
+      yield ChatEvent(content: cleanAssistantDisplayText(state.accumulated));
     }
   }
 
@@ -1398,6 +1940,10 @@ class AiChatService {
   Future<_StartResult> _postStart(
     String userMessage, {
     required bool forceRestart,
+    List<Map<String, String>>? contextMessages,
+    required String providerId,
+    required String agentId,
+    required String agentScope,
   }) async {
     const maxAttempts = 3;
     Object? lastError;
@@ -1411,11 +1957,11 @@ class AiChatService {
         final headers = <String, String>{'Content-Type': 'application/json'};
         if (token != null) headers['Authorization'] = 'Bearer $token';
         final body = json.encode({
-          'messages': [
-            {'role': 'user', 'content': userMessage},
-          ],
+          'messages': _buildStartMessages(userMessage, contextMessages),
           'session_id': _activeSessionId,
-          'provider': _selectedProvider,
+          'provider': providerId,
+          'agent': agentId,
+          'agent_scope': agentScope,
           'force_restart': forceRestart,
         });
         var resp = await http
@@ -1594,6 +2140,9 @@ class AiChatService {
 
     final client = http.Client();
     _activeClient = client;
+    final providerId = activeProvider;
+    final agentId = activeAgent;
+    final agentScope = activeAgentScope;
 
     try {
       final request = http.Request(
@@ -1609,7 +2158,9 @@ class AiChatService {
         'prompt': userPrompt,
         if (currentApp != null) 'current_app': currentApp,
         if (crashLog != null) 'crash_log': crashLog,
-        'provider': _selectedProvider,
+        'provider': providerId,
+        'agent': agentId,
+        'agent_scope': agentScope,
       });
 
       final response = await client
@@ -1735,7 +2286,6 @@ class AiChatService {
   }
 
   Future<void> clear() async {
-    abort();
     await resetSession();
   }
 }

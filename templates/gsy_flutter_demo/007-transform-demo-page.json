@@ -1,0 +1,80 @@
+{
+  "dsl": "3.3",
+  "appid": "f1b14be9-9350-531b-a3fa-2e5fb45d099c",
+  "meta": {
+    "name": "gsy_flutter_demo/007-transform-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "Transform 效果展示",
+      "en": "Transform effectdemo"
+    },
+    "description": "TransformDemoPage：Transform 效果展示",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "Transform 效果展示",
+      "sourcePath": "lib/widget/basic/transform_demo_page.dart",
+      "deferredAlias": "transform_demo_page",
+      "widgetClass": "TransformDemoPage",
+      "category": "basic",
+      "routeIndex": 7
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {},
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "TransformDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#1976D2",
+        "children": [
+          {
+            "type": "center",
+            "child": {
+              "type": "card",
+              "height": 150,
+              "margin": 10,
+              "padding": 10,
+              "borderRadius": 4,
+              "elevation": 1,
+              "crossAxisAlignment": "center",
+              "children": [
+                {
+                  "type": "transform",
+                  "translateY": -30,
+                  "child": {
+                    "type": "image",
+                    "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                    "width": 72,
+                    "height": 72,
+                    "fit": "cover",
+                    "borderRadius": 36,
+                    "paddingV": 0
+                  }
+                },
+                {
+                  "type": "text",
+                  "value": "Flutter is Google's portable UI toolkit for crafting beautiful, natively compiled applications for mobile, web, and desktop from a single codebase. ",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#000000",
+                    "maxLines": 3,
+                    "overflow": "ellipsis",
+                    "paddingV": 0
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

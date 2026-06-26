@@ -1,0 +1,90 @@
+{
+  "dsl": "3.3",
+  "appid": "9f6399f7-a647-5e08-b4eb-84d64af51f12",
+  "meta": {
+    "name": "gsy_flutter_demo/001-controller-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "文本输入框简单的 Controller",
+      "en": "Simple text input controller"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例：文本输入框简单的 Controller",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "文本输入框简单的 Controller",
+      "sourcePath": "lib/widget/basic/controller_demo_page.dart",
+      "deferredAlias": "controller_demo_page",
+      "widgetClass": "ControllerDemoPage",
+      "category": "basic",
+      "routeIndex": 1
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "text": ""
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "center",
+            "child": {
+              "type": "gesture_detector",
+              "onTap": {
+                "type": "navigate",
+                "screen": "edit"
+              },
+              "child": {
+                "type": "text",
+                "value": "Click",
+                "style": {
+                  "fontSize": 50,
+                  "color": "#000000"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "edit",
+        "title": "ControllerDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "center",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "input",
+                  "bind": "global.text",
+                  "placeholder": "",
+                  "style": {
+                    "border": "underline",
+                    "fontSize": 14
+                  }
+                }
+              ],
+              "width": 360,
+              "padding": 10
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

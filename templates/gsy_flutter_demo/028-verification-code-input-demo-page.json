@@ -1,0 +1,70 @@
+{
+  "dsl": "3.3",
+  "appid": "7e58c78a-f1b4-58db-8950-871ba0639e01",
+  "meta": {
+    "name": "gsy_flutter_demo/028-verification-code-input-demo-page",
+    "version": "0.1.5",
+    "type": "app",
+    "displayName": {
+      "zh": "验证码输入框",
+      "en": "Verification code input"
+    },
+    "description": "VerificationCodeInputDemoPage：验证码输入框",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "验证码输入框",
+      "sourcePath": "lib/widget/basic/verification_code_input_demo_page.dart",
+      "deferredAlias": "verification_code_input_demo_page",
+      "widgetClass": "VerificationCodeInputDemoPage",
+      "category": "basic",
+      "routeIndex": 28,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v2"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "code": "",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v2"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "VerificationCodeInputDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "code_input",
+                "bind": "global.code",
+                "length": 6,
+                "keyboardType": "number",
+                "style": "rectangle",
+                "horizontalPadding": 16,
+                "innerInset": 10,
+                "borderColor": "#2196F3",
+                "textColor": "#2196F3"
+              }
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

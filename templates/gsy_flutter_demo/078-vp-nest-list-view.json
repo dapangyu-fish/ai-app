@@ -1,0 +1,218 @@
+{
+  "dsl": "3.3",
+  "appid": "6e0bf47a-aa4e-5c92-8847-47a287c7f755",
+  "meta": {
+    "name": "gsy_flutter_demo/078-vp-nest-list-view",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "垂直  ViewPager 嵌套垂直 ListView ",
+      "en": "Vertical ViewPager nestedVertical ListView"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：垂直  ViewPager 嵌套垂直 ListView ",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "垂直  ViewPager 嵌套垂直 ListView ",
+      "sourcePath": "lib/widget/scroll/vp_list_demo_page.dart",
+      "deferredAlias": "vp_list_demo_page",
+      "widgetClass": "VPNestListView",
+      "category": "scroll",
+      "routeIndex": 78,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-scroll-drag-handoff-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "垂直  ViewPager 嵌套垂直 ListView ",
+      "upstreamSource": "lib/widget/scroll/vp_list_demo_page.dart",
+      "upstreamWidget": "VPNestListView",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-scroll-drag-handoff-v1",
+      "items": [
+        {
+          "index": 0
+        },
+        {
+          "index": 1
+        },
+        {
+          "index": 2
+        },
+        {
+          "index": 3
+        },
+        {
+          "index": 4
+        },
+        {
+          "index": 5
+        },
+        {
+          "index": 6
+        },
+        {
+          "index": 7
+        },
+        {
+          "index": 8
+        },
+        {
+          "index": 9
+        },
+        {
+          "index": 10
+        },
+        {
+          "index": 11
+        },
+        {
+          "index": 12
+        },
+        {
+          "index": 13
+        },
+        {
+          "index": 14
+        },
+        {
+          "index": 15
+        },
+        {
+          "index": 16
+        },
+        {
+          "index": 17
+        },
+        {
+          "index": 18
+        },
+        {
+          "index": 19
+        },
+        {
+          "index": 20
+        },
+        {
+          "index": 21
+        },
+        {
+          "index": 22
+        },
+        {
+          "index": 23
+        },
+        {
+          "index": 24
+        },
+        {
+          "index": 25
+        },
+        {
+          "index": 26
+        },
+        {
+          "index": 27
+        },
+        {
+          "index": 28
+        },
+        {
+          "index": 29
+        }
+      ]
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "VPNestListView",
+        "layout": "column",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "expanded",
+            "child": {
+              "type": "scroll_drag_handoff",
+              "axis": "vertical",
+              "defaultController": "vpnest.list",
+              "switches": [
+                {
+                  "from": "vpnest.list",
+                  "to": "vpnest.page",
+                  "when": "fromAtMaxAndForward"
+                }
+              ],
+              "child": {
+                "type": "page_view",
+                "scrollDirection": "vertical",
+                "children": [
+                  {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "list",
+                        "source": "{{ global.items }}",
+                        "allowNestedScroll": true,
+                        "item_template": {
+                          "type": "container",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "List Item {{ loop.item.index }}",
+                              "style": {
+                                "fontSize": 16,
+                                "color": "#212121"
+                              }
+                            }
+                          ],
+                          "layout": "column",
+                          "height": 48,
+                          "padding": {
+                            "left": 16
+                          },
+                          "alignment": "centerLeft"
+                        },
+                        "controller": "vpnest.list",
+                        "physics": "never"
+                      }
+                    ],
+                    "layout": "column"
+                  },
+                  {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "Page View",
+                        "style": {
+                          "fontSize": 50,
+                          "color": "#000000",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "layout": "column",
+                    "color": "#4CAF50",
+                    "alignment": "center",
+                    "mainAxisAlignment": "center"
+                  }
+                ],
+                "controller": "vpnest.page",
+                "physics": "never"
+              }
+            }
+          }
+        ],
+        "appBar": {
+          "title": "VPNestListView"
+        }
+      }
+    ]
+  }
+}

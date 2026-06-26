@@ -1,0 +1,677 @@
+{
+  "dsl": "3.3",
+  "appid": "c3231a54-0e8f-52f5-abd4-9fdc216e102b",
+  "meta": {
+    "name": "gsy_flutter_demo/095-photo-gallery-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "有趣画廊",
+      "en": "Interesting gallery"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：有趣画廊",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "有趣画廊",
+      "sourcePath": "lib/widget/visual/photo_gallery_demo_page.dart",
+      "deferredAlias": "photo_gallery_demo_page",
+      "widgetClass": "PhotoGalleryDemoPage",
+      "category": "visual",
+      "routeIndex": 95,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v5"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "有趣画廊",
+      "upstreamSource": "lib/widget/visual/photo_gallery_demo_page.dart",
+      "upstreamWidget": "PhotoGalleryDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v5",
+      "row": 2,
+      "col": 2,
+      "offsetX": -548,
+      "offsetY": -828
+    },
+    "functions": {
+      "left": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.col",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.col"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.offsetX",
+                    "value": {
+                      "-": [
+                        {
+                          "var": "global.offsetX"
+                        },
+                        274
+                      ]
+                    }
+                  }
+                }
+              ],
+              "condition": {
+                "<": [
+                  {
+                    "var": "global.col"
+                  },
+                  4
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "right": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.col",
+                    "value": {
+                      "-": [
+                        {
+                          "var": "global.col"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.offsetX",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.offsetX"
+                        },
+                        274
+                      ]
+                    }
+                  }
+                }
+              ],
+              "condition": {
+                ">": [
+                  {
+                    "var": "global.col"
+                  },
+                  0
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "up": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.row",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.row"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.offsetY",
+                    "value": {
+                      "-": [
+                        {
+                          "var": "global.offsetY"
+                        },
+                        414
+                      ]
+                    }
+                  }
+                }
+              ],
+              "condition": {
+                "<": [
+                  {
+                    "var": "global.row"
+                  },
+                  4
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "down": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.row",
+                    "value": {
+                      "-": [
+                        {
+                          "var": "global.row"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.offsetY",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.offsetY"
+                        },
+                        414
+                      ]
+                    }
+                  }
+                }
+              ],
+              "condition": {
+                ">": [
+                  {
+                    "var": "global.row"
+                  },
+                  0
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "PhotoGalleryDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "gesture_detector",
+              "onSwipeLeft": {
+                "call": "@global.left",
+                "args": {}
+              },
+              "onSwipeRight": {
+                "call": "@global.right",
+                "args": {}
+              },
+              "onSwipeUp": {
+                "call": "@global.up",
+                "args": {}
+              },
+              "onSwipeDown": {
+                "call": "@global.down",
+                "args": {}
+              },
+              "child": {
+                "type": "container",
+                "layout": "stack",
+                "children": [
+                  {
+                    "type": "positioned",
+                    "left": 0,
+                    "top": 0,
+                    "right": 0,
+                    "bottom": 0,
+                    "child": {
+                      "type": "overflow_box",
+                      "maxWidth": 1346,
+                      "maxHeight": 2046,
+                      "child": {
+                        "type": "transform",
+                        "translateX": "{{ global.offsetX }}",
+                        "translateY": "{{ global.offsetY }}",
+                        "child": {
+                          "type": "container",
+                          "layout": "stack",
+                          "children": [
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#E57373",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 0,
+                              "top": 0
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#64B5F6",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 274,
+                              "top": 0
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#81C784",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 548,
+                              "top": 0
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#FFD54F",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 822,
+                              "top": 0
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#BA68C8",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 1096,
+                              "top": 0
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#4DB6AC",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 0,
+                              "top": 414
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#FF8A65",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 274,
+                              "top": 414
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#7986CB",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 548,
+                              "top": 414
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#A1887F",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 822,
+                              "top": 414
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#90A4AE",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 1096,
+                              "top": 414
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#F06292",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 0,
+                              "top": 828
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#4FC3F7",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 274,
+                              "top": 828
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#AED581",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 548,
+                              "top": 828
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#FFF176",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 822,
+                              "top": 828
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#9575CD",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 1096,
+                              "top": 828
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#26A69A",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 0,
+                              "top": 1242
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#FFB74D",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 274,
+                              "top": 1242
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#5C6BC0",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 548,
+                              "top": 1242
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#DCE775",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 822,
+                              "top": 1242
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#B0BEC5",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 1096,
+                              "top": 1242
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#EC407A",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 0,
+                              "top": 1656
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#29B6F6",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 274,
+                              "top": 1656
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#66BB6A",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 548,
+                              "top": 1656
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#FFCA28",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 822,
+                              "top": 1656
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "layout": "column",
+                                "children": [],
+                                "color": "#AB47BC",
+                                "borderRadius": 8,
+                                "width": 250,
+                                "height": 390
+                              },
+                              "left": 1096,
+                              "top": 1656
+                            }
+                          ],
+                          "width": 1346,
+                          "height": 2046
+                        }
+                      }
+                    }
+                  }
+                ],
+                "alignment": "center",
+                "mainAxisAlignment": "center",
+                "width": 390,
+                "height": 844
+              }
+            },
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [],
+              "width": 252,
+              "height": 392,
+              "borderRadius": 8,
+              "border": {
+                "color": "#FFFFFFFF",
+                "width": 3
+              }
+            },
+            "leftFactor": 0.5,
+            "leftOffset": -126,
+            "topFactor": 0.5,
+            "topOffset": -196
+          }
+        ]
+      }
+    ]
+  }
+}

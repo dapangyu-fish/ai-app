@@ -1,0 +1,298 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "framework-quality-camera-inspection",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "框架能力模板：现场拍照检测，展示 image_picker(camera)、badge、checkbox、progress。",
+    "author": "fish",
+    "displayName": "Framework Camera Inspection"
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "photoPath": "",
+      "checks": [
+        {
+          "label": "标签清晰",
+          "ok": true
+        },
+        {
+          "label": "封口完整",
+          "ok": true
+        },
+        {
+          "label": "批次匹配",
+          "ok": false
+        }
+      ],
+      "autoEnhance": true,
+      "geoTag": true,
+      "score": 0.78
+    },
+    "functions": {
+      "submit": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "检测报告已提交"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "现场检测",
+        "layout": "column",
+        "children": [
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "包装质检",
+                "style": {
+                  "fontSize": 19,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "text",
+                "value": "拍照、打勾、提交，体现移动端采集类应用，而不是表单记录页。",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#6B7280",
+                  "lineHeight": 1.35
+                }
+              }
+            ],
+            "margin": 12
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 14,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "badge",
+                "label": "待提交",
+                "color": "#DC2626",
+                "textColor": "#FFFFFF",
+                "child": {
+                  "type": "image_picker",
+                  "source": "camera",
+                  "bind": "global.photoPath",
+                  "placeholder": "点击拍摄包装正面",
+                  "height": 220,
+                  "borderRadius": 18
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "AI 预检分",
+                    "style": {
+                      "fontSize": 13,
+                      "color": "#6B7280"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "78",
+                    "style": {
+                      "fontSize": 32,
+                      "fontWeight": "bold",
+                      "color": "#0F766E"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "/100",
+                    "style": {
+                      "fontSize": 13,
+                      "color": "#9CA3AF"
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "end"
+              },
+              {
+                "type": "progress",
+                "value": "{{ global.score }}",
+                "color": "#0F766E",
+                "backgroundColor": "#DDE7E4",
+                "height": 8
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 16,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "text",
+                "value": "采集选项",
+                "style": {
+                  "fontSize": 17,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "switch",
+                "label": "自动增强图片",
+                "bind": "global.autoEnhance"
+              },
+              {
+                "type": "switch",
+                "label": "写入定位标签",
+                "bind": "global.geoTag"
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "质检项",
+                "style": {
+                  "fontSize": 15,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "grid",
+                "source": "{{ global.checks }}",
+                "crossAxisCount": 1,
+                "childAspectRatio": 6.2,
+                "spacing": 8,
+                "shrinkWrap": true,
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "check_circle",
+                      "size": 20,
+                      "color": "#0F766E"
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 10
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.label }}",
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      },
+                      "style": {
+                        "fontSize": 15,
+                        "fontWeight": "600",
+                        "color": "#111827"
+                      }
+                    },
+                    {
+                      "type": "checkbox",
+                      "bind": "loop.item.ok"
+                    }
+                  ],
+                  "padding": 10,
+                  "color": "#EEF7F4",
+                  "borderRadius": 14,
+                  "crossAxisAlignment": "center"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "button",
+                "label": "提交检测",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.submit",
+                  "args": {}
+                },
+                "icon": "send",
+                "style": {
+                  "backgroundColor": "#0F766E",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 16
+                }
+              }
+            ]
+          }
+        ],
+        "backgroundColor": "#F3F7F6",
+        "appBar": {
+          "title": "现场检测",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.submit",
+                "args": {}
+              },
+              "icon": "send",
+              "style": {
+                "textColor": "#0F766E",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "appid": "3b713f9d-2b4e-4f21-a6e4-38a3422824ed"
+}

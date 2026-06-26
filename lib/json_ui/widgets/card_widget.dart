@@ -19,9 +19,12 @@ class JsonCardWidget extends JsonBaseWidget {
     final margin = (json['margin'] as num?)?.toDouble() ?? 8;
     final elevation = (json['elevation'] as num?)?.toDouble() ?? 2;
     final borderRadius = (json['borderRadius'] as num?)?.toDouble() ?? 12;
+    final width = (json['width'] as num?)?.toDouble();
+    final height = (json['height'] as num?)?.toDouble();
     final rawColor = json['color']?.toString();
     final color = _parseColor(
-        rawColor != null ? interpreter.resolveTemplate(rawColor) : null);
+      rawColor != null ? interpreter.resolveTemplate(rawColor) : null,
+    );
 
     // build 阶段预解析 onTap 中的 {{ }} 模板
     // —— grid/list item 在循环上下文中构建，点击发生时 loop 上下文已 pop，
@@ -29,7 +32,7 @@ class JsonCardWidget extends JsonBaseWidget {
     final rawOnTap = json['onTap'];
     final onTap = rawOnTap is Map<String, dynamic>
         ? resolveActionAtBuildTime(rawOnTap, interpreter)
-            as Map<String, dynamic>?
+              as Map<String, dynamic>?
         : null;
 
     final childWidgets = children
@@ -84,10 +87,7 @@ class JsonCardWidget extends JsonBaseWidget {
         borderRadius: BorderRadius.circular(borderRadius),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: EdgeInsets.all(padding),
-        child: layoutWidget,
-      ),
+      child: Padding(padding: EdgeInsets.all(padding), child: layoutWidget),
     );
 
     if (onTap != null) {
@@ -103,12 +103,13 @@ class JsonCardWidget extends JsonBaseWidget {
         child: InkWell(
           onTap: () => interpreter.executeAction(onTap, context),
           borderRadius: BorderRadius.circular(borderRadius),
-          child: Padding(
-            padding: EdgeInsets.all(padding),
-            child: layoutWidget,
-          ),
+          child: Padding(padding: EdgeInsets.all(padding), child: layoutWidget),
         ),
       );
+    }
+
+    if (width != null || height != null) {
+      card = SizedBox(width: width, height: height, child: card);
     }
 
     return card;

@@ -1,0 +1,165 @@
+{
+  "dsl": "3.3",
+  "appid": "19bfd81e-93f8-53e0-8609-144cf4ca3c8a",
+  "meta": {
+    "name": "gsy_flutter_demo/027-sliver-list-demo-page",
+    "version": "0.1.4",
+    "type": "app",
+    "displayName": {
+      "zh": "列表滑动过程控件停靠效果",
+      "en": "Sticky items while scrolling"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：列表滑动过程控件停靠效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "列表滑动过程控件停靠效果",
+      "sourcePath": "lib/widget/scroll/sliver_list_demo_page.dart",
+      "deferredAlias": "sliver_list_demo_page",
+      "widgetClass": "SliverListDemoPage",
+      "category": "scroll",
+      "routeIndex": 27
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "列表滑动过程控件停靠效果",
+      "upstreamSource": "lib/widget/scroll/sliver_list_demo_page.dart",
+      "upstreamWidget": "SliverListDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "SliverListDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "custom_scroll_view",
+              "slivers": [
+                {
+                  "type": "sliver_box",
+                  "height": 180,
+                  "child": {
+                    "type": "container",
+                    "color": "#FF5252",
+                    "layout": "column",
+                    "children": []
+                  }
+                },
+                {
+                  "type": "sliver_persistent_header",
+                  "height": 60,
+                  "pinned": true,
+                  "child": {
+                    "type": "container",
+                    "layout": "row",
+                    "padding": {
+                      "left": 10,
+                      "right": 10,
+                      "top": 10,
+                      "bottom": 10
+                    },
+                    "children": [
+                      {
+                        "type": "expanded",
+                        "child": {
+                          "type": "container",
+                          "color": "#FFAB40",
+                          "alignment": "center",
+                          "children": [
+                            {
+                              "type": "button",
+                              "label": "按键1",
+                              "variant": "text",
+                              "action": {
+                                "call": "@set",
+                                "args": {
+                                  "var": "global.listCount",
+                                  "value": 30
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "type": "expanded",
+                        "child": {
+                          "type": "container",
+                          "color": "#FFAB40",
+                          "alignment": "center",
+                          "children": [
+                            {
+                              "type": "button",
+                              "label": "按键2",
+                              "variant": "text",
+                              "action": {
+                                "call": "@set",
+                                "args": {
+                                  "var": "global.listCount",
+                                  "value": 4
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_list",
+                  "count": 100,
+                  "itemTemplate": {
+                    "type": "card",
+                    "padding": 0,
+                    "margin": 4,
+                    "borderRadius": 4,
+                    "elevation": 1,
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "padding": {
+                          "left": 10
+                        },
+                        "layout": "column",
+                        "mainAxisAlignment": "center",
+                        "crossAxisAlignment": "start",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item {{ loop.index }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

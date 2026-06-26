@@ -84,8 +84,19 @@ class CacheManager {
     String name,
     VersionConstraint constraint, {
     String type = 'library',
+    bool preferLatest = false,
   }) async {
     await init();
+
+    if (preferLatest) {
+      final remoteConfig = await _downloadAndCacheResource(
+        name,
+        constraint,
+        type,
+      );
+      if (remoteConfig != null) return remoteConfig;
+      debugPrint('[CacheManager] 最新版本检查失败，回退本地缓存: $name@$constraint');
+    }
 
     // 1. 检查本地缓存
     final localMatch = _findBestLocalMatch(name, constraint);

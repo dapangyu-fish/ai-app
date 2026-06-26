@@ -1,0 +1,380 @@
+{
+  "dsl": "3.3",
+  "appid": "0de3a895-b2a7-5fd7-a4a2-4222c3cf5b91",
+  "meta": {
+    "name": "gsy_flutter_demo/112-galaxy-particle-screen",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "黑洞流体",
+      "en": "Black hole fluid"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：黑洞流体",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "黑洞流体",
+      "sourcePath": "lib/widget/visual/black_hole_page.dart",
+      "deferredAlias": "black_hole_page",
+      "widgetClass": "GalaxyParticleScreen",
+      "category": "visual",
+      "routeIndex": 112,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-yin-yang-flow-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "黑洞流体",
+      "upstreamSource": "lib/widget/visual/black_hole_page.dart",
+      "upstreamWidget": "GalaxyParticleScreen",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-yin-yang-flow-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "animated_canvas",
+              "backgroundColor": "#000000",
+              "speed": 1,
+              "interactive": true,
+              "layers": [
+                {
+                  "kind": "circle",
+                  "x": {
+                    "-": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      50
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      50
+                    ]
+                  },
+                  "radius": 52,
+                  "color": "#FFFFFF",
+                  "alpha": 0.42,
+                  "blurRadius": 26,
+                  "blendMode": "screen"
+                },
+                {
+                  "kind": "circle",
+                  "x": {
+                    "-": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      50
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      50
+                    ]
+                  },
+                  "radius": 5,
+                  "color": "#FFFFFF",
+                  "alpha": 1
+                },
+                {
+                  "kind": "particles",
+                  "count": 4200,
+                  "x": {
+                    "+": [
+                      "xBase",
+                      {
+                        "*": [
+                          "curve",
+                          70
+                        ]
+                      },
+                      {
+                        "*": [
+                          "jitter",
+                          18
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      "yBase",
+                      {
+                        "*": [
+                          {
+                            "sin": {
+                              "*": [
+                                "u",
+                                12.566370614359172
+                              ]
+                            }
+                          },
+                          28
+                        ]
+                      },
+                      {
+                        "*": [
+                          "jitter",
+                          12
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": 1.35,
+                  "color": "#FFFFFF",
+                  "alpha": {
+                    "*": [
+                      0.18,
+                      {
+                        "+": [
+                          1,
+                          "s"
+                        ]
+                      }
+                    ]
+                  },
+                  "blendMode": "plus",
+                  "locals": {
+                    "u": {
+                      "%": [
+                        {
+                          "+": [
+                            "f",
+                            {
+                              "*": [
+                                "t",
+                                0.05
+                              ]
+                            },
+                            {
+                              "*": [
+                                {
+                                  "seed": "i"
+                                },
+                                0.08
+                              ]
+                            }
+                          ]
+                        },
+                        1
+                      ]
+                    },
+                    "s": {
+                      "sin": {
+                        "*": [
+                          "u",
+                          3.141592653589793
+                        ]
+                      }
+                    },
+                    "curve": {
+                      "sin": {
+                        "*": [
+                          "u",
+                          6.283185307179586
+                        ]
+                      }
+                    },
+                    "jitter": {
+                      "-": [
+                        {
+                          "seed": {
+                            "+": [
+                              "i",
+                              13
+                            ]
+                          }
+                        },
+                        0.5
+                      ]
+                    },
+                    "xBase": {
+                      "+": [
+                        {
+                          "*": [
+                            {
+                              "-": [
+                                {
+                                  "/": [
+                                    "w",
+                                    2
+                                  ]
+                                },
+                                50
+                              ]
+                            },
+                            {
+                              "-": [
+                                1,
+                                "u"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "+": [
+                                {
+                                  "/": [
+                                    "w",
+                                    2
+                                  ]
+                                },
+                                50
+                              ]
+                            },
+                            "u"
+                          ]
+                        }
+                      ]
+                    },
+                    "yBase": {
+                      "+": [
+                        {
+                          "*": [
+                            {
+                              "+": [
+                                {
+                                  "/": [
+                                    "h",
+                                    2
+                                  ]
+                                },
+                                50
+                              ]
+                            },
+                            {
+                              "-": [
+                                1,
+                                "u"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "-": [
+                                {
+                                  "/": [
+                                    "h",
+                                    2
+                                  ]
+                                },
+                                50
+                              ]
+                            },
+                            "u"
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "circle",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      50
+                    ]
+                  },
+                  "y": {
+                    "-": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      50
+                    ]
+                  },
+                  "radius": 18,
+                  "color": "#000000",
+                  "alpha": 1
+                },
+                {
+                  "kind": "circle",
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      50
+                    ]
+                  },
+                  "y": {
+                    "-": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      50
+                    ]
+                  },
+                  "radius": 28,
+                  "color": "#FFFFFF",
+                  "alpha": 0.16,
+                  "style": "stroke",
+                  "strokeWidth": 1.4
+                }
+              ]
+            }
+          }
+        ],
+        "appBar": {
+          "title": ""
+        }
+      }
+    ]
+  }
+}

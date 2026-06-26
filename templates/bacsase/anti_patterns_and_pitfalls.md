@@ -20,15 +20,28 @@
 | UI 显示 `{{ t('xxx') }}` / `{{ global.xxx }}` 字面量 | §7 |
 | UI 显示 `{op_name: ...}` 字面量（带大括号和冒号） | §12 |
 | `@while` / `@for_each` 嵌套调用后循环索引诡异 | §10 |
-| flame_game 里 `{{ loop.id }}` 拼路径返 null | §11 |
+| 循环子逻辑里的 `{{ loop.* }}` 被提前解析成外层值或 null | §11 |
 | atom 用 id 反查不命中 / jsonlogic var 直读 OK | §9 |
 | 平台跳跃类游戏：关卡高差靠感觉摆，导致“差一点跳不上” | §13 |
 | 关卡设计类问题：看起来能玩，实测路线/敌人/收集物/复活点不合理 | §14 |
+| flame_game 只有角色/背景，地图和实体不出来，摇杆也没效果 | §15 |
+| 动作类游戏：角色变成多姿态拼图、输入有反馈但实体不动、动态物只出现一次、场景比例怪 | §16 |
+| 动作类游戏：角色/敌人左右半身拼接、动画帧边界切到身体 | §16 |
+| 动作类游戏：日志显示奖励/敌人已触发，但屏幕不可见、卡在地形里或不可交互 | §16 |
+| 横版动作/射击类游戏：角色上下飞、地图只有一屏、背景寒酸、精灵图被整张压成角色 | §17 |
+| 横版射击类游戏：打几发后不能开火、敌人不出现/只在最后出现、主角冲出屏幕不死 | §17 |
+| 使用素材包做游戏：不知道 sprite sheet 该切几行几列、单帧只显示一角 | §16 |
+| 实时游戏一开始流畅，跑一段后明显掉帧/卡顿 | §16/§17 |
+| 横版射击角色太小、敌人姿势怪、背景像色块拼贴 | §17 |
+| 摇杆/手柄松手后角色不停，一直往一个方向走 | §18 |
+| 横版游戏角色"自己上台阶"、走到落差处自动抬腿爬上去 | §18 |
+| 玩家（或敌人/道具）显示成一个半透明色块/框，不是贴图 | §18 |
 
 如果症状对不上任何一条，往下顺读看类别能否匹配——按类别大致是：布局崩（§1）、
 静态字段类型（§2/§5）、顶层结构（§3）、函数 args 命名（§4）、jsonlogic 求值
 （§6/§8/§12 互相相关）、widget 模板（§7）、数据流模式（§9）、变量命名（§10）、
-flame 专有（§11）、游戏关卡/数值设计（§13/§14）。
+flame 专有（§11）、游戏关卡/数值设计（§13/§14）、动作类游戏素材和输入闭环（§16）、
+横版动作/射击类型设计（§17）。
 
 ---
 
@@ -52,10 +65,19 @@ Another exception was thrown: RenderFlex children have non-zero flex but incomin
 2. **在滚动视图内误用垂直 Flex**：
    在 Tab 的直接子层级中，如果不包含 `list`，页面会被框架默认包裹在 `SingleChildScrollView -> Column` 中（意味着垂直高度是无限的）。如果在这种无限高度的 Column 中直接放入一个带有 `"position": { "type": "flex" }` 的 `button` 或 `container`，`Expanded` 控件会试图在无限高的父容器里填满“剩余空间”，从而报出**高度无约束（unbounded height）**崩溃。
 
+3. **长页面里误用默认 list 导致无法滚到底**：
+   默认 `list` 是 full-height 内部滚动区。screen/tab 一旦包含默认 `list`，框架会避免外层 `SingleChildScrollView`，只让 list 自己滚动。如果同一页还堆了很多统计卡、设置项、表单分组或底部按钮，用户就可能看得到上半屏却滑不到下方内容。
+
+4. **把参考模板当换壳骨架**：
+   模板只能学习 DSL/API 写法。比如 `demo_im` 适合参考 `lib_im` / `lib_user` 怎么接线，但不能照搬它的 tab 顺序、页面 id、函数名集合、通讯录静态行和视觉样式。否则生成出来会像 demo 换皮，还会继承不适合新产品的布局问题。
+
 ### ✅ 正确姿势 / 避坑指南
 * **永远显式声明布局**：在写 `container` 时，务必明确写出 `"layout": "column"` 或 `"layout": "row"`，不要依赖默认行为。
 * **Flex 约束环境**：使用 `type: flex` 时，必须确保其父容器在主轴方向上是有固定尺寸或被强制约束尺寸的（例如屏幕宽度的 Row 内，或者有固定高度的 Column 内）。
 * **不在 ScrollView 里拉伸**：不要在可滚动容器的直接子元素上使用 `flex` 占位。
+* **区分主列表和嵌入列表**：主列表直接作为 screen/tab `children` 的一项；详情页/仪表盘中的“最近记录/预览列表”必须设置 `"shrinkWrap": true`，并让外层页面滚动。
+* **children 永远是数组**：多子控件节点必须写 `"children": [{...}]`。写成 `"children": {...}` 会在切到该页面/Tab 时触发运行时类型转换崩溃。
+* **先重做信息架构再用模板**：生成前先列出本轮产品自己的 tabs、核心页面和关键交互；只把模板里的字段/动作写法迁移过来，不迁移页面骨架。
 
 ---
 
@@ -123,13 +145,13 @@ Another exception was thrown: type 'List<dynamic>' is not a subtype of type 'Map
 
 ---
 
-## 4. 控制流参数命名错误：`@if` 错用 `cond`
+## 4. 普通 JSON-APP 控制流参数命名错误：`@if` 错用 `cond`
 
 ### 🚨 运行时异常表现
 数据查询或逻辑判断似乎“永远走 false / else 分支”，且无任何明显报错（逻辑静默失败返回 null 或空数据）。
 
 ### 💔 反面教材分析
-在编写业务逻辑配置时，容易“想当然”地使用 `"cond"` 作为 `@if` 判断的参数键值：
+在编写普通 JSON-APP 业务逻辑配置时，容易“想当然”地使用 `"cond"` 作为 `@if` 判断的参数键值：
 ```json
 {
   "call": "@if",
@@ -141,7 +163,7 @@ Another exception was thrown: type 'List<dynamic>' is not a subtype of type 'Map
 }
 ```
 **框架盲区**：
-在底层的 `interpreter.dart` 解析 `@if` 内置函数时，它严格取值 `args['condition']`，如果取不到，则判定为 null。而 Dart 中的 `_evaluateBool(null)` 会返回 `false`。因此，错用 `"cond"` 会导致判断条件完全丢失，永远静默执行 `else` 分支的逻辑，极难排查。
+普通 JSON-APP 主解释器 `interpreter.dart` 解析 `@if` 内置函数时，它严格取值 `args['condition']`，如果取不到，则判定为 null。而 Dart 中的 `_evaluateBool(null)` 会返回 `false`。因此，错用 `"cond"` 会导致判断条件完全丢失，永远静默执行 `else` 分支的逻辑，极难排查。
 
 ### ✅ 正确姿势 / 避坑指南
 * **严格遵守关键字**：在使用 `@if` 时，条件字段必须且只能写成 `"condition"`。
@@ -155,6 +177,10 @@ Another exception was thrown: type 'List<dynamic>' is not a subtype of type 'Map
   }
 }
 ```
+
+**注意运行时边界**：这一条只适用于普通 JSON-APP 主解释器。`flame_game` 内部的
+`input` / `frame` / `tick` 使用的是轻量 `GameLogicEngine`，那里 `@if` 的条件字段是
+`"cond"`，不是 `"condition"`。不要把两套运行时的写法混用，详见 §15。
 
 ---
 
@@ -626,35 +652,52 @@ JSON-DSL 没真函数局部作用域，`global._i` 这种全局可写。两个�
 
 ---
 
-## 11. flame_game `@for_each_entity` body 里直接用 `{{ loop.id }}` 模板路径
+## 11. 循环子逻辑里的 `{{ loop.* }}` 被提前解析
 
-在 flame_game 的 `frame.logic` / `tick.logic` 里写 `@for_each_entity`，body 里很自然会想这样写：
+循环类 atom 的 `body` / `do` 是子逻辑，必须等循环真正 push 当前
+`loop` 上下文后再解析。历史上框架曾把这些子逻辑在外层 build / dispatch
+阶段提前“烤”掉，导致内层 `{{ loop.id }}` / `{{ loop.item }}` 变成 null
+或错误地变成外层循环值。
+
+典型写法应该是合法的：
 
 ```jsonc
 {"call": "@set", "args": {
   "var": "vars._t",
-  "value": {"var": "vars.targets.{{ loop.id }}"}  // ⚠️ 不可靠
+  "value": {"var": "vars.targets.{{ loop.id }}"}
 }}
 ```
 
-**踩坑实例**：消消乐 pixel 版 v0.2.0~v0.2.7。tap 写 `vars.targets[uid]`、frame for_each 用 `{{ loop.id }}` 读。tap 端写读都 OK、frame 开头 `vars.targets[_uid_a]` 也读得到、entity id 跟 _uid_a 在 jsonlogic `==` 下能匹配 —— 唯独 `{"var": "vars.targets.{{ loop.id }}"}` 永远返 null。同一份 `_loopStack`，jsonlogic var op 看得到 `loop.id`、`{{ vars.X }}` 模板能解析，唯独 `{{ loop.X }}` 在嵌套 jsonlogic var path 里失效。
-
-**workaround**（不依赖 framework 哪个版本都通）：每个迭代开头先用 jsonlogic var 把 `loop.id` 抓到 vars，所有路径/id 用到 entity id 的地方都改用 `{{ vars._cap }}`：
+普通 JSON action 也一样：
 
 ```jsonc
-{"call": "@for_each_entity", "args": {
-  "where_prefix": "g",
-  "do": [
-    {"call": "@set", "args": {"var": "vars._cap", "value": {"var": "loop.id"}}},  // 先抓
-    {"call": "@set", "args": {"var": "vars._t", "value": {"var": "vars.targets.{{ vars._cap }}"}}},
-    {"call": "@pixel.set_position", "args": {"id": "{{ vars._cap }}", "position": [...]}}
+{"call": "@for_each", "args": {
+  "source": "{{ global.items }}",
+  "body": [
+    {"call": "@list_add", "args": {
+      "var": "global.names",
+      "item": "{{ loop.item.name }}"
+    }}
   ]
 }}
 ```
 
-**约定**：在 flame_game 的 `@for_each_entity` body 里，**永远**第一步抓 `loop.id` 到 `vars._cap`（或加函数级前缀），后续路径/id 全用 `{{ vars._cap }}`。`{{ loop.id }}` 直接用是埋雷。
+**排查方式**：如果日志里 `loop.id` / `loop.item` 是 null、或者嵌套循环里内层
+值总是外层值，优先怀疑“子逻辑被提前解析”。不要靠把 `loop.id` 先拷贝到
+临时变量做长期 workaround；这会掩盖框架层时序 bug。
 
-**回归保护**：`test/flame_loop_template_test.dart` 覆盖几条关键路径，framework 改坏会 catch。
+**当前约定**：`@for_each` / `@loop_by_num` 的 `body`、flame_game
+`@for_each_entity` 的 `do` 都应保持惰性解析。`{{ loop.id }}` / `{{ loop.item }}`
+可以直接使用。`loop.entity` 仍是本轮遍历快照，同一轮里修改 entity 后不要继续
+依赖旧的 `loop.entity.*` 推导状态，改读 `entities.<id>.*` 或先写入临时变量。
+
+如果列表项按钮里再开启内层 `@for_each`，内层 `body` 的 `loop.*` 属于内层循环。
+确实需要外层列表项时，先在进入内层循环前把外层值写进 `global._xxx` 或函数参数，
+不要指望同一个 `loop.item` 同时表示两层循环。
+
+**回归保护**：`test/flame_loop_template_test.dart`、`test/flame_game_widget_bake_test.dart`、
+`test/interpreter_control_flow_lazy_test.dart` 和 `test/action_helper_lazy_test.dart`
+覆盖关键路径。
 
 ---
 
@@ -843,3 +886,292 @@ maxJumpHeight ≈ jumpVelocity² / (2 * gravity)
 - 视觉层、碰撞层、危险层一致
 
 ---
+
+## 15. flame_game 跨运行时写法混用：地图/实体/手柄全静默失效
+
+### 🚨 表现
+
+`flame_game` 游戏启动后看起来没有明显崩溃，但核心内容不工作：
+
+- 只有角色或纯背景，地图瓦片、敌人、道具、终点不显示
+- 虚拟摇杆/按钮本身有触摸反馈，但角色不移动、不跳、不攻击
+- 页面直接白屏，或者只剩标题/手柄，游戏画面没有挂载出来
+- 没有 Flutter 白屏异常，最多只能在日志里看到 tiled tileset 404 或逻辑一直卡在 loading
+
+### 💔 反面教材分析
+
+这类问题通常是把普通 JSON-APP 主解释器的写法直接搬进 `flame_game` 内部运行时。
+
+本项目目前有两套逻辑解释环境：
+
+| 位置 | 解释器 | `@if` 条件字段 |
+|------|--------|----------------|
+| `global.functions` / 普通 widget action | 主 `JsonInterpreter` | `condition` |
+| `flame_game.input` / `flame_game.frame` / `flame_game.tick` | `GameLogicEngine` | `cond` |
+
+如果在 `flame_game.frame.logic` 里写成：
+
+```jsonc
+{
+  "call": "@if",
+  "args": {
+    "condition": { "==": [{ "var": "vars.state" }, "loading"] },
+    "then": [
+      { "call": "@tiled.spawn_objects", "args": { "...": "..." } }
+    ]
+  }
+}
+```
+
+`GameLogicEngine` 会取不到 `cond`，条件被当成 null/false，`then` 永远不会跑。
+后果是 loading 初始化、地图 object spawn、`@platformer.step`、敌人 AI、碰撞检测全被静默跳过。
+外部手柄仍然能把输入发进游戏，但每帧更新逻辑没执行，所以表现就是“摇杆无效”。
+
+另一个常见白屏来源是把 `flame_game` 当作数据塞进组件 props：
+
+```jsonc
+{
+  "type": "ref",
+  "from": "game-controls",
+  "widget": "psJoystickGamepad",
+  "props": {
+    "moveInput": "move_axis",
+    "game": { "type": "flame_game", "...": "..." }
+  }
+}
+```
+
+`game-controls.psJoystickGamepad` 不是容器，它只渲染手柄并发送 `@flame_game_input`。
+`props.game`、`props.actionButtons` 这类字段不会被模板渲染，藏在里面的 `flame_game` 不会挂载到 Flutter widget tree，最终就会出现空白页。
+
+同一类事故还包括 `tiled_map.map_data` 的资源路径写错。内联地图里如果保留：
+
+```jsonc
+"source": "map/level_1.tmx",
+"tilesets": [
+  {
+    "source": "tiles/dirt.tsx",
+    "image": "Sprites/Tiles/Default/terrain_dirt_block.png"
+  }
+]
+```
+
+框架会按 Tiled 的相对路径规则解析：先用 `map/level_1.tmx` 定位 tileset，再以
+`map/tiles/dirt.tsx` 为基准解析 `image`。上面的图片实际会被解析成
+`map/tiles/Sprites/Tiles/...`，而不是 asset pack 根目录下的 `Sprites/Tiles/...`，
+最终 tileset 加载失败，地图层有数据但没有任何可绘制 tile。
+
+### ✅ 正确姿势 / 避坑指南
+
+- 普通 JSON-APP 逻辑用 `condition`；`flame_game` 内部逻辑用 `cond`。
+- `flame_game` 必须直接作为 `ui.screens` 下的可渲染 widget 节点出现；不要放进任何组件的 `props.game`。
+- `game-controls.psJoystickGamepad` / `game-controls.dpadGamepad` 只接受输入映射和外观尺寸类 props，例如 `moveInput`、`moveEndInput`、`jumpInput`、`attackInput`、`upInput`、`leftInput`、`height`、`backgroundColor`；它不是游戏容器。手柄样式切换、D-pad、悬浮位置调整由 JSON 组件库内部组合完成，不要通过 `props.game` 或 `props.actionButtons` 扩展它。
+- 正确组合方式是：真实 `flame_game` 节点负责画面和逻辑，独立的 gamepad 节点作为 sibling 或 overlay 负责输入。
+- 在生成游戏时，先确认 `frame.logic` 里至少有一条 loading -> ready/running 的状态推进，并且这条路径真实会执行。
+- `game-controls.psJoystickGamepad` 是 JSON 组件库，内部由 `analog_stick`、`gesture_detector`、`floating_layer` 等通用原子组合；它只负责发输入。移动必须在 `flame_game.frame.logic` 里把 `vars.move_dir` 转成 `@entity.set(vx)` + `@platformer.step`。
+- 内联 `tiled-json-v1` 地图优先使用绝对图片 URL，或者保证 `image` 相对路径与 `map_data.source` / `tileset.source` 的组合后仍能访问。
+- 如果使用 asset pack 根路径，最稳的是把 tileset `image` 写成完整 URL；不要假设它相对 `base_url` 根目录解析。
+- `@entity.set` 生成时优先写标量字段 `x/y/w/h/vx/vy/auto_update/state.xxx`；不要依赖一次性 `size` / `position` 数组，复杂逻辑里分别写 `w/h` 或 `x/y` 更容易排查。
+- `@entity.add` 的标准参数是 `{id, field, by}`，不是 `{id, path, value}`；旧别名只作为兼容兜底，生成新 APP 时不要使用，否则旧客户端会表现为输入有反馈但角色不动。
+- 地图不显示时，先验证三件事：`@tiled.loaded` 是否为 true、tilesets 数量是否大于 0、首个 tileset 图片 URL 是否 200。
+
+### 🔍 自检 / 排查
+
+- 扫描 `flame_game` 内部所有 `@if`：`args` 里必须有 `cond`，不能只有 `condition`。
+- 扫描所有 `flame_game` 路径：如果路径包含 `.props.`，说明它不是可渲染节点，必须移到 `ui.screens` 的真实 widget 树里。
+- 扫描 `game-controls.psJoystickGamepad.props`：出现 `game`、`actionButtons` 或其它自创字段都要删掉，改成独立 UI 节点。
+- 扫描 `map_data.tilesets[].image`：把它按 `source` 规则拼成最终 URL，实际 `curl -I` 应该是 200。
+- 扫描 `@entity.set`：优先使用 `x/y/w/h/vx/vy/auto_update/state.xxx`；如出现 `size` / `position`，确认目标客户端版本支持兼容写法，最好拆成标量字段。
+- 扫描 `@entity.add`：必须使用 `field` + `by`；如出现 `path` + `value`，应改成标准参数以兼容旧客户端。
+- 如果摇杆有 UI 反馈但角色不动，看 `frame.logic` 中 `@platformer.step` 是否被某个永远 false 的 `@if` 包住。
+- 如果地图 object layer 里有对象但敌人/金币不生成，看 `@tiled.spawn_objects` 是否在 loading 分支里被跳过。
+
+---
+
+## 16. 动作类游戏：素材帧、输入、动态实体和场景比例要闭环验证
+
+### 表现
+
+动作、平台、射击、冒险、跑酷等实时游戏里，常见“能启动但明显不对”的现象：
+
+- 主角不是一个姿态，而是一整块多帧姿态拼图。
+- 摇杆、方向键或按钮有触摸反馈，角色却只改朝向/状态，不产生实际位移或动作。
+- 子弹、特效、掉落物、召唤物等动态实体只出现一次，后续触发无效。
+- 奖励、敌人、掉落物日志显示已触发，但屏幕上不可见、卡在地形里，或出现后不可碰撞/不可拾取。
+- 背景、地面、角色、敌人的比例不一致，场景看起来被放大、裁切或拉伸。
+
+### 反面教材分析
+
+这类问题通常不是某个单独字段写错，而是生成时没有把“资源结构 -> 实体渲染 -> 输入事件 -> 每帧更新 -> 生命周期”连成闭环。
+
+1. **把 sprite sheet 当单帧图使用**
+
+   多帧角色图通常是网格 sprite sheet。不能只看文件名里有 `player` / `enemy` / `attack` 就直接当 `sprite` 或 `frames: 1` 使用。
+   必须先读 asset manifest 的 `files[].sprite` / `files[].atlas` / `files[].image`，确认图片尺寸、行列数和单帧尺寸；`frame_size` 写错时会把多帧区域当成一帧画出来，或者把单帧图裁掉大半。
+   例子：128x128 的单帧角色不能写 `frame_size: [72,72]`；360x360 的 8x8 sheet 才能写 `[45,45]`。
+
+   如果 sprite sheet 没有 manifest/atlas 元数据，不要把“图片宽度能整除某个帧数”当作充分证据。错误的帧宽也可能整除图片宽度，但会让帧边界切过不透明像素，实机表现就是角色/敌人变成左右半身拼接、姿态错位或动画抖动。生成前必须让 `backend/validate_json_app.py` 通过透明边界校验；报出 `declared sprite grid cuts through opaque pixels` 时，说明这张图的切法没有被证明正确。
+
+2. **输入反馈不等于实体行为**
+
+   虚拟摇杆、方向键和按钮只负责发输入事件。角色真正移动/跳跃/攻击，必须在 `flame_game.frame.logic` 中把输入状态转成实体速度、动画和物理步骤。
+   对 `auto_update: false` 的实体，仅设置 `vx` / `vy` 不会自动产生完整平台行为；如果依赖平台物理，必须调用 `@platformer.step`，且 `args.map` 要指向有效地图实体。缺少 `map` 时，平台物理不会执行。
+
+3. **动态实体 id 固定导致后续触发失效**
+
+   `@spawn` 的 `id` 必须唯一；框架发现同 id entity 已存在时会拒绝生成。把所有动态对象都写成同一个 id，旧对象未销毁前后续触发都会失败。
+   这不只影响子弹，也影响爆炸、粒子、掉落物、召唤物、临时敌人和提示标记。
+
+4. **场景比例和视口比例没有一起设计**
+
+   实时游戏要先确定游戏画布比例，再选择或缩放背景层、地面、角色和碰撞盒。不要把任意背景图直接按屏幕高度或宽度拉满；这会导致背景巨大、裁切明显，角色和场景尺度不一致。
+
+5. **每帧全量扫描和动态实体清理失控**
+
+   `@for_each_entity`、`@collision.first`、动态 `@spawn` 都不是免费的。实时游戏如果每帧写很多全量扫描，同时子弹、爆炸、敌人、掉落物没有可靠离屏/命中/动画结束销毁，就会出现“开局流畅，走一段后严重卡顿”。
+
+6. **多帧显隐状态机依赖实体快照**
+
+   `@for_each_entity` body 里的 `loop.entity` 更适合作为“本次遍历看到的快照”，不要在同一 tick 里先 `@entity.set` 再继续从 `loop.entity.*` 推导后续状态。奖励、掉落物、敌人刷新这类关键对象，如果写成“先藏在地形后面 -> 后续循环再改 y/priority/opacity/vx -> 再切碰撞状态”，任何一环读到旧值都会表现为对象已激活但不可见、卡住或不可拾取。
+
+### 正确姿势 / 避坑指南
+
+- 使用 sprite sheet 前，必须先读 manifest：优先 `files[].sprite.frameWidth/frameHeight/columns/rows`，其次 `files[].atlas.entries[]`，最后才是人工读取图片尺寸后推断。不要凭经验猜 32/64/128。
+- 只靠图片总宽/总高做除法不够。推断帧网格时还要检查内部帧边界是否穿过不透明像素；如果切线两侧都有角色像素，通常说明把相邻帧拼到一起了。
+- 单帧 PNG 的 `frame_size` 必须等于 `files[].image.width/height`；如果要裁局部，必须明确使用 `src`，不能把裁剪误写成动画帧尺寸。
+- 如果不确定帧网格，优先使用 manifest 中明确的单帧、切片图或预览图；否则先用 `src` 裁一帧验证。
+- 输入必须形成闭环：`input event -> vars.input_state -> entity velocity/action -> frame update/physics step -> camera/score/status`。
+- 自由移动类游戏如果直接改实体坐标，用 `@entity.add({id, field: "x", by: dx})` / `@entity.add({id, field: "y", by: dy})`；不要写 `path/value`，尺寸和位置初始化也优先拆成 `x/y/w/h` 标量字段。
+- `@platformer.step` 对平台类角色必须带 `map`；没有地图碰撞时，改用 `auto_update: true` 的自由像素移动，并自己处理边界/重力。
+- 子弹、特效、掉落物、召唤物这类动态实体必须使用递增 id 或有限对象池，例如 `effect_{{ vars.spawn_seq }}`，生成后递增计数。
+- 每帧逻辑要控制复杂度：避免多个 `@for_each_entity` 嵌套/重复扫描。优先按距离生成、按类型分组、限制活跃实体数量，并在离屏/命中/动画结束时销毁。
+- 关键可交互对象不要依赖脆弱的隐藏中间态。能直接放到“可见起点”的，就一次性设置 `x/y/vx/vy/priority/state/collider`；确实需要多帧动画时，写后读必须用 `@entity.get` 重新读取实体字段，不要继续读 `loop.entity.*`。
+- 背景先按目标视口验算：如果下方有虚拟手柄，游戏画布本身仍要保持适合该玩法的比例，不要把游戏区域强行拉伸。
+
+### 发布前 checklist
+
+- 角色站立/移动/动作至少各验证一帧，不能出现多帧拼图。
+- 输入不仅改变朝向/状态，还要能让目标实体的位置、动画或动作结果持续变化。
+- 连续触发两次动态生成时，屏幕上要能看到两个有效对象，或看到对象池按设计复用。
+- 触发奖励/敌人刷新后，要验证它立刻可见、层级正确、碰撞盒有效，并且后续帧仍由同一套状态推进。
+- 背景、角色、地面、敌人的尺度在目标手机比例下看起来一致。
+- 所有动态实体 id 不复用，除非显式做了对象池回收。
+
+---
+
+## 17. 横版动作 / 横版射击类游戏：不要把类型需求降级成自由飞行一屏小游戏
+
+### 表现
+
+用户要求横版动作、横版射击、run-and-gun、平台射击等玩法时，生成结果虽然能打开，但完全不像该类型：
+
+- 角色被摇杆上下左右直接拖着飞，没有重力、地面或平台碰撞。
+- 关卡只有一个屏幕宽，背景和地面像静态海报，没有横向推进。
+- 关卡虽然很长，但只有一条平地，没有平台、掩体、障碍、坑洞或节奏变化。
+- 背景只有纯色、单张图、几片云或重复贴图，没有远/中/近景层次，也没有 landmark。
+- 玩家、敌人或爆炸来自 sprite sheet，却被整张压缩成一个角色。
+- 角色在手机竖屏里太小，虽然数值上能动，但视觉上不像可玩的动作游戏。
+- 场景装饰大量使用纯色矩形代替真实素材，导致“像调试关卡，不像游戏场景”。
+- 敌人、道具、掩体随意摆在画面里，没有路线、节奏、生成/销毁逻辑。
+- 地图数据里写了 enemy object，但 `@tiled.spawn_objects` 没有模板，实机看不到敌人或只生成奇怪占位。
+- 子弹设置了上限计数，但打空/飞出屏幕后不释放，几发之后永远不能开火。
+- 玩家跑出 camera 或掉出地图后没有 death/respawn/game_over，角色消失但游戏还在继续。
+- 只支持水平子弹，摇杆上方向没有 `aim_y` / upward fire 语义，无法处理高处敌人。
+
+### 反面教材分析
+
+这类错误本质是没有先建立“类型结构”。横版动作/射击不是“背景 + 角色 + 摇杆 + 子弹”四个元素堆在一起，而是至少包含：
+
+1. 虚拟视口、长地图和横向 camera。
+2. 地面/平台碰撞、重力、跳跃和水平移动。
+3. 多段路线元素：平台、掩体、箱子、墙、坑洞、障碍、坡道等。
+4. 美术主题和场景层次：远景、中景、近景、可交互物、前景装饰。
+5. 角色动画帧、敌人行为、子弹生命周期。
+6. 沿路线推进的障碍、敌人、道具和目标点。
+7. 子弹命中、离屏、超时三类生命周期出口。
+8. 玩家掉坑、越界、受伤后的死亡/重生出口。
+
+如果直接把摇杆 `move_y` 加到 `player.y`，游戏就变成了自由飞行；如果地图宽度不超过一屏，就没有横版推进；如果只有一条超长平地，就没有关卡设计；如果背景只有云和纯色地面，就只是技术 demo；如果 sprite sheet 不切帧或裁剪尺寸超过一帧，角色就会变成多姿态拼图。
+
+### 正确姿势 / 避坑指南
+
+- 先定义 `viewport`，再设计至少 5 屏宽的地图或 tiled-json 关卡（推荐用 `run_and_gun_stage_plan()` 的约 6 屏骨架），并配置 camera 跟随玩家横向移动。
+- 玩家横轴输入控制 `vx`；跳跃按钮控制 `vy`；每帧执行平台物理或等价的重力/地面碰撞。纵轴摇杆只用于瞄准、蹲下、爬梯、进门等语义，不直接自由改 y。
+- 使用 sprite sheet 前必须确认图片尺寸、行列数和单帧尺寸；不确定就换单帧素材或用 `src` 精确裁剪一帧，裁剪框不能大于一帧。
+- 没有 tiled map 时，至少手写多段平台/掩体/障碍/坑洞/箱子/墙体，不能只放一条超长 ground。
+- 背景至少分出远景、中景、近景/装饰层。每个屏幕宽度附近都应有若干视觉变化，例如建筑、废墟、树木、管道、箱子、路灯、标识、残骸、山体、云层或前景遮挡。
+- 角色大小要先按视口验算。手机竖屏横版动作里，玩家高度通常不应低于游戏视口高度的约 12%；否则即使碰撞正常，也会显得“人物超级小”。
+- 可交互物和 landmark 尽量来自所选素材包的真实图片或 tiled layer。纯色矩形只适合 debug/占位，不应作为正式场景装饰。
+- 关卡至少有 4 个节奏段：安全开场、基础敌人、障碍/掩体交火、强化敌人或小 Boss、终点/撤离。每段要有不同的地形或视觉 landmark。
+- 优先使用中立关卡骨架，而不是复制 demo 或第三方地图。后端生成器可用 `run_and_gun_stage_plan()` 得到安全开场、首次接敌、掩体交火、坑洞/平台、纵向压力、终点冲刺这类通用段落，再用当前素材包填充。
+- 敌人、道具、掩体、坑洞、平台应沿玩家前进路线布置。敌人不能长期悬空，除非它本身是飞行单位。
+- 使用 `@tiled.spawn_objects` / `@tiled.spawn_objects_near` 生成敌人时，必须提供 `templates`；object layer 只有点位，不会自动知道用哪张敌人图、怎么切帧、怎么初始化 state。
+- 子弹、爆炸、掉落物等动态对象必须有唯一 id 或对象池，并在离屏/命中/动画结束后销毁。如果有 `bullet_count` 上限，命中和离屏都要释放计数。
+- `@platformer.step` 写出的 `hazard` / `outOfBounds` 必须被 frame logic 消费，触发扣命、重生或 `@game_over`。
+- 横版射击默认要有向上/斜向射击语义。摇杆 `y` 只能进入 `aim_y` / 子弹 `vy` / 角色姿态，不能直接改 `player.y` 让角色飞。
+
+### 发布前 checklist
+
+- 地图宽度是否至少超过视口 5 倍，并且 camera 会跟随玩家？
+- 玩家是否受重力/地面/平台约束，而不是摇杆上下直接飞？
+- 关卡是否有至少数个路线元素，而不是只有一条平地？
+- 背景是否有远/中/近层和每屏视觉变化，而不是纯色、几片云或单图拉伸？
+- 玩家在目标手机视口里是否足够大，是否能清楚看出动作帧？
+- 场景装饰是否使用真实资产，而不是大量纯色矩形占位？
+- 是否有 4 个以上节奏段或 landmark？
+- 前两屏是否已经有敌人、掩体或可互动内容，而不是把所有敌人藏在最后？
+- 玩家和敌人的图片是否按帧渲染，而不是把整张 sprite sheet 或多帧裁剪框缩成一个实体？
+- `@tiled.spawn_objects*` 是否为敌人提供了真实 `templates`？
+- 子弹是否在命中和离屏/超时两条路径都销毁并释放对象池/计数？
+- 玩家掉坑、越界或离屏后是否会死亡、重生或结束？
+- 是否支持 `aim_y` / upward fire 来处理高处敌人？
+- 敌人、道具、障碍是否沿关卡路线分布，并有出现/消失/碰撞逻辑？
+- 这个游戏是否能用一句话说清“从哪里开始、往哪里推进、如何过关”？
+
+---
+
+## 18. 横版游戏三连坑：松手不停 / 自动上台阶 / 玩家变色块
+
+一次"魂斗罗式"生成里同时踩中三个坑。三个都不是随机错，而是**控件接线、物理引擎、精灵兜底**三处的固定反模式，校验器（`backend/validate_json_app.py`）已对它们硬拦。
+
+### 🚨 表现
+
+- 推摇杆能走，**松开摇杆后角色不停**，一直朝最后方向移动。
+- 走到台阶/落差处，**角色自己抬腿爬上去**（期望硬碰撞的射击游戏不该这样）。
+- 主角（有时连敌人/道具）**显示成一个半透明矩形/圆**，看不到贴图。
+
+### 💔 反面教材分析
+
+**(1) 松手不停 —— `moveEndInput` 接错 handler。**
+`game-controls` 的 `psJoystickGamepad` 用 `props.moveInput` / `moveEndInput` 把"拖动 / 松手"分别路由到 `flame_game.input` 里的命名 handler：
+
+```jsonc
+// move handler：把模拟量写进 move_dir
+"move_axis": [{ "call": "@set", "args": { "var": "vars.move_dir", "value": { "var": "event.x" } } }]
+// 松手时控件会用 event.x = 0 再触发 moveEndInput 指向的 handler
+```
+
+坏例子把 `moveEndInput` 指向了 `move_up`，而 `move_up` 只在 `move_dir == ±1` 时才归零：
+
+```jsonc
+"props": { "moveInput": "move_axis", "moveEndInput": "move_up" }   // ❌
+"move_up": [{ "call": "@if", "args": {
+  "cond": { "or": [ { "and": [ {"==":[{"var":"event.direction"},"left"]}, {"==":[{"var":"vars.move_dir"},-1]} ] }, … ] },
+  "then": [{ "call": "@set", "args": { "var": "vars.move_dir", "value": 0 } }] } }]
+```
+
+摇杆是**模拟量**（0.6 / -0.83…），`move_dir` 几乎永远不等于 ±1 → 归零分支永不触发 → `move_dir` 卡住 → 每帧 `vx = speed * move_dir` → 松手后一直走。`move_up` 那段 ±1 逻辑其实是 D-pad 时代的化石，跟"停"无关。
+
+**(2) 自动上台阶 —— 物理引擎用了 `leap_platformer`。**
+`leap_platformer` 自带斜坡/台阶自动攀爬，对横版**射击**（硬碰撞、踩不上去就是踩不上去）是错的体感。
+
+**(3) 玩家变色块 —— `sprite`/`animated_sprite` 挂了 `render` 兜底框。**
+引擎只在**贴图加载失败**时画 `render: {shape:rect,…}`（`game_entity.dart` `SpriteEntity.render`：`if (img == null) drawShape(renderConfig)`）。坏例子给玩家留了 `render: {"shape":"rect","color":"#FFFFFF22"}`，一旦贴图没加载出来，看到的就是这个半透明幽灵方块。
+
+### ✅ 正确姿势 / 避坑指南
+
+1. **摇杆松手必停**：只设 `moveInput`，**`moveEndInput` 留空**（默认回退到 `moveInput`，松手 `event.x=0` 自动归零）。要显式写就写成 `moveEndInput == moveInput`，**绝不要指向方向 handler**。校验器报 `joystick moveEndInput ... will not stop the player` 时，就是这个坑。
+2. **物理引擎按品类选**：横版射击 / 硬碰撞动作类用 `"physics": {"engine": "aabb_platformer"}`；`leap_platformer` 只留给明确要走斜坡的游戏。校验器对 run-and-gun 用 leap 报 ERROR。
+3. **图元不挂 render 色块**：`sprite` / `animated_sprite` 只写 `asset` / `frame_size` / `frames`，不要带 `render: {shape:…}`。需要纯色方块用 `kind:"pixel"`。校验器对玩家挂色块报 ERROR、其余报 WARN。
+
+参考：清理后的 `templates/demo_platformer_adventure.json` 已删掉死的 `move_up`/`move_down` 与所有 `render` 色块，`moveEndInput=move_axis`，可作为正向范本。

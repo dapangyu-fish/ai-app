@@ -1,0 +1,263 @@
+{
+  "dsl": "3.3",
+  "appid": "00379107-427c-571e-84e2-a0b05ad58737",
+  "meta": {
+    "name": "gsy_flutter_demo/098-page-view-in-page-view-demo-page",
+    "version": "0.1.1",
+    "type": "app",
+    "displayName": {
+      "zh": "PageView嵌套PageView",
+      "en": "PageViewnestedPageView"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：PageView嵌套PageView",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "PageView嵌套PageView",
+      "sourcePath": "lib/widget/scroll/pageview_in_pageview_demo_page.dart",
+      "deferredAlias": "pageview_in_pageview_demo_page",
+      "widgetClass": "PageViewInPageViewDemoPage",
+      "category": "scroll",
+      "routeIndex": 98,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-page-handoff-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "PageView嵌套PageView",
+      "upstreamSource": "lib/widget/scroll/pageview_in_pageview_demo_page.dart",
+      "upstreamWidget": "PageViewInPageViewDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-page-handoff-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "PageViewInPageViewDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "page_view",
+              "physics": "never",
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "Inner PageView 1",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#111111",
+                        "textAlign": "center"
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "height": 640,
+                      "children": [
+                        {
+                          "type": "positioned",
+                          "left": 0,
+                          "top": 0,
+                          "right": 0,
+                          "bottom": 0,
+                          "child": {
+                            "type": "scroll_drag_handoff",
+                            "axis": "horizontal",
+                            "defaultController": "pvp.inner1",
+                            "switches": [
+                              {
+                                "from": "pvp.inner1",
+                                "to": "pvp.outer",
+                                "when": "fromAtMaxAndForward"
+                              },
+                              {
+                                "from": "pvp.inner1",
+                                "to": "pvp.outer",
+                                "when": "fromAtMinAndBackward"
+                              }
+                            ],
+                            "child": {
+                              "type": "page_view",
+                              "physics": "never",
+                              "children": [
+                                {
+                                  "type": "container",
+                                  "layout": "column",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "value": "Inner PageView Item",
+                                      "style": {
+                                        "fontSize": 16,
+                                        "color": "#111111",
+                                        "textAlign": "center"
+                                      }
+                                    }
+                                  ],
+                                  "color": "#EA80FC",
+                                  "alignment": "center",
+                                  "mainAxisAlignment": "center"
+                                },
+                                {
+                                  "type": "container",
+                                  "layout": "column",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "value": "Inner PageView Item",
+                                      "style": {
+                                        "fontSize": 16,
+                                        "color": "#111111",
+                                        "textAlign": "center"
+                                      }
+                                    }
+                                  ],
+                                  "color": "#009688",
+                                  "alignment": "center",
+                                  "mainAxisAlignment": "center"
+                                }
+                              ],
+                              "controller": "pvp.inner1"
+                            }
+                          }
+                        }
+                      ],
+                      "layout": "stack"
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "Inner PageView 2",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#111111",
+                        "textAlign": "center"
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "height": 640,
+                      "children": [
+                        {
+                          "type": "positioned",
+                          "left": 0,
+                          "top": 0,
+                          "right": 0,
+                          "bottom": 0,
+                          "child": {
+                            "type": "scroll_drag_handoff",
+                            "axis": "horizontal",
+                            "defaultController": "pvp.inner2",
+                            "switches": [
+                              {
+                                "from": "pvp.inner2",
+                                "to": "pvp.outer",
+                                "when": "fromAtMaxAndForward"
+                              },
+                              {
+                                "from": "pvp.inner2",
+                                "to": "pvp.outer",
+                                "when": "fromAtMinAndBackward"
+                              }
+                            ],
+                            "child": {
+                              "type": "page_view",
+                              "physics": "never",
+                              "children": [
+                                {
+                                  "type": "container",
+                                  "layout": "column",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "value": "Inner PageView Item",
+                                      "style": {
+                                        "fontSize": 16,
+                                        "color": "#111111",
+                                        "textAlign": "center"
+                                      }
+                                    }
+                                  ],
+                                  "color": "#69F0AE",
+                                  "alignment": "center",
+                                  "mainAxisAlignment": "center"
+                                },
+                                {
+                                  "type": "container",
+                                  "layout": "column",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "value": "Inner PageView Item",
+                                      "style": {
+                                        "fontSize": 16,
+                                        "color": "#111111",
+                                        "textAlign": "center"
+                                      }
+                                    }
+                                  ],
+                                  "color": "#FFFF8D",
+                                  "alignment": "center",
+                                  "mainAxisAlignment": "center"
+                                }
+                              ],
+                              "controller": "pvp.inner2"
+                            }
+                          }
+                        }
+                      ],
+                      "layout": "stack"
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "Outer PageView Item",
+                      "style": {
+                        "fontSize": 16,
+                        "color": "#111111",
+                        "textAlign": "center"
+                      }
+                    }
+                  ],
+                  "color": "#2196F3",
+                  "alignment": "center",
+                  "mainAxisAlignment": "center"
+                }
+              ],
+              "controller": "pvp.outer"
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        ],
+        "appBar": {
+          "title": "PageViewInPageViewDemoPage"
+        }
+      }
+    ]
+  }
+}

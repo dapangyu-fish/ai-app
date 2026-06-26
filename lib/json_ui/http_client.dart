@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import '../config/app_config.dart';
 import '../i18n/framework_strings.dart';
 import '../platform/http_sse_bridge.dart';
 
@@ -22,6 +23,17 @@ class DslHttpClient {
     );
   }
 
+  String _resolveUrl(String rawUrl) {
+    final url = rawUrl.trim();
+    if (url.isEmpty) return url;
+    final uri = Uri.tryParse(url);
+    if (uri != null && uri.hasScheme) return url;
+    if (url.startsWith('//')) return 'https:$url';
+    final base = AppConfig.backendUrl.replaceFirst(RegExp(r'/+$'), '');
+    final path = url.startsWith('/') ? url : '/$url';
+    return '$base$path';
+  }
+
   /// HTTP GET
   /// 返回 { "status": int, "data": dynamic, "headers": Map, "error": String? }
   Future<Map<String, dynamic>> get(
@@ -31,7 +43,7 @@ class DslHttpClient {
   }) async {
     try {
       final response = await _dio.get(
-        url,
+        _resolveUrl(url),
         queryParameters: queryParams,
         options: Options(headers: headers),
       );
@@ -53,7 +65,7 @@ class DslHttpClient {
   }) async {
     try {
       final response = await _dio.post(
-        url,
+        _resolveUrl(url),
         data: contentType == 'application/json'
             ? (body is String ? json.decode(body) : body)
             : body,
@@ -75,7 +87,7 @@ class DslHttpClient {
   }) async {
     try {
       final response = await _dio.put(
-        url,
+        _resolveUrl(url),
         data: body,
         options: Options(headers: headers, contentType: 'application/json'),
       );
@@ -94,8 +106,66 @@ class DslHttpClient {
   }) async {
     try {
       final response = await _dio.delete(
-        url,
+        _resolveUrl(url),
         options: Options(headers: headers),
+      );
+      return _buildResult(response);
+    } on DioException catch (e) {
+      return _buildError(e);
+    } catch (e) {
+      return {'status': -1, 'data': null, 'headers': {}, 'error': e.toString()};
+    }
+  }
+
+  /// HTTP PATCH（部分更新）
+  Future<Map<String, dynamic>> patch(
+    String url, {
+    dynamic body,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        _resolveUrl(url),
+        data: body,
+        options: Options(headers: headers, contentType: 'application/json'),
+      );
+      return _buildResult(response);
+    } on DioException catch (e) {
+      return _buildError(e);
+    } catch (e) {
+      return {'status': -1, 'data': null, 'headers': {}, 'error': e.toString()};
+    }
+  }
+
+  /// HTTP HEAD（只取状态码 + 响应头，无 body；常用于存在性/鉴权探测）
+  Future<Map<String, dynamic>> head(
+    String url, {
+    Map<String, dynamic>? queryParams,
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final response = await _dio.head(
+        _resolveUrl(url),
+        queryParameters: queryParams,
+        options: Options(headers: headers),
+      );
+      return _buildResult(response);
+    } on DioException catch (e) {
+      return _buildError(e);
+    } catch (e) {
+      return {'status': -1, 'data': null, 'headers': {}, 'error': e.toString()};
+    }
+  }
+
+  /// HTTP OPTIONS（探测允许的方法 / CORS 预检，取状态码 + 响应头）
+  Future<Map<String, dynamic>> options(
+    String url, {
+    Map<String, String>? headers,
+  }) async {
+    try {
+      final response = await _dio.request(
+        _resolveUrl(url),
+        options: Options(method: 'OPTIONS', headers: headers),
       );
       return _buildResult(response);
     } on DioException catch (e) {
@@ -123,7 +193,7 @@ class DslHttpClient {
       if (kIsWeb && HttpSseWebBridge.isSupported) {
         return await HttpSseWebBridge.stream(
           {
-            'url': url,
+            'url': _resolveUrl(url),
             'method': method,
             'body': body,
             'headers': headers ?? const <String, String>{},
@@ -137,7 +207,7 @@ class DslHttpClient {
       }
 
       final response = await _dio.request<ResponseBody>(
-        url,
+        _resolveUrl(url),
         data: contentType == 'application/json'
             ? (body is String ? json.decode(body) : body)
             : body,

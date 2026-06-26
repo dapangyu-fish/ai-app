@@ -1,0 +1,567 @@
+{
+  "dsl": "3.3",
+  "appid": "cecf1c7e-dfc0-5cb5-9dc3-384caf9974ca",
+  "meta": {
+    "name": "gsy_flutter_demo/073-chat-list-scroll-demo-page2",
+    "version": "0.1.4",
+    "type": "app",
+    "displayName": {
+      "zh": "首尾添加数据不会抖动2",
+      "en": "Stable list when prepend/append2"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：首尾添加数据不会抖动2",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "首尾添加数据不会抖动2",
+      "sourcePath": "lib/widget/basic/chat_list_scroll_demo_page_2.dart",
+      "deferredAlias": "chat_list_scroll_demo_page_2",
+      "widgetClass": "ChatListScrollDemoPage2",
+      "category": "basic",
+      "routeIndex": 73,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "首尾添加数据不会抖动2",
+      "upstreamSource": "lib/widget/basic/chat_list_scroll_demo_page_2.dart",
+      "upstreamWidget": "ChatListScrollDemoPage2",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4",
+      "oldData": [],
+      "newData": [
+        {
+          "txt": "*********init 1*********",
+          "type": "Left",
+          "height": 110
+        },
+        {
+          "txt": "*********init 2*********",
+          "type": "Left",
+          "height": 120
+        },
+        {
+          "txt": "*********init 3*********",
+          "type": "Left",
+          "height": 150
+        }
+      ],
+      "oldCount": 0,
+      "newCount": 3,
+      "atBottom": true
+    },
+    "functions": {
+      "scrollToBottom": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@delay",
+            "args": {
+              "ms": 120
+            }
+          },
+          {
+            "call": "@scroll_to_bottom",
+            "args": {
+              "controller": "chat2",
+              "durationMs": 120
+            }
+          }
+        ]
+      },
+      "send": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@list_add",
+            "args": {
+              "var": "global.newData",
+              "item": {
+                "txt": {
+                  "cat": [
+                    "#### new Send ",
+                    {
+                      "var": "global.newCount"
+                    },
+                    " #### #### #### #### "
+                  ]
+                },
+                "type": "Right",
+                "height": {
+                  "+": [
+                    60,
+                    {
+                      "*": [
+                        {
+                          "%": [
+                            {
+                              "var": "global.newCount"
+                            },
+                            6
+                          ]
+                        },
+                        10
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.newCount",
+              "value": {
+                "+": [
+                  {
+                    "var": "global.newCount"
+                  },
+                  1
+                ]
+              }
+            }
+          },
+          {
+            "call": "@global.scrollToBottom",
+            "args": {}
+          }
+        ]
+      },
+      "addOld": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@loop_by_num",
+            "args": {
+              "count": 20,
+              "body": [
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.oldData",
+                    "item": {
+                      "txt": {
+                        "cat": [
+                          "---------Old ",
+                          {
+                            "var": "global.oldCount"
+                          },
+                          {
+                            "var": "loop.index"
+                          }
+                        ]
+                      },
+                      "type": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "var": "loop.index"
+                                  },
+                                  4
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          "Right",
+                          "Left"
+                        ]
+                      },
+                      "height": {
+                        "+": [
+                          60,
+                          {
+                            "*": [
+                              {
+                                "%": [
+                                  {
+                                    "var": "loop.index"
+                                  },
+                                  6
+                                ]
+                              },
+                              10
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.oldCount",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.oldCount"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "addNew": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@loop_by_num",
+            "args": {
+              "count": 20,
+              "body": [
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.newData",
+                    "item": {
+                      "txt": {
+                        "cat": [
+                          "##########   New ",
+                          {
+                            "var": "global.newCount"
+                          },
+                          " ",
+                          {
+                            "var": "loop.index"
+                          }
+                        ]
+                      },
+                      "type": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "var": "loop.index"
+                                  },
+                                  4
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          "Left",
+                          "Right"
+                        ]
+                      },
+                      "height": {
+                        "+": [
+                          60,
+                          {
+                            "*": [
+                              {
+                                "%": [
+                                  {
+                                    "var": "loop.index"
+                                  },
+                                  6
+                                ]
+                              },
+                              10
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.newCount",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.newCount"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "then": [
+                {
+                  "call": "@show_snackbar",
+                  "args": {
+                    "message": "你目前位于最底部，自动跳转新消息item",
+                    "durationMs": 1000
+                  }
+                },
+                {
+                  "call": "@global.scrollToBottom",
+                  "args": {}
+                }
+              ],
+              "else": [
+                {
+                  "call": "@show_snackbar",
+                  "args": {
+                    "message": "点击我自动跳转新消息item",
+                    "actionLabel": "跳转",
+                    "action": {
+                      "call": "@global.scrollToBottom",
+                      "args": {}
+                    },
+                    "durationMs": 2000,
+                    "backgroundColor": "#3367D6"
+                  }
+                }
+              ],
+              "condition": {
+                "var": "global.atBottom"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "ControllerDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "custom_scroll_view",
+              "controller": "chat2",
+              "physics": "bouncing",
+              "centerIndex": 1,
+              "onScroll": {
+                "call": "@set",
+                "args": {
+                  "var": "global.atBottom",
+                  "value": "{{ event.isEnd }}"
+                }
+              },
+              "slivers": [
+                {
+                  "type": "sliver_list",
+                  "source": "{{ global.oldData }}",
+                  "itemTemplate": {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "container",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.txt }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "layout": "column",
+                        "height": "{{ loop.item.height }}",
+                        "color": "#F44336",
+                        "borderRadius": 4,
+                        "margin": {
+                          "left": 50,
+                          "right": 10,
+                          "top": 5,
+                          "bottom": 5
+                        },
+                        "padding": 10,
+                        "alignment": "centerRight",
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "loop.item.type"
+                            },
+                            "Right"
+                          ]
+                        }
+                      },
+                      {
+                        "type": "container",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.txt }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "layout": "column",
+                        "height": "{{ loop.item.height }}",
+                        "color": "#4CAF50",
+                        "borderRadius": 4,
+                        "margin": {
+                          "left": 10,
+                          "right": 50,
+                          "top": 5,
+                          "bottom": 5
+                        },
+                        "padding": 10,
+                        "alignment": "centerLeft",
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "loop.item.type"
+                            },
+                            "Left"
+                          ]
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 1,
+                  "child": {
+                    "type": "container",
+                    "children": [],
+                    "layout": "column",
+                    "color": "#00000000"
+                  }
+                },
+                {
+                  "type": "sliver_list",
+                  "source": "{{ global.newData }}",
+                  "itemTemplate": {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "container",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.txt }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "layout": "column",
+                        "height": "{{ loop.item.height }}",
+                        "color": "#F44336",
+                        "borderRadius": 4,
+                        "margin": {
+                          "left": 50,
+                          "right": 10,
+                          "top": 5,
+                          "bottom": 5
+                        },
+                        "padding": 10,
+                        "alignment": "centerRight",
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "loop.item.type"
+                            },
+                            "Right"
+                          ]
+                        }
+                      },
+                      {
+                        "type": "container",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.txt }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "layout": "column",
+                        "height": "{{ loop.item.height }}",
+                        "color": "#4CAF50",
+                        "borderRadius": 4,
+                        "margin": {
+                          "left": 10,
+                          "right": 50,
+                          "top": 5,
+                          "bottom": 5
+                        },
+                        "padding": 10,
+                        "alignment": "centerLeft",
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "loop.item.type"
+                            },
+                            "Left"
+                          ]
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  }
+                }
+              ]
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        ],
+        "appBar": {
+          "title": "ControllerDemoPage",
+          "actions": [
+            {
+              "icon": "add",
+              "label": "add old",
+              "color": "#F44336",
+              "action": {
+                "call": "@global.addOld",
+                "args": {}
+              }
+            },
+            {
+              "icon": "add",
+              "label": "add new",
+              "color": "#FFFF00",
+              "action": {
+                "call": "@global.addNew",
+                "args": {}
+              }
+            }
+          ]
+        },
+        "floatingActionButton": {
+          "type": "floating_action_button",
+          "label": "Send",
+          "action": {
+            "call": "@global.send",
+            "args": {}
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,350 @@
+{
+  "dsl": "3.3",
+  "appid": "0c888dfc-e72e-5c6e-9881-d64988b00066",
+  "meta": {
+    "name": "gsy_flutter_demo/088-jue-jin3-d-box-logo-demo-page",
+    "version": "0.1.1",
+    "type": "app",
+    "displayName": {
+      "zh": "掘金更 3d logo",
+      "en": "Juejinenhanced 3d logo"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：掘金更 3d logo",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "掘金更 3d logo",
+      "sourcePath": "lib/widget/visual/juejin_3d_box_logo_demo_page.dart",
+      "deferredAlias": "juejin_3d_box_logo_demo_page",
+      "widgetClass": "JueJin3DBoxLogoDemoPage",
+      "category": "visual",
+      "routeIndex": 88,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "掘金更 3d logo",
+      "upstreamSource": "lib/widget/visual/juejin_3d_box_logo_demo_page.dart",
+      "upstreamWidget": "JueJin3DBoxLogoDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4",
+      "rx": 0,
+      "ry": 0
+    },
+    "functions": {
+      "pan": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.ry",
+              "value": {
+                "/": [
+                  {
+                    "-": [
+                      110,
+                      {
+                        "var": "event.localX"
+                      }
+                    ]
+                  },
+                  4
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.rx",
+              "value": {
+                "/": [
+                  {
+                    "-": [
+                      {
+                        "var": "event.localY"
+                      },
+                      110
+                    ]
+                  },
+                  4
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "reset": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.rx",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.ry",
+              "value": 0
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "JueJin3DBoxLogoDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "children": [
+                {
+                  "type": "gesture_detector",
+                  "onPanUpdate": {
+                    "call": "@global.pan",
+                    "args": {}
+                  },
+                  "onPanEnd": {
+                    "call": "@global.reset",
+                    "args": {}
+                  },
+                  "child": {
+                    "type": "transform",
+                    "perspective": 0.001,
+                    "rotateX": "{{ global.rx }}",
+                    "rotateY": "{{ global.ry }}",
+                    "child": {
+                      "type": "container",
+                      "children": [
+                        {
+                          "type": "container",
+                          "children": [
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "container",
+                                "children": [],
+                                "color": "#1E80FF",
+                                "borderRadius": 4
+                              },
+                              "left": 92,
+                              "top": 0,
+                              "width": 36,
+                              "height": 36
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "transform",
+                                "rotateZ": 52,
+                                "child": {
+                                  "type": "container",
+                                  "children": [],
+                                  "color": "#1E80FF",
+                                  "borderRadius": 4
+                                }
+                              },
+                              "left": 58,
+                              "top": 56,
+                              "width": 36,
+                              "height": 118
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "transform",
+                                "rotateZ": -52,
+                                "child": {
+                                  "type": "container",
+                                  "children": [],
+                                  "color": "#1E8FFF",
+                                  "borderRadius": 4
+                                }
+                              },
+                              "left": 126,
+                              "top": 56,
+                              "width": 36,
+                              "height": 118
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "transform",
+                                "rotateZ": 52,
+                                "child": {
+                                  "type": "container",
+                                  "children": [],
+                                  "color": "#1E38FF",
+                                  "borderRadius": 4
+                                }
+                              },
+                              "left": 38,
+                              "top": 136,
+                              "width": 36,
+                              "height": 140
+                            },
+                            {
+                              "type": "positioned",
+                              "child": {
+                                "type": "transform",
+                                "rotateZ": -52,
+                                "child": {
+                                  "type": "container",
+                                  "children": [],
+                                  "color": "#1E80FF",
+                                  "borderRadius": 4
+                                }
+                              },
+                              "left": 146,
+                              "top": 136,
+                              "width": 36,
+                              "height": 140
+                            }
+                          ],
+                          "layout": "stack",
+                          "width": 220,
+                          "height": 220
+                        },
+                        {
+                          "type": "positioned",
+                          "child": {
+                            "type": "opacity",
+                            "opacity": 0.35,
+                            "child": {
+                              "type": "transform",
+                              "translateX": 12,
+                              "translateY": 12,
+                              "child": {
+                                "type": "container",
+                                "children": [
+                                  {
+                                    "type": "positioned",
+                                    "child": {
+                                      "type": "container",
+                                      "children": [],
+                                      "color": "#1E80FF",
+                                      "borderRadius": 4
+                                    },
+                                    "left": 92,
+                                    "top": 0,
+                                    "width": 36,
+                                    "height": 36
+                                  },
+                                  {
+                                    "type": "positioned",
+                                    "child": {
+                                      "type": "transform",
+                                      "rotateZ": 52,
+                                      "child": {
+                                        "type": "container",
+                                        "children": [],
+                                        "color": "#1E80FF",
+                                        "borderRadius": 4
+                                      }
+                                    },
+                                    "left": 58,
+                                    "top": 56,
+                                    "width": 36,
+                                    "height": 118
+                                  },
+                                  {
+                                    "type": "positioned",
+                                    "child": {
+                                      "type": "transform",
+                                      "rotateZ": -52,
+                                      "child": {
+                                        "type": "container",
+                                        "children": [],
+                                        "color": "#1E8FFF",
+                                        "borderRadius": 4
+                                      }
+                                    },
+                                    "left": 126,
+                                    "top": 56,
+                                    "width": 36,
+                                    "height": 118
+                                  },
+                                  {
+                                    "type": "positioned",
+                                    "child": {
+                                      "type": "transform",
+                                      "rotateZ": 52,
+                                      "child": {
+                                        "type": "container",
+                                        "children": [],
+                                        "color": "#1E38FF",
+                                        "borderRadius": 4
+                                      }
+                                    },
+                                    "left": 38,
+                                    "top": 136,
+                                    "width": 36,
+                                    "height": 140
+                                  },
+                                  {
+                                    "type": "positioned",
+                                    "child": {
+                                      "type": "transform",
+                                      "rotateZ": -52,
+                                      "child": {
+                                        "type": "container",
+                                        "children": [],
+                                        "color": "#1E80FF",
+                                        "borderRadius": 4
+                                      }
+                                    },
+                                    "left": 146,
+                                    "top": 136,
+                                    "width": 36,
+                                    "height": 140
+                                  }
+                                ],
+                                "layout": "stack",
+                                "width": 220,
+                                "height": 220
+                              }
+                            }
+                          },
+                          "left": 0,
+                          "top": 0
+                        }
+                      ],
+                      "layout": "stack",
+                      "width": 240,
+                      "height": 240
+                    }
+                  }
+                }
+              ],
+              "layout": "column",
+              "alignment": "center",
+              "mainAxisAlignment": "center"
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        ],
+        "appBar": {
+          "title": "JueJin3DBoxLogoDemoPage"
+        }
+      }
+    ]
+  }
+}

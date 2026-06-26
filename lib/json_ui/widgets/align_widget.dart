@@ -1,7 +1,7 @@
 // Align 控件
 // 支持: alignment (topLeft / topCenter / topRight / centerLeft / center /
 //       centerRight / bottomLeft / bottomCenter / bottomRight),
-//       widthFactor, heightFactor, child
+//       alignmentX/alignmentY (或 x/y), widthFactor, heightFactor, child
 import 'package:flutter/material.dart';
 import 'base_widget.dart';
 import '../interpreter.dart';
@@ -13,9 +13,19 @@ class JsonAlignWidget extends JsonBaseWidget {
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
-    final alignment = _parseAlignment(json['alignment']?.toString());
-    final widthFactor = (json['widthFactor'] as num?)?.toDouble();
-    final heightFactor = (json['heightFactor'] as num?)?.toDouble();
+    final alignmentX = _resolveDouble(
+      interpreter,
+      json['alignmentX'] ?? json['x'],
+    );
+    final alignmentY = _resolveDouble(
+      interpreter,
+      json['alignmentY'] ?? json['y'],
+    );
+    final alignment = alignmentX != null || alignmentY != null
+        ? Alignment(alignmentX ?? 0, alignmentY ?? 0)
+        : _parseAlignment(json['alignment']?.toString());
+    final widthFactor = _resolveDouble(interpreter, json['widthFactor']);
+    final heightFactor = _resolveDouble(interpreter, json['heightFactor']);
 
     final childJson = json['child'];
     Widget child;
@@ -55,5 +65,13 @@ class JsonAlignWidget extends JsonBaseWidget {
       default:
         return Alignment.center;
     }
+  }
+
+  double? _resolveDouble(JsonInterpreter interpreter, dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    final resolved = interpreter.evaluateExpression(value);
+    if (resolved is num) return resolved.toDouble();
+    return double.tryParse(resolved?.toString() ?? '');
   }
 }

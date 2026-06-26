@@ -1,0 +1,251 @@
+{
+  "dsl": "3.3",
+  "appid": "26e541d9-2850-5f5c-b53f-4660d52d9c21",
+  "meta": {
+    "name": "gsy_flutter_demo/055-particle-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "粒子动画效果",
+      "en": "Particle animation effect"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：粒子动画效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "粒子动画效果",
+      "sourcePath": "lib/widget/animation/particle/particle_page.dart",
+      "deferredAlias": "particle_page",
+      "widgetClass": "ParticlePage",
+      "category": "animation",
+      "routeIndex": 55
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "粒子动画效果",
+      "upstreamSource": "lib/widget/animation/particle/particle_page.dart",
+      "upstreamWidget": "ParticlePage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "ParticlePage",
+        "layout": "stack",
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "animated_canvas",
+              "durationMs": 6000,
+              "layers": [
+                {
+                  "kind": "linear_gradient",
+                  "locals": {
+                    "mirror": {
+                      "if": [
+                        {
+                          "<": [
+                            "progress",
+                            0.5
+                          ]
+                        },
+                        {
+                          "*": [
+                            "progress",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "-": [
+                                1,
+                                "progress"
+                              ]
+                            },
+                            2
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "colors": [
+                    {
+                      "color": "#D38312",
+                      "color2": "#0D47A1",
+                      "mix": "mirror"
+                    },
+                    {
+                      "color": "#A83279",
+                      "color2": "#2196F3",
+                      "mix": "mirror"
+                    }
+                  ],
+                  "begin": "topCenter",
+                  "end": "bottomCenter"
+                },
+                {
+                  "kind": "particles",
+                  "count": 30,
+                  "locals": {
+                    "p": {
+                      "%": [
+                        {
+                          "+": [
+                            "progress",
+                            {
+                              "seed": [
+                                "i"
+                              ]
+                            }
+                          ]
+                        },
+                        1
+                      ]
+                    },
+                    "startX": {
+                      "+": [
+                        -0.2,
+                        {
+                          "*": [
+                            1.4,
+                            {
+                              "seed": [
+                                {
+                                  "*": [
+                                    "i",
+                                    17.0
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "endX": {
+                      "+": [
+                        -0.2,
+                        {
+                          "*": [
+                            1.4,
+                            {
+                              "seed": [
+                                {
+                                  "+": [
+                                    {
+                                      "*": [
+                                        "i",
+                                        29.0
+                                      ]
+                                    },
+                                    3.0
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "sizeSeed": {
+                      "seed": [
+                        {
+                          "+": [
+                            {
+                              "*": [
+                                "i",
+                                31.0
+                              ]
+                            },
+                            9.0
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "x": {
+                    "*": [
+                      "w",
+                      {
+                        "lerp": [
+                          "startX",
+                          "endX",
+                          "p"
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "*": [
+                      "h",
+                      {
+                        "lerp": [
+                          1.2,
+                          -0.2,
+                          "p"
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      "w",
+                      0.2,
+                      {
+                        "+": [
+                          0.2,
+                          {
+                            "*": [
+                              0.4,
+                              "sizeSeed"
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "color": "#FFFFFF",
+                  "alpha": 0.196
+                }
+              ]
+            }
+          },
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "text",
+                "value": "GSY Flutter Demo",
+                "style": {
+                  "fontSize": 30,
+                  "fontWeight": "bold",
+                  "color": "#FFFFFF",
+                  "textAlign": "center"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

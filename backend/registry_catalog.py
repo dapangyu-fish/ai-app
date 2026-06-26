@@ -24,7 +24,7 @@ from config import (
 )
 
 # summary prompt 版本 —— 改了 enrich 的 prompt / schema 就 +1，全量自动重排
-SUMMARY_PROMPT_VERSION = 1
+SUMMARY_PROMPT_VERSION = 2
 
 # 连续失败软上限，达到标 failed（下一轮全量 sweep 会重置回 pending 再试）
 MAX_REINDEX_ATTEMPTS = 5
@@ -45,12 +45,22 @@ def _conn():
 # tech_stack 映射 —— 从结构化信号确定性推导（不走 LLM）
 # ═══════════════════════════════════════════════════════════
 
-# (判定函数 → tech_stack 标签)。判定基于 widgets_used / builtins_used / dependencies
-def _derive_tech_stack(widgets: set, builtins: set, deps: set) -> list:
+# (判定函数 → tech_stack 标签)。判定基于 widgets_used / builtins_used /
+# dependencies / game entity kinds / JSON 结构特征，全部确定性推导，不走 LLM。
+def _derive_tech_stack(
+    widgets: set,
+    builtins: set,
+    deps: set,
+    entity_kinds: set,
+    structural_flags: set,
+) -> list:
     tech = set()
 
     def any_builtin(*prefixes):
         return any(b.startswith(p) for b in builtins for p in prefixes)
+
+    def any_dep(*prefixes):
+        return any(d.startswith(p) for d in deps for p in prefixes)
 
     # 本地数据库
     if any_builtin("@db_") or "lib_database" in deps:
@@ -58,9 +68,28 @@ def _derive_tech_stack(widgets: set, builtins: set, deps: set) -> list:
     # 实时通讯
     if any_builtin("@im_") or "lib_im" in deps:
         tech.add("realtime-messaging")
+    # OpenAI-compatible / SSE AI 工具
+    if any_builtin("@http_sse"):
+        tech.add("sse-streaming")
+    if "lib_openai" in deps:
+        tech.add("ai-chat")
+        tech.add("openai-compatible")
+        tech.add("sse-streaming")
     # 游戏引擎
     if "flame_game" in widgets:
         tech.add("game-engine")
+    if any_builtin("@flame_game_input") or "game-controls" in deps:
+        tech.add("virtual-gamepad")
+    if any_builtin("@platformer."):
+        tech.add("platformer-physics")
+    if any_builtin("@animated_sprite.") or "animated_sprite" in entity_kinds:
+        tech.add("animated-sprite")
+    if any_builtin("@tiled.") or "tiled_map" in entity_kinds:
+        tech.add("tiled-map")
+    if "inline-map-data" in structural_flags:
+        tech.add("inline-tiled-map")
+    if "asset-bundle" in structural_flags:
+        tech.add("asset-bundle")
     # 图表
     if "chart" in widgets:
         tech.add("charts")
@@ -82,6 +111,13 @@ def _derive_tech_stack(widgets: set, builtins: set, deps: set) -> list:
     # 二维码
     if "qr_code" in widgets:
         tech.add("qr")
+    # 启动器 / 应用市场
+    if any_dep("launcher-") or any_builtin(
+        "@my_apps_", "@launch_app", "@startup_default_", "@cache_clear",
+    ):
+        tech.add("launcher")
+    if any_builtin("@market_list"):
+        tech.add("app-market")
     # 文件 / 本地存储
     if any_builtin("@file_", "@storage_"):
         tech.add("file-storage")
@@ -94,8 +130,20 @@ def _derive_tech_stack(widgets: set, builtins: set, deps: set) -> list:
     # 生物识别
     if any_builtin("@biometric_auth"):
         tech.add("biometric")
+    # 系统桥
+    if any_builtin("@clipboard_"):
+        tech.add("clipboard")
+    if any_builtin("@share"):
+        tech.add("share")
+    if any_builtin("@request_permission", "@permission_status", "@open_app_settings"):
+        tech.add("permissions")
+    if any_builtin("@haptic"):
+        tech.add("haptics")
     # i18n / 主题
-    if any_builtin("@set_locale", "@get_locale", "@set_theme", "@get_theme"):
+    if any_builtin(
+        "@set_locale", "@get_locale", "@set_theme", "@get_theme",
+        "@set_framework_locale", "@get_framework_locale",
+    ):
         tech.add("i18n-theming")
     # 通用 UI 库
     if "common-ui" in deps:
@@ -108,20 +156,31 @@ def _derive_tech_stack(widgets: set, builtins: set, deps: set) -> list:
 # capture —— 解析包 JSON 提结构化信号
 # ═══════════════════════════════════════════════════════════
 
-def _walk_collect(node, widget_types: set, builtins: set):
+def _walk_collect(
+    node,
+    widget_types: set,
+    builtins: set,
+    entity_kinds: set,
+    structural_flags: set,
+):
     """递归遍历 JSON 树，收集 widget type（"type" 字段）+ 内置函数（"call":"@xxx"）"""
     if isinstance(node, dict):
         t = node.get("type")
         if isinstance(t, str):
             widget_types.add(t)
+        kind = node.get("kind")
+        if isinstance(kind, str):
+            entity_kinds.add(kind)
         call = node.get("call")
         if isinstance(call, str) and call.startswith("@"):
             builtins.add(call)
+        if "map_data" in node:
+            structural_flags.add("inline-map-data")
         for v in node.values():
-            _walk_collect(v, widget_types, builtins)
+            _walk_collect(v, widget_types, builtins, entity_kinds, structural_flags)
     elif isinstance(node, list):
         for item in node:
-            _walk_collect(item, widget_types, builtins)
+            _walk_collect(item, widget_types, builtins, entity_kinds, structural_flags)
 
 
 def parse_capture(json_content: dict) -> dict:
@@ -144,15 +203,31 @@ def parse_capture(json_content: dict) -> dict:
 
     widget_types: set = set()
     builtins: set = set()
+    entity_kinds: set = set()
+    structural_flags: set = set()
+    if isinstance(json_content.get("assets"), dict) and json_content.get("assets"):
+        structural_flags.add("asset-bundle")
     # 只遍历 ui + steps + global.functions（业务逻辑所在），不遍历 meta
-    _walk_collect(json_content.get("ui"), widget_types, builtins)
-    _walk_collect(json_content.get("steps"), widget_types, builtins)
-    _walk_collect((json_content.get("global") or {}).get("functions"), widget_types, builtins)
+    _walk_collect(json_content.get("ui"), widget_types, builtins, entity_kinds, structural_flags)
+    _walk_collect(json_content.get("steps"), widget_types, builtins, entity_kinds, structural_flags)
+    _walk_collect(
+        (json_content.get("global") or {}).get("functions"),
+        widget_types,
+        builtins,
+        entity_kinds,
+        structural_flags,
+    )
 
     # 去掉明显不是 widget 的 type 值（meta.type 的 app/library/component/widget）
     widget_types -= {"app", "library", "component", "widget"}
 
-    tech_stack = _derive_tech_stack(widget_types, builtins, set(dependencies))
+    tech_stack = _derive_tech_stack(
+        widget_types,
+        builtins,
+        set(dependencies),
+        entity_kinds,
+        structural_flags,
+    )
 
     return {
         "exports": sorted(exports) if all(isinstance(e, str) for e in exports) else exports,
@@ -436,15 +511,83 @@ def resolve_author(author_id: Optional[str], fallback_name: Optional[str] = None
 # 点赞 / 下载
 # ═══════════════════════════════════════════════════════════
 
-def record_install(name: str, user_id: str) -> None:
-    """记一次下载（per-user 去重）。"""
+_install_event_table_ready = False
+
+
+def _ensure_install_event_table(cur) -> None:
+    """Ensure per-run install events exist and seed old unique install rows once."""
+    global _install_event_table_ready
+    if _install_event_table_ready:
+        return
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS package_install_events (
+          id           BIGSERIAL PRIMARY KEY,
+          package_name TEXT NOT NULL,
+          user_id      TEXT NOT NULL DEFAULT '',
+          actor_type   TEXT NOT NULL DEFAULT '',
+          source       TEXT NOT NULL DEFAULT '',
+          user_agent   TEXT NOT NULL DEFAULT '',
+          ip_hash      TEXT NOT NULL DEFAULT '',
+          legacy_key   TEXT,
+          created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_package_install_events_name
+        ON package_install_events(package_name)
+    """)
+    cur.execute("""
+        CREATE INDEX IF NOT EXISTS idx_package_install_events_created_at
+        ON package_install_events(created_at DESC)
+    """)
+    cur.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_package_install_events_legacy_key
+        ON package_install_events(legacy_key)
+        WHERE legacy_key IS NOT NULL
+    """)
+    cur.execute("""
+        INSERT INTO package_install_events
+          (package_name, user_id, actor_type, source, created_at, legacy_key)
+        SELECT package_name, user_id, 'legacy', 'legacy_unique', first_at,
+               package_name || E'\\x1f' || user_id
+        FROM package_installs
+        ON CONFLICT DO NOTHING
+    """)
+    cur.connection.commit()
+    _install_event_table_ready = True
+
+
+def record_install(
+    name: str,
+    user_id: str,
+    *,
+    actor_type: str = "user",
+    source: str = "",
+    user_agent: str = "",
+    ip_hash: str = "",
+) -> None:
+    """Record one app run/download event and keep the legacy unique actor table."""
     conn = _conn()
     try:
         with conn.cursor() as cur:
+            _ensure_install_event_table(cur)
             cur.execute(
                 "INSERT INTO package_installs (package_name, user_id) VALUES (%s, %s) "
                 "ON CONFLICT (package_name, user_id) DO NOTHING",
                 [name, user_id],
+            )
+            cur.execute(
+                """INSERT INTO package_install_events
+                   (package_name, user_id, actor_type, source, user_agent, ip_hash)
+                   VALUES (%s, %s, %s, %s, %s, %s)""",
+                [
+                    name,
+                    user_id,
+                    actor_type[:32],
+                    source[:80],
+                    user_agent[:512],
+                    ip_hash[:128],
+                ],
             )
         conn.commit()
     finally:
@@ -470,9 +613,10 @@ def set_like(name: str, user_id: str, liked: bool) -> None:
 
 def _counts(cur, name: str) -> tuple:
     # cur 可能是 RealDictCursor（fetchone 返 dict），用列别名按 key 取，别用 [0]
+    _ensure_install_event_table(cur)
     cur.execute("SELECT count(*) AS c FROM package_likes WHERE package_name=%s", [name])
     likes = cur.fetchone()["c"]
-    cur.execute("SELECT count(*) AS c FROM package_installs WHERE package_name=%s", [name])
+    cur.execute("SELECT count(*) AS c FROM package_install_events WHERE package_name=%s", [name])
     installs = cur.fetchone()["c"]
     return likes, installs
 
@@ -512,11 +656,12 @@ def get_user_profile(author_id: str) -> dict:
     conn = _conn()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            _ensure_install_event_table(cur)
             # 名下所有包 + 各自点赞/下载量
             cur.execute("""
                 SELECT p.name, p.author_name, p.category, p.summary_zh, p.summary_en, p.tech_stack,
                        (SELECT count(*) FROM package_likes l WHERE l.package_name=p.name)    AS like_count,
-                       (SELECT count(*) FROM package_installs i WHERE i.package_name=p.name) AS install_count
+                       (SELECT count(*) FROM package_install_events i WHERE i.package_name=p.name) AS install_count
                 FROM registry_packages p
                 WHERE p.author_id = %s
                 ORDER BY p.name

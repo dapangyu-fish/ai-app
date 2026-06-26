@@ -1,0 +1,745 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "course-player",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "在线课程播放器：章节列表 + 视频播放 + 学习进度",
+    "author": "fish",
+    "displayName": "在线课程"
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "currentIndex": 1,
+      "currentTitle": "02 变量与基本数据类型",
+      "currentDuration": "22:15",
+      "currentProgress": 0.46,
+      "currentVideoUrl": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      "currentStateLabel": "学习中",
+      "totalLessons": 8,
+      "completedCount": 1,
+      "overallProgress": 0.182,
+      "overallProgressPct": "18%",
+      "totalDuration": "222小时30分钟",
+      "lessons": [
+        {
+          "id": "1",
+          "title": "01 Python 简介与环境搭建",
+          "duration": "15:30",
+          "progress": 1.0,
+          "stateLabel": "已完成",
+          "stateColor": "#22C55E",
+          "iconName": "check_circle",
+          "iconColor": "#22C55E"
+        },
+        {
+          "id": "2",
+          "title": "02 变量与基本数据类型",
+          "duration": "22:15",
+          "progress": 0.46,
+          "stateLabel": "学习中",
+          "stateColor": "#EA580C",
+          "iconName": "play",
+          "iconColor": "#EA580C"
+        },
+        {
+          "id": "3",
+          "title": "03 条件判断与循环控制",
+          "duration": "28:40",
+          "progress": 0.0,
+          "stateLabel": "待学习",
+          "stateColor": "#9CA3AF",
+          "iconName": "schedule",
+          "iconColor": "#9CA3AF"
+        },
+        {
+          "id": "4",
+          "title": "04 列表、元组与字典",
+          "duration": "32:10",
+          "progress": 0.0,
+          "stateLabel": "待学习",
+          "stateColor": "#9CA3AF",
+          "iconName": "schedule",
+          "iconColor": "#9CA3AF"
+        },
+        {
+          "id": "5",
+          "title": "05 函数定义与作用域",
+          "duration": "25:50",
+          "progress": 0.0,
+          "stateLabel": "待学习",
+          "stateColor": "#9CA3AF",
+          "iconName": "schedule",
+          "iconColor": "#9CA3AF"
+        },
+        {
+          "id": "6",
+          "title": "06 面向对象编程基础",
+          "duration": "35:20",
+          "progress": 0.0,
+          "stateLabel": "待学习",
+          "stateColor": "#9CA3AF",
+          "iconName": "schedule",
+          "iconColor": "#9CA3AF"
+        },
+        {
+          "id": "7",
+          "title": "07 文件操作与异常处理",
+          "duration": "20:45",
+          "progress": 0.0,
+          "stateLabel": "待学习",
+          "stateColor": "#9CA3AF",
+          "iconName": "schedule",
+          "iconColor": "#9CA3AF"
+        },
+        {
+          "id": "8",
+          "title": "08 综合项目实战",
+          "duration": "42:00",
+          "progress": 0.0,
+          "stateLabel": "待学习",
+          "stateColor": "#9CA3AF",
+          "iconName": "schedule",
+          "iconColor": "#9CA3AF"
+        }
+      ]
+    },
+    "functions": {
+      "selectLesson": {
+        "params": [
+          "idx"
+        ],
+        "logic": [
+          {
+            "set": [
+              "global.currentIndex",
+              {
+                "var": "params.idx"
+              }
+            ]
+          },
+          {
+            "set": [
+              "global.currentTitle",
+              {
+                "var": [
+                  "global.lessons",
+                  {
+                    "var": "params.idx"
+                  },
+                  "title"
+                ]
+              }
+            ]
+          },
+          {
+            "set": [
+              "global.currentDuration",
+              {
+                "var": [
+                  "global.lessons",
+                  {
+                    "var": "params.idx"
+                  },
+                  "duration"
+                ]
+              }
+            ]
+          },
+          {
+            "set": [
+              "global.currentProgress",
+              {
+                "var": [
+                  "global.lessons",
+                  {
+                    "var": "params.idx"
+                  },
+                  "progress"
+                ]
+              }
+            ]
+          },
+          {
+            "set": [
+              "global.currentStateLabel",
+              {
+                "var": [
+                  "global.lessons",
+                  {
+                    "var": "params.idx"
+                  },
+                  "stateLabel"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "markComplete": {
+        "params": [],
+        "logic": [
+          {
+            "set": [
+              "global.currentProgress",
+              1.0
+            ]
+          },
+          {
+            "set": [
+              "global.currentStateLabel",
+              "已完成"
+            ]
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "🎉 本节已标记为完成！"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "Python 入门实战",
+        "layout": "column",
+        "backgroundColor": "#F5F5F7",
+        "appBar": {
+          "title": "Python 入门实战",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.markComplete",
+                "args": {}
+              },
+              "icon": "bookmark",
+              "style": {
+                "textColor": "#EA580C",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 14,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "video",
+                "url": "{{ global.currentVideoUrl }}",
+                "aspectRatio": 1.78,
+                "borderRadius": 14
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "text",
+                "value": "Python 入门实战 · 第 {{ global.currentIndex }} 节",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#6B7280"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "text",
+                "value": "{{ global.currentTitle }}",
+                "style": {
+                  "fontSize": 20,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "progress",
+                "value": "{{ global.currentProgress }}",
+                "color": "#EA580C",
+                "backgroundColor": "#E5E7EB",
+                "height": 8,
+                "borderRadius": 4
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "spaceBetween",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "{{ global.currentStateLabel }}",
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#EA580C",
+                      "fontWeight": "600"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.currentDuration }}",
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#9CA3AF"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 12,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "tab_view",
+                "height": 420,
+                "color": "#EA580C",
+                "tabs": [
+                  {
+                    "label": "目录",
+                    "icon": "list",
+                    "content": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "grid",
+                          "source": "{{ global.lessons }}",
+                          "crossAxisCount": 1,
+                          "childAspectRatio": 4.8,
+                          "spacing": 10,
+                          "shrinkWrap": true,
+                          "item_template": {
+                            "type": "container",
+                            "layout": "row",
+                            "crossAxisAlignment": "center",
+                            "padding": 14,
+                            "color": "#F9FAFB",
+                            "borderRadius": 16,
+                            "onTap": {
+                              "call": "@global.selectLesson",
+                              "args": {
+                                "idx": "{{ loop.index }}"
+                              }
+                            },
+                            "children": [
+                              {
+                                "type": "icon",
+                                "name": "{{ loop.item.iconName }}",
+                                "size": 22,
+                                "color": "{{ loop.item.iconColor }}"
+                              },
+                              {
+                                "type": "spacer",
+                                "width": 12
+                              },
+                              {
+                                "type": "expanded",
+                                "flex": 1,
+                                "child": {
+                                  "type": "container",
+                                  "layout": "column",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "value": "{{ loop.item.title }}",
+                                      "style": {
+                                        "fontSize": 14,
+                                        "fontWeight": "600",
+                                        "color": "#111827"
+                                      }
+                                    },
+                                    {
+                                      "type": "spacer",
+                                      "height": 5
+                                    },
+                                    {
+                                      "type": "container",
+                                      "layout": "row",
+                                      "crossAxisAlignment": "center",
+                                      "children": [
+                                        {
+                                          "type": "icon",
+                                          "name": "schedule",
+                                          "size": 11,
+                                          "color": "#9CA3AF"
+                                        },
+                                        {
+                                          "type": "spacer",
+                                          "width": 4
+                                        },
+                                        {
+                                          "type": "text",
+                                          "value": "{{ loop.item.duration }}",
+                                          "style": {
+                                            "fontSize": 11,
+                                            "color": "#9CA3AF"
+                                          }
+                                        },
+                                        {
+                                          "type": "spacer",
+                                          "width": 10
+                                        },
+                                        {
+                                          "type": "container",
+                                          "padding": 4,
+                                          "paddingH": 8,
+                                          "borderRadius": 8,
+                                          "color": "{{ loop.item.stateColor }}",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "value": "{{ loop.item.stateLabel }}",
+                                              "style": {
+                                                "fontSize": 10,
+                                                "fontWeight": "600",
+                                                "color": "#FFFFFF"
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "label": "统计",
+                    "icon": "analytics",
+                    "content": {
+                      "type": "container",
+                      "layout": "column",
+                      "padding": 8,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "expanded",
+                              "flex": 1,
+                              "child": {
+                                "type": "card",
+                                "layout": "column",
+                                "color": "#FFFFFF",
+                                "padding": 16,
+                                "margin": 4,
+                                "elevation": 0,
+                                "borderRadius": 16,
+                                "children": [
+                                  {
+                                    "type": "icon",
+                                    "name": "menu_book",
+                                    "size": 20,
+                                    "color": "#EA580C"
+                                  },
+                                  {
+                                    "type": "spacer",
+                                    "height": 8
+                                  },
+                                  {
+                                    "type": "text",
+                                    "value": "总章节",
+                                    "style": {
+                                      "fontSize": 12,
+                                      "color": "#6B7280"
+                                    }
+                                  },
+                                  {
+                                    "type": "spacer",
+                                    "height": 4
+                                  },
+                                  {
+                                    "type": "text",
+                                    "value": "{{ global.totalLessons }} 节",
+                                    "style": {
+                                      "fontSize": 18,
+                                      "fontWeight": "bold",
+                                      "color": "#111827"
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "expanded",
+                              "flex": 1,
+                              "child": {
+                                "type": "card",
+                                "layout": "column",
+                                "color": "#FFFFFF",
+                                "padding": 16,
+                                "margin": 4,
+                                "elevation": 0,
+                                "borderRadius": 16,
+                                "children": [
+                                  {
+                                    "type": "icon",
+                                    "name": "check_circle",
+                                    "size": 20,
+                                    "color": "#22C55E"
+                                  },
+                                  {
+                                    "type": "spacer",
+                                    "height": 8
+                                  },
+                                  {
+                                    "type": "text",
+                                    "value": "已完成",
+                                    "style": {
+                                      "fontSize": 12,
+                                      "color": "#6B7280"
+                                    }
+                                  },
+                                  {
+                                    "type": "spacer",
+                                    "height": 4
+                                  },
+                                  {
+                                    "type": "text",
+                                    "value": "{{ global.completedCount }} 节",
+                                    "style": {
+                                      "fontSize": 18,
+                                      "fontWeight": "bold",
+                                      "color": "#111827"
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "expanded",
+                              "flex": 1,
+                              "child": {
+                                "type": "card",
+                                "layout": "column",
+                                "color": "#FFFFFF",
+                                "padding": 16,
+                                "margin": 4,
+                                "elevation": 0,
+                                "borderRadius": 16,
+                                "children": [
+                                  {
+                                    "type": "icon",
+                                    "name": "schedule",
+                                    "size": 20,
+                                    "color": "#3B82F6"
+                                  },
+                                  {
+                                    "type": "spacer",
+                                    "height": 8
+                                  },
+                                  {
+                                    "type": "text",
+                                    "value": "总时长",
+                                    "style": {
+                                      "fontSize": 12,
+                                      "color": "#6B7280"
+                                    }
+                                  },
+                                  {
+                                    "type": "spacer",
+                                    "height": 4
+                                  },
+                                  {
+                                    "type": "text",
+                                    "value": "{{ global.totalDuration }}",
+                                    "style": {
+                                      "fontSize": 18,
+                                      "fontWeight": "bold",
+                                      "color": "#111827"
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "expanded",
+                              "flex": 1,
+                              "child": {
+                                "type": "card",
+                                "layout": "column",
+                                "color": "#FFFFFF",
+                                "padding": 16,
+                                "margin": 4,
+                                "elevation": 0,
+                                "borderRadius": 16,
+                                "children": [
+                                  {
+                                    "type": "icon",
+                                    "name": "timeline",
+                                    "size": 20,
+                                    "color": "#7C3AED"
+                                  },
+                                  {
+                                    "type": "spacer",
+                                    "height": 8
+                                  },
+                                  {
+                                    "type": "text",
+                                    "value": "整体进度",
+                                    "style": {
+                                      "fontSize": 12,
+                                      "color": "#6B7280"
+                                    }
+                                  },
+                                  {
+                                    "type": "spacer",
+                                    "height": 4
+                                  },
+                                  {
+                                    "type": "text",
+                                    "value": "{{ global.overallProgress }}%",
+                                    "style": {
+                                      "fontSize": 18,
+                                      "fontWeight": "bold",
+                                      "color": "#111827"
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 16
+                        },
+                        {
+                          "type": "card",
+                          "layout": "column",
+                          "color": "#FFFFFF",
+                          "padding": 16,
+                          "margin": 4,
+                          "elevation": 0,
+                          "borderRadius": 16,
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "课程整体进度",
+                              "style": {
+                                "fontSize": 14,
+                                "fontWeight": "600",
+                                "color": "#111827"
+                              }
+                            },
+                            {
+                              "type": "spacer",
+                              "height": 10
+                            },
+                            {
+                              "type": "progress",
+                              "value": "{{ global.overallProgress }}",
+                              "color": "#EA580C",
+                              "backgroundColor": "#E5E7EB",
+                              "height": 10,
+                              "borderRadius": 5
+                            },
+                            {
+                              "type": "spacer",
+                              "height": 6
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ global.completedCount }} / {{ global.totalLessons }} 章节已完成",
+                              "style": {
+                                "fontSize": 12,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 12
+                        },
+                        {
+                          "type": "button",
+                          "label": "标记当前为已完成",
+                          "variant": "filled",
+                          "action": {
+                            "call": "@global.markComplete",
+                            "args": {}
+                          },
+                          "icon": "check_circle",
+                          "style": {
+                            "backgroundColor": "#22C55E",
+                            "textColor": "#FFFFFF",
+                            "borderRadius": 16,
+                            "fontSize": 14,
+                            "paddingV": 12
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

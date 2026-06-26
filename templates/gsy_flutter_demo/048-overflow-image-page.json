@@ -1,0 +1,105 @@
+{
+  "dsl": "3.3",
+  "appid": "a26e7220-ec4a-5697-b2f7-605eae853d84",
+  "meta": {
+    "name": "gsy_flutter_demo/048-overflow-image-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "使用 overflow 处理图片",
+      "en": "Image overflow demo"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：使用 overflow 处理图片",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "使用 overflow 处理图片",
+      "sourcePath": "lib/widget/basic/overflow_image_page.dart",
+      "deferredAlias": "overflow_image_page",
+      "widgetClass": "OverflowImagePage",
+      "category": "basic",
+      "routeIndex": 48
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "使用 overflow 处理图片",
+      "upstreamSource": "lib/widget/basic/overflow_image_page.dart",
+      "upstreamWidget": "OverflowImagePage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "OverflowImagePage",
+        "layout": "column",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "list",
+            "source": [
+              0,
+              1
+            ],
+            "separator": "none",
+            "item_template": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "container",
+                  "height": 100,
+                  "layout": "stack",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "loop.index"
+                      },
+                      0
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "overflow_box",
+                      "alignment": "center",
+                      "maxHeight": 844,
+                      "child": {
+                        "type": "image",
+                        "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                        "fit": "fill",
+                        "widthFactor": 1,
+                        "heightFactor": 0.8907,
+                        "paddingV": 0
+                      },
+                      "maxWidth": 390
+                    }
+                  ]
+                },
+                {
+                  "type": "container",
+                  "height": 760,
+                  "color": "#2196F3",
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "loop.index"
+                      },
+                      1
+                    ]
+                  },
+                  "children": []
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

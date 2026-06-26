@@ -1,0 +1,140 @@
+{
+  "dsl": "3.3",
+  "appid": "60ae90f6-82d5-5bf8-ac42-664bf2f70668",
+  "meta": {
+    "name": "gsy_flutter_demo/030-custom-multi-render-demo-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "自定义布局展示效果",
+      "en": "Custom layout demo"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：自定义布局展示效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "自定义布局展示效果",
+      "sourcePath": "lib/widget/basic/custom_multi_render_demo_page.dart",
+      "deferredAlias": "custom_multi_render_demo_page",
+      "widgetClass": "CustomMultiRenderDemoPage",
+      "category": "basic",
+      "routeIndex": 30
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "自定义布局展示效果",
+      "upstreamSource": "lib/widget/basic/custom_multi_render_demo_page.dart",
+      "upstreamWidget": "CustomMultiRenderDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v1",
+      "circleCount": 5
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "CustomMultiRenderDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "radial_layout",
+                "count": {
+                  "var": "global.circleCount"
+                },
+                "radius": 100,
+                "childSize": 66,
+                "backgroundColor": "#69F0AE",
+                "itemTemplate": {
+                  "type": "container",
+                  "shape": "circle",
+                  "color": "#3F51B5",
+                  "layout": "column",
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ loop.index }}",
+                      "style": {
+                        "fontSize": 22,
+                        "color": "#FFFFFF"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#FFFFFF",
+        "footerButtons": [
+          {
+            "type": "button",
+            "label": "加",
+            "variant": "text",
+            "style": {
+              "backgroundColor": "#FFE57F",
+              "textColor": "#FFFFFF"
+            },
+            "action": {
+              "call": "@set",
+              "args": {
+                "var": "global.circleCount",
+                "value": {
+                  "+": [
+                    {
+                      "var": "global.circleCount"
+                    },
+                    1
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "type": "button",
+            "label": "减",
+            "variant": "text",
+            "style": {
+              "backgroundColor": "#3F51B5",
+              "textColor": "#FFFFFF"
+            },
+            "action": {
+              "call": "@set",
+              "args": {
+                "var": "global.circleCount",
+                "value": {
+                  "max": [
+                    1,
+                    {
+                      "-": [
+                        {
+                          "var": "global.circleCount"
+                        },
+                        1
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

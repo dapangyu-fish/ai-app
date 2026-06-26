@@ -1,0 +1,208 @@
+{
+  "dsl": "3.3",
+  "appid": "779a2902-3af6-58ef-91d1-22c59c53f7a4",
+  "meta": {
+    "name": "gsy_flutter_demo/077-vp-list-view",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "ListView 嵌套 ViewPager 解决斜着滑动问题",
+      "en": "ListView nested ViewPager fix diagonal gesture conflict"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：ListView 嵌套 ViewPager 解决斜着滑动问题",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "ListView 嵌套 ViewPager 解决斜着滑动问题",
+      "sourcePath": "lib/widget/scroll/vp_list_demo_page.dart",
+      "deferredAlias": "vp_list_demo_page",
+      "widgetClass": "VPListView",
+      "category": "scroll",
+      "routeIndex": 77,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-gesture-settings-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "ListView 嵌套 ViewPager 解决斜着滑动问题",
+      "upstreamSource": "lib/widget/scroll/vp_list_demo_page.dart",
+      "upstreamWidget": "VPListView",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-gesture-settings-v1",
+      "items": [
+        {
+          "index": 0
+        },
+        {
+          "index": 1
+        },
+        {
+          "index": 2
+        },
+        {
+          "index": 3
+        },
+        {
+          "index": 4
+        },
+        {
+          "index": 5
+        },
+        {
+          "index": 6
+        },
+        {
+          "index": 7
+        },
+        {
+          "index": 8
+        },
+        {
+          "index": 9
+        },
+        {
+          "index": 10
+        },
+        {
+          "index": 11
+        },
+        {
+          "index": 12
+        },
+        {
+          "index": 13
+        },
+        {
+          "index": 14
+        }
+      ]
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "VPListView",
+        "layout": "column",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "expanded",
+            "child": {
+              "type": "gesture_settings_scope",
+              "touchSlop": 50,
+              "child": {
+                "type": "page_view",
+                "scrollDirection": "horizontal",
+                "pageSnapping": true,
+                "children": [
+                  {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "gesture_settings_scope",
+                        "touchSlop": 18,
+                        "child": {
+                          "type": "list",
+                          "source": "{{ global.items }}",
+                          "allowNestedScroll": true,
+                          "separator": "none",
+                          "item_template": {
+                            "type": "container",
+                            "children": [
+                              {
+                                "type": "container",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "Item {{ loop.item.index }}",
+                                    "style": {
+                                      "fontSize": 16,
+                                      "color": "#212121"
+                                    }
+                                  }
+                                ],
+                                "layout": "column",
+                                "height": 48,
+                                "padding": {
+                                  "left": 16
+                                },
+                                "alignment": "centerLeft"
+                              },
+                              {
+                                "type": "container",
+                                "children": [],
+                                "height": 3,
+                                "color": "#E0E0E0"
+                              }
+                            ],
+                            "layout": "column"
+                          }
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  },
+                  {
+                    "type": "container",
+                    "children": [
+                      {
+                        "type": "gesture_settings_scope",
+                        "touchSlop": 18,
+                        "child": {
+                          "type": "list",
+                          "source": "{{ global.items }}",
+                          "allowNestedScroll": true,
+                          "separator": "none",
+                          "item_template": {
+                            "type": "container",
+                            "children": [
+                              {
+                                "type": "container",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "Item {{ loop.item.index }}",
+                                    "style": {
+                                      "fontSize": 16,
+                                      "color": "#212121"
+                                    }
+                                  }
+                                ],
+                                "layout": "column",
+                                "height": 48,
+                                "padding": {
+                                  "left": 16
+                                },
+                                "alignment": "centerLeft"
+                              },
+                              {
+                                "type": "container",
+                                "children": [],
+                                "height": 3,
+                                "color": "#E0E0E0"
+                              }
+                            ],
+                            "layout": "column"
+                          }
+                        }
+                      }
+                    ],
+                    "layout": "column"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "appBar": {
+          "title": "VPListView"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,235 @@
+{
+  "dsl": "3.3",
+  "appid": "9a3d518a-fc26-5733-8203-92aa93014e4d",
+  "meta": {
+    "name": "gsy_flutter_demo/102-liquid-glass-shader-view",
+    "version": "0.1.1",
+    "type": "app",
+    "displayName": {
+      "zh": "liquid glass",
+      "en": "liquid glass"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：liquid glass",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "liquid glass",
+      "sourcePath": "lib/widget/canvas/liquid_glass_demo.dart",
+      "deferredAlias": "liquid_glass_demo",
+      "widgetClass": "LiquidGlassShaderView",
+      "category": "canvas",
+      "routeIndex": 102,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v5"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "liquid glass",
+      "upstreamSource": "lib/widget/canvas/liquid_glass_demo.dart",
+      "upstreamWidget": "LiquidGlassShaderView",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v5",
+      "down": false,
+      "lensLeft": 120,
+      "lensTop": 280
+    },
+    "functions": {
+      "track": {
+        "params": [
+          "x",
+          "y"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.down",
+              "value": true
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.lensLeft",
+              "value": {
+                "-": [
+                  {
+                    "var": "params.x"
+                  },
+                  72
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.lensTop",
+              "value": {
+                "-": [
+                  {
+                    "var": "params.y"
+                  },
+                  72
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "release": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.down",
+              "value": false
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "image",
+              "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/iOS26.png",
+              "fit": "cover",
+              "heightFactor": 2.2
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "gesture_detector",
+              "onTapDown": {
+                "call": "@global.track",
+                "args": {
+                  "x": "{{ event.localX }}",
+                  "y": "{{ event.localY }}"
+                }
+              },
+              "onTapUp": {
+                "call": "@global.release",
+                "args": {}
+              },
+              "onTapCancel": {
+                "call": "@global.release",
+                "args": {}
+              },
+              "onPanStart": {
+                "call": "@global.track",
+                "args": {
+                  "x": "{{ event.localX }}",
+                  "y": "{{ event.localY }}"
+                }
+              },
+              "onPanUpdate": {
+                "call": "@global.track",
+                "args": {
+                  "x": "{{ event.localX }}",
+                  "y": "{{ event.localY }}"
+                }
+              },
+              "onPanEnd": {
+                "call": "@global.release",
+                "args": {}
+              },
+              "onPanCancel": {
+                "call": "@global.release",
+                "args": {}
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "color": "#00000000"
+              }
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "backdrop_blur",
+              "sigmaX": 14,
+              "sigmaY": 14,
+              "borderRadius": 72,
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 84,
+                    "height": 84,
+                    "shape": "circle",
+                    "border": {
+                      "color": "#55FFFFFF",
+                      "width": 1
+                    },
+                    "gradient": {
+                      "colors": [
+                        "#42FFFFFF",
+                        "#08FFFFFF"
+                      ],
+                      "begin": "topLeft",
+                      "end": "bottomRight"
+                    }
+                  }
+                ],
+                "width": 144,
+                "height": 144,
+                "shape": "circle",
+                "border": {
+                  "color": "#AAFFFFFF",
+                  "width": 1.4
+                },
+                "gradient": {
+                  "colors": [
+                    "#35FFFFFF",
+                    "#10FFFFFF"
+                  ],
+                  "begin": "topLeft",
+                  "end": "bottomRight"
+                },
+                "alignment": "center",
+                "mainAxisAlignment": "center"
+              }
+            },
+            "left": "{{ global.lensLeft }}",
+            "top": "{{ global.lensTop }}",
+            "visible": {
+              "var": "global.down"
+            }
+          }
+        ],
+        "appBar": {
+          "title": ""
+        }
+      }
+    ]
+  }
+}

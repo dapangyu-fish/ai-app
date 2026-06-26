@@ -90,20 +90,14 @@ class GameLogicEngine {
       // do 数组要保持原样，由 dispatch 内部的迭代 case 在每次 push 完
       // loop 上下文后再 runStep。这里只解析非 do 的部分（where_prefix 等）。
       final rawArgs = (action['args'] as Map?)?.cast<String, dynamic>() ?? {};
-      final partial = <String, dynamic>{};
-      rawArgs.forEach((k, v) {
-        partial[k] = (k == 'do') ? v : resolveExpression(v);
-      });
+      final partial = _resolveMapExcept(rawArgs, const {'do'});
       final result = GameActions.dispatch(game, call, partial, this);
       _assignResult(action, result);
       return result;
     }
     if (call == '@tiled.spawn_objects' || call == '@tiled.spawn_objects_near') {
       final rawArgs = (action['args'] as Map?)?.cast<String, dynamic>() ?? {};
-      final partial = <String, dynamic>{};
-      rawArgs.forEach((k, v) {
-        partial[k] = (k == 'templates') ? v : resolveExpression(v);
-      });
+      final partial = _resolveMapExcept(rawArgs, const {'templates'});
       final result = GameActions.dispatch(game, call, partial, this);
       _assignResult(action, result);
       return result;
@@ -230,7 +224,9 @@ class GameLogicEngine {
   /// - "abc {{ x }} def" → 返回 String
   /// - 其他无 {{ → 直通
   dynamic _resolveString(String s) {
-    final fullMatch = RegExp(r'^\s*\{\{\s*(.+?)\s*\}\}\s*$').firstMatch(s);
+    // `[^{}]` 而非 `.+?`：避免「{{ 开头 }} 结尾」的混合模板被整体误匹配成单变量
+    // → null。混合模板走下面的逐个插值。（同 interpreter.resolveExpression）
+    final fullMatch = RegExp(r'^\s*\{\{\s*([^{}]+?)\s*\}\}\s*$').firstMatch(s);
     if (fullMatch != null) {
       return getVariable(fullMatch.group(1)!);
     }
@@ -261,6 +257,17 @@ class GameLogicEngine {
     final out = <String, dynamic>{};
     m.forEach((k, v) {
       out[k] = resolveExpression(v);
+    });
+    return out;
+  }
+
+  Map<String, dynamic> _resolveMapExcept(
+    Map<String, dynamic> m,
+    Set<String> rawKeys,
+  ) {
+    final out = <String, dynamic>{};
+    m.forEach((k, v) {
+      out[k] = rawKeys.contains(k) ? v : resolveExpression(v);
     });
     return out;
   }

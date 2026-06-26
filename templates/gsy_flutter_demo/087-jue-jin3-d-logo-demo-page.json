@@ -1,0 +1,644 @@
+{
+  "dsl": "3.3",
+  "appid": "db7ecf49-6c8c-536e-84bb-5f1ca7a8e1e7",
+  "meta": {
+    "name": "gsy_flutter_demo/087-jue-jin3-d-logo-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "掘金 3d logo",
+      "en": "Juejin 3d logo"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：掘金 3d logo",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "掘金 3d logo",
+      "sourcePath": "lib/widget/visual/juejin_3d_logo_demo_page.dart",
+      "deferredAlias": "juejin_3d_logo_demo_page",
+      "widgetClass": "JueJin3DLogoDemoPage",
+      "category": "visual",
+      "routeIndex": 87,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-juejin-path-logo-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "掘金 3d logo",
+      "upstreamSource": "lib/widget/visual/juejin_3d_logo_demo_page.dart",
+      "upstreamWidget": "JueJin3DLogoDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-juejin-path-logo-v1",
+      "rx": 0,
+      "ry": 0
+    },
+    "functions": {
+      "pan": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.ry",
+              "value": {
+                "/": [
+                  {
+                    "-": [
+                      110,
+                      {
+                        "var": "event.localX"
+                      }
+                    ]
+                  },
+                  4
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.rx",
+              "value": {
+                "/": [
+                  {
+                    "-": [
+                      {
+                        "var": "event.localY"
+                      },
+                      110
+                    ]
+                  },
+                  4
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "reset": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.rx",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.ry",
+              "value": 0
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "JueJin3DLogoDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "gesture_detector",
+                "onPanUpdate": {
+                  "call": "@global.pan",
+                  "args": {}
+                },
+                "onPanEnd": {
+                  "call": "@global.reset",
+                  "args": {}
+                },
+                "child": {
+                  "type": "transform",
+                  "perspective": 0.001,
+                  "rotateX": "{{ global.rx }}",
+                  "rotateY": "{{ global.ry }}",
+                  "child": {
+                    "type": "animated_canvas",
+                    "width": 270,
+                    "height": 270,
+                    "backgroundColor": "#00000000",
+                    "durationMs": 6000,
+                    "speed": 1,
+                    "layers": [
+                      {
+                        "kind": "path",
+                        "style": "fill",
+                        "commands": [
+                          {
+                            "op": "moveTo",
+                            "x": 140.0049,
+                            "y": 89.90986000000001
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 169.6555,
+                            "y": 66.33645000000001
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 140.00511,
+                            "y": 42.55347659
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 139.97899999999998,
+                            "y": 42.50110000000001
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 110.3809,
+                            "y": 66.28409
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 139.97899999999998,
+                            "y": 89.88368
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 140.0049,
+                            "y": 89.90986000000001
+                          },
+                          {
+                            "op": "close"
+                          }
+                        ],
+                        "color": "#0A2B66",
+                        "alpha": 0.25
+                      },
+                      {
+                        "kind": "path",
+                        "style": "fill",
+                        "commands": [
+                          {
+                            "op": "moveTo",
+                            "x": 140.0,
+                            "y": 164.2696
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 216.5086,
+                            "y": 103.92134
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 195.76409999999998,
+                            "y": 87.26281
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 140.02589999999998,
+                            "y": 131.26670000000001
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 140.0,
+                            "y": 131.26670000000001
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 84.23576,
+                            "y": 87.31517
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 63.51729999999999,
+                            "y": 103.97377
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 139.9741,
+                            "y": 164.29606
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 140.0,
+                            "y": 164.2696
+                          },
+                          {
+                            "op": "close"
+                          }
+                        ],
+                        "color": "#0A2B66",
+                        "alpha": 0.25
+                      },
+                      {
+                        "kind": "path",
+                        "style": "fill",
+                        "commands": [
+                          {
+                            "op": "moveTo",
+                            "x": 140.0,
+                            "y": 205.4989
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 139.9741,
+                            "y": 205.52480000000003
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 37.61288999999999,
+                            "y": 124.7728
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 16.894499999999994,
+                            "y": 141.4048
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 18.885132,
+                            "y": 143.0029
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 140.0,
+                            "y": 238.5011
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 216.5611,
+                            "y": 178.1275
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 263.1321,
+                            "y": 141.37904
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 242.38759999999996,
+                            "y": 124.7203
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 140.0,
+                            "y": 205.4989
+                          },
+                          {
+                            "op": "close"
+                          }
+                        ],
+                        "color": "#0A2B66",
+                        "alpha": 0.25
+                      },
+                      {
+                        "kind": "path",
+                        "style": "fill",
+                        "commands": [
+                          {
+                            "op": "moveTo",
+                            "x": 135.0049,
+                            "y": 83.90986000000001
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 164.6555,
+                            "y": 60.33645000000001
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 135.00511,
+                            "y": 36.55347659
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 134.97899999999998,
+                            "y": 36.50110000000001
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 105.3809,
+                            "y": 60.284090000000006
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 134.97899999999998,
+                            "y": 83.88368
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 135.0049,
+                            "y": 83.90986000000001
+                          },
+                          {
+                            "op": "close"
+                          }
+                        ],
+                        "color": "#1E38FF",
+                        "alpha": 0.35
+                      },
+                      {
+                        "kind": "path",
+                        "style": "fill",
+                        "commands": [
+                          {
+                            "op": "moveTo",
+                            "x": 135.0,
+                            "y": 158.2696
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 211.5086,
+                            "y": 97.92134
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 190.76409999999998,
+                            "y": 81.26281
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 135.02589999999998,
+                            "y": 125.2667
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 135.0,
+                            "y": 125.2667
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 79.23576,
+                            "y": 81.31517
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 58.51729999999999,
+                            "y": 97.97377
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 134.9741,
+                            "y": 158.29606
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 135.0,
+                            "y": 158.2696
+                          },
+                          {
+                            "op": "close"
+                          }
+                        ],
+                        "color": "#1E38FF",
+                        "alpha": 0.35
+                      },
+                      {
+                        "kind": "path",
+                        "style": "fill",
+                        "commands": [
+                          {
+                            "op": "moveTo",
+                            "x": 135.0,
+                            "y": 199.4989
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 134.9741,
+                            "y": 199.52480000000003
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 32.61288999999999,
+                            "y": 118.7728
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 11.894499999999994,
+                            "y": 135.4048
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 13.885131999999999,
+                            "y": 137.0029
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 135.0,
+                            "y": 232.5011
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 211.5611,
+                            "y": 172.1275
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 258.1321,
+                            "y": 135.37904
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 237.38759999999996,
+                            "y": 118.7203
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 135.0,
+                            "y": 199.4989
+                          },
+                          {
+                            "op": "close"
+                          }
+                        ],
+                        "color": "#1E38FF",
+                        "alpha": 0.35
+                      },
+                      {
+                        "kind": "path",
+                        "style": "fill",
+                        "commands": [
+                          {
+                            "op": "moveTo",
+                            "x": 130.0049,
+                            "y": 77.90986000000001
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 159.6555,
+                            "y": 54.33645000000001
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 130.00511,
+                            "y": 30.553476590000002
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 129.97899999999998,
+                            "y": 30.501100000000008
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 100.3809,
+                            "y": 54.284090000000006
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 129.97899999999998,
+                            "y": 77.88368
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 130.0049,
+                            "y": 77.90986000000001
+                          },
+                          {
+                            "op": "close"
+                          }
+                        ],
+                        "color": "#1E80FF",
+                        "alpha": 1.0
+                      },
+                      {
+                        "kind": "path",
+                        "style": "fill",
+                        "commands": [
+                          {
+                            "op": "moveTo",
+                            "x": 130.0,
+                            "y": 152.2696
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 206.5086,
+                            "y": 91.92134
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 185.76409999999998,
+                            "y": 75.26281
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 130.02589999999998,
+                            "y": 119.2667
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 130.0,
+                            "y": 119.2667
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 74.23576,
+                            "y": 75.31517
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 53.51729999999999,
+                            "y": 91.97377
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 129.9741,
+                            "y": 152.29606
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 130.0,
+                            "y": 152.2696
+                          },
+                          {
+                            "op": "close"
+                          }
+                        ],
+                        "color": "#1E80FF",
+                        "alpha": 1.0
+                      },
+                      {
+                        "kind": "path",
+                        "style": "fill",
+                        "commands": [
+                          {
+                            "op": "moveTo",
+                            "x": 130.0,
+                            "y": 193.4989
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 129.9741,
+                            "y": 193.52480000000003
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 27.612889999999993,
+                            "y": 112.7728
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 6.894499999999994,
+                            "y": 129.4048
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 8.885131999999999,
+                            "y": 131.0029
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 130.0,
+                            "y": 226.5011
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 206.5611,
+                            "y": 166.1275
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 253.13209999999998,
+                            "y": 129.37904
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 232.38759999999996,
+                            "y": 112.7203
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": 130.0,
+                            "y": 193.4989
+                          },
+                          {
+                            "op": "close"
+                          }
+                        ],
+                        "color": "#1E80FF",
+                        "alpha": 1.0
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "appBar": {
+          "title": "JueJin3DLogoDemoPage"
+        }
+      }
+    ]
+  }
+}

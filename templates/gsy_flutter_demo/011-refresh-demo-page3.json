@@ -1,0 +1,180 @@
+{
+  "dsl": "3.3",
+  "appid": "aee2dde7-2634-56ee-8490-3f3de813ac28",
+  "meta": {
+    "name": "gsy_flutter_demo/011-refresh-demo-page3",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "简单上下刷新3",
+      "en": "Simple pull refresh3"
+    },
+    "description": "RefreshDemoPage：简单上下刷新3",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "简单上下刷新3",
+      "sourcePath": "lib/widget/scroll/custom_pull/refresh_demo_page3.dart",
+      "deferredAlias": "refresh_demo_page3",
+      "widgetClass": "RefreshDemoPage3",
+      "category": "basic",
+      "routeIndex": 11
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "dataList": [],
+      "isLoadingMore": false
+    },
+    "functions": {
+      "refresh": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@delay",
+            "args": {
+              "ms": 2000
+            }
+          },
+          {
+            "call": "@list_clear",
+            "args": {
+              "var": "global.dataList"
+            }
+          },
+          {
+            "call": "@loop_by_num",
+            "args": {
+              "count": 30,
+              "body": [
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.dataList",
+                    "item": "refresh"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "loadMore": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "!": [
+                  {
+                    "var": "global.isLoadingMore"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.isLoadingMore",
+                    "value": true
+                  }
+                },
+                {
+                  "call": "@delay",
+                  "args": {
+                    "ms": 2000
+                  }
+                },
+                {
+                  "call": "@loop_by_num",
+                  "args": {
+                    "count": 30,
+                    "body": [
+                      {
+                        "call": "@list_add",
+                        "args": {
+                          "var": "global.dataList",
+                          "item": "loadmore"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.isLoadingMore",
+                    "value": false
+                  }
+                }
+              ],
+              "else": []
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "RefreshDemoPage",
+        "layout": "column",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "cupertino_refresh_list",
+            "source": "{{ global.dataList }}",
+            "pageSize": 30,
+            "initialRefresh": true,
+            "initialOverscroll": -141,
+            "initialDelayMs": 500,
+            "initialDurationMs": 600,
+            "customIndicator": true,
+            "onRefresh": {
+              "call": "@global.refresh",
+              "args": {}
+            },
+            "onLoadMore": {
+              "call": "@global.loadMore",
+              "args": {}
+            },
+            "item_template": {
+              "type": "card",
+              "layout": "column",
+              "padding": 0,
+              "margin": 4,
+              "borderRadius": 4,
+              "elevation": 1,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "height": 60,
+                  "padding": 0,
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "start",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "Item {{ loop.item }} {{ loop.index }}",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#000000",
+                        "paddingV": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

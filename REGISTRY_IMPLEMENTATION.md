@@ -1,9 +1,12 @@
 # Registry 服务实施总结
 
+> 历史实施记录。当前生产部署、API 真源和运行链路以
+> [`README.md`](README.md)、[`backend/REGISTRY_README.md`](backend/REGISTRY_README.md)
+> 和 [`deploy/production/README.md`](deploy/production/README.md) 为准。
+
 ## 分支信息
-- **分支名称**: `feature/registry-service`
-- **基于**: `main` 分支
-- **状态**: 开发完成，待测试和合并
+- **历史分支名称**: `feature/registry-service`
+- **当前状态**: Registry 已进入当前主架构；生产由 `myapp-ctl` 管理，运行时解析以 MinIO `_index.json` + JSON 包文件为准，市场详情/富化/统计使用 Postgres `registry_packages`。
 
 ## 新增文件
 
@@ -86,16 +89,13 @@
       "path": "common-ui"
     }
   },
-  "namespaces": {
-    "mycompany": {
-      "owner_id": "uuid-xxx",
-      "owner_email": "user@example.com",
-      "created_at": "2026-04-21T09:00:00Z",
-      "sub_namespaces": ["frontend"]
-    }
-  }
+  "namespaces": {}
 }
 ```
+
+当前命名空间权限不以 `_index.json.namespaces` 为准，而是落在 Postgres
+`namespaces` / `namespace_members` 表。`registry_packages` 是附加富化索引，
+不替代 `_index.json` 作为运行时包解析真源。
 
 ## 部署步骤
 
@@ -107,11 +107,13 @@ cd /path/to/ai-app
 python3 backend/registry_init.py
 ```
 
-### 2. 启动服务
+### 2. 启动服务（历史/本地调试）
 
 ```bash
-nohup python3 backend/registry_server.py > logs/registry.log 2>&1 &
+python3 backend/registry_server.py
 ```
+
+生产环境使用 `myapp-ctl deploy --build|--pull` 启动 `myapp-registry` 容器。
 
 ### 3. 配置 Nginx
 
@@ -139,10 +141,10 @@ curl "https://myapp-registry.dapangyu.work/resolve?name=common-ui&version=^1.0.0
 
 ## 向后兼容性
 
-✅ **完全向后兼容**
+✅ **格式兼容**
 
-- 旧的完整 URL 格式仍然支持
-- 客户端优先使用 URL，如果没有则通过 Registry 解析
+- 旧对象格式 `{ "url": "...", "version": "..." }` 仍能被解析
+- 当前客户端实际使用包名和 `version` 约束通过 CacheManager/Registry 解析；`url` 只作为历史兼容元数据保留
 - 现有 JSON 文件无需修改即可运行
 
 ## 迁移建议
@@ -176,7 +178,7 @@ curl "https://myapp-registry.dapangyu.work/resolve?name=common-ui&version=^1.0.0
 1. **索引文件**: 所有操作都会更新 `_index.json`，确保 MinIO 可写
 2. **并发安全**: 当前实现不支持高并发写入，生产环境建议加锁
 3. **命名空间**: 首次发布用户包前必须创建命名空间
-4. **版本不可变**: 已发布的版本不能修改（除非 `force_update=true`）
+4. **版本不可变**: 已发布的同名同版本不能覆盖；发布新内容必须递增版本号
 
 ## 下一步
 

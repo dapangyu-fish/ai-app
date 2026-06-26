@@ -9,7 +9,14 @@
       "zh": "启动器组件 · 设置",
       "en": "Launcher Component · Settings",
       "de": "Launcher-Komponente · Einstellungen",
-      "es": "Componente launcher · Ajustes"
+      "es": "Componente launcher · Ajustes",
+      "fr": "Composant lanceur · Réglages",
+      "pt": "Componente de lançador · Definições",
+      "ca": "Component de llançador · Configuració",
+      "hi": "लॉन्चर कॉम्पोनेंट · सेटिंग्स",
+      "ko": "런처 컴포넌트 · 설정",
+      "ja": "ランチャーコンポーネント・設定",
+      "it": "Componente launcher · Impostazioni"
     },
     "description": "可嵌入的'设置'组件库——主题/语言/默认启动 App/缓存/账号管理。所有 UI 字符串走消费方的 global.i18n（t('settings.xxx')），加语言只改消费方 JSON。",
     "author": "fish",
@@ -366,7 +373,14 @@
                     { "label": "中文",     "value": "zh" },
                     { "label": "English",  "value": "en" },
                     { "label": "Deutsch",  "value": "de" },
-                    { "label": "Español",  "value": "es" }
+                    { "label": "Español",  "value": "es" },
+                    { "label": "Français", "value": "fr" },
+                    { "label": "Português", "value": "pt" },
+                    { "label": "Català", "value": "ca" },
+                    { "label": "हिन्दी", "value": "hi" },
+                    { "label": "한국어", "value": "ko" },
+                    { "label": "日本語", "value": "ja" },
+                    { "label": "Italiano", "value": "it" }
                   ],
                   "action": {
                     "call": "@launcher-settings._setLocale",

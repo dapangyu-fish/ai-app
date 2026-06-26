@@ -1,0 +1,367 @@
+{
+  "dsl": "3.3",
+  "appid": "d3134589-617a-5135-a3b4-6041fedfded2",
+  "meta": {
+    "name": "gsy_flutter_demo/119-disco-sphere-final-fusion-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "Cool Disco Sphere",
+      "en": "Cool Disco Sphere"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：Cool Disco Sphere",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "Cool Disco Sphere",
+      "sourcePath": "lib/widget/visual/disco_sphere_page.dart",
+      "deferredAlias": "disco_sphere_page",
+      "widgetClass": "DiscoSphereFinalFusionPage",
+      "category": "visual",
+      "routeIndex": 119,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-disco-mode-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "Cool Disco Sphere",
+      "upstreamSource": "lib/widget/visual/disco_sphere_page.dart",
+      "upstreamWidget": "DiscoSphereFinalFusionPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-disco-mode-v1",
+      "paperMode": true
+    },
+    "functions": {
+      "toggleMode": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.paperMode",
+              "value": {
+                "!": [
+                  {
+                    "var": "global.paperMode"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "computed": {
+      "paperModeLabel": {
+        "if": [
+          {
+            "var": "global.paperMode"
+          },
+          "模式: 纸张铺开",
+          "模式: 随机破碎"
+        ]
+      },
+      "paperModeIcon": {
+        "if": [
+          {
+            "var": "global.paperMode"
+          },
+          "layers",
+          "grain"
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#020205",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "animated_canvas",
+              "backgroundColor": "#020205",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "particles",
+                  "count": 1200,
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          "rx",
+                          "sphereR"
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "*": [
+                          "h",
+                          0.43
+                        ]
+                      },
+                      {
+                        "*": [
+                          "yy",
+                          "sphereR"
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": {
+                    "*": [
+                      1.6,
+                      2
+                    ]
+                  },
+                  "color": "#F5F5F5",
+                  "alpha": {
+                    "*": [
+                      "a",
+                      0.95
+                    ]
+                  },
+                  "blendMode": "plus",
+                  "shape": "square",
+                  "locals": {
+                    "sphereR": {
+                      "*": [
+                        "min",
+                        0.34
+                      ]
+                    },
+                    "yy": {
+                      "-": [
+                        1,
+                        {
+                          "*": [
+                            "f",
+                            2
+                          ]
+                        }
+                      ]
+                    },
+                    "rr": {
+                      "sqrt": {
+                        "clamp": [
+                          {
+                            "-": [
+                              1,
+                              {
+                                "*": [
+                                  "yy",
+                                  "yy"
+                                ]
+                              }
+                            ]
+                          },
+                          0,
+                          1
+                        ]
+                      }
+                    },
+                    "theta": {
+                      "*": [
+                        "i",
+                        2.399963229728653
+                      ]
+                    },
+                    "xx": {
+                      "*": [
+                        {
+                          "cos": "theta"
+                        },
+                        "rr"
+                      ]
+                    },
+                    "zz": {
+                      "*": [
+                        {
+                          "sin": "theta"
+                        },
+                        "rr"
+                      ]
+                    },
+                    "rx": {
+                      "-": [
+                        {
+                          "*": [
+                            "xx",
+                            {
+                              "cos": {
+                                "*": [
+                                  "t",
+                                  0.35
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "zz",
+                            {
+                              "sin": {
+                                "*": [
+                                  "t",
+                                  0.35
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "rz": {
+                      "+": [
+                        {
+                          "*": [
+                            "xx",
+                            {
+                              "sin": {
+                                "*": [
+                                  "t",
+                                  0.35
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            "zz",
+                            {
+                              "cos": {
+                                "*": [
+                                  "t",
+                                  0.35
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "a": {
+                      "+": [
+                        0.35,
+                        {
+                          "*": [
+                            {
+                              "clamp": [
+                                "rz",
+                                0,
+                                1
+                              ]
+                            },
+                            0.55
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "skipWhen": {
+                    "<": [
+                      "rz",
+                      -0.7
+                    ]
+                  },
+                  "color2": "#673AB7",
+                  "mix": {
+                    "clamp": [
+                      {
+                        "+": [
+                          0.45,
+                          {
+                            "*": [
+                              0.45,
+                              {
+                                "sin": {
+                                  "*": [
+                                    "i",
+                                    12.9898
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      0,
+                      1
+                    ]
+                  }
+                }
+              ]
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "right": 16,
+            "bottom": 24,
+            "child": {
+              "type": "container",
+              "layout": "row",
+              "mainAxisAlignment": "center",
+              "alignment": "center",
+              "padding": {
+                "horizontal": 18,
+                "vertical": 14
+              },
+              "color": "#26FFFFFF",
+              "borderRadius": 28,
+              "onTap": {
+                "call": "@global.toggleMode",
+                "args": {}
+              },
+              "children": [
+                {
+                  "type": "icon",
+                  "name": "{{ global.paperModeIcon }}",
+                  "size": 20,
+                  "color": "#FFFFFF"
+                },
+                {
+                  "type": "spacer",
+                  "width": 8
+                },
+                {
+                  "type": "text",
+                  "value": "{{ global.paperModeLabel }}",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#FFFFFF"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "appBar": {
+          "title": ""
+        }
+      }
+    ]
+  }
+}

@@ -41,7 +41,7 @@
             "assign": "global.randomNumber"
           },
           {
-            "call": "@common-ui.showToast",
+            "call": "@common-ui.showInfo",
             "args": {
               "message": "随机数: {{ global.randomNumber }}"
             }

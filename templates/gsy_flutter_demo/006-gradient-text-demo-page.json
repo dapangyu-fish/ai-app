@@ -1,0 +1,80 @@
+{
+  "dsl": "3.3",
+  "appid": "453b5164-f743-517c-a38c-9d3da7c0aa14",
+  "meta": {
+    "name": "gsy_flutter_demo/006-gradient-text-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "展示渐变带边框的文本",
+      "en": "Gradient text with border"
+    },
+    "description": "GradientTextDemoPage：展示渐变带边框的文本",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "展示渐变带边框的文本",
+      "sourcePath": "lib/widget/basic/gradient_text_demo_page.dart",
+      "deferredAlias": "gradient_text_demo_page",
+      "widgetClass": "GradientTextDemoPage",
+      "category": "basic",
+      "routeIndex": 6
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {},
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "GradientTextDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "center",
+            "child": {
+              "type": "stack",
+              "alignment": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "8",
+                  "style": {
+                    "fontSize": 100,
+                    "paddingV": 0,
+                    "gradient": [
+                      "#FFEB3B",
+                      "#000000"
+                    ],
+                    "gradientWidth": 200,
+                    "gradientHeight": 100
+                  }
+                },
+                {
+                  "type": "text",
+                  "value": "8",
+                  "style": {
+                    "fontSize": 100,
+                    "paddingV": 0,
+                    "gradient": [
+                      "#EEFF41",
+                      "#84FFFF"
+                    ],
+                    "gradientWidth": 200,
+                    "gradientHeight": 100,
+                    "strokeWidth": 2
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

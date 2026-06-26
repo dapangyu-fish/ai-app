@@ -1,0 +1,27 @@
+ARG BASE_IMAGE=dapangyu/myapp-backend-base:agent-control-plane
+FROM ${BASE_IMAGE}
+
+ARG MYAPP_BUILD_COMMIT=unknown
+ARG MYAPP_BUILD_VERSION=unknown
+
+ENV MYAPP_BUILD_COMMIT=${MYAPP_BUILD_COMMIT} \
+    MYAPP_BUILD_VERSION=${MYAPP_BUILD_VERSION}
+
+# The isolated FaaS git push worker pushes generated code over SSH; the base
+# image ships git but not an ssh client.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY backend/ /app/backend/
+COPY lib/json_ui/widgets/icon_registry.dart /app/lib/json_ui/widgets/icon_registry.dart
+# validate_json_app 用它建 widget 类型白名单（拦 AI 自造的 row/column/flex/text_input）
+COPY lib/json_ui/widget_builder.dart /app/lib/json_ui/widget_builder.dart
+COPY config_center/ /app/config_center/
+COPY user_center/ /app/user_center/
+
+EXPOSE 5566 3254 5000 5567
+
+CMD ["python", "/app/backend/app.py"]

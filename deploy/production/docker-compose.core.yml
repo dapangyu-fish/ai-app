@@ -1,0 +1,395 @@
+name: myapp
+
+services:
+  jsonapp-postgres:
+    image: postgres:15.8
+    container_name: myapp-jsonapp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: "${JSONAPP_DB_USER:-jsonapp}"
+      POSTGRES_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
+      POSTGRES_DB: "${JSONAPP_DB_NAME:-jsonapp}"
+    volumes:
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/jsonapp-postgres/data:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      # Reachable from FaaS service containers for the per-user database: bound
+      # to the docker bridge gateway IP only (NOT 0.0.0.0 — never public). Access
+      # is gated by per-user least-privilege roles. Override the bind IP per host
+      # via JSONAPP_PG_BIND_ADDR.
+      - "${JSONAPP_PG_BIND_ADDR:-172.18.0.1}:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ai-session-redis:
+    image: redis:7.4-alpine
+    container_name: myapp-ai-session-redis
+    restart: unless-stopped
+    command: redis-server --requirepass "${BACKEND_REDIS_PASSWORD:-redis-dev-password}" --appendonly yes
+    volumes:
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/ai-session-redis/data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${BACKEND_REDIS_PASSWORD:-redis-dev-password}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app-minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: myapp-app-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: "${APP_MINIO_ACCESS_KEY:-myappminio}"
+      MINIO_ROOT_PASSWORD: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
+      MINIO_SERVER_URL: "${APP_MINIO_PUBLIC_URL:-http://127.0.0.1:9000}"
+      MINIO_BROWSER_REDIRECT_URL: "${APP_MINIO_CONSOLE_PUBLIC_URL:-http://127.0.0.1:9090}"
+    command: server /data --console-address ":9090"
+    volumes:
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/app-minio/data:/data
+    ports:
+      - "${APP_MINIO_PORT:-9000}:9000"
+      - "${APP_MINIO_CONSOLE_PORT:-9090}:9090"
+
+  backend:
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyu/myapp-backend:agent-control-plane}"
+    container_name: myapp-backend
+    restart: unless-stopped
+    depends_on:
+      jsonapp-postgres:
+        condition: service_healthy
+      ai-session-redis:
+        condition: service_healthy
+      app-minio:
+        condition: service_started
+      agent-node:
+        condition: service_started
+    working_dir: /app/backend
+    command: ["gunicorn", "-k", "eventlet", "-w", "${BACKEND_GUNICORN_WORKERS:-10}", "-b", "0.0.0.0:5566", "app:app"]
+    env_file:
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
+        required: false
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/ai-providers.env
+        required: false
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/agent.env
+        required: false
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/push.env
+        required: false
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/faas.env
+        required: false
+    environment:
+      DB_HOST: jsonapp-postgres
+      DB_PORT: "5432"
+      DB_NAME: "${JSONAPP_DB_NAME:-jsonapp}"
+      DB_USER: "${JSONAPP_DB_USER:-jsonapp}"
+      DB_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
+      AI_SESSION_REDIS_HOST: ai-session-redis
+      AI_SESSION_REDIS_PORT: "6379"
+      AI_SESSION_REDIS_PASSWORD: "${BACKEND_REDIS_PASSWORD:-redis-dev-password}"
+      AI_SESSION_REDIS_TTL_SECONDS: "${AI_SESSION_REDIS_TTL_SECONDS:-86400}"
+      AI_WORKER_EXECUTION_BACKEND: "${AI_WORKER_EXECUTION_BACKEND:-agent-pull}"
+      CONFIG_CENTER_URL: "${CONFIG_CENTER_INTERNAL_URL:-http://config-center:5000}"
+      AGENT_NODE_URL: "http://agent-node:5590"
+      AGENT_NODE_URLS: "${AGENT_NODE_URLS:-http://agent-node:5590}"
+      AGENT_NODE_TOKEN: "${AGENT_NODE_TOKEN:-}"
+      AGENT_NODE_REGISTRATION_TOKEN: "${AGENT_NODE_REGISTRATION_TOKEN:-}"
+      AI_WORKER_MAX_CONCURRENCY: "${AI_WORKER_MAX_CONCURRENCY:-20}"
+      AI_WORKER_QUEUE_MAX: "${AI_WORKER_QUEUE_MAX:-100}"
+      AI_SERVER_REPAIR_MAX_ATTEMPTS: "${AI_SERVER_REPAIR_MAX_ATTEMPTS:-3}"
+      AI_APP_VISUAL_REVIEW_ENABLED: "${AI_APP_VISUAL_REVIEW_ENABLED:-1}"
+      AI_APP_VISUAL_REVIEW_CMD: "${AI_APP_VISUAL_REVIEW_CMD:-myapp-visual-review}"
+      AI_APP_VISUAL_REVIEW_WEB_BASE: "${AI_APP_VISUAL_REVIEW_WEB_BASE:-https://myapp-web.dapangyu.work}"
+      AI_APP_VISUAL_REVIEW_REMOTE_PARAM: "${AI_APP_VISUAL_REVIEW_REMOTE_PARAM:-remote_file}"
+      AI_APP_VISUAL_REVIEW_PRIMARY_VIEWPORT: "${AI_APP_VISUAL_REVIEW_PRIMARY_VIEWPORT:-402x874}"
+      AI_APP_VISUAL_REVIEW_SMALL_VIEWPORT: "${AI_APP_VISUAL_REVIEW_SMALL_VIEWPORT:-360x780}"
+      AI_APP_VISUAL_REVIEW_MAX_CLICKS: "${AI_APP_VISUAL_REVIEW_MAX_CLICKS:-4}"
+      DEEPSEEK_AI_WORKER_MAX_CONCURRENCY: "${DEEPSEEK_AI_WORKER_MAX_CONCURRENCY:-20}"
+      DEEPSEEK_AI_WORKER_QUEUE_MAX: "${DEEPSEEK_AI_WORKER_QUEUE_MAX:-100}"
+      MINIMAX_AI_WORKER_MAX_CONCURRENCY: "${MINIMAX_AI_WORKER_MAX_CONCURRENCY:-5}"
+      MINIMAX_AI_WORKER_QUEUE_MAX: "${MINIMAX_AI_WORKER_QUEUE_MAX:-20}"
+      SUPABASE_URL: "${SUPABASE_URL:-}"
+      SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY:-}"
+      SUPABASE_SERVICE_KEY: "${SUPABASE_SERVICE_KEY:-}"
+      MINIO_PUBLIC_URL: "${APP_MINIO_PUBLIC_URL:-http://127.0.0.1:9000}"
+      MINIO_ENDPOINT: "app-minio:9000"
+      MINIO_SECURE: "false"
+      MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY:-myappminio}"
+      MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
+      REGISTRY_BASE_URL: "${REGISTRY_PUBLIC_URL:-http://127.0.0.1:3254}"
+      OPENIM_API_URL: "${OPENIM_API_URL:-}"
+      OPENIM_WS_URL: "${OPENIM_WS_URL:-}"
+      OPENIM_SECRET: "${OPENIM_SECRET:-}"
+      OPENIM_WEBHOOK_SECRET: "${OPENIM_WEBHOOK_SECRET:-}"
+      FLASK_SECRET_KEY: "${FLASK_SECRET_KEY:-}"
+      FAAS_CODE_ROOT: "${FAAS_CODE_ROOT:-/mnt/myapp/faas/code}"
+      FAAS_RUNTIME_TOKEN: "${FAAS_RUNTIME_TOKEN:-}"
+      FAAS_RUNTIME_BUNDLE_BASE_URL: "${FAAS_RUNTIME_BUNDLE_BASE_URL:-}"
+      FAAS_LOCAL_DOCKER_IMAGE: "${FAAS_LOCAL_DOCKER_IMAGE:-dapangyu/myapp-faas-runtime:agent-control-plane}"
+      FAAS_LOCAL_DOCKER_NETWORK: "${FAAS_LOCAL_DOCKER_NETWORK:-myapp_default}"
+      FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT: "${FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT:-/mnt/myapp/faas/code}"
+      FAAS_LOCAL_DOCKER_HOST_CODE_ROOT: "${FAAS_LOCAL_DOCKER_HOST_CODE_ROOT:-${MYAPP_DATA_ROOT:-/mnt/myapp}/faas/code}"
+      PORT: "5566"
+    volumes:
+      - ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/files:/etc/myapp/secret-files:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/faas:/mnt/myapp/faas
+    ports:
+      - "${BACKEND_PORT:-5566}:5566"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:5566/api/ai/providers"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  ai-worker:
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyu/myapp-backend:agent-control-plane}"
+    container_name: myapp-ai-worker
+    restart: unless-stopped
+    depends_on:
+      jsonapp-postgres:
+        condition: service_healthy
+      ai-session-redis:
+        condition: service_healthy
+      agent-node:
+        condition: service_started
+    working_dir: /app/backend
+    command: ["python", "ai_worker_daemon.py"]
+    env_file:
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
+        required: false
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/ai-providers.env
+        required: false
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/agent.env
+        required: false
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/faas.env
+        required: false
+    environment:
+      DB_HOST: jsonapp-postgres
+      DB_PORT: "5432"
+      DB_NAME: "${JSONAPP_DB_NAME:-jsonapp}"
+      DB_USER: "${JSONAPP_DB_USER:-jsonapp}"
+      DB_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
+      AI_SESSION_REDIS_HOST: ai-session-redis
+      AI_SESSION_REDIS_PORT: "6379"
+      AI_SESSION_REDIS_PASSWORD: "${BACKEND_REDIS_PASSWORD:-redis-dev-password}"
+      AI_SESSION_REDIS_TTL_SECONDS: "${AI_SESSION_REDIS_TTL_SECONDS:-86400}"
+      AI_WORKER_EXECUTION_BACKEND: "${AI_WORKER_EXECUTION_BACKEND:-agent-pull}"
+      CONFIG_CENTER_URL: "${CONFIG_CENTER_INTERNAL_URL:-http://config-center:5000}"
+      AGENT_NODE_URL: "http://agent-node:5590"
+      AGENT_NODE_URLS: "${AGENT_NODE_URLS:-http://agent-node:5590}"
+      AGENT_NODE_TOKEN: "${AGENT_NODE_TOKEN:-}"
+      AGENT_NODE_REGISTRATION_TOKEN: "${AGENT_NODE_REGISTRATION_TOKEN:-}"
+      AI_WORKER_MAX_CONCURRENCY: "${AI_WORKER_MAX_CONCURRENCY:-20}"
+      AI_WORKER_QUEUE_MAX: "${AI_WORKER_QUEUE_MAX:-100}"
+      AI_SERVER_REPAIR_MAX_ATTEMPTS: "${AI_SERVER_REPAIR_MAX_ATTEMPTS:-3}"
+      AI_APP_VISUAL_REVIEW_ENABLED: "${AI_APP_VISUAL_REVIEW_ENABLED:-1}"
+      AI_APP_VISUAL_REVIEW_CMD: "${AI_APP_VISUAL_REVIEW_CMD:-myapp-visual-review}"
+      AI_APP_VISUAL_REVIEW_WEB_BASE: "${AI_APP_VISUAL_REVIEW_WEB_BASE:-https://myapp-web.dapangyu.work}"
+      AI_APP_VISUAL_REVIEW_REMOTE_PARAM: "${AI_APP_VISUAL_REVIEW_REMOTE_PARAM:-remote_file}"
+      AI_APP_VISUAL_REVIEW_PRIMARY_VIEWPORT: "${AI_APP_VISUAL_REVIEW_PRIMARY_VIEWPORT:-402x874}"
+      AI_APP_VISUAL_REVIEW_SMALL_VIEWPORT: "${AI_APP_VISUAL_REVIEW_SMALL_VIEWPORT:-360x780}"
+      AI_APP_VISUAL_REVIEW_MAX_CLICKS: "${AI_APP_VISUAL_REVIEW_MAX_CLICKS:-4}"
+      DEEPSEEK_AI_WORKER_MAX_CONCURRENCY: "${DEEPSEEK_AI_WORKER_MAX_CONCURRENCY:-20}"
+      DEEPSEEK_AI_WORKER_QUEUE_MAX: "${DEEPSEEK_AI_WORKER_QUEUE_MAX:-100}"
+      MINIMAX_AI_WORKER_MAX_CONCURRENCY: "${MINIMAX_AI_WORKER_MAX_CONCURRENCY:-5}"
+      MINIMAX_AI_WORKER_QUEUE_MAX: "${MINIMAX_AI_WORKER_QUEUE_MAX:-20}"
+      REGISTRY_BASE_URL: "${REGISTRY_PUBLIC_URL:-http://127.0.0.1:3254}"
+      MINIO_PUBLIC_URL: "${APP_MINIO_PUBLIC_URL:-http://127.0.0.1:9000}"
+      MINIO_ENDPOINT: "app-minio:9000"
+      MINIO_SECURE: "false"
+      MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY:-myappminio}"
+      MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
+      FAAS_CODE_ROOT: "${FAAS_CODE_ROOT:-/mnt/myapp/faas/code}"
+      FAAS_RUNTIME_TOKEN: "${FAAS_RUNTIME_TOKEN:-}"
+      FAAS_RUNTIME_BUNDLE_BASE_URL: "${FAAS_RUNTIME_BUNDLE_BASE_URL:-}"
+      FAAS_LOCAL_DOCKER_IMAGE: "${FAAS_LOCAL_DOCKER_IMAGE:-dapangyu/myapp-faas-runtime:agent-control-plane}"
+      FAAS_LOCAL_DOCKER_NETWORK: "${FAAS_LOCAL_DOCKER_NETWORK:-myapp_default}"
+      FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT: "${FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT:-/mnt/myapp/faas/code}"
+      FAAS_LOCAL_DOCKER_HOST_CODE_ROOT: "${FAAS_LOCAL_DOCKER_HOST_CODE_ROOT:-${MYAPP_DATA_ROOT:-/mnt/myapp}/faas/code}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/files:/etc/myapp/secret-files:ro
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/faas:/mnt/myapp/faas
+
+  faas-push-worker:
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyu/myapp-backend:agent-control-plane}"
+    container_name: myapp-faas-push-worker
+    restart: unless-stopped
+    depends_on:
+      jsonapp-postgres:
+        condition: service_healthy
+    working_dir: /app/backend
+    command: ["python", "faas_push_worker.py"]
+    env_file:
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
+        required: false
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/faas.env
+        required: false
+    environment:
+      DB_HOST: jsonapp-postgres
+      DB_PORT: "5432"
+      DB_NAME: "${JSONAPP_DB_NAME:-jsonapp}"
+      DB_USER: "${JSONAPP_DB_USER:-jsonapp}"
+      DB_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
+      FAAS_CODE_ROOT: "${FAAS_CODE_ROOT:-/mnt/myapp/faas/code}"
+    volumes:
+      - ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/files:/etc/myapp/secret-files:ro
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/faas:/mnt/myapp/faas
+
+  registry:
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyu/myapp-backend:agent-control-plane}"
+    container_name: myapp-registry
+    restart: unless-stopped
+    depends_on:
+      jsonapp-postgres:
+        condition: service_healthy
+      app-minio:
+        condition: service_started
+    working_dir: /app/backend
+    command: ["gunicorn", "-k", "gthread", "-w", "2", "--threads", "8", "-b", "0.0.0.0:3254", "registry_server:app"]
+    env_file:
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
+        required: false
+    environment:
+      DB_HOST: jsonapp-postgres
+      DB_PORT: "5432"
+      DB_NAME: "${JSONAPP_DB_NAME:-jsonapp}"
+      DB_USER: "${JSONAPP_DB_USER:-jsonapp}"
+      DB_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
+      MINIO_PUBLIC_URL: "${APP_MINIO_PUBLIC_URL:-http://127.0.0.1:9000}"
+      MINIO_ENDPOINT: "app-minio:9000"
+      MINIO_SECURE: "false"
+      MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY:-myappminio}"
+      MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
+      REGISTRY_BASE_URL: "${REGISTRY_PUBLIC_URL:-http://127.0.0.1:3254}"
+      REGISTRY_ADMIN_TOKEN: "${REGISTRY_ADMIN_TOKEN:-}"
+      # Registry Mirror —— 上游回源仓库。空=独立运行（默认）。配置后本实例每
+      # REGISTRY_MIRROR_SYNC_INTERVAL_SEC 秒同步上游 /mirror/manifest 索引，并按需
+      # 代理+缓存上游文件到本地 MinIO。用 `myapp-ctl registry upstream <url>` 配置。
+      REGISTRY_UPSTREAM: "${REGISTRY_UPSTREAM:-}"
+      REGISTRY_MIRROR_SYNC_INTERVAL_SEC: "${REGISTRY_MIRROR_SYNC_INTERVAL_SEC:-600}"
+      FLASK_SECRET_KEY: "${FLASK_SECRET_KEY:-}"
+    ports:
+      - "${REGISTRY_PORT:-3254}:3254"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3254/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  config-center:
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyu/myapp-backend:agent-control-plane}"
+    container_name: myapp-config-center
+    restart: unless-stopped
+    working_dir: /app/config_center
+    command: ["gunicorn", "-k", "gthread", "-w", "1", "--threads", "4", "-b", "0.0.0.0:5000", "app:app"]
+    env_file:
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/config-center.env
+        required: false
+      # 统一管理后台 dashboard glue：复用已有密钥，供 config-center 只读代理
+      # 用户(SUPABASE_*, backend.env) / Agent(AGENT_NODE_*, agent.env)；不改 backend 逻辑。
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
+        required: false
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/agent.env
+        required: false
+    environment:
+      ADMIN_USERNAME: "${CONFIG_CENTER_ADMIN_USERNAME:-admin}"
+      ADMIN_PASSWORD: "${CONFIG_CENTER_ADMIN_PASSWORD:-}"
+      SESSION_SECRET: "${CONFIG_CENTER_SESSION_SECRET:-}"
+      MINIO_PUBLIC_URL: "${APP_MINIO_PUBLIC_URL:-http://127.0.0.1:9000}"
+      MINIO_ENDPOINT: "app-minio:9000"
+      MINIO_SECURE: "false"
+      MINIO_ACCESS_KEY: "${APP_MINIO_ACCESS_KEY:-myappminio}"
+      MINIO_SECRET_KEY: "${APP_MINIO_SECRET_KEY:-myapp-minio-dev-password}"
+      LISTEN_HOST: "0.0.0.0"
+      LISTEN_PORT: "5000"
+      DB_PATH: "/data/config.db"
+      BACKEND_URL: "${CONFIG_CENTER_BACKEND_URL:-http://backend:5566}"
+    volumes:
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/config-center/data:/data
+    ports:
+      - "${CONFIG_CENTER_PORT:-5000}:5000"
+
+  user-center:
+    image: "${MYAPP_BACKEND_IMAGE:-dapangyu/myapp-backend:agent-control-plane}"
+    container_name: myapp-user-center
+    restart: unless-stopped
+    working_dir: /app/user_center
+    command: ["gunicorn", "-k", "gthread", "-w", "1", "--threads", "4", "-b", "0.0.0.0:5567", "app:app"]
+    env_file:
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
+        required: false
+    environment:
+      SUPABASE_URL: "${SUPABASE_URL:-}"
+      SUPABASE_SERVICE_KEY: "${SUPABASE_SERVICE_KEY:-}"
+      ADMIN_USERNAME: "${USER_CENTER_ADMIN_USERNAME:-admin}"
+      ADMIN_PASSWORD: "${USER_CENTER_ADMIN_PASSWORD:-}"
+      SESSION_SECRET: "${USER_CENTER_SESSION_SECRET:-}"
+      COOKIE_SECURE: "${USER_CENTER_COOKIE_SECURE:-false}"
+    ports:
+      - "${USER_CENTER_PORT:-5567}:5567"
+
+  agent-node:
+    image: "${MYAPP_AGENT_NODE_IMAGE:-dapangyu/myapp-agent-node:agent-control-plane}"
+    container_name: myapp-agent-node
+    restart: unless-stopped
+    env_file:
+      - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/agent.env
+        required: false
+      - path: ${AGENT_NODE_AI_PROVIDERS_ENV_FILE:-/mnt/myapp/agent-node/ai-providers.env}
+        required: false
+    environment:
+      AGENT_NODE_ID: "${AGENT_NODE_ID:-myapp-agent-local}"
+      AGENT_NODE_TOKEN: "${AGENT_NODE_TOKEN:-}"
+      AGENT_NODE_REGISTRATION_TOKEN: "${AGENT_NODE_REGISTRATION_TOKEN:-}"
+      AGENT_NODE_PROVIDER_MODE: "${AGENT_NODE_PROVIDER_MODE:-master}"
+      AGENT_NODE_PULL_ENABLED: "${AGENT_NODE_PULL_ENABLED:-1}"
+      AGENT_NODE_BACKEND_URL: "${AGENT_NODE_BACKEND_URL:-http://backend:5566}"
+      AGENT_NODE_CAPACITY: "${AGENT_NODE_CAPACITY:-10}"
+      AGENT_NODE_QUEUE_MAX: "${AGENT_NODE_QUEUE_MAX:-100}"
+      AGENT_NODE_POLL_INTERVAL_IDLE_SECONDS: "${AGENT_NODE_POLL_INTERVAL_IDLE_SECONDS:-1}"
+      AGENT_NODE_POLL_TIMEOUT_SECONDS: "${AGENT_NODE_POLL_TIMEOUT_SECONDS:-5}"
+      AGENT_NODE_POLL_ERROR_BACKOFF_MAX_SECONDS: "${AGENT_NODE_POLL_ERROR_BACKOFF_MAX_SECONDS:-30}"
+      AGENT_NODE_EVENT_FLUSH_LIVE_MS: "${AGENT_NODE_EVENT_FLUSH_LIVE_MS:-200}"
+      AGENT_NODE_EVENT_FLUSH_BACKGROUND_SECONDS: "${AGENT_NODE_EVENT_FLUSH_BACKGROUND_SECONDS:-5}"
+      AGENT_NODE_SELF_REGISTER_URL: "${AGENT_NODE_SELF_REGISTER_URL:-}"
+      PUBLIC_HOST: "${PUBLIC_HOST:-127.0.0.1}"
+      AGENT_NODE_RUNTIME_IMAGE: "${MYAPP_AGENT_RUNTIME_IMAGE:-dapangyu/myapp-agent-runtime:agent-control-plane}"
+      AGENT_NODE_DOCKER_NETWORK: "${AGENT_NODE_DOCKER_NETWORK:-myapp_agent_runtime}"
+      AGENT_NODE_ALLOW_HOST_GATEWAY: "${AGENT_NODE_ALLOW_HOST_GATEWAY:-0}"
+      AGENT_NODE_PROVIDER_PROXY_BASE_URL: "${AGENT_NODE_PROVIDER_PROXY_BASE_URL:-http://agent-node:5590}"
+      AGENT_NODE_STATE_ROOT: "/var/lib/myapp/agent-node/state"
+      AGENT_NODE_WORKSPACE_ROOT: "/var/lib/myapp/agent-node/workspaces"
+      AGENT_NODE_HOST_STATE_ROOT: "${MYAPP_DATA_ROOT:-/mnt/myapp}/agent-node/state"
+      AGENT_NODE_HOST_WORKSPACE_ROOT: "${MYAPP_DATA_ROOT:-/mnt/myapp}/agent-node/workspaces"
+      AGENT_NODE_LOG_DIR: "/var/lib/myapp/agent-node/logs"
+      AGENT_NODE_RUN_RETENTION_SECONDS: "${AGENT_NODE_RUN_RETENTION_SECONDS:-604800}"
+      AGENT_NODE_RUN_SNAPSHOT_MAX_FILE_BYTES: "${AGENT_NODE_RUN_SNAPSHOT_MAX_FILE_BYTES:-52428800}"
+      AGENT_NODE_RUN_SNAPSHOT_MAX_FILES: "${AGENT_NODE_RUN_SNAPSHOT_MAX_FILES:-5000}"
+      AGENT_NODE_CONTAINER_CPUS: "${AGENT_NODE_CONTAINER_CPUS:-2}"
+      AGENT_NODE_CONTAINER_MEMORY: "${AGENT_NODE_CONTAINER_MEMORY:-2g}"
+      AI_APP_VISUAL_REVIEW_ENABLED: "${AI_APP_VISUAL_REVIEW_ENABLED:-1}"
+      AI_APP_VISUAL_REVIEW_CMD: "${AI_APP_VISUAL_REVIEW_CMD:-myapp-visual-review}"
+      AI_APP_VISUAL_REVIEW_WEB_BASE: "${AI_APP_VISUAL_REVIEW_WEB_BASE:-https://myapp-web.dapangyu.work}"
+      AI_APP_VISUAL_REVIEW_REMOTE_PARAM: "${AI_APP_VISUAL_REVIEW_REMOTE_PARAM:-remote_file}"
+      AI_APP_VISUAL_REVIEW_PRIMARY_VIEWPORT: "${AI_APP_VISUAL_REVIEW_PRIMARY_VIEWPORT:-402x874}"
+      AI_APP_VISUAL_REVIEW_SMALL_VIEWPORT: "${AI_APP_VISUAL_REVIEW_SMALL_VIEWPORT:-360x780}"
+      AI_APP_VISUAL_REVIEW_MAX_CLICKS: "${AI_APP_VISUAL_REVIEW_MAX_CLICKS:-4}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${MYAPP_DATA_ROOT:-/mnt/myapp}/agent-node:/var/lib/myapp/agent-node
+    ports:
+      - "127.0.0.1:${AGENT_NODE_PORT:-5590}:5590"
+    networks:
+      - default
+      - agent-runtime
+
+networks:
+  default:
+    name: myapp_default
+  agent-runtime:
+    name: myapp_agent_runtime

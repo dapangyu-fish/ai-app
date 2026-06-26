@@ -1,0 +1,1288 @@
+{
+  "dsl": "3.3",
+  "appid": "8046a3f9-42fd-5c0f-afec-dc3c73a43544",
+  "meta": {
+    "name": "gsy_flutter_demo/094-star-bomb-button-page",
+    "version": "0.1.4",
+    "type": "app",
+    "displayName": {
+      "zh": "点击爆炸的五角星（ChatGPT 生成代码）",
+      "en": "Yellow Star"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：点击爆炸的五角星（ChatGPT 生成代码）",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "点击爆炸的五角星（ChatGPT 生成代码）",
+      "sourcePath": "lib/widget/scroll/star_bomb_button_page.dart",
+      "deferredAlias": "star_bomb_button_page",
+      "widgetClass": "StarBombButtonPage",
+      "category": "scroll",
+      "routeIndex": 94,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-formula-canvas-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "点击爆炸的五角星（ChatGPT 生成代码）",
+      "upstreamSource": "lib/widget/scroll/star_bomb_button_page.dart",
+      "upstreamWidget": "StarBombButtonPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-formula-canvas-v1",
+      "exploded": false,
+      "burstTick": 0
+    },
+    "functions": {
+      "startBurst": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.exploded",
+              "value": true
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.burstTick",
+              "value": 0
+            }
+          }
+        ]
+      },
+      "advanceBurst": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "var": "global.exploded"
+              },
+              "then": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      ">=": [
+                        {
+                          "var": "global.burstTick"
+                        },
+                        30
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.exploded",
+                          "value": false
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.burstTick",
+                          "value": 0
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.burstTick",
+                          "value": {
+                            "+": [
+                              {
+                                "var": "global.burstTick"
+                              },
+                              1
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ],
+              "else": []
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "Yellow Star",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "gesture_detector",
+                "onTap": {
+                  "call": "@global.startBurst",
+                  "args": {}
+                },
+                "child": {
+                  "type": "interval_action",
+                  "intervalMs": 16,
+                  "runImmediately": false,
+                  "action": {
+                    "call": "@global.advanceBurst",
+                    "args": {}
+                  },
+                  "child": {
+                    "type": "animated_canvas",
+                    "width": 300,
+                    "height": 300,
+                    "durationMs": 500,
+                    "variables": {
+                      "exploded": {
+                        "var": "global.exploded"
+                      },
+                      "burstProgress": {
+                        "clamp": [
+                          {
+                            "/": [
+                              {
+                                "var": "global.burstTick"
+                              },
+                              30
+                            ]
+                          },
+                          0,
+                          1
+                        ]
+                      }
+                    },
+                    "layers": [
+                      {
+                        "kind": "path",
+                        "style": "fill",
+                        "color": "#FFEB3B",
+                        "skipWhen": "exploded",
+                        "locals": {
+                          "cx": {
+                            "/": [
+                              "w",
+                              2
+                            ]
+                          },
+                          "cy": {
+                            "/": [
+                              "h",
+                              2
+                            ]
+                          },
+                          "starSize": {
+                            "*": [
+                              "min",
+                              0.4
+                            ]
+                          },
+                          "outerR": {
+                            "/": [
+                              "starSize",
+                              2
+                            ]
+                          },
+                          "innerR": {
+                            "*": [
+                              "starSize",
+                              0.2
+                            ]
+                          }
+                        },
+                        "commands": [
+                          {
+                            "op": "moveTo",
+                            "x": {
+                              "+": [
+                                "cx",
+                                {
+                                  "*": [
+                                    "outerR",
+                                    {
+                                      "cos": [
+                                        {
+                                          "+": [
+                                            {
+                                              "*": [
+                                                {
+                                                  "/": [
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        "pi"
+                                                      ]
+                                                    },
+                                                    5
+                                                  ]
+                                                },
+                                                0
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                -2
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "y": {
+                              "+": [
+                                "cy",
+                                {
+                                  "*": [
+                                    "outerR",
+                                    {
+                                      "sin": [
+                                        {
+                                          "+": [
+                                            {
+                                              "*": [
+                                                {
+                                                  "/": [
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        "pi"
+                                                      ]
+                                                    },
+                                                    5
+                                                  ]
+                                                },
+                                                0
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                -2
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": {
+                              "+": [
+                                "cx",
+                                {
+                                  "*": [
+                                    "innerR",
+                                    {
+                                      "cos": [
+                                        {
+                                          "+": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "/": [
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            "pi"
+                                                          ]
+                                                        },
+                                                        5
+                                                      ]
+                                                    },
+                                                    0
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "pi",
+                                                    -2
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                5
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "y": {
+                              "+": [
+                                "cy",
+                                {
+                                  "*": [
+                                    "innerR",
+                                    {
+                                      "sin": [
+                                        {
+                                          "+": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "/": [
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            "pi"
+                                                          ]
+                                                        },
+                                                        5
+                                                      ]
+                                                    },
+                                                    0
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "pi",
+                                                    -2
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                5
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": {
+                              "+": [
+                                "cx",
+                                {
+                                  "*": [
+                                    "outerR",
+                                    {
+                                      "cos": [
+                                        {
+                                          "+": [
+                                            {
+                                              "*": [
+                                                {
+                                                  "/": [
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        "pi"
+                                                      ]
+                                                    },
+                                                    5
+                                                  ]
+                                                },
+                                                1
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                -2
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "y": {
+                              "+": [
+                                "cy",
+                                {
+                                  "*": [
+                                    "outerR",
+                                    {
+                                      "sin": [
+                                        {
+                                          "+": [
+                                            {
+                                              "*": [
+                                                {
+                                                  "/": [
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        "pi"
+                                                      ]
+                                                    },
+                                                    5
+                                                  ]
+                                                },
+                                                1
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                -2
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": {
+                              "+": [
+                                "cx",
+                                {
+                                  "*": [
+                                    "innerR",
+                                    {
+                                      "cos": [
+                                        {
+                                          "+": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "/": [
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            "pi"
+                                                          ]
+                                                        },
+                                                        5
+                                                      ]
+                                                    },
+                                                    1
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "pi",
+                                                    -2
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                5
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "y": {
+                              "+": [
+                                "cy",
+                                {
+                                  "*": [
+                                    "innerR",
+                                    {
+                                      "sin": [
+                                        {
+                                          "+": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "/": [
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            "pi"
+                                                          ]
+                                                        },
+                                                        5
+                                                      ]
+                                                    },
+                                                    1
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "pi",
+                                                    -2
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                5
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": {
+                              "+": [
+                                "cx",
+                                {
+                                  "*": [
+                                    "outerR",
+                                    {
+                                      "cos": [
+                                        {
+                                          "+": [
+                                            {
+                                              "*": [
+                                                {
+                                                  "/": [
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        "pi"
+                                                      ]
+                                                    },
+                                                    5
+                                                  ]
+                                                },
+                                                2
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                -2
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "y": {
+                              "+": [
+                                "cy",
+                                {
+                                  "*": [
+                                    "outerR",
+                                    {
+                                      "sin": [
+                                        {
+                                          "+": [
+                                            {
+                                              "*": [
+                                                {
+                                                  "/": [
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        "pi"
+                                                      ]
+                                                    },
+                                                    5
+                                                  ]
+                                                },
+                                                2
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                -2
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": {
+                              "+": [
+                                "cx",
+                                {
+                                  "*": [
+                                    "innerR",
+                                    {
+                                      "cos": [
+                                        {
+                                          "+": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "/": [
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            "pi"
+                                                          ]
+                                                        },
+                                                        5
+                                                      ]
+                                                    },
+                                                    2
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "pi",
+                                                    -2
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                5
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "y": {
+                              "+": [
+                                "cy",
+                                {
+                                  "*": [
+                                    "innerR",
+                                    {
+                                      "sin": [
+                                        {
+                                          "+": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "/": [
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            "pi"
+                                                          ]
+                                                        },
+                                                        5
+                                                      ]
+                                                    },
+                                                    2
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "pi",
+                                                    -2
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                5
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": {
+                              "+": [
+                                "cx",
+                                {
+                                  "*": [
+                                    "outerR",
+                                    {
+                                      "cos": [
+                                        {
+                                          "+": [
+                                            {
+                                              "*": [
+                                                {
+                                                  "/": [
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        "pi"
+                                                      ]
+                                                    },
+                                                    5
+                                                  ]
+                                                },
+                                                3
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                -2
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "y": {
+                              "+": [
+                                "cy",
+                                {
+                                  "*": [
+                                    "outerR",
+                                    {
+                                      "sin": [
+                                        {
+                                          "+": [
+                                            {
+                                              "*": [
+                                                {
+                                                  "/": [
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        "pi"
+                                                      ]
+                                                    },
+                                                    5
+                                                  ]
+                                                },
+                                                3
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                -2
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": {
+                              "+": [
+                                "cx",
+                                {
+                                  "*": [
+                                    "innerR",
+                                    {
+                                      "cos": [
+                                        {
+                                          "+": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "/": [
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            "pi"
+                                                          ]
+                                                        },
+                                                        5
+                                                      ]
+                                                    },
+                                                    3
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "pi",
+                                                    -2
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                5
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "y": {
+                              "+": [
+                                "cy",
+                                {
+                                  "*": [
+                                    "innerR",
+                                    {
+                                      "sin": [
+                                        {
+                                          "+": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "/": [
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            "pi"
+                                                          ]
+                                                        },
+                                                        5
+                                                      ]
+                                                    },
+                                                    3
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "pi",
+                                                    -2
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                5
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": {
+                              "+": [
+                                "cx",
+                                {
+                                  "*": [
+                                    "outerR",
+                                    {
+                                      "cos": [
+                                        {
+                                          "+": [
+                                            {
+                                              "*": [
+                                                {
+                                                  "/": [
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        "pi"
+                                                      ]
+                                                    },
+                                                    5
+                                                  ]
+                                                },
+                                                4
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                -2
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "y": {
+                              "+": [
+                                "cy",
+                                {
+                                  "*": [
+                                    "outerR",
+                                    {
+                                      "sin": [
+                                        {
+                                          "+": [
+                                            {
+                                              "*": [
+                                                {
+                                                  "/": [
+                                                    {
+                                                      "*": [
+                                                        2,
+                                                        "pi"
+                                                      ]
+                                                    },
+                                                    5
+                                                  ]
+                                                },
+                                                4
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                -2
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "op": "lineTo",
+                            "x": {
+                              "+": [
+                                "cx",
+                                {
+                                  "*": [
+                                    "innerR",
+                                    {
+                                      "cos": [
+                                        {
+                                          "+": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "/": [
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            "pi"
+                                                          ]
+                                                        },
+                                                        5
+                                                      ]
+                                                    },
+                                                    4
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "pi",
+                                                    -2
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                5
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "y": {
+                              "+": [
+                                "cy",
+                                {
+                                  "*": [
+                                    "innerR",
+                                    {
+                                      "sin": [
+                                        {
+                                          "+": [
+                                            {
+                                              "+": [
+                                                {
+                                                  "*": [
+                                                    {
+                                                      "/": [
+                                                        {
+                                                          "*": [
+                                                            2,
+                                                            "pi"
+                                                          ]
+                                                        },
+                                                        5
+                                                      ]
+                                                    },
+                                                    4
+                                                  ]
+                                                },
+                                                {
+                                                  "/": [
+                                                    "pi",
+                                                    -2
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "/": [
+                                                "pi",
+                                                5
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "op": "close"
+                          }
+                        ]
+                      },
+                      {
+                        "kind": "particles",
+                        "count": 30,
+                        "shape": "circle",
+                        "color": "#FFEB3B",
+                        "alpha": {
+                          "-": [
+                            1,
+                            {
+                              "*": [
+                                "burstP",
+                                0.15
+                              ]
+                            }
+                          ]
+                        },
+                        "skipWhen": {
+                          "!": "exploded"
+                        },
+                        "locals": {
+                          "cx": {
+                            "/": [
+                              "w",
+                              2
+                            ]
+                          },
+                          "cy": {
+                            "/": [
+                              "h",
+                              2
+                            ]
+                          },
+                          "starSize": {
+                            "*": [
+                              "min",
+                              0.4
+                            ]
+                          },
+                          "burstP": "burstProgress",
+                          "seedX": {
+                            "seed": [
+                              "i"
+                            ]
+                          },
+                          "seedY": {
+                            "seed": [
+                              {
+                                "+": [
+                                  "i",
+                                  47
+                                ]
+                              }
+                            ]
+                          },
+                          "dx": {
+                            "-": [
+                              {
+                                "*": [
+                                  "seedX",
+                                  "starSize"
+                                ]
+                              },
+                              {
+                                "/": [
+                                  "starSize",
+                                  2
+                                ]
+                              }
+                            ]
+                          },
+                          "dy": {
+                            "-": [
+                              {
+                                "*": [
+                                  "seedY",
+                                  "starSize"
+                                ]
+                              },
+                              {
+                                "/": [
+                                  "starSize",
+                                  2
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "x": {
+                          "+": [
+                            "cx",
+                            {
+                              "*": [
+                                "dx",
+                                {
+                                  "+": [
+                                    1,
+                                    "burstP"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "y": {
+                          "+": [
+                            "cy",
+                            {
+                              "*": [
+                                "dy",
+                                {
+                                  "+": [
+                                    1,
+                                    "burstP"
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "radius": {
+                          "/": [
+                            "starSize",
+                            30
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "appBar": {
+          "title": "Yellow Star"
+        }
+      }
+    ]
+  }
+}

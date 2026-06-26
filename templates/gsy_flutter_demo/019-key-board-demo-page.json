@@ -1,0 +1,159 @@
+{
+  "dsl": "3.3",
+  "appid": "74148de8-2bb9-51a0-919a-f032127b9bac",
+  "meta": {
+    "name": "gsy_flutter_demo/019-key-board-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "键盘弹出与监听（仅 App）",
+      "en": "Keyboard show/hide listener(App only)"
+    },
+    "description": "KeyBoardDemoPage：键盘弹出与监听",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "键盘弹出与监听（仅 App）",
+      "sourcePath": "lib/widget/basic/keyboard_demo_page.dart",
+      "deferredAlias": "keyboard_demo_page",
+      "widgetClass": "KeyBoardDemoPage",
+      "category": "basic",
+      "routeIndex": 19
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "isKeyboardShowing": false,
+      "inputText": ""
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "KeyBoardDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "keyboard_detector",
+              "bind": "global.isKeyboardShowing",
+              "child": {
+                "type": "gesture_detector",
+                "onTap": {
+                  "call": "@unfocus",
+                  "args": {}
+                },
+                "child": {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "positioned",
+                      "child": {
+                        "type": "center",
+                        "child": {
+                          "type": "stack",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "键盘未弹起",
+                              "visible": {
+                                "!": [
+                                  {
+                                    "var": "global.isKeyboardShowing"
+                                  }
+                                ]
+                              },
+                              "style": {
+                                "fontSize": 14,
+                                "color": "#69F0AE"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "键盘弹起",
+                              "visible": {
+                                "var": "global.isKeyboardShowing"
+                              },
+                              "style": {
+                                "fontSize": 14,
+                                "color": "#FF5252"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "left": 0,
+                      "right": 0,
+                      "topFactor": 0.18
+                    },
+                    {
+                      "type": "positioned",
+                      "child": {
+                        "type": "center",
+                        "child": {
+                          "type": "button",
+                          "label": "弹出键盘",
+                          "variant": "text",
+                          "action": {
+                            "call": "@focus_input",
+                            "args": {
+                              "id": "keyboardInput"
+                            }
+                          },
+                          "style": {
+                            "backgroundColor": "#00000000",
+                            "textColor": "#1976D2",
+                            "paddingH": 12,
+                            "paddingV": 8
+                          }
+                        }
+                      },
+                      "left": 0,
+                      "right": 0,
+                      "topFactor": 0.42
+                    },
+                    {
+                      "type": "positioned",
+                      "child": {
+                        "type": "container",
+                        "children": [
+                          {
+                            "type": "input",
+                            "bind": "global.inputText",
+                            "focusId": "keyboardInput",
+                            "maxLines": 7,
+                            "style": {
+                              "borderRadius": 4
+                            }
+                          }
+                        ],
+                        "layout": "column",
+                        "margin": {
+                          "horizontal": 10
+                        }
+                      },
+                      "left": 0,
+                      "right": 0,
+                      "bottom": 24
+                    }
+                  ],
+                  "layout": "stack"
+                }
+              }
+            },
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0
+          }
+        ],
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

@@ -11,7 +11,7 @@ from flask_socketio import emit
 from auth import require_auth_socketio
 from database import get_quota_info, increment_quota
 from config import ROLE_QUOTAS
-from bytedance_asr_service import ByteDanceASRProxy
+from bytedance_asr_service import ByteDanceASRProxy, is_configured as bytedance_asr_configured
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,14 @@ def register_asr_routes(socketio):
         role = request.user_role
 
         logger.info(f"[ASR] Start recognition - user: {user_id}, role: {role}")
+
+        if not bytedance_asr_configured():
+            logger.warning("[ASR] ByteDance ASR is not configured")
+            emit('asr_error', {
+                'type': 'error',
+                'message': 'ASR service is not configured'
+            })
+            return
 
         # 检查配额
         used, limit, remaining = get_quota_info(

@@ -1,0 +1,2 @@
+"""DeepSeek OpenCode adapter."""
+

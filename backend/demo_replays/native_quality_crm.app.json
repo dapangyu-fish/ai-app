@@ -1,0 +1,2354 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "lightweight-crm",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "轻量 CRM：客户列表、跟进记录、状态标签",
+    "author": "fish",
+    "displayName": "轻量CRM"
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "searchQuery": "",
+      "selectedStatus": "全部",
+      "customers": [
+        {
+          "id": "c1",
+          "name": "林青",
+          "company": "北辰科技",
+          "phone": "138 0000 1201",
+          "status": "待跟进",
+          "nextStep": "明天 10:00 回访预算",
+          "note": "关注部署周期和售后响应，希望本周拿到报价。",
+          "accent": "#2563EB",
+          "tint": "#EAF1FF",
+          "followUps": [
+            {
+              "id": "f1",
+              "date": "2026-06-20 14:30",
+              "type": "电话",
+              "content": "初次联系，了解客户基本需求，对方对云端部署比较关注。"
+            },
+            {
+              "id": "f2",
+              "date": "2026-06-22 10:00",
+              "type": "邮件",
+              "content": "发送产品介绍文档和报价方案，等待客户反馈。"
+            }
+          ]
+        },
+        {
+          "id": "c2",
+          "name": "周远",
+          "company": "恒泰贸易",
+          "phone": "139 0000 2302",
+          "status": "洽谈中",
+          "nextStep": "周五发送试用账号",
+          "note": "团队 12 人，核心诉求是移动端审批和客户数据沉淀。",
+          "accent": "#D97706",
+          "tint": "#FFF4DE",
+          "followUps": [
+            {
+              "id": "f3",
+              "date": "2026-06-18 09:00",
+              "type": "拜访",
+              "content": "上门演示产品，对方技术负责人对API对接有疑问。"
+            },
+            {
+              "id": "f4",
+              "date": "2026-06-21 15:00",
+              "type": "电话",
+              "content": "跟进API对接问题，确认下周发送试用环境。"
+            },
+            {
+              "id": "f5",
+              "date": "2026-06-24 11:30",
+              "type": "备注",
+              "content": "内部评审通过，进入商务谈判阶段。"
+            }
+          ]
+        },
+        {
+          "id": "c3",
+          "name": "陈白",
+          "company": "云谷设计",
+          "phone": "137 0000 4503",
+          "status": "已成交",
+          "nextStep": "下月复盘续费计划",
+          "note": "已完成首单，后续可能扩展到第二部门。",
+          "accent": "#059669",
+          "tint": "#E8F7F0",
+          "followUps": [
+            {
+              "id": "f6",
+              "date": "2026-06-15 13:00",
+              "type": "电话",
+              "content": "确认首期合同细节，约定周五签约。"
+            },
+            {
+              "id": "f7",
+              "date": "2026-06-17 16:30",
+              "type": "拜访",
+              "content": "完成合同签署，客户对服务非常满意。"
+            }
+          ]
+        }
+      ],
+      "currentCustomerId": "",
+      "currentName": "",
+      "currentCompany": "",
+      "currentPhone": "",
+      "currentStatus": "",
+      "currentNextStep": "",
+      "currentNote": "",
+      "currentAccent": "#2563EB",
+      "currentTint": "#EAF1FF",
+      "currentFollowUps": [],
+      "formMode": "create",
+      "formCustomerId": "",
+      "formName": "",
+      "formPhone": "",
+      "formCompany": "",
+      "formStatus": "待跟进",
+      "formNextStep": "",
+      "formNote": "",
+      "followUpType": "电话",
+      "followUpContent": "",
+      "toastMsg": ""
+    },
+    "functions": {
+      "startCreate": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formMode",
+              "value": "create"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formCustomerId",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formName",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formPhone",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formCompany",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formStatus",
+              "value": "待跟进"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formNextStep",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formNote",
+              "value": ""
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "customer_form"
+            }
+          }
+        ]
+      },
+      "viewCustomer": {
+        "params": [
+          "customerId",
+          "customerName",
+          "company",
+          "phone",
+          "status",
+          "nextStep",
+          "note",
+          "accent",
+          "tint"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentCustomerId",
+              "value": "{{ params.customerId }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentName",
+              "value": "{{ params.customerName }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentCompany",
+              "value": "{{ params.company }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentPhone",
+              "value": "{{ params.phone }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentStatus",
+              "value": "{{ params.status }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentNextStep",
+              "value": "{{ params.nextStep }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentNote",
+              "value": "{{ params.note }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentAccent",
+              "value": "{{ params.accent }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentTint",
+              "value": "{{ params.tint }}"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "customer_detail"
+            }
+          }
+        ]
+      },
+      "saveCustomer": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  "{{ global.formMode }}",
+                  "create"
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.customers",
+                    "value": {
+                      "+": [
+                        "{{ global.customers }}",
+                        [
+                          {
+                            "id": {
+                              "+": [
+                                "c",
+                                {
+                                  "+": [
+                                    {
+                                      "+": [
+                                        1,
+                                        {
+                                          "var": "global.customers.length"
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "name": "{{ global.formName }}",
+                            "company": "{{ global.formCompany }}",
+                            "phone": "{{ global.formPhone }}",
+                            "status": "{{ global.formStatus }}",
+                            "nextStep": "{{ global.formNextStep }}",
+                            "note": "{{ global.formNote }}",
+                            "accent": {
+                              "if": [
+                                {
+                                  "==": [
+                                    "{{ global.formStatus }}",
+                                    "待跟进"
+                                  ]
+                                },
+                                "#2563EB",
+                                {
+                                  "if": [
+                                    {
+                                      "==": [
+                                        "{{ global.formStatus }}",
+                                        "洽谈中"
+                                      ]
+                                    },
+                                    "#D97706",
+                                    {
+                                      "if": [
+                                        {
+                                          "==": [
+                                            "{{ global.formStatus }}",
+                                            "已成交"
+                                          ]
+                                        },
+                                        "#059669",
+                                        "#DC2626"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "tint": {
+                              "if": [
+                                {
+                                  "==": [
+                                    "{{ global.formStatus }}",
+                                    "待跟进"
+                                  ]
+                                },
+                                "#EAF1FF",
+                                {
+                                  "if": [
+                                    {
+                                      "==": [
+                                        "{{ global.formStatus }}",
+                                        "洽谈中"
+                                      ]
+                                    },
+                                    "#FFF4DE",
+                                    {
+                                      "if": [
+                                        {
+                                          "==": [
+                                            "{{ global.formStatus }}",
+                                            "已成交"
+                                          ]
+                                        },
+                                        "#E8F7F0",
+                                        "#FEE2E2"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "followUps": []
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.customers",
+                    "value": {
+                      "map": [
+                        {
+                          "var": "global.customers"
+                        },
+                        {
+                          "if": [
+                            {
+                              "==": [
+                                {
+                                  "var": "loop.item.id"
+                                },
+                                "{{ global.formCustomerId }}"
+                              ]
+                            },
+                            {
+                              "merge": [
+                                {
+                                  "var": "loop.item"
+                                },
+                                {
+                                  "name": "{{ global.formName }}",
+                                  "company": "{{ global.formCompany }}",
+                                  "phone": "{{ global.formPhone }}",
+                                  "status": "{{ global.formStatus }}",
+                                  "nextStep": "{{ global.formNextStep }}",
+                                  "note": "{{ global.formNote }}",
+                                  "accent": {
+                                    "if": [
+                                      {
+                                        "==": [
+                                          "{{ global.formStatus }}",
+                                          "待跟进"
+                                        ]
+                                      },
+                                      "#2563EB",
+                                      {
+                                        "if": [
+                                          {
+                                            "==": [
+                                              "{{ global.formStatus }}",
+                                              "洽谈中"
+                                            ]
+                                          },
+                                          "#D97706",
+                                          {
+                                            "if": [
+                                              {
+                                                "==": [
+                                                  "{{ global.formStatus }}",
+                                                  "已成交"
+                                                ]
+                                              },
+                                              "#059669",
+                                              "#DC2626"
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  "tint": {
+                                    "if": [
+                                      {
+                                        "==": [
+                                          "{{ global.formStatus }}",
+                                          "待跟进"
+                                        ]
+                                      },
+                                      "#EAF1FF",
+                                      {
+                                        "if": [
+                                          {
+                                            "==": [
+                                              "{{ global.formStatus }}",
+                                              "洽谈中"
+                                            ]
+                                          },
+                                          "#FFF4DE",
+                                          {
+                                            "if": [
+                                              {
+                                                "==": [
+                                                  "{{ global.formStatus }}",
+                                                  "已成交"
+                                                ]
+                                              },
+                                              "#E8F7F0",
+                                              "#FEE2E2"
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "var": "loop.item"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "客户已保存"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "home"
+            }
+          }
+        ]
+      },
+      "editCustomer": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formMode",
+              "value": "edit"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formCustomerId",
+              "value": "{{ global.currentCustomerId }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formName",
+              "value": "{{ global.currentName }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formPhone",
+              "value": "{{ global.currentPhone }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formCompany",
+              "value": "{{ global.currentCompany }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formStatus",
+              "value": "{{ global.currentStatus }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formNextStep",
+              "value": "{{ global.currentNextStep }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formNote",
+              "value": "{{ global.currentNote }}"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "customer_form"
+            }
+          }
+        ]
+      },
+      "deleteCustomer": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.customers",
+              "value": {
+                "filter": [
+                  {
+                    "var": "global.customers"
+                  },
+                  {
+                    "!==": [
+                      {
+                        "var": "loop.item.id"
+                      },
+                      "{{ global.currentCustomerId }}"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "客户已删除"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "home"
+            }
+          }
+        ]
+      },
+      "startAddFollowUp": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.followUpType",
+              "value": "电话"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.followUpContent",
+              "value": ""
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "followup_form"
+            }
+          }
+        ]
+      },
+      "saveFollowUp": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.customers",
+              "value": {
+                "map": [
+                  {
+                    "var": "global.customers"
+                  },
+                  {
+                    "if": [
+                      {
+                        "==": [
+                          {
+                            "var": "loop.item.id"
+                          },
+                          "{{ global.currentCustomerId }}"
+                        ]
+                      },
+                      {
+                        "merge": [
+                          {
+                            "var": "loop.item"
+                          },
+                          {
+                            "followUps": {
+                              "+": [
+                                {
+                                  "var": "loop.item.followUps"
+                                },
+                                [
+                                  {
+                                    "id": {
+                                      "+": [
+                                        "f",
+                                        {
+                                          "+": [
+                                            1,
+                                            {
+                                              "var": "loop.item.followUps.length"
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    "date": "{{ global.followUpType }}",
+                                    "type": "{{ global.followUpType }}",
+                                    "content": "{{ global.followUpContent }}"
+                                  }
+                                ]
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "var": "loop.item"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "跟进记录已添加"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "customer_detail"
+            }
+          }
+        ]
+      },
+      "deleteFollowUp": {
+        "params": [
+          "followUpId"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.customers",
+              "value": {
+                "map": [
+                  {
+                    "var": "global.customers"
+                  },
+                  {
+                    "if": [
+                      {
+                        "==": [
+                          {
+                            "var": "loop.item.id"
+                          },
+                          "{{ global.currentCustomerId }}"
+                        ]
+                      },
+                      {
+                        "merge": [
+                          {
+                            "var": "loop.item"
+                          },
+                          {
+                            "followUps": {
+                              "filter": [
+                                {
+                                  "var": "loop.item.followUps"
+                                },
+                                {
+                                  "!==": [
+                                    {
+                                      "var": "loop.item.id"
+                                    },
+                                    "{{ params.followUpId }}"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "var": "loop.item"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "跟进记录已删除"
+            }
+          }
+        ]
+      },
+      "quickChangeStatus": {
+        "params": [
+          "newStatus"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentStatus",
+              "value": "{{ params.newStatus }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentAccent",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      "{{ params.newStatus }}",
+                      "待跟进"
+                    ]
+                  },
+                  "#2563EB",
+                  {
+                    "if": [
+                      {
+                        "==": [
+                          "{{ params.newStatus }}",
+                          "洽谈中"
+                        ]
+                      },
+                      "#D97706",
+                      {
+                        "if": [
+                          {
+                            "==": [
+                              "{{ params.newStatus }}",
+                              "已成交"
+                            ]
+                          },
+                          "#059669",
+                          "#DC2626"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentTint",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      "{{ params.newStatus }}",
+                      "待跟进"
+                    ]
+                  },
+                  "#EAF1FF",
+                  {
+                    "if": [
+                      {
+                        "==": [
+                          "{{ params.newStatus }}",
+                          "洽谈中"
+                        ]
+                      },
+                      "#FFF4DE",
+                      {
+                        "if": [
+                          {
+                            "==": [
+                              "{{ params.newStatus }}",
+                              "已成交"
+                            ]
+                          },
+                          "#E8F7F0",
+                          "#FEE2E2"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.customers",
+              "value": {
+                "map": [
+                  {
+                    "var": "global.customers"
+                  },
+                  {
+                    "if": [
+                      {
+                        "==": [
+                          {
+                            "var": "loop.item.id"
+                          },
+                          "{{ global.currentCustomerId }}"
+                        ]
+                      },
+                      {
+                        "merge": [
+                          {
+                            "var": "loop.item"
+                          },
+                          {
+                            "status": "{{ params.newStatus }}",
+                            "accent": {
+                              "if": [
+                                {
+                                  "==": [
+                                    "{{ params.newStatus }}",
+                                    "待跟进"
+                                  ]
+                                },
+                                "#2563EB",
+                                {
+                                  "if": [
+                                    {
+                                      "==": [
+                                        "{{ params.newStatus }}",
+                                        "洽谈中"
+                                      ]
+                                    },
+                                    "#D97706",
+                                    {
+                                      "if": [
+                                        {
+                                          "==": [
+                                            "{{ params.newStatus }}",
+                                            "已成交"
+                                          ]
+                                        },
+                                        "#059669",
+                                        "#DC2626"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            "tint": {
+                              "if": [
+                                {
+                                  "==": [
+                                    "{{ params.newStatus }}",
+                                    "待跟进"
+                                  ]
+                                },
+                                "#EAF1FF",
+                                {
+                                  "if": [
+                                    {
+                                      "==": [
+                                        "{{ params.newStatus }}",
+                                        "洽谈中"
+                                      ]
+                                    },
+                                    "#FFF4DE",
+                                    {
+                                      "if": [
+                                        {
+                                          "==": [
+                                            "{{ params.newStatus }}",
+                                            "已成交"
+                                          ]
+                                        },
+                                        "#E8F7F0",
+                                        "#FEE2E2"
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "var": "loop.item"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.toastMsg",
+              "value": {
+                "+": [
+                  "状态已更新为 ",
+                  "{{ params.newStatus }}"
+                ]
+              }
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "{{ global.toastMsg }}"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "客户",
+        "layout": "column",
+        "children": [
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "people",
+                              "size": 18,
+                              "color": "#2563EB"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "客户总数",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ global.customers.length }}",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "clock",
+                              "size": 18,
+                              "color": "#D97706"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "待跟进",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ global.customers | filter(loop.item.status == '待跟进') | length }}",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "chat",
+                              "size": 18,
+                              "color": "#7C3AED"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "洽谈中",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ global.customers | filter(loop.item.status == '洽谈中') | length }}",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "check_circle",
+                              "size": 18,
+                              "color": "#059669"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "已成交",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ global.customers | filter(loop.item.status == '已成交') | length }}",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ],
+            "margin": 8
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "icon",
+                "name": "search",
+                "size": 18,
+                "color": "#8E8E93"
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "搜索姓名、公司、电话",
+                "bind": "global.searchQuery",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                },
+                "style": {
+                  "fontSize": 15,
+                  "borderRadius": 10
+                }
+              }
+            ],
+            "padding": 10,
+            "margin": 12,
+            "color": "#F7F8FA",
+            "borderRadius": 14,
+            "crossAxisAlignment": "center"
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "全部",
+                    "variant": "choice",
+                    "bind": "global.selectedStatus",
+                    "value": "全部",
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "待跟进",
+                    "variant": "choice",
+                    "bind": "global.selectedStatus",
+                    "value": "待跟进",
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "洽谈中",
+                    "variant": "choice",
+                    "bind": "global.selectedStatus",
+                    "value": "洽谈中",
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "已成交",
+                    "variant": "choice",
+                    "bind": "global.selectedStatus",
+                    "value": "已成交",
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "已流失",
+                    "variant": "choice",
+                    "bind": "global.selectedStatus",
+                    "value": "已流失",
+                    "color": "#2563EB"
+                  }
+                ]
+              }
+            ],
+            "padding": 12,
+            "margin": 8,
+            "color": "#FFFFFF",
+            "borderRadius": 14
+          },
+          {
+            "type": "list",
+            "source": "{{ global.customers | filter(global.selectedStatus == '全部' or loop.item.status == global.selectedStatus) | filter(global.searchQuery == '' or (loop.item.name + loop.item.company + loop.item.phone) | includes(global.searchQuery)) }}",
+            "emptyText": "暂无客户，点击下方新增第一位客户",
+            "item_template": {
+              "type": "card",
+              "layout": "column",
+              "color": "#FFFFFF",
+              "padding": 14,
+              "margin": 8,
+              "elevation": 0,
+              "borderRadius": 16,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "crossAxisAlignment": "start",
+                  "children": [
+                    {
+                      "type": "avatar",
+                      "text": "{{ loop.item.name | first }}",
+                      "size": 46,
+                      "color": "{{ loop.item.tint }}",
+                      "textColor": "{{ loop.item.accent }}"
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 12
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      },
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "crossAxisAlignment": "center",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.name }}",
+                              "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "color": "#111827",
+                                "maxLines": 1,
+                                "overflow": "ellipsis"
+                              }
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "container",
+                              "layout": "column",
+                              "padding": 4,
+                              "paddingH": 8,
+                              "color": "{{ loop.item.tint }}",
+                              "borderRadius": 6,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "value": "{{ loop.item.status }}",
+                                  "style": {
+                                    "fontSize": 11,
+                                    "fontWeight": "600",
+                                    "color": "{{ loop.item.accent }}"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 5
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.company }} · {{ loop.item.phone }}",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280",
+                            "maxLines": 1,
+                            "overflow": "ellipsis"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "crossAxisAlignment": "center",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "calendar",
+                              "size": 14,
+                              "color": "#9CA3AF"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 4
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.nextStep }}",
+                              "style": {
+                                "fontSize": 12,
+                                "color": "#4B5563",
+                                "maxLines": 1,
+                                "overflow": "ellipsis"
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "onTap": {
+                "call": "@global.viewCustomer",
+                "args": {
+                  "customerId": "{{ loop.item.id }}",
+                  "customerName": "{{ loop.item.name }}",
+                  "company": "{{ loop.item.company }}",
+                  "phone": "{{ loop.item.phone }}",
+                  "status": "{{ loop.item.status }}",
+                  "nextStep": "{{ loop.item.nextStep }}",
+                  "note": "{{ loop.item.note }}",
+                  "accent": "{{ loop.item.accent }}",
+                  "tint": "{{ loop.item.tint }}"
+                }
+              }
+            }
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "button",
+                "label": "新增客户",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.startCreate",
+                  "args": {}
+                },
+                "icon": "add",
+                "style": {
+                  "backgroundColor": "#2563EB",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 16,
+                  "fontSize": 15,
+                  "paddingV": 12
+                }
+              }
+            ],
+            "padding": 12,
+            "color": "#F4F6F8"
+          }
+        ],
+        "backgroundColor": "#F4F6F8",
+        "appBar": {
+          "title": "客户",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.startCreate",
+                "args": {}
+              },
+              "icon": "add",
+              "style": {
+                "textColor": "#2563EB",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              },
+              "tooltip": "新增客户"
+            }
+          ]
+        }
+      },
+      {
+        "id": "customer_detail",
+        "title": "客户详情",
+        "layout": "column",
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 18,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "avatar",
+                    "text": "{{ global.currentName | first }}",
+                    "size": 56,
+                    "color": "{{ global.currentTint }}",
+                    "textColor": "{{ global.currentAccent }}"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 14
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentName }}",
+                        "style": {
+                          "fontSize": 23,
+                          "fontWeight": "bold",
+                          "color": "#111827"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 4
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentCompany }}",
+                        "style": {
+                          "fontSize": 14,
+                          "color": "#6B7280"
+                        }
+                      }
+                    ],
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "状态",
+                    "style": {
+                      "fontSize": 13,
+                      "color": "#6B7280"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 8
+                  },
+                  {
+                    "type": "wrap",
+                    "spacing": 8,
+                    "runSpacing": 8,
+                    "children": [
+                      {
+                        "type": "chip",
+                        "label": "待跟进",
+                        "variant": "choice",
+                        "bind": "global.currentStatus",
+                        "value": "待跟进",
+                        "color": "#2563EB",
+                        "action": {
+                          "call": "@global.quickChangeStatus",
+                          "args": {
+                            "newStatus": "待跟进"
+                          }
+                        }
+                      },
+                      {
+                        "type": "chip",
+                        "label": "洽谈中",
+                        "variant": "choice",
+                        "bind": "global.currentStatus",
+                        "value": "洽谈中",
+                        "color": "#D97706",
+                        "action": {
+                          "call": "@global.quickChangeStatus",
+                          "args": {
+                            "newStatus": "洽谈中"
+                          }
+                        }
+                      },
+                      {
+                        "type": "chip",
+                        "label": "已成交",
+                        "variant": "choice",
+                        "bind": "global.currentStatus",
+                        "value": "已成交",
+                        "color": "#059669",
+                        "action": {
+                          "call": "@global.quickChangeStatus",
+                          "args": {
+                            "newStatus": "已成交"
+                          }
+                        }
+                      },
+                      {
+                        "type": "chip",
+                        "label": "已流失",
+                        "variant": "choice",
+                        "bind": "global.currentStatus",
+                        "value": "已流失",
+                        "color": "#DC2626",
+                        "action": {
+                          "call": "@global.quickChangeStatus",
+                          "args": {
+                            "newStatus": "已流失"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ],
+                "padding": 14,
+                "color": "#F9FAFB",
+                "borderRadius": 12
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "phone",
+                    "size": 17,
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.currentPhone }}",
+                    "style": {
+                      "fontSize": 15,
+                      "color": "#374151"
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "calendar",
+                    "size": 17,
+                    "color": "#D97706"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.currentNextStep }}",
+                    "style": {
+                      "fontSize": 15,
+                      "color": "#374151"
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "notes",
+                    "size": 17,
+                    "color": "#6B7280"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.currentNote }}",
+                    "style": {
+                      "fontSize": 14,
+                      "color": "#4B5563",
+                      "lineHeight": 1.5
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "start"
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "schedule",
+                    "size": 18,
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "text",
+                    "value": "跟进记录",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "bold",
+                      "color": "#111827"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 0
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              }
+            ],
+            "padding": 16,
+            "margin": 12,
+            "color": "#FFFFFF",
+            "borderRadius": 16
+          },
+          {
+            "type": "list",
+            "source": "{{ global.currentFollowUps }}",
+            "shrinkWrap": true,
+            "emptyText": "暂无跟进记录，点击下方添加",
+            "item_template": {
+              "type": "container",
+              "layout": "row",
+              "crossAxisAlignment": "start",
+              "padding": 14,
+              "margin": 6,
+              "color": "#FFFFFF",
+              "borderRadius": 14,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "{{ loop.item.type == '电话' ? 'phone' : (loop.item.type == '拜访' ? 'people' : (loop.item.type == '邮件' ? 'mail' : 'notes')) }}",
+                      "size": 16,
+                      "color": "{{ loop.item.type == '电话' ? '#2563EB' : (loop.item.type == '拜访' ? '#D97706' : (loop.item.type == '邮件' ? '#059669' : '#6B7280')) }}"
+                    }
+                  ],
+                  "padding": 8,
+                  "color": "{{ loop.item.type == '电话' ? '#EAF1FF' : (loop.item.type == '拜访' ? '#FFF4DE' : (loop.item.type == '邮件' ? '#E8F7F0' : '#F3F4F6')) }}",
+                  "borderRadius": 10,
+                  "crossAxisAlignment": "center",
+                  "mainAxisAlignment": "center"
+                },
+                {
+                  "type": "spacer",
+                  "width": 12
+                },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "padding": 3,
+                          "paddingH": 8,
+                          "color": "{{ loop.item.type == '电话' ? '#EAF1FF' : (loop.item.type == '拜访' ? '#FFF4DE' : (loop.item.type == '邮件' ? '#E8F7F0' : '#F3F4F6')) }}",
+                          "borderRadius": 4,
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.type }}",
+                              "style": {
+                                "fontSize": 11,
+                                "fontWeight": "600",
+                                "color": "{{ loop.item.type == '电话' ? '#2563EB' : (loop.item.type == '拜访' ? '#D97706' : (loop.item.type == '邮件' ? '#059669' : '#6B7280')) }}"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 0
+                        },
+                        {
+                          "type": "button",
+                          "label": "",
+                          "variant": "text",
+                          "action": {
+                            "call": "@global.deleteFollowUp",
+                            "args": {
+                              "followUpId": "{{ loop.item.id }}"
+                            }
+                          },
+                          "icon": "delete",
+                          "style": {
+                            "textColor": "#DC2626",
+                            "fontSize": 16,
+                            "paddingH": 4,
+                            "paddingV": 2
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 6
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.content }}",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#374151",
+                        "lineHeight": 1.4
+                      }
+                    }
+                  ],
+                  "position": {
+                    "type": "flex",
+                    "flex": 1
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "button",
+                "label": "添加跟进记录",
+                "variant": "outlined",
+                "action": {
+                  "call": "@global.startAddFollowUp",
+                  "args": {}
+                },
+                "icon": "add",
+                "style": {
+                  "textColor": "#2563EB",
+                  "borderRadius": 14,
+                  "fontSize": 14,
+                  "paddingV": 10
+                }
+              }
+            ],
+            "padding": 12,
+            "margin": 12,
+            "color": "#F4F6F8"
+          }
+        ],
+        "backgroundColor": "#F4F6F8",
+        "appBar": {
+          "title": "客户详情",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.editCustomer",
+                "args": {}
+              },
+              "icon": "edit",
+              "style": {
+                "textColor": "#2563EB",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              },
+              "tooltip": "编辑"
+            },
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.deleteCustomer",
+                "args": {}
+              },
+              "icon": "delete",
+              "style": {
+                "textColor": "#DC2626",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              },
+              "tooltip": "删除"
+            }
+          ]
+        }
+      },
+      {
+        "id": "customer_form",
+        "title": "编辑客户",
+        "layout": "column",
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 18,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "text",
+                "value": "姓名",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "客户姓名",
+                "bind": "global.formName"
+              },
+              {
+                "type": "spacer",
+                "height": 18
+              },
+              {
+                "type": "text",
+                "value": "电话",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "手机号或座机",
+                "bind": "global.formPhone"
+              },
+              {
+                "type": "spacer",
+                "height": 18
+              },
+              {
+                "type": "text",
+                "value": "公司",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "公司名称",
+                "bind": "global.formCompany"
+              },
+              {
+                "type": "spacer",
+                "height": 18
+              },
+              {
+                "type": "text",
+                "value": "状态",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "待跟进",
+                    "variant": "choice",
+                    "bind": "global.formStatus",
+                    "value": "待跟进",
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "洽谈中",
+                    "variant": "choice",
+                    "bind": "global.formStatus",
+                    "value": "洽谈中",
+                    "color": "#D97706"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "已成交",
+                    "variant": "choice",
+                    "bind": "global.formStatus",
+                    "value": "已成交",
+                    "color": "#059669"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "已流失",
+                    "variant": "choice",
+                    "bind": "global.formStatus",
+                    "value": "已流失",
+                    "color": "#DC2626"
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 18
+              },
+              {
+                "type": "text",
+                "value": "下一步计划",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "例如：周五发送报价方案",
+                "bind": "global.formNextStep"
+              },
+              {
+                "type": "spacer",
+                "height": 18
+              },
+              {
+                "type": "text",
+                "value": "备注",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "备注信息",
+                "bind": "global.formNote",
+                "multiline": true
+              },
+              {
+                "type": "spacer",
+                "height": 22
+              },
+              {
+                "type": "button",
+                "label": "保存客户",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.saveCustomer",
+                  "args": {}
+                },
+                "icon": "save",
+                "style": {
+                  "backgroundColor": "#2563EB",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 14,
+                  "fontSize": 15,
+                  "paddingV": 12
+                }
+              }
+            ]
+          }
+        ],
+        "backgroundColor": "#F4F6F8",
+        "appBar": {
+          "title": "{{ global.formMode == 'create' ? '新增客户' : '编辑客户' }}",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0
+        }
+      },
+      {
+        "id": "followup_form",
+        "title": "添加跟进记录",
+        "layout": "column",
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 18,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "text",
+                "value": "跟进方式",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "电话",
+                    "variant": "choice",
+                    "bind": "global.followUpType",
+                    "value": "电话",
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "拜访",
+                    "variant": "choice",
+                    "bind": "global.followUpType",
+                    "value": "拜访",
+                    "color": "#D97706"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "邮件",
+                    "variant": "choice",
+                    "bind": "global.followUpType",
+                    "value": "邮件",
+                    "color": "#059669"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "备注",
+                    "variant": "choice",
+                    "bind": "global.followUpType",
+                    "value": "备注",
+                    "color": "#6B7280"
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 18
+              },
+              {
+                "type": "text",
+                "value": "跟进内容",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#374151"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "记录本次跟进的主要内容...",
+                "bind": "global.followUpContent",
+                "multiline": true
+              },
+              {
+                "type": "spacer",
+                "height": 22
+              },
+              {
+                "type": "button",
+                "label": "保存跟进记录",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.saveFollowUp",
+                  "args": {}
+                },
+                "icon": "save",
+                "style": {
+                  "backgroundColor": "#2563EB",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 14,
+                  "fontSize": 15,
+                  "paddingV": 12
+                }
+              }
+            ]
+          }
+        ],
+        "backgroundColor": "#F4F6F8",
+        "appBar": {
+          "title": "添加跟进记录",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0
+        }
+      }
+    ]
+  }
+}

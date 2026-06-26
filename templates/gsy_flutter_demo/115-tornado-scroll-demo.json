@@ -1,0 +1,273 @@
+{
+  "dsl": "3.3",
+  "appid": "9c8d931e-af2e-55d6-b8c9-e6e2c10f083f",
+  "meta": {
+    "name": "gsy_flutter_demo/115-tornado-scroll-demo",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "骚气滑动列表",
+      "en": "Fancy scrolling list"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：骚气滑动列表",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "骚气滑动列表",
+      "sourcePath": "lib/widget/scroll/tornado_scroll_demo.dart",
+      "deferredAlias": "tornado_scroll_demo",
+      "widgetClass": "TornadoScrollDemo",
+      "category": "scroll",
+      "routeIndex": 115,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-tornado-controls-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "骚气滑动列表",
+      "upstreamSource": "lib/widget/scroll/tornado_scroll_demo.dart",
+      "upstreamWidget": "TornadoScrollDemo",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-tornado-controls-v1",
+      "items": [
+        {
+          "index": 0,
+          "title": "Item 0",
+          "color": "#FFCDD2"
+        },
+        {
+          "index": 1,
+          "title": "Item 1",
+          "color": "#F8BBD0"
+        },
+        {
+          "index": 2,
+          "title": "Item 2",
+          "color": "#E1BEE7"
+        },
+        {
+          "index": 3,
+          "title": "Item 3",
+          "color": "#D1C4E9"
+        },
+        {
+          "index": 4,
+          "title": "Item 4",
+          "color": "#BBDEFB"
+        },
+        {
+          "index": 5,
+          "title": "Item 5",
+          "color": "#B2EBF2"
+        },
+        {
+          "index": 6,
+          "title": "Item 6",
+          "color": "#C8E6C9"
+        },
+        {
+          "index": 7,
+          "title": "Item 7",
+          "color": "#FFF9C4"
+        },
+        {
+          "index": 8,
+          "title": "Item 8",
+          "color": "#FFCDD2"
+        },
+        {
+          "index": 9,
+          "title": "Item 9",
+          "color": "#F8BBD0"
+        },
+        {
+          "index": 10,
+          "title": "Item 10",
+          "color": "#E1BEE7"
+        },
+        {
+          "index": 11,
+          "title": "Item 11",
+          "color": "#D1C4E9"
+        },
+        {
+          "index": 12,
+          "title": "Item 12",
+          "color": "#BBDEFB"
+        },
+        {
+          "index": 13,
+          "title": "Item 13",
+          "color": "#B2EBF2"
+        },
+        {
+          "index": 14,
+          "title": "Item 14",
+          "color": "#C8E6C9"
+        },
+        {
+          "index": 15,
+          "title": "Item 15",
+          "color": "#FFF9C4"
+        },
+        {
+          "index": 16,
+          "title": "Item 16",
+          "color": "#FFCDD2"
+        },
+        {
+          "index": 17,
+          "title": "Item 17",
+          "color": "#F8BBD0"
+        },
+        {
+          "index": 18,
+          "title": "Item 18",
+          "color": "#E1BEE7"
+        },
+        {
+          "index": 19,
+          "title": "Item 19",
+          "color": "#D1C4E9"
+        },
+        {
+          "index": 20,
+          "title": "Item 20",
+          "color": "#BBDEFB"
+        },
+        {
+          "index": 21,
+          "title": "Item 21",
+          "color": "#B2EBF2"
+        },
+        {
+          "index": 22,
+          "title": "Item 22",
+          "color": "#C8E6C9"
+        },
+        {
+          "index": 23,
+          "title": "Item 23",
+          "color": "#FFF9C4"
+        },
+        {
+          "index": 24,
+          "title": "Item 24",
+          "color": "#FFCDD2"
+        },
+        {
+          "index": 25,
+          "title": "Item 25",
+          "color": "#F8BBD0"
+        },
+        {
+          "index": 26,
+          "title": "Item 26",
+          "color": "#E1BEE7"
+        },
+        {
+          "index": 27,
+          "title": "Item 27",
+          "color": "#D1C4E9"
+        }
+      ],
+      "twistIntensity": 0.5
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "TornadoScrollDemo",
+        "layout": "stack",
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 128,
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "alignment": "center",
+              "mainAxisAlignment": "center",
+              "children": [
+                {
+                  "type": "list",
+                  "source": "{{ global.items }}",
+                  "separator": "none",
+                  "item_template": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ loop.item.title }}",
+                        "style": {
+                          "fontSize": 20,
+                          "color": "#111111",
+                          "fontWeight": "bold",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "height": 72,
+                    "margin": {
+                      "left": 28,
+                      "right": 28,
+                      "top": 8,
+                      "bottom": 8
+                    },
+                    "borderRadius": 18,
+                    "color": "{{ loop.item.color }}",
+                    "alignment": "center",
+                    "mainAxisAlignment": "center"
+                  },
+                  "allowNestedScroll": true
+                }
+              ]
+            }
+          },
+          {
+            "type": "positioned",
+            "left": 20,
+            "right": 20,
+            "bottom": 50,
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Twist Intensity (Zoom)",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#FFFFFF",
+                    "textAlign": "center"
+                  }
+                },
+                {
+                  "type": "slider",
+                  "bind": "global.twistIntensity",
+                  "min": 0,
+                  "max": 1.5,
+                  "showLabel": false,
+                  "color": "#FFFFFFFF"
+                }
+              ]
+            }
+          }
+        ],
+        "appBar": {
+          "title": "TornadoScrollDemo"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "dsl": "3.3",
+  "appid": "2e847a2f-3617-5b35-99ee-c1adf20454e0",
+  "meta": {
+    "name": "gsy_flutter_demo/022-floating-touch-demo-page",
+    "version": "0.1.4",
+    "type": "app",
+    "displayName": {
+      "zh": "全局悬浮按键效果",
+      "en": "Global floating action button"
+    },
+    "description": "FloatingTouchDemoPage：全局悬浮按键效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "全局悬浮按键效果",
+      "sourcePath": "lib/widget/basic/floating_touch_demo_page.dart",
+      "deferredAlias": "floating_touch_demo_page",
+      "widgetClass": "FloatingTouchDemoPage",
+      "category": "basic",
+      "routeIndex": 22,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "FloatingTouchDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "overlay_spawner",
+                "initialLeft": 200,
+                "initialTop": 200,
+                "entryWidth": 80,
+                "entryHeight": 80,
+                "draggable": true,
+                "longPressRemove": true,
+                "trigger": {
+                  "type": "container",
+                  "layout": "column",
+                  "padding": {
+                    "horizontal": 12,
+                    "vertical": 8
+                  },
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "显示悬浮",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#FF2196F3"
+                      }
+                    }
+                  ],
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center"
+                },
+                "entry": {
+                  "type": "container",
+                  "shape": "circle",
+                  "color": "#FFFF5252",
+                  "alignment": "center",
+                  "layout": "column",
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "长按\n移除",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#FFFFFFFF",
+                        "textAlign": "center"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

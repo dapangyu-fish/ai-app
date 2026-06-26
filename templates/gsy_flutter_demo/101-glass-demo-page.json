@@ -1,0 +1,591 @@
+{
+  "dsl": "3.3",
+  "appid": "43494333-4776-5695-9c7b-44c2eb1df603",
+  "meta": {
+    "name": "gsy_flutter_demo/101-glass-demo-page",
+    "version": "0.1.1",
+    "type": "app",
+    "displayName": {
+      "zh": "glass",
+      "en": "glass"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：glass",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "glass",
+      "sourcePath": "lib/widget/canvas/glass_demo_page.dart",
+      "deferredAlias": "glass_demo_page",
+      "widgetClass": "GlassDemoPage",
+      "category": "canvas",
+      "routeIndex": 101,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v5"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "glass",
+      "upstreamSource": "lib/widget/canvas/glass_demo_page.dart",
+      "upstreamWidget": "GlassDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v5",
+      "sheetItems": [
+        {
+          "index": 1
+        },
+        {
+          "index": 2
+        },
+        {
+          "index": 3
+        },
+        {
+          "index": 4
+        },
+        {
+          "index": 5
+        }
+      ]
+    },
+    "functions": {
+      "dialog": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_dialog",
+            "args": {
+              "title": "玻璃对话框",
+              "message": "这是一个玻璃材质的对话框"
+            }
+          }
+        ]
+      },
+      "sheet": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_bottom_sheet",
+            "args": {
+              "backgroundColor": "#22FFFFFF",
+              "content": {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 40,
+                    "height": 4,
+                    "color": "#82FFFFFF",
+                    "borderRadius": 2
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 20
+                  },
+                  {
+                    "type": "text",
+                    "value": "玻璃底部弹窗",
+                    "style": {
+                      "fontSize": 20,
+                      "color": "#FFFFFFFF",
+                      "fontWeight": "w600",
+                      "textAlign": "center"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 20
+                  },
+                  {
+                    "type": "list",
+                    "source": "{{ global.sheetItems }}",
+                    "shrinkWrap": true,
+                    "separator": "none",
+                    "item_template": {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "list",
+                          "size": 22,
+                          "color": "#D0FFFFFF"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 12
+                        },
+                        {
+                          "type": "text",
+                          "value": "选项 {{ loop.item.index }}",
+                          "style": {
+                            "fontSize": 16,
+                            "color": "#FFFFFFFF"
+                          }
+                        }
+                      ],
+                      "padding": 16,
+                      "margin": {
+                        "bottom": 10
+                      },
+                      "borderRadius": 12,
+                      "border": {
+                        "color": "#33FFFFFF",
+                        "width": 1
+                      },
+                      "gradient": {
+                        "colors": [
+                          "#28FFFFFF",
+                          "#08FFFFFF"
+                        ],
+                        "begin": "topLeft",
+                        "end": "bottomRight"
+                      },
+                      "crossAxisAlignment": "center"
+                    }
+                  }
+                ],
+                "padding": 20,
+                "height": 300,
+                "gradient": {
+                  "colors": [
+                    "#44FFFFFF",
+                    "#18FFFFFF"
+                  ],
+                  "begin": "topCenter",
+                  "end": "bottomCenter"
+                },
+                "borderRadius": 20
+              }
+            }
+          }
+        ]
+      },
+      "share": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_snackbar",
+            "args": {
+              "message": "share"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [],
+              "gradient": {
+                "colors": [
+                  "#667EEA",
+                  "#764BA2",
+                  "#F093FB",
+                  "#F5576C"
+                ],
+                "begin": "topLeft",
+                "end": "bottomRight"
+              }
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [],
+              "width": 86,
+              "height": 86,
+              "shape": "circle",
+              "border": {
+                "color": "#22FFFFFF",
+                "width": 1
+              },
+              "gradient": {
+                "colors": [
+                  "#22FFFFFF",
+                  "#02FFFFFF"
+                ],
+                "begin": "topLeft",
+                "end": "bottomRight"
+              }
+            },
+            "left": 32,
+            "top": 86
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [],
+              "width": 72,
+              "height": 72,
+              "shape": "circle",
+              "border": {
+                "color": "#22FFFFFF",
+                "width": 1
+              },
+              "gradient": {
+                "colors": [
+                  "#22FFFFFF",
+                  "#02FFFFFF"
+                ],
+                "begin": "topLeft",
+                "end": "bottomRight"
+              }
+            },
+            "left": 260,
+            "top": 148
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [],
+              "width": 104,
+              "height": 104,
+              "shape": "circle",
+              "border": {
+                "color": "#22FFFFFF",
+                "width": 1
+              },
+              "gradient": {
+                "colors": [
+                  "#22FFFFFF",
+                  "#02FFFFFF"
+                ],
+                "begin": "topLeft",
+                "end": "bottomRight"
+              }
+            },
+            "left": 78,
+            "top": 278
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [],
+              "width": 94,
+              "height": 94,
+              "shape": "circle",
+              "border": {
+                "color": "#22FFFFFF",
+                "width": 1
+              },
+              "gradient": {
+                "colors": [
+                  "#22FFFFFF",
+                  "#02FFFFFF"
+                ],
+                "begin": "topLeft",
+                "end": "bottomRight"
+              }
+            },
+            "left": 290,
+            "top": 430
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [],
+              "width": 82,
+              "height": 82,
+              "shape": "circle",
+              "border": {
+                "color": "#22FFFFFF",
+                "width": 1
+              },
+              "gradient": {
+                "colors": [
+                  "#22FFFFFF",
+                  "#02FFFFFF"
+                ],
+                "begin": "topLeft",
+                "end": "bottomRight"
+              }
+            },
+            "left": -18,
+            "top": 560
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [],
+              "width": 118,
+              "height": 118,
+              "shape": "circle",
+              "border": {
+                "color": "#22FFFFFF",
+                "width": 1
+              },
+              "gradient": {
+                "colors": [
+                  "#22FFFFFF",
+                  "#02FFFFFF"
+                ],
+                "begin": "topLeft",
+                "end": "bottomRight"
+              }
+            },
+            "left": 210,
+            "top": 650
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "backdrop_blur",
+                  "sigmaX": 10,
+                  "sigmaY": 10,
+                  "borderRadius": 20,
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "wb_sunny",
+                        "size": 48,
+                        "color": "#DDFFFFFF"
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 16
+                      },
+                      {
+                        "type": "text",
+                        "value": "毛玻璃效果",
+                        "style": {
+                          "fontSize": 24,
+                          "color": "#DDFFFFFF",
+                          "fontWeight": "w600",
+                          "textAlign": "center"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 8
+                      },
+                      {
+                        "type": "text",
+                        "value": "Flutter Glass",
+                        "style": {
+                          "fontSize": 16,
+                          "color": "#C8FFFFFF",
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "width": 320,
+                    "height": 200,
+                    "borderRadius": 20,
+                    "border": {
+                      "color": "#38FFFFFF",
+                      "width": 1.5
+                    },
+                    "gradient": {
+                      "colors": [
+                        "#42FFFFFF",
+                        "#18FFFFFF"
+                      ],
+                      "begin": "topLeft",
+                      "end": "bottomRight"
+                    },
+                    "alignment": "center",
+                    "mainAxisAlignment": "center"
+                  }
+                },
+                {
+                  "type": "spacer",
+                  "height": 30
+                },
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "gesture_detector",
+                      "onTap": {
+                        "call": "@global.dialog",
+                        "args": {}
+                      },
+                      "child": {
+                        "type": "backdrop_blur",
+                        "sigmaX": 8,
+                        "sigmaY": 8,
+                        "borderRadius": 30,
+                        "child": {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "favorite",
+                              "size": 24,
+                              "color": "#DDFFFFFF"
+                            }
+                          ],
+                          "width": 60,
+                          "height": 60,
+                          "shape": "circle",
+                          "border": {
+                            "color": "#38FFFFFF",
+                            "width": 1
+                          },
+                          "gradient": {
+                            "colors": [
+                              "#4AFFFFFF",
+                              "#18FFFFFF"
+                            ],
+                            "begin": "topLeft",
+                            "end": "bottomRight"
+                          },
+                          "alignment": "center",
+                          "mainAxisAlignment": "center"
+                        }
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 20
+                    },
+                    {
+                      "type": "gesture_detector",
+                      "onTap": {
+                        "call": "@global.sheet",
+                        "args": {}
+                      },
+                      "child": {
+                        "type": "backdrop_blur",
+                        "sigmaX": 8,
+                        "sigmaY": 8,
+                        "borderRadius": 30,
+                        "child": {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "star",
+                              "size": 24,
+                              "color": "#DDFFFFFF"
+                            }
+                          ],
+                          "width": 60,
+                          "height": 60,
+                          "shape": "circle",
+                          "border": {
+                            "color": "#38FFFFFF",
+                            "width": 1
+                          },
+                          "gradient": {
+                            "colors": [
+                              "#4AFFFFFF",
+                              "#18FFFFFF"
+                            ],
+                            "begin": "topLeft",
+                            "end": "bottomRight"
+                          },
+                          "alignment": "center",
+                          "mainAxisAlignment": "center"
+                        }
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 20
+                    },
+                    {
+                      "type": "gesture_detector",
+                      "onTap": {
+                        "call": "@global.share",
+                        "args": {}
+                      },
+                      "child": {
+                        "type": "backdrop_blur",
+                        "sigmaX": 8,
+                        "sigmaY": 8,
+                        "borderRadius": 30,
+                        "child": {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "share",
+                              "size": 24,
+                              "color": "#DDFFFFFF"
+                            }
+                          ],
+                          "width": 60,
+                          "height": 60,
+                          "shape": "circle",
+                          "border": {
+                            "color": "#38FFFFFF",
+                            "width": 1
+                          },
+                          "gradient": {
+                            "colors": [
+                              "#4AFFFFFF",
+                              "#18FFFFFF"
+                            ],
+                            "begin": "topLeft",
+                            "end": "bottomRight"
+                          },
+                          "alignment": "center",
+                          "mainAxisAlignment": "center"
+                        }
+                      }
+                    }
+                  ],
+                  "mainAxisAlignment": "center"
+                }
+              ],
+              "alignment": "center",
+              "mainAxisAlignment": "center"
+            },
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0
+          }
+        ],
+        "appBar": {
+          "title": ""
+        }
+      }
+    ]
+  }
+}

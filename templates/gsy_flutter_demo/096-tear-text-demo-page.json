@@ -1,0 +1,493 @@
+{
+  "dsl": "3.3",
+  "appid": "62ab3925-2541-5be8-ba4d-9dffbb0c2729",
+  "meta": {
+    "name": "gsy_flutter_demo/096-tear-text-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "有趣的文本撕裂动画",
+      "en": "Text tear animation"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：有趣的文本撕裂动画",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "有趣的文本撕裂动画",
+      "sourcePath": "lib/widget/animation/tear_text_demo_page.dart",
+      "deferredAlias": "tear_text_demo_page",
+      "widgetClass": "TearTextDemoPage",
+      "category": "animation",
+      "routeIndex": 96,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clip-path-tear-text-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "有趣的文本撕裂动画",
+      "upstreamSource": "lib/widget/animation/tear_text_demo_page.dart",
+      "upstreamWidget": "TearTextDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clip-path-tear-text-v1",
+      "tear": false
+    },
+    "functions": {
+      "tearTick": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tear",
+              "value": true
+            }
+          },
+          {
+            "call": "@delay",
+            "args": {
+              "ms": 150
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tear",
+              "value": false
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "TearTextDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "interval_action",
+              "intervalMs": 400,
+              "runImmediately": false,
+              "action": {
+                "call": "@global.tearTick",
+                "args": {}
+              },
+              "child": {
+                "type": "interval_action",
+                "intervalMs": 600,
+                "runImmediately": false,
+                "action": {
+                  "call": "@global.tearTick",
+                  "args": {}
+                },
+                "child": {
+                  "type": "container",
+                  "layout": "stack",
+                  "width": 390,
+                  "height": 120,
+                  "alignment": "center",
+                  "clipBehavior": "none",
+                  "children": [
+                    {
+                      "type": "transform",
+                      "translateX": -4,
+                      "translateY": 2,
+                      "visible": {
+                        "var": "global.tear"
+                      },
+                      "child": {
+                        "type": "clip_path",
+                        "mode": "polygon",
+                        "points": [
+                          {
+                            "xFactor": 0.0,
+                            "yFactor": 0.05
+                          },
+                          {
+                            "xFactor": 0.16,
+                            "yFactor": 0.18
+                          },
+                          {
+                            "xFactor": 0.27,
+                            "yFactor": 0.02
+                          },
+                          {
+                            "xFactor": 0.43,
+                            "yFactor": 0.2
+                          },
+                          {
+                            "xFactor": 0.56,
+                            "yFactor": 0.06
+                          },
+                          {
+                            "xFactor": 0.72,
+                            "yFactor": 0.24
+                          },
+                          {
+                            "xFactor": 0.86,
+                            "yFactor": 0.08
+                          },
+                          {
+                            "xFactor": 1.0,
+                            "yFactor": 0.18
+                          },
+                          {
+                            "xFactor": 1.0,
+                            "yFactor": 0.94
+                          },
+                          {
+                            "xFactor": 0.82,
+                            "yFactor": 0.76
+                          },
+                          {
+                            "xFactor": 0.68,
+                            "yFactor": 0.96
+                          },
+                          {
+                            "xFactor": 0.5,
+                            "yFactor": 0.8
+                          },
+                          {
+                            "xFactor": 0.34,
+                            "yFactor": 0.98
+                          },
+                          {
+                            "xFactor": 0.18,
+                            "yFactor": 0.78
+                          },
+                          {
+                            "xFactor": 0.0,
+                            "yFactor": 0.92
+                          }
+                        ],
+                        "child": {
+                          "type": "clip_path",
+                          "mode": "rect",
+                          "y": 30,
+                          "heightFactor": 0.66,
+                          "child": {
+                            "type": "container",
+                            "layout": "stack",
+                            "width": 390,
+                            "height": 120,
+                            "alignment": "center",
+                            "children": [
+                              {
+                                "type": "center",
+                                "child": {
+                                  "type": "text",
+                                  "value": "Hello Flutter",
+                                  "style": {
+                                    "fontSize": 48,
+                                    "fontWeight": "normal",
+                                    "color": "#FFFFFFFF",
+                                    "textAlign": "center",
+                                    "paddingV": 0,
+                                    "shadows": [
+                                      {
+                                        "color": "#55FFFFFF",
+                                        "blurRadius": 10
+                                      },
+                                      {
+                                        "color": "#55FFFFFF",
+                                        "blurRadius": 30
+                                      }
+                                    ],
+                                    "gradient": [
+                                      "#2196F3",
+                                      "#4CAF50",
+                                      "#F44336"
+                                    ],
+                                    "strokeWidth": 5,
+                                    "gradientWidth": 360,
+                                    "gradientHeight": 90
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "layout": "stack",
+                      "width": 390,
+                      "height": 120,
+                      "alignment": "center",
+                      "visible": {
+                        "!": [
+                          {
+                            "var": "global.tear"
+                          }
+                        ]
+                      },
+                      "children": [
+                        {
+                          "type": "center",
+                          "child": {
+                            "type": "text",
+                            "value": "Hello Flutter",
+                            "style": {
+                              "fontSize": 48,
+                              "fontWeight": "bold",
+                              "color": "#FFFFFFFF",
+                              "textAlign": "center",
+                              "paddingV": 0,
+                              "shadows": [
+                                {
+                                  "color": "#FFFFFFFF",
+                                  "blurRadius": 10
+                                },
+                                {
+                                  "color": "#55FFFFFF",
+                                  "blurRadius": 20
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "clip_path",
+                      "mode": "polygon",
+                      "points": [
+                        {
+                          "xFactor": 0.0,
+                          "yFactor": 0.05
+                        },
+                        {
+                          "xFactor": 0.16,
+                          "yFactor": 0.18
+                        },
+                        {
+                          "xFactor": 0.27,
+                          "yFactor": 0.02
+                        },
+                        {
+                          "xFactor": 0.43,
+                          "yFactor": 0.2
+                        },
+                        {
+                          "xFactor": 0.56,
+                          "yFactor": 0.06
+                        },
+                        {
+                          "xFactor": 0.72,
+                          "yFactor": 0.24
+                        },
+                        {
+                          "xFactor": 0.86,
+                          "yFactor": 0.08
+                        },
+                        {
+                          "xFactor": 1.0,
+                          "yFactor": 0.18
+                        },
+                        {
+                          "xFactor": 1.0,
+                          "yFactor": 0.94
+                        },
+                        {
+                          "xFactor": 0.82,
+                          "yFactor": 0.76
+                        },
+                        {
+                          "xFactor": 0.68,
+                          "yFactor": 0.96
+                        },
+                        {
+                          "xFactor": 0.5,
+                          "yFactor": 0.8
+                        },
+                        {
+                          "xFactor": 0.34,
+                          "yFactor": 0.98
+                        },
+                        {
+                          "xFactor": 0.18,
+                          "yFactor": 0.78
+                        },
+                        {
+                          "xFactor": 0.0,
+                          "yFactor": 0.92
+                        }
+                      ],
+                      "visible": {
+                        "var": "global.tear"
+                      },
+                      "child": {
+                        "type": "container",
+                        "layout": "stack",
+                        "width": 390,
+                        "height": 120,
+                        "alignment": "center",
+                        "children": [
+                          {
+                            "type": "center",
+                            "child": {
+                              "type": "text",
+                              "value": "Hello Flutter",
+                              "style": {
+                                "fontSize": 48,
+                                "fontWeight": "bold",
+                                "color": "#FFFFFFFF",
+                                "textAlign": "center",
+                                "paddingV": 0,
+                                "shadows": [
+                                  {
+                                    "color": "#FFFFFFFF",
+                                    "blurRadius": 10
+                                  },
+                                  {
+                                    "color": "#55FFFFFF",
+                                    "blurRadius": 20
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "type": "transform",
+                      "translateX": 7,
+                      "translateY": -5,
+                      "visible": {
+                        "var": "global.tear"
+                      },
+                      "child": {
+                        "type": "clip_path",
+                        "mode": "polygon",
+                        "points": [
+                          {
+                            "xFactor": 0.0,
+                            "yFactor": 0.92
+                          },
+                          {
+                            "xFactor": 0.18,
+                            "yFactor": 0.78
+                          },
+                          {
+                            "xFactor": 0.34,
+                            "yFactor": 0.98
+                          },
+                          {
+                            "xFactor": 0.5,
+                            "yFactor": 0.8
+                          },
+                          {
+                            "xFactor": 0.68,
+                            "yFactor": 0.96
+                          },
+                          {
+                            "xFactor": 0.82,
+                            "yFactor": 0.76
+                          },
+                          {
+                            "xFactor": 1.0,
+                            "yFactor": 0.94
+                          },
+                          {
+                            "xFactor": 1.0,
+                            "yFactor": 0.18
+                          },
+                          {
+                            "xFactor": 0.86,
+                            "yFactor": 0.08
+                          },
+                          {
+                            "xFactor": 0.72,
+                            "yFactor": 0.24
+                          },
+                          {
+                            "xFactor": 0.56,
+                            "yFactor": 0.06
+                          },
+                          {
+                            "xFactor": 0.43,
+                            "yFactor": 0.2
+                          },
+                          {
+                            "xFactor": 0.27,
+                            "yFactor": 0.02
+                          },
+                          {
+                            "xFactor": 0.16,
+                            "yFactor": 0.18
+                          },
+                          {
+                            "xFactor": 0.0,
+                            "yFactor": 0.05
+                          }
+                        ],
+                        "child": {
+                          "type": "clip_path",
+                          "mode": "rect",
+                          "y": 20,
+                          "heightFactor": 0.5,
+                          "child": {
+                            "type": "container",
+                            "layout": "stack",
+                            "width": 390,
+                            "height": 120,
+                            "alignment": "center",
+                            "children": [
+                              {
+                                "type": "center",
+                                "child": {
+                                  "type": "text",
+                                  "value": "Hello Flutter",
+                                  "style": {
+                                    "fontSize": 48,
+                                    "fontWeight": "normal",
+                                    "color": "#66FFFFFF",
+                                    "textAlign": "center",
+                                    "paddingV": 0,
+                                    "shadows": [
+                                      {
+                                        "color": "#55FFFFFF",
+                                        "blurRadius": 10
+                                      },
+                                      {
+                                        "color": "#55FFFFFF",
+                                        "blurRadius": 30
+                                      }
+                                    ],
+                                    "fontStyle": "italic",
+                                    "strokeWidth": 5
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "leftFactor": 0.5,
+            "leftOffset": -195,
+            "topFactor": 0.5,
+            "topOffset": -60
+          }
+        ],
+        "appBar": {
+          "title": "TearTextDemoPage"
+        }
+      }
+    ]
+  }
+}

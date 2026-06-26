@@ -1,0 +1,427 @@
+{
+  "dsl": "3.3",
+  "appid": "00b2b0a4-298b-5284-a185-ee9f2da85ae0",
+  "meta": {
+    "name": "gsy_flutter_demo/072-chat-list-scroll-demo-page",
+    "version": "0.1.4",
+    "type": "app",
+    "displayName": {
+      "zh": "首尾添加数据不会抖动",
+      "en": "Stable list when prepend/append"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：首尾添加数据不会抖动",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "首尾添加数据不会抖动",
+      "sourcePath": "lib/widget/basic/chat_list_scroll_demo_page.dart",
+      "deferredAlias": "chat_list_scroll_demo_page",
+      "widgetClass": "ChatListScrollDemoPage",
+      "category": "basic",
+      "routeIndex": 72
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "首尾添加数据不会抖动",
+      "upstreamSource": "lib/widget/basic/chat_list_scroll_demo_page.dart",
+      "upstreamWidget": "ChatListScrollDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4",
+      "oldData": [
+        {
+          "txt": "aaa11",
+          "type": "Right"
+        },
+        {
+          "txt": "aaa22",
+          "type": "Right"
+        },
+        {
+          "txt": "aaa33",
+          "type": "Right"
+        }
+      ],
+      "newData": [],
+      "newCount": 0,
+      "oldCount": 3
+    },
+    "functions": {
+      "send": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@list_add",
+            "args": {
+              "var": "global.newData",
+              "item": {
+                "txt": {
+                  "cat": [
+                    "#### new Send ",
+                    {
+                      "var": "global.newCount"
+                    }
+                  ]
+                },
+                "type": "Right"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.newCount",
+              "value": {
+                "+": [
+                  {
+                    "var": "global.newCount"
+                  },
+                  1
+                ]
+              }
+            }
+          },
+          {
+            "call": "@global.scrollToStart",
+            "args": {}
+          }
+        ]
+      },
+      "addNew": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@loop_by_num",
+            "args": {
+              "count": 20,
+              "body": [
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.newData",
+                    "item": {
+                      "txt": {
+                        "cat": [
+                          "New ",
+                          {
+                            "var": "global.newCount"
+                          },
+                          {
+                            "var": "loop.index"
+                          }
+                        ]
+                      },
+                      "type": "Left"
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.newCount",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.newCount"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "addOld": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@loop_by_num",
+            "args": {
+              "count": 20,
+              "body": [
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.oldData",
+                    "item": {
+                      "txt": {
+                        "cat": [
+                          "Old ",
+                          {
+                            "var": "global.oldCount"
+                          },
+                          {
+                            "var": "loop.index"
+                          }
+                        ]
+                      },
+                      "type": "Right"
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.oldCount",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.oldCount"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "scrollToStart": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@delay",
+            "args": {
+              "ms": 1000
+            }
+          },
+          {
+            "call": "@scroll_to_top",
+            "args": {
+              "controller": "chat1",
+              "durationMs": 1
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "ControllerDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "custom_scroll_view",
+              "physics": "bouncing",
+              "slivers": [
+                {
+                  "type": "sliver_list",
+                  "source": "{{ global.newData }}",
+                  "itemTemplate": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.txt }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "height": 50,
+                        "color": "#F44336",
+                        "borderRadius": 4,
+                        "margin": {
+                          "left": 50,
+                          "right": 10,
+                          "top": 5,
+                          "bottom": 5
+                        },
+                        "padding": 10,
+                        "alignment": "centerRight",
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "loop.item.type"
+                            },
+                            "Right"
+                          ]
+                        }
+                      },
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.txt }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "height": 50,
+                        "color": "#4CAF50",
+                        "borderRadius": 4,
+                        "margin": {
+                          "left": 10,
+                          "right": 50,
+                          "top": 5,
+                          "bottom": 5
+                        },
+                        "padding": 10,
+                        "alignment": "centerLeft",
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "loop.item.type"
+                            },
+                            "Left"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "height": 1,
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "color": "#00000000"
+                  }
+                },
+                {
+                  "type": "sliver_list",
+                  "source": "{{ global.oldData }}",
+                  "itemTemplate": {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.txt }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "height": 50,
+                        "color": "#F44336",
+                        "borderRadius": 4,
+                        "margin": {
+                          "left": 50,
+                          "right": 10,
+                          "top": 5,
+                          "bottom": 5
+                        },
+                        "padding": 10,
+                        "alignment": "centerRight",
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "loop.item.type"
+                            },
+                            "Right"
+                          ]
+                        }
+                      },
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.txt }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ],
+                        "height": 50,
+                        "color": "#4CAF50",
+                        "borderRadius": 4,
+                        "margin": {
+                          "left": 10,
+                          "right": 50,
+                          "top": 5,
+                          "bottom": 5
+                        },
+                        "padding": 10,
+                        "alignment": "centerLeft",
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "loop.item.type"
+                            },
+                            "Left"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              ],
+              "controller": "chat1",
+              "reverse": true,
+              "centerIndex": 1
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        ],
+        "appBar": {
+          "title": "ControllerDemoPage",
+          "actions": [
+            {
+              "icon": "add",
+              "label": "add old",
+              "color": "#F44336",
+              "action": {
+                "call": "@global.addOld",
+                "args": {}
+              }
+            },
+            {
+              "icon": "add",
+              "label": "add new",
+              "color": "#FFFF00",
+              "action": {
+                "call": "@global.addNew",
+                "args": {}
+              }
+            }
+          ]
+        },
+        "floatingActionButton": {
+          "type": "floating_action_button",
+          "label": "Send",
+          "action": {
+            "call": "@global.send",
+            "args": {}
+          }
+        }
+      }
+    ]
+  }
+}

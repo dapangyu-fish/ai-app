@@ -1,0 +1,354 @@
+{
+  "dsl": "3.3",
+  "appid": "bd36c9dc-82de-5879-888e-ce726bbc01f0",
+  "meta": {
+    "name": "gsy_flutter_demo/084-dash3d-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "3D Dash",
+      "en": "3D Dash"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：3D Dash",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "3D Dash",
+      "sourcePath": "lib/widget/visual/dash_3d_demo_page.dart",
+      "deferredAlias": "dash_3d_demo_page",
+      "widgetClass": "Dash3dDemoPage",
+      "category": "visual",
+      "routeIndex": 84,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-projected-scene-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "3D Dash",
+      "upstreamSource": "lib/widget/visual/dash_3d_demo_page.dart",
+      "upstreamWidget": "Dash3dDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-projected-scene-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "Dash3dDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "projected_scene",
+                "width": 340,
+                "height": 320,
+                "zoom": 5,
+                "perspective": 800,
+                "durationMs": 12000,
+                "speed": 1,
+                "sortMode": "depth",
+                "interactive": true,
+                "dragRotationScale": 0.012,
+                "locals": {
+                  "flight": {
+                    "abs": {
+                      "sin": {
+                        "*": [
+                          "t",
+                          10
+                        ]
+                      }
+                    }
+                  },
+                  "bob": {
+                    "*": [
+                      "flight",
+                      1.2
+                    ]
+                  },
+                  "leftWingAngle": {
+                    "-": [
+                      -0.5,
+                      {
+                        "*": [
+                          "flight",
+                          0.16
+                        ]
+                      }
+                    ]
+                  },
+                  "rightWingAngle": {
+                    "+": [
+                      0.5,
+                      {
+                        "*": [
+                          "flight",
+                          0.16
+                        ]
+                      }
+                    ]
+                  }
+                },
+                "nodes": [
+                  {
+                    "kind": "ellipse",
+                    "x": -23,
+                    "y": "bob",
+                    "z": -2,
+                    "width": 20,
+                    "height": 15,
+                    "rotateZ": "leftWingAngle",
+                    "color": "#5CC0EF"
+                  },
+                  {
+                    "kind": "ellipse",
+                    "x": 23,
+                    "y": "bob",
+                    "z": -2,
+                    "width": 20,
+                    "height": 15,
+                    "rotateZ": "rightWingAngle",
+                    "color": "#5CC0EF"
+                  },
+                  {
+                    "kind": "circle",
+                    "x": 0,
+                    "y": "bob",
+                    "z": 0,
+                    "diameter": 40,
+                    "color": "#A0E6FE"
+                  },
+                  {
+                    "kind": "ellipse",
+                    "x": 0,
+                    "y": {
+                      "+": [
+                        12,
+                        "bob"
+                      ]
+                    },
+                    "z": -17,
+                    "width": 18,
+                    "height": 26,
+                    "color": "#5CC0EF"
+                  },
+                  {
+                    "kind": "ellipse",
+                    "x": 0,
+                    "y": {
+                      "+": [
+                        -20,
+                        "bob"
+                      ]
+                    },
+                    "z": 1,
+                    "width": 3,
+                    "height": 6,
+                    "color": "#A0E6FE"
+                  },
+                  {
+                    "kind": "ellipse",
+                    "x": -2,
+                    "y": {
+                      "+": [
+                        -19,
+                        "bob"
+                      ]
+                    },
+                    "z": 1,
+                    "width": 3,
+                    "height": 6,
+                    "rotateZ": {
+                      "-": [
+                        0,
+                        {
+                          "/": [
+                            "pi",
+                            8
+                          ]
+                        }
+                      ]
+                    },
+                    "color": "#A0E6FE"
+                  },
+                  {
+                    "kind": "ellipse",
+                    "x": 2,
+                    "y": {
+                      "+": [
+                        -19,
+                        "bob"
+                      ]
+                    },
+                    "z": 1,
+                    "width": 3,
+                    "height": 6,
+                    "rotateZ": {
+                      "/": [
+                        "pi",
+                        8
+                      ]
+                    },
+                    "color": "#A0E6FE"
+                  },
+                  {
+                    "kind": "ellipse",
+                    "x": 0,
+                    "y": {
+                      "+": [
+                        5,
+                        "bob"
+                      ]
+                    },
+                    "z": 20,
+                    "width": 60,
+                    "height": 30,
+                    "color": "#FFFFFF"
+                  },
+                  {
+                    "kind": "circle",
+                    "x": -7,
+                    "y": {
+                      "+": [
+                        0,
+                        "bob"
+                      ]
+                    },
+                    "z": 22,
+                    "diameter": 15,
+                    "color": "#5CC0EF"
+                  },
+                  {
+                    "kind": "circle",
+                    "x": 7,
+                    "y": {
+                      "+": [
+                        0,
+                        "bob"
+                      ]
+                    },
+                    "z": 22,
+                    "diameter": 15,
+                    "color": "#5CC0EF"
+                  },
+                  {
+                    "kind": "ellipse",
+                    "x": -7,
+                    "y": {
+                      "+": [
+                        0,
+                        "bob"
+                      ]
+                    },
+                    "z": 23,
+                    "width": 6,
+                    "height": 8,
+                    "color": "#71D3C7"
+                  },
+                  {
+                    "kind": "ellipse",
+                    "x": 7,
+                    "y": {
+                      "+": [
+                        0,
+                        "bob"
+                      ]
+                    },
+                    "z": 23,
+                    "width": 6,
+                    "height": 8,
+                    "color": "#71D3C7"
+                  },
+                  {
+                    "kind": "ellipse",
+                    "x": -7,
+                    "y": {
+                      "+": [
+                        0,
+                        "bob"
+                      ]
+                    },
+                    "z": 24,
+                    "width": 6,
+                    "height": 8,
+                    "color": "#000000"
+                  },
+                  {
+                    "kind": "ellipse",
+                    "x": 7,
+                    "y": {
+                      "+": [
+                        0,
+                        "bob"
+                      ]
+                    },
+                    "z": 24,
+                    "width": 6,
+                    "height": 8,
+                    "color": "#000000"
+                  },
+                  {
+                    "kind": "circle",
+                    "x": -5,
+                    "y": {
+                      "+": [
+                        -2,
+                        "bob"
+                      ]
+                    },
+                    "z": 25,
+                    "diameter": 1.4,
+                    "color": "#FFFFFF"
+                  },
+                  {
+                    "kind": "circle",
+                    "x": 9,
+                    "y": {
+                      "+": [
+                        -2,
+                        "bob"
+                      ]
+                    },
+                    "z": 25,
+                    "diameter": 1.4,
+                    "color": "#FFFFFF"
+                  },
+                  {
+                    "kind": "cone",
+                    "x": 0,
+                    "y": {
+                      "+": [
+                        7,
+                        "bob"
+                      ]
+                    },
+                    "z": 24,
+                    "diameter": 3,
+                    "length": 10,
+                    "color": "#967C40"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "appBar": {
+          "title": "Dash3dDemoPage"
+        }
+      }
+    ]
+  }
+}

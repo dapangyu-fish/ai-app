@@ -30,19 +30,29 @@ PreferredSizeWidget buildAppBar(
   final elevation = (json['elevation'] as num?)?.toDouble();
   final rawBg = json['backgroundColor']?.toString();
   final bg = _parseColor(
-      rawBg != null ? interpreter.resolveTemplate(rawBg) : null);
+    rawBg != null ? interpreter.resolveTemplate(rawBg) : null,
+  );
   final rawFg = json['color']?.toString();
   final fg = _parseColor(
-      rawFg != null ? interpreter.resolveTemplate(rawFg) : null);
+    rawFg != null ? interpreter.resolveTemplate(rawFg) : null,
+  );
+  final rawImage = json['backgroundImage']?.toString();
+  final backgroundImage = rawImage != null
+      ? interpreter.resolveTemplate(rawImage)
+      : null;
+  final height = (json['height'] as num?)?.toDouble();
 
   Widget? leading;
   final leadingDef = json['leading'];
   if (leadingDef is Map<String, dynamic>) {
-    final iconName = leadingDef['icon']?.toString();
+    final rawIconName = leadingDef['icon']?.toString();
+    final iconName = rawIconName == null
+        ? null
+        : interpreter.resolveTemplate(rawIconName);
     final iconData = iconName != null ? IconRegistry.get(iconName) : null;
     final action = leadingDef['action'] as Map<String, dynamic>?;
     leading = IconButton(
-      icon: Icon(iconData ?? Icons.arrow_back),
+      icon: Icon(iconData ?? Icons.arrow_back, color: fg),
       onPressed: action != null
           ? () => interpreter.executeAction(action, context)
           : null,
@@ -55,16 +65,67 @@ PreferredSizeWidget buildAppBar(
     for (final a in rawActions) {
       if (a is Map<String, dynamic>) {
         final iconName = a['icon']?.toString();
-        final iconData = iconName != null ? IconRegistry.get(iconName) : null;
+        final resolvedIconName = iconName == null
+            ? null
+            : interpreter.resolveTemplate(iconName);
+        final iconData = resolvedIconName != null
+            ? IconRegistry.get(resolvedIconName)
+            : null;
+        final rawLabel = a['label']?.toString();
+        final label = rawLabel == null
+            ? null
+            : interpreter.resolveTemplate(rawLabel);
+        final rawColor = a['color']?.toString();
+        final color = _parseColor(
+          rawColor != null ? interpreter.resolveTemplate(rawColor) : null,
+        );
         final action = a['action'] as Map<String, dynamic>?;
-        actionWidgets.add(IconButton(
-          icon: Icon(iconData ?? Icons.more_vert),
-          onPressed: action != null
-              ? () => interpreter.executeAction(action, context)
-              : null,
-        ));
+        final onPressed = action != null
+            ? () => interpreter.executeAction(action, context)
+            : null;
+        if (label != null && label.isNotEmpty) {
+          final text = Text(label, style: TextStyle(color: color));
+          actionWidgets.add(
+            iconData == null
+                ? TextButton(onPressed: onPressed, child: text)
+                : TextButton.icon(
+                    onPressed: onPressed,
+                    icon: Icon(iconData, color: color),
+                    label: text,
+                  ),
+          );
+        } else {
+          actionWidgets.add(
+            IconButton(
+              icon: Icon(iconData ?? Icons.more_vert, color: color),
+              onPressed: onPressed,
+            ),
+          );
+        }
       }
     }
+  }
+
+  if (backgroundImage != null && backgroundImage.isNotEmpty) {
+    final appBarHeight = height ?? kToolbarHeight * 3;
+    return PreferredSize(
+      preferredSize: Size.fromHeight(appBarHeight),
+      child: Stack(
+        children: [
+          Positioned.fill(child: _buildImage(backgroundImage, appBarHeight)),
+          if (leadingDef != false)
+            SafeArea(
+              child:
+                  leading ??
+                  IconButton(
+                    color: fg ?? Colors.white,
+                    icon: const Icon(Icons.arrow_back_ios),
+                    onPressed: () => Navigator.of(context).maybePop(),
+                  ),
+            ),
+        ],
+      ),
+    );
   }
 
   return AppBar(
@@ -75,6 +136,23 @@ PreferredSizeWidget buildAppBar(
     foregroundColor: fg,
     leading: leading,
     actions: actionWidgets.isEmpty ? null : actionWidgets,
+  );
+}
+
+Widget _buildImage(String source, double height) {
+  if (source.startsWith('http://') || source.startsWith('https://')) {
+    return Image.network(
+      source,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: height,
+    );
+  }
+  return Image.asset(
+    source,
+    fit: BoxFit.cover,
+    width: double.infinity,
+    height: height,
   );
 }
 

@@ -1,0 +1,387 @@
+{
+  "dsl": "3.3",
+  "appid": "548bafd0-2cd1-5e87-88dc-00d8c985e5df",
+  "meta": {
+    "name": "gsy_flutter_demo/091-list-link-bottom-sheet-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "列表联动 BottomSheet 效果",
+      "en": "列表联动 BottomSheet effect"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：列表联动 BottomSheet 效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "列表联动 BottomSheet 效果",
+      "sourcePath": "lib/widget/scroll/list_link_bottomsheet_demo_page.dart",
+      "deferredAlias": "list_link_bottomsheet_demo_page",
+      "widgetClass": "ListLinkBottomSheetDemoPage",
+      "category": "scroll",
+      "routeIndex": 91,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-scroll-sheet-handoff-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "列表联动 BottomSheet 效果",
+      "upstreamSource": "lib/widget/scroll/list_link_bottomsheet_demo_page.dart",
+      "upstreamWidget": "ListLinkBottomSheetDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-scroll-sheet-handoff-v1",
+      "items": [
+        {
+          "index": 0
+        },
+        {
+          "index": 1
+        },
+        {
+          "index": 2
+        },
+        {
+          "index": 3
+        },
+        {
+          "index": 4
+        },
+        {
+          "index": 5
+        },
+        {
+          "index": 6
+        },
+        {
+          "index": 7
+        },
+        {
+          "index": 8
+        },
+        {
+          "index": 9
+        },
+        {
+          "index": 10
+        },
+        {
+          "index": 11
+        },
+        {
+          "index": 12
+        },
+        {
+          "index": 13
+        },
+        {
+          "index": 14
+        },
+        {
+          "index": 15
+        },
+        {
+          "index": 16
+        },
+        {
+          "index": 17
+        },
+        {
+          "index": 18
+        },
+        {
+          "index": 19
+        },
+        {
+          "index": 20
+        },
+        {
+          "index": 21
+        },
+        {
+          "index": 22
+        },
+        {
+          "index": 23
+        },
+        {
+          "index": 24
+        },
+        {
+          "index": 25
+        },
+        {
+          "index": 26
+        },
+        {
+          "index": 27
+        },
+        {
+          "index": 28
+        },
+        {
+          "index": 29
+        }
+      ],
+      "sheetHeight": 0,
+      "sheetMaxHeight": 720,
+      "sheetDirectionUp": false
+    },
+    "functions": {
+      "updateSheetDrag": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sheetDirectionUp",
+              "value": {
+                "<=": [
+                  {
+                    "var": "event.deltaY"
+                  },
+                  0
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sheetHeight",
+              "value": {
+                "clamp": [
+                  {
+                    "-": [
+                      {
+                        "var": "global.sheetHeight"
+                      },
+                      {
+                        "var": "event.deltaY"
+                      }
+                    ]
+                  },
+                  0,
+                  {
+                    "var": "global.sheetMaxHeight"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "snapSheet": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sheetHeight",
+              "value": {
+                "if": [
+                  {
+                    "var": "global.sheetDirectionUp"
+                  },
+                  {
+                    "var": "global.sheetMaxHeight"
+                  },
+                  0
+                ]
+              }
+            }
+          },
+          {
+            "call": "@scroll_to_offset",
+            "args": {
+              "controller": "listlink.page",
+              "offset": 0,
+              "durationMs": 0
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "ListLinkBottomSheetDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "scroll_drag_handoff",
+              "axis": "vertical",
+              "defaultController": "listlink.list",
+              "switches": [
+                {
+                  "from": "listlink.list",
+                  "to": "listlink.page",
+                  "when": "fromAtMaxAndForward"
+                }
+              ],
+              "child": {
+                "type": "page_view",
+                "scrollDirection": "vertical",
+                "controller": "listlink.page",
+                "physics": "never",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "list",
+                        "source": "{{ global.items }}",
+                        "allowNestedScroll": true,
+                        "controller": "listlink.list",
+                        "physics": "never",
+                        "separator": "none",
+                        "item_template": {
+                          "type": "container",
+                          "layout": "column",
+                          "height": 48,
+                          "padding": {
+                            "left": 16
+                          },
+                          "alignment": "centerLeft",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "List Item {{ loop.item.index }}",
+                              "style": {
+                                "fontSize": 16,
+                                "color": "#212121"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "alignment": "center",
+                    "mainAxisAlignment": "center",
+                    "color": "#FFFFFF",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "纯粹背后占位",
+                        "style": {
+                          "fontSize": 50,
+                          "color": "#000000",
+                          "textAlign": "center"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "gesture_detector",
+                  "onPanUpdate": {
+                    "call": "@global.updateSheetDrag",
+                    "args": {}
+                  },
+                  "onPanEnd": {
+                    "call": "@global.snapSheet",
+                    "args": {}
+                  },
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "height": 50,
+                    "color": "#2196F3",
+                    "alignment": "center",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "Header",
+                        "style": {
+                          "fontSize": 18,
+                          "color": "#111111",
+                          "fontWeight": "bold",
+                          "textAlign": "center"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "gesture_detector",
+                  "onPanUpdate": {
+                    "call": "@global.updateSheetDrag",
+                    "args": {}
+                  },
+                  "onPanEnd": {
+                    "call": "@global.snapSheet",
+                    "args": {}
+                  },
+                  "child": {
+                    "type": "animated_container",
+                    "durationMs": 220,
+                    "height": {
+                      "var": "global.sheetHeight"
+                    },
+                    "color": "#FFFFFF",
+                    "child": {
+                      "type": "container",
+                      "layout": "column",
+                      "height": 30,
+                      "alignment": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "BottomSheet /n Content",
+                          "style": {
+                            "fontSize": 30,
+                            "color": "#111111",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "visible": {
+                        ">": [
+                          {
+                            "var": "global.sheetHeight"
+                          },
+                          1
+                        ]
+                      }
+                    }
+                  }
+                }
+              ],
+              "color": "#FFFFFF"
+            }
+          }
+        ],
+        "appBar": {
+          "title": "ListLinkBottomSheetDemoPage"
+        }
+      }
+    ]
+  }
+}

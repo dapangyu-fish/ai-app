@@ -1,0 +1,115 @@
+{
+  "dsl": "3.3",
+  "appid": "c8cde7b4-8c89-5bfc-9cbf-3245a99d0437",
+  "meta": {
+    "name": "gsy_flutter_demo/093-async-to-sync-call-page",
+    "version": "0.1.1",
+    "type": "app",
+    "displayName": {
+      "zh": "异步调用的顺序执行",
+      "en": "Ordered async calls"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：异步调用的顺序执行",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "异步调用的顺序执行",
+      "sourcePath": "lib/widget/basic/async_to_sync_call_page.dart",
+      "deferredAlias": "async_to_sync_call_page",
+      "widgetClass": "AsyncToSyncCallPage",
+      "category": "basic",
+      "routeIndex": 93,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v5"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "异步调用的顺序执行",
+      "upstreamSource": "lib/widget/basic/async_to_sync_call_page.dart",
+      "upstreamWidget": "AsyncToSyncCallPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v5",
+      "logs": []
+    },
+    "functions": {
+      "run": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@print",
+            "args": {
+              "value": "Start······Waiting"
+            }
+          },
+          {
+            "call": "@delay",
+            "args": {
+              "ms": 4000
+            }
+          },
+          {
+            "call": "@print",
+            "args": {
+              "value": "Finish First"
+            }
+          },
+          {
+            "call": "@delay",
+            "args": {
+              "ms": 2000
+            }
+          },
+          {
+            "call": "@print",
+            "args": {
+              "value": "Finish Tow"
+            }
+          },
+          {
+            "call": "@delay",
+            "args": {
+              "ms": 1000
+            }
+          },
+          {
+            "call": "@print",
+            "args": {
+              "value": "Finish Three"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "AsyncToSyncCallPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "floating_action_button",
+              "label": "",
+              "action": {
+                "call": "@global.run",
+                "args": {}
+              }
+            },
+            "right": 24,
+            "bottom": 24
+          }
+        ],
+        "appBar": {
+          "title": "AsyncToSyncCallPage"
+        }
+      }
+    ]
+  }
+}

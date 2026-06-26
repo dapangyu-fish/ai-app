@@ -1,0 +1,132 @@
+{
+  "dsl": "3.3",
+  "appid": "4ba434d2-9e1b-5ad6-843d-c69a1d5521b6",
+  "meta": {
+    "name": "gsy_flutter_demo/035-input-bottom-demo-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "键盘顶起展示（仅 App）",
+      "en": "Keyboard insets demo(App only)"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：键盘顶起展示（仅 App）",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "键盘顶起展示（仅 App）",
+      "sourcePath": "lib/widget/basic/input_bottom_demo_page.dart",
+      "deferredAlias": "input_bottom_demo_page",
+      "widgetClass": "InputBottomDemoPage",
+      "category": "basic",
+      "routeIndex": 35
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "键盘顶起展示（仅 App）",
+      "upstreamSource": "lib/widget/basic/input_bottom_demo_page.dart",
+      "upstreamWidget": "InputBottomDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v1",
+      "keyboardVisible": false,
+      "inputText": ""
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "KeyBoardDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "keyboard_detector",
+              "bind": "global.keyboardVisible",
+              "child": {
+                "type": "stack",
+                "fit": "expand",
+                "children": [
+                  {
+                    "type": "center",
+                    "child": {
+                      "type": "text",
+                      "value": "测试，测试，测试，测试，测试，测试，测试，测试，测试，测试，测试，测试",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#000000",
+                        "textAlign": "center"
+                      }
+                    }
+                  },
+                  {
+                    "type": "positioned",
+                    "left": 0,
+                    "right": 0,
+                    "bottom": 0,
+                    "child": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "container",
+                          "padding": {
+                            "horizontal": 10
+                          },
+                          "layout": "column",
+                          "crossAxisAlignment": "stretch",
+                          "border": {
+                            "color": "#448AFF",
+                            "width": 1
+                          },
+                          "children": [
+                            {
+                              "type": "input",
+                              "placeholder": "请输入",
+                              "bind": "global.inputText"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "container",
+                          "height": 40,
+                          "color": "#9E9E9E",
+                          "layout": "column",
+                          "mainAxisAlignment": "center",
+                          "crossAxisAlignment": "center",
+                          "visible": {
+                            "var": "global.keyboardVisible"
+                          },
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "bottom bar",
+                              "style": {
+                                "fontSize": 14,
+                                "color": "#000000"
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

@@ -19,6 +19,9 @@ class SessionMeta {
   lastKnownStatus; // 上次 /status 探到的 status: queued/running/done/failed/aborted
   bool processAlive; // 上次 /status 探到的 process_alive
   String lastEntryId; // SSE 续读游标，仅 active session 有意义
+  String providerId; // 本会话最后一次选择的供应商
+  String agentId; // 本会话首次发送前选择的执行 Agent；会话有内容后锁定
+  String agentScope; // public/private，随会话保存，避免切会话后请求路由错位
 
   SessionMeta({
     required this.id,
@@ -30,6 +33,9 @@ class SessionMeta {
     this.lastKnownStatus,
     this.processAlive = false,
     this.lastEntryId = '0',
+    this.providerId = '',
+    this.agentId = '',
+    this.agentScope = 'public',
   }) : updatedAt = updatedAt ?? DateTime.now().millisecondsSinceEpoch;
 
   Map<String, dynamic> toJson() => {
@@ -42,6 +48,9 @@ class SessionMeta {
     if (lastKnownStatus != null) 'lastKnownStatus': lastKnownStatus,
     'processAlive': processAlive,
     'lastEntryId': lastEntryId,
+    if (providerId.isNotEmpty) 'providerId': providerId,
+    if (agentId.isNotEmpty) 'agentId': agentId,
+    'agentScope': agentScope,
   };
 
   factory SessionMeta.fromJson(Map<String, dynamic> j) => SessionMeta(
@@ -54,6 +63,10 @@ class SessionMeta {
     lastKnownStatus: j['lastKnownStatus'] as String?,
     processAlive: j['processAlive'] as bool? ?? false,
     lastEntryId: j['lastEntryId'] as String? ?? '0',
+    providerId: j['providerId'] as String? ?? j['provider'] as String? ?? '',
+    agentId: j['agentId'] as String? ?? j['agent'] as String? ?? '',
+    agentScope:
+        j['agentScope'] as String? ?? j['agent_scope'] as String? ?? 'public',
   );
 
   /// 显示用标题。maxVisualWidth 是"视觉宽度"——中文按 1.0、ASCII 按 0.5 计。

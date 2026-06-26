@@ -1,0 +1,93 @@
+{
+  "dsl": "3.3",
+  "appid": "fc20296e-8588-597b-b9fd-c363e0f9f543",
+  "meta": {
+    "name": "gsy_flutter_demo/012-positioned-demo-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "通过绝对定位布局",
+      "en": "Absolute positioned layout"
+    },
+    "description": "PositionedDemoPage：通过绝对定位布局",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "通过绝对定位布局",
+      "sourcePath": "lib/widget/basic/positioned_demo_page.dart",
+      "deferredAlias": "positioned_demo_page",
+      "widgetClass": "PositionedDemoPage",
+      "category": "basic",
+      "routeIndex": 12,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "PositionedDemoPage",
+        "layout": "stack",
+        "padding": 15,
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "container",
+            "width": 88,
+            "height": 36,
+            "color": "#2196F3",
+            "borderRadius": 2
+          },
+          {
+            "type": "positioned",
+            "leftFactor": 0.5,
+            "child": {
+              "type": "container",
+              "width": 88,
+              "height": 36,
+              "color": "#69F0AE",
+              "borderRadius": 2
+            }
+          },
+          {
+            "type": "positioned",
+            "leftFactor": 0.2,
+            "topFactor": 0.75,
+            "child": {
+              "type": "container",
+              "width": 88,
+              "height": 36,
+              "color": "#FFEB3B",
+              "borderRadius": 2
+            }
+          },
+          {
+            "type": "positioned",
+            "leftFactor": 0.5,
+            "leftOffset": -44,
+            "topFactor": 0.5,
+            "subtractSafeTop": true,
+            "subtractToolbar": true,
+            "child": {
+              "type": "container",
+              "width": 88,
+              "height": 36,
+              "color": "#FF5252",
+              "borderRadius": 2
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

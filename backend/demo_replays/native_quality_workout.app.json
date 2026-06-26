@@ -1,0 +1,4354 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "fitness-coach",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "健身训练助手：训练计划、动作计时、训练记录",
+    "author": "fish",
+    "displayName": {
+      "zh": "健身教练"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "plans": [
+        {
+          "id": "p1",
+          "name": "上肢力量训练",
+          "type": "力量",
+          "desc": "重点训练胸部、肩部、三头肌",
+          "estDuration": 45,
+          "accent": "#EA580C",
+          "tint": "#FFF1E8",
+          "exCount": 5,
+          "exercises": [
+            {
+              "id": "e1_1",
+              "name": "卧推",
+              "targetSets": 4,
+              "targetReps": 10,
+              "duration": 45,
+              "restDuration": 60
+            },
+            {
+              "id": "e1_2",
+              "name": "哑铃飞鸟",
+              "targetSets": 3,
+              "targetReps": 12,
+              "duration": 40,
+              "restDuration": 45
+            },
+            {
+              "id": "e1_3",
+              "name": "肩推",
+              "targetSets": 3,
+              "targetReps": 10,
+              "duration": 40,
+              "restDuration": 50
+            },
+            {
+              "id": "e1_4",
+              "name": "侧平举",
+              "targetSets": 3,
+              "targetReps": 15,
+              "duration": 35,
+              "restDuration": 40
+            },
+            {
+              "id": "e1_5",
+              "name": "三头下压",
+              "targetSets": 3,
+              "targetReps": 12,
+              "duration": 35,
+              "restDuration": 40
+            }
+          ]
+        },
+        {
+          "id": "p2",
+          "name": "腿部训练",
+          "type": "力量",
+          "desc": "深蹲、硬拉、箭步蹲全面刺激下肢",
+          "estDuration": 55,
+          "accent": "#2563EB",
+          "tint": "#EAF1FF",
+          "exCount": 4,
+          "exercises": [
+            {
+              "id": "e2_1",
+              "name": "深蹲",
+              "targetSets": 4,
+              "targetReps": 8,
+              "duration": 50,
+              "restDuration": 90
+            },
+            {
+              "id": "e2_2",
+              "name": "罗马尼亚硬拉",
+              "targetSets": 3,
+              "targetReps": 10,
+              "duration": 45,
+              "restDuration": 60
+            },
+            {
+              "id": "e2_3",
+              "name": "箭步蹲",
+              "targetSets": 3,
+              "targetReps": 12,
+              "duration": 40,
+              "restDuration": 50
+            },
+            {
+              "id": "e2_4",
+              "name": "腿弯举",
+              "targetSets": 3,
+              "targetReps": 15,
+              "duration": 35,
+              "restDuration": 45
+            }
+          ]
+        },
+        {
+          "id": "p3",
+          "name": "有氧恢复",
+          "type": "有氧",
+          "desc": "中低强度有氧+全身拉伸放松",
+          "estDuration": 35,
+          "accent": "#059669",
+          "tint": "#E8F7F0",
+          "exCount": 3,
+          "exercises": [
+            {
+              "id": "e3_1",
+              "name": "椭圆机",
+              "targetSets": 1,
+              "targetReps": 1,
+              "duration": 1200,
+              "restDuration": 0
+            },
+            {
+              "id": "e3_2",
+              "name": "划船机",
+              "targetSets": 1,
+              "targetReps": 1,
+              "duration": 600,
+              "restDuration": 120
+            },
+            {
+              "id": "e3_3",
+              "name": "全身拉伸",
+              "targetSets": 1,
+              "targetReps": 1,
+              "duration": 600,
+              "restDuration": 0
+            }
+          ]
+        },
+        {
+          "id": "p4",
+          "name": "核心训练",
+          "type": "力量",
+          "desc": "腹肌、下背部和核心稳定性训练",
+          "estDuration": 30,
+          "accent": "#7C3AED",
+          "tint": "#F3EEFF",
+          "exCount": 5,
+          "exercises": [
+            {
+              "id": "e4_1",
+              "name": "平板支撑",
+              "targetSets": 3,
+              "targetReps": 1,
+              "duration": 60,
+              "restDuration": 30
+            },
+            {
+              "id": "e4_2",
+              "name": "卷腹",
+              "targetSets": 3,
+              "targetReps": 20,
+              "duration": 40,
+              "restDuration": 30
+            },
+            {
+              "id": "e4_3",
+              "name": "俄罗斯转体",
+              "targetSets": 3,
+              "targetReps": 20,
+              "duration": 40,
+              "restDuration": 30
+            },
+            {
+              "id": "e4_4",
+              "name": "超人式",
+              "targetSets": 3,
+              "targetReps": 15,
+              "duration": 35,
+              "restDuration": 30
+            },
+            {
+              "id": "e4_5",
+              "name": "侧平板",
+              "targetSets": 2,
+              "targetReps": 1,
+              "duration": 45,
+              "restDuration": 30
+            }
+          ]
+        }
+      ],
+      "selectedPlanType": "全部",
+      "formPlanId": "",
+      "formPlanName": "",
+      "formPlanDesc": "",
+      "formPlanType": "力量",
+      "formExercises": [],
+      "formExName": "",
+      "formExSets": "3",
+      "formExReps": "10",
+      "formExDuration": "45",
+      "formExRest": "60",
+      "currentPlan": {},
+      "timerMode": "exercise",
+      "timerTotal": 60,
+      "timerRemaining": 60,
+      "timerRunning": false,
+      "timerLabel": "动作计时",
+      "timerPreset": "60",
+      "records": [
+        {
+          "id": "r1",
+          "planName": "上肢力量训练",
+          "planId": "p1",
+          "date": "2026-06-24",
+          "duration": 48,
+          "accent": "#EA580C",
+          "tint": "#FFF1E8",
+          "completedSets": 17,
+          "exercises": [
+            {
+              "name": "卧推",
+              "sets": [
+                {
+                  "reps": 10,
+                  "weight": 70
+                },
+                {
+                  "reps": 10,
+                  "weight": 70
+                },
+                {
+                  "reps": 8,
+                  "weight": 75
+                },
+                {
+                  "reps": 8,
+                  "weight": 75
+                }
+              ]
+            },
+            {
+              "name": "哑铃飞鸟",
+              "sets": [
+                {
+                  "reps": 12,
+                  "weight": 20
+                },
+                {
+                  "reps": 12,
+                  "weight": 20
+                },
+                {
+                  "reps": 10,
+                  "weight": 22
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "r2",
+          "planName": "腿部训练",
+          "planId": "p2",
+          "date": "2026-06-23",
+          "duration": 55,
+          "accent": "#2563EB",
+          "tint": "#EAF1FF",
+          "completedSets": 14,
+          "exercises": [
+            {
+              "name": "深蹲",
+              "sets": [
+                {
+                  "reps": 8,
+                  "weight": 90
+                },
+                {
+                  "reps": 8,
+                  "weight": 90
+                },
+                {
+                  "reps": 6,
+                  "weight": 100
+                },
+                {
+                  "reps": 6,
+                  "weight": 100
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "r3",
+          "planName": "有氧恢复",
+          "planId": "p3",
+          "date": "2026-06-22",
+          "duration": 32,
+          "accent": "#059669",
+          "tint": "#E8F7F0",
+          "completedSets": 3,
+          "exercises": [
+            {
+              "name": "椭圆机",
+              "sets": [
+                {
+                  "reps": 1,
+                  "weight": 0
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "sessionPlanId": "",
+      "sessionPlanName": "",
+      "sessionExercises": [],
+      "sessionExIdx": 0,
+      "sessionCurrentSet": 1,
+      "sessionActive": false,
+      "sessionCompleted": false,
+      "sessionExLabel": "第 1 个动作",
+      "sessionSetLabel": "第 1 组",
+      "sessionLogReps": "",
+      "sessionLogWeight": "",
+      "timerDisplay": "60",
+      "viewRecord": {}
+    },
+    "functions": {
+      "goHome": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@navigate",
+            "args": {
+              "tab": "train_tab"
+            }
+          }
+        ]
+      },
+      "goPlans": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@navigate",
+            "args": {
+              "tab": "plans_tab"
+            }
+          }
+        ]
+      },
+      "goTimer": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@navigate",
+            "args": {
+              "tab": "timer_tab"
+            }
+          }
+        ]
+      },
+      "goRecords": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@navigate",
+            "args": {
+              "tab": "records_tab"
+            }
+          }
+        ]
+      },
+      "startCreatePlan": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formPlanId",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formPlanName",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formPlanDesc",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formPlanType",
+              "value": "力量"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formExercises",
+              "value": []
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "plan_form"
+            }
+          }
+        ]
+      },
+      "startEditPlan": {
+        "params": [
+          "planId"
+        ],
+        "logic": [
+          {
+            "call": "@for_each",
+            "args": {
+              "source": "{{ global.plans }}",
+              "var": "p",
+              "body": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        "{{ loop.p.id }}",
+                        "{{ params.planId }}"
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.formPlanId",
+                          "value": "{{ loop.p.id }}"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.formPlanName",
+                          "value": "{{ loop.p.name }}"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.formPlanDesc",
+                          "value": "{{ loop.p.desc }}"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.formPlanType",
+                          "value": "{{ loop.p.type }}"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.formExercises",
+                          "value": "{{ loop.p.exercises }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "plan_form"
+            }
+          }
+        ]
+      },
+      "savePlan": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._newPlan",
+              "value": {
+                "id": "{{ global.formPlanName }}_{{ global.plans | len }}",
+                "name": "{{ global.formPlanName }}",
+                "type": "{{ global.formPlanType }}",
+                "desc": "{{ global.formPlanDesc }}",
+                "estDuration": 40,
+                "accent": {
+                  "if": [
+                    {
+                      "==": [
+                        "{{ global.formPlanType }}",
+                        "有氧"
+                      ]
+                    },
+                    "#059669",
+                    {
+                      "if": [
+                        {
+                          "==": [
+                            "{{ global.formPlanType }}",
+                            "恢复"
+                          ]
+                        },
+                        "#7C3AED",
+                        "#EA580C"
+                      ]
+                    }
+                  ]
+                },
+                "tint": {
+                  "if": [
+                    {
+                      "==": [
+                        "{{ global.formPlanType }}",
+                        "有氧"
+                      ]
+                    },
+                    "#E8F7F0",
+                    {
+                      "if": [
+                        {
+                          "==": [
+                            "{{ global.formPlanType }}",
+                            "恢复"
+                          ]
+                        },
+                        "#F3EEFF",
+                        "#FFF1E8"
+                      ]
+                    }
+                  ]
+                },
+                "exCount": {
+                  "len": "{{ global.formExercises }}"
+                },
+                "exercises": "{{ global.formExercises }}"
+              }
+            }
+          },
+          {
+            "call": "@for_each",
+            "args": {
+              "var": "p",
+              "source": "{{ global.plans }}",
+              "body": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "and": [
+                        {
+                          "!=": [
+                            "{{ global.formPlanId }}",
+                            ""
+                          ]
+                        },
+                        {
+                          "==": [
+                            "{{ loop.p.id }}",
+                            "{{ global.formPlanId }}"
+                          ]
+                        }
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.plans",
+                          "value": {
+                            "map": [
+                              {
+                                "var": "x"
+                              },
+                              {
+                                "if": [
+                                  {
+                                    "==": [
+                                      "{{ var.x.id }}",
+                                      "{{ global.formPlanId }}"
+                                    ]
+                                  },
+                                  "{{ global._newPlan }}",
+                                  "{{ var.x }}"
+                                ]
+                              }
+                            ],
+                            "source": "{{ global.plans }}"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "var": "global.formPlanId",
+              "condition": {
+                "==": [
+                  "{{ global.formPlanId }}",
+                  ""
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.plans",
+                    "value": {
+                      "+": [
+                        "{{ global.plans }}",
+                        [
+                          "{{ global._newPlan }}"
+                        ]
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "计划已保存"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "plans_tab"
+            }
+          }
+        ]
+      },
+      "deletePlan": {
+        "params": [
+          "planId"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.plans",
+              "value": {
+                "filter": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "!=": [
+                      "{{ var.x.id }}",
+                      "{{ params.planId }}"
+                    ]
+                  }
+                ],
+                "source": "{{ global.plans }}"
+              }
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "计划已删除"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "plans_tab"
+            }
+          }
+        ]
+      },
+      "viewPlan": {
+        "params": [
+          "planId"
+        ],
+        "logic": [
+          {
+            "call": "@for_each",
+            "args": {
+              "source": "{{ global.plans }}",
+              "var": "p",
+              "body": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        "{{ loop.p.id }}",
+                        "{{ params.planId }}"
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.currentPlan",
+                          "value": "{{ loop.p }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "plan_detail"
+            }
+          }
+        ]
+      },
+      "addExerciseToForm": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formExercises",
+              "value": {
+                "+": [
+                  "{{ global.formExercises }}",
+                  [
+                    {
+                      "id": "{{ global.formExName }}_{{ global.formExercises | len }}",
+                      "name": "{{ global.formExName }}",
+                      "targetSets": {
+                        "int": "{{ global.formExSets }}"
+                      },
+                      "targetReps": {
+                        "int": "{{ global.formExReps }}"
+                      },
+                      "duration": {
+                        "int": "{{ global.formExDuration }}"
+                      },
+                      "restDuration": {
+                        "int": "{{ global.formExRest }}"
+                      }
+                    }
+                  ]
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formExName",
+              "value": ""
+            }
+          }
+        ]
+      },
+      "removeExerciseFromForm": {
+        "params": [
+          "idx"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.formExercises",
+              "value": {
+                "filter": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "!=": [
+                      "{{ loop.index }}",
+                      {
+                        "int": "{{ params.idx }}"
+                      }
+                    ]
+                  }
+                ],
+                "source": "{{ global.formExercises }}"
+              }
+            }
+          }
+        ]
+      },
+      "setTimerPreset": {
+        "params": [
+          "seconds",
+          "mode"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerMode",
+              "value": "{{ params.mode }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerTotal",
+              "value": {
+                "int": "{{ params.seconds }}"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerRemaining",
+              "value": {
+                "int": "{{ params.seconds }}"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerRunning",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerLabel",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      "{{ params.mode }}",
+                      "rest"
+                    ]
+                  },
+                  "休息计时",
+                  "动作计时"
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerPreset",
+              "value": "{{ params.seconds }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerDisplay",
+              "value": "{{ params.seconds }}"
+            }
+          }
+        ]
+      },
+      "setCustomTimer": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerTotal",
+              "value": {
+                "int": "{{ global.timerPreset }}"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerRemaining",
+              "value": {
+                "int": "{{ global.timerPreset }}"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerRunning",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerDisplay",
+              "value": "{{ global.timerPreset }}"
+            }
+          }
+        ]
+      },
+      "timerTick": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "and": [
+                  {
+                    "==": [
+                      "{{ global.timerRunning }}",
+                      true
+                    ]
+                  },
+                  {
+                    ">": [
+                      "{{ global.timerRemaining }}",
+                      0
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.timerRemaining",
+                    "value": {
+                      "-": [
+                        "{{ global.timerRemaining }}",
+                        1
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.timerDisplay",
+                    "value": "{{ global.timerRemaining }}"
+                  }
+                },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        "{{ global.timerRemaining }}",
+                        0
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.timerRunning",
+                          "value": false
+                        }
+                      },
+                      {
+                        "call": "@haptic",
+                        "args": {
+                          "type": "heavy"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "startTimer": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerRunning",
+              "value": true
+            }
+          }
+        ]
+      },
+      "pauseTimer": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerRunning",
+              "value": false
+            }
+          }
+        ]
+      },
+      "resetTimer": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerRemaining",
+              "value": "{{ global.timerTotal }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerRunning",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.timerDisplay",
+              "value": "{{ global.timerTotal }}"
+            }
+          }
+        ]
+      },
+      "startWorkout": {
+        "params": [
+          "planId"
+        ],
+        "logic": [
+          {
+            "call": "@for_each",
+            "args": {
+              "source": "{{ global.plans }}",
+              "var": "p",
+              "body": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        "{{ loop.p.id }}",
+                        "{{ params.planId }}"
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.sessionPlanId",
+                          "value": "{{ loop.p.id }}"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.sessionPlanName",
+                          "value": "{{ loop.p.name }}"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.sessionExercises",
+                          "value": "{{ loop.p.exercises }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionExIdx",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionCurrentSet",
+              "value": 1
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionExLabel",
+              "value": "第 1 个动作"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionSetLabel",
+              "value": "第 1 组"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionActive",
+              "value": true
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionCompleted",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionLogReps",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionLogWeight",
+              "value": ""
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "workout_session"
+            }
+          }
+        ]
+      },
+      "logSet": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionCurrentSet",
+              "value": {
+                "+": [
+                  "{{ global.sessionCurrentSet }}",
+                  1
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionSetLabel",
+              "value": {
+                "+": [
+                  "第 ",
+                  "{{ global.sessionCurrentSet }}",
+                  " 组"
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionLogReps",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionLogWeight",
+              "value": ""
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "已记录，继续下一组"
+            }
+          }
+        ]
+      },
+      "nextExercise": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionExIdx",
+              "value": {
+                "+": [
+                  "{{ global.sessionExIdx }}",
+                  1
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionCurrentSet",
+              "value": 1
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionExLabel",
+              "value": {
+                "+": [
+                  "第 ",
+                  {
+                    "+": [
+                      "{{ global.sessionExIdx }}",
+                      1
+                    ]
+                  },
+                  " 个动作"
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionSetLabel",
+              "value": "第 1 组"
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                ">=": [
+                  {
+                    "+": [
+                      "{{ global.sessionExIdx }}",
+                      1
+                    ]
+                  },
+                  {
+                    "len": "{{ global.sessionExercises }}"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.sessionActive",
+                    "value": false
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.sessionCompleted",
+                    "value": true
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "finishWorkout": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.records",
+              "value": {
+                "+": [
+                  "{{ global.records }}",
+                  [
+                    {
+                      "id": "r_{{ global.records | len }}",
+                      "planName": "{{ global.sessionPlanName }}",
+                      "planId": "{{ global.sessionPlanId }}",
+                      "date": "2026-06-25",
+                      "duration": 40,
+                      "accent": "#EA580C",
+                      "tint": "#FFF1E8",
+                      "completedSets": "{{ global.sessionCurrentSet }}",
+                      "exercises": []
+                    }
+                  ]
+                ]
+              }
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "训练完成！记录已保存"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionActive",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionCompleted",
+              "value": false
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "tab": "records_tab"
+            }
+          }
+        ]
+      },
+      "cancelWorkout": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionActive",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.sessionCompleted",
+              "value": false
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "tab": "train_tab"
+            }
+          }
+        ]
+      },
+      "viewRecord": {
+        "params": [
+          "recordId"
+        ],
+        "logic": [
+          {
+            "call": "@for_each",
+            "args": {
+              "source": "{{ global.records }}",
+              "var": "r",
+              "body": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        "{{ loop.r.id }}",
+                        "{{ params.recordId }}"
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.viewRecord",
+                          "value": "{{ loop.r }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "record_detail"
+            }
+          }
+        ]
+      },
+      "deleteRecord": {
+        "params": [
+          "recordId"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.records",
+              "value": {
+                "filter": [
+                  {
+                    "var": "x"
+                  },
+                  {
+                    "!=": [
+                      "{{ var.x.id }}",
+                      "{{ params.recordId }}"
+                    ]
+                  }
+                ],
+                "source": "{{ global.records }}"
+              }
+            }
+          },
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "记录已删除"
+            }
+          },
+          {
+            "call": "@navigate",
+            "args": {
+              "screen": "records_tab"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "train_tab",
+        "title": "训练",
+        "layout": "column",
+        "backgroundColor": "#F5F5F7",
+        "appBar": {
+          "title": "训练",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "icon": "add",
+              "action": {
+                "call": "@global.startCreatePlan",
+                "args": {}
+              },
+              "style": {
+                "textColor": "#FF6B35",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "calendar",
+                              "size": 18,
+                              "color": "#FF6B35"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "本周训练",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "4",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "clock",
+                              "size": 18,
+                              "color": "#3B82F6"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "总时长(分)",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "170",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "check_circle",
+                              "size": 18,
+                              "color": "#10B981"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "完成组数",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "62",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ],
+            "margin": 8
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "训练计划",
+                    "style": {
+                      "fontSize": 17,
+                      "fontWeight": "bold",
+                      "color": "#111827"
+                    }
+                  },
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [],
+                      "mainAxisAlignment": "end"
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "新建",
+                    "variant": "text",
+                    "action": {
+                      "call": "@global.startCreatePlan",
+                      "args": {}
+                    },
+                    "style": {
+                      "textColor": "#FF6B35",
+                      "fontSize": 13,
+                      "paddingH": 8,
+                      "paddingV": 4
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "全部",
+                    "variant": "choice",
+                    "bind": "global.selectedPlanType",
+                    "value": "全部",
+                    "color": "#FF6B35"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "力量",
+                    "variant": "choice",
+                    "bind": "global.selectedPlanType",
+                    "value": "力量",
+                    "color": "#FF6B35"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "有氧",
+                    "variant": "choice",
+                    "bind": "global.selectedPlanType",
+                    "value": "有氧",
+                    "color": "#FF6B35"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "恢复",
+                    "variant": "choice",
+                    "bind": "global.selectedPlanType",
+                    "value": "恢复",
+                    "color": "#FF6B35"
+                  }
+                ]
+              }
+            ],
+            "padding": 12,
+            "margin": 8,
+            "color": "#FFFFFF",
+            "borderRadius": 14
+          },
+          {
+            "type": "list",
+            "source": "{{ global.plans }}",
+            "emptyText": "还没有训练计划，点击右上角 + 创建",
+            "item_template": {
+              "type": "card",
+              "layout": "column",
+              "color": "#FFFFFF",
+              "padding": 14,
+              "margin": 8,
+              "elevation": 0,
+              "borderRadius": 16,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "bolt",
+                          "size": 20,
+                          "color": "{{ loop.item.accent }}"
+                        }
+                      ],
+                      "width": 42,
+                      "height": 42,
+                      "color": "{{ loop.item.tint }}",
+                      "borderRadius": 12,
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 12
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.name }}",
+                              "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "color": "#111827",
+                                "maxLines": 1,
+                                "overflow": "ellipsis"
+                              },
+                              "position": {
+                                "type": "flex",
+                                "flex": 1
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.exCount }}个动作",
+                              "style": {
+                                "fontSize": 12,
+                                "color": "#9CA3AF"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 4
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.desc }}",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280",
+                            "maxLines": 1,
+                            "overflow": "ellipsis"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "schedule",
+                              "size": 14,
+                              "color": "#9CA3AF"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 4
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.estDuration }}分钟",
+                              "style": {
+                                "fontSize": 12,
+                                "color": "#9CA3AF"
+                              }
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 12
+                            },
+                            {
+                              "type": "icon",
+                              "name": "list",
+                              "size": 14,
+                              "color": "#9CA3AF"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 4
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.type }}",
+                              "style": {
+                                "fontSize": 12,
+                                "color": "#9CA3AF"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        }
+                      ],
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      }
+                    }
+                  ],
+                  "crossAxisAlignment": "center"
+                }
+              ],
+              "onTap": {
+                "call": "@global.viewPlan",
+                "args": {
+                  "planId": "{{ loop.item.id }}"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "plans_tab",
+        "title": "计划",
+        "layout": "column",
+        "backgroundColor": "#F5F5F7",
+        "appBar": {
+          "title": "训练计划",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "icon": "add",
+              "action": {
+                "call": "@global.startCreatePlan",
+                "args": {}
+              },
+              "style": {
+                "textColor": "#FF6B35",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "全部",
+                    "variant": "choice",
+                    "bind": "global.selectedPlanType",
+                    "value": "全部",
+                    "color": "#FF6B35"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "力量",
+                    "variant": "choice",
+                    "bind": "global.selectedPlanType",
+                    "value": "力量",
+                    "color": "#FF6B35"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "有氧",
+                    "variant": "choice",
+                    "bind": "global.selectedPlanType",
+                    "value": "有氧",
+                    "color": "#FF6B35"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "恢复",
+                    "variant": "choice",
+                    "bind": "global.selectedPlanType",
+                    "value": "恢复",
+                    "color": "#FF6B35"
+                  }
+                ]
+              }
+            ],
+            "padding": 12,
+            "margin": 8,
+            "color": "#FFFFFF",
+            "borderRadius": 14
+          },
+          {
+            "type": "list",
+            "source": "{{ global.plans }}",
+            "emptyText": "还没有训练计划",
+            "item_template": {
+              "type": "card",
+              "layout": "column",
+              "color": "#FFFFFF",
+              "padding": 14,
+              "margin": 8,
+              "elevation": 0,
+              "borderRadius": 16,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "bolt",
+                          "size": 20,
+                          "color": "{{ loop.item.accent }}"
+                        }
+                      ],
+                      "width": 42,
+                      "height": 42,
+                      "color": "{{ loop.item.tint }}",
+                      "borderRadius": 12,
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 12
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.name }}",
+                              "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "color": "#111827",
+                                "maxLines": 1,
+                                "overflow": "ellipsis"
+                              },
+                              "position": {
+                                "type": "flex",
+                                "flex": 1
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.exCount }}个动作",
+                              "style": {
+                                "fontSize": 12,
+                                "color": "#9CA3AF"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 4
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.desc }}",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280",
+                            "maxLines": 1,
+                            "overflow": "ellipsis"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "schedule",
+                              "size": 14,
+                              "color": "#9CA3AF"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 4
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.estDuration }}分钟",
+                              "style": {
+                                "fontSize": 12,
+                                "color": "#9CA3AF"
+                              }
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 12
+                            },
+                            {
+                              "type": "icon",
+                              "name": "list",
+                              "size": 14,
+                              "color": "#9CA3AF"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 4
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.type }}",
+                              "style": {
+                                "fontSize": 12,
+                                "color": "#9CA3AF"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        }
+                      ],
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      }
+                    }
+                  ],
+                  "crossAxisAlignment": "center"
+                }
+              ],
+              "onTap": {
+                "call": "@global.viewPlan",
+                "args": {
+                  "planId": "{{ loop.item.id }}"
+                }
+              }
+            }
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "button",
+                "label": "创建新计划",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.startCreatePlan",
+                  "args": {}
+                },
+                "icon": "add",
+                "style": {
+                  "backgroundColor": "#FF6B35",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 14,
+                  "fontSize": 15,
+                  "paddingV": 12,
+                  "paddingH": 20
+                }
+              }
+            ],
+            "padding": 12,
+            "color": "#F5F5F7"
+          }
+        ]
+      },
+      {
+        "id": "plan_detail",
+        "title": "计划详情",
+        "layout": "column",
+        "backgroundColor": "#F5F5F7",
+        "appBar": {
+          "title": "计划详情",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0
+        },
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 20,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "bolt",
+                    "size": 28,
+                    "color": "{{ global.currentPlan.accent }}"
+                  }
+                ],
+                "width": 58,
+                "height": 58,
+                "color": "{{ global.currentPlan.tint }}",
+                "borderRadius": 18,
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "text",
+                "value": "{{ global.currentPlan.name }}",
+                "style": {
+                  "fontSize": 24,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "{{ global.currentPlan.desc }}",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#6B7280"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "schedule",
+                        "size": 16,
+                        "color": "#9CA3AF"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 4
+                      },
+                      {
+                        "type": "text",
+                        "value": "约{{ global.currentPlan.estDuration }}分钟",
+                        "style": {
+                          "fontSize": 13,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 16
+                  },
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "list",
+                        "size": 16,
+                        "color": "#9CA3AF"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 4
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.currentPlan.exCount }}个动作",
+                        "style": {
+                          "fontSize": 13,
+                          "color": "#9CA3AF"
+                        }
+                      }
+                    ],
+                    "crossAxisAlignment": "center"
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              }
+            ],
+            "crossAxisAlignment": "center"
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "动作列表",
+                "style": {
+                  "fontSize": 17,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              }
+            ],
+            "padding": 16,
+            "color": "#F5F5F7"
+          },
+          {
+            "type": "list",
+            "source": "{{ global.currentPlan.exercises }}",
+            "shrinkWrap": true,
+            "emptyText": "暂无动作",
+            "item_template": {
+              "type": "card",
+              "layout": "row",
+              "color": "#FFFFFF",
+              "padding": 12,
+              "margin": 6,
+              "elevation": 0,
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ loop.index | + 1 }}",
+                      "style": {
+                        "fontSize": 16,
+                        "fontWeight": "bold",
+                        "color": "#FF6B35"
+                      }
+                    }
+                  ],
+                  "width": 34,
+                  "height": 34,
+                  "color": "#FFF5F0",
+                  "borderRadius": 17,
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center"
+                },
+                {
+                  "type": "spacer",
+                  "width": 12
+                },
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ loop.item.name }}",
+                      "style": {
+                        "fontSize": 15,
+                        "fontWeight": "600",
+                        "color": "#111827"
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 3
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.targetSets }}组 × {{ loop.item.targetReps }}次",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#6B7280"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "icon",
+                          "name": "clock",
+                          "size": 12,
+                          "color": "#9CA3AF"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 2
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.duration }}s",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#9CA3AF"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "休{{ loop.item.restDuration }}s",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#9CA3AF"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "center"
+                    }
+                  ],
+                  "position": {
+                    "type": "flex",
+                    "flex": 1
+                  }
+                }
+              ],
+              "crossAxisAlignment": "center"
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 16
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "button",
+                "label": "开始训练",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.startWorkout",
+                  "args": {
+                    "planId": "{{ global.currentPlan.id }}"
+                  }
+                },
+                "icon": "play",
+                "style": {
+                  "backgroundColor": "#FF6B35",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 14,
+                  "fontSize": 15,
+                  "paddingV": 12,
+                  "paddingH": 20
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "button",
+                      "label": "编辑",
+                      "variant": "outlined",
+                      "action": {
+                        "call": "@global.startEditPlan",
+                        "args": {
+                          "planId": "{{ global.currentPlan.id }}"
+                        }
+                      },
+                      "icon": "edit",
+                      "style": {
+                        "backgroundColor": "transparent",
+                        "textColor": "#FF6B35",
+                        "borderRadius": 14,
+                        "fontSize": 15,
+                        "paddingV": 12,
+                        "paddingH": 20
+                      }
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 10
+                  },
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "button",
+                      "label": "删除",
+                      "variant": "outlined",
+                      "action": {
+                        "call": "@global.deletePlan",
+                        "args": {
+                          "planId": "{{ global.currentPlan.id }}"
+                        }
+                      },
+                      "icon": "delete",
+                      "style": {
+                        "backgroundColor": "transparent",
+                        "textColor": "#EF4444",
+                        "borderRadius": 14,
+                        "fontSize": 15,
+                        "paddingV": 12,
+                        "paddingH": 20
+                      }
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              }
+            ],
+            "padding": 12,
+            "color": "#F5F5F7"
+          }
+        ]
+      },
+      {
+        "id": "plan_form",
+        "title": "编辑计划",
+        "layout": "column",
+        "backgroundColor": "#F5F5F7",
+        "appBar": {
+          "title": "编辑计划",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0
+        },
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 16,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 16,
+            "children": [
+              {
+                "type": "text",
+                "value": "计划名称",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "例如 上肢力量训练",
+                "bind": "global.formPlanName",
+                "style": {
+                  "fontSize": 15,
+                  "borderRadius": 10
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "text",
+                "value": "描述",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "简短描述训练目标",
+                "bind": "global.formPlanDesc",
+                "style": {
+                  "fontSize": 15,
+                  "borderRadius": 10
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "text",
+                "value": "类型",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "力量",
+                    "variant": "choice",
+                    "bind": "global.formPlanType",
+                    "value": "力量",
+                    "color": "#FF6B35"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "有氧",
+                    "variant": "choice",
+                    "bind": "global.formPlanType",
+                    "value": "有氧",
+                    "color": "#FF6B35"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "恢复",
+                    "variant": "choice",
+                    "bind": "global.formPlanType",
+                    "value": "恢复",
+                    "color": "#FF6B35"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 16,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 16,
+            "children": [
+              {
+                "type": "text",
+                "value": "动作列表",
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "list",
+                "source": "{{ global.formExercises }}",
+                "shrinkWrap": true,
+                "emptyText": "暂无动作，请在下方添加",
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "padding": 10,
+                  "margin": 4,
+                  "color": "#F5F5F7",
+                  "borderRadius": 10,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.index | + 1 }}",
+                          "style": {
+                            "fontSize": 14,
+                            "fontWeight": "bold",
+                            "color": "#FF6B35"
+                          }
+                        }
+                      ],
+                      "width": 28,
+                      "height": 28,
+                      "color": "#FFF5F0",
+                      "borderRadius": 14,
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 10
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.name }}",
+                          "style": {
+                            "fontSize": 14,
+                            "fontWeight": "600",
+                            "color": "#111827"
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.targetSets }}组×{{ loop.item.targetReps }}次 · {{ loop.item.duration }}s · 休{{ loop.item.restDuration }}s",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#9CA3AF"
+                          }
+                        }
+                      ],
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "label": "",
+                      "variant": "text",
+                      "icon": "delete",
+                      "action": {
+                        "call": "@global.removeExerciseFromForm",
+                        "args": {
+                          "idx": "{{ loop.index }}"
+                        }
+                      },
+                      "style": {
+                        "textColor": "#EF4444",
+                        "fontSize": 16,
+                        "paddingH": 6,
+                        "paddingV": 4
+                      }
+                    }
+                  ],
+                  "crossAxisAlignment": "center"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "height": 1,
+                "color": "#E5E7EB"
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "text",
+                "value": "添加动作",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "input",
+                "placeholder": "动作名称",
+                "bind": "global.formExName",
+                "style": {
+                  "fontSize": 14,
+                  "borderRadius": 10
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "组数",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#6B7280"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 4
+                      },
+                      {
+                        "type": "input",
+                        "placeholder": "3",
+                        "bind": "global.formExSets",
+                        "style": {
+                          "fontSize": 14,
+                          "borderRadius": 10,
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "次数",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#6B7280"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 4
+                      },
+                      {
+                        "type": "input",
+                        "placeholder": "10",
+                        "bind": "global.formExReps",
+                        "style": {
+                          "fontSize": 14,
+                          "borderRadius": 10,
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "时长(s)",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#6B7280"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 4
+                      },
+                      {
+                        "type": "input",
+                        "placeholder": "45",
+                        "bind": "global.formExDuration",
+                        "style": {
+                          "fontSize": 14,
+                          "borderRadius": 10,
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "休息(s)",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#6B7280"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 4
+                      },
+                      {
+                        "type": "input",
+                        "placeholder": "60",
+                        "bind": "global.formExRest",
+                        "style": {
+                          "fontSize": 14,
+                          "borderRadius": 10,
+                          "textAlign": "center"
+                        }
+                      }
+                    ],
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "button",
+                "label": "添加动作",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.addExerciseToForm",
+                  "args": {}
+                },
+                "icon": "add",
+                "style": {
+                  "backgroundColor": "#FF6B35",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 12,
+                  "fontSize": 14,
+                  "paddingV": 10,
+                  "paddingH": 20
+                }
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 8
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "button",
+                "label": "保存计划",
+                "variant": "filled",
+                "action": {
+                  "call": "@global.savePlan",
+                  "args": {}
+                },
+                "icon": "save",
+                "style": {
+                  "backgroundColor": "#FF6B35",
+                  "textColor": "#FFFFFF",
+                  "borderRadius": 14,
+                  "fontSize": 15,
+                  "paddingV": 12,
+                  "paddingH": 20
+                }
+              }
+            ],
+            "padding": 12,
+            "color": "#F5F5F7"
+          }
+        ]
+      },
+      {
+        "id": "timer_tab",
+        "title": "计时",
+        "layout": "column",
+        "backgroundColor": "#F5F5F7",
+        "appBar": {
+          "title": "计时器",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0
+        },
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "chip",
+                  "label": "动作计时",
+                  "variant": "choice",
+                  "bind": "global.timerMode",
+                  "value": "exercise",
+                  "color": "#3B82F6",
+                  "action": {
+                    "call": "@global.setTimerPreset",
+                    "args": {
+                      "seconds": "{{ global.timerPreset }}",
+                      "mode": "exercise"
+                    }
+                  }
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "chip",
+                  "label": "休息计时",
+                  "variant": "choice",
+                  "bind": "global.timerMode",
+                  "value": "rest",
+                  "color": "#10B981",
+                  "action": {
+                    "call": "@global.setTimerPreset",
+                    "args": {
+                      "seconds": "{{ global.timerPreset }}",
+                      "mode": "rest"
+                    }
+                  }
+                }
+              }
+            ],
+            "crossAxisAlignment": "center",
+            "padding": 8,
+            "margin": 12,
+            "color": "#FFFFFF",
+            "borderRadius": 14
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "{{ global.timerLabel }}",
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "500",
+                  "color": "#6B7280"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 20
+              },
+              {
+                "type": "text",
+                "value": "{{ global.timerDisplay }}",
+                "style": {
+                  "fontSize": 64,
+                  "fontWeight": "bold",
+                  "color": "#3B82F6",
+                  "maxLines": 1
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "共 {{ global.timerTotal }} 秒",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#9CA3AF"
+                }
+              }
+            ],
+            "mainAxisAlignment": "center",
+            "crossAxisAlignment": "center",
+            "padding": 30,
+            "color": "#FFFFFF",
+            "margin": 12,
+            "borderRadius": 20
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "button",
+                  "label": "重置",
+                  "variant": "outlined",
+                  "action": {
+                    "call": "@global.resetTimer",
+                    "args": {}
+                  },
+                  "icon": "restart",
+                  "style": {
+                    "backgroundColor": "transparent",
+                    "textColor": "#6B7280",
+                    "borderRadius": 14,
+                    "fontSize": 15,
+                    "paddingV": 12,
+                    "paddingH": 20
+                  }
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 12
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "if": [
+                    {
+                      "==": [
+                        "{{ global.timerRunning }}",
+                        true
+                      ]
+                    },
+                    {
+                      "type": "button",
+                      "label": "暂停",
+                      "variant": "filled",
+                      "action": {
+                        "call": "@global.pauseTimer",
+                        "args": {}
+                      },
+                      "icon": "pause",
+                      "style": {
+                        "backgroundColor": "#F59E0B",
+                        "textColor": "#FFFFFF",
+                        "borderRadius": 14,
+                        "fontSize": 15,
+                        "paddingV": 12,
+                        "paddingH": 20
+                      }
+                    },
+                    {
+                      "type": "button",
+                      "label": "开始",
+                      "variant": "filled",
+                      "action": {
+                        "call": "@global.startTimer",
+                        "args": {}
+                      },
+                      "icon": "play",
+                      "style": {
+                        "backgroundColor": "#3B82F6",
+                        "textColor": "#FFFFFF",
+                        "borderRadius": 14,
+                        "fontSize": 15,
+                        "paddingV": 12,
+                        "paddingH": 20
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "crossAxisAlignment": "center",
+            "padding": 12
+          },
+          {
+            "type": "interval_action",
+            "intervalMs": 1000,
+            "runImmediately": false,
+            "action": {
+              "call": "@global.timerTick",
+              "args": {}
+            },
+            "child": {
+              "type": "spacer",
+              "height": 0
+            }
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 14,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 16,
+            "children": [
+              {
+                "type": "text",
+                "value": "快速预设",
+                "style": {
+                  "fontSize": 14,
+                  "fontWeight": "600",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "30秒",
+                    "variant": "choice",
+                    "bind": "global.timerPreset",
+                    "value": "30",
+                    "color": "#3B82F6",
+                    "action": {
+                      "call": "@global.setTimerPreset",
+                      "args": {
+                        "seconds": "30",
+                        "mode": "{{ global.timerMode }}"
+                      }
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "45秒",
+                    "variant": "choice",
+                    "bind": "global.timerPreset",
+                    "value": "45",
+                    "color": "#3B82F6",
+                    "action": {
+                      "call": "@global.setTimerPreset",
+                      "args": {
+                        "seconds": "45",
+                        "mode": "{{ global.timerMode }}"
+                      }
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "60秒",
+                    "variant": "choice",
+                    "bind": "global.timerPreset",
+                    "value": "60",
+                    "color": "#3B82F6",
+                    "action": {
+                      "call": "@global.setTimerPreset",
+                      "args": {
+                        "seconds": "60",
+                        "mode": "{{ global.timerMode }}"
+                      }
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "90秒",
+                    "variant": "choice",
+                    "bind": "global.timerPreset",
+                    "value": "90",
+                    "color": "#3B82F6",
+                    "action": {
+                      "call": "@global.setTimerPreset",
+                      "args": {
+                        "seconds": "90",
+                        "mode": "{{ global.timerMode }}"
+                      }
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "120秒",
+                    "variant": "choice",
+                    "bind": "global.timerPreset",
+                    "value": "120",
+                    "color": "#3B82F6",
+                    "action": {
+                      "call": "@global.setTimerPreset",
+                      "args": {
+                        "seconds": "120",
+                        "mode": "{{ global.timerMode }}"
+                      }
+                    }
+                  },
+                  {
+                    "type": "chip",
+                    "label": "180秒",
+                    "variant": "choice",
+                    "bind": "global.timerPreset",
+                    "value": "180",
+                    "color": "#3B82F6",
+                    "action": {
+                      "call": "@global.setTimerPreset",
+                      "args": {
+                        "seconds": "180",
+                        "mode": "{{ global.timerMode }}"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "text",
+                "value": "自定义时长（秒）",
+                "style": {
+                  "fontSize": 13,
+                  "color": "#6B7280"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "input",
+                    "placeholder": "输入秒数",
+                    "bind": "global.timerPreset",
+                    "style": {
+                      "fontSize": 15,
+                      "borderRadius": 10
+                    },
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "button",
+                    "label": "设置",
+                    "variant": "filled",
+                    "action": {
+                      "call": "@global.setCustomTimer",
+                      "args": {}
+                    },
+                    "style": {
+                      "backgroundColor": "#3B82F6",
+                      "textColor": "#FFFFFF",
+                      "borderRadius": 12,
+                      "fontSize": 14,
+                      "paddingV": 10,
+                      "paddingH": 16
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "workout_session",
+        "title": "训练中",
+        "layout": "column",
+        "backgroundColor": "#F5F5F7",
+        "appBar": {
+          "title": "训练中",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0
+        },
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 24,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "bolt",
+                    "size": 32,
+                    "color": "#FF6B35"
+                  }
+                ],
+                "width": 64,
+                "height": 64,
+                "color": "#FFF5F0",
+                "borderRadius": 20,
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "text",
+                "value": "{{ global.sessionPlanName }}",
+                "style": {
+                  "fontSize": 20,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "if": [
+                  {
+                    "and": [
+                      "{{ global.sessionActive }}",
+                      {
+                        "<": [
+                          "{{ global.sessionExIdx }}",
+                          {
+                            "len": "{{ global.sessionExercises }}"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.sessionExLabel }}",
+                        "style": {
+                          "fontSize": 15,
+                          "fontWeight": "600",
+                          "color": "#FF6B35"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 4
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.sessionSetLabel }}",
+                        "style": {
+                          "fontSize": 13,
+                          "color": "#6B7280"
+                        }
+                      }
+                    ],
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "训练完成！",
+                        "style": {
+                          "fontSize": 18,
+                          "fontWeight": "bold",
+                          "color": "#10B981"
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 6
+                      },
+                      {
+                        "type": "icon",
+                        "name": "check_circle",
+                        "size": 48,
+                        "color": "#10B981"
+                      }
+                    ],
+                    "crossAxisAlignment": "center",
+                    "padding": 10
+                  }
+                ]
+              }
+            ],
+            "crossAxisAlignment": "center"
+          },
+          {
+            "if": [
+              "{{ global.sessionActive }}",
+              {
+                "type": "card",
+                "layout": "column",
+                "color": "#FFFFFF",
+                "padding": 16,
+                "margin": 12,
+                "elevation": 0,
+                "borderRadius": 16,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "记录当前组",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "bold",
+                      "color": "#111827"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 12
+                  },
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "children": [
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "次数",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#6B7280"
+                            }
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 4
+                          },
+                          {
+                            "type": "input",
+                            "placeholder": "10",
+                            "bind": "global.sessionLogReps",
+                            "style": {
+                              "fontSize": 16,
+                              "borderRadius": 10,
+                              "textAlign": "center"
+                            }
+                          }
+                        ],
+                        "position": {
+                          "type": "flex",
+                          "flex": 1
+                        }
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 10
+                      },
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "重量(kg)",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#6B7280"
+                            }
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 4
+                          },
+                          {
+                            "type": "input",
+                            "placeholder": "0",
+                            "bind": "global.sessionLogWeight",
+                            "style": {
+                              "fontSize": 16,
+                              "borderRadius": 10,
+                              "textAlign": "center"
+                            }
+                          }
+                        ],
+                        "position": {
+                          "type": "flex",
+                          "flex": 1
+                        }
+                      }
+                    ],
+                    "crossAxisAlignment": "center"
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 12
+                  },
+                  {
+                    "type": "button",
+                    "label": "记录此组",
+                    "variant": "filled",
+                    "action": {
+                      "call": "@global.logSet",
+                      "args": {}
+                    },
+                    "icon": "check",
+                    "style": {
+                      "backgroundColor": "#10B981",
+                      "textColor": "#FFFFFF",
+                      "borderRadius": 14,
+                      "fontSize": 15,
+                      "paddingV": 12,
+                      "paddingH": 20
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 8
+                  },
+                  {
+                    "type": "button",
+                    "label": "下一个动作",
+                    "variant": "outlined",
+                    "action": {
+                      "call": "@global.nextExercise",
+                      "args": {}
+                    },
+                    "icon": "forward",
+                    "style": {
+                      "backgroundColor": "transparent",
+                      "textColor": "#3B82F6",
+                      "borderRadius": 14,
+                      "fontSize": 15,
+                      "paddingV": 12,
+                      "paddingH": 20
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "card",
+                "layout": "column",
+                "color": "#FFFFFF",
+                "padding": 16,
+                "margin": 12,
+                "elevation": 0,
+                "borderRadius": 16,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "所有动作已完成！",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "bold",
+                      "color": "#10B981"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "height": 12
+                  },
+                  {
+                    "type": "button",
+                    "label": "完成训练",
+                    "variant": "filled",
+                    "action": {
+                      "call": "@global.finishWorkout",
+                      "args": {}
+                    },
+                    "icon": "check_circle",
+                    "style": {
+                      "backgroundColor": "#10B981",
+                      "textColor": "#FFFFFF",
+                      "borderRadius": 14,
+                      "fontSize": 15,
+                      "paddingV": 12,
+                      "paddingH": 20
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "button",
+                "label": "打开计时器",
+                "variant": "outlined",
+                "action": {
+                  "call": "@global.goTimer",
+                  "args": {}
+                },
+                "icon": "clock",
+                "style": {
+                  "backgroundColor": "transparent",
+                  "textColor": "#3B82F6",
+                  "borderRadius": 14,
+                  "fontSize": 15,
+                  "paddingV": 12,
+                  "paddingH": 20
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "button",
+                "label": "放弃训练",
+                "variant": "text",
+                "action": {
+                  "call": "@global.cancelWorkout",
+                  "args": {}
+                },
+                "style": {
+                  "backgroundColor": "transparent",
+                  "textColor": "#EF4444",
+                  "borderRadius": 14,
+                  "fontSize": 14,
+                  "paddingV": 12,
+                  "paddingH": 20
+                }
+              }
+            ],
+            "padding": 12,
+            "color": "#F5F5F7",
+            "crossAxisAlignment": "center"
+          }
+        ]
+      },
+      {
+        "id": "records_tab",
+        "title": "记录",
+        "layout": "column",
+        "backgroundColor": "#F5F5F7",
+        "appBar": {
+          "title": "训练记录",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0
+        },
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 14,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "trophy",
+                          "size": 18,
+                          "color": "#F59E0B"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "总训练次数",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ global.records | len }}",
+                      "style": {
+                        "fontSize": 21,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 8
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 6,
+                  "elevation": 0,
+                  "borderRadius": 14,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "calendar",
+                          "size": 18,
+                          "color": "#FF6B35"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "本周次数",
+                          "style": {
+                            "fontSize": 13,
+                            "color": "#6B7280"
+                          }
+                        }
+                      ],
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "3",
+                      "style": {
+                        "fontSize": 21,
+                        "fontWeight": "bold",
+                        "color": "#111827",
+                        "maxLines": 1
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "margin": 8
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "wrap",
+                "spacing": 8,
+                "runSpacing": 8,
+                "children": [
+                  {
+                    "type": "chip",
+                    "label": "全部",
+                    "variant": "choice",
+                    "bind": "global.selectedPlanType",
+                    "value": "全部",
+                    "color": "#F59E0B"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "力量",
+                    "variant": "choice",
+                    "bind": "global.selectedPlanType",
+                    "value": "力量",
+                    "color": "#F59E0B"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "有氧",
+                    "variant": "choice",
+                    "bind": "global.selectedPlanType",
+                    "value": "有氧",
+                    "color": "#F59E0B"
+                  },
+                  {
+                    "type": "chip",
+                    "label": "恢复",
+                    "variant": "choice",
+                    "bind": "global.selectedPlanType",
+                    "value": "恢复",
+                    "color": "#F59E0B"
+                  }
+                ]
+              }
+            ],
+            "padding": 12,
+            "margin": 8,
+            "color": "#FFFFFF",
+            "borderRadius": 14
+          },
+          {
+            "type": "list",
+            "source": "{{ global.records }}",
+            "emptyText": "还没有训练记录，完成一次训练吧",
+            "item_template": {
+              "type": "card",
+              "layout": "column",
+              "color": "#FFFFFF",
+              "padding": 14,
+              "margin": 8,
+              "elevation": 0,
+              "borderRadius": 16,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "trophy",
+                          "size": 20,
+                          "color": "{{ loop.item.accent }}"
+                        }
+                      ],
+                      "width": 42,
+                      "height": 42,
+                      "color": "{{ loop.item.tint }}",
+                      "borderRadius": 12,
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 12
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.planName }}",
+                              "style": {
+                                "fontSize": 16,
+                                "fontWeight": "bold",
+                                "color": "#111827",
+                                "maxLines": 1,
+                                "overflow": "ellipsis"
+                              },
+                              "position": {
+                                "type": "flex",
+                                "flex": 1
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.duration }}分钟",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 4
+                        },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "calendar",
+                              "size": 14,
+                              "color": "#9CA3AF"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 4
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.date }}",
+                              "style": {
+                                "fontSize": 12,
+                                "color": "#9CA3AF"
+                              }
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 12
+                            },
+                            {
+                              "type": "icon",
+                              "name": "check_circle",
+                              "size": 14,
+                              "color": "#10B981"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 4
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.completedSets }}组完成",
+                              "style": {
+                                "fontSize": 12,
+                                "color": "#9CA3AF"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        }
+                      ],
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      }
+                    }
+                  ],
+                  "crossAxisAlignment": "center"
+                }
+              ],
+              "onTap": {
+                "call": "@global.viewRecord",
+                "args": {
+                  "recordId": "{{ loop.item.id }}"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "record_detail",
+        "title": "记录详情",
+        "layout": "column",
+        "backgroundColor": "#F5F5F7",
+        "appBar": {
+          "title": "记录详情",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0
+        },
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 20,
+            "margin": 12,
+            "elevation": 0,
+            "borderRadius": 18,
+            "children": [
+              {
+                "type": "container",
+                "layout": "column",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "trophy",
+                    "size": 28,
+                    "color": "#F59E0B"
+                  }
+                ],
+                "width": 58,
+                "height": 58,
+                "color": "#FFF7E6",
+                "borderRadius": 18,
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "text",
+                "value": "{{ global.viewRecord.planName }}",
+                "style": {
+                  "fontSize": 22,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "calendar",
+                    "size": 14,
+                    "color": "#9CA3AF"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 4
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.viewRecord.date }}",
+                    "style": {
+                      "fontSize": 13,
+                      "color": "#9CA3AF"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 14
+                  },
+                  {
+                    "type": "icon",
+                    "name": "clock",
+                    "size": 14,
+                    "color": "#9CA3AF"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 4
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.viewRecord.duration }}分钟",
+                    "style": {
+                      "fontSize": 13,
+                      "color": "#9CA3AF"
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 14
+                  },
+                  {
+                    "type": "icon",
+                    "name": "check_circle",
+                    "size": 14,
+                    "color": "#10B981"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 4
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ global.viewRecord.completedSets }}组",
+                    "style": {
+                      "fontSize": 13,
+                      "color": "#9CA3AF"
+                    }
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              }
+            ],
+            "crossAxisAlignment": "center"
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "动作详情",
+                "style": {
+                  "fontSize": 17,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              }
+            ],
+            "padding": 16,
+            "color": "#F5F5F7"
+          },
+          {
+            "type": "list",
+            "source": "{{ global.viewRecord.exercises }}",
+            "shrinkWrap": true,
+            "emptyText": "无动作记录",
+            "item_template": {
+              "type": "card",
+              "layout": "column",
+              "color": "#FFFFFF",
+              "padding": 12,
+              "margin": 6,
+              "elevation": 0,
+              "borderRadius": 12,
+              "children": [
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.name }}",
+                  "style": {
+                    "fontSize": 15,
+                    "fontWeight": "600",
+                    "color": "#111827"
+                  }
+                },
+                {
+                  "type": "spacer",
+                  "height": 6
+                },
+                {
+                  "type": "text",
+                  "value": "{{ loop.item.sets | len }} 组完成",
+                  "style": {
+                    "fontSize": 12,
+                    "color": "#6B7280"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 12
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "button",
+                "label": "删除记录",
+                "variant": "outlined",
+                "action": {
+                  "call": "@global.deleteRecord",
+                  "args": {
+                    "recordId": "{{ global.viewRecord.id }}"
+                  }
+                },
+                "icon": "delete",
+                "style": {
+                  "backgroundColor": "transparent",
+                  "textColor": "#EF4444",
+                  "borderRadius": 14,
+                  "fontSize": 15,
+                  "paddingV": 12,
+                  "paddingH": 20
+                }
+              }
+            ],
+            "padding": 12,
+            "color": "#F5F5F7",
+            "crossAxisAlignment": "center"
+          }
+        ]
+      }
+    ]
+  },
+  "tabs": {
+    "style": "bottom",
+    "items": [
+      {
+        "id": "train_tab",
+        "label": "训练",
+        "icon": "bolt"
+      },
+      {
+        "id": "plans_tab",
+        "label": "计划",
+        "icon": "list"
+      },
+      {
+        "id": "timer_tab",
+        "label": "计时",
+        "icon": "clock"
+      },
+      {
+        "id": "records_tab",
+        "label": "记录",
+        "icon": "receipt"
+      }
+    ]
+  }
+}

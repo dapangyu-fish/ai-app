@@ -1,0 +1,26 @@
+{
+  "service": {
+    "service_id": "tieba",
+    "slug": "tieba",
+    "name": "tieba",
+    "version": "1.1.0",
+    "type": "faas",
+    "description": "贴吧：公开论坛（吧/主题/楼中楼/搜索）+ 用户主页 + 好友 + 私信。",
+    "routes": [
+      { "path": "/whoami", "methods": ["GET"] },
+      { "path": "/me", "methods": ["POST"] },
+      { "path": "/boards", "methods": ["GET", "POST"] },
+      { "path": "/board", "methods": ["GET"] },
+      { "path": "/threads", "methods": ["GET", "POST"] },
+      { "path": "/thread", "methods": ["GET"] },
+      { "path": "/posts", "methods": ["POST", "DELETE"] },
+      { "path": "/user", "methods": ["GET"] },
+      { "path": "/friends", "methods": ["GET"] },
+      { "path": "/friends/requests", "methods": ["GET"] },
+      { "path": "/friends/request", "methods": ["POST"] },
+      { "path": "/friends/accept", "methods": ["POST"] },
+      { "path": "/friends/reject", "methods": ["POST"] },
+      { "path": "/dm", "methods": ["GET", "POST"] }
+    ]
+  }
+}

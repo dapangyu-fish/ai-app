@@ -1,0 +1,399 @@
+{
+  "dsl": "3.3",
+  "appid": "d9d78e45-88c3-5e5e-85aa-14c7f2f01914",
+  "meta": {
+    "name": "gsy_flutter_demo/075-shader-canvas-demo-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "测试 canvas 阴影",
+      "en": "Canvas shadow test"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：测试 canvas 阴影",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "测试 canvas 阴影",
+      "sourcePath": "lib/widget/canvas/shader_canvas_demo_page.dart",
+      "deferredAlias": "shader_canvas_demo_page",
+      "widgetClass": "ShaderCanvasDemoPage",
+      "category": "canvas",
+      "routeIndex": 75,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-static-wave-shadow-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "测试 canvas 阴影",
+      "upstreamSource": "lib/widget/canvas/shader_canvas_demo_page.dart",
+      "upstreamWidget": "ShaderCanvasDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-static-wave-shadow-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "ShaderCanvasDemoPage",
+        "layout": "column",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "container",
+            "height": 100,
+            "children": [
+              {
+                "type": "animated_canvas",
+                "backgroundColor": "#00000000",
+                "speed": 0,
+                "layers": [
+                  {
+                    "kind": "path",
+                    "style": "fill",
+                    "color": "#44333333",
+                    "alpha": 1,
+                    "commands": [
+                      {
+                        "op": "moveTo",
+                        "x": 0,
+                        "y": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    {
+                                      "sin": "v"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "quadTo",
+                        "x1": {
+                          "*": [
+                            "w",
+                            0.5
+                          ]
+                        },
+                        "y1": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    {
+                                      "sin": {
+                                        "+": [
+                                          "v",
+                                          1.5707963267948966
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "x": "w",
+                        "y": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    {
+                                      "sin": {
+                                        "+": [
+                                          "v",
+                                          3.141592653589793
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": "w",
+                        "y": "h"
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": 0,
+                        "y": "h"
+                      },
+                      {
+                        "op": "close"
+                      }
+                    ],
+                    "locals": {
+                      "v": 50
+                    },
+                    "blurRadius": 5
+                  },
+                  {
+                    "kind": "path",
+                    "style": "fill",
+                    "color": "#3C2196F3",
+                    "alpha": 1,
+                    "locals": {
+                      "v": 50
+                    },
+                    "commands": [
+                      {
+                        "op": "moveTo",
+                        "x": 0,
+                        "y": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    {
+                                      "sin": "v"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "quadTo",
+                        "x1": {
+                          "*": [
+                            "w",
+                            0.5
+                          ]
+                        },
+                        "y1": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    {
+                                      "sin": {
+                                        "+": [
+                                          "v",
+                                          1.5707963267948966
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "x": "w",
+                        "y": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    {
+                                      "sin": {
+                                        "+": [
+                                          "v",
+                                          3.141592653589793
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": "w",
+                        "y": "h"
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": 0,
+                        "y": "h"
+                      },
+                      {
+                        "op": "close"
+                      }
+                    ]
+                  }
+                ],
+                "durationMs": 1000
+              }
+            ],
+            "constraints": {
+              "minWidth": 390
+            }
+          },
+          {
+            "type": "spacer",
+            "height": 5
+          },
+          {
+            "type": "container",
+            "height": 100,
+            "children": [
+              {
+                "type": "animated_canvas",
+                "backgroundColor": "#00000000",
+                "speed": 0,
+                "layers": [
+                  {
+                    "kind": "path",
+                    "style": "fill",
+                    "color": "#3C000000",
+                    "alpha": 1,
+                    "commands": [
+                      {
+                        "op": "moveTo",
+                        "x": 0,
+                        "y": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    {
+                                      "sin": "v"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "quadTo",
+                        "x1": {
+                          "*": [
+                            "w",
+                            0.5
+                          ]
+                        },
+                        "y1": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    {
+                                      "sin": {
+                                        "+": [
+                                          "v",
+                                          1.5707963267948966
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        "x": "w",
+                        "y": {
+                          "*": [
+                            "h",
+                            {
+                              "+": [
+                                0.5,
+                                {
+                                  "*": [
+                                    0.4,
+                                    {
+                                      "sin": {
+                                        "+": [
+                                          "v",
+                                          3.141592653589793
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": "w",
+                        "y": "h"
+                      },
+                      {
+                        "op": "lineTo",
+                        "x": 0,
+                        "y": "h"
+                      },
+                      {
+                        "op": "close"
+                      }
+                    ],
+                    "locals": {
+                      "v": 50
+                    },
+                    "blurRadius": 2
+                  }
+                ],
+                "durationMs": 1000
+              }
+            ],
+            "constraints": {
+              "minWidth": 390
+            }
+          }
+        ],
+        "appBar": {
+          "title": "ShaderCanvasDemoPage"
+        }
+      }
+    ]
+  }
+}

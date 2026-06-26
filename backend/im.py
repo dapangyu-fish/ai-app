@@ -64,12 +64,18 @@ def _post_openim(path: str, body: dict, *, admin_token: str = None, timeout: int
         headers["token"] = admin_token
 
     url = f"{OPENIM_API_URL.rstrip('/')}{path}"
-    resp = requests.post(url, json=body, headers=headers, timeout=timeout)
+    try:
+        resp = requests.post(url, json=body, headers=headers, timeout=timeout)
+    except requests.RequestException as e:
+        raise RuntimeError(f"OpenIM {path} request failed: {e}") from e
 
     if resp.status_code != 200:
         raise RuntimeError(f"OpenIM {path} HTTP {resp.status_code}: {resp.text[:200]}")
 
-    data = resp.json()
+    try:
+        data = resp.json()
+    except ValueError as e:
+        raise RuntimeError(f"OpenIM {path} returned non-JSON: {resp.text[:200]}") from e
     if data.get("errCode", -1) != 0:
         raise RuntimeError(f"OpenIM {path} errCode={data.get('errCode')} errMsg={data.get('errMsg')}")
 
@@ -251,6 +257,139 @@ def lookup_user():
     })
 
 
+@require_auth
+def list_friends():
+    """
+    GET /api/im/friends
+
+    返回当前登录用户在 OpenIM 服务端的权威好友列表。客户端 SDK 的
+    getFriendList 读取本地同步库；如果好友事件在重连/后台期间漏同步，
+    本接口用来兜底恢复联系人 UI。
+    """
+    raw_user_id = str(request.supabase_user.get("id", ""))
+    if not raw_user_id:
+        return jsonify({"error": "Supabase 用户没有 id 字段"}), 500
+
+    user_id = _to_im_user_id(raw_user_id)
+    try:
+        limit = max(1, min(500, int(request.args.get("limit", "200"))))
+    except (TypeError, ValueError):
+        limit = 200
+
+    try:
+        admin_token = _get_admin_token()
+        friends_info = _fetch_openim_friend_list(user_id, limit, admin_token=admin_token)
+    except RuntimeError as e:
+        try:
+            admin_token = _get_admin_token(force_refresh=True)
+            friends_info = _fetch_openim_friend_list(user_id, limit, admin_token=admin_token)
+        except RuntimeError as e2:
+            logger.error(f"[IM] 拉服务端好友列表失败 user={user_id}: {e2}")
+            return jsonify({"error": str(e2)}), 502
+
+    profile_map = {}
+    friend_ids = [
+        ((item.get("friendUser") or {}).get("userID") or item.get("friendUserID") or "")
+        for item in friends_info
+    ]
+    friend_ids = [fid for fid in friend_ids if fid]
+    if friend_ids:
+        try:
+            profile_map = _supabase_profiles_by_im_id(friend_ids)
+        except RuntimeError as e:
+            logger.warning(f"[IM] 好友资料回填失败 user={user_id}: {e}")
+
+    friends = []
+    for item in friends_info:
+        friend_user = item.get("friendUser") or {}
+        fid = friend_user.get("userID") or item.get("friendUserID") or ""
+        if not fid:
+            continue
+        profile = profile_map.get(fid, {})
+        nickname = (
+            profile.get("nickname")
+            or friend_user.get("nickname")
+            or fid[:8]
+        )
+        face_url = (
+            profile.get("face_url")
+            or profile.get("avatar_url")
+            or friend_user.get("faceURL")
+            or ""
+        )
+        friends.append({
+            "user_id": fid,
+            "im_user_id": fid,
+            "nickname": nickname,
+            "email": profile.get("email", ""),
+            "face_url": face_url,
+            "avatar_url": face_url,
+            "remark": item.get("remark") or "",
+            "create_time": item.get("createTime") or 0,
+            "source": "openim-server",
+        })
+
+    return jsonify({"friends": friends, "total": len(friends)})
+
+
+def _fetch_openim_friend_list(user_id: str, limit: int, *, admin_token: str) -> list:
+    """分页拉 OpenIM 服务端好友列表。OpenIM v3.8 要求 body 带 pagination。"""
+    friends = []
+    page = 1
+    page_size = min(100, max(1, limit))
+    while len(friends) < limit:
+        data = _post_openim(
+            "/friend/get_friend_list",
+            {
+                "userID": user_id,
+                "pagination": {
+                    "pageNumber": page,
+                    "showNumber": min(page_size, limit - len(friends)),
+                },
+            },
+            admin_token=admin_token,
+        )
+        batch = data.get("friendsInfo") or data.get("friends") or []
+        if not batch:
+            break
+        friends.extend(batch)
+        total = int(data.get("total") or 0)
+        if total and len(friends) >= total:
+            break
+        if len(batch) < page_size:
+            break
+        page += 1
+    return friends[:limit]
+
+
+def _supabase_profiles_by_im_id(im_user_ids: list[str]) -> dict:
+    wanted = {item.replace("-", "").lower() for item in im_user_ids if item}
+    if not wanted:
+        return {}
+
+    all_users = _list_supabase_users()
+    profiles = {}
+    for u in all_users:
+        uid = str(u.get("id", ""))
+        im_user_id = _to_im_user_id(uid)
+        if im_user_id.lower() not in wanted and uid.replace("-", "").lower() not in wanted:
+            continue
+
+        email = u.get("email", "")
+        meta = u.get("user_metadata") or {}
+        face_url = meta.get("avatar_url") or ""
+        profiles[im_user_id] = {
+            "im_user_id": im_user_id,
+            "nickname": meta.get("username") or email.split("@")[0] or uid[:8],
+            "email": email,
+            "face_url": face_url,
+            "avatar_url": face_url,
+        }
+        if len(profiles) >= len(wanted):
+            break
+    return profiles
+
+
 # ============================================================
 # 用户搜索（加好友用）
 # ============================================================
@@ -362,6 +501,55 @@ def search_users():
         m.pop("_rank", None)
 
     return jsonify({"users": matches})
+
+
+@require_auth
+def user_profiles():
+    """
+    GET /api/im/users/profiles?ids=im_user_id1,im_user_id2
+
+    给客户端/JSON-DSL 精确回填头像和昵称用：
+      - ids 是 OpenIM userID（去掉 hyphen 的 Supabase uuid），也兼容带 hyphen uuid
+      - 不排除当前用户自己，聊天列表/消息流需要用它补自己的头像
+      - 返回字段与 search_users 保持兼容：{ im_user_id, nickname, email, face_url }
+    """
+    raw_ids = [
+        item.strip()
+        for item in (request.args.get("ids") or "").split(",")
+        if item.strip()
+    ]
+    if not raw_ids:
+        return jsonify({"users": []})
+    if len(raw_ids) > 100:
+        return jsonify({"error": "too many ids"}), 400
+
+    wanted = {item.replace("-", "").lower() for item in raw_ids}
+
+    try:
+        all_users = _list_supabase_users()
+    except RuntimeError as e:
+        logger.error(f"[IM] user profiles 拉表失败: {e}")
+        return jsonify({"error": str(e)}), 502
+
+    users = []
+    for u in all_users:
+        uid = str(u.get("id", ""))
+        im_user_id = _to_im_user_id(uid)
+        if im_user_id.lower() not in wanted and uid.replace("-", "").lower() not in wanted:
+            continue
+
+        email = u.get("email", "")
+        meta = u.get("user_metadata") or {}
+        users.append({
+            "im_user_id": im_user_id,
+            "nickname": meta.get("username") or email.split("@")[0] or uid[:8],
+            "email": email,
+            "face_url": meta.get("avatar_url") or "",
+        })
+        if len(users) >= len(wanted):
+            break
+
+    return jsonify({"users": users})
 
 
 def _rank_user(u, q_lower: str, q_no_hyphen: str, me_im_id: str) -> int:

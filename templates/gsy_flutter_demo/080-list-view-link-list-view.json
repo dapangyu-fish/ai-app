@@ -1,0 +1,290 @@
+{
+  "dsl": "3.3",
+  "appid": "8693fba5-7ca8-5719-ad95-b68e5575bbdd",
+  "meta": {
+    "name": "gsy_flutter_demo/080-list-view-link-list-view",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "垂直  ListView 联动  ListView",
+      "en": "Vertical ListView 联动 ListView"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：垂直  ListView 联动  ListView",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "垂直  ListView 联动  ListView",
+      "sourcePath": "lib/widget/scroll/vp_list_demo_page.dart",
+      "deferredAlias": "vp_list_demo_page",
+      "widgetClass": "ListViewLinkListView",
+      "category": "scroll",
+      "routeIndex": 80,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-linked-scroll-action-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "垂直  ListView 联动  ListView",
+      "upstreamSource": "lib/widget/scroll/vp_list_demo_page.dart",
+      "upstreamWidget": "ListViewLinkListView",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-linked-scroll-action-v1",
+      "items": [
+        {
+          "index": 0
+        },
+        {
+          "index": 1
+        },
+        {
+          "index": 2
+        },
+        {
+          "index": 3
+        },
+        {
+          "index": 4
+        },
+        {
+          "index": 5
+        },
+        {
+          "index": 6
+        },
+        {
+          "index": 7
+        },
+        {
+          "index": 8
+        },
+        {
+          "index": 9
+        },
+        {
+          "index": 10
+        },
+        {
+          "index": 11
+        },
+        {
+          "index": 12
+        },
+        {
+          "index": 13
+        },
+        {
+          "index": 14
+        },
+        {
+          "index": 15
+        },
+        {
+          "index": 16
+        },
+        {
+          "index": 17
+        },
+        {
+          "index": 18
+        },
+        {
+          "index": 19
+        },
+        {
+          "index": 20
+        },
+        {
+          "index": 21
+        },
+        {
+          "index": 22
+        },
+        {
+          "index": 23
+        },
+        {
+          "index": 24
+        },
+        {
+          "index": 25
+        },
+        {
+          "index": 26
+        },
+        {
+          "index": 27
+        },
+        {
+          "index": 28
+        },
+        {
+          "index": 29
+        },
+        {
+          "index": 30
+        },
+        {
+          "index": 31
+        },
+        {
+          "index": 32
+        },
+        {
+          "index": 33
+        },
+        {
+          "index": 34
+        },
+        {
+          "index": 35
+        },
+        {
+          "index": 36
+        },
+        {
+          "index": 37
+        },
+        {
+          "index": 38
+        },
+        {
+          "index": 39
+        },
+        {
+          "index": 40
+        },
+        {
+          "index": 41
+        },
+        {
+          "index": 42
+        },
+        {
+          "index": 43
+        },
+        {
+          "index": 44
+        },
+        {
+          "index": 45
+        },
+        {
+          "index": 46
+        },
+        {
+          "index": 47
+        },
+        {
+          "index": 48
+        },
+        {
+          "index": 49
+        },
+        {
+          "index": 50
+        },
+        {
+          "index": 51
+        },
+        {
+          "index": 52
+        },
+        {
+          "index": 53
+        },
+        {
+          "index": 54
+        }
+      ]
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "ListViewLinkListView",
+        "layout": "row",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "list",
+            "source": "{{ global.items }}",
+            "separator": "none",
+            "item_template": {
+              "type": "container",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Item {{ loop.item.index }}",
+                  "style": {
+                    "fontSize": 40,
+                    "color": "#2196F3",
+                    "textAlign": "center"
+                  }
+                }
+              ],
+              "layout": "column",
+              "height": 300,
+              "color": "#69F0AE",
+              "alignment": "center",
+              "mainAxisAlignment": "center"
+            },
+            "controller": "primary",
+            "onScroll": {
+              "call": "@scroll_to_offset",
+              "args": {
+                "controller": "sub",
+                "offset": {
+                  "/": [
+                    {
+                      "var": "event.offset"
+                    },
+                    30
+                  ]
+                },
+                "durationMs": 0
+              }
+            }
+          },
+          {
+            "type": "spacer",
+            "width": 5
+          },
+          {
+            "type": "list",
+            "source": "{{ global.items }}",
+            "separator": "none",
+            "item_template": {
+              "type": "container",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Item {{ loop.item.index }}",
+                  "style": {
+                    "fontSize": 40,
+                    "color": "#FFFFFF",
+                    "textAlign": "center"
+                  }
+                }
+              ],
+              "layout": "column",
+              "height": 300,
+              "color": "#FF5722",
+              "alignment": "center",
+              "mainAxisAlignment": "center"
+            },
+            "controller": "sub",
+            "physics": "never"
+          }
+        ],
+        "appBar": {
+          "title": "ListViewLinkListView"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+FROM python:3.11-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir \
+        "flask==3.0.3" \
+        "requests>=2.32.0" \
+        "pydantic>=2.7.0" \
+        "python-dateutil>=2.9.0" \
+        "psycopg2-binary>=2.9.9"

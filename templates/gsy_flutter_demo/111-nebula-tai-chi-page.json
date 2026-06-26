@@ -1,0 +1,281 @@
+{
+  "dsl": "3.3",
+  "appid": "6bcb139c-12bf-5745-8d6f-9178799b8dc1",
+  "meta": {
+    "name": "gsy_flutter_demo/111-nebula-tai-chi-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "流体太极",
+      "en": "Fluid Taichi"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：流体太极",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "流体太极",
+      "sourcePath": "lib/widget/visual/stream_taichi_page.dart",
+      "deferredAlias": "stream_taichi_page",
+      "widgetClass": "NebulaTaiChiPage",
+      "category": "visual",
+      "routeIndex": 111,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "流体太极",
+      "upstreamSource": "lib/widget/visual/stream_taichi_page.dart",
+      "upstreamWidget": "NebulaTaiChiPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "animated_canvas",
+              "backgroundColor": "#000000",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "particles",
+                  "count": 1200,
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          "xx",
+                          "min",
+                          0.43
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "+": [
+                      {
+                        "/": [
+                          "h",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          "yy",
+                          "min",
+                          0.43
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": 1.6,
+                  "color": "#FFFFFF",
+                  "alpha": 0.75,
+                  "blendMode": "plus",
+                  "locals": {
+                    "rnd": {
+                      "seed": {
+                        "*": [
+                          "i",
+                          78.233
+                        ]
+                      }
+                    },
+                    "rr": {
+                      "*": [
+                        {
+                          "sqrt": "rnd"
+                        },
+                        1.02
+                      ]
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "i",
+                            2.399963229728653
+                          ]
+                        },
+                        {
+                          "*": [
+                            "t",
+                            0.16
+                          ]
+                        }
+                      ]
+                    },
+                    "xx": {
+                      "*": [
+                        {
+                          "cos": "angle"
+                        },
+                        "rr"
+                      ]
+                    },
+                    "yy": {
+                      "*": [
+                        {
+                          "sin": "angle"
+                        },
+                        "rr"
+                      ]
+                    },
+                    "top": {
+                      "sqrt": {
+                        "+": [
+                          {
+                            "*": [
+                              "xx",
+                              "xx"
+                            ]
+                          },
+                          {
+                            "*": [
+                              {
+                                "-": [
+                                  "yy",
+                                  0.5
+                                ]
+                              },
+                              {
+                                "-": [
+                                  "yy",
+                                  0.5
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "bottom": {
+                      "sqrt": {
+                        "+": [
+                          {
+                            "*": [
+                              "xx",
+                              "xx"
+                            ]
+                          },
+                          {
+                            "*": [
+                              {
+                                "+": [
+                                  "yy",
+                                  0.5
+                                ]
+                              },
+                              {
+                                "+": [
+                                  "yy",
+                                  0.5
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "bright0": {
+                      "if": [
+                        {
+                          ">": [
+                            "xx",
+                            0
+                          ]
+                        },
+                        1,
+                        0.08
+                      ]
+                    },
+                    "bright1": {
+                      "if": [
+                        {
+                          "<": [
+                            "top",
+                            0.5
+                          ]
+                        },
+                        1,
+                        "bright0"
+                      ]
+                    },
+                    "bright2": {
+                      "if": [
+                        {
+                          "<": [
+                            "bottom",
+                            0.5
+                          ]
+                        },
+                        0.08,
+                        "bright1"
+                      ]
+                    },
+                    "bright3": {
+                      "if": [
+                        {
+                          "<": [
+                            "top",
+                            0.13
+                          ]
+                        },
+                        0.06,
+                        "bright2"
+                      ]
+                    },
+                    "bright": {
+                      "if": [
+                        {
+                          "<": [
+                            "bottom",
+                            0.13
+                          ]
+                        },
+                        1,
+                        "bright3"
+                      ]
+                    }
+                  },
+                  "skipWhen": {
+                    "<=": [
+                      "bright",
+                      0.2
+                    ]
+                  }
+                }
+              ]
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        ],
+        "appBar": {
+          "title": ""
+        }
+      }
+    ]
+  }
+}

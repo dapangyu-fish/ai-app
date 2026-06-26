@@ -1,0 +1,568 @@
+{
+  "dsl": "3.3",
+  "appid": "8d51a9de-21cc-5b4f-94dc-6d9802a227a3",
+  "meta": {
+    "name": "gsy_flutter_demo/122-particle-effect-screen",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "Particle Effect",
+      "en": "Particle Effect"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：Particle Effect",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "Particle Effect",
+      "sourcePath": "lib/widget/animation/particle_effect_screen.dart",
+      "deferredAlias": "particle_effect_screen",
+      "widgetClass": "ParticleEffectScreen",
+      "category": "animation",
+      "routeIndex": 122,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-particle-rings-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "Particle Effect",
+      "upstreamSource": "lib/widget/animation/particle_effect_screen.dart",
+      "upstreamWidget": "ParticleEffectScreen",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-particle-rings-v1",
+      "cyberpunk": false
+    },
+    "functions": {
+      "toggleMode": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.cyberpunk",
+              "value": {
+                "!": [
+                  {
+                    "var": "global.cyberpunk"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "computed": {
+      "modeLabel": {
+        "if": [
+          {
+            "var": "global.cyberpunk"
+          },
+          "MODE: CYBER",
+          "MODE: NORMAL"
+        ]
+      },
+      "modeIcon": {
+        "if": [
+          {
+            "var": "global.cyberpunk"
+          },
+          "radar",
+          "filter_drama"
+        ]
+      },
+      "buttonBg": {
+        "if": [
+          {
+            "var": "global.cyberpunk"
+          },
+          "#FF00FFFF",
+          "#FFFFFFFF"
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "animated_canvas",
+              "backgroundColor": "#000000",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "particles",
+                  "count": 320,
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "-": [
+                              {
+                                "%": [
+                                  {
+                                    "*": [
+                                      "i",
+                                      97
+                                    ]
+                                  },
+                                  100
+                                ]
+                              },
+                              50
+                            ]
+                          },
+                          12
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "-": [
+                      {
+                        "*": [
+                          "h",
+                          0.9
+                        ]
+                      },
+                      {
+                        "%": [
+                          {
+                            "+": [
+                              {
+                                "*": [
+                                  "i",
+                                  41
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "progress",
+                                  480
+                                ]
+                              }
+                            ]
+                          },
+                          900
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": 1,
+                  "color": "#FFFFFF",
+                  "alpha": 0.18
+                },
+                {
+                  "kind": "particles",
+                  "count": 4200,
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          "r"
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "-": [
+                      {
+                        "+": [
+                          {
+                            "*": [
+                              "h",
+                              0.9
+                            ]
+                          },
+                          {
+                            "*": [
+                              {
+                                "sin": "angle"
+                              },
+                              "r",
+                              0.25
+                            ]
+                          }
+                        ]
+                      },
+                      "wave"
+                    ]
+                  },
+                  "radius": 1.1,
+                  "color": "#E0E0E0",
+                  "color2": "#00FFFF",
+                  "mix": {
+                    "if": [
+                      {
+                        "var": "global.cyberpunk"
+                      },
+                      1,
+                      0
+                    ]
+                  },
+                  "alpha": {
+                    "if": [
+                      {
+                        "var": "global.cyberpunk"
+                      },
+                      0.5,
+                      0.72
+                    ]
+                  },
+                  "locals": {
+                    "ring": {
+                      "floor": {
+                        "/": [
+                          "i",
+                          70
+                        ]
+                      }
+                    },
+                    "p": {
+                      "%": [
+                        "i",
+                        70
+                      ]
+                    },
+                    "r": {
+                      "+": [
+                        40,
+                        {
+                          "*": [
+                            "ring",
+                            14
+                          ]
+                        }
+                      ]
+                    },
+                    "angle": {
+                      "*": [
+                        "p",
+                        {
+                          "/": [
+                            6.283185307179586,
+                            70
+                          ]
+                        }
+                      ]
+                    },
+                    "wave": {
+                      "*": [
+                        15,
+                        {
+                          "sin": {
+                            "-": [
+                              {
+                                "*": [
+                                  "r",
+                                  0.022
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "t",
+                                  4
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "clamp": [
+                            {
+                              "-": [
+                                1,
+                                {
+                                  "/": [
+                                    "r",
+                                    800
+                                  ]
+                                }
+                              ]
+                            },
+                            0,
+                            1
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "particles",
+                  "count": 900,
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": "i"
+                          },
+                          5
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "-": [
+                      {
+                        "*": [
+                          "h",
+                          0.9
+                        ]
+                      },
+                      {
+                        "%": [
+                          {
+                            "+": [
+                              {
+                                "*": [
+                                  "i",
+                                  13
+                                ]
+                              },
+                              {
+                                "*": [
+                                  "progress",
+                                  920
+                                ]
+                              }
+                            ]
+                          },
+                          1050
+                        ]
+                      }
+                    ]
+                  },
+                  "radius": {
+                    "if": [
+                      {
+                        "var": "global.cyberpunk"
+                      },
+                      2.4,
+                      1.5
+                    ]
+                  },
+                  "color": "#FFFFFF",
+                  "color2": "#00FFFF",
+                  "mix": {
+                    "if": [
+                      {
+                        "var": "global.cyberpunk"
+                      },
+                      1,
+                      0
+                    ]
+                  },
+                  "alpha": {
+                    "if": [
+                      {
+                        "var": "global.cyberpunk"
+                      },
+                      0.55,
+                      0.45
+                    ]
+                  },
+                  "blendMode": "plus"
+                },
+                {
+                  "kind": "particles",
+                  "count": 1800,
+                  "x": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "cos": "angle"
+                          },
+                          "spread"
+                        ]
+                      },
+                      {
+                        "*": [
+                          {
+                            "sin": {
+                              "*": [
+                                "i",
+                                0.7
+                              ]
+                            }
+                          },
+                          8
+                        ]
+                      }
+                    ]
+                  },
+                  "y": {
+                    "-": [
+                      {
+                        "*": [
+                          "h",
+                          0.9
+                        ]
+                      },
+                      "height"
+                    ]
+                  },
+                  "radius": 1.5,
+                  "color": "#FFFFFF",
+                  "alpha": 0.5,
+                  "blendMode": "plus",
+                  "locals": {
+                    "f": {
+                      "%": [
+                        {
+                          "+": [
+                            {
+                              "*": [
+                                "i",
+                                0.001
+                              ]
+                            },
+                            {
+                              "*": [
+                                "progress",
+                                1.2
+                              ]
+                            }
+                          ]
+                        },
+                        1
+                      ]
+                    },
+                    "angle": {
+                      "+": [
+                        {
+                          "*": [
+                            "i",
+                            2.399963229728653
+                          ]
+                        },
+                        {
+                          "*": [
+                            "t",
+                            0.25
+                          ]
+                        }
+                      ]
+                    },
+                    "spread": {
+                      "*": [
+                        "f",
+                        "f",
+                        360
+                      ]
+                    },
+                    "height": {
+                      "*": [
+                        760,
+                        "f",
+                        {
+                          "-": [
+                            1,
+                            {
+                              "*": [
+                                0.55,
+                                "f"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "positioned",
+            "right": 16,
+            "bottom": 24,
+            "child": {
+              "type": "container",
+              "layout": "row",
+              "alignment": "center",
+              "mainAxisAlignment": "center",
+              "padding": {
+                "horizontal": 18,
+                "vertical": 14
+              },
+              "color": "{{ global.buttonBg }}",
+              "borderRadius": 28,
+              "onTap": {
+                "call": "@global.toggleMode",
+                "args": {}
+              },
+              "children": [
+                {
+                  "type": "icon",
+                  "name": "{{ global.modeIcon }}",
+                  "size": 20,
+                  "color": "#000000"
+                },
+                {
+                  "type": "spacer",
+                  "width": 8
+                },
+                {
+                  "type": "text",
+                  "value": "{{ global.modeLabel }}",
+                  "style": {
+                    "fontSize": 13,
+                    "fontWeight": "bold",
+                    "color": "#000000"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "appBar": {
+          "title": ""
+        }
+      }
+    ]
+  }
+}

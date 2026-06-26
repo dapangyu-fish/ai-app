@@ -22,11 +22,14 @@ import 'dependency_loader.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
 import 'builtins/launcher_bridges.dart';
+import 'security/token_authorizer.dart';
 import '../auth/auth_service.dart';
+import '../config/app_config.dart';
 import '../designer/app_storage.dart';
 import '../im/im_service.dart';
 import 'drift_database.dart';
-import '../main.dart' show appThemeMode, appLifecycleEvent;
+import '../main.dart' show appLifecycleEvent;
+import '../theme/theme_controller.dart';
 import '../i18n/locale_controller.dart' show LocaleController;
 import '../i18n/framework_strings.dart';
 
@@ -38,6 +41,9 @@ class JsonInterpreter extends ChangeNotifier {
   late Map<String, dynamic> _functions;
   String _currentScreenId = '';
   String _appId = 'default';
+
+  /// 敏感能力授权器：JSON-APP 调 @get_auth_token / @get_user_info 时按 appId 弹窗授权。
+  final TokenAuthorizer _tokenAuthorizer = TokenAuthorizer();
 
   final List<Map<String, dynamic>> _loopContextStack = [];
   final List<Map<String, dynamic>> _paramsStack = [];
@@ -53,6 +59,29 @@ class JsonInterpreter extends ChangeNotifier {
   final List<void Function()> _flameGameResetters = [];
   final List<void Function(String name, Map<String, dynamic> data)>
   _flameGameInputHandlers = [];
+  final Map<String, ScrollController> _scrollControllers = {};
+  final Map<String, Map<int, GlobalKey>> _scrollTargetKeys = {};
+
+  void registerScrollController(String id, ScrollController controller) {
+    if (id.isEmpty) return;
+    _scrollControllers[id] = controller;
+  }
+
+  void unregisterScrollController(String id, ScrollController controller) {
+    if (_scrollControllers[id] == controller) {
+      _scrollControllers.remove(id);
+    }
+  }
+
+  ScrollController? scrollController(String id) => _scrollControllers[id];
+
+  GlobalKey scrollTargetKey(String controllerId, int index) {
+    final targets = _scrollTargetKeys.putIfAbsent(
+      controllerId,
+      () => <int, GlobalKey>{},
+    );
+    return targets.putIfAbsent(index, GlobalKey.new);
+  }
 
   void registerFlameGameResetter(void Function() resetter) {
     _flameGameResetters.add(resetter);
@@ -94,6 +123,7 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   final Map<String, TextEditingController> _textControllers = {};
+  final Map<String, FocusNode> _focusNodes = {};
 
   /// 屏幕导航历史栈（不含当前页）。
   /// PopScope / Android 物理返回键 / iOS 边缘滑动 都会调 navigateBack 弹出栈顶。
@@ -114,6 +144,7 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ Toast 重叠显示管理 ============
   final List<OverlayEntry> _activeToasts = [];
   static const int _maxOverlappingToasts = 20;
+  DateTime? _lastLoginRequiredToastAt;
 
   // ============ IM 反应式订阅 ============
   // @im_subscribe_inbox 第一次被调用时挂上 IMService.newMessageStream 监听，
@@ -180,6 +211,18 @@ class JsonInterpreter extends ChangeNotifier {
 
   Jsonlogic _createJsonLogic() {
     final jl = Jsonlogic(); // 已包含标准操作符
+    double numAt(
+      List<dynamic> params,
+      Map<String, dynamic> data,
+      dynamic Function(dynamic rule, Map<String, dynamic> data) applier,
+      int index, [
+      double fallback = 0,
+    ]) {
+      if (index >= params.length) return fallback;
+      final value = applier(params[index], data);
+      if (value is num && value.isFinite) return value.toDouble();
+      return double.tryParse(value?.toString() ?? '') ?? fallback;
+    }
 
     // ── 字符串扩展 ──
     jl.add('str_len', (applier, data, params) {
@@ -210,6 +253,13 @@ class JsonInterpreter extends ChangeNotifier {
       final from = applier(params[1], data)?.toString() ?? '';
       final to = applier(params[2], data)?.toString() ?? '';
       return str.replaceAll(from, to);
+    });
+    jl.add('str_replace_first', (applier, data, params) {
+      if (params.length < 3) return applier(params[0], data)?.toString() ?? '';
+      final str = applier(params[0], data)?.toString() ?? '';
+      final from = applier(params[1], data)?.toString() ?? '';
+      final to = applier(params[2], data)?.toString() ?? '';
+      return str.replaceFirst(from, to);
     });
     jl.add('str_split', (applier, data, params) {
       if (params.length < 2) {
@@ -297,6 +347,49 @@ class JsonInterpreter extends ChangeNotifier {
       if (v is num) return v.abs();
       return 0;
     });
+    jl.add('sin', (applier, data, params) {
+      return sin(numAt(params, data, applier, 0));
+    });
+    jl.add('cos', (applier, data, params) {
+      return cos(numAt(params, data, applier, 0));
+    });
+    jl.add('tan', (applier, data, params) {
+      return tan(numAt(params, data, applier, 0));
+    });
+    jl.add('atan2', (applier, data, params) {
+      return atan2(
+        numAt(params, data, applier, 0),
+        numAt(params, data, applier, 1),
+      );
+    });
+    jl.add('sqrt', (applier, data, params) {
+      return sqrt(max(0, numAt(params, data, applier, 0)));
+    });
+    jl.add('pow', (applier, data, params) {
+      return pow(
+        numAt(params, data, applier, 0),
+        numAt(params, data, applier, 1),
+      ).toDouble();
+    });
+    jl.add('clamp', (applier, data, params) {
+      return numAt(params, data, applier, 0)
+          .clamp(
+            numAt(params, data, applier, 1),
+            numAt(params, data, applier, 2),
+          )
+          .toDouble();
+    });
+    jl.add('lerp', (applier, data, params) {
+      final start = numAt(params, data, applier, 0);
+      final end = numAt(params, data, applier, 1);
+      final t = numAt(params, data, applier, 2);
+      return start + (end - start) * t;
+    });
+    jl.add('seed', (applier, data, params) {
+      final raw = sin(numAt(params, data, applier, 0) * 12.9898) * 43758.5453;
+      return raw - raw.floorToDouble();
+    });
+    jl.add('pi', (applier, data, params) => pi);
 
     return jl;
   }
@@ -308,6 +401,18 @@ class JsonInterpreter extends ChangeNotifier {
 
   /// 每次求值前，将当前状态组装为 jsonlogic 的 data 参数
   /// global.computed.* 会被即时求值，作为 global 名空间下的"派生字段"暴露
+  /// 只读平台地址命名空间。JSON 用 `{{ app.backendUrl }}` / `{"var": "app.supabaseUrl"}`
+  /// 读取当前环境的服务地址（值取自 [AppConfig]，跟随环境切换）。都是非密钥的公开
+  /// 地址。这样 JSON-APP 不必写死域名；"拼后端地址"这种平台业务可以留在 JSON 层
+  /// （如 faas lib），通用 http builtin 只认完整 URL，不再替调用方猜后端。
+  Map<String, dynamic> _appContext() => {
+        'backendUrl': AppConfig.backendUrl,
+        'supabaseUrl': AppConfig.supabaseUrl,
+        'registryUrl': AppConfig.registryUrl,
+        'minioUrl': AppConfig.minioUrl,
+        'imApiUrl': AppConfig.imApiUrl,
+      };
+
   Map<String, dynamic> _buildDataContext() {
     Map<String, dynamic> globalView = _variables;
     final computed = (_config['global'] as Map<String, dynamic>?)?['computed'];
@@ -334,6 +439,7 @@ class JsonInterpreter extends ChangeNotifier {
       'loop': _loopContextStack.isNotEmpty ? _loopContextStack.last : {},
       'params': _paramsStack.isNotEmpty ? _paramsStack.last : {},
       'event': _eventContextStack.isNotEmpty ? _eventContextStack.last : {},
+      'app': _appContext(),
     };
   }
 
@@ -391,6 +497,23 @@ class JsonInterpreter extends ChangeNotifier {
     return _knownJsonLogicOps.contains(m.keys.first);
   }
 
+  bool looksLikeJsonLogic(Map<String, dynamic> value) =>
+      _looksLikeJsonLogic(value);
+
+  dynamic evaluateExpression(dynamic value) => _evaluateExpression(value);
+
+  bool evaluateBool(dynamic condition) => _evaluateBool(condition);
+
+  dynamic evaluateJsonLogicWithLocals(
+    Map<String, dynamic> rule,
+    Map<String, dynamic> locals,
+  ) {
+    final data = _buildDataContext();
+    data.addAll(locals);
+    final preprocessed = _resolveTemplatesInRule(rule);
+    return _jl.apply(preprocessed, data);
+  }
+
   /// jsonlogic 标准 operator + 本文件 _createJsonLogic 里 jl.add 注册的自定义 op。
   /// 维护提示：在 _createJsonLogic 里加新的 jl.add('xxx', ...) 时，**记得把
   /// 'xxx' 加到这里**，否则该 op 写法会被当作数据 Map 不再触发 jsonlogic 求值。
@@ -407,10 +530,11 @@ class JsonInterpreter extends ChangeNotifier {
     'log',
     // 本文件自定义
     'str_len', 'str_upper', 'str_lower', 'str_trim', 'str_contains',
-    'str_replace', 'str_split', 'str_join',
+    'str_replace', 'str_replace_first', 'str_split', 'str_join',
     'length', 'at', 'slice', 'sort', 'reverse',
     'to_string', 'to_int', 'to_double',
-    'abs',
+    'abs', 'sin', 'cos', 'tan', 'atan2', 'sqrt', 'pow', 'clamp', 'lerp',
+    'seed', 'pi',
   };
 
   /// 求值为布尔
@@ -458,14 +582,23 @@ class JsonInterpreter extends ChangeNotifier {
     _eventContextStack.clear();
     _navigationHistory.clear();
     _depLoader.clear();
+    _scrollControllers.clear();
+    _scrollTargetKeys.clear();
     for (final c in _textControllers.values) {
       c.dispose();
     }
     _textControllers.clear();
+    for (final node in _focusNodes.values) {
+      node.dispose();
+    }
+    _focusNodes.clear();
 
     // 切 app 时清掉旧 IM 监听，避免老 app 的 inbox 还在写新 app 的 _variables
     _imInboxSub?.cancel();
     _imInboxSub = null;
+
+    // 新一次 app 运行：清掉「单次运行」授权（持久化的「始终允许」保留）。
+    _tokenAuthorizer.resetRunGrants();
 
     if (screens.isNotEmpty) {
       _currentScreenId =
@@ -512,6 +645,7 @@ class JsonInterpreter extends ChangeNotifier {
         textControllers: Map<String, TextEditingController>.of(
           _textControllers,
         ),
+        focusNodes: Map<String, FocusNode>.of(_focusNodes),
         loopContextStack: List<Map<String, dynamic>>.of(_loopContextStack),
         paramsStack: List<Map<String, dynamic>>.of(_paramsStack),
         eventContextStack: List<Map<String, dynamic>>.of(_eventContextStack),
@@ -523,6 +657,7 @@ class JsonInterpreter extends ChangeNotifier {
     // 填充。注意 _textControllers 这里**不能 dispose**——所有控件还活在父 app
     // widget tree 里持有引用，dispose 会让父 app 的输入框炸。
     _textControllers.clear();
+    _focusNodes.clear();
     _navigationHistory.clear();
     _loopContextStack.clear();
     _paramsStack.clear();
@@ -548,6 +683,12 @@ class JsonInterpreter extends ChangeNotifier {
     _textControllers
       ..clear()
       ..addAll(snapshot.textControllers);
+    for (final node in _focusNodes.values) {
+      node.dispose();
+    }
+    _focusNodes
+      ..clear()
+      ..addAll(snapshot.focusNodes);
 
     // 子 app 自己开的 IM 订阅 cancel 掉，再恢复父的（之前是 pause，这里 resume）
     _imInboxSub?.cancel();
@@ -617,6 +758,11 @@ class JsonInterpreter extends ChangeNotifier {
     // 兼容旧格式：去掉 $. 前缀
     if (path.startsWith(r'$.')) {
       path = path.substring(2);
+    }
+
+    if (path.startsWith('app.')) {
+      // 只读平台地址命名空间，见 [_appContext]。
+      return _getNestedValue(_appContext(), path.substring(4));
     }
 
     if (path.startsWith('loop.')) {
@@ -849,7 +995,21 @@ class JsonInterpreter extends ChangeNotifier {
             .toString();
     final dict = (_config['global'] as Map<String, dynamic>?)?['i18n'] as Map?;
     if (dict == null) return keyPath;
-    final localeDict = dict[locale];
+    // 优先精确 locale；缺失时按 语言码(zh-CN→zh) → en → zh → 任意可用 回退，
+    // 这样部分翻译的 i18n 字典会降级到真实语言，而不是把原始 key 显示给用户。
+    var localeDict = dict[locale];
+    if (localeDict is! Map) {
+      final lang = locale.split(RegExp(r'[-_]')).first;
+      localeDict = dict[lang] ?? dict['en'] ?? dict['zh'];
+      if (localeDict is! Map) {
+        for (final v in dict.values) {
+          if (v is Map) {
+            localeDict = v;
+            break;
+          }
+        }
+      }
+    }
     if (localeDict is! Map) return keyPath;
     final raw = _getNestedValue(Map<String, dynamic>.from(localeDict), keyPath);
     final value = raw?.toString() ?? keyPath;
@@ -868,7 +1028,11 @@ class JsonInterpreter extends ChangeNotifier {
   /// 解析表达式，返回原始值（{{ path }} 返回实际类型，非字符串化）
   dynamic resolveExpression(dynamic raw) {
     if (raw is String) {
-      final regex = RegExp(r'^\{\{\s*(.+?)\s*\}\}$');
+      // 单一表达式 {{ x }} → 返回原始类型。这里用 `[^{}]` 而非 `.+?`：否则
+      // "{{ a }}/x/{{ b }}" 这种「以 {{ 开头、以 }} 结尾」的混合模板会被整体
+      // 误匹配成一个变量路径 → getVariable(垃圾路径) → null。混合 / 多表达式
+      // 模板要交给下面的 resolveTemplate 逐个插值。
+      final regex = RegExp(r'^\{\{\s*([^{}]+?)\s*\}\}$');
       final match = regex.firstMatch(raw);
       if (match != null) {
         final path = match.group(1)!;
@@ -911,6 +1075,23 @@ class JsonInterpreter extends ChangeNotifier {
     final controller = TextEditingController(text: currentValue);
     _textControllers[bindPath] = controller;
     return controller;
+  }
+
+  FocusNode getFocusNode(String id) {
+    return _focusNodes.putIfAbsent(id, FocusNode.new);
+  }
+
+  bool requestFocusNode(String id) {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted || id.isEmpty) return false;
+    FocusScope.of(ctx).requestFocus(getFocusNode(id));
+    return true;
+  }
+
+  void unfocus() {
+    final ctx = globalContext;
+    if (ctx == null || !ctx.mounted) return;
+    FocusScope.of(ctx).unfocus();
   }
 
   // ============ Action 执行 ============
@@ -1089,7 +1270,40 @@ class JsonInterpreter extends ChangeNotifier {
     String callTarget,
     Map<String, dynamic> args,
   ) async {
+    // Control-flow actions own their child logic arrays. Do not run the generic
+    // args resolver first: it would recursively bake templates inside body /
+    // then / else before the nested loop/event context exists.
+    switch (callTarget) {
+      case '@if':
+        return await _builtinIf(args);
+      case '@while':
+        return await _builtinWhile(args);
+      case '@for_each':
+        return await _builtinForEach(args);
+      case '@loop_by_num':
+        return await _builtinLoopByNum(args);
+      case '@try_catch':
+        return await _builtinTryCatch(args);
+      case '@parallel':
+        return await _builtinParallel(args);
+    }
+
     final resolvedArgs = _resolveArgs(args);
+
+    if (_requiresLoggedIn(callTarget) && !AuthService.isLoggedIn) {
+      _showLoginRequiredToast();
+      return _loginRequiredFallback(callTarget, resolvedArgs);
+    }
+
+    if (callTarget.startsWith('@im_') && !IMService.instance.isLoggedIn) {
+      return IMService.instance.login().then<dynamic>((ok) {
+        if (!ok) {
+          _showToast(T.current.homeImLoginFailed);
+          return _loginRequiredFallback(callTarget, resolvedArgs);
+        }
+        return _executeCall(callTarget, args);
+      });
+    }
 
     // 自定义全局函数: @global.funcName
     if (callTarget.startsWith('@global.')) {
@@ -1151,24 +1365,77 @@ class JsonInterpreter extends ChangeNotifier {
         if (screen != null) navigateTo(screen);
         return null;
 
-      // ── 控制流 ──
-      case '@if':
-        return await _builtinIf(args);
-      case '@while':
-        return await _builtinWhile(args);
-      case '@for_each':
-        return await _builtinForEach(args);
-      case '@loop_by_num':
-        return await _builtinLoopByNum(args);
-      case '@try_catch':
-        return await _builtinTryCatch(args);
-      case '@parallel':
-        return await _builtinParallel(args);
       case '@delay':
         final ms = _toInt(
           resolvedArgs['ms'] ?? resolvedArgs['milliseconds'] ?? 0,
         );
         await Future.delayed(Duration(milliseconds: ms));
+        return null;
+      case '@scroll_to_top':
+        final id = resolvedArgs['controller']?.toString() ?? '';
+        final controller = _scrollControllers[id];
+        if (controller == null || !controller.hasClients) return false;
+        await controller.animateTo(
+          0,
+          duration: Duration(
+            milliseconds: _toInt(resolvedArgs['durationMs'] ?? 1000),
+          ),
+          curve: _parseScrollCurve(resolvedArgs['curve']?.toString()),
+        );
+        return true;
+      case '@scroll_to_bottom':
+        final id = resolvedArgs['controller']?.toString() ?? '';
+        final controller = _scrollControllers[id];
+        if (controller == null || !controller.hasClients) return false;
+        await controller.animateTo(
+          controller.position.maxScrollExtent,
+          duration: Duration(
+            milliseconds: _toInt(resolvedArgs['durationMs'] ?? 300),
+          ),
+          curve: _parseScrollCurve(resolvedArgs['curve']?.toString()),
+        );
+        return true;
+      case '@scroll_to_offset':
+        final id = resolvedArgs['controller']?.toString() ?? '';
+        final controller = _scrollControllers[id];
+        if (controller == null || !controller.hasClients) return false;
+        final position = controller.position;
+        final offsetValue = args['offset'] is Map<String, dynamic>
+            ? _evaluateExpression(args['offset'])
+            : resolvedArgs['offset'];
+        final target = _toDouble(
+          offsetValue ?? 0,
+        ).clamp(position.minScrollExtent, position.maxScrollExtent);
+        final durationMs = _toInt(resolvedArgs['durationMs'] ?? 0);
+        if (durationMs <= 0) {
+          controller.jumpTo(target);
+        } else {
+          await controller.animateTo(
+            target,
+            duration: Duration(milliseconds: durationMs),
+            curve: _parseScrollCurve(resolvedArgs['curve']?.toString()),
+          );
+        }
+        return true;
+      case '@scroll_to_index':
+        final id = resolvedArgs['controller']?.toString() ?? '';
+        final index = _toInt(resolvedArgs['index'] ?? 0);
+        final key = _scrollTargetKeys[id]?[index];
+        final targetContext = key?.currentContext;
+        if (targetContext == null) return false;
+        await Scrollable.ensureVisible(
+          targetContext,
+          duration: Duration(
+            milliseconds: _toInt(resolvedArgs['durationMs'] ?? 500),
+          ),
+          curve: _parseScrollCurve(resolvedArgs['curve']?.toString()),
+          alignment: _toDouble(resolvedArgs['alignment'] ?? 0.0),
+        );
+        return true;
+      case '@focus_input':
+        return requestFocusNode(resolvedArgs['id']?.toString() ?? '');
+      case '@unfocus':
+        unfocus();
         return null;
       case '@throw':
         // 主动抛错——用于测试 @try_catch / 业务侧主动失败
@@ -1300,19 +1567,19 @@ class JsonInterpreter extends ChangeNotifier {
       case '@set_theme':
         // mode: light / dark / system
         final mode = resolvedArgs['mode']?.toString() ?? 'system';
-        appThemeMode.value = switch (mode) {
-          'light' => ThemeMode.light,
-          'dark' => ThemeMode.dark,
-          _ => ThemeMode.system,
-        };
+        await ThemeController.setThemeMode(ThemeController.parseMode(mode));
         return null;
       case '@get_theme':
         // 返回当前 mode（system 时返回 'system'，由调用方再决定怎么显示当前实际亮度）
-        return switch (appThemeMode.value) {
-          ThemeMode.light => 'light',
-          ThemeMode.dark => 'dark',
-          ThemeMode.system => 'system',
-        };
+        return ThemeController.modeTag(appThemeMode.value);
+      case '@set_system_ui_overlay':
+        final style = resolvedArgs['style']?.toString().toLowerCase();
+        if (style == 'light') {
+          SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
+        } else {
+          SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
+        }
+        return null;
       case '@biometric_auth':
         // reason: 必填——告诉用户为什么要验证（系统弹窗里的文案）
         // 返回 bool：通过 / 失败（web 无生物识别，恒 false）
@@ -1330,6 +1597,12 @@ class JsonInterpreter extends ChangeNotifier {
         return await _builtinHttpPut(resolvedArgs);
       case '@http_delete':
         return await _builtinHttpDelete(resolvedArgs);
+      case '@http_patch':
+        return await _builtinHttpPatch(resolvedArgs);
+      case '@http_head':
+        return await _builtinHttpHead(resolvedArgs);
+      case '@http_options':
+        return await _builtinHttpOptions(resolvedArgs);
       case '@http_sse':
         return await _builtinHttpSse(args, resolvedArgs);
 
@@ -1520,8 +1793,9 @@ class JsonInterpreter extends ChangeNotifier {
 
       case '@show_bottom_sheet':
         // 底部弹窗
-        // args: { content: { ...widget... }, isDismissible?, enableDrag?, backgroundColor? }
-        // 返回值：弹窗里 close action 透传的值（关闭返回 null）
+        // args: { content: { ...widget... }, isDismissible?, enableDrag?,
+        //         backgroundColor?, padding?, borderRadius?, useSafeArea? }
+        // 返回值：系统关闭返回 null；未来如增加带 result 的关闭 action 可透传结果。
         return await _showBottomSheet(resolvedArgs);
 
       // ── 本地存储 ──
@@ -2174,21 +2448,27 @@ class JsonInterpreter extends ChangeNotifier {
 
       // ── 用户信息 ──
       case '@get_user_info':
-        final userInfo = AuthService.currentUser != null
-            ? _normalizeUserInfo(
-                Map<String, dynamic>.from(AuthService.currentUser!),
-              )
-            : null;
+        if (AuthService.currentUser == null) return null;
+        if (!await _authorizeSensitive(SensitiveCapability.userInfo)) {
+          return null;
+        }
+        final userInfo = _normalizeUserInfo(
+          Map<String, dynamic>.from(AuthService.currentUser!),
+        );
         final bindPath = resolvedArgs['bind'] as String?;
-        if (bindPath != null && userInfo != null) {
+        if (bindPath != null) {
           setVariable(bindPath, userInfo);
         }
         return userInfo;
 
       case '@get_auth_token':
         final token = AuthService.token;
+        if (token == null) return null;
+        if (!await _authorizeSensitive(SensitiveCapability.authToken)) {
+          return null;
+        }
         final tokenBind = resolvedArgs['bind'] as String?;
-        if (tokenBind != null && token != null) {
+        if (tokenBind != null) {
           setVariable(tokenBind, token);
         }
         return token;
@@ -2750,6 +3030,32 @@ class JsonInterpreter extends ChangeNotifier {
     return await _httpClient.delete(url, headers: headers);
   }
 
+  Future<Map<String, dynamic>> _builtinHttpPatch(
+    Map<String, dynamic> args,
+  ) async {
+    final url = args['url']?.toString() ?? '';
+    final body = _evaluateExpression(args['body']);
+    final headers = _toStringMap(args['headers']);
+    return await _httpClient.patch(url, body: body, headers: headers);
+  }
+
+  Future<Map<String, dynamic>> _builtinHttpHead(
+    Map<String, dynamic> args,
+  ) async {
+    final url = args['url']?.toString() ?? '';
+    final query = args['query'] as Map<String, dynamic>?;
+    final headers = _toStringMap(args['headers']);
+    return await _httpClient.head(url, queryParams: query, headers: headers);
+  }
+
+  Future<Map<String, dynamic>> _builtinHttpOptions(
+    Map<String, dynamic> args,
+  ) async {
+    final url = args['url']?.toString() ?? '';
+    final headers = _toStringMap(args['headers']);
+    return await _httpClient.options(url, headers: headers);
+  }
+
   Future<Map<String, dynamic>> _builtinHttpSse(
     Map<String, dynamic> rawArgs,
     Map<String, dynamic> args,
@@ -2880,6 +3186,73 @@ class JsonInterpreter extends ChangeNotifier {
     }
   }
 
+  bool _requiresLoggedIn(String callTarget) {
+    if (callTarget.startsWith('@im_')) return true;
+    switch (callTarget) {
+      case '@refresh_user':
+      case '@update_profile':
+      case '@upload_avatar':
+        return true;
+    }
+    return false;
+  }
+
+  dynamic _loginRequiredFallback(
+    String callTarget,
+    Map<String, dynamic> resolvedArgs,
+  ) {
+    dynamic bindAndReturn(dynamic value) {
+      final bindPath = resolvedArgs['bind'] as String?;
+      if (bindPath != null) setVariable(bindPath, value);
+      return value;
+    }
+
+    switch (callTarget) {
+      case '@im_search_users':
+      case '@im_friend_applications':
+      case '@im_friend_list':
+      case '@im_conversations':
+      case '@im_history':
+        return bindAndReturn(const []);
+      case '@im_total_unread':
+        return bindAndReturn(0);
+      case '@im_current_user_id':
+      case '@refresh_user':
+      case '@upload_avatar':
+        return bindAndReturn(null);
+      case '@im_subscribe_inbox':
+        setVariable('global._im', {
+          'tick': 0,
+          'last_message': null,
+          'current_user_id': null,
+          'logged_in': false,
+        });
+        return false;
+      case '@im_send_friend_request':
+      case '@im_accept_friend':
+      case '@im_reject_friend':
+      case '@im_mark_read':
+        return false;
+      case '@update_profile':
+        return {
+          'error': 'login_required',
+          'message': T.current.chatErrPleaseLogin,
+        };
+      default:
+        return null;
+    }
+  }
+
+  void _showLoginRequiredToast() {
+    final now = DateTime.now();
+    final last = _lastLoginRequiredToastAt;
+    if (last != null && now.difference(last) < const Duration(seconds: 2)) {
+      return;
+    }
+    _lastLoginRequiredToastAt = now;
+    _showToast(T.current.chatErrPleaseLogin);
+  }
+
   // ============ UI 反馈 ============
 
   void _showToast(String message) {
@@ -2935,6 +3308,19 @@ class JsonInterpreter extends ChangeNotifier {
         _activeToasts.remove(entry);
       }
     });
+  }
+
+  /// 框架层敏感能力授权：JSON-APP 读取登录凭证 / 账号信息前，按当前 appId 弹窗授权。
+  /// appId / 版本 / 名称都从 _config 实时读取，保证 @launch_app 嵌套 popState 后仍对应当前 app。
+  Future<bool> _authorizeSensitive(SensitiveCapability capability) {
+    final meta = _config['meta'] as Map<String, dynamic>?;
+    return _tokenAuthorizer.authorize(
+      appId: _appId,
+      appVersion: meta?['version']?.toString() ?? '',
+      appName: meta?['name']?.toString() ?? _appId,
+      capability: capability,
+      context: globalContext,
+    );
   }
 
   Future<bool> _showAlertDialog(String title, String message) async {
@@ -3165,6 +3551,10 @@ class JsonInterpreter extends ChangeNotifier {
     final isDismissible = args['isDismissible'] != false;
     final enableDrag = args['enableDrag'] != false;
     final bg = _parseColorHex(args['backgroundColor']?.toString());
+    final padding =
+        _parseInsetsArg(args['padding']) ?? const EdgeInsets.all(16);
+    final radius = _toDouble(args['borderRadius'] ?? 16);
+    final useSafeArea = args['useSafeArea'] != false;
 
     _activeModalCount++;
     try {
@@ -3174,19 +3564,46 @@ class JsonInterpreter extends ChangeNotifier {
         enableDrag: enableDrag,
         backgroundColor: bg,
         isScrollControlled: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        builder: (sheetCtx) => SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: buildWidget(sheetCtx, content),
-          ),
-        ),
+        shape: radius > 0
+            ? RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(radius),
+                ),
+              )
+            : null,
+        builder: (sheetCtx) {
+          Widget sheet = buildWidget(sheetCtx, content);
+          if (padding != EdgeInsets.zero) {
+            sheet = Padding(padding: padding, child: sheet);
+          }
+          return useSafeArea ? SafeArea(child: sheet) : sheet;
+        },
       );
     } finally {
       _activeModalCount--;
     }
+  }
+
+  EdgeInsets? _parseInsetsArg(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return EdgeInsets.all(value.toDouble());
+    if (value is String) {
+      final parsed = double.tryParse(value);
+      return parsed == null ? null : EdgeInsets.all(parsed);
+    }
+    if (value is Map<String, dynamic>) {
+      final all = _toDouble(value['all']);
+      if (value.containsKey('all')) return EdgeInsets.all(all);
+      final horizontal = _toDouble(value['horizontal']);
+      final vertical = _toDouble(value['vertical']);
+      return EdgeInsets.fromLTRB(
+        value.containsKey('left') ? _toDouble(value['left']) : horizontal,
+        value.containsKey('top') ? _toDouble(value['top']) : vertical,
+        value.containsKey('right') ? _toDouble(value['right']) : horizontal,
+        value.containsKey('bottom') ? _toDouble(value['bottom']) : vertical,
+      );
+    }
+    return null;
   }
 
   /// 解析 #RRGGBB / #AARRGGBB 颜色字符串
@@ -3390,6 +3807,23 @@ class JsonInterpreter extends ChangeNotifier {
     return 0.0;
   }
 
+  Curve _parseScrollCurve(String? value) {
+    switch (value) {
+      case 'linear':
+        return Curves.linear;
+      case 'bounceInOut':
+        return Curves.bounceInOut;
+      case 'easeInOut':
+        return Curves.easeInOut;
+      case 'easeOut':
+        return Curves.easeOut;
+      case 'easeIn':
+        return Curves.easeIn;
+      default:
+        return Curves.ease;
+    }
+  }
+
   Map<String, String>? _toStringMap(dynamic val) {
     if (val is Map) {
       return val.map((k, v) => MapEntry(k.toString(), v.toString()));
@@ -3541,13 +3975,24 @@ class JsonInterpreter extends ChangeNotifier {
         .toSet()
         .toList();
     if (ids.isEmpty) return;
+    final myId = IMService.instance.currentUserId;
+    final myAvatar = AuthService.currentUser?['avatar_url']?.toString() ?? '';
+    final myName = AuthService.currentUser?['username']?.toString() ?? '';
+    if (myId != null && myId.isNotEmpty && myAvatar.isNotEmpty) {
+      for (final item in items) {
+        if ((item[idField]?.toString() ?? '') != myId) continue;
+        item[faceField] = myAvatar;
+        if (myName.isNotEmpty) item[nicknameField] = myName;
+      }
+    }
     final supaMap = await IMService.instance.lookupUsersFromSupabase(ids);
     if (supaMap.isEmpty) return;
     for (final item in items) {
       final id = item[idField]?.toString() ?? '';
       final supa = supaMap[id];
       if (supa == null) continue;
-      final supaFace = supa['face_url']?.toString() ?? '';
+      final supaFace =
+          supa['face_url']?.toString() ?? supa['avatar_url']?.toString() ?? '';
       if (supaFace.isNotEmpty) item[faceField] = supaFace;
       // 昵称同样可能更新过；非空时盖一下，让显示用最新值
       final supaName = supa['nickname']?.toString() ?? '';
@@ -3631,6 +4076,7 @@ class _InterpreterStateSnapshot {
   final List<String> navigationHistory;
   final Map<String, LoadedModule> depModules;
   final Map<String, TextEditingController> textControllers;
+  final Map<String, FocusNode> focusNodes;
   final List<Map<String, dynamic>> loopContextStack;
   final List<Map<String, dynamic>> paramsStack;
   final List<Map<String, dynamic>> eventContextStack;
@@ -3645,6 +4091,7 @@ class _InterpreterStateSnapshot {
     required this.navigationHistory,
     required this.depModules,
     required this.textControllers,
+    required this.focusNodes,
     required this.loopContextStack,
     required this.paramsStack,
     required this.eventContextStack,

@@ -1,0 +1,136 @@
+{
+  "dsl": "3.3",
+  "appid": "cb08d3aa-b8cd-5808-8997-fd2b0b2ec3b3",
+  "meta": {
+    "name": "gsy_flutter_demo/020-anima-demo-page",
+    "version": "0.1.5",
+    "type": "app",
+    "displayName": {
+      "zh": "控件动画组合展示（旋转加放大圆）",
+      "en": "Combined widget animations(旋转加放大圆)"
+    },
+    "description": "AnimaDemoPage：控件动画组合展示",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "控件动画组合展示（旋转加放大圆）",
+      "sourcePath": "lib/widget/animation/anima_demo_page.dart",
+      "deferredAlias": "anima_demo_page",
+      "widgetClass": "AnimaDemoPage",
+      "category": "animation",
+      "routeIndex": 20,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "angle": 0,
+      "portVersion": "json-dsl-primitives-v2",
+      "portStatus": "ported_json"
+    },
+    "functions": {
+      "tick": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.angle",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.angle"
+                      },
+                      4
+                    ]
+                  },
+                  360
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "AnimaDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "interval_action",
+              "intervalMs": 33,
+              "action": {
+                "call": "@global.tick",
+                "args": {}
+              },
+              "child": {
+                "type": "center",
+                "child": {
+                  "type": "transform",
+                  "rotateZ": "{{ global.angle }}",
+                  "child": {
+                    "type": "container",
+                    "width": 200,
+                    "height": 200,
+                    "clipBehavior": "hardEdge",
+                    "color": "#69F0AE",
+                    "children": [
+                      {
+                        "type": "animated_canvas",
+                        "width": 200,
+                        "height": 200,
+                        "durationMs": 3000,
+                        "layers": [
+                          {
+                            "kind": "circle",
+                            "x": {
+                              "/": [
+                                "w",
+                                2
+                              ]
+                            },
+                            "y": {
+                              "/": [
+                                "h",
+                                2
+                              ]
+                            },
+                            "radius": {
+                              "*": [
+                                "progress",
+                                300
+                              ]
+                            },
+                            "color": "#FF5252",
+                            "style": "stroke",
+                            "strokeWidth": 4
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        ],
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

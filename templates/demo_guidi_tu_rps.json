@@ -1,0 +1,1472 @@
+{
+  "dsl": "3.3",
+  "appid": "0e25c719-4772-5928-8243-1c5194b5c843",
+  "meta": {
+    "name": "demo-guidi-tu-rps",
+    "displayName": "Guidi Tu RPS",
+    "version": "1.1.0",
+    "type": "app",
+    "description": "Pass-and-play JSON port of Guidi Tu Rock Paper Scissors with source hand assets and per-slot sequence scoring.",
+    "author": "fish"
+  },
+  "dependencies": {
+    "common-ui": "^1.3.0"
+  },
+  "global": {
+    "variables": {
+      "phase": "p1",
+      "status": "Player 1 sequence",
+      "empty": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/rps/hands/rock_grey.png",
+      "p1": [
+        "",
+        "",
+        "",
+        ""
+      ],
+      "p2": [
+        "",
+        "",
+        "",
+        ""
+      ],
+      "p1Count": 0,
+      "p2Count": 0,
+      "p1Score": 0,
+      "p2Score": 0,
+      "_a": "",
+      "_b": "",
+      "p1Url0": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/rps/hands/rock_grey.png",
+      "p1Url1": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/rps/hands/rock_grey.png",
+      "p1Url2": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/rps/hands/rock_grey.png",
+      "p1Url3": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/rps/hands/rock_grey.png",
+      "p2Url0": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/rps/hands/rock_grey.png",
+      "p2Url1": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/rps/hands/rock_grey.png",
+      "p2Url2": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/rps/hands/rock_grey.png",
+      "p2Url3": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/rps/hands/rock_grey.png"
+    },
+    "functions": {
+      "pick": {
+        "params": [
+          "gesture",
+          "url"
+        ],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "var": "global.phase"
+                  },
+                  "p1"
+                ]
+              },
+              "then": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "<": [
+                        {
+                          "var": "global.p1Count"
+                        },
+                        4
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.p1.{{ global.p1Count }}",
+                          "value": "{{ params.gesture }}"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.p1Url{{ global.p1Count }}",
+                          "value": "{{ params.url }}"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.p1Count",
+                          "value": {
+                            "+": [
+                              {
+                                "var": "global.p1Count"
+                              },
+                              1
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        {
+                          "var": "global.p1Count"
+                        },
+                        4
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.phase",
+                          "value": "p2"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.status",
+                          "value": "Player 2 sequence"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "and": [
+                        {
+                          "==": [
+                            {
+                              "var": "global.phase"
+                            },
+                            "p2"
+                          ]
+                        },
+                        {
+                          "<": [
+                            {
+                              "var": "global.p2Count"
+                            },
+                            4
+                          ]
+                        }
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.p2.{{ global.p2Count }}",
+                          "value": "{{ params.gesture }}"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.p2Url{{ global.p2Count }}",
+                          "value": "{{ params.url }}"
+                        }
+                      },
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.p2Count",
+                          "value": {
+                            "+": [
+                              {
+                                "var": "global.p2Count"
+                              },
+                              1
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        {
+                          "var": "global.p2Count"
+                        },
+                        4
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@global.score",
+                        "args": {}
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "back": {
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "and": [
+                  {
+                    "==": [
+                      {
+                        "var": "global.phase"
+                      },
+                      "p1"
+                    ]
+                  },
+                  {
+                    ">": [
+                      {
+                        "var": "global.p1Count"
+                      },
+                      0
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p1Count",
+                    "value": {
+                      "-": [
+                        {
+                          "var": "global.p1Count"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p1.{{ global.p1Count }}",
+                    "value": ""
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p1Url{{ global.p1Count }}",
+                    "value": "{{ global.empty }}"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "and": [
+                  {
+                    "==": [
+                      {
+                        "var": "global.phase"
+                      },
+                      "p2"
+                    ]
+                  },
+                  {
+                    ">": [
+                      {
+                        "var": "global.p2Count"
+                      },
+                      0
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p2Count",
+                    "value": {
+                      "-": [
+                        {
+                          "var": "global.p2Count"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p2.{{ global.p2Count }}",
+                    "value": ""
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p2Url{{ global.p2Count }}",
+                    "value": "{{ global.empty }}"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "score": {
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p1Score",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p2Score",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._a",
+              "value": "{{ global.p1.0 }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._b",
+              "value": "{{ global.p2.0 }}"
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "or": [
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "rock"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "scissors"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "paper"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "rock"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "scissors"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "paper"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p1Score",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.p1Score"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "or": [
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "rock"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "scissors"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "paper"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "rock"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "scissors"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "paper"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p2Score",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.p2Score"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._a",
+              "value": "{{ global.p1.1 }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._b",
+              "value": "{{ global.p2.1 }}"
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "or": [
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "rock"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "scissors"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "paper"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "rock"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "scissors"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "paper"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p1Score",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.p1Score"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "or": [
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "rock"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "scissors"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "paper"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "rock"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "scissors"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "paper"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p2Score",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.p2Score"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._a",
+              "value": "{{ global.p1.2 }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._b",
+              "value": "{{ global.p2.2 }}"
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "or": [
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "rock"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "scissors"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "paper"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "rock"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "scissors"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "paper"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p1Score",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.p1Score"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "or": [
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "rock"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "scissors"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "paper"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "rock"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "scissors"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "paper"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p2Score",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.p2Score"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._a",
+              "value": "{{ global.p1.3 }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._b",
+              "value": "{{ global.p2.3 }}"
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "or": [
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "rock"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "scissors"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "paper"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "rock"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "scissors"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "paper"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p1Score",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.p1Score"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "or": [
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "rock"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "scissors"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "paper"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "rock"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "==": [
+                          {
+                            "var": "global._b"
+                          },
+                          "scissors"
+                        ]
+                      },
+                      {
+                        "==": [
+                          {
+                            "var": "global._a"
+                          },
+                          "paper"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.p2Score",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.p2Score"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.phase",
+              "value": "result"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.status",
+              "value": "P1 {{ global.p1Score }} : {{ global.p2Score }} P2"
+            }
+          }
+        ]
+      },
+      "reset": {
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.phase",
+              "value": "p1"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.status",
+              "value": "Player 1 sequence"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p1Count",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p2Count",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p1Score",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p2Score",
+              "value": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p1.0",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p1.1",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p1.2",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p1.3",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p2.0",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p2.1",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p2.2",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p2.3",
+              "value": ""
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p1Url0",
+              "value": "{{ global.empty }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p1Url1",
+              "value": "{{ global.empty }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p1Url2",
+              "value": "{{ global.empty }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p1Url3",
+              "value": "{{ global.empty }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p2Url0",
+              "value": "{{ global.empty }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p2Url1",
+              "value": "{{ global.empty }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p2Url2",
+              "value": "{{ global.empty }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.p2Url3",
+              "value": "{{ global.empty }}"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "Guidi Tu RPS",
+        "appBar": {
+          "title": "Guidi Tu RPS",
+          "centerTitle": true,
+          "backgroundColor": "#111827",
+          "color": "#FFFFFF",
+          "actions": [
+            {
+              "icon": "replay",
+              "action": {
+                "call": "@global.reset",
+                "args": {}
+              }
+            }
+          ]
+        },
+        "layout": "column",
+        "padding": 14,
+        "children": [
+          {
+            "type": "image",
+            "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/title/logo_en.png",
+            "height": 92,
+            "fit": "contain"
+          },
+          {
+            "type": "text",
+            "value": "{{ global.status }}",
+            "style": {
+              "fontSize": 18,
+              "fontWeight": "bold",
+              "color": "#111827",
+              "align": "center"
+            }
+          },
+          {
+            "type": "container",
+            "padding": 10,
+            "layout": "row",
+            "mainAxisAlignment": "spaceEvenly",
+            "children": [
+              {
+                "type": "image",
+                "src": "{{ global.p1Url0 }",
+                "width": 70,
+                "height": 56,
+                "fit": "contain"
+              },
+              {
+                "type": "image",
+                "src": "{{ global.p1Url1 }",
+                "width": 70,
+                "height": 56,
+                "fit": "contain"
+              },
+              {
+                "type": "image",
+                "src": "{{ global.p1Url2 }",
+                "width": 70,
+                "height": 56,
+                "fit": "contain"
+              },
+              {
+                "type": "image",
+                "src": "{{ global.p1Url3 }",
+                "width": 70,
+                "height": 56,
+                "fit": "contain"
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "padding": 10,
+            "layout": "row",
+            "mainAxisAlignment": "spaceEvenly",
+            "children": [
+              {
+                "type": "image",
+                "src": "{{ global.p2Url0 }",
+                "width": 70,
+                "height": 56,
+                "fit": "contain"
+              },
+              {
+                "type": "image",
+                "src": "{{ global.p2Url1 }",
+                "width": 70,
+                "height": 56,
+                "fit": "contain"
+              },
+              {
+                "type": "image",
+                "src": "{{ global.p2Url2 }",
+                "width": 70,
+                "height": 56,
+                "fit": "contain"
+              },
+              {
+                "type": "image",
+                "src": "{{ global.p2Url3 }",
+                "width": 70,
+                "height": 56,
+                "fit": "contain"
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "padding": 10,
+            "layout": "row",
+            "mainAxisAlignment": "spaceEvenly",
+            "children": [
+              {
+                "type": "button",
+                "label": "Rock",
+                "style": {
+                  "type": "filled",
+                  "backgroundColor": "#FACC15",
+                  "textColor": "#111827"
+                },
+                "action": {
+                  "call": "@global.pick",
+                  "args": {
+                    "gesture": "rock",
+                    "url": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/rps/hands/rock.png"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "Paper",
+                "style": {
+                  "type": "filled",
+                  "backgroundColor": "#FACC15",
+                  "textColor": "#111827"
+                },
+                "action": {
+                  "call": "@global.pick",
+                  "args": {
+                    "gesture": "paper",
+                    "url": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/rps/hands/paper.png"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "Scissors",
+                "style": {
+                  "type": "filled",
+                  "backgroundColor": "#FACC15",
+                  "textColor": "#111827"
+                },
+                "action": {
+                  "call": "@global.pick",
+                  "args": {
+                    "gesture": "scissors",
+                    "url": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/images/rps/hands/scissors.png"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "Back",
+                "style": {
+                  "type": "outlined"
+                },
+                "action": {
+                  "call": "@global.back",
+                  "args": {}
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "visible": {
+              "==": [
+                {
+                  "var": "global.phase"
+                },
+                "result"
+              ]
+            },
+            "value": "Result: Player 1 {{ global.p1Score }} - {{ global.p2Score }} Player 2",
+            "style": {
+              "fontSize": 18,
+              "fontWeight": "bold",
+              "color": "#7C2D12",
+              "align": "center"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "assets": {
+    "bundles": {
+      "source-guidi-tu": {
+        "baseUrl": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/source-guidi-tu/1.1/",
+        "manifest": "manifest.json",
+        "license": "CC BY-NC-SA 4.0",
+        "startupDownload": true,
+        "description": "Guidi Tu LFS hand/interstitial assets"
+      }
+    }
+  }
+}

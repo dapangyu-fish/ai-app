@@ -1,0 +1,514 @@
+{
+  "dsl": "3.3",
+  "appid": "6971cd17-c7aa-5395-b0ad-753d8fa33c82",
+  "meta": {
+    "name": "gsy_flutter_demo/074-route-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "测试路由嵌套",
+      "en": "Nested route test"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：测试路由嵌套",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "测试路由嵌套",
+      "sourcePath": "lib/widget/basic/route_demo_page.dart",
+      "deferredAlias": "route_demo_page",
+      "widgetClass": "RouteDemoPage",
+      "category": "basic",
+      "routeIndex": 74,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-route-stack-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "测试路由嵌套",
+      "upstreamSource": "lib/widget/basic/route_demo_page.dart",
+      "upstreamWidget": "RouteDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-route-stack-v1",
+      "currentRoute": 0,
+      "routeStack": [
+        0
+      ]
+    },
+    "functions": {
+      "openRoute": {
+        "params": [
+          "index"
+        ],
+        "logic": [
+          {
+            "call": "@list_add",
+            "args": {
+              "var": "global.routeStack",
+              "item": {
+                "var": "params.index"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentRoute",
+              "value": {
+                "var": "params.index"
+              }
+            }
+          }
+        ]
+      },
+      "popRoute": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.routeStack",
+              "value": {
+                "if": [
+                  {
+                    ">": [
+                      {
+                        "length": [
+                          {
+                            "var": "global.routeStack"
+                          }
+                        ]
+                      },
+                      1
+                    ]
+                  },
+                  {
+                    "slice": [
+                      {
+                        "var": "global.routeStack"
+                      },
+                      0,
+                      {
+                        "-": [
+                          {
+                            "length": [
+                              {
+                                "var": "global.routeStack"
+                              }
+                            ]
+                          },
+                          1
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "var": "global.routeStack"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentRoute",
+              "value": {
+                "at": [
+                  {
+                    "var": "global.routeStack"
+                  },
+                  {
+                    "-": [
+                      {
+                        "length": [
+                          {
+                            "var": "global.routeStack"
+                          }
+                        ]
+                      },
+                      1
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "RouteDemoPage",
+        "layout": "row",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "expanded",
+            "flex": 1,
+            "child": {
+              "type": "container",
+              "children": [
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  0",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 0
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  1",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 1
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  2",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 2
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  3",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 3
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  4",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 4
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  5",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 5
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  6",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 6
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  7",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 7
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  8",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 8
+                    }
+                  }
+                },
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "click  9",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#000000",
+                        "textAlign": "center",
+                        "paddingV": 0
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "height": 34,
+                  "color": "#FFE57F",
+                  "margin": {
+                    "top": 6,
+                    "bottom": 6
+                  },
+                  "alignment": "center",
+                  "onTap": {
+                    "call": "@global.openRoute",
+                    "args": {
+                      "index": 9
+                    }
+                  }
+                }
+              ],
+              "layout": "column",
+              "color": "#2196F3"
+            }
+          },
+          {
+            "type": "container",
+            "children": [],
+            "width": 1,
+            "color": "#9E9E9E"
+          },
+          {
+            "type": "spacer",
+            "width": 30
+          },
+          {
+            "type": "expanded",
+            "flex": 3,
+            "child": {
+              "type": "container",
+              "children": [
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "container",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.currentRoute }}",
+                          "style": {
+                            "fontSize": 100,
+                            "color": "#F44336",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "layout": "column",
+                      "width": 200,
+                      "height": 200,
+                      "color": "#FFC107",
+                      "alignment": "center",
+                      "onTap": {
+                        "call": "@global.popRoute",
+                        "args": {}
+                      }
+                    }
+                  ],
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "alignment": "center",
+                  "mainAxisAlignment": "center"
+                }
+              ],
+              "layout": "column",
+              "color": "#9E9E9E",
+              "alignment": "center",
+              "mainAxisAlignment": "center"
+            }
+          }
+        ],
+        "appBar": {
+          "title": "RouteDemoPage"
+        }
+      }
+    ]
+  }
+}

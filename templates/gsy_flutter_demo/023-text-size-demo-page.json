@@ -1,0 +1,152 @@
+{
+  "dsl": "3.3",
+  "appid": "bd44e11a-8990-5f9a-8fe1-99ca4228c41a",
+  "meta": {
+    "name": "gsy_flutter_demo/023-text-size-demo-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "全局设置字体大小",
+      "en": "Global font size setting"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：全局设置字体大小",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "全局设置字体大小",
+      "sourcePath": "lib/widget/basic/text_size_demo_page.dart",
+      "deferredAlias": "text_size_demo_page",
+      "widgetClass": "TextSizeDemoPage",
+      "category": "basic",
+      "routeIndex": 23
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "全局设置字体大小",
+      "upstreamSource": "lib/widget/basic/text_size_demo_page.dart",
+      "upstreamWidget": "TextSizeDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v1",
+      "textScale": 1
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "TextLineHeightDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 20,
+            "top": 20,
+            "right": 20,
+            "bottom": 120,
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "padding": 12,
+              "color": "#607D8B",
+              "children": [
+                {
+                  "type": "text_scale_scope",
+                  "scale": {
+                    "var": "global.textScale"
+                  },
+                  "child": {
+                    "type": "text",
+                    "value": "Today I was amazed to see the usually positive and friendly VueJS community descend into a bitter war. Two weeks ago Vue creator Evan You released a Request for Comment (RFC) for a new function-based way of writing Vue components in the upcoming Vue 3.0. Today a critical Reddit thread followed by similarly critical comments in a Hacker News thread caused a flood of developers to flock to the original RFC to voice their outrage, some of which were borderline abusive. It was claimed in various places that",
+                    "style": {
+                      "fontSize": 14,
+                      "color": "#000000"
+                    }
+                  }
+                }
+              ],
+              "crossAxisAlignment": "start"
+            }
+          },
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "bottom": 50,
+            "child": {
+              "type": "container",
+              "layout": "row",
+              "mainAxisAlignment": "center",
+              "children": [
+                {
+                  "type": "button",
+                  "label": "-",
+                  "variant": "text",
+                  "style": {
+                    "backgroundColor": "#FF5252",
+                    "textColor": "#FFFFFF",
+                    "paddingH": 24,
+                    "paddingV": 10
+                  },
+                  "action": {
+                    "call": "@set",
+                    "args": {
+                      "var": "global.textScale",
+                      "value": {
+                        "max": [
+                          1,
+                          {
+                            "-": [
+                              {
+                                "var": "global.textScale"
+                              },
+                              1
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "spacer",
+                  "width": 20
+                },
+                {
+                  "type": "button",
+                  "label": "+",
+                  "variant": "text",
+                  "style": {
+                    "backgroundColor": "#69F0AE",
+                    "textColor": "#000000",
+                    "paddingH": 24,
+                    "paddingV": 10
+                  },
+                  "action": {
+                    "call": "@set",
+                    "args": {
+                      "var": "global.textScale",
+                      "value": {
+                        "+": [
+                          {
+                            "var": "global.textScale"
+                          },
+                          1
+                        ]
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

@@ -1,0 +1,1955 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "ops-dashboard-quality",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "运维场景数据看板 · CPU/内存/QPS 折线与柱状 · 服务状态 · 告警列表",
+    "author": "fish",
+    "displayName": "运维数据看板"
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "range": "最近 24 小时",
+      "alerts": [
+        {
+          "level": "critical",
+          "label": "严重",
+          "title": "订单中心响应延迟超阈值",
+          "subtitle": "P99 延迟 1260ms · 已持续 6 分钟",
+          "time": "12:42",
+          "source": "order-svc/prod",
+          "icon": "error",
+          "accent": "#DC2626",
+          "tint": "#FEE2E2"
+        },
+        {
+          "level": "warning",
+          "label": "警告",
+          "title": "对象存储 us-west 上传失败率上升",
+          "subtitle": "失败率 3.2% · 影响 4 个上游服务",
+          "time": "12:18",
+          "source": "oss-adapter",
+          "icon": "warning_amber",
+          "accent": "#D97706",
+          "tint": "#FEF3C7"
+        },
+        {
+          "level": "warning",
+          "label": "警告",
+          "title": "Kafka broker-2 磁盘水位 86%",
+          "subtitle": "预计 5 小时内耗尽 · 已开启告警",
+          "time": "11:55",
+          "source": "kafka/cluster-a",
+          "icon": "warning",
+          "accent": "#D97706",
+          "tint": "#FEF3C7"
+        },
+        {
+          "level": "info",
+          "label": "通知",
+          "title": "搜索集群索引重建完成",
+          "subtitle": "重建 1.2 亿条文档 · 耗时 38 分钟",
+          "time": "11:20",
+          "source": "elastic/main",
+          "icon": "info",
+          "accent": "#2563EB",
+          "tint": "#DBEAFE"
+        },
+        {
+          "level": "warning",
+          "label": "警告",
+          "title": "API 网关某机房出口带宽 82%",
+          "subtitle": "BGP 流量异常 · 正在切换备用线路",
+          "time": "10:48",
+          "source": "edge/ali-bj",
+          "icon": "warning",
+          "accent": "#D97706",
+          "tint": "#FEF3C7"
+        },
+        {
+          "level": "info",
+          "label": "通知",
+          "title": "数据库主库完成主备切换演练",
+          "subtitle": "切换耗时 28s · 数据零丢失",
+          "time": "10:05",
+          "source": "mysql/primary",
+          "icon": "check_circle",
+          "accent": "#2563EB",
+          "tint": "#DBEAFE"
+        },
+        {
+          "level": "critical",
+          "label": "严重",
+          "title": "支付回调 5xx 错误率突增",
+          "subtitle": "错误率 1.8% · 已自动扩容 4 个 pod",
+          "time": "09:30",
+          "source": "pay-svc/callback",
+          "icon": "error",
+          "accent": "#DC2626",
+          "tint": "#FEE2E2"
+        },
+        {
+          "level": "info",
+          "label": "通知",
+          "title": "新版本 v3.4.2 灰度发布完成",
+          "subtitle": "覆盖 30% 流量 · 错误率 -12%",
+          "time": "08:50",
+          "source": "release/v3.4.2",
+          "icon": "check_circle",
+          "accent": "#2563EB",
+          "tint": "#DBEAFE"
+        }
+      ],
+      "services": [
+        {
+          "name": "API 网关",
+          "subtitle": "nginx · 8 节点",
+          "status": "healthy",
+          "latency": "32 ms",
+          "uptime": "99.98%",
+          "icon": "router",
+          "accent": "#059669",
+          "tint": "#E7F8EF",
+          "statusIcon": "check_circle",
+          "statusAccent": "#059669",
+          "statusLabel": "运行中"
+        },
+        {
+          "name": "鉴权服务",
+          "subtitle": "auth-svc · 4 节点",
+          "status": "healthy",
+          "latency": "18 ms",
+          "uptime": "99.99%",
+          "icon": "lock",
+          "accent": "#2563EB",
+          "tint": "#EAF1FF",
+          "statusIcon": "check_circle",
+          "statusAccent": "#059669",
+          "statusLabel": "运行中"
+        },
+        {
+          "name": "订单中心",
+          "subtitle": "order-svc · 6 节点",
+          "status": "warning",
+          "latency": "126 ms",
+          "uptime": "99.62%",
+          "icon": "receipt",
+          "accent": "#D97706",
+          "tint": "#FFF4DE",
+          "statusIcon": "warning_amber",
+          "statusAccent": "#D97706",
+          "statusLabel": "需关注"
+        },
+        {
+          "name": "支付网关",
+          "subtitle": "pay-svc · 4 节点",
+          "status": "healthy",
+          "latency": "44 ms",
+          "uptime": "99.95%",
+          "icon": "payment",
+          "accent": "#7C3AED",
+          "tint": "#F1EAFF",
+          "statusIcon": "check_circle",
+          "statusAccent": "#059669",
+          "statusLabel": "运行中"
+        },
+        {
+          "name": "搜索集群",
+          "subtitle": "elastic · 3 节点",
+          "status": "healthy",
+          "latency": "67 ms",
+          "uptime": "99.91%",
+          "icon": "search",
+          "accent": "#2563EB",
+          "tint": "#EAF1FF",
+          "statusIcon": "check_circle",
+          "statusAccent": "#059669",
+          "statusLabel": "运行中"
+        },
+        {
+          "name": "消息队列",
+          "subtitle": "kafka · 5 broker",
+          "status": "healthy",
+          "latency": "9 ms",
+          "uptime": "99.97%",
+          "icon": "chat",
+          "accent": "#059669",
+          "tint": "#E7F8EF",
+          "statusIcon": "check_circle",
+          "statusAccent": "#059669",
+          "statusLabel": "运行中"
+        },
+        {
+          "name": "对象存储",
+          "subtitle": "oss · 多区域",
+          "status": "warning",
+          "latency": "85 ms",
+          "uptime": "99.74%",
+          "icon": "inventory_2",
+          "accent": "#D97706",
+          "tint": "#FFF4DE",
+          "statusIcon": "warning_amber",
+          "statusAccent": "#D97706",
+          "statusLabel": "需关注"
+        },
+        {
+          "name": "数据库主库",
+          "subtitle": "mysql · 2 主 4 从",
+          "status": "healthy",
+          "latency": "12 ms",
+          "uptime": "99.99%",
+          "icon": "key",
+          "accent": "#059669",
+          "tint": "#E7F8EF",
+          "statusIcon": "check_circle",
+          "statusAccent": "#059669",
+          "statusLabel": "运行中"
+        }
+      ],
+      "lastRefreshedAt": "12:48"
+    },
+    "functions": {
+      "refresh": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "数据已刷新 · 24 个实例上报完成"
+            }
+          },
+          {
+            "call": "@set_global",
+            "args": {
+              "key": "lastRefreshedAt",
+              "value": "刚刚"
+            }
+          }
+        ]
+      },
+      "runCheck": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "巡检任务已下发 · 共检查 8 项"
+            }
+          }
+        ]
+      },
+      "viewAlerts": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "打开告警事件面板"
+            }
+          }
+        ]
+      },
+      "openSettings": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "打开看板配置"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "dashboard",
+        "title": "运维数据看板",
+        "layout": "column",
+        "children": [
+          {
+            "type": "container",
+            "layout": "column",
+            "padding": 18,
+            "margin": 10,
+            "color": "#FFFFFF",
+            "borderRadius": 18,
+            "elevation": 0,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "spaceBetween",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "今日系统健康度",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#64748B"
+                        }
+                      },
+                      {
+                        "type": "container",
+                        "layout": "row",
+                        "crossAxisAlignment": "end",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "97.4",
+                            "style": {
+                              "fontSize": 32,
+                              "fontWeight": "bold",
+                              "color": "#0F172A"
+                            }
+                          },
+                          {
+                            "type": "text",
+                            "value": " / 100",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#64748B"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "container",
+                        "layout": "row",
+                        "crossAxisAlignment": "center",
+                        "children": [
+                          {
+                            "type": "icon",
+                            "name": "up",
+                            "size": 12,
+                            "color": "#059669"
+                          },
+                          {
+                            "type": "spacer",
+                            "width": 3
+                          },
+                          {
+                            "type": "text",
+                            "value": "+1.2 较昨日",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#059669",
+                              "fontWeight": "600"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "color": "#2563EB",
+                        "padding": 12,
+                        "borderRadius": 14,
+                        "children": [
+                          {
+                            "type": "icon",
+                            "name": "monitor_heart",
+                            "size": 22,
+                            "color": "#FFFFFF"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "progress",
+                "value": 0.974,
+                "color": "#2563EB",
+                "backgroundColor": "#E2E8F0",
+                "height": 8
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "spaceBetween",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "过去 24 小时 · 8 个核心服务 · 持续采样",
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#64748B"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "刷新于 12:48",
+                    "style": {
+                      "fontSize": 11,
+                      "color": "#94A3B8"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "margin": 8,
+            "children": [
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "container",
+                  "layout": "column",
+                  "padding": 14,
+                  "margin": 5,
+                  "color": "#FFFFFF",
+                  "borderRadius": 16,
+                  "elevation": 0,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "bolt",
+                          "size": 20,
+                          "color": "#2563EB"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 6
+                        },
+                        {
+                          "type": "text",
+                          "value": "CPU 平均",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#64748B"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "62%",
+                      "style": {
+                        "fontSize": 22,
+                        "fontWeight": "bold",
+                        "color": "#0F172A",
+                        "maxLines": 1
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "up",
+                          "size": 12,
+                          "color": "#059669"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 3
+                        },
+                        {
+                          "type": "text",
+                          "value": "+4.2%",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#059669",
+                            "fontWeight": "600"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 4
+                        },
+                        {
+                          "type": "text",
+                          "value": "较昨日",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#94A3B8"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 4
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "container",
+                  "layout": "column",
+                  "padding": 14,
+                  "margin": 5,
+                  "color": "#FFFFFF",
+                  "borderRadius": 16,
+                  "elevation": 0,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "layers",
+                          "size": 20,
+                          "color": "#7C3AED"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 6
+                        },
+                        {
+                          "type": "text",
+                          "value": "内存使用",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#64748B"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "68%",
+                      "style": {
+                        "fontSize": 22,
+                        "fontWeight": "bold",
+                        "color": "#0F172A",
+                        "maxLines": 1
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "up",
+                          "size": 12,
+                          "color": "#059669"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 3
+                        },
+                        {
+                          "type": "text",
+                          "value": "+2.6%",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#059669",
+                            "fontWeight": "600"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 4
+                        },
+                        {
+                          "type": "text",
+                          "value": "较昨日",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#94A3B8"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 4
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "container",
+                  "layout": "column",
+                  "padding": 14,
+                  "margin": 5,
+                  "color": "#FFFFFF",
+                  "borderRadius": 16,
+                  "elevation": 0,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "electric_bolt",
+                          "size": 20,
+                          "color": "#D97706"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 6
+                        },
+                        {
+                          "type": "text",
+                          "value": "QPS 峰值",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#64748B"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 8
+                    },
+                    {
+                      "type": "text",
+                      "value": "7.9K",
+                      "style": {
+                        "fontSize": 22,
+                        "fontWeight": "bold",
+                        "color": "#0F172A",
+                        "maxLines": 1
+                      }
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "down",
+                          "size": 12,
+                          "color": "#DC2626"
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 3
+                        },
+                        {
+                          "type": "text",
+                          "value": "-3.1%",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#DC2626",
+                            "fontWeight": "600"
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 4
+                        },
+                        {
+                          "type": "text",
+                          "value": "较昨日",
+                          "style": {
+                            "fontSize": 11,
+                            "color": "#94A3B8"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 14,
+            "margin": 8,
+            "elevation": 0,
+            "borderRadius": 16,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "spaceBetween",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "QPS 实时趋势",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "bold",
+                      "color": "#0F172A"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "最近 24 小时",
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#64748B"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "chart",
+                "kind": "line",
+                "data": [
+                  {
+                    "x": 0,
+                    "y": 1200.0
+                  },
+                  {
+                    "x": 1,
+                    "y": 1100.0
+                  },
+                  {
+                    "x": 2,
+                    "y": 1050.0
+                  },
+                  {
+                    "x": 3,
+                    "y": 980.0
+                  },
+                  {
+                    "x": 4,
+                    "y": 950.0
+                  },
+                  {
+                    "x": 5,
+                    "y": 1000.0
+                  },
+                  {
+                    "x": 6,
+                    "y": 1300.0
+                  },
+                  {
+                    "x": 7,
+                    "y": 2100.0
+                  },
+                  {
+                    "x": 8,
+                    "y": 3400.0
+                  },
+                  {
+                    "x": 9,
+                    "y": 4800.0
+                  },
+                  {
+                    "x": 10,
+                    "y": 5900.0
+                  },
+                  {
+                    "x": 11,
+                    "y": 6700.0
+                  },
+                  {
+                    "x": 12,
+                    "y": 7200.0
+                  },
+                  {
+                    "x": 13,
+                    "y": 7600.0
+                  },
+                  {
+                    "x": 14,
+                    "y": 7900.0
+                  },
+                  {
+                    "x": 15,
+                    "y": 7400.0
+                  },
+                  {
+                    "x": 16,
+                    "y": 6800.0
+                  },
+                  {
+                    "x": 17,
+                    "y": 6100.0
+                  },
+                  {
+                    "x": 18,
+                    "y": 5400.0
+                  },
+                  {
+                    "x": 19,
+                    "y": 4800.0
+                  },
+                  {
+                    "x": 20,
+                    "y": 4200.0
+                  },
+                  {
+                    "x": 21,
+                    "y": 3700.0
+                  },
+                  {
+                    "x": 22,
+                    "y": 3100.0
+                  },
+                  {
+                    "x": 23,
+                    "y": 2600.0
+                  }
+                ],
+                "height": 200,
+                "color": "#2563EB"
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "text",
+                "value": "峰值 7,900 req/s · 谷值 950 req/s · 平均 4,180 req/s",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#64748B"
+                }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "margin": 4,
+            "children": [
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 8,
+                  "elevation": 0,
+                  "borderRadius": 16,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "mainAxisAlignment": "spaceBetween",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "CPU 使用率",
+                          "style": {
+                            "fontSize": 16,
+                            "fontWeight": "bold",
+                            "color": "#0F172A"
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "value": "24h (%)",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#64748B"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 6
+                    },
+                    {
+                      "type": "chart",
+                      "kind": "line",
+                      "data": [
+                        {
+                          "x": 0,
+                          "y": 38.0
+                        },
+                        {
+                          "x": 1,
+                          "y": 36.0
+                        },
+                        {
+                          "x": 2,
+                          "y": 35.0
+                        },
+                        {
+                          "x": 3,
+                          "y": 34.0
+                        },
+                        {
+                          "x": 4,
+                          "y": 33.0
+                        },
+                        {
+                          "x": 5,
+                          "y": 32.0
+                        },
+                        {
+                          "x": 6,
+                          "y": 34.0
+                        },
+                        {
+                          "x": 7,
+                          "y": 41.0
+                        },
+                        {
+                          "x": 8,
+                          "y": 52.0
+                        },
+                        {
+                          "x": 9,
+                          "y": 61.0
+                        },
+                        {
+                          "x": 10,
+                          "y": 66.0
+                        },
+                        {
+                          "x": 11,
+                          "y": 70.0
+                        },
+                        {
+                          "x": 12,
+                          "y": 72.0
+                        },
+                        {
+                          "x": 13,
+                          "y": 75.0
+                        },
+                        {
+                          "x": 14,
+                          "y": 78.0
+                        },
+                        {
+                          "x": 15,
+                          "y": 74.0
+                        },
+                        {
+                          "x": 16,
+                          "y": 70.0
+                        },
+                        {
+                          "x": 17,
+                          "y": 64.0
+                        },
+                        {
+                          "x": 18,
+                          "y": 58.0
+                        },
+                        {
+                          "x": 19,
+                          "y": 55.0
+                        },
+                        {
+                          "x": 20,
+                          "y": 50.0
+                        },
+                        {
+                          "x": 21,
+                          "y": 47.0
+                        },
+                        {
+                          "x": 22,
+                          "y": 44.0
+                        },
+                        {
+                          "x": 23,
+                          "y": 41.0
+                        }
+                      ],
+                      "height": 160,
+                      "color": "#2563EB"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "text",
+                      "value": "峰值 78% · 15:00",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#64748B"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 4
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 14,
+                  "margin": 8,
+                  "elevation": 0,
+                  "borderRadius": 16,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "mainAxisAlignment": "spaceBetween",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "内存使用率",
+                          "style": {
+                            "fontSize": 16,
+                            "fontWeight": "bold",
+                            "color": "#0F172A"
+                          }
+                        },
+                        {
+                          "type": "text",
+                          "value": "24h (%)",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#64748B"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 6
+                    },
+                    {
+                      "type": "chart",
+                      "kind": "line",
+                      "data": [
+                        {
+                          "x": 0,
+                          "y": 54.0
+                        },
+                        {
+                          "x": 1,
+                          "y": 53.0
+                        },
+                        {
+                          "x": 2,
+                          "y": 52.0
+                        },
+                        {
+                          "x": 3,
+                          "y": 51.0
+                        },
+                        {
+                          "x": 4,
+                          "y": 50.0
+                        },
+                        {
+                          "x": 5,
+                          "y": 51.0
+                        },
+                        {
+                          "x": 6,
+                          "y": 53.0
+                        },
+                        {
+                          "x": 7,
+                          "y": 57.0
+                        },
+                        {
+                          "x": 8,
+                          "y": 62.0
+                        },
+                        {
+                          "x": 9,
+                          "y": 67.0
+                        },
+                        {
+                          "x": 10,
+                          "y": 71.0
+                        },
+                        {
+                          "x": 11,
+                          "y": 74.0
+                        },
+                        {
+                          "x": 12,
+                          "y": 76.0
+                        },
+                        {
+                          "x": 13,
+                          "y": 78.0
+                        },
+                        {
+                          "x": 14,
+                          "y": 80.0
+                        },
+                        {
+                          "x": 15,
+                          "y": 79.0
+                        },
+                        {
+                          "x": 16,
+                          "y": 76.0
+                        },
+                        {
+                          "x": 17,
+                          "y": 72.0
+                        },
+                        {
+                          "x": 18,
+                          "y": 68.0
+                        },
+                        {
+                          "x": 19,
+                          "y": 65.0
+                        },
+                        {
+                          "x": 20,
+                          "y": 62.0
+                        },
+                        {
+                          "x": 21,
+                          "y": 60.0
+                        },
+                        {
+                          "x": 22,
+                          "y": 57.0
+                        },
+                        {
+                          "x": 23,
+                          "y": 55.0
+                        }
+                      ],
+                      "height": 160,
+                      "color": "#7C3AED"
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
+                    {
+                      "type": "text",
+                      "value": "峰值 80% · 15:00",
+                      "style": {
+                        "fontSize": 12,
+                        "color": "#64748B"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 14,
+            "margin": 8,
+            "elevation": 0,
+            "borderRadius": 16,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "spaceBetween",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "流量分布 · 平均 Mbps",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "bold",
+                      "color": "#0F172A"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "按通道聚合 · 24 小时",
+                    "style": {
+                      "fontSize": 12,
+                      "color": "#64748B"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "chart",
+                "kind": "bar",
+                "data": [
+                  {
+                    "label": "入站",
+                    "value": 32
+                  },
+                  {
+                    "label": "出站",
+                    "value": 26
+                  },
+                  {
+                    "label": "磁盘",
+                    "value": 47
+                  },
+                  {
+                    "label": "缓存",
+                    "value": 29
+                  }
+                ],
+                "height": 180,
+                "color": "#059669"
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "text",
+                "value": "入站 32 · 出站 25 · 磁盘 50 · 缓存 28",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#64748B"
+                }
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 14,
+            "margin": 8,
+            "elevation": 0,
+            "borderRadius": 16,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "spaceBetween",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "服务状态",
+                        "style": {
+                          "fontSize": 16,
+                          "fontWeight": "bold",
+                          "color": "#0F172A"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "value": "8 个核心服务 · 2 个需关注",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#64748B"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "crossAxisAlignment": "center",
+                    "color": "#EAF1FF",
+                    "padding": 6,
+                    "borderRadius": 8,
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "refresh",
+                        "size": 14,
+                        "color": "#2563EB"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 4
+                      },
+                      {
+                        "type": "text",
+                        "value": "刷新",
+                        "style": {
+                          "fontSize": 11,
+                          "color": "#2563EB",
+                          "fontWeight": "600"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "grid",
+                "source": [
+                  {
+                    "name": "API 网关",
+                    "subtitle": "nginx · 8 节点",
+                    "status": "healthy",
+                    "latency": "32 ms",
+                    "uptime": "99.98%",
+                    "icon": "router",
+                    "accent": "#059669",
+                    "tint": "#E7F8EF",
+                    "statusIcon": "check_circle",
+                    "statusAccent": "#059669",
+                    "statusLabel": "运行中"
+                  },
+                  {
+                    "name": "鉴权服务",
+                    "subtitle": "auth-svc · 4 节点",
+                    "status": "healthy",
+                    "latency": "18 ms",
+                    "uptime": "99.99%",
+                    "icon": "lock",
+                    "accent": "#2563EB",
+                    "tint": "#EAF1FF",
+                    "statusIcon": "check_circle",
+                    "statusAccent": "#059669",
+                    "statusLabel": "运行中"
+                  },
+                  {
+                    "name": "订单中心",
+                    "subtitle": "order-svc · 6 节点",
+                    "status": "warning",
+                    "latency": "126 ms",
+                    "uptime": "99.62%",
+                    "icon": "receipt",
+                    "accent": "#D97706",
+                    "tint": "#FFF4DE",
+                    "statusIcon": "warning_amber",
+                    "statusAccent": "#D97706",
+                    "statusLabel": "需关注"
+                  },
+                  {
+                    "name": "支付网关",
+                    "subtitle": "pay-svc · 4 节点",
+                    "status": "healthy",
+                    "latency": "44 ms",
+                    "uptime": "99.95%",
+                    "icon": "payment",
+                    "accent": "#7C3AED",
+                    "tint": "#F1EAFF",
+                    "statusIcon": "check_circle",
+                    "statusAccent": "#059669",
+                    "statusLabel": "运行中"
+                  },
+                  {
+                    "name": "搜索集群",
+                    "subtitle": "elastic · 3 节点",
+                    "status": "healthy",
+                    "latency": "67 ms",
+                    "uptime": "99.91%",
+                    "icon": "search",
+                    "accent": "#2563EB",
+                    "tint": "#EAF1FF",
+                    "statusIcon": "check_circle",
+                    "statusAccent": "#059669",
+                    "statusLabel": "运行中"
+                  },
+                  {
+                    "name": "消息队列",
+                    "subtitle": "kafka · 5 broker",
+                    "status": "healthy",
+                    "latency": "9 ms",
+                    "uptime": "99.97%",
+                    "icon": "chat",
+                    "accent": "#059669",
+                    "tint": "#E7F8EF",
+                    "statusIcon": "check_circle",
+                    "statusAccent": "#059669",
+                    "statusLabel": "运行中"
+                  },
+                  {
+                    "name": "对象存储",
+                    "subtitle": "oss · 多区域",
+                    "status": "warning",
+                    "latency": "85 ms",
+                    "uptime": "99.74%",
+                    "icon": "inventory_2",
+                    "accent": "#D97706",
+                    "tint": "#FFF4DE",
+                    "statusIcon": "warning_amber",
+                    "statusAccent": "#D97706",
+                    "statusLabel": "需关注"
+                  },
+                  {
+                    "name": "数据库主库",
+                    "subtitle": "mysql · 2 主 4 从",
+                    "status": "healthy",
+                    "latency": "12 ms",
+                    "uptime": "99.99%",
+                    "icon": "key",
+                    "accent": "#059669",
+                    "tint": "#E7F8EF",
+                    "statusIcon": "check_circle",
+                    "statusAccent": "#059669",
+                    "statusLabel": "运行中"
+                  }
+                ],
+                "crossAxisCount": 2,
+                "childAspectRatio": 1.5,
+                "shrinkWrap": true,
+                "item_template": {
+                  "type": "container",
+                  "layout": "column",
+                  "padding": 12,
+                  "margin": 5,
+                  "color": "#FFFFFF",
+                  "borderRadius": 14,
+                  "elevation": 0,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "color": "{{ loop.item.tint }}",
+                          "padding": 8,
+                          "borderRadius": 10,
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "{{ loop.item.icon }}",
+                              "size": 18,
+                              "color": "{{ loop.item.accent }}"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "spacer",
+                          "width": 8
+                        },
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "position": {
+                            "type": "flex",
+                            "flex": 1
+                          },
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.name }}",
+                              "style": {
+                                "fontSize": 14,
+                                "fontWeight": "bold",
+                                "color": "#0F172A",
+                                "maxLines": 1
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.subtitle }}",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#64748B",
+                                "maxLines": 1
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 10
+                    },
+                    {
+                      "type": "container",
+                      "layout": "row",
+                      "mainAxisAlignment": "spaceBetween",
+                      "crossAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "延迟",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#64748B"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.latency }}",
+                              "style": {
+                                "fontSize": 14,
+                                "fontWeight": "bold",
+                                "color": "#0F172A"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "可用率",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#64748B"
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.uptime }}",
+                              "style": {
+                                "fontSize": 14,
+                                "fontWeight": "bold",
+                                "color": "#0F172A"
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "crossAxisAlignment": "center",
+                          "color": "{{ loop.item.statusAccent }}",
+                          "padding": 4,
+                          "borderRadius": 8,
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "{{ loop.item.statusIcon }}",
+                              "size": 11,
+                              "color": "#FFFFFF"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 3
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.statusLabel }}",
+                              "style": {
+                                "fontSize": 10,
+                                "color": "#FFFFFF",
+                                "fontWeight": "bold"
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 14,
+            "margin": 8,
+            "elevation": 0,
+            "borderRadius": 16,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "mainAxisAlignment": "spaceBetween",
+                "crossAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "告警事件",
+                        "style": {
+                          "fontSize": 16,
+                          "fontWeight": "bold",
+                          "color": "#0F172A"
+                        }
+                      },
+                      {
+                        "type": "text",
+                        "value": "最新 8 条 · 已按严重度排序",
+                        "style": {
+                          "fontSize": 12,
+                          "color": "#64748B"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "crossAxisAlignment": "center",
+                    "color": "#DC2626",
+                    "padding": 4,
+                    "borderRadius": 10,
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "notification",
+                        "size": 14,
+                        "color": "#FFFFFF"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 4
+                      },
+                      {
+                        "type": "text",
+                        "value": "2 严重",
+                        "style": {
+                          "fontSize": 11,
+                          "color": "#FFFFFF",
+                          "fontWeight": "bold"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "list",
+                "source": "{{ global.alerts }}",
+                "shrinkWrap": true,
+                "separator": "none",
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "crossAxisAlignment": "start",
+                  "padding": 12,
+                  "margin": 6,
+                  "color": "#FFFFFF",
+                  "borderRadius": 14,
+                  "elevation": 0,
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "color": "{{ loop.item.tint }}",
+                      "padding": 8,
+                      "borderRadius": 10,
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "{{ loop.item.icon }}",
+                          "size": 18,
+                          "color": "{{ loop.item.accent }}"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 10
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "position": {
+                        "type": "flex",
+                        "flex": 1
+                      },
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "mainAxisAlignment": "spaceBetween",
+                          "crossAxisAlignment": "start",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.title }}",
+                              "style": {
+                                "fontSize": 14,
+                                "fontWeight": "600",
+                                "color": "#0F172A",
+                                "maxLines": 2
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item.time }}",
+                              "style": {
+                                "fontSize": 11,
+                                "color": "#64748B",
+                                "maxLines": 1
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 4
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.subtitle }}",
+                          "style": {
+                            "fontSize": 12,
+                            "color": "#475569",
+                            "maxLines": 2
+                          }
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "crossAxisAlignment": "center",
+                          "children": [
+                            {
+                              "type": "container",
+                              "layout": "row",
+                              "crossAxisAlignment": "center",
+                              "color": "{{ loop.item.tint }}",
+                              "padding": 4,
+                              "borderRadius": 6,
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "tag",
+                                  "size": 11,
+                                  "color": "{{ loop.item.accent }}"
+                                },
+                                {
+                                  "type": "spacer",
+                                  "width": 3
+                                },
+                                {
+                                  "type": "text",
+                                  "value": "{{ loop.item.source }}",
+                                  "style": {
+                                    "fontSize": 11,
+                                    "color": "{{ loop.item.accent }}",
+                                    "fontWeight": "500"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 6
+                            },
+                            {
+                              "type": "container",
+                              "layout": "row",
+                              "crossAxisAlignment": "center",
+                              "color": "{{ loop.item.accent }}",
+                              "padding": 4,
+                              "borderRadius": 6,
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "name": "{{ loop.item.icon }}",
+                                  "size": 11,
+                                  "color": "#FFFFFF"
+                                },
+                                {
+                                  "type": "spacer",
+                                  "width": 3
+                                },
+                                {
+                                  "type": "text",
+                                  "value": "{{ loop.item.label }}",
+                                  "style": {
+                                    "fontSize": 10,
+                                    "color": "#FFFFFF",
+                                    "fontWeight": "bold"
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "margin": 10,
+            "mainAxisAlignment": "spaceBetween",
+            "children": [
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "button",
+                  "label": "立即巡检",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.runCheck",
+                    "args": {}
+                  },
+                  "icon": "check_circle",
+                  "style": {
+                    "backgroundColor": "#2563EB",
+                    "textColor": "#FFFFFF",
+                    "borderRadius": 14,
+                    "fontSize": 14,
+                    "paddingV": 10
+                  }
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 10
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "button",
+                  "label": "处理告警",
+                  "variant": "filled",
+                  "action": {
+                    "call": "@global.viewAlerts",
+                    "args": {}
+                  },
+                  "icon": "warning",
+                  "style": {
+                    "backgroundColor": "#FEE2E2",
+                    "textColor": "#DC2626",
+                    "borderRadius": 14,
+                    "fontSize": 14,
+                    "paddingV": 10
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "spacer",
+            "height": 24
+          }
+        ],
+        "backgroundColor": "#F1F5F9",
+        "appBar": {
+          "title": "运维数据看板",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#0F172A",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.refresh",
+                "args": {}
+              },
+              "icon": "refresh",
+              "style": {
+                "textColor": "#2563EB",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            },
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.openSettings",
+                "args": {}
+              },
+              "icon": "settings",
+              "style": {
+                "textColor": "#475569",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

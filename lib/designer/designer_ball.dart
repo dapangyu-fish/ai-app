@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' show sqrt, pi;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,7 +12,7 @@ import 'gesture_exclusion_helper.dart';
 import '../config/app_config.dart';
 import '../auth/auth_service.dart';
 import '../i18n/framework_strings.dart';
-import '../main.dart' show JsonDslApp;
+import '../main.dart' show JsonDslApp, appLifecycleEvent;
 import '../onboarding/onboarding_keys.dart';
 
 /// 语音识别方式枚举
@@ -88,6 +89,10 @@ class DesignerBall extends StatefulWidget {
 
 class _DesignerBallState extends State<DesignerBall>
     with TickerProviderStateMixin {
+  static const String _messageBucketKeyPrefix = 'ai_messages_v1_';
+  static const int _maxPersistedMessagesPerSession = 120;
+  static const int _maxPersistedMessageBytes = 900 * 1024;
+
   // ── 尺寸常量 ──
   static const double _ballSize = 64.0;
   static const double _peekSize = 22.0;
@@ -146,7 +151,6 @@ class _DesignerBallState extends State<DesignerBall>
   // ── 语音识别 & AI ──
   stt.SpeechToText? _speech;
   bool _speechInited = false;
-  bool _nativeSpeechReceivedCallback = false; // 标记原生识别是否收到过回调
   // 平台（Android SpeechRecognizer / iOS SFSpeechRecognizer）单次会话有 10-60s
   // 上限，用户按着球时长按下去到 done/error 时要无感重启。这个 flag 在主动 stop
   // 之前置 true，防止主动停止被识别为"该重启"。
@@ -157,7 +161,12 @@ class _DesignerBallState extends State<DesignerBall>
   final ByteDanceAsrService _bytedanceAsr = ByteDanceAsrService.instance;
   final AiChatService _chatService = AiChatService();
   StreamSubscription<ChatEvent>? _streamSub;
+  int _streamEpoch = 0;
   bool _resumeInFlight = false;
+  bool _appResumeProbeInFlight = false;
+  Timer? _appResumeFollowUpTimer;
+  Timer? _sessionReconcileTimer;
+  bool _sessionReconcileInFlight = false;
   // 老的 5s 独立 heartbeat 已被删掉。新逻辑：
   // - SSE 内部 20s idle timeout → _checkAliveCarefully 三态探活
   // - 后端 worker 自身在 CLI 异常退出 / 外部 kill 时主动写 needs_retry 事件
@@ -168,6 +177,8 @@ class _DesignerBallState extends State<DesignerBall>
   // 多会话：消息按 sid 分桶；getter `_messages` 永远返回当前 active 那一桶。
   // 切 active session 时 setState 会重 build，自动展示新桶。
   final Map<String, List<ChatMessage>> _messageBuckets = {};
+  final Set<String> _loadedMessageBucketIds = {};
+  Timer? _messagePersistTimer;
   List<ChatMessage> get _messages {
     final sid = _chatService.sessionId;
     final key = sid.isEmpty ? '__pending__' : sid;
@@ -208,14 +219,22 @@ class _DesignerBallState extends State<DesignerBall>
       if (mounted) setState(() {}); // 触发一次 rebuild 让 _asrMode getter 拿到新值
     });
     AsrModePrefs.notifier.addListener(_onAsrModeChanged);
+    AiChatService.agentRoutingRevision.addListener(_onAgentScopeChanged);
     // 加载 AI 对话 session，加载完之后异步检查上一轮有没有未完成 / 已完成的任务
     // 不 await，不阻塞 UI 启动
-    _chatService.loadSession().then((_) => _maybeResumeUnfinishedSession());
+    _chatService.loadSession().then((_) async {
+      await _refreshAiRoutingOptions();
+      await _loadMessagesForSession(_chatService.sessionId);
+      if (!mounted) return;
+      setState(() {});
+      await _maybeResumeUnfinishedSession();
+    });
 
     // DesignerBall 挂在 MaterialApp.builder 里凌驾所有路由，**不会**因为 AuthGate
     // 切换 (FilePickerPage <-> AuthPage) 而重建。所以"用户掉登录后重新登录"这个
     // 场景下，initState 不会再跑——必须显式监听登录态切换，重新触发 resume。
     AuthService.authNotifier.addListener(_onAuthChanged);
+    appLifecycleEvent.addListener(_onAppLifecycleChanged);
 
     // 提前初始化原生语音识别（参照测试应用的成功实践）
     _initNativeSpeech();
@@ -231,6 +250,17 @@ class _DesignerBallState extends State<DesignerBall>
     debugPrint(
       '[DesignerBall] ASR mode changed -> ${AsrModePrefs.notifier.value.name}',
     );
+  }
+
+  /// 设置页切换 平台/私有 agent node → 悬浮球立即重建字幕选择器（之前要等下一次自发
+  /// setState 才同步）。switchAgentScope 已拉好新 scope 的 providers，这里只需把未提交的
+  /// 活跃会话收敛到新 scope 再 rebuild。
+  void _onAgentScopeChanged() {
+    if (!mounted) return;
+    unawaited(() async {
+      await _chatService.reconcileActiveScopeIfUnlocked();
+      if (mounted) setState(() {});
+    }());
   }
 
   /// 初始化豆包ASR连接
@@ -389,9 +419,124 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   @override
+  // ── 打字机缓冲（AI 回复平滑吐字）──────────────────────────────────────
+  // 真实生成里 codex/opencode 等按「整条消息」吐文本（非 token deltas），加上 SSE 成批投递，
+  // 直接整段上屏会「一大段一大段」跳。这里把「已收到全文」(_typeFull) 与「已显示长度」
+  // (_typeShown) 解耦，用一个 ~60fps timer 平滑地把显示推进到目标，体感像逐字流式。
+  // 对所有 provider/agent + demo 回放都生效，且免疫 SSE 突发。
+  Timer? _typeTimer;
+  String _typeFull = '';
+  int _typeShown = 0;
+  bool _typeIsThinking = false;
+  int _typeScrollTick = 0;
+  // 打字机归属的会话：与流同理，active 切走后不能再把这条流的文字写进别的会话桶。
+  String _typeOwnerSid = '';
+
+  // 设置打字机目标（目标只增不减，_typeShown 持续往后吐）
+  void _setTypewriterTarget(String full) {
+    _typeOwnerSid = _chatService.sessionId; // 调用点已过 isCurrentStream，等于流归属 sid
+    _typeFull = full;
+    if (_typeShown > _typeFull.length) _typeShown = _typeFull.length;
+    if (_typeShown < _typeFull.length) _ensureTypeTimer();
+  }
+
+  void _ensureTypeTimer() {
+    _typeTimer ??= Timer.periodic(
+      const Duration(milliseconds: 16),
+      (_) => _tickTypewriter(),
+    );
+  }
+
+  void _tickTypewriter() {
+    if (!mounted || _typeTimer == null) return;
+    // 归属会话已不是当前 active（用户切走 / loadSession 改了 active）→ 停表，
+    // 不把这条流的文字写进别的会话桶。该会话内容靠切回时的 resume 复原。
+    if (_chatService.sessionId != _typeOwnerSid) {
+      _typeTimer?.cancel();
+      _typeTimer = null;
+      return;
+    }
+    if (_typeShown >= _typeFull.length) {
+      // 追平 → 停掉省电，下个目标到来再起
+      _typeTimer?.cancel();
+      _typeTimer = null;
+      return;
+    }
+    final remaining = _typeFull.length - _typeShown;
+    // 自适应速率：落后越多吐越快（保证不拖尾），每帧 1~40 字
+    int step;
+    if (remaining <= 3) {
+      step = remaining;
+    } else {
+      step = remaining ~/ 6;
+      if (step < 1) step = 1;
+      if (step > 40) step = 40;
+    }
+    _typeShown += step;
+    if (_typeShown > _typeFull.length) _typeShown = _typeFull.length;
+    // 不要把 emoji（UTF-16 代理对）切一半，否则会闪一帧 �
+    if (_typeShown < _typeFull.length) {
+      final unit = _typeFull.codeUnitAt(_typeShown - 1);
+      if (unit >= 0xD800 && unit <= 0xDBFF) _typeShown += 1;
+    }
+    if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+      setState(() {
+        _messages.last = ChatMessage(
+          role: 'assistant',
+          content: _typeFull.substring(0, _typeShown),
+        );
+      });
+      if (_typeScrollTick++ % 4 == 0) _scrollToBottom();
+    }
+  }
+
+  // 立即补全并停掉打字机（流结束/出错/切流时调用），保证最终文本完整。
+  // 只改 _messages，不自带 setState —— 由调用方所在的 setState/重建负责刷新。
+  void _flushTypewriter() {
+    _typeTimer?.cancel();
+    _typeTimer = null;
+    if (_typeFull.isNotEmpty &&
+        _typeShown < _typeFull.length &&
+        _messages.isNotEmpty &&
+        _messages.last.role == 'assistant') {
+      _typeShown = _typeFull.length;
+      _messages.last = ChatMessage(role: 'assistant', content: _typeFull);
+    }
+  }
+
+  // 复位打字机（新一轮 / 切流 / 出错）
+  void _resetTypewriter() {
+    _typeTimer?.cancel();
+    _typeTimer = null;
+    _typeFull = '';
+    _typeShown = 0;
+    _typeIsThinking = false;
+  }
+
+  // 思考→正文：补全思考气泡，再开一个空正文气泡，打字机从 0 指向正文。
+  // 只改 _messages，由调用方的 setState 刷新。
+  void _startContentBubbleAfterThinking(String content) {
+    _typeTimer?.cancel();
+    _typeTimer = null;
+    if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+      _messages.last = ChatMessage(role: 'assistant', content: _typeFull); // 思考补全
+    }
+    _messages.add(ChatMessage(role: 'assistant', content: ''));
+    _typeIsThinking = false;
+    _typeOwnerSid = _chatService.sessionId;
+    _typeFull = content;
+    _typeShown = 0;
+    _ensureTypeTimer();
+  }
+
   void dispose() {
+    _typeTimer?.cancel();
     _longPressTimer?.cancel();
     _streamSub?.cancel();
+    _appResumeFollowUpTimer?.cancel();
+    _messagePersistTimer?.cancel();
+    _sessionReconcileTimer?.cancel();
+    unawaited(_flushActiveMessages());
     // Plan A 关键：app 关掉 worker 继续在 backend 跑，下次启动 _maybeResumeUnfinishedSession 接回来
     // 所以 dispose 只关本地 SSE，绝不通知 backend abort
     _chatService.abortLocal();
@@ -402,8 +547,120 @@ class _DesignerBallState extends State<DesignerBall>
     _speech?.stop();
     _scrollController.dispose();
     AsrModePrefs.notifier.removeListener(_onAsrModeChanged);
+    AiChatService.agentRoutingRevision.removeListener(_onAgentScopeChanged);
     AuthService.authNotifier.removeListener(_onAuthChanged);
+    appLifecycleEvent.removeListener(_onAppLifecycleChanged);
     super.dispose();
+  }
+
+  String _messageBucketKey(String sid) => '$_messageBucketKeyPrefix$sid';
+
+  bool _isCommittedSession(String sid) {
+    return _chatService.listSessions().any((s) => s.id == sid && s.committed);
+  }
+
+  Future<void> _loadMessagesForSession(String sid) async {
+    if (sid.isEmpty || _loadedMessageBucketIds.contains(sid)) return;
+    _loadedMessageBucketIds.add(sid);
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_messageBucketKey(sid));
+    if (raw == null || raw.isEmpty) {
+      _messageBuckets.putIfAbsent(sid, () => []);
+      return;
+    }
+    try {
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      var migrated = false;
+      _messageBuckets[sid] = decoded.whereType<Map>().map((m) {
+        final message = ChatMessage.fromJson(
+          m.map((key, value) => MapEntry(key.toString(), value)),
+        );
+        if (message.role != 'assistant') return message;
+        final cleaned = AiChatService.cleanAssistantDisplayText(
+          message.content,
+        );
+        if (cleaned == message.content) return message;
+        migrated = true;
+        return ChatMessage(
+          role: message.role,
+          content: cleaned,
+          jsonApp: message.jsonApp,
+          action: message.action,
+          failedJsonUrl: message.failedJsonUrl,
+          jsonUrl: message.jsonUrl,
+        );
+      }).toList();
+      if (migrated) {
+        unawaited(_persistMessagesForSession(sid, _messageBuckets[sid]!));
+      }
+      debugPrint(
+        '[DesignerBall] loaded ${_messageBuckets[sid]!.length} persisted AI messages for sid=$sid',
+      );
+    } catch (e) {
+      debugPrint('[DesignerBall] load AI messages failed sid=$sid: $e');
+      _messageBuckets.putIfAbsent(sid, () => []);
+    }
+  }
+
+  void _schedulePersistActiveMessages() {
+    final sid = _chatService.sessionId;
+    // 放宽落盘门禁：committed 或「桶非空」即可存。否则"发出后立刻切走"窗口里、尚未
+    // committed 的新会话桶一个字节都落不了盘，切回就全空（BUG2）。
+    if (sid.isEmpty || (!_isCommittedSession(sid) && _messages.isEmpty)) return;
+    final snapshot = List<ChatMessage>.from(_messages);
+    _messagePersistTimer?.cancel();
+    _messagePersistTimer = Timer(const Duration(milliseconds: 350), () {
+      unawaited(_persistMessagesForSession(sid, snapshot));
+    });
+  }
+
+  Future<void> _flushActiveMessages() async {
+    _messagePersistTimer?.cancel();
+    _messagePersistTimer = null;
+    final sid = _chatService.sessionId;
+    if (sid.isEmpty || (!_isCommittedSession(sid) && _messages.isEmpty)) return;
+    await _persistMessagesForSession(sid, List<ChatMessage>.from(_messages));
+  }
+
+  Future<void> _persistMessagesForSession(
+    String sid,
+    List<ChatMessage> messages,
+  ) async {
+    if (sid.isEmpty || (!_isCommittedSession(sid) && messages.isEmpty)) return;
+    final prefs = await SharedPreferences.getInstance();
+    if (messages.isEmpty) {
+      await prefs.remove(_messageBucketKey(sid));
+      return;
+    }
+    var start = messages.length > _maxPersistedMessagesPerSession
+        ? messages.length - _maxPersistedMessagesPerSession
+        : 0;
+    var includeJsonApp = true;
+    String encode() => jsonEncode(
+      messages
+          .skip(start)
+          .map((m) => m.toJson(includeJsonApp: includeJsonApp))
+          .toList(),
+    );
+
+    var encoded = encode();
+    if (encoded.length > _maxPersistedMessageBytes) {
+      includeJsonApp = false;
+      encoded = encode();
+    }
+    while (encoded.length > _maxPersistedMessageBytes &&
+        start < messages.length - 1) {
+      start++;
+      encoded = encode();
+    }
+    await prefs.setString(_messageBucketKey(sid), encoded);
+  }
+
+  Future<void> _deletePersistedMessagesForSession(String sid) async {
+    if (sid.isEmpty) return;
+    _loadedMessageBucketIds.remove(sid);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_messageBucketKey(sid));
   }
 
   /// 登录态变化：从未登录 → 已登录时，重新检查是否有未完成会话需要恢复。
@@ -413,9 +670,166 @@ class _DesignerBallState extends State<DesignerBall>
     if (AuthService.authNotifier.value) {
       // 重新登录后重新加载本地 session 信息（_lastUserMessage 等可能在断网期间陈旧）
       // 然后异步触发恢复
-      _chatService.loadSession().then((_) {
-        if (mounted) _maybeResumeUnfinishedSession();
+      _chatService.loadSession().then((_) async {
+        await _refreshAiRoutingOptions();
+        await _loadMessagesForSession(_chatService.sessionId);
+        if (mounted) {
+          setState(() {});
+          _maybeResumeUnfinishedSession();
+        }
       });
+    }
+  }
+
+  void _onAppLifecycleChanged() {
+    if (!mounted) return;
+    final event = appLifecycleEvent.value;
+    if (event == 'inactive' ||
+        event == 'pause' ||
+        event == 'hidden' ||
+        event == 'detached') {
+      _detachAiStreamForAppBackground(event);
+      return;
+    }
+    if (event == 'resume') {
+      unawaited(_probeAiSessionAfterAppResume());
+    }
+  }
+
+  Future<void> _refreshAiRoutingOptions() async {
+    await Future.wait([
+      AiChatService.fetchProviders(agentScope: _chatService.activeAgentScope),
+      AiChatService.fetchAgents(),
+    ]);
+    if (mounted) setState(() {});
+  }
+
+  void _detachAiStreamForAppBackground(String lifecycleEvent) {
+    _detachAiStreamForLifecycle(reason: 'app-$lifecycleEvent', resetUi: true);
+  }
+
+  void _detachAiStreamForLifecycle({
+    required String reason,
+    required bool resetUi,
+  }) {
+    final sub = _streamSub;
+    _streamEpoch++;
+    _flushTypewriter(); // 切后台前补全已收到全文，commitPartial 才能存到完整内容
+    _resetTypewriter();
+    if (sub != null) {
+      debugPrint('[DesignerBall] $reason: detach local AI stream');
+      if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+        _chatService.commitPartial(_messages.last.content);
+      }
+      _streamSub = null;
+      unawaited(sub.cancel());
+    }
+    _chatService.abortLocal();
+    if (resetUi && mounted) {
+      setState(() {
+        _isThinking = false;
+        _isGeneratingJson = false;
+        _generatingStatusMessage = T.current.chatStatusGenerating;
+      });
+    }
+    unawaited(_flushActiveMessages());
+  }
+
+  Future<void> _probeAiSessionAfterAppResume() async {
+    if (_appResumeProbeInFlight) return;
+    _appResumeProbeInFlight = true;
+    try {
+      // 让 Auth / 网络栈先完成前台恢复，避免刚 resume 就探测被系统瞬断误伤。
+      await Future.delayed(const Duration(milliseconds: 350));
+      if (!mounted || !AuthService.authNotifier.value) return;
+
+      // 移动端后台恢复时，旧 SSE/http client 可能已经半断但 Dart 订阅对象仍存在。
+      // 先强制丢弃本地连接，再通过 /status + /result 或 /stream 恢复。
+      _detachAiStreamForLifecycle(reason: 'app-resume-probe', resetUi: false);
+      await _chatService.loadSession();
+      await _refreshAiRoutingOptions();
+      await _loadMessagesForSession(_chatService.sessionId);
+      if (!mounted) return;
+      setState(() {});
+
+      debugPrint('[DesignerBall] app resumed: probe AI session');
+      await _maybeResumeUnfinishedSession(forceDetachLocalStream: true);
+      if (mounted) {
+        unawaited(_flushActiveMessages());
+        _scheduleAppResumeFollowUpReconcile();
+      }
+    } catch (e) {
+      debugPrint('[DesignerBall] app resume probe failed (ignored): $e');
+    } finally {
+      _appResumeProbeInFlight = false;
+    }
+  }
+
+  void _scheduleAppResumeFollowUpReconcile() {
+    _appResumeFollowUpTimer?.cancel();
+    _appResumeFollowUpTimer = Timer(const Duration(seconds: 2), () {
+      if (!mounted) return;
+      unawaited(_reconcileActiveSession(reason: 'resume-follow-up'));
+    });
+  }
+
+  void _startSessionReconcileTimer({bool immediate = false}) {
+    _sessionReconcileTimer ??= Timer.periodic(const Duration(seconds: 30), (_) {
+      unawaited(_reconcileActiveSession(reason: 'timer'));
+    });
+    if (immediate) {
+      unawaited(_reconcileActiveSession(reason: 'immediate'));
+    }
+  }
+
+  void _stopSessionReconcileTimer() {
+    _sessionReconcileTimer?.cancel();
+    _sessionReconcileTimer = null;
+  }
+
+  /// Low-frequency safety net for long generations after local SSE was detached
+  /// or the final [DONE] action event was missed. This only runs while the chat
+  /// overlay is visible and there is no active local stream, so normal streaming
+  /// does not add backend load.
+  Future<void> _reconcileActiveSession({required String reason}) async {
+    if (!mounted ||
+        !_chatMode ||
+        _streamSub != null ||
+        _sessionReconcileInFlight ||
+        !AuthService.authNotifier.value) {
+      return;
+    }
+    final sid = _chatService.sessionId;
+    if (sid.isEmpty) return;
+
+    _sessionReconcileInFlight = true;
+    try {
+      final statusData = await _chatService.probeActiveSessionStatus();
+      // await 期间用户可能切换/新建会话；sid 已不是当初对账的那条就直接放弃，
+      // 否则后面的 resume/flush 会落到错误的会话桶。
+      if (!mounted ||
+          !_chatMode ||
+          _streamSub != null ||
+          _chatService.sessionId != sid) {
+        return;
+      }
+      if (statusData == null) return;
+
+      final status = statusData['status'] as String? ?? '';
+      debugPrint('[DesignerBall] reconcile($reason) status=$status sid=$sid');
+      if (status == 'queued' || status == 'running' || status == 'done') {
+        await _resumeActiveSessionIfNeeded();
+        if (mounted) {
+          unawaited(_flushActiveMessages());
+        }
+      }
+      if (status == 'done' || status == 'failed' || status == 'aborted') {
+        _stopSessionReconcileTimer();
+      }
+    } catch (e) {
+      debugPrint('[DesignerBall] reconcile($reason) failed (ignored): $e');
+    } finally {
+      _sessionReconcileInFlight = false;
     }
   }
 
@@ -671,8 +1085,13 @@ class _DesignerBallState extends State<DesignerBall>
   /// 真正恢复会话的逻辑（之前 _onDoubleTap 直接干的事）。
   /// 从快捷菜单的"恢复会话"按钮调过来。
   Future<void> _restoreSession() async {
+    if (!AuthService.isLoggedIn) {
+      _showLoginRequired();
+      return;
+    }
     if (_chatMode || _messages.isEmpty) return;
     setState(() => _chatMode = true);
+    _startSessionReconcileTimer(immediate: true);
     _scrollToBottom();
     await _resumeActiveSessionIfNeeded();
   }
@@ -784,8 +1203,250 @@ class _DesignerBallState extends State<DesignerBall>
   // 对话模式
   // ════════════════════════════════════════════════════════
 
+  // 未登录时按住悬浮球：给两个选项 —— 请登录 / Demo 体验模式。
+  void _showLoginRequired() {
+    final navContext = JsonDslApp.navigatorKey.currentContext ?? context;
+    showModalBottomSheet<void>(
+      context: navContext,
+      showDragHandle: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Text(
+                  '用 AI 创建应用',
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.login_rounded, color: cs.primary),
+                title: Text(T.current.chatErrPleaseLogin), // 请登录
+                subtitle: const Text('用真实账号创建并保存你的应用'),
+                onTap: () => Navigator.of(ctx).pop(),
+                // 未登录时 AuthGate 已经把登录页显示在底层，pop 即可看到登录表单
+              ),
+              ListTile(
+                leading: Icon(Icons.play_circle_outline, color: cs.primary),
+                title: const Text('Demo 体验模式'),
+                subtitle: const Text('免登录，点一下示例需求即可生成可运行的 App'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  unawaited(_enterDemoAndPrompt());
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Demo：登录预置假账号 → 进入对话模式 → 弹示例需求列表。
+  Future<void> _enterDemoAndPrompt() async {
+    final navContext = JsonDslApp.navigatorKey.currentContext ?? context;
+    try {
+      await AuthService.enterDemoMode();
+    } catch (e) {
+      ScaffoldMessenger.maybeOf(navContext)?.showSnackBar(
+        SnackBar(content: Text('Demo 模式暂不可用：$e')),
+      );
+      return;
+    }
+    await _enterChatMode(); // 此时已登录，门禁通过
+    _showDemoPromptList();
+  }
+
+  // Demo 示例需求：每条对应一个特殊 UUID，服务端识别后走预录回放。
+  // UUID 必须与后端 demo_replay.DEMO_SESSIONS 一致。
+  static const List<Map<String, String>> _demoPrompts = [
+    {
+      'uuid': '00000000-0000-0000-0000-000000000001',
+      'title': '论坛 / 贴吧类 App（全栈）',
+      'prompt':
+          '创建一个论坛类型的 App：要有用户个人页面（显示真实头像）、可以创建讨论区（类似贴吧的「吧」）、可以发帖、评论、点赞。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000002',
+      'title': '番茄钟（纯前端）',
+      'prompt': '做一个番茄钟：25 分钟倒计时，开始 / 暂停 / 重置，结束提醒。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000003',
+      'title': '计算器',
+      'prompt': '做一个计算器，支持加减乘除、百分比和清除。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000004',
+      'title': '多页面 App 示例',
+      'prompt': '做一个有 5 个页面、底部导航切换的多页面 App。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000005',
+      'title': '媒体播放',
+      'prompt': '做一个媒体展示 App，能播放视频、展示图片。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000006',
+      'title': '视频浏览',
+      'prompt': '做一个视频浏览 App：列表 + 点进去播放。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000007',
+      'title': '拍照巡检',
+      'prompt': '做一个拍照巡检 App：拍照记录设备状态，生成巡检单。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000008',
+      'title': '课程播放器',
+      'prompt': '做一个在线课程播放器：章节列表 + 视频播放 + 学习进度。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000009',
+      'title': '运维数据看板',
+      'prompt': '做一个运维数据仪表盘：服务状态、指标图表、告警列表。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000010',
+      'title': '智能家居',
+      'prompt': '做一个智能家居控制面板：灯光、空调、场景一键控制。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000011',
+      'title': '旅行通行证',
+      'prompt': '做一个旅行通行证 App：行程卡片、二维码、登机信息。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000012',
+      'title': '像素三消游戏',
+      'prompt': '做一个像素风格的三消小游戏。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000013',
+      'title': '记账预算',
+      'prompt': '做一个记账 App：收支记录、分类统计、月度预算。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000014',
+      'title': '客户管理 CRM',
+      'prompt': '做一个轻量 CRM：客户列表、跟进记录、状态标签。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000015',
+      'title': '习惯打卡',
+      'prompt': '做一个习惯打卡 App：每日打卡、连续天数、热力图。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000016',
+      'title': '笔记',
+      'prompt': '做一个笔记 App：新建、编辑、列表、搜索。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000017',
+      'title': '健身训练',
+      'prompt': '做一个健身训练 App：训练计划、动作计时、记录。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000018',
+      'title': '超级 App 首页',
+      'prompt': '做一个超级 App 首页：多功能入口聚合、轮播、九宫格。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000019',
+      'title': '文本收集器',
+      'prompt': '做一个文本收集器：快速记录、列表管理、复制。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000020',
+      'title': '2048 数字游戏',
+      'prompt': '做一个 2048 数字合并游戏。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000021',
+      'title': '贪吃蛇',
+      'prompt': '做一个贪吃蛇小游戏：吃食物变长、撞墙结束。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000022',
+      'title': 'Flappy Bird',
+      'prompt': '做一个 Flappy Bird 点击飞行小游戏。',
+    },
+  ];
+
+  void _showDemoPromptList() {
+    final navContext = JsonDslApp.navigatorKey.currentContext ?? context;
+    showModalBottomSheet<void>(
+      context: navContext,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.7,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      '选择一个示例需求（Demo）',
+                      style: Theme.of(ctx).textTheme.titleMedium,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    children: [
+                      for (final p in _demoPrompts)
+                        ListTile(
+                          leading: Icon(Icons.auto_awesome, color: cs.primary),
+                          title: Text(p['title']!),
+                          subtitle: Text(
+                            p['prompt']!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          onTap: () {
+                            Navigator.of(ctx).pop();
+                            unawaited(_fireDemoTask(p['uuid']!, p['prompt']!));
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 触发一个 demo 任务：把 active session 的 id 固定成特殊 UUID 再正常发送，
+  // 服务端据此走回放（不路由 agent-node、不建 FaaS）。
+  Future<void> _fireDemoTask(String uuid, String promptText) async {
+    await _chatService.createDemoSession(uuid);
+    _sendTextToAi(promptText);
+  }
+
   Future<void> _enterChatMode() async {
     debugPrint('[DesignerBall] _enterChatMode called');
+    if (!AuthService.isLoggedIn) {
+      _showLoginRequired();
+      return;
+    }
 
     // 进入对话模式的重震动反馈：双击 heavyImpact，间隔 ~70ms。
     // Flutter SDK 的 heavyImpact 已是单次最强，要更明显只能连击。
@@ -874,6 +1535,8 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 最终检查：手已离开 → 只设置 chatMode 但不开始录音
     setState(() => _chatMode = true);
+    unawaited(_refreshAiRoutingOptions());
+    _startSessionReconcileTimer(immediate: true);
     if (!_pointerDown) {
       debugPrint(
         '[DesignerBall] Pointer lifted before startListening, skipping',
@@ -886,9 +1549,13 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   void _startListening() {
+    // Demo 模式不做语音识别，改弹示例需求列表（点一条即假装触发 AI 任务）。
+    if (AuthService.isDemoMode) {
+      _showDemoPromptList();
+      return;
+    }
     _recordStartPos = Offset(_left, _top);
     _dragCancelling = false;
-    _nativeSpeechReceivedCallback = false; // 重置回调标记
     _accumulatedTranscript = ''; // 清空累积文本
     setState(() {
       _isListening = true;
@@ -1010,7 +1677,25 @@ class _DesignerBallState extends State<DesignerBall>
       _scrollToBottom();
     }
 
-    _attachAiStream(_chatService.sendStream(text));
+    _attachAiStream(
+      _chatService.sendStream(text, contextMessages: _aiConversationPayload()),
+    );
+  }
+
+  List<Map<String, String>> _aiConversationPayload() {
+    final items = <Map<String, String>>[];
+    for (final message in _messages) {
+      if (message.role != 'user' && message.role != 'assistant') continue;
+      if (message.action != null ||
+          message.failedJsonUrl != null ||
+          message.jsonUrl != null) {
+        continue;
+      }
+      final content = message.content.trim();
+      if (content.isEmpty) continue;
+      items.add({'role': message.role, 'content': content});
+    }
+    return items;
   }
 
   /// 把一个 AI 事件流接到 UI。三处用：
@@ -1020,15 +1705,35 @@ class _DesignerBallState extends State<DesignerBall>
   ///
   /// 调用方负责在调本方法之前把 user 气泡 / 空 assistant 气泡先注入好。
   void _attachAiStream(Stream<ChatEvent> stream) {
+    _startSessionReconcileTimer();
+    final streamEpoch = ++_streamEpoch;
+    // 绑定这条流归属的会话。active 一旦在流存活期内被切走——用户新建/切换会话，或
+    // _onAuthChanged → loadSession 改了 _activeSessionId 却没 ++epoch——这条流的迟到
+    // 事件必须丢弃，绝不能写进当前 active 桶（BUG1 串桶根因：epoch 守卫挡不住"active
+    // 变了但 epoch 没变"）。
+    final streamSid = _chatService.sessionId;
+    bool isCurrentStream() {
+      if (!mounted || streamEpoch != _streamEpoch) return false;
+      if (_chatService.sessionId != streamSid) {
+        debugPrint(
+          '[DesignerBall] stream-sid-mismatch drop streamSid=$streamSid '
+          'active=${_chatService.sessionId}',
+        );
+        return false;
+      }
+      return true;
+    }
     // 用于累积流式事件中的指令，[DONE] 时统一处理
     Map<String, dynamic>? pendingJsonApp;
     String? pendingRequestAction;
     String? pendingFailedJsonUrl;
     String? pendingFailedJsonError;
     String? pendingJsonUrl;
+    final pendingSystemMessages = <String>[];
 
     _streamSub = stream.listen(
       (event) {
+        if (!isCurrentStream()) return;
         if (event.isGeneratingJson) {
           setState(() {
             _isGeneratingJson = true;
@@ -1041,7 +1746,9 @@ class _DesignerBallState extends State<DesignerBall>
           setState(() {
             // 有工具动作时直接在浮层里显示，避免看起来像卡住
             _isGeneratingJson = true;
-            _generatingStatusMessage = event.statusMessage!;
+            _generatingStatusMessage = _translateStatusKey(
+              event.statusMessage!,
+            );
           });
           _scrollToBottom();
           return;
@@ -1052,6 +1759,8 @@ class _DesignerBallState extends State<DesignerBall>
         //    backend 把 error 和 needs_retry:true 一起塞过来）
         if (event.needsRetry) {
           setState(() {
+            _flushTypewriter(); // 补全已流出的 partial，再挂中断/重试
+            _typeIsThinking = false;
             _isThinking = false;
             _isGeneratingJson = false;
             _generatingStatusMessage = T.current.chatStatusGenerating;
@@ -1081,10 +1790,12 @@ class _DesignerBallState extends State<DesignerBall>
               ),
             );
           });
+          _stopSessionReconcileTimer();
           _scrollToBottom();
           return;
         }
         if (event.error != null && event.content == null) {
+          _resetTypewriter(); // 停掉打字机，避免下一帧覆盖错误文案
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
@@ -1123,46 +1834,40 @@ class _DesignerBallState extends State<DesignerBall>
           pendingJsonUrl = event.pendingJsonUrl;
           return;
         }
+        if (event.systemMessage != null && event.systemMessage!.isNotEmpty) {
+          pendingSystemMessages.add(event.systemMessage!);
+          return;
+        }
 
         if (event.thinking != null) {
-          // 思考过程 → 只更新最后一条消息（如果是空的或思考消息）
-          setState(() {
-            _isThinking = false;
-            // ⚠️ 不要在这里关 _isGeneratingJson：后端在 thinking 块开始时
-            // 会主动发 status="thinking" 让转圈亮起来；如果这里关掉，转圈
-            // 会被 thinking_delta 第一帧立刻熄掉，用户体感"无反应"。
-            // 转圈的关闭由真正的内容到达（event.content）或 onDone 负责。
-            if (_messages.isNotEmpty &&
-                _messages.last.role == 'assistant' &&
-                (_messages.last.content.isEmpty ||
-                    _messages.last.content.startsWith('💭'))) {
-              _messages.last = ChatMessage(
-                role: 'assistant',
-                content: '💭 ${event.thinking!}',
-              );
-            }
-          });
-          _scrollToBottom();
+          // 思考过程 → 经打字机平滑吐字（仍只更新空气泡或思考气泡）。
+          // ⚠️ 不要在这里关 _isGeneratingJson：后端在 thinking 块开始时会主动发
+          // status="thinking" 让转圈亮起来；这里关掉会被第一帧立刻熄掉，体感"无反应"。
+          final eligible = _messages.isNotEmpty &&
+              _messages.last.role == 'assistant' &&
+              (_typeIsThinking || _messages.last.content.isEmpty);
+          if (eligible) {
+            setState(() => _isThinking = false);
+            _typeIsThinking = true;
+            _setTypewriterTarget('💭 ${event.thinking!}');
+          }
           return;
         }
         if (event.content != null) {
+          final wasThinking = _typeIsThinking;
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
-            if (_messages.isNotEmpty &&
-                _messages.last.role == 'assistant' &&
-                _messages.last.content.startsWith('💭')) {
-              _messages.add(
-                ChatMessage(role: 'assistant', content: event.content!),
-              );
-            } else if (_messages.isNotEmpty &&
-                _messages.last.role == 'assistant') {
-              _messages.last = ChatMessage(
-                role: 'assistant',
-                content: event.content!,
-              );
+            if (wasThinking) {
+              // 思考→正文：补全思考气泡 + 开新正文气泡 + 打字机指向正文
+              _startContentBubbleAfterThinking(event.content!);
             }
           });
+          if (!wasThinking &&
+              _messages.isNotEmpty &&
+              _messages.last.role == 'assistant') {
+            _setTypewriterTarget(event.content!);
+          }
           _scrollToBottom();
         }
         if (event.quota != null) {
@@ -1170,7 +1875,9 @@ class _DesignerBallState extends State<DesignerBall>
         }
       },
       onError: (e) {
+        if (!isCurrentStream()) return;
         _streamSub = null;
+        _resetTypewriter(); // 停掉打字机，避免下一帧覆盖错误文案
         setState(() {
           _isThinking = false;
           _isGeneratingJson = false;
@@ -1189,8 +1896,10 @@ class _DesignerBallState extends State<DesignerBall>
             );
           }
         });
+        _startSessionReconcileTimer(immediate: true);
       },
       onDone: () {
+        if (!isCurrentStream()) return;
         _streamSub = null;
         debugPrint(
           '[DesignerBall] AI stream onDone: '
@@ -1200,53 +1909,32 @@ class _DesignerBallState extends State<DesignerBall>
           'pendingJsonApp=${pendingJsonApp != null}',
         );
         setState(() {
+          _flushTypewriter(); // 补全正文，停掉打字机
+          _typeIsThinking = false;
           _isGeneratingJson = false;
           _generatingStatusMessage = T.current.chatStatusGenerating;
 
-          // ⚠️ 这里**必须**用独立 if 而不是 if/else if 链：
-          // AI 一次回复里完全可能同时包含 [request_action]upload_current_app[/request_action]
-          // 和 [json_app_url]…[/json_app_url]（"我需要先看代码 ... 不过链接给你"）。
-          // 老的 else-if 链让 UPLOAD 抢占，下载按钮就消失了——这是 P0 bug。
-          // 各按钮语义独立，应该共存：UPLOAD 让用户提供代码、下载让用户拿 app、
-          // 试运行让用户直接跑、失败重试让用户重下。
-          if (pendingRequestAction == 'upload_current_app') {
-            _messages.add(
-              ChatMessage(
-                role: 'system',
-                content: 'AI 需要获取当前应用的代码配置以进行修改：',
-                action: 'UPLOAD_CURRENT_APP',
-              ),
-            );
-          }
-          if (pendingJsonUrl != null) {
-            _messages.add(
-              ChatMessage(
-                role: 'system',
-                content: 'JSON-APP 已生成，点击下载并运行：',
-                jsonUrl: pendingJsonUrl,
-              ),
-            );
-          }
-          if (pendingFailedJsonUrl != null) {
-            _messages.add(
-              ChatMessage(
-                role: 'system',
-                content:
-                    pendingFailedJsonError ?? T.current.chatJsonDownloadFailed,
-                failedJsonUrl: pendingFailedJsonUrl,
-              ),
-            );
-          }
-          if (pendingJsonApp != null) {
-            _messages.add(
-              ChatMessage(
-                role: 'system',
-                content: '🚀 点击试运行',
-                jsonApp: pendingJsonApp,
-              ),
-            );
-          }
+          _appendFinalActionMessages(
+            requestAction: pendingRequestAction,
+            jsonUrl: pendingJsonUrl,
+            failedJsonUrl: pendingFailedJsonUrl,
+            failedJsonError: pendingFailedJsonError,
+            jsonApp: pendingJsonApp,
+            systemMessages: pendingSystemMessages,
+          );
         });
+        final hasFinalAction =
+            pendingRequestAction != null ||
+            pendingJsonUrl != null ||
+            pendingFailedJsonUrl != null ||
+            pendingJsonApp != null ||
+            pendingSystemMessages.isNotEmpty;
+        if (hasFinalAction) {
+          _stopSessionReconcileTimer();
+        } else {
+          _startSessionReconcileTimer();
+          unawaited(_reconcileActiveSession(reason: 'stream-done-no-action'));
+        }
         _scrollToBottom();
       },
     );
@@ -1276,55 +1964,72 @@ class _DesignerBallState extends State<DesignerBall>
     _scrollToBottom();
 
     _cancelCurrentStream();
-    _attachAiStream(_chatService.retryLastTurn());
+    _attachAiStream(
+      _chatService.retryLastTurn(contextMessages: _aiConversationPayload()),
+    );
   }
 
   /// app 启动/重新打开字幕时：检查后端有没有上一轮未完成 / 已完成的任务，
   /// 并合并到当前消息桶，避免关闭字幕后恢复时重复插入 user/assistant 气泡。
-  Future<void> _maybeResumeUnfinishedSession() =>
-      _resumeActiveSessionIfNeeded();
+  Future<void> _maybeResumeUnfinishedSession({
+    bool forceDetachLocalStream = false,
+  }) => _resumeActiveSessionIfNeeded(
+    forceDetachLocalStream: forceDetachLocalStream,
+  );
 
-  Future<void> _resumeActiveSessionIfNeeded() async {
+  Future<void> _resumeActiveSessionIfNeeded({
+    bool forceDetachLocalStream = false,
+  }) async {
     if (!mounted) return;
-    if (_resumeInFlight || _streamSub != null) return;
+    if (_resumeInFlight) return;
+    // 捕获「要恢复的会话」。下面 tryResumeUnfinished 有网络 await，期间用户可能
+    // 切换/新建会话；恢复结果只能应用回这同一条会话，否则会串进别的会话桶。
+    final resumingSid = _chatService.sessionId;
+    if (_streamSub != null) {
+      if (!forceDetachLocalStream) return;
+      _detachAiStreamForLifecycle(
+        reason: 'resume-stale-stream',
+        resetUi: false,
+      );
+    }
     _resumeInFlight = true;
     try {
-      final result = await _chatService.tryResumeUnfinished();
-      if (!mounted) return;
+      final result = await _chatService.tryResumeUnfinished(
+        forceDetachLocalClient: forceDetachLocalStream,
+      );
+      // ⚠️ await 回来后 active 若已变（用户新开/切换了会话），丢弃结果——
+      // 这些 _ensureUserMessage/_upsertAssistantMessage 都走「活的」_messages
+      // getter，会写进当前会话桶，应用旧会话结果就是「消息跑到别的会话」的根因。
+      if (!mounted || _chatService.sessionId != resumingSid) return;
       switch (result) {
         case ResumeNothing():
+          setState(() {
+            _isThinking = false;
+            _isGeneratingJson = false;
+            _generatingStatusMessage = T.current.chatStatusGenerating;
+          });
           break;
         case ResumeCompleted(
           :final userMessage,
           :final assistantText,
           :final jsonUrl,
           :final requestAction,
+          :final systemMessages,
         ):
           setState(() {
+            _isThinking = false;
+            _isGeneratingJson = false;
+            _generatingStatusMessage = T.current.chatStatusGenerating;
             _ensureUserMessage(userMessage);
             _upsertAssistantMessage(assistantText);
-            // 各按钮独立共存（同一回复可能既要 upload 又给 url，参考 6645d35）
-            if (requestAction == 'upload_current_app' &&
-                !_hasSystemMessage(action: 'UPLOAD_CURRENT_APP')) {
-              _messages.add(
-                ChatMessage(
-                  role: 'system',
-                  content: 'AI 需要获取当前应用的代码配置以进行修改：',
-                  action: 'UPLOAD_CURRENT_APP',
-                ),
-              );
-            }
-            if (jsonUrl != null && !_hasSystemMessage(jsonUrl: jsonUrl)) {
-              _messages.add(
-                ChatMessage(
-                  role: 'system',
-                  content: 'JSON-APP 已生成，点击下载并运行：',
-                  jsonUrl: jsonUrl,
-                ),
-              );
-            }
+            _appendFinalActionMessages(
+              requestAction: requestAction,
+              jsonUrl: jsonUrl,
+              systemMessages: systemMessages,
+            );
           });
           _scrollToBottom();
+          _stopSessionReconcileTimer();
         case ResumeStreaming(:final userMessage, :final stream):
           setState(() {
             _ensureUserMessage(userMessage);
@@ -1337,6 +2042,9 @@ class _DesignerBallState extends State<DesignerBall>
           _attachAiStream(stream);
         case ResumeNeedsRetry(:final userMessage):
           setState(() {
+            _isThinking = false;
+            _isGeneratingJson = false;
+            _generatingStatusMessage = T.current.chatStatusGenerating;
             _ensureUserMessage(userMessage);
             if (!_hasSystemMessage(action: 'RETRY_LAST_TURN')) {
               _messages.add(
@@ -1349,6 +2057,7 @@ class _DesignerBallState extends State<DesignerBall>
             }
           });
           _scrollToBottom();
+          _stopSessionReconcileTimer();
       }
     } catch (e) {
       debugPrint('[DesignerBall] resume 失败 (静默): $e');
@@ -1359,7 +2068,17 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _ensureUserMessage(String content) {
     if (content.isEmpty) return;
-    if (_messages.any((m) => m.role == 'user' && m.content == content)) return;
+    if (_messages.isNotEmpty &&
+        _messages.last.role == 'user' &&
+        _messages.last.content == content) {
+      return;
+    }
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      final message = _messages[i];
+      if (message.role != 'user') continue;
+      if (message.content == content) return;
+      break;
+    }
     _messages.add(ChatMessage(role: 'user', content: content));
   }
 
@@ -1369,18 +2088,22 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   void _upsertAssistantMessage(String content) {
+    final displayContent = AiChatService.cleanAssistantDisplayText(content);
     if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
-      _messages.last = ChatMessage(role: 'assistant', content: content);
+      // 别用更短的 final_text 覆盖本地已流式累积的更完整内容（"只剩用户+JSON"根因）
+      if (_messages.last.content.length > displayContent.length) return;
+      _messages.last = ChatMessage(role: 'assistant', content: displayContent);
       return;
     }
     for (var i = _messages.length - 1; i >= 0; i--) {
       if (_messages[i].role == 'user') break;
       if (_messages[i].role == 'assistant') {
-        _messages[i] = ChatMessage(role: 'assistant', content: content);
+        if (_messages[i].content.length > displayContent.length) return;
+        _messages[i] = ChatMessage(role: 'assistant', content: displayContent);
         return;
       }
     }
-    _messages.add(ChatMessage(role: 'assistant', content: content));
+    _messages.add(ChatMessage(role: 'assistant', content: displayContent));
   }
 
   bool _hasSystemMessage({String? action, String? jsonUrl}) {
@@ -1390,6 +2113,94 @@ class _DesignerBallState extends State<DesignerBall>
       if (jsonUrl != null && m.jsonUrl == jsonUrl) return true;
       return false;
     });
+  }
+
+  int _lastUserMessageIndex() {
+    for (var i = _messages.length - 1; i >= 0; i--) {
+      if (_messages[i].role == 'user') return i;
+    }
+    return -1;
+  }
+
+  void _removeCurrentTurnSystemMessage({
+    String? action,
+    String? jsonUrl,
+    String? failedJsonUrl,
+    String? content,
+  }) {
+    final start = _lastUserMessageIndex() + 1;
+    for (var i = _messages.length - 1; i >= start; i--) {
+      final m = _messages[i];
+      if (m.role != 'system') continue;
+      if (action != null && m.action == action) {
+        _messages.removeAt(i);
+        continue;
+      }
+      if (jsonUrl != null && m.jsonUrl == jsonUrl) {
+        _messages.removeAt(i);
+        continue;
+      }
+      if (failedJsonUrl != null && m.failedJsonUrl == failedJsonUrl) {
+        _messages.removeAt(i);
+        continue;
+      }
+      if (content != null && m.content == content) {
+        _messages.removeAt(i);
+      }
+    }
+  }
+
+  void _appendFinalActionMessages({
+    String? requestAction,
+    String? jsonUrl,
+    String? failedJsonUrl,
+    String? failedJsonError,
+    Map<String, dynamic>? jsonApp,
+    List<String> systemMessages = const [],
+  }) {
+    // 各按钮独立共存；重新恢复/重连同一轮时，先移除本轮旧位置的动作消息，
+    // 再按固定顺序追加到最后，避免下载提示夹在 assistant 文本中间。
+    if (requestAction == 'upload_current_app') {
+      _removeCurrentTurnSystemMessage(action: 'UPLOAD_CURRENT_APP');
+      _messages.add(
+        ChatMessage(
+          role: 'system',
+          content: 'AI 需要获取当前应用的代码配置以进行修改：',
+          action: 'UPLOAD_CURRENT_APP',
+        ),
+      );
+    }
+    if (jsonUrl != null) {
+      _removeCurrentTurnSystemMessage(jsonUrl: jsonUrl);
+      _messages.add(
+        ChatMessage(
+          role: 'system',
+          content: 'JSON-APP 已生成，点击下载并运行：',
+          jsonUrl: jsonUrl,
+        ),
+      );
+    }
+    if (failedJsonUrl != null) {
+      _removeCurrentTurnSystemMessage(failedJsonUrl: failedJsonUrl);
+      _messages.add(
+        ChatMessage(
+          role: 'system',
+          content: failedJsonError ?? T.current.chatJsonDownloadFailed,
+          failedJsonUrl: failedJsonUrl,
+        ),
+      );
+    }
+    if (jsonApp != null) {
+      _messages.add(
+        ChatMessage(role: 'system', content: '🚀 点击试运行', jsonApp: jsonApp),
+      );
+    }
+    for (final message in systemMessages) {
+      final content = message.trim();
+      if (content.isEmpty) continue;
+      _removeCurrentTurnSystemMessage(content: content);
+      _messages.add(ChatMessage(role: 'system', content: content));
+    }
   }
 
   Future<void> _handleUploadCurrentApp() async {
@@ -1503,7 +2314,6 @@ class _DesignerBallState extends State<DesignerBall>
         onResult: (result) {
           // 编辑模式下，stop() 后迟到的 final 结果一律丢弃
           if (!_isListening || _editMode) return;
-          _nativeSpeechReceivedCallback = true;
           final segment = result.recognizedWords;
           // 中文段间直接拼，不加空格（之前 '类似于 鸟' 的 bug）。
           // 英文场景这里也凑合，最终落到聊天框时不会有大问题。
@@ -1649,6 +2459,9 @@ class _DesignerBallState extends State<DesignerBall>
   /// UI 状态**，否则会出现：在 session A "正在生成代码" 中途切到 session B（已 done），
   /// 但 _isGeneratingJson 没被清，B 的视图还在转圈。
   void _cancelCurrentStream() {
+    _streamEpoch++;
+    _flushTypewriter(); // 把已收到的全文补全到气泡，再复位（下面 commitPartial 才存到完整内容）
+    _resetTypewriter();
     if (_streamSub != null) {
       // 保存已收到的部分回复到对话历史
       if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
@@ -1673,11 +2486,13 @@ class _DesignerBallState extends State<DesignerBall>
       _isGeneratingJson = false;
       _generatingStatusMessage = T.current.chatStatusGenerating;
     });
+    unawaited(_flushActiveMessages());
   }
 
   /// 只隐藏字幕时使用：断开本地 SSE 节省资源，但保留当前 session 和消息占位。
   /// 后端 worker 继续跑；用户从快捷菜单恢复会话时会通过 /status + /stream 接回。
   void _detachCurrentStreamForHide() {
+    _streamEpoch++;
     if (_streamSub != null) {
       if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
         _chatService.commitPartial(_messages.last.content);
@@ -1691,6 +2506,7 @@ class _DesignerBallState extends State<DesignerBall>
       _isGeneratingJson = false;
       _generatingStatusMessage = T.current.chatStatusGenerating;
     });
+    unawaited(_flushActiveMessages());
   }
 
   /// 处理崩溃报告 — 自动进入对话模式并发送崩溃信息给 AI
@@ -1706,10 +2522,28 @@ class _DesignerBallState extends State<DesignerBall>
 
     // 直接发送给 AI
     _cancelCurrentStream();
+    final streamEpoch = ++_streamEpoch;
+    // 绑定这条流归属的会话。active 一旦在流存活期内被切走——用户新建/切换会话，或
+    // _onAuthChanged → loadSession 改了 _activeSessionId 却没 ++epoch——这条流的迟到
+    // 事件必须丢弃，绝不能写进当前 active 桶（BUG1 串桶根因：epoch 守卫挡不住"active
+    // 变了但 epoch 没变"）。
+    final streamSid = _chatService.sessionId;
+    bool isCurrentStream() {
+      if (!mounted || streamEpoch != _streamEpoch) return false;
+      if (_chatService.sessionId != streamSid) {
+        debugPrint(
+          '[DesignerBall] stream-sid-mismatch drop streamSid=$streamSid '
+          'active=${_chatService.sessionId}',
+        );
+        return false;
+      }
+      return true;
+    }
     _streamSub = _chatService
-        .sendStream(crashReport)
+        .sendStream(crashReport, contextMessages: _aiConversationPayload())
         .listen(
           (event) {
+            if (!isCurrentStream()) return;
             if (event.error != null && event.content == null) {
               setState(() {
                 _isThinking = false;
@@ -1747,6 +2581,8 @@ class _DesignerBallState extends State<DesignerBall>
             }
           },
           onError: (e) {
+            if (!isCurrentStream()) return;
+            _streamSub = null;
             setState(() {
               _isThinking = false;
               _messages.last = ChatMessage(
@@ -1754,6 +2590,10 @@ class _DesignerBallState extends State<DesignerBall>
                 content: T.fmt(T.current.chatAnalysisFailedWith, {'err': e}),
               );
             });
+          },
+          onDone: () {
+            if (!isCurrentStream()) return;
+            _streamSub = null;
           },
         );
   }
@@ -1764,6 +2604,7 @@ class _DesignerBallState extends State<DesignerBall>
       _speech?.stop();
     } catch (_) {}
     _detachCurrentStreamForHide();
+    _stopSessionReconcileTimer();
     _pulseController.stop();
     _pulseController.reset();
     setState(() {
@@ -1783,6 +2624,7 @@ class _DesignerBallState extends State<DesignerBall>
     _closeChatMode();
     if (sid.isNotEmpty) {
       _messageBuckets.remove(sid);
+      unawaited(_deletePersistedMessagesForSession(sid));
       _chatService.deleteSession(sid); // fire-and-forget；内部会处理 active 切换
     }
   }
@@ -1791,7 +2633,10 @@ class _DesignerBallState extends State<DesignerBall>
   Future<void> _handleNewSession() async {
     _cancelCurrentStream(); // 防止老 session 迟到事件流进新桶
     await _chatService.createNewSession();
+    await _refreshAiRoutingOptions();
     if (!mounted) return;
+    _messageBuckets.putIfAbsent(_chatService.sessionId, () => []);
+    _loadedMessageBucketIds.add(_chatService.sessionId);
     setState(() {}); // 触发 ChatOverlay 渲染新桶（空列表）
     _scrollToBottom();
   }
@@ -1804,6 +2649,8 @@ class _DesignerBallState extends State<DesignerBall>
   Future<void> _handleSwitchSession(String sid) async {
     _cancelCurrentStream(); // 同上
     await _chatService.switchToSession(sid);
+    await _refreshAiRoutingOptions();
+    await _loadMessagesForSession(sid);
     if (!mounted) return;
     setState(() {});
     await _maybeResumeUnfinishedSession();
@@ -1817,7 +2664,9 @@ class _DesignerBallState extends State<DesignerBall>
       _cancelCurrentStream();
     }
     _messageBuckets.remove(sid);
+    await _deletePersistedMessagesForSession(sid);
     await _chatService.deleteSession(sid);
+    await _refreshAiRoutingOptions();
     if (!mounted) return;
     setState(() {});
   }
@@ -1826,6 +2675,78 @@ class _DesignerBallState extends State<DesignerBall>
     await _chatService.renameSession(sid, title);
     if (!mounted) return;
     setState(() {});
+  }
+
+  void _showAiRouteLockedHint() {
+    final ctx = JsonDslApp.navigatorKey.currentContext ?? context;
+    final messenger = ScaffoldMessenger.maybeOf(ctx);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(
+      const SnackBar(
+        content: Text('当前会话的执行 Agent 已锁定，请新建会话后再选择这个供应商。'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  bool get _activeAgentLocked {
+    return _chatService.activeAgentLocked ||
+        _messages.any(
+          (message) =>
+              message.content.trim().isNotEmpty ||
+              message.action != null ||
+              message.failedJsonUrl != null ||
+              message.jsonUrl != null ||
+              message.jsonApp != null,
+        );
+  }
+
+  Future<void> _handleSelectAiProvider(String providerId) async {
+    final changed = await _chatService.setActiveProvider(
+      providerId,
+      agentScope: AiChatService.providersScope,
+    );
+    if (!mounted) return;
+    if (changed) {
+      setState(() {});
+    } else {
+      _showAiRouteLockedHint();
+    }
+  }
+
+  Future<void> _handleSelectAiAgent(String agentId) async {
+    if (_activeAgentLocked) {
+      _showAiRouteLockedHint();
+      return;
+    }
+    final changed = await _chatService.setActiveAgent(agentId);
+    if (!mounted) return;
+    if (changed) {
+      setState(() {});
+    } else {
+      _showAiRouteLockedHint();
+    }
+  }
+
+  Future<void> _handleSelectAiProviderAgent(
+    String providerId,
+    String agentId,
+  ) async {
+    if (_activeAgentLocked) {
+      _showAiRouteLockedHint();
+      return;
+    }
+    final changed = await _chatService.setActiveProviderAgent(
+      providerId,
+      agentId,
+      agentScope: AiChatService.providersScope,
+    );
+    if (!mounted) return;
+    if (changed) {
+      setState(() {});
+    } else {
+      _showAiRouteLockedHint();
+    }
   }
 
   /// 双击 heavyImpact，主观上明显比单次更"重"。
@@ -1838,6 +2759,7 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   void _scrollToBottom() {
+    _schedulePersistActiveMessages();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
@@ -1847,6 +2769,50 @@ class _DesignerBallState extends State<DesignerBall>
         );
       }
     });
+  }
+
+  /// 翻译后端发送的状态 key 为本地化文案
+  String _translateStatusKey(String key) {
+    // 格式: "tool.reading" 或 "tool.reading_file|config.json"
+    final parts = key.split('|');
+    final statusKey = parts[0];
+    final param = parts.length > 1 ? parts[1] : null;
+
+    switch (statusKey) {
+      case 'status.ai_engine_started':
+        return T.current.toolStatusAiEngineStarted;
+      case 'tool.reading':
+        return T.current.toolStatusReading;
+      case 'tool.reading_file':
+        return T.current.toolStatusReadingFile.replaceAll(
+          '{file}',
+          param ?? '',
+        );
+      case 'tool.writing':
+        return T.current.toolStatusWriting;
+      case 'tool.writing_file':
+        return T.current.toolStatusWritingFile.replaceAll(
+          '{file}',
+          param ?? '',
+        );
+      case 'tool.searching':
+        return T.current.toolStatusSearching;
+      case 'tool.running_command':
+        return T.current.toolStatusRunningCommand;
+      case 'tool.editing':
+        return T.current.toolStatusEditing;
+      case 'tool.fetching_web':
+        return T.current.toolStatusFetchingWeb;
+      case 'tool.searching_web':
+        return T.current.toolStatusSearchingWeb;
+      case 'tool.updating_plan':
+        return T.current.toolStatusUpdatingPlan;
+      case 'tool.using_tool':
+        return T.current.toolStatusUsingTool.replaceAll('{tool}', param ?? '');
+      default:
+        // 向后兼容：如果不是 key 格式，直接返回原文
+        return key;
+    }
   }
 
   // ════════════════════════════════════════════════════════
@@ -1968,6 +2934,14 @@ class _DesignerBallState extends State<DesignerBall>
               scrollController: _scrollController,
               activeSessionId: _chatService.sessionId,
               getSessions: _chatService.listSessions,
+              providers: AiChatService.providers,
+              agents: AiChatService.agents,
+              selectedProviderId: _chatService.activeProvider,
+              selectedAgentId: _chatService.activeAgent,
+              agentLocked: _activeAgentLocked,
+              onSelectProvider: _handleSelectAiProvider,
+              onSelectAgent: _handleSelectAiAgent,
+              onSelectProviderAgent: _handleSelectAiProviderAgent,
               onUploadCurrentApp: _handleUploadCurrentApp,
               onRetryDownload: _handleRetryDownload,
               onDownloadAndRun: _handleDownloadAndRun,

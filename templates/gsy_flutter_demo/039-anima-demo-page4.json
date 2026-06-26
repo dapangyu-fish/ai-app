@@ -1,0 +1,118 @@
+{
+  "dsl": "3.3",
+  "appid": "9d440e6b-f71a-5c39-aac0-90a6a56a0a03",
+  "meta": {
+    "name": "gsy_flutter_demo/039-anima-demo-page4",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "按键切换动画效果",
+      "en": "Switch animation"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：按键切换动画效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "按键切换动画效果",
+      "sourcePath": "lib/widget/animation/anima_demo_page4.dart",
+      "deferredAlias": "anima_demo_page4",
+      "widgetClass": "AnimaDemoPage4",
+      "category": "animation",
+      "routeIndex": 39
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "按键切换动画效果",
+      "upstreamSource": "lib/widget/animation/anima_demo_page4.dart",
+      "upstreamWidget": "AnimaDemoPage4",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2",
+      "switchIcon": "close"
+    },
+    "functions": {
+      "toggleIcon": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.switchIcon",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var": "global.switchIcon"
+                      },
+                      "close"
+                    ]
+                  },
+                  "add",
+                  "close"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "AnimaDemoPage4",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "appBar": {
+          "title": "AnimaDemoPage4",
+          "centerTitle": true,
+          "actions": [
+            {
+              "icon": "{{ global.switchIcon }}",
+              "action": {
+                "call": "@global.toggleIcon",
+                "args": {}
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "animated_switcher",
+                "switchKey": "{{ global.switchIcon }}",
+                "transitionType": "scale",
+                "durationMs": 300,
+                "child": {
+                  "type": "icon",
+                  "name": "{{ global.switchIcon }}",
+                  "size": 72,
+                  "color": "#212121"
+                }
+              }
+            }
+          }
+        ],
+        "floatingActionButton": {
+          "type": "floating_action_button",
+          "icon": "{{ global.switchIcon }}",
+          "action": {
+            "call": "@global.toggleIcon",
+            "args": {}
+          }
+        }
+      }
+    ]
+  }
+}

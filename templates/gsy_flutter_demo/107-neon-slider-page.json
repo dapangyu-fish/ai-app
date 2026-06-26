@@ -1,0 +1,326 @@
+{
+  "dsl": "3.3",
+  "appid": "36794694-e715-5e46-8abc-d9239020de8f",
+  "meta": {
+    "name": "gsy_flutter_demo/107-neon-slider-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "霓虹滑块，100%高亮",
+      "en": "Neon slider, full highlight"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：霓虹滑块，100%高亮",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "霓虹滑块，100%高亮",
+      "sourcePath": "lib/widget/animation/neon_slider_page.dart",
+      "deferredAlias": "neon_slider_page",
+      "widgetClass": "NeonSliderPage",
+      "category": "animation",
+      "routeIndex": 107,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-neon-slider-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "霓虹滑块，100%高亮",
+      "upstreamSource": "lib/widget/animation/neon_slider_page.dart",
+      "upstreamWidget": "NeonSliderPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-neon-slider-v1",
+      "progress": 0.34,
+      "sliderWidth": 310,
+      "display": 34
+    },
+    "functions": {
+      "setProgress": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.progress",
+              "value": {
+                "clamp": [
+                  {
+                    "/": [
+                      {
+                        "var": "event.localX"
+                      },
+                      {
+                        "var": "global.sliderWidth"
+                      }
+                    ]
+                  },
+                  0,
+                  1
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.display",
+              "value": {
+                "round": {
+                  "*": [
+                    {
+                      "var": "global.progress"
+                    },
+                    100
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#000000",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0,
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "mainAxisAlignment": "center",
+              "alignment": "center",
+              "children": [
+                {
+                  "type": "gesture_detector",
+                  "onTapDown": {
+                    "call": "@global.setProgress",
+                    "args": {}
+                  },
+                  "onPanStart": {
+                    "call": "@global.setProgress",
+                    "args": {}
+                  },
+                  "onPanUpdate": {
+                    "call": "@global.setProgress",
+                    "args": {}
+                  },
+                  "child": {
+                    "type": "container",
+                    "layout": "stack",
+                    "width": "{{ global.sliderWidth }}",
+                    "height": 56,
+                    "borderRadius": 28,
+                    "clipBehavior": "hardEdge",
+                    "children": [
+                      {
+                        "type": "animated_canvas",
+                        "width": "{{ global.sliderWidth }}",
+                        "height": 56,
+                        "backgroundColor": "#00000000",
+                        "speed": 1,
+                        "variables": {
+                          "progress": "{{ global.progress }}"
+                        },
+                        "layers": [
+                          {
+                            "kind": "rect",
+                            "x": 0,
+                            "y": 0,
+                            "width": {
+                              "var": "w"
+                            },
+                            "height": {
+                              "var": "h"
+                            },
+                            "borderRadius": 28,
+                            "color": "#151515",
+                            "alpha": 1
+                          },
+                          {
+                            "kind": "rect",
+                            "x": 0,
+                            "y": 0,
+                            "width": {
+                              "var": "w"
+                            },
+                            "height": {
+                              "var": "h"
+                            },
+                            "borderRadius": 28,
+                            "color": "#FFFFFF",
+                            "alpha": 0.1,
+                            "style": "stroke",
+                            "strokeWidth": 1
+                          },
+                          {
+                            "kind": "rect",
+                            "x": 0,
+                            "y": 0,
+                            "width": {
+                              "max": [
+                                56,
+                                {
+                                  "*": [
+                                    "w",
+                                    "progress"
+                                  ]
+                                }
+                              ]
+                            },
+                            "height": {
+                              "var": "h"
+                            },
+                            "borderRadius": 28,
+                            "color": "#00C6FF",
+                            "alpha": 0.4,
+                            "blurRadius": 12
+                          },
+                          {
+                            "kind": "rect",
+                            "x": 0,
+                            "y": 0,
+                            "width": {
+                              "max": [
+                                56,
+                                {
+                                  "*": [
+                                    "w",
+                                    "progress"
+                                  ]
+                                }
+                              ]
+                            },
+                            "height": {
+                              "var": "h"
+                            },
+                            "borderRadius": 28,
+                            "color": "#151515",
+                            "alpha": 1
+                          },
+                          {
+                            "kind": "segments",
+                            "count": 34,
+                            "x1": {
+                              "*": [
+                                "i",
+                                {
+                                  "/": [
+                                    "w",
+                                    33
+                                  ]
+                                }
+                              ]
+                            },
+                            "y1": 2,
+                            "x2": {
+                              "*": [
+                                "i",
+                                {
+                                  "/": [
+                                    "w",
+                                    33
+                                  ]
+                                }
+                              ]
+                            },
+                            "y2": 54,
+                            "strokeWidth": 3,
+                            "color": "#FF5F6D",
+                            "color2": "#00C6FF",
+                            "mix": "f",
+                            "alpha": {
+                              "if": [
+                                {
+                                  ">=": [
+                                    {
+                                      "*": [
+                                        "progress",
+                                        "w"
+                                      ]
+                                    },
+                                    {
+                                      "*": [
+                                        "i",
+                                        {
+                                          "/": [
+                                            "w",
+                                            33
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                1,
+                                0
+                              ]
+                            },
+                            "blendMode": "plus"
+                          },
+                          {
+                            "kind": "rect",
+                            "x": 0,
+                            "y": 0,
+                            "width": {
+                              "max": [
+                                56,
+                                {
+                                  "*": [
+                                    "w",
+                                    "progress"
+                                  ]
+                                }
+                              ]
+                            },
+                            "height": {
+                              "var": "h"
+                            },
+                            "borderRadius": 28,
+                            "color": "#FFFFFF",
+                            "alpha": 0.12,
+                            "style": "stroke",
+                            "strokeWidth": 2
+                          }
+                        ]
+                      },
+                      {
+                        "type": "positioned",
+                        "right": 20,
+                        "top": 14,
+                        "child": {
+                          "type": "text",
+                          "value": "{{ global.display }}",
+                          "style": {
+                            "fontSize": 18,
+                            "fontWeight": "w600",
+                            "color": "#FFFFFF",
+                            "textAlign": "right"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "appBar": {
+          "title": ""
+        }
+      }
+    ]
+  }
+}

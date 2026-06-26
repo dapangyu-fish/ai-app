@@ -1,0 +1,126 @@
+{
+  "dsl": "3.3",
+  "appid": "16aafd92-e41c-5517-a687-49b99fb1a8c4",
+  "meta": {
+    "name": "gsy_flutter_demo/017-wrap-content-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "warpContent实现",
+      "en": "warpContent实现"
+    },
+    "description": "WrapContentPage：wrapContent 实现",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "warpContent实现",
+      "sourcePath": "lib/widget/basic/wrap_content_page.dart",
+      "deferredAlias": "wrap_content_page",
+      "widgetClass": "WrapContentPage",
+      "category": "basic",
+      "routeIndex": 17
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {},
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "WrapContentPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0,
+            "child": {
+              "type": "container",
+              "children": [
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "container",
+                    "children": [],
+                    "height": 400,
+                    "color": "#FFFF00"
+                  },
+                  {
+                    "type": "container",
+                    "children": [],
+                    "height": 50,
+                    "color": "#F44336"
+                  },
+                  {
+                    "type": "positioned",
+                    "child": {
+                      "type": "container",
+                      "children": [
+                        {
+                          "type": "container",
+                          "children": [],
+                          "width": 33,
+                          "height": 33,
+                          "color": "#000000"
+                        }
+                      ],
+                      "layout": "row",
+                      "height": 56,
+                      "color": "#607D8B",
+                      "alignment": "centerLeft"
+                    },
+                    "left": 0,
+                    "right": 0,
+                    "top": 0
+                  }
+                ],
+                "layout": "stack",
+                "constraints": {
+                  "minHeight": 100
+                }
+              },
+              {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "container",
+                    "children": [],
+                    "height": 600,
+                    "color": "#4CAF50"
+                  },
+                  {
+                    "type": "container",
+                    "children": [],
+                    "height": 50,
+                    "color": "#FFC107"
+                  }
+                ],
+                "layout": "column",
+                "margin": {
+                  "top": 20
+                },
+                "constraints": {
+                  "minHeight": 100
+                }
+              }
+            ],
+            "layout": "column",
+            "scrollDirection": "vertical",
+              "constraints": {
+                "minHeight": 100
+              }
+            }
+          }
+        ],
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

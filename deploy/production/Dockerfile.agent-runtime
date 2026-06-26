@@ -1,0 +1,32 @@
+ARG BASE_IMAGE=dapangyu/myapp-agent-runtime-base:agent-control-plane
+FROM ${BASE_IMAGE}
+
+ARG MYAPP_BUILD_COMMIT=unknown
+ARG MYAPP_BUILD_VERSION=unknown
+
+ENV MYAPP_BUILD_COMMIT=${MYAPP_BUILD_COMMIT} \
+    MYAPP_BUILD_VERSION=${MYAPP_BUILD_VERSION}
+
+WORKDIR /app
+
+COPY backend/ /app/backend/
+COPY lib/ /app/lib/
+COPY assets/ /app/assets/
+COPY test/ /app/test/
+COPY templates/ /app/templates/
+COPY docs/ /app/docs/
+COPY scripts/ /app/scripts/
+COPY JSON-DSL.md /app/JSON-DSL.md
+COPY pubspec.yaml pubspec.lock analysis_options.yaml /app/
+COPY deploy/production/agent_runner.py /opt/myapp/agent_runner.py
+
+RUN chmod 755 /app/scripts/myapp_visual_review.py \
+    && ln -sf /app/scripts/myapp_visual_review.py /usr/local/bin/myapp-visual-review \
+    && myapp-visual-review --help >/dev/null \
+    && chown -R agent:agent /opt/myapp /run/myapp-agent \
+    && chmod 755 /opt/myapp/agent_runner.py
+
+USER 10001:10001
+WORKDIR /app
+
+CMD ["bash", "-lc", "python3 --version && node --version && claude --version && codex --version && opencode --version"]

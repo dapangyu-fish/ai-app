@@ -1,0 +1,111 @@
+{
+  "dsl": "3.3",
+  "appid": "95a82e03-bcec-5c4e-ae11-00cd40d2fd9c",
+  "meta": {
+    "name": "gsy_flutter_demo/018-status-bar-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "状态栏颜色修改（仅 App）",
+      "en": "Status bar color update(App only)"
+    },
+    "description": "StatusBarDemoPage：状态栏颜色修改",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "状态栏颜色修改（仅 App）",
+      "sourcePath": "lib/widget/basic/statusbar_demo_page.dart",
+      "deferredAlias": "statusbar_demo_page",
+      "widgetClass": "StatusBarDemoPage",
+      "category": "basic",
+      "routeIndex": 18
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {},
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "StatusBarDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "container",
+                "children": [
+                  {
+                    "type": "button",
+                    "label": "Light",
+                    "variant": "text",
+                    "action": {
+                      "call": "@set_system_ui_overlay",
+                      "args": {
+                        "style": "light"
+                      }
+                    },
+                    "style": {
+                      "backgroundColor": "#FFFF00",
+                      "textColor": "#000000",
+                      "borderRadius": 4,
+                      "paddingH": 16,
+                      "paddingV": 10
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 10
+                  },
+                  {
+                    "type": "button",
+                    "label": "Dart",
+                    "variant": "text",
+                    "action": {
+                      "call": "@set_system_ui_overlay",
+                      "args": {
+                        "style": "dark"
+                      }
+                    },
+                    "style": {
+                      "backgroundColor": "#69F0AE",
+                      "textColor": "#000000",
+                      "borderRadius": 4,
+                      "paddingH": 16,
+                      "paddingV": 10
+                    }
+                  }
+                ],
+                "layout": "row",
+                "mainAxisAlignment": "center",
+                "crossAxisAlignment": "center"
+              }
+            },
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0
+          }
+        ],
+        "appBar": {
+          "backgroundImage": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+          "height": 168,
+          "color": "#FFFFFF",
+          "leading": {
+            "icon": "back",
+            "action": {
+              "type": "back"
+            }
+          }
+        },
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

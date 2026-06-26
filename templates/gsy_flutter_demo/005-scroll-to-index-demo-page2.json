@@ -1,0 +1,202 @@
+{
+  "dsl": "3.3",
+  "appid": "62df433b-f2f0-5fea-9d3f-7dc6cb929533",
+  "meta": {
+    "name": "gsy_flutter_demo/005-scroll-to-index-demo-page2",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "滑动到指定位置2",
+      "en": "Scroll to target position2"
+    },
+    "description": "ScrollToIndexDemoPage2：滑动到指定位置2",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "滑动到指定位置2",
+      "sourcePath": "lib/widget/scroll/scroll_to_index_demo_page2.dart",
+      "deferredAlias": "scroll_to_index_demo_page2",
+      "widgetClass": "ScrollToIndexDemoPage2",
+      "category": "scroll",
+      "routeIndex": 5
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "items": [],
+      "highlightIndex": -1,
+      "tmpHeight": 0
+    },
+    "functions": {
+      "scrollTo12": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@scroll_to_index",
+            "args": {
+              "controller": "scrollToIndex2",
+              "index": 12,
+              "durationMs": 500,
+              "curve": "linear",
+              "alignment": 0
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.highlightIndex",
+              "value": 12
+            }
+          }
+        ]
+      },
+      "initItems": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@list_clear",
+            "args": {
+              "var": "global.items"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.highlightIndex",
+              "value": -1
+            }
+          },
+          {
+            "call": "@loop_by_num",
+            "args": {
+              "count": 100,
+              "body": [
+                {
+                  "call": "@random_float",
+                  "args": {
+                    "min": 0,
+                    "max": 300
+                  },
+                  "assign": "global.tmpHeight"
+                },
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.items",
+                    "item": {
+                      "index": {
+                        "var": "loop.index"
+                      },
+                      "height": {
+                        "var": "global.tmpHeight"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "ScrollToIndexDemoPage2",
+        "layout": "column",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "list",
+            "controller": "scrollToIndex2",
+            "source": "{{ global.items }}",
+            "separator": "none",
+            "item_template": {
+              "type": "card",
+              "layout": "column",
+              "padding": 0,
+              "margin": 4,
+              "borderRadius": 4,
+              "elevation": 1,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "stack",
+                  "height": "{{ loop.item.height }}",
+                  "children": [
+                    {
+                      "type": "positioned",
+                      "left": 0,
+                      "top": 0,
+                      "right": 0,
+                      "bottom": 0,
+                      "child": {
+                        "type": "container",
+                        "color": "#1A000000",
+                        "visible": {
+                          "==": [
+                            {
+                              "var": "global.highlightIndex"
+                            },
+                            {
+                              "var": "loop.item.index"
+                            }
+                          ]
+                        },
+                        "children": []
+                      }
+                    },
+                    {
+                      "type": "align",
+                      "alignment": "centerLeft",
+                      "child": {
+                        "type": "container",
+                        "layout": "column",
+                        "margin": 5,
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "Item {{ loop.item.index }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000",
+                              "paddingV": 0
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "footerButtons": [
+          {
+            "type": "button",
+            "variant": "text",
+            "label": "Scroll to 12",
+            "style": {
+              "paddingH": 8,
+              "paddingV": 8,
+              "fontSize": 14
+            },
+            "action": {
+              "call": "@global.scrollTo12",
+              "args": {}
+            }
+          }
+        ],
+        "onLoad": {
+          "call": "@global.initItems",
+          "args": {}
+        }
+      }
+    ]
+  }
+}

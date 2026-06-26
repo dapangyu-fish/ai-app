@@ -17,14 +17,19 @@ import websocket
 logger = logging.getLogger(__name__)
 
 # 字节跳动 ASR 配置（从 .env 读取，不再硬编码）
-APP_KEY = os.environ["BYTEDANCE_ASR_APP_KEY"]
-ACCESS_KEY = os.environ["BYTEDANCE_ASR_ACCESS_KEY"]
+APP_KEY = os.environ.get("BYTEDANCE_ASR_APP_KEY", "")
+ACCESS_KEY = os.environ.get("BYTEDANCE_ASR_ACCESS_KEY", "")
 RESOURCE_ID = os.environ.get("BYTEDANCE_ASR_RESOURCE_ID", "volc.bigasr.sauc.duration")
 WS_URL = os.environ.get("BYTEDANCE_ASR_WS_URL", "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel")
 
 # 音频参数
 SAMPLE_RATE = 16000
 CHANNELS = 1
+
+
+def is_configured():
+    """Return whether the optional ByteDance ASR channel is configured."""
+    return bool(APP_KEY and ACCESS_KEY)
 
 
 class ByteDanceASRProxy:
@@ -173,6 +178,9 @@ class ByteDanceASRProxy:
 
     def connect(self):
         """连接到字节跳动 ASR 服务"""
+        if not is_configured():
+            logger.error("[ASR-%s] ByteDance ASR is not configured", self.client_sid)
+            return False
         try:
             headers = {
                 "X-Api-App-Key": APP_KEY,

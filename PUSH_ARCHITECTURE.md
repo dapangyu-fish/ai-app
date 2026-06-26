@@ -71,7 +71,7 @@ CREATE TABLE device_tokens (
 | `fcm` | `{"app_id": "...debug"}` 或 `{}` | 不同 applicationId 用不同 service account |
 | `getui` | `{"app_id": "...", "vendor": "huawei"}` | 厂商通道（华为/小米/OPPO/vivo）|
 
-复合 PK `(user_id, channel, token)` 允许同 user 多设备 + 同设备多通道（如 Android 既走 FCM 又走 geTui）。
+复合 PK `(user_id, channel, token)` 允许同 user 多设备。客户端侧会避免同一设备同时注册 FCM/APNs 与 GeTui，防止重复通知。
 
 ### 2. 后端 dispatcher 模式
 
@@ -181,34 +181,39 @@ OpenIM v3.8 有 6+ 个 webhook。我们曾试过 `beforeOfflinePush`，**实测�
   - `{"env": "production"}` → `api.push.apple.com`
 - 410 / `BadDeviceToken` / `Unregistered` 返 `expired_token=True`，dispatcher 调用方 DELETE row
 
-### 5. FCM provider（`backend/push/fcm_provider.py`）⏳ 待实现
+### 5. FCM provider（`backend/push/fcm_provider.py`）✅ 已实现
 
-预期实现：
 - 服务账号 JSON 存 `/etc/fcm/service-account.json`
 - `google-auth` + `httpx` POST 到 `https://fcm.googleapis.com/v1/projects/<project>/messages:send`
 - payload: `{message: {token, notification: {title, body}, data: {...}}}`
-- `meta.app_id` 多 applicationId 时按这个选 service account（dev/release flavor）
+- `FCM_PROJECT_ID` 为空时 provider 返回配置错误，不阻塞 IM 主流程
 
-### 6. geTui provider（`backend/push/getui_provider.py`）⏳ 待实现
+### 6. GeTui provider（`backend/push/getui_provider.py`）✅ 已实现
 
-预期实现：
-- AppID/AppKey/MasterSecret 存 `.env`
-- 先调 `/auth_sign` 拿短期 token（24h）
-- `/push/single/cid` 推单设备，`token` 字段实际是 geTui 自己生成的 `clientID`
-- `meta.vendor` 可指定厂商通道（huawei/xiaomi/oppo/vivo）
+- 服务端环境变量：`GETUI_APP_ID` / `GETUI_APP_KEY` / `GETUI_MASTER_SECRET`，真实值只放 `myapp-ctl` 管理的 `/etc/myapp/secrets.d/push.env`
+- 先调 `POST /v2/{appId}/auth` 换接口 token，provider 内存缓存并在失效时刷新
+- `POST /v2/{appId}/push/single/cid` 推单个 CID；`device_tokens.token` 在该通道下就是 GeTui ClientID
+- `GETUI_APP_SECRET` 作为控制台凭证保留在服务端环境变量；当前 Android 原生桥只需要构建时注入 AppID，MasterSecret 严禁进入客户端
 
-### 7. 客户端上报 token（`lib/im/apns_service.dart` + iOS native）
+### 7. 客户端上报 token（`lib/im/apns_service.dart` / `lib/im/fcm_service.dart` / `lib/im/getui_service.dart`）
 
 注册流程：
-1. 登录成功后 `IMService` 调 `ApnsService.instance.start()`（iOS only）
-2. 弹通知权限 → `registerForRemoteNotifications`
+1. 登录成功后 `IMService` 启动推送服务：
+   - 默认：iOS 走 APNs，Android 走 FCM
+   - Android 构建时配置 `GETUI_ENABLED=true` 且注入 `GETUI_APP_ID` 后：优先走 GeTui，并注销同设备旧 FCM token，避免重复推送
+2. APNs：弹通知权限 → `registerForRemoteNotifications`
 3. iOS native `AppDelegate.swift` 在 `didRegisterForRemoteNotificationsWithDeviceToken` 回调里：
    - hex 化 deviceToken
    - **调 `detectApsEnvironment()` 真实读 entitlement**（见下文坑）
    - 用 MethodChannel 把 `{token, env}` 发给 Dart
-4. Dart 把 `'development'` 规约成 `'sandbox'`，POST `/api/im/push_token`：
+4. FCM/GeTui：SDK 获取 token/CID 后直接 POST `/api/im/push_token`
+5. Dart 把 APNs `'development'` 规约成 `'sandbox'`，POST `/api/im/push_token`：
    ```json
    { "channel": "apns", "token": "<hex>", "meta": {"env": "sandbox"|"production"} }
+   ```
+   GeTui 对应：
+   ```json
+   { "channel": "getui", "token": "<cid>", "meta": {"app_id": "<appid>", "platform": "android"} }
    ```
 
 注销流程（logout / 切账号）：
@@ -268,29 +273,34 @@ Body: { "channel": "apns", "token": "<token>" }
 
 ## 配置参考
 
-`backend/config.py`：
+服务端推送 secret 由 `myapp-ctl setup` 写入 `/etc/myapp/secrets.d/push.env`
+和 `/etc/myapp/secrets.d/files/**`，权限建议 `600 root:root`：
 
-```python
-# OpenIM webhook 共享密钥
-OPENIM_WEBHOOK_SECRET = os.environ.get("OPENIM_WEBHOOK_SECRET", "...")
+```bash
+APNS_KEY_PATH=/etc/myapp/secrets.d/files/apns/AuthKey_XXXXXXXXXX.p8
+APNS_KEY_ID=XXXXXXXXXX
+APNS_TEAM_ID=XXXXXXXXXX
+APNS_BUNDLE_ID=dapangyu.fish.myapp
+APNS_USE_SANDBOX=true
 
-# APNs（iOS）
-APNS_KEY_PATH = "/etc/apns/AuthKey_8NM9U7CJCJ.p8"
-APNS_KEY_ID   = "8NM9U7CJCJ"
-APNS_TEAM_ID  = "5CD2U23TPH"
-APNS_BUNDLE_ID = "dapangyu.fish.myapp"
+FCM_SERVICE_ACCOUNT_PATH=/etc/myapp/secrets.d/files/fcm/service-account.json
+FCM_PROJECT_ID=
 
-# 老兜底 flag —— 仅当 device_tokens row 的 meta 里没 env 字段时启用（迁移完成后这条
-# 路径应该走不到，因为新代码注册时一定带 meta.env）
-APNS_USE_SANDBOX = True
+GETUI_BASE_URL=https://restapi.getui.com/v2
+GETUI_APP_ID=
+GETUI_APP_KEY=
+GETUI_APP_SECRET=
+GETUI_MASTER_SECRET=
+GETUI_TTL_MS=7200000
+```
 
-# FCM（待加）
-# FCM_SERVICE_ACCOUNT_PATH = "/etc/fcm/service-account.json"
+Android 客户端启用 GeTui 时，构建环境注入 AppID，但不提交到仓库；iOS 继续走 APNs，不引入 GeTui iOS SDK：
 
-# geTui（待加）
-# GETUI_APP_ID = "..."
-# GETUI_APP_KEY = "..."
-# GETUI_MASTER_SECRET = "..."
+```bash
+export GETUI_APP_ID=...
+flutter build apk \
+  --dart-define=GETUI_ENABLED=true \
+  --dart-define=GETUI_APP_ID="$GETUI_APP_ID"
 ```
 
 ## 排查清单
@@ -321,8 +331,8 @@ APNS_USE_SANDBOX = True
 
 ## 后续扩展点
 
-- [ ] `backend/push/fcm_provider.py` + Flutter Firebase 集成（Android 海外）
-- [ ] `backend/push/getui_provider.py` + 客户端 geTui SDK 集成（Android 国内）
+- [x] `backend/push/fcm_provider.py` + Flutter Firebase 集成（Android 海外）
+- [x] `backend/push/getui_provider.py` + 客户端 GeTui SDK 集成（Android 国内）
 - [ ] APNs VoIP / Live Activity（独立 channel，独立 .p8 也独立 push-type）
 - [ ] iOS Notification Service Extension：从 `custom.conversation_id` 跳到具体会话
 - [ ] 用户级开关：app 内可关闭某些类型推送（@消息 / 群消息 / 静音对话）

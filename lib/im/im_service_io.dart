@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import '../i18n/framework_strings.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
@@ -13,6 +14,7 @@ import '../auth/auth_service.dart';
 import '../config/app_config.dart';
 import 'apns_service.dart';
 import 'fcm_service.dart';
+import 'getui_service.dart';
 
 /// IMService.friendshipStream 推的事件类型
 enum FriendshipEventKind {
@@ -66,6 +68,11 @@ class IMService {
   bool _loggedIn = false;
   // 复用进行中的 login future，防止 `_AuthGate.build()` 反复触发登录（rebuild 重入）
   Future<bool>? _loginInFlight;
+  Future<bool>? _reconnectInFlight;
+
+  static const Duration _sdkLoginTimeout = Duration(seconds: 15);
+  static const Duration _sdkSendTimeout = Duration(seconds: 25);
+  static const Duration _sdkReadTimeout = Duration(seconds: 12);
 
   final ValueNotifier<bool> connectionNotifier = ValueNotifier(false);
   final ValueNotifier<int> unreadCountNotifier = ValueNotifier(0);
@@ -241,7 +248,7 @@ class IMService {
       return false;
     }
     if (!AuthService.isLoggedIn) return false;
-    if (_loggedIn) return true;
+    if (_loggedIn && connectionNotifier.value) return true;
     if (_loginInFlight != null) return _loginInFlight!;
 
     final future = _doLogin();
@@ -262,6 +269,9 @@ class IMService {
     Object? lastError;
     for (var attempt = 1; attempt <= 3; attempt++) {
       try {
+        if (_loggedIn && !connectionNotifier.value) {
+          await _logoutSdkBestEffort();
+        }
         final credentials = await _fetchIMCredentials();
         if (credentials == null) {
           lastError = 'fetch credentials returned null';
@@ -276,19 +286,15 @@ class IMService {
           // 防止 wipe 删目录后 SDK login 打不开 SQLite
           await init();
 
-          await OpenIM.iMManager.login(userID: _imUserId!, token: _imToken!);
+          await OpenIM.iMManager
+              .login(userID: _imUserId!, token: _imToken!)
+              .timeout(_sdkLoginTimeout);
 
           _loggedIn = true;
           connectionNotifier.value = true;
           await _updateUnreadCount();
 
-          // iOS 真机：启动 APNs（弹权限 → 拿 deviceToken → 上传后端）
-          // Android：启动 FCM（同样流程，走 Firebase Messaging）
-          // 两个都是 noop-safe on unsupported platforms（kIsWeb / 桌面 / 不匹配的 OS）
-          // ignore: unawaited_futures
-          ApnsService.instance.start();
-          // ignore: unawaited_futures
-          FcmService.instance.start();
+          _startPushServices();
 
           debugPrint('[IM] 登录成功: $_imUserId (attempt $attempt/3)');
           return true;
@@ -308,7 +314,7 @@ class IMService {
   Future<void> logout() async {
     try {
       if (_loggedIn) {
-        await OpenIM.iMManager.logout();
+        await OpenIM.iMManager.logout().timeout(const Duration(seconds: 5));
       }
     } catch (_) {}
     _loggedIn = false;
@@ -345,14 +351,13 @@ class IMService {
     if (_imToken != null && _imUserId != null) {
       try {
         await init();
-        await OpenIM.iMManager.login(userID: _imUserId!, token: _imToken!);
+        await OpenIM.iMManager
+            .login(userID: _imUserId!, token: _imToken!)
+            .timeout(_sdkLoginTimeout);
         _loggedIn = true;
         connectionNotifier.value = true;
         await _updateUnreadCount();
-        // ignore: unawaited_futures
-        ApnsService.instance.start();
-        // ignore: unawaited_futures
-        FcmService.instance.start();
+        _startPushServices();
         return true;
       } catch (e) {
         debugPrint('[IM] 恢复会话失败, 尝试重新获取 token: $e');
@@ -360,6 +365,63 @@ class IMService {
       }
     }
     return false;
+  }
+
+  void _startPushServices() {
+    if (GetuiService.isConfigured) {
+      // GeTui 与 APNs/FCM 同时注册会导致同一设备重复推送；配置后优先使用 GeTui。
+      // ignore: unawaited_futures
+      GetuiService.instance.start();
+      // ignore: unawaited_futures
+      ApnsService.instance.unregister();
+      // ignore: unawaited_futures
+      FcmService.instance.unregister();
+      return;
+    }
+    // iOS 真机：启动 APNs（弹权限 → 拿 deviceToken → 上传后端）
+    // Android：启动 FCM（同样流程，走 Firebase Messaging）
+    // 两个都是 noop-safe on unsupported platforms（kIsWeb / 桌面 / 不匹配的 OS）
+    // ignore: unawaited_futures
+    ApnsService.instance.start();
+    // ignore: unawaited_futures
+    FcmService.instance.start();
+  }
+
+  /// 确保 SDK 处于可发送/可拉取状态。
+  ///
+  /// `_loggedIn` 是我们自己的状态位，OpenIM 底层长连接断开时它不会自动变回
+  /// false。之前这种情况下 `login()` 会因为 `_loggedIn=true` 直接返回，导致
+  /// 好友列表读到本地旧缓存、发消息一直处于 sending。这里把连接状态也纳入判定。
+  Future<bool> ensureConnected() async {
+    if (!isPlatformSupported || !AuthService.isLoggedIn) return false;
+    if (_loggedIn && connectionNotifier.value) return true;
+    if (_reconnectInFlight != null) return _reconnectInFlight!;
+
+    final future = _reconnect();
+    _reconnectInFlight = future;
+    try {
+      return await future;
+    } finally {
+      _reconnectInFlight = null;
+    }
+  }
+
+  Future<bool> _reconnect() async {
+    debugPrint('[IM] 连接未就绪，尝试重连');
+    if (_loggedIn && !connectionNotifier.value) {
+      await _logoutSdkBestEffort();
+    }
+    _loggedIn = false;
+    connectionNotifier.value = false;
+    return login();
+  }
+
+  Future<void> _logoutSdkBestEffort() async {
+    try {
+      await OpenIM.iMManager.logout().timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('[IM] 重连前 logout 忽略失败: $e');
+    }
   }
 
   // ---------- 消息操作 ----------
@@ -386,17 +448,24 @@ class IMService {
       return null;
     }
     try {
-      return await OpenIM.iMManager.messageManager.sendMessage(
-        message: message,
-        offlinePushInfo: OfflinePushInfo(
-          title: T.current.imPushNewMessage,
-          desc: previewText.length > 50
-              ? '${previewText.substring(0, 50)}...'
-              : previewText,
-        ),
-        userID: userID,
-        groupID: groupID,
-      );
+      final ready = await ensureConnected();
+      if (!ready) {
+        debugPrint('[IM] 发送失败: IM 未连接');
+        return null;
+      }
+      return await OpenIM.iMManager.messageManager
+          .sendMessage(
+            message: message,
+            offlinePushInfo: OfflinePushInfo(
+              title: T.current.imPushNewMessage,
+              desc: previewText.length > 50
+                  ? '${previewText.substring(0, 50)}...'
+                  : previewText,
+            ),
+            userID: userID,
+            groupID: groupID,
+          )
+          .timeout(_sdkSendTimeout);
     } catch (e) {
       debugPrint('[IM] 发送失败: $e');
       return null;
@@ -436,17 +505,21 @@ class IMService {
       return null;
     }
     try {
+      final ready = await ensureConnected();
+      if (!ready) return null;
       final msg = await OpenIM.iMManager.messageManager
           .createImageMessageFromFullPath(imagePath: imagePath);
-      return await OpenIM.iMManager.messageManager.sendMessage(
-        message: msg,
-        offlinePushInfo: OfflinePushInfo(
-          title: T.current.imPushNewMessage,
-          desc: T.current.imPushImagePreview,
-        ),
-        userID: userID,
-        groupID: groupID,
-      );
+      return await OpenIM.iMManager.messageManager
+          .sendMessage(
+            message: msg,
+            offlinePushInfo: OfflinePushInfo(
+              title: T.current.imPushNewMessage,
+              desc: T.current.imPushImagePreview,
+            ),
+            userID: userID,
+            groupID: groupID,
+          )
+          .timeout(_sdkSendTimeout);
     } catch (e) {
       debugPrint('[IM] 发送图片失败: $e');
       return null;
@@ -621,9 +694,11 @@ class IMService {
   /// 只是清旧未读时）回调延迟或不触发，所以这里手动 _updateUnreadCount() 兜底。
   Future<void> markConversationRead({required String conversationID}) async {
     try {
-      await OpenIM.iMManager.conversationManager.markConversationMessageAsRead(
-        conversationID: conversationID,
-      );
+      final ready = await ensureConnected();
+      if (!ready) return;
+      await OpenIM.iMManager.conversationManager
+          .markConversationMessageAsRead(conversationID: conversationID)
+          .timeout(_sdkReadTimeout);
       // 立刻刷一次总未读数，不依赖回调时机
       await _updateUnreadCount();
     } catch (e) {
@@ -636,8 +711,11 @@ class IMService {
   /// 获取会话列表
   Future<List<ConversationInfo>> getConversationList() async {
     try {
+      final ready = await ensureConnected();
+      if (!ready) return [];
       final list = await OpenIM.iMManager.conversationManager
-          .getConversationListSplit(offset: 0, count: 100);
+          .getConversationListSplit(offset: 0, count: 100)
+          .timeout(_sdkReadTimeout);
       return list;
     } catch (e) {
       debugPrint('[IM] 获取会话列表失败: $e');
@@ -652,12 +730,15 @@ class IMService {
     int count = 20,
   }) async {
     try {
+      final ready = await ensureConnected();
+      if (!ready) return [];
       final result = await OpenIM.iMManager.messageManager
           .getAdvancedHistoryMessageList(
             conversationID: conversationID,
             startMsg: startMsg,
             count: count,
-          );
+          )
+          .timeout(_sdkReadTimeout);
       return result.messageList ?? [];
     } catch (e) {
       debugPrint('[IM] 获取历史消息失败: $e');
@@ -671,9 +752,11 @@ class IMService {
   Future<List<PublicUserInfo>> getUsersInfo(List<String> userIDList) async {
     if (userIDList.isEmpty) return [];
     try {
-      return await OpenIM.iMManager.userManager.getUsersInfo(
-        userIDList: userIDList,
-      );
+      final ready = await ensureConnected();
+      if (!ready) return [];
+      return await OpenIM.iMManager.userManager
+          .getUsersInfo(userIDList: userIDList)
+          .timeout(_sdkReadTimeout);
     } catch (e) {
       debugPrint('[IM] 获取用户信息失败: $e');
       return [];
@@ -693,8 +776,49 @@ class IMService {
     final uniqIds = userIDList.where((s) => s.isNotEmpty).toSet().toList();
     if (uniqIds.isEmpty) return const {};
 
+    final result = <String, Map<String, dynamic>>{};
+    try {
+      final token = AuthService.token;
+      final uri = Uri.parse(
+        '$_backendUrl/api/im/users/profiles',
+      ).replace(queryParameters: {'ids': uniqIds.join(',')});
+      final resp = await http
+          .get(
+            uri,
+            headers: token == null ? null : {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode == 200) {
+        final data = json.decode(resp.body) as Map<String, dynamic>;
+        for (final raw in List<Map<String, dynamic>>.from(
+          data['users'] ?? const [],
+        )) {
+          final id = raw['im_user_id']?.toString() ?? '';
+          if (id.isEmpty) continue;
+          final face =
+              raw['face_url']?.toString() ??
+              raw['avatar_url']?.toString() ??
+              '';
+          result[id] = {
+            'im_user_id': id,
+            'nickname': raw['nickname']?.toString() ?? '',
+            'email': raw['email']?.toString() ?? '',
+            'face_url': face,
+            'avatar_url': face,
+          };
+        }
+      } else {
+        debugPrint('[IM] profiles lookup 失败 ${resp.statusCode}: ${resp.body}');
+      }
+    } catch (e) {
+      debugPrint('[IM] profiles lookup 异常: $e');
+    }
+
+    final missingIds = uniqIds.where((id) => !result.containsKey(id)).toList();
+    if (missingIds.isEmpty) return result;
+
     final entries = await Future.wait(
-      uniqIds.map((id) async {
+      missingIds.map((id) async {
         try {
           final hits = await searchUsers(id);
           for (final u in hits) {
@@ -708,9 +832,10 @@ class IMService {
         return null;
       }),
     );
-    return Map.fromEntries(
+    result.addEntries(
       entries.whereType<MapEntry<String, Map<String, dynamic>>>(),
     );
+    return result;
   }
 
   // ---------- 群聊操作 ----------
@@ -741,7 +866,11 @@ class IMService {
   /// 获取已加入的群列表
   Future<List<GroupInfo>> getJoinedGroups() async {
     try {
-      return await OpenIM.iMManager.groupManager.getJoinedGroupList();
+      final ready = await ensureConnected();
+      if (!ready) return [];
+      return await OpenIM.iMManager.groupManager.getJoinedGroupList().timeout(
+        _sdkReadTimeout,
+      );
     } catch (e) {
       debugPrint('[IM] 获取群列表失败: $e');
       return [];
@@ -753,7 +882,11 @@ class IMService {
   /// 拉好友列表
   Future<List<FriendInfo>> getFriendList() async {
     try {
-      return await OpenIM.iMManager.friendshipManager.getFriendList();
+      final ready = await ensureConnected();
+      if (!ready) return [];
+      return await OpenIM.iMManager.friendshipManager.getFriendList().timeout(
+        _sdkReadTimeout,
+      );
     } catch (e) {
       debugPrint('[IM] 获取好友列表失败: $e');
       return [];
@@ -768,12 +901,17 @@ class IMService {
     String reqMsg = '',
   }) async {
     try {
-      await OpenIM.iMManager.friendshipManager.addFriend(
-        userID: userID,
-        reason: reqMsg,
-      );
+      final ready = await ensureConnected();
+      if (!ready) return false;
+      await OpenIM.iMManager.friendshipManager
+          .addFriend(userID: userID, reason: reqMsg)
+          .timeout(_sdkReadTimeout);
       return true;
     } catch (e) {
+      if (_isAlreadyFriendsError(e)) {
+        debugPrint('[IM] 好友关系已存在，按发送申请成功处理: $userID');
+        return true;
+      }
       debugPrint('[IM] 发送好友申请失败: $e');
       return false;
     }
@@ -782,8 +920,11 @@ class IMService {
   /// 我收到的好友申请列表（待处理 / 历史）
   Future<List<FriendApplicationInfo>> getIncomingFriendApplications() async {
     try {
+      final ready = await ensureConnected();
+      if (!ready) return [];
       return await OpenIM.iMManager.friendshipManager
-          .getFriendApplicationListAsRecipient();
+          .getFriendApplicationListAsRecipient()
+          .timeout(_sdkReadTimeout);
     } catch (e) {
       debugPrint('[IM] 获取收到的好友申请失败: $e');
       return [];
@@ -793,8 +934,11 @@ class IMService {
   /// 我发出的好友申请列表（待对方处理）
   Future<List<FriendApplicationInfo>> getOutgoingFriendApplications() async {
     try {
+      final ready = await ensureConnected();
+      if (!ready) return [];
       return await OpenIM.iMManager.friendshipManager
-          .getFriendApplicationListAsApplicant();
+          .getFriendApplicationListAsApplicant()
+          .timeout(_sdkReadTimeout);
     } catch (e) {
       debugPrint('[IM] 获取发出的好友申请失败: $e');
       return [];
@@ -807,10 +951,11 @@ class IMService {
     String handleMsg = '',
   }) async {
     try {
-      await OpenIM.iMManager.friendshipManager.acceptFriendApplication(
-        userID: fromUserID,
-        handleMsg: handleMsg,
-      );
+      final ready = await ensureConnected();
+      if (!ready) return false;
+      await OpenIM.iMManager.friendshipManager
+          .acceptFriendApplication(userID: fromUserID, handleMsg: handleMsg)
+          .timeout(_sdkReadTimeout);
       return true;
     } catch (e) {
       debugPrint('[IM] 同意好友申请失败: $e');
@@ -824,10 +969,11 @@ class IMService {
     String handleMsg = '',
   }) async {
     try {
-      await OpenIM.iMManager.friendshipManager.refuseFriendApplication(
-        userID: fromUserID,
-        handleMsg: handleMsg,
-      );
+      final ready = await ensureConnected();
+      if (!ready) return false;
+      await OpenIM.iMManager.friendshipManager
+          .refuseFriendApplication(userID: fromUserID, handleMsg: handleMsg)
+          .timeout(_sdkReadTimeout);
       return true;
     } catch (e) {
       debugPrint('[IM] 拒绝好友申请失败: $e');
@@ -838,7 +984,11 @@ class IMService {
   /// 删除好友
   Future<bool> deleteFriend(String userID) async {
     try {
-      await OpenIM.iMManager.friendshipManager.deleteFriend(userID: userID);
+      final ready = await ensureConnected();
+      if (!ready) return false;
+      await OpenIM.iMManager.friendshipManager
+          .deleteFriend(userID: userID)
+          .timeout(_sdkReadTimeout);
       return true;
     } catch (e) {
       debugPrint('[IM] 删除好友失败: $e');
@@ -953,10 +1103,15 @@ class IMService {
   Future<void> _refreshIMToken() async {
     final credentials = await _fetchIMCredentials();
     if (credentials != null) {
+      _imUserId = credentials['im_user_id'] ?? _imUserId;
       _imToken = credentials['im_token'];
+      _wsUrl = credentials['ws_url'] ?? _wsUrl;
+      _apiUrl = credentials['api_url'] ?? _apiUrl;
       await _saveCredentials();
       try {
-        await OpenIM.iMManager.login(userID: _imUserId!, token: _imToken!);
+        await OpenIM.iMManager
+            .login(userID: _imUserId!, token: _imToken!)
+            .timeout(_sdkLoginTimeout);
         _loggedIn = true;
         connectionNotifier.value = true;
       } catch (e) {
@@ -1025,13 +1180,18 @@ class IMService {
 
   /// 好友 userID 集合（@im_search_users 标记 is_friend 用）。
   Future<Set<String>> getFriendIds() async {
-    final friends = await getFriendList();
-    return friends.map((f) => f.userID).whereType<String>().toSet();
+    final friends = await getFriendListAsMaps();
+    return friends
+        .map((f) => f['user_id']?.toString() ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
   }
 
   Future<List<Map<String, dynamic>>> getFriendListAsMaps() async {
     final friends = await getFriendList();
-    return friends.map(_friendInfoToMap).toList();
+    final local = friends.map(_friendInfoToMap).toList();
+    final server = await _fetchServerFriendListAsMaps();
+    return _mergeFriendMaps(local, server);
   }
 
   Future<List<Map<String, dynamic>>>
@@ -1092,6 +1252,98 @@ class IMService {
       'face_url': f.faceURL ?? '',
       'remark': f.remark ?? '',
     };
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchServerFriendListAsMaps() async {
+    try {
+      final token = AuthService.token;
+      if (token == null || token.isEmpty) return const [];
+      final uri = Uri.parse('$_backendUrl/api/im/friends');
+      final resp = await http
+          .get(uri, headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) {
+        debugPrint('[IM] 服务端好友列表失败 ${resp.statusCode}: ${resp.body}');
+        return const [];
+      }
+
+      final data = json.decode(resp.body);
+      if (data is! Map<String, dynamic>) return const [];
+      final rawFriends = data['friends'];
+      if (rawFriends is! List) return const [];
+
+      final friends = <Map<String, dynamic>>[];
+      for (final raw in rawFriends) {
+        if (raw is! Map) continue;
+        final id =
+            raw['user_id']?.toString() ?? raw['im_user_id']?.toString() ?? '';
+        if (id.isEmpty) continue;
+        final face =
+            raw['face_url']?.toString() ?? raw['avatar_url']?.toString() ?? '';
+        friends.add({
+          'user_id': id,
+          'nickname': raw['nickname']?.toString() ?? '',
+          'face_url': face,
+          'avatar_url': face,
+          'remark': raw['remark']?.toString() ?? '',
+          'email': raw['email']?.toString() ?? '',
+          'source': raw['source']?.toString() ?? 'server',
+        });
+      }
+      return friends;
+    } catch (e) {
+      debugPrint('[IM] 服务端好友列表异常: $e');
+      return const [];
+    }
+  }
+
+  List<Map<String, dynamic>> _mergeFriendMaps(
+    List<Map<String, dynamic>> local,
+    List<Map<String, dynamic>> server,
+  ) {
+    final byId = <String, Map<String, dynamic>>{};
+    for (final item in [...local, ...server]) {
+      final id = item['user_id']?.toString() ?? '';
+      if (id.isEmpty) continue;
+      final prev = byId[id];
+      if (prev == null) {
+        byId[id] = Map<String, dynamic>.from(item);
+        continue;
+      }
+      final merged = Map<String, dynamic>.from(prev);
+      for (final entry in item.entries) {
+        final value = entry.value;
+        if (value != null && value.toString().isNotEmpty) {
+          merged[entry.key] = value;
+        }
+      }
+      byId[id] = merged;
+    }
+    final result = byId.values.toList();
+    result.sort((a, b) {
+      final an =
+          (a['remark']?.toString().isNotEmpty == true
+                  ? a['remark']
+                  : a['nickname'])
+              ?.toString()
+              .toLowerCase();
+      final bn =
+          (b['remark']?.toString().isNotEmpty == true
+                  ? b['remark']
+                  : b['nickname'])
+              ?.toString()
+              .toLowerCase();
+      return (an ?? '').compareTo(bn ?? '');
+    });
+    return result;
+  }
+
+  bool _isAlreadyFriendsError(Object e) {
+    if (e is PlatformException && e.code == '1304') return true;
+    final text = e.toString().toLowerCase();
+    return text.contains('1304') ||
+        text.contains('relationshipalreadyerror') ||
+        text.contains('already friends');
   }
 
   Map<String, dynamic> _friendApplicationToMap(FriendApplicationInfo a) {

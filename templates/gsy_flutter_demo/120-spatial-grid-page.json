@@ -1,0 +1,490 @@
+{
+  "dsl": "3.3",
+  "appid": "1bb841a5-55f6-5e86-b717-1f5933dd7353",
+  "meta": {
+    "name": "gsy_flutter_demo/120-spatial-grid-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "Cool Spatial Grid",
+      "en": "Cool Spatial Grid"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：Cool Spatial Grid",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "Cool Spatial Grid",
+      "sourcePath": "lib/widget/visual/spatial_grid_page.dart",
+      "deferredAlias": "spatial_grid_page",
+      "widgetClass": "SpatialGridPage",
+      "category": "visual",
+      "routeIndex": 120,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-spatial-grid-mode-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "Cool Spatial Grid",
+      "upstreamSource": "lib/widget/visual/spatial_grid_page.dart",
+      "upstreamWidget": "SpatialGridPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-spatial-grid-mode-v1",
+      "cyberMode": false
+    },
+    "functions": {
+      "toggleMode": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.cyberMode",
+              "value": {
+                "!": [
+                  {
+                    "var": "global.cyberMode"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    "computed": {
+      "modeIcon": {
+        "if": [
+          {
+            "var": "global.cyberMode"
+          },
+          "bolt",
+          "dark_mode"
+        ]
+      },
+      "fabBg": {
+        "if": [
+          {
+            "var": "global.cyberMode"
+          },
+          "#FF212121",
+          "#FF000000"
+        ]
+      },
+      "fabIcon": {
+        "if": [
+          {
+            "var": "global.cyberMode"
+          },
+          "#FF00FFFF",
+          "#FFFFFFFF"
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "animated_canvas",
+              "backgroundColor": "#FFFFFF",
+              "speed": 0.35,
+              "layers": [
+                {
+                  "kind": "segments",
+                  "count": 60,
+                  "x1": {
+                    "-": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      "half"
+                    ]
+                  },
+                  "y1": "y",
+                  "x2": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      "half"
+                    ]
+                  },
+                  "y2": "y",
+                  "color": "#000000",
+                  "alpha": 0.8,
+                  "strokeWidth": 1,
+                  "strokeCap": "round",
+                  "locals": {
+                    "depth": {
+                      "/": [
+                        {
+                          "+": [
+                            "i",
+                            1
+                          ]
+                        },
+                        60
+                      ]
+                    },
+                    "y": {
+                      "+": [
+                        {
+                          "*": [
+                            "h",
+                            0.2
+                          ]
+                        },
+                        {
+                          "*": [
+                            "depth",
+                            {
+                              "*": [
+                                "h",
+                                0.68
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "half": {
+                      "*": [
+                        "w",
+                        {
+                          "+": [
+                            0.08,
+                            {
+                              "*": [
+                                "depth",
+                                0.82
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 60,
+                  "x1": "xTop",
+                  "y1": {
+                    "*": [
+                      "h",
+                      0.2
+                    ]
+                  },
+                  "x2": "xBottom",
+                  "y2": {
+                    "*": [
+                      "h",
+                      0.88
+                    ]
+                  },
+                  "color": "#000000",
+                  "alpha": 0.8,
+                  "strokeWidth": 1,
+                  "strokeCap": "round",
+                  "locals": {
+                    "k": {
+                      "-": [
+                        "i",
+                        30
+                      ]
+                    },
+                    "xTop": {
+                      "+": [
+                        {
+                          "/": [
+                            "w",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            "k",
+                            3.2
+                          ]
+                        }
+                      ]
+                    },
+                    "xBottom": {
+                      "+": [
+                        {
+                          "/": [
+                            "w",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            "k",
+                            12.0
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "visible": {
+              "!": [
+                {
+                  "var": "global.cyberMode"
+                }
+              ]
+            }
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "animated_canvas",
+              "backgroundColor": "#000000",
+              "speed": 1,
+              "layers": [
+                {
+                  "kind": "segments",
+                  "count": 26,
+                  "x1": {
+                    "-": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      "half"
+                    ]
+                  },
+                  "y1": "y",
+                  "x2": {
+                    "+": [
+                      {
+                        "/": [
+                          "w",
+                          2
+                        ]
+                      },
+                      "half"
+                    ]
+                  },
+                  "y2": "y",
+                  "color": "#00E5FF",
+                  "alpha": "a",
+                  "strokeWidth": 1,
+                  "strokeCap": "round",
+                  "blendMode": "plus",
+                  "locals": {
+                    "depth": {
+                      "/": [
+                        {
+                          "+": [
+                            "i",
+                            1
+                          ]
+                        },
+                        26
+                      ]
+                    },
+                    "y": {
+                      "+": [
+                        {
+                          "*": [
+                            "h",
+                            0.52
+                          ]
+                        },
+                        {
+                          "*": [
+                            260,
+                            {
+                              "-": [
+                                1,
+                                "depth"
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "*": [
+                            {
+                              "sin": {
+                                "+": [
+                                  "t",
+                                  "i"
+                                ]
+                              }
+                            },
+                            3
+                          ]
+                        }
+                      ]
+                    },
+                    "half": {
+                      "*": [
+                        "w",
+                        {
+                          "+": [
+                            0.08,
+                            {
+                              "*": [
+                                "depth",
+                                0.55
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    "a": {
+                      "clamp": [
+                        {
+                          "-": [
+                            1,
+                            "depth"
+                          ]
+                        },
+                        0.05,
+                        0.8
+                      ]
+                    }
+                  }
+                },
+                {
+                  "kind": "segments",
+                  "count": 19,
+                  "x1": "x0",
+                  "y1": {
+                    "+": [
+                      {
+                        "*": [
+                          "h",
+                          0.52
+                        ]
+                      },
+                      260
+                    ]
+                  },
+                  "x2": "x1",
+                  "y2": {
+                    "-": [
+                      {
+                        "*": [
+                          "h",
+                          0.52
+                        ]
+                      },
+                      220
+                    ]
+                  },
+                  "color": "#FFFFFF",
+                  "alpha": 0.25,
+                  "strokeWidth": 1,
+                  "strokeCap": "round",
+                  "blendMode": "plus",
+                  "locals": {
+                    "k": {
+                      "-": [
+                        "i",
+                        9
+                      ]
+                    },
+                    "x0": {
+                      "+": [
+                        {
+                          "/": [
+                            "w",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            "k",
+                            12
+                          ]
+                        }
+                      ]
+                    },
+                    "x1": {
+                      "+": [
+                        {
+                          "/": [
+                            "w",
+                            2
+                          ]
+                        },
+                        {
+                          "*": [
+                            "k",
+                            42
+                          ]
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "visible": {
+              "var": "global.cyberMode"
+            }
+          },
+          {
+            "type": "positioned",
+            "right": 24,
+            "bottom": 24,
+            "child": {
+              "type": "container",
+              "width": 56,
+              "height": 56,
+              "shape": "circle",
+              "color": "{{ global.fabBg }}",
+              "alignment": "center",
+              "onTap": {
+                "call": "@global.toggleMode",
+                "args": {}
+              },
+              "children": [
+                {
+                  "type": "icon",
+                  "name": "{{ global.modeIcon }}",
+                  "size": 24,
+                  "color": "{{ global.fabIcon }}"
+                }
+              ]
+            }
+          }
+        ],
+        "appBar": {
+          "title": ""
+        }
+      }
+    ]
+  }
+}

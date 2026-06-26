@@ -1,0 +1,512 @@
+{
+  "dsl": "3.3",
+  "appid": "7344912c-17d1-54cf-8599-46618162a5f6",
+  "meta": {
+    "name": "gsy_flutter_demo/067-canvas-click-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "纯 Canvas 绘制闹钟",
+      "en": "Canvas alarm clock"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：纯 Canvas 绘制闹钟",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "纯 Canvas 绘制闹钟",
+      "sourcePath": "lib/widget/canvas/canvas_click_demo_page.dart",
+      "deferredAlias": "canvas_click_demo_page",
+      "widgetClass": "CanvasClickDemoPage",
+      "category": "canvas",
+      "routeIndex": 67,
+      "portVersion": "json-dsl-alarm-clock-canvas-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "纯 Canvas 绘制闹钟",
+      "upstreamSource": "lib/widget/canvas/canvas_click_demo_page.dart",
+      "upstreamWidget": "CanvasClickDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-alarm-clock-canvas-v1",
+      "tick": 0,
+      "shake": false
+    },
+    "functions": {
+      "tick": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.tick",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.tick"
+                      },
+                      1
+                    ]
+                  },
+                  60
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "toggle": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.shake",
+              "value": {
+                "!": [
+                  {
+                    "var": "global.shake"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "CanvasClickDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "interval_action",
+              "intervalMs": 800,
+              "runImmediately": true,
+              "action": {
+                "call": "@global.tick",
+                "args": {}
+              },
+              "child": {
+                "type": "container",
+                "layout": "column",
+                "children": [],
+                "color": "#FFFFFF"
+              }
+            }
+          },
+          {
+            "type": "positioned",
+            "left": 45,
+            "top": 220,
+            "child": {
+              "type": "gesture_detector",
+              "onTap": {
+                "call": "@global.toggle",
+                "args": {}
+              },
+              "child": {
+                "type": "transform",
+                "rotateZ": {
+                  "if": [
+                    {
+                      "var": "global.shake"
+                    },
+                    3,
+                    0
+                  ]
+                },
+                "child": {
+                  "type": "animated_canvas",
+                  "width": 300,
+                  "height": 300,
+                  "backgroundColor": "#00000000",
+                  "speed": 0,
+                  "variables": {
+                    "tick": "{{ global.tick }}"
+                  },
+                  "layers": [
+                    {
+                      "kind": "segments",
+                      "count": 1,
+                      "x1": 150,
+                      "y1": {
+                        "-": [
+                          150,
+                          100
+                        ]
+                      },
+                      "x2": 150,
+                      "y2": 28,
+                      "color": "#FF9800",
+                      "strokeWidth": 10,
+                      "strokeCap": "round"
+                    },
+                    {
+                      "kind": "segments",
+                      "count": 2,
+                      "x1": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "cos": "angle"
+                              },
+                              108
+                            ]
+                          }
+                        ]
+                      },
+                      "y1": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "sin": "angle"
+                              },
+                              108
+                            ]
+                          }
+                        ]
+                      },
+                      "x2": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "cos": "angle"
+                              },
+                              132
+                            ]
+                          }
+                        ]
+                      },
+                      "y2": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "sin": "angle"
+                              },
+                              132
+                            ]
+                          }
+                        ]
+                      },
+                      "color": "#FFC107",
+                      "strokeWidth": 10,
+                      "strokeCap": "round",
+                      "locals": {
+                        "angle": {
+                          "+": [
+                            {
+                              "*": [
+                                60,
+                                {
+                                  "/": [
+                                    3.141592653589793,
+                                    180
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "*": [
+                                "i",
+                                {
+                                  "*": [
+                                    60,
+                                    {
+                                      "/": [
+                                        3.141592653589793,
+                                        180
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "kind": "circle",
+                      "x": 150,
+                      "y": 28,
+                      "radius": 8,
+                      "color": "#FF9800"
+                    },
+                    {
+                      "kind": "circle",
+                      "x": 96,
+                      "y": 64,
+                      "radius": 28,
+                      "color": "#FFC107"
+                    },
+                    {
+                      "kind": "circle",
+                      "x": 204,
+                      "y": 64,
+                      "radius": 28,
+                      "color": "#FFC107"
+                    },
+                    {
+                      "kind": "circle",
+                      "x": 150,
+                      "y": 150,
+                      "radius": 100,
+                      "color": "#448AFF",
+                      "style": "stroke",
+                      "strokeWidth": 14
+                    },
+                    {
+                      "kind": "segments",
+                      "count": 12,
+                      "x1": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "cos": "a"
+                              },
+                              74
+                            ]
+                          }
+                        ]
+                      },
+                      "y1": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "sin": "a"
+                              },
+                              74
+                            ]
+                          }
+                        ]
+                      },
+                      "x2": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "cos": "a"
+                              },
+                              82
+                            ]
+                          }
+                        ]
+                      },
+                      "y2": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "sin": "a"
+                              },
+                              82
+                            ]
+                          }
+                        ]
+                      },
+                      "color": "#000000",
+                      "strokeWidth": 5,
+                      "strokeCap": "round",
+                      "locals": {
+                        "a": {
+                          "*": [
+                            "i",
+                            {
+                              "/": [
+                                {
+                                  "*": [
+                                    3.141592653589793,
+                                    2
+                                  ]
+                                },
+                                12
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "kind": "segments",
+                      "count": 1,
+                      "x1": 150,
+                      "y1": 150,
+                      "x2": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "cos": -1.25
+                              },
+                              46
+                            ]
+                          }
+                        ]
+                      },
+                      "y2": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "sin": -1.25
+                              },
+                              46
+                            ]
+                          }
+                        ]
+                      },
+                      "color": "#111111",
+                      "strokeWidth": 5,
+                      "strokeCap": "round"
+                    },
+                    {
+                      "kind": "segments",
+                      "count": 1,
+                      "x1": 150,
+                      "y1": 150,
+                      "x2": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "cos": 0.15
+                              },
+                              62
+                            ]
+                          }
+                        ]
+                      },
+                      "y2": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "sin": 0.15
+                              },
+                              62
+                            ]
+                          }
+                        ]
+                      },
+                      "color": "#111111",
+                      "strokeWidth": 5,
+                      "strokeCap": "round"
+                    },
+                    {
+                      "kind": "segments",
+                      "count": 1,
+                      "x1": 150,
+                      "y1": 150,
+                      "x2": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "cos": "secAngle"
+                              },
+                              66
+                            ]
+                          }
+                        ]
+                      },
+                      "y2": {
+                        "+": [
+                          150,
+                          {
+                            "*": [
+                              {
+                                "sin": "secAngle"
+                              },
+                              66
+                            ]
+                          }
+                        ]
+                      },
+                      "color": "#F44336",
+                      "strokeWidth": 2.5,
+                      "strokeCap": "round",
+                      "locals": {
+                        "secAngle": {
+                          "-": [
+                            {
+                              "*": [
+                                {
+                                  "%": [
+                                    "tick",
+                                    60
+                                  ]
+                                },
+                                {
+                                  "/": [
+                                    {
+                                      "*": [
+                                        3.141592653589793,
+                                        2
+                                      ]
+                                    },
+                                    60
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "/": [
+                                3.141592653589793,
+                                2
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "kind": "circle",
+                      "x": 150,
+                      "y": 150,
+                      "radius": 8,
+                      "color": "#FFC107"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

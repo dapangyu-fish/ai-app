@@ -1,0 +1,437 @@
+{
+  "dsl": "3.3",
+  "appid": "b6788a57-85df-528d-abcf-cf2009e5783a",
+  "meta": {
+    "name": "gsy_flutter_demo/076-anim-switch-layout-demo-page",
+    "version": "0.1.1",
+    "type": "app",
+    "displayName": {
+      "zh": "控件动画切换效果",
+      "en": "Widget switch animation"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：控件动画切换效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "控件动画切换效果",
+      "sourcePath": "lib/widget/animation/anim_switch_layout_demo_page.dart",
+      "deferredAlias": "anim_switch_layout_demo_page",
+      "widgetClass": "AnimSwitchLayoutDemoPage",
+      "category": "animation",
+      "routeIndex": 76,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "控件动画切换效果",
+      "upstreamSource": "lib/widget/animation/anim_switch_layout_demo_page.dart",
+      "upstreamWidget": "AnimSwitchLayoutDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4",
+      "currentIndex": 0
+    },
+    "functions": {
+      "next": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.currentIndex",
+              "value": {
+                "%": [
+                  {
+                    "+": [
+                      {
+                        "var": "global.currentIndex"
+                      },
+                      1
+                    ]
+                  },
+                  3
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "ControllerDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "container",
+              "children": [
+                {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "animated_positioned",
+                      "durationMs": 1000,
+                      "curve": "fastOutSlowIn",
+                      "left": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      0
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          0,
+                          180
+                        ]
+                      },
+                      "top": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      0
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          0,
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  {
+                                    "%": [
+                                      {
+                                        "+": [
+                                          {
+                                            "var": "global.currentIndex"
+                                          },
+                                          0
+                                        ]
+                                      },
+                                      3
+                                    ]
+                                  },
+                                  1
+                                ]
+                              },
+                              0,
+                              155
+                            ]
+                          }
+                        ]
+                      },
+                      "width": 170,
+                      "height": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      0
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              1
+                            ]
+                          },
+                          145,
+                          300
+                        ]
+                      },
+                      "child": {
+                        "type": "container",
+                        "children": [],
+                        "layout": "column",
+                        "color": "#FF5252"
+                      }
+                    },
+                    {
+                      "type": "animated_positioned",
+                      "durationMs": 1000,
+                      "curve": "fastOutSlowIn",
+                      "left": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      1
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          0,
+                          180
+                        ]
+                      },
+                      "top": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      1
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          0,
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  {
+                                    "%": [
+                                      {
+                                        "+": [
+                                          {
+                                            "var": "global.currentIndex"
+                                          },
+                                          1
+                                        ]
+                                      },
+                                      3
+                                    ]
+                                  },
+                                  1
+                                ]
+                              },
+                              0,
+                              155
+                            ]
+                          }
+                        ]
+                      },
+                      "width": 170,
+                      "height": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      1
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              1
+                            ]
+                          },
+                          145,
+                          300
+                        ]
+                      },
+                      "child": {
+                        "type": "container",
+                        "children": [],
+                        "layout": "column",
+                        "color": "#69F0AE"
+                      }
+                    },
+                    {
+                      "type": "animated_positioned",
+                      "durationMs": 1000,
+                      "curve": "fastOutSlowIn",
+                      "left": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      2
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          0,
+                          180
+                        ]
+                      },
+                      "top": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      2
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              0
+                            ]
+                          },
+                          0,
+                          {
+                            "if": [
+                              {
+                                "==": [
+                                  {
+                                    "%": [
+                                      {
+                                        "+": [
+                                          {
+                                            "var": "global.currentIndex"
+                                          },
+                                          2
+                                        ]
+                                      },
+                                      3
+                                    ]
+                                  },
+                                  1
+                                ]
+                              },
+                              0,
+                              155
+                            ]
+                          }
+                        ]
+                      },
+                      "width": 170,
+                      "height": {
+                        "if": [
+                          {
+                            "==": [
+                              {
+                                "%": [
+                                  {
+                                    "+": [
+                                      {
+                                        "var": "global.currentIndex"
+                                      },
+                                      2
+                                    ]
+                                  },
+                                  3
+                                ]
+                              },
+                              1
+                            ]
+                          },
+                          145,
+                          300
+                        ]
+                      },
+                      "child": {
+                        "type": "container",
+                        "children": [],
+                        "layout": "column",
+                        "color": "#FFFF8D"
+                      }
+                    }
+                  ],
+                  "layout": "stack",
+                  "width": 350,
+                  "height": 300,
+                  "clipBehavior": "hardEdge"
+                }
+              ],
+              "layout": "column",
+              "mainAxisAlignment": "center",
+              "crossAxisAlignment": "center"
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "floating_action_button",
+              "label": "",
+              "action": {
+                "call": "@global.next",
+                "args": {}
+              }
+            },
+            "right": 24,
+            "bottom": 24
+          }
+        ],
+        "appBar": {
+          "title": "ControllerDemoPage"
+        }
+      }
+    ]
+  }
+}

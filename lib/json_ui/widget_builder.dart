@@ -53,7 +53,22 @@ import 'widgets/camera_widget.dart';
 import 'widgets/skeleton_widget.dart';
 import 'widgets/reorderable_list_widget.dart';
 import 'widgets/flame_game_widget.dart';
-import 'widgets/virtual_gamepad_widget.dart';
+import 'widgets/analog_stick_widget.dart';
+import 'widgets/floating_layer_widget.dart';
+import 'widgets/transform_widget.dart';
+import 'widgets/positioned_widget.dart';
+import 'widgets/cupertino_refresh_list_widget.dart';
+import 'widgets/keyboard_detector_widget.dart';
+import 'widgets/floating_action_button_widget.dart';
+import 'widgets/scroll_primitives_widget.dart';
+import 'widgets/visual_primitives_widget.dart';
+import 'widgets/animated_text_widget.dart';
+import 'widgets/gesture_password_widget.dart';
+import 'widgets/form_primitives_widget.dart';
+import 'widgets/layout_primitives_widget.dart';
+import 'widgets/overlay_primitives_widget.dart';
+import 'widgets/cross_axis_sizing_list_widget.dart';
+import 'widgets/rive_animation_widget.dart';
 
 class JsonWidgetBuilder {
   // 控件注册表：type → 构建器实例
@@ -93,8 +108,10 @@ class JsonWidgetBuilder {
     'avatar': JsonAvatarWidget(),
     'rich_text': JsonRichTextWidget(),
     'progress': JsonProgressWidget(),
+    'gradient_progress': JsonGradientProgressWidget(),
     'inkwell': JsonInkWellWidget(),
     'gesture_detector': JsonGestureDetectorWidget(),
+    'transform_gesture': JsonTransformGestureWidget(),
     'dismissible': JsonDismissibleWidget(),
     'draggable': JsonDraggableWidget(),
     'refresh': JsonRefreshWidget(),
@@ -108,8 +125,53 @@ class JsonWidgetBuilder {
     'skeleton': JsonSkeletonWidget(),
     'reorderable_list': JsonReorderableListWidget(),
     'flame_game': JsonFlameGameWidget(),
-    'virtual_gamepad': JsonVirtualGamepadWidget(),
+    'analog_stick': JsonAnalogStickWidget(),
+    'floating_layer': JsonFloatingLayerWidget(),
+    'transform': JsonTransformWidget(),
+    'positioned': JsonPositionedWidget(),
+    'cupertino_refresh_list': JsonCupertinoRefreshListWidget(),
+    'keyboard_detector': JsonKeyboardDetectorWidget(),
+    'floating_action_button': JsonFloatingActionButtonWidget(),
+    'page_view': JsonPageViewWidget(),
+    'scroll_drag_handoff': JsonScrollDragHandoffWidget(),
+    'custom_scroll_view': JsonCustomScrollViewWidget(),
+    'cross_axis_sizing_list': JsonCrossAxisSizingListWidget(),
+    'rive_animation': JsonRiveAnimationWidget(),
+    'radial_layout': JsonRadialLayoutWidget(),
+    'backdrop_blur': JsonBackdropBlurWidget(),
+    'image_filter': JsonImageFilterWidget(),
+    'animated_container': JsonAnimatedContainerWidget(),
+    'animated_visibility': JsonAnimatedVisibilityWidget(),
+    'animated_switcher': JsonAnimatedSwitcherWidget(),
+    'opacity': JsonOpacityWidget(),
+    'overflow_box': JsonOverflowBoxWidget(),
+    'aspect_ratio': JsonAspectRatioWidget(),
+    'interval_action': JsonIntervalActionWidget(),
+    'animated_positioned': JsonAnimatedPositionedWidget(),
+    'animated_canvas': JsonAnimatedCanvasWidget(),
+    'particle_stream_canvas': JsonParticleStreamCanvasWidget(),
+    'projected_scene': JsonProjectedSceneWidget(),
+    'animated_text': JsonAnimatedTextWidget(),
+    'gesture_password': JsonGesturePasswordWidget(),
+    'circular_reveal': JsonCircularRevealWidget(),
+    'clip_path': JsonClipPathWidget(),
+    'image_shader_path': JsonImageShaderPathWidget(),
+    'slide_verify': JsonSlideVerifyWidget(),
+    'code_input': JsonCodeInputWidget(),
+    'text_scale_scope': JsonTextScaleScopeWidget(),
+    'gesture_settings_scope': JsonGestureSettingsScopeWidget(),
+    'measured_box': JsonMeasuredBoxWidget(),
+    'spiral_flow': JsonSpiralFlowWidget(),
+    'anchored_popover': JsonAnchoredPopoverWidget(),
+    'overlay_spawner': JsonOverlaySpawnerWidget(),
   };
+
+  /// 已注册的 widget 类型集合（`_builders` 的 key）。
+  ///
+  /// 渲染端是唯一真相源：不在 `_builders` 里的 type 会被渲染成红色"未知类型"框。
+  /// 这个公开访问器让校验器 / 能力清单导出能拿到真实集合，不必再去 regex 解析本文件
+  /// （避免格式变动导致解析悄悄失效、与框架漂移）。
+  static Set<String> get registeredWidgetTypes => _builders.keys.toSet();
 
   /// 根据 JSON 配置构建对应的 Flutter Widget
   Widget build(
@@ -117,6 +179,10 @@ class JsonWidgetBuilder {
     Map<String, dynamic> json,
     JsonInterpreter interpreter,
   ) {
+    if (!_isVisible(json['visible'], interpreter)) {
+      return const SizedBox.shrink();
+    }
+
     final type = json['type'] as String?;
 
     if (type == null) {
@@ -146,5 +212,25 @@ class JsonWidgetBuilder {
         ),
       ),
     );
+  }
+
+  bool _isVisible(dynamic raw, JsonInterpreter interpreter) {
+    if (raw == null) return true;
+    dynamic value = raw;
+    if (raw is Map<String, dynamic> && interpreter.looksLikeJsonLogic(raw)) {
+      value = interpreter.evaluateJsonLogicWithLocals(raw, const {});
+    } else {
+      value = interpreter.resolveExpression(raw);
+    }
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      return normalized.isNotEmpty &&
+          normalized != 'false' &&
+          normalized != '0' &&
+          normalized != 'null';
+    }
+    return value != null;
   }
 }

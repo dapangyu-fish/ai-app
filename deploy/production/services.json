@@ -1,0 +1,287 @@
+{
+  "version": 1,
+  "services": {
+    "backend": {
+      "group": "core",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "backend",
+      "container": "myapp-backend",
+      "health": {"type": "http", "url": "http://127.0.0.1:5566/api/ai/providers"}
+    },
+    "ai-worker": {
+      "group": "core",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "ai-worker",
+      "container": "myapp-ai-worker"
+    },
+    "faas-push-worker": {
+      "group": "faas",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "faas-push-worker",
+      "container": "myapp-faas-push-worker"
+    },
+    "registry": {
+      "group": "core",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "registry",
+      "container": "myapp-registry",
+      "health": {"type": "http", "url": "http://127.0.0.1:3254/health"}
+    },
+    "config-center": {
+      "group": "core",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "config-center",
+      "container": "myapp-config-center",
+      "health": {"type": "http", "url": "http://127.0.0.1:5000/api/v1/public"}
+    },
+    "user-center": {
+      "group": "core",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "user-center",
+      "container": "myapp-user-center",
+      "health": {"type": "http", "url": "http://127.0.0.1:5567/healthz"}
+    },
+    "faas-control": {
+      "group": "faas",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "backend",
+      "container": "myapp-backend",
+      "health": {"type": "http", "url": "http://127.0.0.1:5566/api/faas/health"}
+    },
+    "faas-worker": {
+      "group": "faas",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "ai-worker",
+      "container": "myapp-ai-worker"
+    },
+    "faas-runtime": {
+      "group": "faas",
+      "kind": "image",
+      "image": "dapangyu/myapp-faas-runtime:agent-control-plane"
+    },
+    "agent-node": {
+      "group": "agent",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "agent-node",
+      "container": "myapp-agent-node",
+      "health": {"type": "http", "url": "http://127.0.0.1:5590/health"}
+    },
+    "agent-runtime": {
+      "group": "agent",
+      "kind": "image",
+      "image": "dapangyu/myapp-agent-runtime:agent-control-plane"
+    },
+    "edge-nginx": {
+      "group": "edge",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.edge.yml"],
+      "compose_service": "edge-nginx",
+      "container": "myapp-edge-nginx"
+    },
+    "ai-session-redis": {
+      "group": "infra",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "ai-session-redis",
+      "container": "myapp-ai-session-redis"
+    },
+    "app-minio": {
+      "group": "infra",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "app-minio",
+      "container": "myapp-app-minio",
+      "health": {"type": "http", "url": "http://127.0.0.1:9000/minio/health/ready"}
+    },
+    "jsonapp-postgres": {
+      "group": "infra",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "jsonapp-postgres",
+      "container": "myapp-jsonapp-postgres"
+    },
+    "supabase-studio": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "studio",
+      "container": "supabase-studio"
+    },
+    "supabase-kong": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "kong",
+      "container": "supabase-kong"
+    },
+    "supabase-auth": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "auth",
+      "container": "supabase-auth"
+    },
+    "supabase-rest": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "rest",
+      "container": "supabase-rest"
+    },
+    "supabase-realtime": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "realtime",
+      "container": "realtime-dev.supabase-realtime"
+    },
+    "supabase-storage": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "storage",
+      "container": "supabase-storage"
+    },
+    "supabase-imgproxy": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "imgproxy",
+      "container": "supabase-imgproxy"
+    },
+    "supabase-meta": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "meta",
+      "container": "supabase-meta"
+    },
+    "supabase-edge-functions": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "functions",
+      "container": "supabase-edge-functions"
+    },
+    "supabase-analytics": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "analytics",
+      "container": "supabase-analytics"
+    },
+    "supabase-db": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "db",
+      "container": "supabase-db"
+    },
+    "supabase-vector": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "vector",
+      "container": "supabase-vector"
+    },
+    "supabase-pooler": {
+      "group": "supabase",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/supabase",
+      "compose_files": ["docker-compose.yml", "docker-compose.override.yml"],
+      "compose_service": "supavisor",
+      "container": "supabase-pooler"
+    },
+    "openim-mysql": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "mysql",
+      "container": "myapp-openim-mysql"
+    },
+    "openim-mongo": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "mongodb",
+      "container": "myapp-openim-mongo"
+    },
+    "openim-redis": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "redis",
+      "container": "myapp-openim-redis"
+    },
+    "openim-kafka": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "kafka",
+      "container": "myapp-openim-kafka"
+    },
+    "openim-etcd": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "etcd",
+      "container": "myapp-openim-etcd"
+    },
+    "openim-minio": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "minio",
+      "container": "myapp-openim-minio"
+    },
+    "openim-server": {
+      "group": "openim",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production/openim",
+      "compose_files": ["docker-compose.yml"],
+      "compose_service": "openim-server",
+      "container": "myapp-openim-server",
+      "health": {"type": "tcp", "host": "127.0.0.1", "port": 10002}
+    }
+  }
+}

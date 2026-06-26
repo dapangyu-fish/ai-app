@@ -3,9 +3,18 @@
 import 'package:flutter/material.dart';
 
 class IconRegistry {
+  /// 已注册的图标名集合（`_icons` 的 key）。供校验器 / 能力清单导出枚举真实集合，
+  /// 不必再 regex 解析本文件。未知静态图标名会显示红色问号并触发 validator ERROR。
+  static Set<String> get registeredNames => _icons.keys.toSet();
+
   static final Map<String, IconData> _icons = {
     // 导航
     'home': Icons.home,
+    'insights': Icons.insights,
+    'auto_awesome': Icons.auto_awesome,
+    'auto_awesome_mosaic': Icons.auto_awesome_mosaic,
+    'layers': Icons.layers,
+    'grain': Icons.grain,
     'back': Icons.arrow_back,
     'forward': Icons.arrow_forward,
     'menu': Icons.menu,
@@ -15,7 +24,9 @@ class IconRegistry {
 
     // 操作
     'add': Icons.add,
+    'add_circle_outline': Icons.add_circle_outline,
     'remove': Icons.remove,
+    'remove_circle_outline': Icons.remove_circle_outline,
     'delete': Icons.delete,
     'edit': Icons.edit,
     'save': Icons.save,
@@ -27,6 +38,7 @@ class IconRegistry {
     'download': Icons.download,
     'refresh': Icons.refresh,
     'sync': Icons.sync,
+    'swap_calls': Icons.swap_calls,
     'undo': Icons.undo,
     'redo': Icons.redo,
 
@@ -59,6 +71,7 @@ class IconRegistry {
     'check_circle': Icons.check_circle,
     'error': Icons.error,
     'warning': Icons.warning,
+    'warning_amber': Icons.warning_amber,
     'info': Icons.info,
     'help': Icons.help,
     'block': Icons.block,
@@ -88,6 +101,10 @@ class IconRegistry {
     'lock': Icons.lock,
     'unlock': Icons.lock_open,
     'key': Icons.vpn_key,
+    'radar': Icons.radar,
+    'filter_drama': Icons.filter_drama,
+    'grid_3x3': Icons.grid_3x3,
+    'blur_on': Icons.blur_on,
 
     // 方向
     'up': Icons.arrow_upward,
@@ -97,6 +114,7 @@ class IconRegistry {
     'expand': Icons.expand_more,
     'collapse': Icons.expand_less,
     'fullscreen': Icons.fullscreen,
+    'vertical_align_top': Icons.vertical_align_top,
 
     // 游戏 / 历史
     'history': Icons.history,
@@ -110,11 +128,57 @@ class IconRegistry {
     'timeline': Icons.timeline,
 
     // 其他
+    'ac_unit': Icons.ac_unit,
+    'air': Icons.air,
+    'bathroom': Icons.bathroom,
+    'bathtub': Icons.bathtub,
+    'bed': Icons.bed,
+    'blinds': Icons.blinds,
+    'bolt': Icons.bolt,
     'calendar': Icons.calendar_today,
+    'chair': Icons.chair,
+    'chevron_right': Icons.chevron_right,
     'clock': Icons.access_time,
+    'cleaning_services': Icons.cleaning_services,
+    'cooking': Icons.restaurant,
+    'curtains': Icons.curtains,
+    'devices': Icons.devices,
+    'door_front': Icons.door_front_door,
+    'electric_bolt': Icons.electric_bolt,
+    'garage': Icons.garage,
+    'health_and_safety': Icons.health_and_safety,
+    'inventory_2': Icons.inventory_2,
+    'king_bed': Icons.king_bed,
+    'kitchen': Icons.kitchen,
+    'lightbulb': Icons.lightbulb,
+    'local_laundry_service': Icons.local_laundry_service,
+    'local_pharmacy': Icons.local_pharmacy,
     'location': Icons.location_on,
     'map': Icons.map,
+    'medication': Icons.medication,
+    'menu_book': Icons.menu_book,
+    'monitor_heart': Icons.monitor_heart,
+    'notes': Icons.notes,
+    'payments': Icons.payments,
+    'power': Icons.power_settings_new,
+    'power_settings_new': Icons.power_settings_new,
     'globe': Icons.language,
+    'restaurant': Icons.restaurant,
+    'room_preferences': Icons.room_preferences,
+    'router': Icons.router,
+    'schedule': Icons.schedule,
+    'security': Icons.security,
+    'sensors': Icons.sensors,
+    'single_bed': Icons.single_bed,
+    'spa': Icons.spa,
+    'thermostat': Icons.thermostat,
+    'thermostat_auto': Icons.thermostat_auto,
+    'theaters': Icons.theaters,
+    'today': Icons.today,
+    'tv': Icons.tv,
+    'water_drop': Icons.water_drop,
+    'wb_sunny': Icons.wb_sunny,
+    'weekend': Icons.weekend,
     'wifi': Icons.wifi,
     'bluetooth': Icons.bluetooth,
     'print': Icons.print,
@@ -125,6 +189,10 @@ class IconRegistry {
     'grid': Icons.grid_view,
     'dashboard': Icons.dashboard,
     'analytics': Icons.analytics,
+    'widgets': Icons.widgets_rounded,
+    'swap_vert': Icons.swap_vert_rounded,
+    'brush': Icons.brush_rounded,
+    'language': Icons.language_rounded,
     'receipt': Icons.receipt,
     'shopping_cart': Icons.shopping_cart,
     'payment': Icons.payment,

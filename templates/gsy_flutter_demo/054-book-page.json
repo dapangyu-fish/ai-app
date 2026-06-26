@@ -1,0 +1,1028 @@
+{
+  "dsl": "3.3",
+  "appid": "8c20c716-f33c-5c76-9817-2c636013d77f",
+  "meta": {
+    "name": "gsy_flutter_demo/054-book-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "仿真书本翻页动画（仅APP）",
+      "en": "Book page flip animation(仅APP)"
+    },
+    "description": "BookPage：JSON 公式近似实现拖拽翻页裁剪",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "仿真书本翻页动画（仅APP）",
+      "sourcePath": "lib/widget/animation/book_page/book_page.dart",
+      "deferredAlias": "book_page",
+      "widgetClass": "BookPage",
+      "category": "animation",
+      "routeIndex": 54,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-book-curl-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "仿真书本翻页动画（仅APP）",
+      "upstreamSource": "lib/widget/animation/book_page/book_page.dart",
+      "upstreamWidget": "BookPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-book-curl-v1",
+      "dragging": false,
+      "cornerTop": false,
+      "aX": 389,
+      "aY": 759,
+      "contentA": "林语堂\n\n一、腰有十文钱必振衣作响；\n\n二、每与人言必谈及贵戚；\n\n三、遇美人必急索登床；\n\n四、见到问路之人必作傲睨之态；\n\n五、与朋友相聚便喋喋高吟其酸腐诗文；\n\n六、头已花白却喜唱艳曲；\n\n七、施人一小惠便广布于众；\n\n八、与人交谈便借刁言以逞才；\n\n九、借人之债时其脸如丐，被人索偿时则其态如王；\n\n十、见人常多蜜语而背地却常揭人短处。",
+      "contentB": "林语堂\n\n1.人本过客来无处，休说故里在何方。随遇而安无不可，人间到处有芳香。——林语堂\n\n2.人生不过如此，且行且珍惜。自己永远是自己的主角，不要总在别人的戏剧里充当着配角。——林语堂《人生不过如此》\n\n3.最明亮时总是最迷茫，最繁华时也是最悲凉。——林语堂《京华烟云》\n\n4.理想的人并不是完美的人，通常只是受人喜爱，并且通情达理的人，而我只是努力去接近于此罢了。——林语堂",
+      "bookW": 390,
+      "bookH": 760,
+      "fX": 390,
+      "fY": 760,
+      "gX": 389.5,
+      "gY": 759.5,
+      "dx": 1,
+      "dyRaw": 1,
+      "dy": 1,
+      "eX": 389,
+      "eY": 760,
+      "hX": 390,
+      "hY": 759,
+      "cX": 388,
+      "cY": 760,
+      "jX": 390,
+      "jY": 759.5,
+      "bX": 388.5,
+      "bY": 759.5,
+      "kX": 389.5,
+      "kY": 759.25,
+      "dX": 388.75,
+      "dY": 759.75,
+      "iX": 389.875,
+      "iY": 759.25,
+      "foldAngle": 0
+    },
+    "functions": {
+      "startCurl": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.dragging",
+              "value": true
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.cornerTop",
+              "value": {
+                "<": [
+                  {
+                    "var": "event.localY"
+                  },
+                  253
+                ]
+              }
+            }
+          },
+          {
+            "call": "@global.updateCurl",
+            "args": {}
+          }
+        ]
+      },
+      "updateCurl": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.aX",
+              "value": {
+                "clamp": [
+                  {
+                    "var": "event.localX"
+                  },
+                  24,
+                  389
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.aY",
+              "value": {
+                "clamp": [
+                  {
+                    "var": "event.localY"
+                  },
+                  1,
+                  759
+                ]
+              }
+            }
+          },
+          {
+            "call": "@global.recalculateCurl",
+            "args": {}
+          }
+        ]
+      },
+      "recalculateCurl": {
+        "params": [],
+        "logic": [
+          {
+            "expression": {
+              "if": [
+                {
+                  "var": "global.cornerTop"
+                },
+                0,
+                760
+              ]
+            },
+            "assign": "global.fY"
+          },
+          {
+            "expression": {
+              "/": [
+                {
+                  "+": [
+                    {
+                      "var": "global.aX"
+                    },
+                    {
+                      "var": "global.fX"
+                    }
+                  ]
+                },
+                2
+              ]
+            },
+            "assign": "global.gX"
+          },
+          {
+            "expression": {
+              "/": [
+                {
+                  "+": [
+                    {
+                      "var": "global.aY"
+                    },
+                    {
+                      "var": "global.fY"
+                    }
+                  ]
+                },
+                2
+              ]
+            },
+            "assign": "global.gY"
+          },
+          {
+            "expression": {
+              "clamp": [
+                {
+                  "-": [
+                    {
+                      "var": "global.fX"
+                    },
+                    {
+                      "var": "global.gX"
+                    }
+                  ]
+                },
+                1,
+                390
+              ]
+            },
+            "assign": "global.dx"
+          },
+          {
+            "expression": {
+              "-": [
+                {
+                  "var": "global.fY"
+                },
+                {
+                  "var": "global.gY"
+                }
+              ]
+            },
+            "assign": "global.dyRaw"
+          },
+          {
+            "expression": {
+              "if": [
+                {
+                  "<": [
+                    {
+                      "var": "global.dyRaw"
+                    },
+                    0
+                  ]
+                },
+                {
+                  "clamp": [
+                    {
+                      "var": "global.dyRaw"
+                    },
+                    -760,
+                    -1
+                  ]
+                },
+                {
+                  "clamp": [
+                    {
+                      "var": "global.dyRaw"
+                    },
+                    1,
+                    760
+                  ]
+                }
+              ]
+            },
+            "assign": "global.dy"
+          },
+          {
+            "expression": {
+              "-": [
+                {
+                  "var": "global.gX"
+                },
+                {
+                  "/": [
+                    {
+                      "*": [
+                        {
+                          "var": "global.dy"
+                        },
+                        {
+                          "var": "global.dy"
+                        }
+                      ]
+                    },
+                    {
+                      "var": "global.dx"
+                    }
+                  ]
+                }
+              ]
+            },
+            "assign": "global.eX"
+          },
+          {
+            "expression": {
+              "var": "global.fY"
+            },
+            "assign": "global.eY"
+          },
+          {
+            "expression": {
+              "-": [
+                {
+                  "var": "global.gY"
+                },
+                {
+                  "/": [
+                    {
+                      "*": [
+                        {
+                          "var": "global.dx"
+                        },
+                        {
+                          "var": "global.dx"
+                        }
+                      ]
+                    },
+                    {
+                      "var": "global.dy"
+                    }
+                  ]
+                }
+              ]
+            },
+            "assign": "global.hY"
+          },
+          {
+            "expression": {
+              "-": [
+                {
+                  "var": "global.eX"
+                },
+                {
+                  "/": [
+                    {
+                      "-": [
+                        390,
+                        {
+                          "var": "global.eX"
+                        }
+                      ]
+                    },
+                    2
+                  ]
+                }
+              ]
+            },
+            "assign": "global.cX"
+          },
+          {
+            "expression": {
+              "var": "global.fY"
+            },
+            "assign": "global.cY"
+          },
+          {
+            "expression": {
+              "-": [
+                {
+                  "var": "global.hY"
+                },
+                {
+                  "/": [
+                    {
+                      "-": [
+                        {
+                          "var": "global.fY"
+                        },
+                        {
+                          "var": "global.hY"
+                        }
+                      ]
+                    },
+                    2
+                  ]
+                }
+              ]
+            },
+            "assign": "global.jY"
+          },
+          {
+            "expression": {
+              "/": [
+                {
+                  "+": [
+                    {
+                      "var": "global.aX"
+                    },
+                    {
+                      "var": "global.cX"
+                    }
+                  ]
+                },
+                2
+              ]
+            },
+            "assign": "global.bX"
+          },
+          {
+            "expression": {
+              "/": [
+                {
+                  "+": [
+                    {
+                      "var": "global.aY"
+                    },
+                    {
+                      "var": "global.cY"
+                    }
+                  ]
+                },
+                2
+              ]
+            },
+            "assign": "global.bY"
+          },
+          {
+            "expression": {
+              "/": [
+                {
+                  "+": [
+                    {
+                      "var": "global.aX"
+                    },
+                    {
+                      "var": "global.jX"
+                    }
+                  ]
+                },
+                2
+              ]
+            },
+            "assign": "global.kX"
+          },
+          {
+            "expression": {
+              "/": [
+                {
+                  "+": [
+                    {
+                      "var": "global.aY"
+                    },
+                    {
+                      "var": "global.jY"
+                    }
+                  ]
+                },
+                2
+              ]
+            },
+            "assign": "global.kY"
+          },
+          {
+            "expression": {
+              "/": [
+                {
+                  "+": [
+                    {
+                      "var": "global.cX"
+                    },
+                    {
+                      "*": [
+                        2,
+                        {
+                          "var": "global.eX"
+                        }
+                      ]
+                    },
+                    {
+                      "var": "global.bX"
+                    }
+                  ]
+                },
+                4
+              ]
+            },
+            "assign": "global.dX"
+          },
+          {
+            "expression": {
+              "/": [
+                {
+                  "+": [
+                    {
+                      "*": [
+                        2,
+                        {
+                          "var": "global.eY"
+                        }
+                      ]
+                    },
+                    {
+                      "var": "global.cY"
+                    },
+                    {
+                      "var": "global.bY"
+                    }
+                  ]
+                },
+                4
+              ]
+            },
+            "assign": "global.dY"
+          },
+          {
+            "expression": {
+              "/": [
+                {
+                  "+": [
+                    {
+                      "var": "global.jX"
+                    },
+                    {
+                      "*": [
+                        2,
+                        {
+                          "var": "global.hX"
+                        }
+                      ]
+                    },
+                    {
+                      "var": "global.kX"
+                    }
+                  ]
+                },
+                4
+              ]
+            },
+            "assign": "global.iX"
+          },
+          {
+            "expression": {
+              "/": [
+                {
+                  "+": [
+                    {
+                      "*": [
+                        2,
+                        {
+                          "var": "global.hY"
+                        }
+                      ]
+                    },
+                    {
+                      "var": "global.jY"
+                    },
+                    {
+                      "var": "global.kY"
+                    }
+                  ]
+                },
+                4
+              ]
+            },
+            "assign": "global.iY"
+          },
+          {
+            "expression": {
+              "*": [
+                {
+                  "atan2": [
+                    {
+                      "-": [
+                        {
+                          "var": "global.fX"
+                        },
+                        {
+                          "var": "global.aX"
+                        }
+                      ]
+                    },
+                    {
+                      "abs": [
+                        {
+                          "-": [
+                            {
+                              "var": "global.fY"
+                            },
+                            {
+                              "var": "global.aY"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                57.295779513
+              ]
+            },
+            "assign": "global.foldAngle"
+          }
+        ]
+      },
+      "cancelCurl": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.dragging",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.cornerTop",
+              "value": false
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.aX",
+              "value": 389
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.aY",
+              "value": 759
+            }
+          },
+          {
+            "call": "@global.recalculateCurl",
+            "args": {}
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "BookPage",
+        "layout": "stack",
+        "backgroundColor": "#64FFDA",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "gesture_detector",
+                "onTapDown": {
+                  "call": "@global.startCurl",
+                  "args": {}
+                },
+                "onTapUp": {
+                  "call": "@global.cancelCurl",
+                  "args": {}
+                },
+                "onTapCancel": {
+                  "call": "@global.cancelCurl",
+                  "args": {}
+                },
+                "onPanStart": {
+                  "call": "@global.startCurl",
+                  "args": {}
+                },
+                "onPanUpdate": {
+                  "call": "@global.updateCurl",
+                  "args": {}
+                },
+                "onPanEnd": {
+                  "call": "@global.cancelCurl",
+                  "args": {}
+                },
+                "onPanCancel": {
+                  "call": "@global.cancelCurl",
+                  "args": {}
+                },
+                "child": {
+                  "type": "container",
+                  "layout": "stack",
+                  "width": 390,
+                  "height": 760,
+                  "color": "#64FFDA",
+                  "clipBehavior": "hardEdge",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "width": 390,
+                      "height": 760,
+                      "padding": {
+                        "left": 22,
+                        "right": 22,
+                        "top": 22,
+                        "bottom": 22
+                      },
+                      "color": "#64FFDA",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.contentB }}",
+                          "style": {
+                            "fontSize": 16,
+                            "lineHeight": 1.42,
+                            "color": "#111111"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "width": 390,
+                      "height": 760,
+                      "padding": {
+                        "left": 22,
+                        "right": 22,
+                        "top": 22,
+                        "bottom": 22
+                      },
+                      "color": "#64FFDA",
+                      "visible": {
+                        "==": [
+                          {
+                            "var": "global.dragging"
+                          },
+                          false
+                        ]
+                      },
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.contentA }}",
+                          "style": {
+                            "fontSize": 15,
+                            "lineHeight": 1.32,
+                            "color": "#111111"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "clip_path",
+                      "mode": "path",
+                      "visible": {
+                        "var": "global.dragging"
+                      },
+                      "commands": [
+                        {
+                          "op": "moveTo",
+                          "x": 0,
+                          "y": 0
+                        },
+                        {
+                          "op": "lineTo",
+                          "x": 0,
+                          "y": 760
+                        },
+                        {
+                          "op": "lineTo",
+                          "x": {
+                            "var": "global.cX"
+                          },
+                          "y": {
+                            "var": "global.cY"
+                          }
+                        },
+                        {
+                          "op": "quadTo",
+                          "x1": {
+                            "var": "global.eX"
+                          },
+                          "y1": {
+                            "var": "global.eY"
+                          },
+                          "x": {
+                            "var": "global.bX"
+                          },
+                          "y": {
+                            "var": "global.bY"
+                          }
+                        },
+                        {
+                          "op": "lineTo",
+                          "x": {
+                            "var": "global.aX"
+                          },
+                          "y": {
+                            "var": "global.aY"
+                          }
+                        },
+                        {
+                          "op": "lineTo",
+                          "x": {
+                            "var": "global.kX"
+                          },
+                          "y": {
+                            "var": "global.kY"
+                          }
+                        },
+                        {
+                          "op": "quadTo",
+                          "x1": {
+                            "var": "global.hX"
+                          },
+                          "y1": {
+                            "var": "global.hY"
+                          },
+                          "x": {
+                            "var": "global.jX"
+                          },
+                          "y": {
+                            "var": "global.jY"
+                          }
+                        },
+                        {
+                          "op": "lineTo",
+                          "x": 390,
+                          "y": 0
+                        },
+                        {
+                          "op": "close"
+                        }
+                      ],
+                      "child": {
+                        "type": "container",
+                        "layout": "column",
+                        "width": 390,
+                        "height": 760,
+                        "padding": {
+                          "left": 22,
+                          "right": 22,
+                          "top": 22,
+                          "bottom": 22
+                        },
+                        "color": "#64FFDA",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ global.contentA }}",
+                            "style": {
+                              "fontSize": 15,
+                              "lineHeight": 1.32,
+                              "color": "#111111"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "type": "clip_path",
+                      "mode": "path",
+                      "visible": {
+                        "var": "global.dragging"
+                      },
+                      "commands": [
+                        {
+                          "op": "moveTo",
+                          "x": {
+                            "var": "global.iX"
+                          },
+                          "y": {
+                            "var": "global.iY"
+                          }
+                        },
+                        {
+                          "op": "lineTo",
+                          "x": {
+                            "var": "global.dX"
+                          },
+                          "y": {
+                            "var": "global.dY"
+                          }
+                        },
+                        {
+                          "op": "lineTo",
+                          "x": {
+                            "var": "global.bX"
+                          },
+                          "y": {
+                            "var": "global.bY"
+                          }
+                        },
+                        {
+                          "op": "lineTo",
+                          "x": {
+                            "var": "global.aX"
+                          },
+                          "y": {
+                            "var": "global.aY"
+                          }
+                        },
+                        {
+                          "op": "lineTo",
+                          "x": {
+                            "var": "global.kX"
+                          },
+                          "y": {
+                            "var": "global.kY"
+                          }
+                        },
+                        {
+                          "op": "close"
+                        }
+                      ],
+                      "child": {
+                        "type": "container",
+                        "layout": "stack",
+                        "width": 390,
+                        "height": 760,
+                        "color": "#FFEB3B",
+                        "children": [
+                          {
+                            "type": "animated_canvas",
+                            "width": 390,
+                            "height": 760,
+                            "durationMs": 1000,
+                            "variables": {
+                              "ax": {
+                                "var": "global.aX"
+                              },
+                              "ay": {
+                                "var": "global.aY"
+                              },
+                              "ex": {
+                                "var": "global.eX"
+                              },
+                              "ey": {
+                                "var": "global.eY"
+                              },
+                              "hx": {
+                                "var": "global.hX"
+                              },
+                              "hy": {
+                                "var": "global.hY"
+                              }
+                            },
+                            "layers": [
+                              {
+                                "kind": "linear_gradient",
+                                "x": 0,
+                                "y": 0,
+                                "width": 390,
+                                "height": 760,
+                                "colors": [
+                                  "#FFF59D",
+                                  "#FDD835",
+                                  "#5A4B00"
+                                ],
+                                "stops": [
+                                  0,
+                                  0.74,
+                                  1
+                                ],
+                                "begin": "centerLeft",
+                                "end": "centerRight"
+                              },
+                              {
+                                "kind": "path",
+                                "style": "stroke",
+                                "strokeWidth": 2,
+                                "color": "#66333333",
+                                "commands": [
+                                  {
+                                    "op": "moveTo",
+                                    "x": "ex",
+                                    "y": "ey"
+                                  },
+                                  {
+                                    "op": "lineTo",
+                                    "x": "ax",
+                                    "y": "ay"
+                                  },
+                                  {
+                                    "op": "lineTo",
+                                    "x": "hx",
+                                    "y": "hy"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "type": "animated_canvas",
+                      "width": 390,
+                      "height": 760,
+                      "visible": {
+                        "var": "global.dragging"
+                      },
+                      "durationMs": 1000,
+                      "variables": {
+                        "cx": {
+                          "var": "global.cX"
+                        },
+                        "cy": {
+                          "var": "global.cY"
+                        },
+                        "jx": {
+                          "var": "global.jX"
+                        },
+                        "jy": {
+                          "var": "global.jY"
+                        }
+                      },
+                      "layers": [
+                        {
+                          "kind": "path",
+                          "style": "stroke",
+                          "strokeWidth": 12,
+                          "color": "#33333333",
+                          "blurRadius": 8,
+                          "commands": [
+                            {
+                              "op": "moveTo",
+                              "x": "cx",
+                              "y": "cy"
+                            },
+                            {
+                              "op": "lineTo",
+                              "x": "jx",
+                              "y": "jy"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

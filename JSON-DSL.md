@@ -1,10 +1,12 @@
-# Flutter JSON Low-Code DSL 完整开发文档 v3.3
+# Flutter JSON Low-Code DSL 完整开发文档 v3.4
 
-**文档版本**：v3.3
-**制定日期**：2026年4月
+**文档版本**：v3.4
+**制定日期**：2026年5月
 **状态**：正式发布
 **适用范围**：Flutter 跨平台 GUI 客户端（iOS / Android / Web / Desktop）
 **目标**：一套**纯 JSON 配置驱动**的低代码 Flutter 应用，支持动态下发 UI 与业务逻辑。
+
+> 说明：文档版本是 v3.4；当前 JSON 包里的 `"dsl"` 字段仍使用 `"3.3"`，表示运行时兼容线，不需要改成文档版本号。
 
 ---
 
@@ -13,8 +15,8 @@
 - **Server-Driven UI**：云端下发 JSON，App 内置解释器实时渲染界面并执行逻辑。
 - **图灵完备**：支持 `@while`、递归、`@set` 可变状态、`@if` 条件分支、`@parallel` 并发。
 - **安全合规**：解释器纯 Dart 静态编译进 APK/IPA，JSON 仅为数据配置。
-- **零性能限制**：不对页面层级、Widget 数量、循环次数设上限。
-- **位置描述**：每个控件可通过 `position` 精确描述自己在页面中的位置。
+- **性能边界清晰**：框架不对页面层级 / Widget 数量做人为配额限制，但运行时仍受设备性能约束；`@while` 有 `max_iterations` 保护，游戏逐帧 logic 应控制实体规模。
+- **位置描述**：每个控件可加 `position`；`absolute` 只在 `Stack` 父级下生效，`flex` 只应放在 `Row` / `Column` 等 Flex 父级下。
 
 - **模块化**：支持 JSON 模块引用，通过 `dependencies` + 版本约束实现复用。
 
@@ -55,11 +57,9 @@
     "exports": []
   },
   "dependencies": {
-    "common-ui": {
-      "url": "https://cdn.example.com/common-ui.json",
-      "version": "^1.2.0"
-    }
+    "common-ui": "^1.3.0"
   },
+  "assets": { ... },
   "global": { ... },
   "steps": [ ... ],
   "ui": { ... }
@@ -70,12 +70,13 @@
 |------|------|------|
 | `dsl` | 是 | DSL 规范版本（如 `"3.3"`），兼容旧 `version` 字段 |
 | `appid` | 否 | 应用唯一标识（UUID，发布时必须，新创建可留空） |
-| `meta.name` | 是 | 模块唯一标识（包名）。**仅作为标识使用**（路由 / 依赖引用 / 安装路径），不会显示给用户 |
+| `meta.name` | 是 | 模块唯一标识（包名），用于路由 / 依赖引用 / 安装路径；正常展示应使用 `meta.displayName`，仅在 displayName 缺省时作为兜底 |
 | `meta.displayName` | 否 | 用户可见的应用名称。支持纯字符串或多语言 Map（见下）。缺省时框架回退到 `meta.name` |
 | `meta.version` | 是 | 模块版本号（semver: `MAJOR.MINOR.PATCH`） |
 | `meta.type` | 是 | `app`（完整应用）/ `library`（函数/页面集合）/ `widget`（可复用控件模板） |
 | `meta.exports` | 否 | library/widget 暴露给外部的函数名和页面 ID 列表 |
-| `dependencies` | 否 | 依赖声明，key 为依赖别名，value 含 `url` 和 `version` 约束 |
+| `dependencies` | 否 | 依赖声明，key 必须是 Registry 包名，同时也是调用命名空间（如 `@common-ui.showInfo` 的 `common-ui`）；value 推荐写版本约束字符串（如 `"^1.3.0"`）。也兼容旧对象格式 `{ "url": "...", "version": "^1.2.0" }`，但当前加载器实际按 Registry/CacheManager 解析，`url` 仅保留旧格式兼容 |
+| `assets` | 否 | 资源声明区。游戏/媒体类 APP 推荐声明 `assets.bundles`，让客户端启动时缓存远程资源 |
 
 #### `meta.displayName` 两种写法
 
@@ -121,7 +122,7 @@
 
 ```jsonc
 // 调用依赖的函数: @depName.funcName
-{ "call": "@common-ui.showToast", "args": { "message": "操作成功" } }
+{ "call": "@common-ui.showInfo", "args": { "message": "操作成功" } }
 
 // 导航到依赖的页面: depName:screenId
 { "type": "navigate", "screen": "auth:loginPage" }
@@ -132,6 +133,65 @@
 // 读取依赖的变量（只读）: depName.varPath
 "{{ common-ui.theme.primaryColor }}"
 ```
+
+#### assets.bundles 与素材 manifest
+
+游戏、动画和媒体类 APP 推荐声明所使用的托管素材包：
+
+```json
+"assets": {
+  "bundles": {
+    "kenney_new_platformer": {
+      "baseUrl": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/asset-packs/kenney-new-platformer-pack/1.1/",
+      "manifest": "manifest.json",
+      "license": "LICENSE",
+      "startupDownload": true
+    }
+  }
+}
+```
+
+素材包 manifest 是选材和裁剪的事实依据。Agent / 人工编写游戏时应优先读取：
+
+| 字段 | 说明 |
+|------|------|
+| `files[].image.width/height` | 图片真实像素尺寸 |
+| `files[].sprite.kind` | `single` / `grid` / `strip` / `atlas` / `unknown_sheet` |
+| `files[].sprite.frameWidth/frameHeight` | 一帧的真实尺寸 |
+| `files[].sprite.columns/rows/frames` | 网格/横条 sprite sheet 的行列和帧数 |
+| `files[].atlas.entries[]` | XML atlas 解析出的 `SubTexture` 裁剪框 |
+
+如果 manifest 没有 `sprite` / `atlas` 字段，不能凭文件名猜 3x3、8x8 或 64x64。应选择单帧素材，或先读取 PNG 尺寸并明确推断依据，最终必须通过 `backend/validate_json_app.py` 的 sprite 边界校验。单帧 PNG 的 `frame_size` 默认应等于 `files[].image.width/height`；只有确认透明边界时，才用 `src` 显式裁剪。
+
+#### Agent 生成辅助库
+
+后端 Agent 生成复杂 APP 时可以使用 `backend/json_app_builder.py` 作为临时 Python 生成器的辅助库。它不是客户端运行时能力，只用于降低生成 JSON 的出错率。
+
+> **需要后端/数据库的 JSON-APP（FaaS 服务组权限模型）**：客户端侧没有变化——仍用 `@http_post`/`@http_get`
+> 调 `{{ app.backendUrl }}/api/faas/invoke/<service_id><route>`。FaaS 后端的权限单元是**服务组**
+> （= 1 个 FaaS + 可选 1 个 DB，1:1）：函数用内置 `myapp_auth.current_user()` 拿可信的组内调用者假名
+> （框架已登录即生效，无需 app 内再登录），用 `myapp_data`（按调用者隔离的 CRUD，函数不持 DB 连接）
+> 读写**消费者自己的**数据；`schema.sql` 主键用 UUID（禁 SERIAL）。JSON-App 前端与服务组解耦，按需调用。
+> 生成 FaaS 必读 `docs/playbooks/faas-jsonapp.md`；模型详见 `CLAUDE.md`「FaaS 服务组权限模型」。
+
+推荐使用场景：`flame_game`、Tiled 地图、长关卡、大量实体、重复 UI、素材 manifest 选材和 sprite sheet 切帧。生成器应输出最终 JSON 后继续运行 `python3 backend/validate_json_app.py <TMPFILE>`。
+
+常用 helper：
+
+| helper | 用途 |
+|--------|------|
+| `new_app/screen/text/container/expanded/flame_game` | 生成标准 DSL 结构和基础控件 |
+| `pixel_entity/sprite_entity/animated_sprite_entity/parallax_entity/tiled_map_entity` | 生成 `flame_game.entities` 的标准实体结构 |
+| `AssetPack.from_url/url/frame_size/animation` | 从 manifest 取资源 URL、单帧尺寸、动画配置 |
+| `asset_bundle` | 生成 `assets.bundles` |
+| `tile_layer/fill_rect/set_tile/object_layer/tiled_object/tileset/tiled_map` | 生成内联 `tiled-json-v1` 地图 |
+| `run_and_gun_stage_plan/tiled_objects_from_run_and_gun_plan` | 生成中立 run-and-gun 关卡骨架和 object layer，避免复制第三方地图 |
+| `save_json(app, out, packs=[pack])` | 写出 JSON，并校验资源 URL 来自所选 manifest |
+
+`run_and_gun_stage_plan()` 不是客户端 atom，也不是某个游戏的地图数据。它只给后端
+Agent 一个中立关卡节奏骨架：安全开场、首次接敌、掩体交火、坑洞/平台、纵向压力和终点冲刺。
+生成器仍必须用所选 asset manifest 填充 tileset、角色、敌人、背景和装饰；不能把 demo 的坐标、
+素材路径或第三方地图文件直接复制进新 APP。
 
 ### 3.2 global（全局定义区）
 
@@ -165,7 +225,7 @@
 | `123` / `true` / `[]` | 原始值 | 直接使用 | `"value": []` |
 | `"{{ path }}"` | 模板引用 | 解析为变量的**原始类型**（List/Map/String 等） | `"value": "{{ global.list }}"` → 实际 List |
 | `"前缀 {{ path }} 后缀"` | 模板插值 | 解析为**字符串**（变量 toString 后拼接） | `"value": "共 {{ global.count }} 条"` → `"共 5 条"` |
-| `{ "op": [...] }` 单 key + key 在 op 集合 | JsonLogic 表达式 | 通过 jsonlogic 引擎**求值** | `"value": { "merge": [...] }` |
+| `{ "if": [...] }` / `{ "+": [...] }` 等单 key + key 在 op 集合 | JsonLogic 表达式 | 通过 jsonlogic 引擎**求值** | `"value": { "merge": [...] }` |
 | `{ "key": ..., "key2": ... }` 数据 Map | 普通数据对象 | **原样传递**，递归展开内部 `{{ }}` 模板，不走 jsonlogic | `"item": { "id": "{{ loop.index }}", "name": "..." }` |
 
 **关键区分**：
@@ -215,7 +275,7 @@
 - **函数调用**：`{ "call": "...", "args": {...}, "assign": "global.xxx" }`
 - **表达式**：`{ "expression": {JsonLogic}, "assign": "global.xxx" }`
 
-`assign` 将函数返回值 / 表达式结果存入指定变量。
+`assign` 将表达式结果存入指定变量；函数调用的 `assign` 只在返回值非 `null` 时写入，避免取消弹窗、空网络结果等把已有状态误清空。
 
 ### 3.5 i18n（JSON 层国际化）
 
@@ -291,7 +351,8 @@
 | 函数 | 参数 | 说明 |
 |------|------|------|
 | `@print` | `{ "value": "..." }` | 调试打印 |
-| `@set` | `{ "var": "$.global.xxx", "value": ... }` | 设置变量（value 支持 JsonLogic 表达式） |
+| `@set` | `{ "var": "global.xxx", "value": ... }` | 设置变量（value 支持 JsonLogic 表达式）。`$.global.xxx` 旧路径仍兼容，但新 JSON 统一写 `global.xxx` |
+| `@var_get` | `{ "var": "global.xxx", "default": null }` | 命令式读取变量；变量不存在时返回 `default` |
 | `@navigate` | `{ "screen": "screenId" }` | 页面跳转 |
 | `@delay` | `{ "ms": 1000 }` | 延迟指定毫秒 |
 
@@ -301,9 +362,9 @@
 |------|------|------|
 | `@if` | `{ "condition": {expr}, "then": [...], "else": [...] }` | 条件分支 |
 | `@while` | `{ "condition": {expr}, "body": [...], "max_iterations": 10000 }` | 循环 |
-| `@for_each` | `{ "source": {expr}, "body": [...] }` | 遍历数组（$.loop.item / $.loop.index） |
+| `@for_each` | `{ "source": {expr}, "body": [...] }` | 遍历数组（`loop.item` / `loop.index`） |
 | `@loop_by_num` | `{ "count": 10, "body": [...] }` | 按次数循环 |
-| `@try_catch` | `{ "try": [...], "catch": [...], "error_var": "$.global.err" }` | 异常捕获 |
+| `@try_catch` | `{ "try": [...], "catch": [...], "error_var": "global.err" }` | 异常捕获 |
 | `@parallel` | `{ "steps": [...] }` | **并发执行**多个 step，全部完成后继续 |
 | `@throw` | `{ "message": "..." }` | 主动抛出异常（用于测试 @try_catch / 业务侧失败时进入 catch 分支） |
 
@@ -312,7 +373,7 @@
 {
   "call": "@if",
   "args": {
-    "condition": { ">": [{ "var": "$.global.count" }, 0] },
+    "condition": { ">": [{ "var": "global.count" }, 0] },
     "then": [
       { "call": "@print", "args": { "value": "有数据" } }
     ],
@@ -323,14 +384,18 @@
 }
 ```
 
+> 注意：上表是普通 JSON-APP 主解释器的写法。`flame_game.input` /
+> `flame_game.frame` / `flame_game.tick` 内部使用轻量 GameLogicEngine，
+> 其 `@if` 条件字段是 `cond`（见 flame_game 章节），不要混用。
+
 **@parallel 示例**：
 ```json
 {
   "call": "@parallel",
   "args": {
     "steps": [
-      { "call": "@http_get", "args": { "url": "https://api1.com" }, "assign": "$.global.r1" },
-      { "call": "@http_get", "args": { "url": "https://api2.com" }, "assign": "$.global.r2" }
+      { "call": "@http_get", "args": { "url": "https://api1.com" }, "assign": "global.r1" },
+      { "call": "@http_get", "args": { "url": "https://api2.com" }, "assign": "global.r2" }
     ]
   }
 }
@@ -338,14 +403,18 @@
 
 ### 4.3 HTTP 请求
 
-所有 HTTP 函数返回 `{ "status": int, "data": dynamic, "headers": {}, "error": String? }`
+`@http_get` / `@http_post` / `@http_put` / `@http_delete` / `@http_patch` / `@http_head` / `@http_options` 返回 `{ "status": int, "data": dynamic, "headers": {}, "error": String? }`（`@http_head` / `@http_options` 无响应体，`data` 为空，靠 `status` / `headers` 判断）。`@http_sse` 返回 `{ "status": int, "events": [], "done": bool, "error": String? }`，并可在流式过程中触发回调。
 
 | 函数 | 参数 | 说明 |
 |------|------|------|
 | `@http_get` | `{ "url": "...", "query": {...}, "headers": {...} }` | GET 请求 |
 | `@http_post` | `{ "url": "...", "body": {...}, "headers": {...}, "content_type": "application/json" }` | POST 请求 |
-| `@http_put` | `{ "url": "...", "body": {...}, "headers": {...} }` | PUT 请求 |
+| `@http_put` | `{ "url": "...", "body": {...}, "headers": {...} }` | PUT 请求（整体替换） |
+| `@http_patch` | `{ "url": "...", "body": {...}, "headers": {...} }` | PATCH 请求（部分更新） |
 | `@http_delete` | `{ "url": "...", "headers": {...} }` | DELETE 请求 |
+| `@http_head` | `{ "url": "...", "query": {...}, "headers": {...} }` | HEAD 请求（只取 `status` / `headers`，无 body；存在性/鉴权探测） |
+| `@http_options` | `{ "url": "...", "headers": {...} }` | OPTIONS 请求（探测允许的方法 / CORS） |
+| `@http_sse` | `{ "url": "...", "method": "POST", "body": {...}, "headers": {...}, "bind": "global.stream", "onEvent": [...] }` | Server-Sent Events。每个事件形如 `{raw,event,id,data,json,done,delta}`；`delta` 自动兼容 OpenAI Chat Completions / Responses 常见文本增量。Web 端走浏览器兼容桥，若目标服务未配 CORS 仍会被浏览器拦截 |
 
 **示例**：
 ```json
@@ -354,12 +423,12 @@
   "args": {
     "url": "https://api.example.com/users",
     "body": {
-      "name": "{{ $.global.username }}",
-      "email": "{{ $.global.email }}"
+      "name": "{{ global.username }}",
+      "email": "{{ global.email }}"
     },
-    "headers": { "Authorization": "Bearer {{ $.global.token }}" }
+    "headers": { "Authorization": "Bearer {{ global.token }}" }
   },
-  "assign": "$.global.postResult"
+  "assign": "global.postResult"
 }
 ```
 
@@ -390,11 +459,11 @@
 | 函数 | 参数 | 说明 |
 |------|------|------|
 | `@list_length` | `{ "value": {expr} }` | 返回数组长度 |
-| `@list_add` | `{ "var": "$.global.list", "item": "xxx" }` | 向数组末尾添加元素 |
-| `@list_remove_at` | `{ "var": "$.global.list", "index": 0 }` | 按索引删除 |
-| `@list_remove` | `{ "var": "$.global.list", "value": "xxx" }` | 按值删除（删除所有等于 value 的元素） |
-| `@list_insert` | `{ "var": "$.global.list", "index": 0, "item": "xxx" }` | 在指定位置插入 |
-| `@list_clear` | `{ "var": "$.global.list" }` | 清空数组 |
+| `@list_add` | `{ "var": "global.list", "item": "xxx" }` | 向数组末尾添加元素 |
+| `@list_remove_at` | `{ "var": "global.list", "index": 0 }` | 按索引删除 |
+| `@list_remove` | `{ "var": "global.list", "value": "xxx" }` | 按值删除（删除所有等于 value 的元素） |
+| `@list_insert` | `{ "var": "global.list", "index": 0, "item": "xxx" }` | 在指定位置插入 |
+| `@list_clear` | `{ "var": "global.list" }` | 清空数组 |
 
 ### 4.7 类型转换
 
@@ -411,14 +480,14 @@
 
 | 函数 | 参数 | 说明 |
 |------|------|------|
-| `@show_toast` | `{ "message": "保存成功" }` | 底部 SnackBar 提示 |
+| `@show_toast` | `{ "message": "保存成功" }` | 轻量底部 toast（Overlay 浮层，非 SnackBar） |
 | `@show_snackbar` | `{ "message": "邮件已发送", "actionLabel": "撤销", "action": {...}, "durationMs": 4000, "backgroundColor": "#333333" }` | 增强 SnackBar，支持操作按钮回调 |
 | `@show_dialog` | `{ "title": "确认", "message": "确定删除？" }` | 弹窗，返回 `true`/`false` |
 | `@show_input_dialog` | `{ "title": "重命名", "hint": "请输入", "defaultValue": "", "bind": "global.name" }` | 文本输入弹窗，返回输入值（取消返回 `null`） |
 | `@show_choice_dialog` | `{ "title": "保存修改？", "message": "...", "buttons": [{"label":"保存","value":"save","style":"primary"},{"label":"丢弃","value":"discard","style":"danger"},{"label":"取消","value":"cancel"}], "dismissible": true }` | 自定义按钮弹窗，返回被点按钮的 `value`（关闭返回 `null`）。`style`：`primary` / `danger` / `text`（默认） |
 | `@show_date_picker` | `{ "initial": "2026-04-28", "firstDate": "2020-01-01", "lastDate": "2030-12-31", "bind": "global.date" }` | 命令式日期选择器，返回 yyyy-MM-dd 字符串（取消返回 `null`） |
 | `@show_time_picker` | `{ "initial": "14:30", "bind": "global.time" }` | 命令式时间选择器，返回 HH:mm 字符串（取消返回 `null`） |
-| `@show_bottom_sheet` | `{ "content": { ...widget... }, "isDismissible": true, "enableDrag": true, "backgroundColor": "#FFFFFF" }` | 底部弹窗，content 是任意 widget 配置，弹窗内可通过自定义函数关闭并返回值 |
+| `@show_bottom_sheet` | `{ "content": { ...widget... }, "isDismissible": true, "enableDrag": true, "backgroundColor": "#FFFFFF" }` | 底部弹窗，content 是任意 widget 配置。当前 JSON action 可用 `{ "type": "back" }` 关闭；关闭返回 `null` |
 
 ### 4.9 系统 / 平台原生
 
@@ -434,6 +503,7 @@
 | `@open_app_settings` | `{}` | 跳系统设置页（用于 permanentlyDenied 后引导用户手动开启） |
 | `@biometric_auth` | `{ "reason": "请验证身份解锁" }` | 触发指纹 / Face ID / 设备 PIN 验证。返回 bool |
 | `@flame_game_reset` | `{}` | 重置当前屏幕挂着的所有 flame_game。给 JSON-APP 层（结算 dialog 的"再来一局"按钮）从外面重置游戏用，避免依赖 canvas 的 tap-to-reset |
+| `@flame_game_input` | `{ "type": "button", "id": "jump", "pressed": true }` 或 `{ "type": "joystick", "x": 0.5, "y": -0.2, "strength": 0.54 }` | 从普通 JSON widget 向当前屏幕的 flame_game 注入外部输入。`virtual_gamepad` 组件库就是基于这个桥接实现 |
 
 ### 4.9.1 媒体 / 相机（底层 API，**建议走 lib**）
 
@@ -480,7 +550,7 @@
 - 之后 `global._im.tick` 每收到一条新消息会 +1，`global._im.last_message` 更新到最新一条
 - 想做"自动刷新会话列表"，绑 `tick` 触发 rebuild + 在适当时机重新调 `listConversations` 即可
 - 想做未读 badge，调一次 `@lib_im.totalUnread { bind: "global.totalUnread" }`，UI 绑 `{{ global.totalUnread }}`，业务路径里发完 / 读完消息再调一次刷新
-- 平台限制：iOS / Android 才有真实数据；macOS / Web / Windows / Linux 上 IM SDK 无效，所有 `@im_*` 安全降级返回空数据，不会崩
+- 平台限制：iOS / Android 使用原生 OpenIM SDK；Web 使用 `openim/wasm-client-sdk` 兼容层。macOS / Windows / Linux 暂无真实 IM SDK，所有 `@im_*` 安全降级返回空数据，不会崩。
 
 ### 4.11 主题 / 多语言 / 生命周期
 
@@ -530,7 +600,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 | `@my_apps_list` | — | `List<{fileName, name, displayName, description, savedAt, version, author, type}>` | 列出本地保存的 JSON-APP（按时间倒序）。配合 `assign: "global.xxx"` 写到变量 |
 | `@my_apps_delete` | `{fileName}` | `bool` | 删一个本地 APP |
 | `@my_apps_share` | `{fileName}` | `bool` | 通过系统分享发出 JSON 文件 |
-| `@market_list` | `{type?: "app"\|"library", search?}` | `List<{name, displayName, description, version, author, type}>` | 从 Registry 拉市场列表，可选客户端搜索过滤（名称/描述/作者任一字段包含子串即命中） |
+| `@market_list` | `{type?: "app"\|"library", search?, page?, perPage?}` | `List<{name, displayName, description, version, author, type}>` | 从 Registry 分页拉市场列表，`search` 由服务端模糊匹配。默认 `page=1`, `perPage=50` |
 | `@launch_app` | `{kind: "local"\|"market", fileName?, name?, version?, isStartupRoot?}` | `bool` | 在当前 JSON-APP 内嵌套启动另一个 JSON-APP。kind=local 必须传 fileName；kind=market 必须传 name（version 缺省任意）。`isStartupRoot=true` 时新 APP 没有返回按钮（启动器场景）。框架会自动 push/pop 状态栈，子 APP pop 时父态恢复 |
 | `@startup_default_get` | — | `{kind, hasTarget, marketName, marketVersion, marketDisplayName, localFileName, localDisplayName, displayName}` | 读默认启动 APP 配置 |
 | `@startup_default_set` | `{kind: "market"\|"local", name?, version?, fileName?, displayName?}` | `bool` | 设默认启动 APP（market 必填 name+version；local 必填 fileName） |
@@ -544,6 +614,28 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 `getUserAvatar` / `getUserName` / `getUserEmail`——launcher 这里不重复
 包一份。原始字段名见 `AuthService.currentUser`：`id` / `username` / `email`
 / `avatar_url` / `role`。
+
+> ⚠️ **敏感能力授权（框架行为，契约）**：`@get_auth_token` 与 `@get_user_info`
+> 会把登录凭证 / 账号信息暴露给 JSON-APP，进而可能被发往第三方。框架在这两个
+> 调用点加了**按 appId 的授权弹窗**：用户可选「单次运行 / 始终允许 / 拒绝」，并可
+> 勾选「仅限当前版本」（不勾＝对该 app 所有版本生效）；「始终允许」后不再弹窗。
+> 因此 JSON-APP **必须把这两个调用当作可能返回 `null`** 来处理（用户拒绝、或无
+> UI 上下文可弹窗时返回 `null`，不写入 `bind`）。未登录时同样返回 `null`（不弹窗）。
+> 授权决策持久化在本地 `SharedPreferences`（key `json_app_sensitive_grants_v1`）。
+
+### 4.13 其它内置函数索引（补充）
+
+本节记录近期框架层已经存在、但容易漏写到文档里的通用函数。详细参数以源码实现为准，JSON-APP 里应优先通过组件库封装复用。
+
+| 类别 | 函数 |
+|------|------|
+| 本地 KV | `@storage_set`, `@storage_get`, `@storage_remove`, `@storage_clear` |
+| 本地 JSON 文件 | `@file_write_json`, `@file_read_json`, `@file_exists`, `@file_delete`, `@file_list`, `@file_append_json`, `@file_remove_json_item`, `@file_update_json_item` |
+| 本地表/数据库 | `@db_create_table`, `@db_insert`, `@db_query`, `@db_update`, `@db_delete`, `@db_count`, `@db_kv_set`, `@db_kv_get`, `@db_kv_delete` |
+| 随机/时间 | `@random`, `@random_float`, `@random_bool`, `@random_chars`, `@uuid`, `@random_pick`, `@timestamp`, `@date_format` |
+| 扩展字符串 | `@str_repeat`, `@str_reverse`, `@str_pad`, `@str_join`, `@str_capitalize`, `@str_count`, `@str_index_of`, `@str_last_index_of`, `@str_between`, `@str_mask` |
+| 扩展数组 | `@list_shuffle`, `@list_sample`, `@list_unique`, `@list_flatten`, `@list_sort`, `@list_reverse`, `@list_slice` |
+| 账号/应用配置 | `@get_user_info`, `@get_auth_token`, `@is_logged_in`, `@logout`, `@refresh_user`, `@update_profile`, `@upload_avatar`, `@get_app_config`, `@apply_app_config`, `@save_app_config` |
 
 
 **使用示例 — 嵌套启动**
@@ -592,14 +684,16 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 
 ## 5. JsonLogic 表达式引擎
 
-所有 `{ "operator": [...args] }` 形式的 JSON 节点都通过表达式引擎求值。
+单 key 且 key 属于已知 operator 的 Map 会通过表达式引擎求值，例如 `{ "operator": [...args] }`；多 key Map 或 key 不是 operator 的单 key Map 会按普通数据对象递归解析。
 
 ### 5.1 数据访问
 
 | 操作 | 示例 | 说明 |
 |------|------|------|
-| `var` | `{ "var": "$.global.name" }` | 读取变量 |
+| `var` | `{ "var": "global.name" }` | 读取变量 |
 | `var` (空) | `{ "var": "" }` | 读取当前迭代元素 (filter/map 中) |
+
+> JsonLogic 的 `var` 走 `jsonlogic` 包的点路径查找，必须写 `global.xxx` / `loop.xxx` / `params.xxx` / `event.xxx`。`$.global.xxx` 只在模板 `{{ $.global.xxx }}` 和 action 的路径字符串里做旧格式兼容，不要写进 `{ "var": ... }`。
 
 ### 5.2 算术运算
 
@@ -616,7 +710,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 `==`, `!=`, `>`, `<`, `>=`, `<=`
 
 ```json
-{ ">": [{ "var": "$.global.age" }, 18] }
+{ ">": [{ "var": "global.age" }, 18] }
 ```
 
 ### 5.4 逻辑运算
@@ -702,13 +796,15 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 
 ### 6.2 position 字段
 
-每个控件都支持 `position` 字段：
+每个控件都支持 `position` 字段，但它只是外层包装：
 
 | type | 说明 | 附加字段 |
 |------|------|----------|
 | `relative` | 顺序排列（默认） | — |
 | `absolute` | 绝对定位（需 `layout=stack`） | `top`, `left`, `bottom`, `right` |
-| `flex` | 弹性布局 | `flex` (数字) |
+| `flex` | 弹性布局（需 Row / Column / Flex 父级） | `flex` (数字) |
+
+`position.type=absolute` 会包装成 Flutter `Positioned`，父级必须是 `screen.layout="stack"`、`container.layout="stack"` 或 `stack` 控件；`position.type=flex` 会包装成 `Expanded`，父级必须是 Flex 布局。放错父级会触发布局错误。
 
 #### visible 字段（条件渲染）
 
@@ -754,11 +850,11 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 | `skeleton` | 自实现 shimmer | — | `width`, `height`, `borderRadius`, `loading`(布尔, 与 `child` 联用), `child`(loading=true 时用 child 撑形状再覆盖 shimmer，false 时透传) |
 | `container` | `Container` | `children` | `layout`(column/row/stack), `color`, `padding`, `margin`, `borderRadius`, `border`, `elevation`, `width`, `height` |
 | `divider` | `Divider` | — | `height`, `thickness`, `color`, `indent` |
-| `image` | `Image.network` | `url` | `fit`, `width`, `height`, `borderRadius` |
+| `image` | `Image.network` / `Image.memory` / 本地文件 | `url` / `src` | `fit`, `width`, `height`, `borderRadius` |
 | `spacer` | `SizedBox` / `Spacer` | — | `height`, `width`, `flex`（不写任何字段时默认 `Spacer()`，仅在 Flex 父级生效） |
 | `switch` | `Switch` | `bind` | `label`, `action` |
 | `image_picker` | `ImagePicker` | `bind` | `source`(gallery/camera), `placeholder`, `width`, `height`, `borderRadius` |
-| `video` | `Chewie` + `VideoPlayer` | `url` | `autoplay`, `looping`, `aspectRatio`, `borderRadius` |
+| `video` | `Chewie` + `VideoPlayer` | `url` / `src` | `autoplay`, `looping`, `aspectRatio`, `width`, `height`, `borderRadius` |
 | `icon` | `Icon` | `name` | `size`, `color` |
 | `card` | `Card` | `children` | `layout`, `padding`, `margin`, `elevation`, `borderRadius`, `color`, `onTap`, `crossAxisAlignment`, `mainAxisAlignment` |
 | `checkbox` | `Checkbox` | `bind` | `label`, `action`, `disabled`, `color` |
@@ -796,6 +892,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 | `camera` | `CameraPreview` (camera 包) | — | `lensDirection`(back/front), `resolution`(low/medium/high/veryHigh), `height` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
 | `flame_game` | Flame `GameWidget` 嵌入 ECS 游戏 | `world` | `vars`, `entities`, `input`, `frame`, `tick`, `on_*`, `overlay`, `height`（详见 6.42） |
+| `virtual_gamepad` | 通用虚拟手柄 | — | `mode`(`dpad`/`joystick`), `directions`, `actions`, `actionLayout`(`wrap`/`ps`), `joystick`, `height`。适合平台跳跃 / 动作游戏；可通过组件库 `game-controls` 复用 |
 
 ### 6.4 button 详细属性
 
@@ -857,7 +954,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
   "type": "input",
   "placeholder": "请输入邮箱",
   "label": "邮箱地址",
-  "bind": "$.global.email",
+  "bind": "global.email",
   "keyboardType": "email",
   "maxLines": 1,
   "obscureText": false,
@@ -1387,7 +1484,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 }
 ```
 
-单 widget 同时管 TabBar 和 TabBarView，避免上下两层 widget 各自管理 controller 的麻烦。`height` 用于 TabBarView 高度（必须明确）。
+单 widget 同时管 TabBar 和 TabBarView，避免上下两层 widget 各自管理 controller 的麻烦。`height` 用于 TabBarView 高度，建议显式写；不写时默认 400。
 
 > 提示：如果你想要的是底部 tab + 多页面切换，screen 级别的 `tabs` 配置更合适（已支持，见下文）。
 
@@ -1420,6 +1517,17 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 ```
 
 字段：`title` / `centerTitle` / `backgroundColor` / `color`(前景) / `elevation` / `leading: {icon, action}` / `actions: [{icon, action}]`。
+
+全屏体验（游戏标题页、沉浸式工具页等）可以显式关闭默认顶部栏：
+
+```json
+{
+  "id": "title",
+  "appBar": false,
+  "backgroundColor": "#000000",
+  "children": [...]
+}
+```
 
 ### 6.38 screen.drawer — 侧边栏（Scaffold 级别）
 
@@ -1555,6 +1663,25 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 
 `{{ props.xxx }}` 在渲染时被替换为调用方传入的 `props` 值。
 
+模板可以声明 props 默认值，调用方未传或传 `null` 时生效。默认值支持只引用
+`props.*` 的 JsonLogic，适合表达“某个 prop 默认等于另一个 prop”：
+
+```json
+"userCard": {
+  "props": ["name", "avatar", "fallbackAvatar"],
+  "defaults": {
+    "fallbackAvatar": { "var": ["props.avatar", "https://example.com/avatar.png"] }
+  },
+  "root": {
+    "type": "image",
+    "url": { "or": [{ "var": "props.avatar" }, { "var": "props.fallbackAvatar" }] }
+  }
+}
+```
+
+出于生命周期安全，`ref` 的构建阶段只会提前计算完全由 `props.*` 组成的
+JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻辑里计算。
+
 ### 6.42 flame_game 控件 — 嵌入小游戏（atom + 编排）
 
 `flame_game` 是一个**通用游戏宿主**：JSON 描述游戏的世界、实体、输入、循环规则，框架（Flame 引擎 + 游戏 atom）负责执行。**新加一个游戏不需要改客户端代码**——只要 JSON 用现有 atom 拼出即可。
@@ -1578,6 +1705,11 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
   "world": { ... },
   "vars": { ... },
   "entities": { "<id>": { ... } },
+  "audio": {
+    "base_url": "https://example.com/game-audio/",
+    "tracks": { "bgm": { "src": "main.ogg", "loop": true, "volume": 0.3 } },
+    "sounds": { "jump": { "src": "jump.ogg", "volume": 0.8 } }
+  },
   "input": { "tap": [...], "swipe": [...], "pan": [...], "swipe_threshold": 16 },
   "frame": { "logic": [...] },
   "tick": { "interval": 0.16, "logic": [...] },
@@ -1594,6 +1726,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `world` | ✅ | 坐标系 |
 | `vars` | ❌ | 游戏内变量初始值（每次 reset 重置） |
 | `entities` | ❌ | 实体声明（id → spec） |
+| `audio` | ❌ | 游戏音频目录。`tracks` 适合 BGM/循环音，`sounds` 适合跳跃、拾取、命中等短音效；资源由 JSON 以 URL/相对路径声明 |
 | `input.tap` | ❌ | 点击事件 logic（event 含 `x`, `y`） |
 | `input.swipe` | ❌ | **离散** swipe：一次手势结束才触发一次（按累积位移决定方向）。event 含 `direction`（up/down/left/right）+ 累积 `dx`/`dy`。适合 2048、贪吃蛇、卡牌这类"一次手势 = 一次事件"的游戏 |
 | `input.pan` | ❌ | **连续** pan：onPanUpdate 每帧（~16ms）触发一次，event 只含本帧增量 `dx`/`dy`（不含 direction）。适合划线、轨迹、拖动、连续蓄力这类需要逐帧位移的游戏 |
@@ -1617,7 +1750,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `{{ world.cols }}` / `{{ world.rows }}` / `{{ world.width }}` / `{{ world.height }}` / `{{ world.cell_w }}` / `{{ world.cell_h }}` | 世界尺寸 |
 | `{{ score }}` / `{{ best }}` / `{{ game_over }}` | 内置标量 |
 
-外层模板（`{{ global.x }}`, `{{ params.x }}`, `{{ loop.x }}`）会在 widget build 时一次性烤进 spec，仅作为初始值用。
+外层模板（`{{ global.x }}`, `{{ params.x }}`）会在 widget build 时一次性烤进 spec，仅作为初始值用。`vars.*` / `event.*` / `entities.*` / `world.*` / `loop.*` 属于游戏内部命名空间，必须保留到 game logic 执行时再解析。
 
 #### `world` —— 坐标系
 
@@ -1637,8 +1770,11 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `cell_path` | `init: [[x,y], ...]` | 网格上的格子序列（snake 身体）；`render.gradient: true` 启头亮尾暗 |
 | `scroll_list` | `direction: "down"` | 垂直滚动行序列（tap_white_tile）；`speed`, `row_height`(默认 width/cells), `safe_zone_bottom`(默认 2), `row_spec` |
 | `value_grid` | `cols`, `rows` | 网格里每格存 int 值（2048 类游戏）；`init: [[0,0,2,...]]` 初始矩阵；`render.by_value: { "2": {...}, "4": {...} }` 按值渲染，`render.default` 兜底；render 支持 `text` + `text_color` + `font_size` 在色块上叠数字，`{{ value }}` 占位会被当前值替换 |
-| `pixel` | `position: [x, y]`, `size: [w, h]`, `velocity: [vx, vy]` | **自由 2D sprite**：每帧自动 `position += velocity * dt`。通用，可做角色 / 子弹 / 障碍物 / 任意运动元素；render 支持 rect / circle / text（emoji 走 `shape: "text"`） |
-| `static` | `position`, `size` | 像素静态可视（保留接口，第一版未启用） |
+| `pixel` | `position: [x, y]`, `size: [w, h]`, `velocity: [vx, vy]` | **自由 2D sprite**：默认每帧自动 `position += velocity * dt`，如需静态像素块用 `velocity: [0,0]` 或 `auto_update: false`；render 支持 rect / circle / text（emoji 走 `shape: "text"`） |
+| `sprite` | `asset`, `position`, `size` | 单张图片 / spritesheet 子区域渲染；可配 `src` 裁切 |
+| `animated_sprite` | `asset`, `position`, `size`, `frame_size` | spritesheet 动画；支持 `animations`、`currentAnimation`、`loop`、`step_time`；非零起点/非紧密排布的图集可用 `src_origin: [x,y]` / `src_x` / `src_y` 和 `frame_step: [dx,dy]` / `frame_step_x` / `frame_step_y` |
+| `parallax` | `asset` | 横向循环背景层；支持 `speed_x`, `y`, `height` |
+| `tiled_map` | `source` 或 `map_data` | Tiled 地图渲染 + 碰撞 + object layer 读取；支持外链 TMX/JSON，也支持内联 `tiled-json-v1`（见下）。`solid_layers` / `hazard_layers` 可指向 tile layer，也可指向 objectgroup 的矩形碰撞层 |
 
 每个 entity 的 `render` 字段：
 
@@ -1646,6 +1782,88 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 { "shape": "rect", "color": "#00C800", "padding": 2, "radius": 4 }
 { "shape": "circle", "color": "#FF4444", "padding": 4 }
 ```
+
+#### `tiled_map` 地图输入：外链资源 / 内联 JSON
+
+`tiled_map` 是通用地图 atom，不绑定任何具体游戏。它把 Tiled 地图读成框架内部统一结构，供渲染、碰撞、object spawn 使用。
+
+**Agent 选型规则**：做 JSON 游戏时，如果需要 TMX / Tiled 地图，默认优先生成
+`map_data` 并保存在同一份 JSON APP 里。这样用户拿到的就是一个完整 APP，
+不需要额外准备 bucket、CDN、上传 TMX，也不容易因为资源路径漏传导致地图空白。
+只有在地图很大、已有稳定资源托管、需要用 Tiled 工具链反复维护、或多款 APP
+共享同一套地图资源时，才优先使用外链 `source`。
+
+**模式 A：外链 TMX / JSON**
+
+```json
+{
+  "kind": "tiled_map",
+  "source": "map/level_1.tmx",
+  "base_url": "https://cdn.example.com/my-game/",
+  "solid_layers": ["Ground"],
+  "hazard_layers": ["Hazard"]
+}
+```
+
+`source` 可以是绝对 URL，也可以配 `base_url` 使用相对路径。`.tmx` 会按 Tiled XML 解析；`.json` 或内容以 `{` 开头时按 `tiled-json-v1` 解析。外链模式适合已经有资源托管和地图制作流程的项目，便于 Tiled 工具链、图片资源和缓存协同；不应作为 AI 生成小游戏的默认选择。
+
+**模式 B：内联地图数据**
+
+```json
+{
+  "kind": "tiled_map",
+  "base_url": "https://cdn.example.com/my-game/",
+  "map_data": {
+    "format": "tiled-json-v1",
+    "source": "map/level_1.tmx",
+    "width": 96,
+    "height": 15,
+    "tilewidth": 64,
+    "tileheight": 64,
+    "tilesets": [
+      {
+        "firstgid": 1,
+        "source": "tiles/ground.tsx",
+        "name": "ground",
+        "tilewidth": 64,
+        "tileheight": 64,
+        "tilecount": 8,
+        "columns": 4,
+        "image": "ground.png",
+        "tiles": [
+          {
+            "id": 0,
+            "type": "Platform",
+            "collision": [{ "x": 0, "y": 0, "width": 64, "height": 64 }]
+          }
+        ]
+      }
+    ],
+    "layers": [
+      {
+        "type": "tilelayer",
+        "name": "Ground",
+        "width": 96,
+        "height": 15,
+        "data": [0, 0, 1, 1, 0]
+      },
+      {
+        "type": "objectgroup",
+        "name": "spawn",
+        "objects": [
+          { "id": 1, "name": "start", "x": 128, "y": 704, "width": 48, "height": 48 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+内联模式是 AI 生成游戏的推荐默认方案，也适合小/中地图、用户没有 bucket/CDN 的场景。地图结构可以直接放在 `global.variables._tiledMaps`，实体和 `@tiled.load` 用 `{{ global._tiledMaps.level1 }}` 引用，避免重复塞多份。`map_data.source` 可选，但建议保留原 TMX 相对路径（如 `map/level_1.tmx`），框架会用它作为 tileset 图片相对路径的解析基准。
+
+注意：`map_data` 解决的是地图结构内联；tileset 图片仍建议用 URL / `base_url` 资源。小图未来可以用 data URL，但大型 spritesheet 不建议塞进主 JSON。
+
+碰撞层规则：`solid_layers` 和 `hazard_layers` 中的 layer name 如果是 tile layer，会按 tileset 的 tile collision / type 生成碰撞；如果是 objectgroup，会把该层每个矩形 object 当作 AABB 碰撞区域。object 自己有 `type` 时优先使用 object type，否则 solid 默认 `Platform`、hazard 默认 `Hazard`。
 
 #### atom @action 集合（仅 flame_game 内可用）
 
@@ -1665,6 +1883,7 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `@score.set({value})` | 分数设为 v |
 | `@game_over` | 触发结束，emit `gameOver` |
 | `@game_reset` | 重置（仅清状态，不重新构建结构）。**只能在 flame_game 内部 logic 里用**，外层 JSON-APP 用下面的 `@flame_game_reset` |
+| `@emit({event, data})` | 从游戏内部发自定义事件给外层 JSON-APP；外层用 `on_<event>` 接收 |
 | `@cell_path.advance({path, direction})` | 头按方向走一格（带 wrap）|
 | `@cell_path.grow({path})` | 长一节 |
 | `@cell_path.contains({path, cell, skip_head})` | 是否包含某格（碰撞检测） |
@@ -1680,29 +1899,80 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `@value_grid.slide_merge({grid, direction})` | 按方向 slide+merge，返回 `{moved: bool, score: int}`，2048 类用 |
 | `@value_grid.spawn({grid, four_chance: 0.1})` | 随机空格 spawn 一个 2 / 4，返回是否成功 |
 | `@value_grid.can_move({grid})` | 是否还能动（有空格或邻接同值） |
+| `@matrix.clear({grid, value?})` | 清空 `value_grid` 为指定整数，默认 0；适合棋盘/消除/下落方块类游戏 |
+| `@matrix.can_place({grid, cells, x, y, empty_values?, allow_above?})` | 判断多格形状能否放入网格；`cells` 支持 `[[x,y], ...]` 或 `{x,y}` 列表，默认空值为 0，默认允许形状部分在顶部以上 |
+| `@matrix.place({grid, cells, x, y, value, only_in_bounds?})` | 把多格形状写入网格，返回写入格数；默认越界格跳过 |
+| `@matrix.clear_full_rows({grid, empty_values?, fill?})` | 清除所有满行并顶部补空行，返回 `{cleared, rows}` |
+| `@matrix.random_item({items})` | 从列表中随机深拷贝一项，适合抽取下一块/下一张牌/下一个图案 |
+| `@polyomino.rotate({cells, direction?, normalize?})` | 旋转多格形状；`direction` 支持 `cw`/`ccw`/`flip`，默认旋转后归一到最小 x/y 为 0 |
 | `@not({value})` | 通用否定。jsonlogic `!` 不递归 inline action 调用，需要 `@not` 把 inline call 结果取反 |
 | `@pixel.set_position({id, p: [x, y]})` | 写 pixel entity 的位置 |
 | `@pixel.set_velocity({id, v: [vx, vy]})` | 写 pixel entity 的速度（写完每帧自动按 v*dt 更新位置） |
 | `@pixel.add_velocity({id, dv: [dvx, dvy]})` | 累加速度。每帧加 `[0, gravity*dt]` = 重力；加 `[wind, 0]` = 风力；通用语义 |
 | `@spawn({kind, id, position?, size?, velocity?, render?, ...})` | 运行时创建一个新 entity（任何 kind）。typical 用于子弹 / 敌人 / 障碍物等"无限生成"的场景 |
 | `@despawn({id})` | 运行时销毁一个 entity |
+| `@animated_sprite.set_animation({id, animation})` | 切换 animated_sprite 当前动画 |
+| `@animated_sprite.effect({...})` | 生成一次性动画特效，播完自动移除 |
+| `@entity.exists({id})` | 判断 entity 是否存在 |
+| `@entity.get({id, field})` | 读取 entity 字段；常用字段：`x/y/w/h/vx/vy/position/size/velocity/auto_update/state.xxx` |
+| `@entity.set({id, field, value})` | 写 entity 字段；推荐写标量字段 `x/y/w/h/vx/vy/auto_update/state.xxx`。框架兼容 `position:[x,y]` / `size:[w,h]` / `velocity:[vx,vy]`，但新 JSON 生成时优先分别写 `x/y`、`w/h`、`vx/vy`，错误更容易定位 |
+| `@entity.add({id, field, by, min?, max?})` | 对 entity 数值字段做累加；常用字段：`x/y/w/h/vx/vy/state.xxx`。兼容旧别名 `path/value`，但新 JSON 必须写 `field/by` |
+| `@entity.flip_by_velocity({id})` | 按 vx 自动翻转 sprite 朝向 |
+| `@audio.play({id, source?, loop?, volume?, restart?})` | 播放 `audio.tracks/sounds` 中的 id，或直接播放 `source` URL/asset。BGM 通常 `loop:true`；短音效用默认一次性播放 |
+| `@audio.stop({id?})` | 停止指定循环音；不传 id 时停止当前游戏内所有音频 |
+| `@audio.pause({id?})` / `@audio.resume({id?})` | 暂停/恢复指定或全部循环音 |
+| `@audio.set_volume({id, volume})` | 调整循环音音量，`volume` 范围 0..1 |
 | `@collide.rect({a, b})` | 两个 entity 的 AABB 矩形重叠检测，返回 bool。两边都得是 pixel 类（暴露 x/y/w/h） |
+| `@collision.first({a, where_prefix})` | 查询实体 `a` 与指定 id 前缀实体的第一条 AABB 碰撞，返回命中的 entity id 或 `null` |
+| `@tiled.loaded({map})` | 地图是否已加载完成 |
+| `@tiled.first_object({map, layer})` | 读取 object layer 第一项 |
+| `@tiled.load({map, source})` | 切换 tiled_map 到另一张外链 TMX/JSON |
+| `@tiled.load({map, map_data})` | 切换 tiled_map 到另一份内联 `tiled-json-v1` 数据 |
+| `@tiled.clear_spawned({prefix})` | 删除指定前缀的动态生成实体 |
+| `@tiled.spawn_objects({map, layer, templates})` | 按 object layer 批量生成实体 |
+| `@tiled.spawn_objects_near({map, layer, reference, proximity, templates})` | 只生成 reference 附近的 object，适合长地图懒加载 |
+| `@tiled.collisions({map, rect})` / `@tiled.collisions({map, entity})` | 返回指定矩形或 entity AABB 范围内的瓦片碰撞列表 |
+| `@tiled.has_collision_type({map, rect, type})` / `@tiled.has_collision_type({map, entity, type})` | 判断范围内是否命中特定碰撞类型；`type: "hazard"` 时掉出地图底部也视为命中 |
+| `@tiled.nearest_object({map, layer, before_x})` | 查某层中 `x < before_x` 且离 `before_x` 最近的 object，常用于找最近重生点 |
+| `@tiled.remove_object({map, layer, object_id})` | 从指定 object layer 移除一个 object，并标记为已消费；适合破坏、拾取、开关触发后不再参与碰撞的地图对象 |
+| `@platformer.step({...})` | 通用平台跳跃物理步进：重力、地面、墙、危险区域等 |
+| `@platformer.backend({...})` | 平台物理后端辅助，供复杂 platformer 使用 |
+| `@platformer.respawn({...})` | 按 respawn 点重生 |
+| `@platformer.stuck_check({...})` | 卡住检测 |
+| `@platformer.section_exit({...})` | 横版跑图段落出口检测 |
 | `@for_each_entity({where_prefix, do})` | 遍历 id 前缀匹配的所有 entity。子 logic 里 `{{ loop.id }}` / `{{ loop.entity }}` / `{{ loop.index }}` 可用。子 logic 内 spawn/despawn 不影响本轮迭代（用快照） |
+
+`@tiled.spawn_objects*` 的 object layer 只提供点位和属性，不等于可见实体。生成敌人、
+道具、掩体时必须传 `templates`，模板里写清 `kind`、真实 `asset`、`position`、`size`、
+动画的 `frame_size/frames/frames_per_row` 和必要 `state`。否则 object 能被读取，但生成出来的
+实体可能没有素材、没有行为，表现为“地图里有点位但游戏里没有敌人”。
+
+横版射击类游戏如果使用 `bullet_count` / `projectile_count` 这类上限变量，必须在命中敌人、
+飞出屏幕或超时销毁时都释放计数；只在命中时释放会导致玩家打空几发后永远不能开火。
+`@platformer.step` 会写入 `entities.<id>.hazard` / `outOfBounds` 语义，关卡游戏需要在
+`frame.logic` 里读取并触发扣命、重生或 `@game_over`，避免角色掉出地图后继续隐形运行。
+它也会写入通用碰撞边信息：`blockedLeft` / `blockedRight` / `blockedUp` /
+`blockedDown`、`xCollision` / `yCollision` / `onGroundCollision`。平台游戏可以据此
+实现撞墙反向、下方撞击可交互物、踩地触发等状态机，不要靠猜坐标。
+
+平台游戏发布前至少过这组验收：地面能站住；墙/管道/箱子从侧面会阻挡；可交互地图块从下方能命中；
+单向平台只在显式 `one_way_types` / `one_way_tilesets` 指定时生效；掉坑、碰危险物、冲出地图会扣命、
+重生或结束；敌人、道具、子弹不会因为离屏/命中路径遗漏而永久卡住状态。
 | `@random_int({min, max})` | 返回 [min, max) 的随机整数 |
 | `@random_double({min, max})` | 返回 [min, max) 的随机 double |
 
 #### 双向桥
 
-- 游戏 emit 的事件（`score_changed` / `game_over` / `reset`）会在 spec 的 `on_<event>` 字段里被外层 JSON-APP 接住，能调任意 130 个全局 @action（@set 写 global、@http_*、@navigate 等）
+- 游戏 emit 的事件（`score_changed` / `game_over` / `reset`）会在 spec 的 `on_<event>` 字段里被外层 JSON-APP 接住，能调外层 JSON-APP 的全局 @action（例如 @set 写 global、@http_*、@navigate 等）
 - 游戏内部 logic 用上面 atom @action 集，不能调 @http、@navigate 这种（避免污染游戏循环）
 
-#### 已知限制 / 不在第一版
+#### 已知限制 / 设计边界
 
-- 没有 sprite / image entity（纯 Canvas 图形）
-- 没有音效
-- 没有动画曲线 / 缓动
-- 没有持久化（高分让 JSON-APP 自己用 `on_game_over` 存）
-- 频繁 jsonlogic 求值无 cache，性能不是瓶颈但 60fps frame.logic 不要塞太多规则
+- 音频能力只负责播放 JSON 引入的 BGM / 短音效；复杂混音、音频精确同步和动态合成暂不支持。
+- 没有动画曲线 / 缓动系统；简单 spritesheet 动画用 `animated_sprite`。
+- 没有游戏专用持久化；高分/进度让 JSON-APP 自己在 `on_game_over` / `on_score_changed` 中用 storage/file/db 保存。
+- `frame.logic` 是逐帧解释执行，适合轻量规则；大批量实体建议用 `@tiled.spawn_objects_near`、前缀遍历和距离 despawn 控制规模。
+- `tiled_map.map_data` 可以承载小/中地图；大型正式地图仍建议外链 asset，避免主 JSON 难以 review。
 
 #### 完整示例
 
@@ -1713,6 +1983,10 @@ drawer 是 Scaffold 的属性，所以是 screen 级别配置。点击侧边栏�
 | `templates/demo_2048.json` | `pixel_world` + `value_grid` + `init.logic` + `swipe` | **flame_game 与普通 widget 混排**：顶部分数 bar、中间游戏区、底部结果 bar 在同一份 JSON 里 |
 | `templates/demo_flappy_bird.json` | `pixel` entity + `@pixel.add_velocity` + `@spawn`/`@despawn` + `@collide.rect` + `@for_each_entity` | **物理 + 动态生成 + 碰撞**：重力 / 跳跃冲量 / 管道无限生成 / 出屏销毁 / 计分 全在 JSON 里编排，框架零业务逻辑。bird 用 🐦 emoji 渲染 |
 | `templates/demo_jump.json` | `input.press_end` + `pixel` entity + 抛物线物理 + 状态机 | **蓄力跳跃 + 平台滚动**：按住-松手按 `held_ms` 决定 vx，抛物线由重力自然形成；落到目标平台→镜头滚动（platform / player 同时 `set_velocity`)，到位后 despawn / spawn 切换。整套状态机（ready/jumping/rolling）由 JSON `vars.state` 驱动 |
+| `templates/demo_superdash_runner.ALL_IN_ONE.json` | `demo-superdash-runner-all-in-one` | 官方 SuperDash 风格跑酷，地图结构内联在 JSON 中；图片仍走 asset URL |
+| `templates/demo_platformer_adventure.ALL_IN_ONE.json` | `demo-platformer-adventure-all-in-one` | 多关卡平台跳跃，地图结构内联在 JSON 中，演示无 bucket 的 all-in-one 游戏发布方式 |
+| `templates/demo_tetris.json` | `value_grid` + `@matrix.*` + `@polyomino.rotate` | 竖屏下落方块游戏；棋盘清行、旋转和放置都通过通用矩阵 atom 编排 |
+| `templates/demo_mario_platformer.json` | `tiled_map` objectgroup 碰撞 + `animated_sprite.src_origin` + `@platformer.step` | 横屏平台跳跃游戏；外链 TMX/素材，玩法逻辑留在 JSON 层 |
 
 ---
 

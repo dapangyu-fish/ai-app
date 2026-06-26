@@ -146,6 +146,38 @@ void main() {
     expect(game.vars['captured'], 'g7');
   });
 
+  test('@for_each_entity keeps do raw until loop context exists', () {
+    game.logic.runLogic([
+      {
+        'call': '@for_each_entity',
+        'args': {
+          'where_prefix': 'g',
+          'do': [
+            {
+              'call': '@set',
+              'args': {
+                'var': 'vars.loop_x',
+                'value': {
+                  'call': '@entity.get',
+                  'args': {'id': '{{ loop.id }}', 'field': 'x'},
+                },
+              },
+            },
+            {
+              'call': '@set',
+              'args': {'var': 'vars.captured', 'value': '{{ loop.id }}'},
+            },
+          ],
+        },
+      }
+    ]);
+
+    expect(game.vars['captured'], 'g7');
+    expect(game.vars['loop_x'], isNotNull,
+        reason:
+            'inline action inside do must execute after @for_each_entity pushes loop.id');
+  });
+
   test('multiple entities (64) + nested @if + event stack mimics frame.logic',
       () {
     // 重建跟 match3-pixel 一样的环境：64 个 g* entity，frame.logic 在

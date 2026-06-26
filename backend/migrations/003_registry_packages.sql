@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS registry_packages (
   -- ② enrich（LLM 产出）
   summary_zh       TEXT,
   summary_en       TEXT,
-  category         TEXT,                        -- 单选受控：app|library|game|demo|tool
+  category         TEXT,                        -- 单选受控：app|library|game|tool|demo|launcher|component|template
   domains          JSONB DEFAULT '[]'::jsonb,   -- 多选受控（语义领域）
   capabilities     JSONB DEFAULT '[]'::jsonb,   -- 半自由能力点
   use_case_zh      TEXT,

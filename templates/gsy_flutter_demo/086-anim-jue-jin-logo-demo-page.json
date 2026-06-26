@@ -1,0 +1,70 @@
+{
+  "dsl": "3.3",
+  "appid": "b2ac2114-0ff6-5a04-88eb-a835ede68dc0",
+  "meta": {
+    "name": "gsy_flutter_demo/086-anim-jue-jin-logo-demo-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "rive 掘金 logo",
+      "en": "rive Juejin logo"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：rive 掘金 logo",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "rive 掘金 logo",
+      "sourcePath": "lib/widget/visual/anim_juejin_logo_demo_page.dart",
+      "deferredAlias": "anim_juejin_logo_demo_page",
+      "widgetClass": "AnimJueJinLogoDemoPage",
+      "category": "visual",
+      "routeIndex": 86,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-rive-animation-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "rive 掘金 logo",
+      "upstreamSource": "lib/widget/visual/anim_juejin_logo_demo_page.dart",
+      "upstreamWidget": "AnimJueJinLogoDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-rive-animation-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "AnimJueJinLogoDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "rive_animation",
+                "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/juejin.riv",
+                "fit": "contain",
+                "alignment": "center",
+                "renderer": "flutter"
+              }
+            }
+          }
+        ],
+        "appBar": {
+          "title": "AnimJueJinLogoDemoPage"
+        }
+      }
+    ]
+  }
+}

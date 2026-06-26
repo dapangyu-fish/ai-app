@@ -272,8 +272,30 @@ class _IMChatPageState extends State<IMChatPage> {
     final text = _inputController.text.trim();
     if (text.isEmpty) return;
 
+    final ready = await IMService.instance.ensureConnected();
+    if (!ready) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(T.of(context).homeImLoginFailed)));
+      return;
+    }
+
     _inputController.clear();
-    final pending = await IMService.instance.createTextMessage(text);
+    late final Message pending;
+    try {
+      pending = await IMService.instance
+          .createTextMessage(text)
+          .timeout(const Duration(seconds: 8));
+    } catch (e) {
+      debugPrint('[IM] 创建文本消息失败: $e');
+      if (!mounted) return;
+      _inputController.text = text;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(T.of(context).authErrSendFailed)));
+      return;
+    }
 
     if (mounted) {
       setState(() => _messages.insert(0, pending));
@@ -995,8 +1017,9 @@ class _IMChatPageState extends State<IMChatPage> {
   static String _fmtFileSize(int bytes) {
     if (bytes < 1024) return '${bytes}B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)}KB';
-    if (bytes < 1024 * 1024 * 1024)
+    if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+    }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)}GB';
   }
 
@@ -1268,7 +1291,7 @@ class _IMChatPageState extends State<IMChatPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              T.fmt(T.of(context).imOpenFailedWith, {'msg': r.message ?? ''}),
+              T.fmt(T.of(context).imOpenFailedWith, {'msg': r.message}),
             ),
           ),
         );
@@ -1419,6 +1442,7 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
   VideoPlayerController? _vpc;
   ChewieController? _cc;
   String? _err;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -1450,6 +1474,41 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
     super.dispose();
   }
 
+  Future<void> _saveToAlbum() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    final messenger = ScaffoldMessenger.of(context);
+    final s = T.of(context);
+    try {
+      final granted =
+          await Gal.hasAccess(toAlbum: true) ||
+          await Gal.requestAccess(toAlbum: true);
+      if (!granted) {
+        messenger.showSnackBar(SnackBar(content: Text(s.imSaveFailed)));
+        return;
+      }
+      final fileInfo = await ImMediaCacheManager.instance.getFileFromCache(
+        widget.url,
+      );
+      String localPath;
+      if (fileInfo != null) {
+        localPath = fileInfo.file.path;
+      } else {
+        final downloaded = await ImMediaCacheManager.instance.downloadFile(
+          widget.url,
+        );
+        localPath = downloaded.file.path;
+      }
+      await Gal.putVideo(localPath);
+      messenger.showSnackBar(SnackBar(content: Text(s.imSaveSuccess)));
+    } catch (e) {
+      debugPrint('[IM] 保存视频到相册失败: $e');
+      messenger.showSnackBar(SnackBar(content: Text(s.imSaveFailed)));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget body;
@@ -1478,6 +1537,24 @@ class _VideoPlayerPageState extends State<_VideoPlayerPage> {
             child: IconButton(
               icon: const Icon(Icons.close, color: Colors.white),
               onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 8,
+            child: IconButton(
+              icon: _saving
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.download_rounded, color: Colors.white),
+              tooltip: T.of(context).imSaveToAlbum,
+              onPressed: _saving ? null : _saveToAlbum,
             ),
           ),
         ],

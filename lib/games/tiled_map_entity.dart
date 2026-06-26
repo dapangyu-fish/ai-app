@@ -17,6 +17,7 @@ const int _flipDiagonal = 0x20000000;
 
 class TiledMapEntity extends GameEntity {
   String source;
+  Map<String, dynamic>? mapData;
   final String? baseUrl;
   final double scale;
   bool loaded = false;
@@ -41,6 +42,7 @@ class TiledMapEntity extends GameEntity {
     required super.renderConfig,
     super.priority,
     required this.source,
+    this.mapData,
     this.baseUrl,
     this.scale = 1,
     this.includeLayers,
@@ -56,34 +58,24 @@ class TiledMapEntity extends GameEntity {
 
   Future<void> load() async {
     try {
-      final sourceUrl = _resolve(source);
-      debugPrint('[tiled_map:$id] load start: $sourceUrl');
-      final tmxText = await _loadText(sourceUrl);
-      final doc = XmlDocument.parse(tmxText);
-      final map = doc.rootElement;
-      mapWidth = _intAttr(map, 'width', 0);
-      mapHeight = _intAttr(map, 'height', 0);
-      tileWidth = _intAttr(map, 'tilewidth', 64);
-      tileHeight = _intAttr(map, 'tileheight', 64);
-
-      tilesets.clear();
-      for (final ts in map.findElements('tileset')) {
-        final firstGid = _intAttr(ts, 'firstgid', 1);
-        final tsxSource = ts.getAttribute('source');
-        if (tsxSource == null) continue;
-        try {
-          tilesets.add(
-            await _loadTileset(firstGid, tsxSource, relativeTo: sourceUrl),
-          );
-        } catch (e) {
-          debugPrint('[tiled_map:$id] tileset failed: $tsxSource $e');
-        }
-      }
-      tilesets.sort((a, b) => a.firstGid.compareTo(b.firstGid));
-
       layers.clear();
       objectsByLayer.clear();
-      _readMapChildren(map);
+      tilesets.clear();
+
+      if (mapData != null) {
+        debugPrint('[tiled_map:$id] load inline map_data');
+        await _loadFromJson(mapData!);
+      } else {
+        final sourceUrl = _resolve(source);
+        debugPrint('[tiled_map:$id] load start: $sourceUrl');
+        final text = await _loadText(sourceUrl);
+        if (text.trimLeft().startsWith('{')) {
+          final data = json.decode(text) as Map<String, dynamic>;
+          await _loadFromJson(data, sourceUrl: sourceUrl);
+        } else {
+          await _loadFromTmx(text, sourceUrl);
+        }
+      }
 
       loaded = true;
       error = null;
@@ -98,8 +90,97 @@ class TiledMapEntity extends GameEntity {
     }
   }
 
+  Future<void> _loadFromTmx(String tmxText, String sourceUrl) async {
+    final doc = XmlDocument.parse(tmxText);
+    final map = doc.rootElement;
+    mapWidth = _intAttr(map, 'width', 0);
+    mapHeight = _intAttr(map, 'height', 0);
+    tileWidth = _intAttr(map, 'tilewidth', 64);
+    tileHeight = _intAttr(map, 'tileheight', 64);
+
+    for (final ts in map.findElements('tileset')) {
+      final firstGid = _intAttr(ts, 'firstgid', 1);
+      final tsxSource = ts.getAttribute('source');
+      if (tsxSource == null) continue;
+      try {
+        tilesets.add(
+          await _loadTileset(firstGid, tsxSource, relativeTo: sourceUrl),
+        );
+      } catch (e) {
+        debugPrint('[tiled_map:$id] tileset failed: $tsxSource $e');
+      }
+    }
+    tilesets.sort((a, b) => a.firstGid.compareTo(b.firstGid));
+
+    _readMapChildren(map);
+  }
+
+  Future<void> _loadFromJson(
+    Map<String, dynamic> data, {
+    String? sourceUrl,
+  }) async {
+    final inlineSource = data['source']?.toString();
+    final effectiveSourceUrl =
+        sourceUrl ??
+        (inlineSource == null || inlineSource.isEmpty
+            ? null
+            : _resolve(inlineSource));
+    mapWidth = _intValue(data['width'], 0);
+    mapHeight = _intValue(data['height'], 0);
+    tileWidth = _intValue(data['tilewidth'] ?? data['tileWidth'], 64);
+    tileHeight = _intValue(data['tileheight'] ?? data['tileHeight'], 64);
+
+    final rawTilesets = data['tilesets'];
+    if (rawTilesets is List) {
+      for (final raw in rawTilesets) {
+        final ts = _asStringMap(raw);
+        if (ts == null) continue;
+        final firstGid = _intValue(ts['firstgid'] ?? ts['firstGid'], 1);
+        final tsSource = ts['source']?.toString();
+        try {
+          if (_hasInlineTilesetData(ts)) {
+            tilesets.add(
+              await _loadTilesetFromJson(
+                firstGid,
+                ts,
+                relativeTo: effectiveSourceUrl,
+              ),
+            );
+          } else if (tsSource != null && tsSource.isNotEmpty) {
+            tilesets.add(
+              await _loadTileset(
+                firstGid,
+                tsSource,
+                relativeTo: effectiveSourceUrl,
+              ),
+            );
+          }
+        } catch (e) {
+          debugPrint('[tiled_map:$id] json tileset failed: $tsSource $e');
+        }
+      }
+    }
+    tilesets.sort((a, b) => a.firstGid.compareTo(b.firstGid));
+
+    final rawLayers = data['layers'];
+    if (rawLayers is List) {
+      _readJsonChildren(rawLayers);
+    }
+  }
+
   Future<void> loadSource(String nextSource) async {
     source = nextSource;
+    mapData = null;
+    await _reload();
+  }
+
+  Future<void> loadMapData(Map<String, dynamic> nextMapData) async {
+    source = '';
+    mapData = nextMapData;
+    await _reload();
+  }
+
+  Future<void> _reload() async {
     loaded = false;
     error = null;
     tilesets.clear();
@@ -220,6 +301,37 @@ class TiledMapEntity extends GameEntity {
         }
       }
     }
+    for (final entry in objectsByLayer.entries) {
+      final layerName = entry.key;
+      final layerSolid = solidLayers.contains(layerName);
+      final layerHazard = hazardLayers.contains(layerName);
+      if (!layerSolid && !layerHazard) continue;
+      for (final object in entry.value) {
+        if (object.width <= 0 || object.height <= 0) continue;
+        final rect = Rect.fromLTWH(
+          object.x,
+          object.y,
+          object.width,
+          object.height,
+        );
+        if (!rect.overlaps(area)) continue;
+        out.add(
+          TiledTileCollision(
+            rect: rect,
+            type: object.type.isNotEmpty
+                ? object.type
+                : layerHazard
+                ? 'Hazard'
+                : 'Solid',
+            tileset: layerName,
+            objectId: object.id,
+            objectName: object.name,
+            layer: layerName,
+            properties: object.properties,
+          ),
+        );
+      }
+    }
     return out;
   }
 
@@ -227,6 +339,17 @@ class TiledMapEntity extends GameEntity {
     final objects = objectsByLayer[layer];
     if (objects == null || objects.isEmpty) return null;
     return objects.first;
+  }
+
+  bool removeObject(String layer, int objectId) {
+    final objects = objectsByLayer[layer];
+    if (objects == null || objects.isEmpty) return false;
+    final next = objects
+        .where((object) => object.id != objectId)
+        .toList(growable: true);
+    if (next.length == objects.length) return false;
+    objectsByLayer[layer] = next;
+    return true;
   }
 
   bool _usesLayer(TiledLayer layer) {
@@ -274,6 +397,104 @@ class TiledMapEntity extends GameEntity {
         _readObjectGroup(child, childOffsetX, childOffsetY, childVisible);
       }
     }
+  }
+
+  void _readJsonChildren(
+    List<dynamic> children, {
+    double offsetX = 0,
+    double offsetY = 0,
+    bool visible = true,
+  }) {
+    for (final raw in children) {
+      final child = _asStringMap(raw);
+      if (child == null) continue;
+      final type = child['type']?.toString() ?? child['kind']?.toString() ?? '';
+      final childVisible = visible && _boolValue(child['visible'], true);
+      final childOffsetX = offsetX + _doubleValue(child['offsetx'], 0) * scale;
+      final childOffsetY = offsetY + _doubleValue(child['offsety'], 0) * scale;
+      if (type == 'group') {
+        final nested = child['layers'] ?? child['children'];
+        if (nested is List) {
+          _readJsonChildren(
+            nested,
+            offsetX: childOffsetX,
+            offsetY: childOffsetY,
+            visible: childVisible,
+          );
+        }
+      } else if (type == 'tilelayer' || child.containsKey('data')) {
+        _readJsonLayer(child, childOffsetX, childOffsetY, childVisible);
+      } else if (type == 'objectgroup' || child.containsKey('objects')) {
+        _readJsonObjectGroup(child, childOffsetX, childOffsetY, childVisible);
+      }
+    }
+  }
+
+  void _readJsonLayer(
+    Map<String, dynamic> layer,
+    double offsetX,
+    double offsetY,
+    bool visible,
+  ) {
+    final data = layer['data'];
+    final gids = switch (data) {
+      List() =>
+        data.map((value) => _intValue(value, 0)).toList(growable: false),
+      String() =>
+        data
+            .split(',')
+            .map((value) => int.tryParse(value.trim()) ?? 0)
+            .toList(growable: false),
+      _ => const <int>[],
+    };
+    layers.add(
+      TiledLayer(
+        name: layer['name']?.toString() ?? '',
+        width: _intValue(layer['width'], mapWidth),
+        height: _intValue(layer['height'], mapHeight),
+        offsetX: offsetX,
+        offsetY: offsetY,
+        visible: visible,
+        parallaxX: _doubleValue(layer['parallaxx'] ?? layer['parallaxX'], 1),
+        parallaxY: _doubleValue(layer['parallaxy'] ?? layer['parallaxY'], 1),
+        gids: gids,
+      ),
+    );
+  }
+
+  void _readJsonObjectGroup(
+    Map<String, dynamic> group,
+    double offsetX,
+    double offsetY,
+    bool visible,
+  ) {
+    if (!visible) return;
+    final name = group['name']?.toString() ?? '';
+    final objects = group['objects'];
+    objectsByLayer[name] = objects is List
+        ? objects
+              .map(_asStringMap)
+              .whereType<Map<String, dynamic>>()
+              .map(
+                (object) => TiledObject(
+                  id: _intValue(object['id'], 0),
+                  name: object['name']?.toString() ?? '',
+                  type:
+                      object['type']?.toString() ??
+                      object['class']?.toString() ??
+                      '',
+                  x: offsetX + _doubleValue(object['x'], 0) * scale,
+                  y: offsetY + _doubleValue(object['y'], 0) * scale,
+                  width:
+                      _doubleValue(object['width'] ?? object['w'], 0) * scale,
+                  height:
+                      _doubleValue(object['height'] ?? object['h'], 0) * scale,
+                  gid: _intValue(object['gid'], 0),
+                  properties: _readJsonProperties(object['properties']),
+                ),
+              )
+              .toList(growable: false)
+        : const <TiledObject>[];
   }
 
   void _readLayer(
@@ -511,6 +732,104 @@ class TiledMapEntity extends GameEntity {
     );
   }
 
+  Future<TiledTileset> _loadTilesetFromJson(
+    int firstGid,
+    Map<String, dynamic> data, {
+    String? relativeTo,
+  }) async {
+    final source = data['source']?.toString() ?? '';
+    final sourceUrl = source.isEmpty
+        ? relativeTo
+        : _resolve(source, relativeTo: relativeTo);
+    final rawImage =
+        data['image']?.toString() ??
+        data['imageSource']?.toString() ??
+        data['image_source']?.toString() ??
+        '';
+    final imageUrl = rawImage.isEmpty
+        ? ''
+        : _resolve(rawImage, relativeTo: sourceUrl);
+    ui.Image? image;
+    if (imageUrl.isNotEmpty) {
+      final bytes = await _loadBytes(imageUrl);
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      image = frame.image;
+    }
+
+    final tileCollision = <int, List<Rect>>{};
+    final tileTypes = <int, String>{};
+    final tileProperties = <int, Map<String, dynamic>>{};
+    final rawTiles = data['tiles'];
+    if (rawTiles is List) {
+      for (final rawTile in rawTiles) {
+        final tile = _asStringMap(rawTile);
+        if (tile == null) continue;
+        final id = _intValue(tile['id'], -1);
+        if (id < 0) continue;
+        final type =
+            tile['type']?.toString() ?? tile['class']?.toString() ?? '';
+        if (type.isNotEmpty) tileTypes[id] = type;
+        final props = _readJsonProperties(tile['properties']);
+        if (props.isNotEmpty) tileProperties[id] = props;
+
+        final rects = <Rect>[];
+        final collision = tile['collision'];
+        if (collision is List) {
+          for (final rawRect in collision) {
+            final rect = _asStringMap(rawRect);
+            if (rect == null) continue;
+            rects.add(
+              Rect.fromLTWH(
+                _doubleValue(rect['x'], 0),
+                _doubleValue(rect['y'], 0),
+                _doubleValue(rect['width'] ?? rect['w'], 0),
+                _doubleValue(rect['height'] ?? rect['h'], 0),
+              ),
+            );
+          }
+        }
+        final objectGroup = _asStringMap(tile['objectgroup']);
+        final objects = objectGroup?['objects'];
+        if (objects is List) {
+          for (final rawObject in objects) {
+            final object = _asStringMap(rawObject);
+            if (object == null) continue;
+            rects.add(
+              Rect.fromLTWH(
+                _doubleValue(object['x'], 0),
+                _doubleValue(object['y'], 0),
+                _doubleValue(object['width'] ?? object['w'], 0),
+                _doubleValue(object['height'] ?? object['h'], 0),
+              ),
+            );
+          }
+        }
+        if (rects.isNotEmpty) tileCollision[id] = rects;
+      }
+    }
+
+    return TiledTileset(
+      firstGid: firstGid,
+      name: data['name']?.toString() ?? '',
+      source: sourceUrl ?? '',
+      imageSource: imageUrl,
+      tileWidth: _intValue(data['tilewidth'] ?? data['tileWidth'], tileWidth),
+      tileHeight: _intValue(
+        data['tileheight'] ?? data['tileHeight'],
+        tileHeight,
+      ),
+      tileCount: _intValue(data['tilecount'] ?? data['tileCount'], 0),
+      columns: _intValue(data['columns'], 1).clamp(1, 1 << 30),
+      spacing: _intValue(data['spacing'], 0),
+      margin: _intValue(data['margin'], 0),
+      image: image,
+      tileCollision: tileCollision,
+      tileTypes: tileTypes,
+      tileProperties: tileProperties,
+    );
+  }
+
   String _resolve(String path, {String? relativeTo}) {
     return assetManager.resolve(path, baseUrl: baseUrl, relativeTo: relativeTo);
   }
@@ -543,12 +862,68 @@ class TiledMapEntity extends GameEntity {
     return props;
   }
 
+  static Map<String, dynamic> _readJsonProperties(dynamic rawProperties) {
+    if (rawProperties is Map) {
+      return rawProperties.map((key, value) => MapEntry(key.toString(), value));
+    }
+    if (rawProperties is List) {
+      final out = <String, dynamic>{};
+      for (final raw in rawProperties) {
+        final prop = _asStringMap(raw);
+        if (prop == null) continue;
+        final name = prop['name']?.toString();
+        if (name == null) continue;
+        out[name] = prop.containsKey('value')
+            ? prop['value']
+            : prop['text']?.toString();
+      }
+      return out;
+    }
+    return const {};
+  }
+
+  static bool _hasInlineTilesetData(Map<String, dynamic> data) {
+    return data.containsKey('image') ||
+        data.containsKey('imageSource') ||
+        data.containsKey('image_source') ||
+        data.containsKey('tiles') ||
+        data.containsKey('tilewidth') ||
+        data.containsKey('tileWidth');
+  }
+
+  static Map<String, dynamic>? _asStringMap(dynamic value) {
+    if (value is! Map) return null;
+    return value.map((key, value) => MapEntry(key.toString(), value));
+  }
+
   static int _intAttr(XmlElement e, String name, int fallback) {
     return int.tryParse(e.getAttribute(name) ?? '') ?? fallback;
   }
 
   static double _doubleAttr(XmlElement e, String name, double fallback) {
     return double.tryParse(e.getAttribute(name) ?? '') ?? fallback;
+  }
+
+  static int _intValue(dynamic value, int fallback) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  static double _doubleValue(dynamic value, double fallback) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  static bool _boolValue(dynamic value, bool fallback) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      if (normalized == 'true' || normalized == '1') return true;
+      if (normalized == 'false' || normalized == '0') return false;
+    }
+    return fallback;
   }
 }
 
@@ -659,12 +1034,18 @@ class TiledTileCollision {
   final Rect rect;
   final String type;
   final String tileset;
+  final int? objectId;
+  final String? objectName;
+  final String? layer;
   final Map<String, dynamic> properties;
 
   const TiledTileCollision({
     required this.rect,
     required this.type,
     this.tileset = '',
+    this.objectId,
+    this.objectName,
+    this.layer,
     this.properties = const {},
   });
 
@@ -679,6 +1060,9 @@ class TiledTileCollision {
     'h': rect.height,
     'type': type,
     'tileset': tileset,
+    if (objectId != null) 'objectId': objectId,
+    if (objectName != null && objectName!.isNotEmpty) 'objectName': objectName,
+    if (layer != null && layer!.isNotEmpty) 'layer': layer,
     'properties': properties,
     ...properties,
   };

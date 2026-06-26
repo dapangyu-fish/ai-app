@@ -1,0 +1,1778 @@
+{
+  "dsl": "3.3",
+  "appid": "19f75283-c206-53a2-8c17-37f48c6d5983",
+  "meta": {
+    "name": "gsy_flutter_demo/042-drop-select-demo-page",
+    "version": "0.1.4",
+    "type": "app",
+    "displayName": {
+      "zh": "下弹筛选展示效果",
+      "en": "Dropdown filter demo"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：下弹筛选展示效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "下弹筛选展示效果",
+      "sourcePath": "lib/widget/basic/drop_select_menu/drop_select_demo_page.dart",
+      "deferredAlias": "drop_select_demo_page",
+      "widgetClass": "DropSelectDemoPage",
+      "category": "basic",
+      "routeIndex": 42
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "下弹筛选展示效果",
+      "upstreamSource": "lib/widget/basic/drop_select_menu/drop_select_demo_page.dart",
+      "upstreamWidget": "DropSelectDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2",
+      "menu": -1,
+      "title1": "title1",
+      "title2": "title2",
+      "title3": "title3",
+      "activeExpandGroup": "-1",
+      "menu0SelectedByGroup": {
+        "距离": [
+          "全部"
+        ],
+        "范围": [
+          "全部"
+        ],
+        "路径": [
+          "全部"
+        ],
+        "回家": [
+          "全部"
+        ]
+      },
+      "menu0TempByGroup": {
+        "距离": [
+          "全部"
+        ],
+        "范围": [
+          "全部"
+        ],
+        "路径": [
+          "全部"
+        ],
+        "回家": [
+          "全部"
+        ]
+      },
+      "menu1SelectedByGroup": {
+        "选择1": [
+          "全部"
+        ],
+        "选择2": [
+          "全部"
+        ]
+      },
+      "menu1TempByGroup": {
+        "选择1": [
+          "全部"
+        ],
+        "选择2": [
+          "全部"
+        ]
+      },
+      "menu2SelectedIndex": "0",
+      "expandGroups": [
+        {
+          "title": "距离",
+          "children": [
+            {
+              "group": "距离",
+              "title": "全部"
+            },
+            {
+              "group": "距离",
+              "title": "距离1"
+            },
+            {
+              "group": "距离",
+              "title": "距离2"
+            },
+            {
+              "group": "距离",
+              "title": "距离3"
+            },
+            {
+              "group": "距离",
+              "title": "距离4"
+            },
+            {
+              "group": "距离",
+              "title": "距离5"
+            },
+            {
+              "group": "距离",
+              "title": "距离6"
+            },
+            {
+              "group": "距离",
+              "title": "距离7"
+            }
+          ]
+        },
+        {
+          "title": "范围",
+          "children": [
+            {
+              "group": "范围",
+              "title": "全部"
+            },
+            {
+              "group": "范围",
+              "title": "范围1"
+            },
+            {
+              "group": "范围",
+              "title": "范围2"
+            },
+            {
+              "group": "范围",
+              "title": "范围3"
+            },
+            {
+              "group": "范围",
+              "title": "范围4"
+            },
+            {
+              "group": "范围",
+              "title": "范围5"
+            },
+            {
+              "group": "范围",
+              "title": "范围6"
+            },
+            {
+              "group": "范围",
+              "title": "范围7"
+            },
+            {
+              "group": "范围",
+              "title": "范围8"
+            }
+          ]
+        },
+        {
+          "title": "路径",
+          "children": [
+            {
+              "group": "路径",
+              "title": "全部"
+            },
+            {
+              "group": "路径",
+              "title": "路径1"
+            },
+            {
+              "group": "路径",
+              "title": "路径2"
+            },
+            {
+              "group": "路径",
+              "title": "路径3"
+            },
+            {
+              "group": "路径",
+              "title": "路径4"
+            },
+            {
+              "group": "路径",
+              "title": "路径5"
+            }
+          ]
+        },
+        {
+          "title": "回家",
+          "children": [
+            {
+              "group": "回家",
+              "title": "全部"
+            },
+            {
+              "group": "回家",
+              "title": "回家1"
+            },
+            {
+              "group": "回家",
+              "title": "回家2"
+            },
+            {
+              "group": "回家",
+              "title": "回家3"
+            }
+          ]
+        }
+      ],
+      "gridGroups": [
+        {
+          "title": "选择1",
+          "children": [
+            {
+              "group": "选择1",
+              "title": "全部"
+            },
+            {
+              "group": "选择1",
+              "title": "问题1"
+            },
+            {
+              "group": "选择1",
+              "title": "问题2"
+            },
+            {
+              "group": "选择1",
+              "title": "问题3"
+            },
+            {
+              "group": "选择1",
+              "title": "问题4"
+            },
+            {
+              "group": "选择1",
+              "title": "问题5"
+            },
+            {
+              "group": "选择1",
+              "title": "问题6"
+            },
+            {
+              "group": "选择1",
+              "title": "问题7"
+            },
+            {
+              "group": "选择1",
+              "title": "问题8"
+            }
+          ]
+        },
+        {
+          "title": "选择2",
+          "children": [
+            {
+              "group": "选择2",
+              "title": "全部"
+            },
+            {
+              "group": "选择2",
+              "title": "测试1"
+            },
+            {
+              "group": "选择2",
+              "title": "测试2"
+            },
+            {
+              "group": "选择2",
+              "title": "测试3"
+            },
+            {
+              "group": "选择2",
+              "title": "测试4"
+            },
+            {
+              "group": "选择2",
+              "title": "测试5"
+            },
+            {
+              "group": "选择2",
+              "title": "测试6"
+            }
+          ]
+        }
+      ],
+      "normalItems": [
+        "全部",
+        "选择2",
+        "选择3",
+        "选择4",
+        "选择5",
+        "选择6",
+        "选择7",
+        "选择7"
+      ],
+      "listItems": [
+        "Text 0",
+        "Text 1",
+        "Text 2",
+        "Text 3",
+        "Text 4",
+        "Text 5",
+        "Text 6",
+        "Text 7",
+        "Text 8",
+        "Text 9",
+        "Text 10",
+        "Text 11",
+        "Text 12",
+        "Text 13",
+        "Text 14",
+        "Text 15",
+        "Text 16",
+        "Text 17",
+        "Text 18",
+        "Text 19",
+        "Text 20",
+        "Text 21",
+        "Text 22",
+        "Text 23",
+        "Text 24",
+        "Text 25",
+        "Text 26",
+        "Text 27",
+        "Text 28",
+        "Text 29",
+        "Text 30",
+        "Text 31",
+        "Text 32",
+        "Text 33",
+        "Text 34",
+        "Text 35",
+        "Text 36",
+        "Text 37",
+        "Text 38",
+        "Text 39",
+        "Text 40",
+        "Text 41",
+        "Text 42",
+        "Text 43",
+        "Text 44",
+        "Text 45",
+        "Text 46",
+        "Text 47",
+        "Text 48",
+        "Text 49",
+        "Text 50",
+        "Text 51",
+        "Text 52",
+        "Text 53",
+        "Text 54",
+        "Text 55",
+        "Text 56",
+        "Text 57",
+        "Text 58",
+        "Text 59",
+        "Text 60",
+        "Text 61",
+        "Text 62",
+        "Text 63",
+        "Text 64",
+        "Text 65",
+        "Text 66",
+        "Text 67",
+        "Text 68",
+        "Text 69",
+        "Text 70",
+        "Text 71",
+        "Text 72",
+        "Text 73",
+        "Text 74",
+        "Text 75",
+        "Text 76",
+        "Text 77",
+        "Text 78",
+        "Text 79",
+        "Text 80",
+        "Text 81",
+        "Text 82",
+        "Text 83",
+        "Text 84",
+        "Text 85",
+        "Text 86",
+        "Text 87",
+        "Text 88",
+        "Text 89",
+        "Text 90",
+        "Text 91",
+        "Text 92",
+        "Text 93",
+        "Text 94",
+        "Text 95",
+        "Text 96",
+        "Text 97",
+        "Text 98",
+        "Text 99"
+      ]
+    },
+    "functions": {
+      "openMenu": {
+        "params": [
+          "i"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var": "global.menu"
+                      },
+                      {
+                        "to_int": {
+                          "var": "params.i"
+                        }
+                      }
+                    ]
+                  },
+                  -1,
+                  {
+                    "to_int": {
+                      "var": "params.i"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.activeExpandGroup",
+              "value": "-1"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0TempByGroup.距离",
+              "value": {
+                "var": "global.menu0SelectedByGroup.距离"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0TempByGroup.范围",
+              "value": {
+                "var": "global.menu0SelectedByGroup.范围"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0TempByGroup.路径",
+              "value": {
+                "var": "global.menu0SelectedByGroup.路径"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0TempByGroup.回家",
+              "value": {
+                "var": "global.menu0SelectedByGroup.回家"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu1TempByGroup.选择1",
+              "value": {
+                "var": "global.menu1SelectedByGroup.选择1"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu1TempByGroup.选择2",
+              "value": {
+                "var": "global.menu1SelectedByGroup.选择2"
+              }
+            }
+          }
+        ]
+      },
+      "hideMenu": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu",
+              "value": -1
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.activeExpandGroup",
+              "value": "-1"
+            }
+          }
+        ]
+      },
+      "toggleExpandGroup": {
+        "params": [
+          "i"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.activeExpandGroup",
+              "value": {
+                "if": [
+                  {
+                    "==": [
+                      {
+                        "var": "global.activeExpandGroup"
+                      },
+                      {
+                        "to_string": {
+                          "var": "params.i"
+                        }
+                      }
+                    ]
+                  },
+                  "-1",
+                  {
+                    "to_string": {
+                      "var": "params.i"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "selectMenu0Child": {
+        "params": [
+          "group",
+          "title"
+        ],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "var": "params.title"
+                  },
+                  "全部"
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.menu0TempByGroup.{{ params.group }}",
+                    "value": [
+                      "全部"
+                    ]
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "in": [
+                        {
+                          "var": "params.title"
+                        },
+                        {
+                          "var": "menu0TempByGroup.{{ params.group }}"
+                        }
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@list_remove",
+                        "args": {
+                          "var": "global.menu0TempByGroup.{{ params.group }}",
+                          "value": "{{ params.title }}"
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@list_remove",
+                        "args": {
+                          "var": "global.menu0TempByGroup.{{ params.group }}",
+                          "value": "全部"
+                        }
+                      },
+                      {
+                        "call": "@list_add",
+                        "args": {
+                          "var": "global.menu0TempByGroup.{{ params.group }}",
+                          "item": "{{ params.title }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "selectMenu1Child": {
+        "params": [
+          "group",
+          "title"
+        ],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "var": "params.title"
+                  },
+                  "全部"
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.menu1TempByGroup.{{ params.group }}",
+                    "value": [
+                      "全部"
+                    ]
+                  }
+                }
+              ],
+              "else": [
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "in": [
+                        {
+                          "var": "params.title"
+                        },
+                        {
+                          "var": "menu1TempByGroup.{{ params.group }}"
+                        }
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@list_remove",
+                        "args": {
+                          "var": "global.menu1TempByGroup.{{ params.group }}",
+                          "value": "{{ params.title }}"
+                        }
+                      }
+                    ],
+                    "else": [
+                      {
+                        "call": "@list_remove",
+                        "args": {
+                          "var": "global.menu1TempByGroup.{{ params.group }}",
+                          "value": "全部"
+                        }
+                      },
+                      {
+                        "call": "@list_add",
+                        "args": {
+                          "var": "global.menu1TempByGroup.{{ params.group }}",
+                          "item": "{{ params.title }}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "resetMenu0": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0SelectedByGroup.距离",
+              "value": [
+                "全部"
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0SelectedByGroup.范围",
+              "value": [
+                "全部"
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0SelectedByGroup.路径",
+              "value": [
+                "全部"
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0SelectedByGroup.回家",
+              "value": [
+                "全部"
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0TempByGroup.距离",
+              "value": [
+                "全部"
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0TempByGroup.范围",
+              "value": [
+                "全部"
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0TempByGroup.路径",
+              "value": [
+                "全部"
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0TempByGroup.回家",
+              "value": [
+                "全部"
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu",
+              "value": -1
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.activeExpandGroup",
+              "value": "-1"
+            }
+          }
+        ]
+      },
+      "confirmMenu0": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0SelectedByGroup.距离",
+              "value": {
+                "var": "global.menu0TempByGroup.距离"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0SelectedByGroup.范围",
+              "value": {
+                "var": "global.menu0TempByGroup.范围"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0SelectedByGroup.路径",
+              "value": {
+                "var": "global.menu0TempByGroup.路径"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu0SelectedByGroup.回家",
+              "value": {
+                "var": "global.menu0TempByGroup.回家"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.title1",
+              "value": "title"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu",
+              "value": -1
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.activeExpandGroup",
+              "value": "-1"
+            }
+          }
+        ]
+      },
+      "resetMenu1": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu1SelectedByGroup.选择1",
+              "value": [
+                "全部"
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu1SelectedByGroup.选择2",
+              "value": [
+                "全部"
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu1TempByGroup.选择1",
+              "value": [
+                "全部"
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu1TempByGroup.选择2",
+              "value": [
+                "全部"
+              ]
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu",
+              "value": -1
+            }
+          }
+        ]
+      },
+      "confirmMenu1": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu1SelectedByGroup.选择1",
+              "value": {
+                "var": "global.menu1TempByGroup.选择1"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu1SelectedByGroup.选择2",
+              "value": {
+                "var": "global.menu1TempByGroup.选择2"
+              }
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.title2",
+              "value": "title"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu",
+              "value": -1
+            }
+          }
+        ]
+      },
+      "selectMenu2": {
+        "params": [
+          "i"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu2SelectedIndex",
+              "value": "{{ params.i }}"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.title3",
+              "value": "title"
+            }
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.menu",
+              "value": -1
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "DropSelectDemoPage",
+        "layout": "column",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "height": 46,
+            "border": {
+              "color": "#E0E0E0",
+              "width": 0.5
+            },
+            "children": [
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "container",
+                  "layout": "row",
+                  "height": 46,
+                  "mainAxisAlignment": "center",
+                  "border": {
+                    "color": "#E0E0E0",
+                    "width": 0.5
+                  },
+                  "onTap": {
+                    "call": "@global.openMenu",
+                    "args": {
+                      "i": 0
+                    }
+                  },
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ global.title1 }}",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#2196F3"
+                      }
+                    },
+                    {
+                      "type": "icon",
+                      "name": "collapse",
+                      "size": 22,
+                      "color": "#2196F3",
+                      "visible": {
+                        "==": [
+                          {
+                            "var": "global.menu"
+                          },
+                          0
+                        ]
+                      }
+                    },
+                    {
+                      "type": "icon",
+                      "name": "expand",
+                      "size": 22,
+                      "color": "#9E9E9E",
+                      "visible": {
+                        "!=": [
+                          {
+                            "var": "global.menu"
+                          },
+                          0
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "container",
+                  "layout": "row",
+                  "height": 46,
+                  "mainAxisAlignment": "center",
+                  "border": {
+                    "color": "#E0E0E0",
+                    "width": 0.5
+                  },
+                  "onTap": {
+                    "call": "@global.openMenu",
+                    "args": {
+                      "i": 1
+                    }
+                  },
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ global.title2 }}",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#2196F3"
+                      }
+                    },
+                    {
+                      "type": "icon",
+                      "name": "collapse",
+                      "size": 22,
+                      "color": "#2196F3",
+                      "visible": {
+                        "==": [
+                          {
+                            "var": "global.menu"
+                          },
+                          1
+                        ]
+                      }
+                    },
+                    {
+                      "type": "icon",
+                      "name": "expand",
+                      "size": 22,
+                      "color": "#9E9E9E",
+                      "visible": {
+                        "!=": [
+                          {
+                            "var": "global.menu"
+                          },
+                          1
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "container",
+                  "layout": "row",
+                  "height": 46,
+                  "mainAxisAlignment": "center",
+                  "border": {
+                    "color": "#E0E0E0",
+                    "width": 0.5
+                  },
+                  "onTap": {
+                    "call": "@global.openMenu",
+                    "args": {
+                      "i": 2
+                    }
+                  },
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "{{ global.title3 }}",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#2196F3"
+                      }
+                    },
+                    {
+                      "type": "icon",
+                      "name": "collapse",
+                      "size": 22,
+                      "color": "#2196F3",
+                      "visible": {
+                        "==": [
+                          {
+                            "var": "global.menu"
+                          },
+                          2
+                        ]
+                      }
+                    },
+                    {
+                      "type": "icon",
+                      "name": "expand",
+                      "size": 22,
+                      "color": "#9E9E9E",
+                      "visible": {
+                        "!=": [
+                          {
+                            "var": "global.menu"
+                          },
+                          2
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "type": "expanded",
+            "child": {
+              "type": "stack",
+              "children": [
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "top": 0,
+                  "right": 0,
+                  "bottom": 0,
+                  "child": {
+                    "type": "custom_scroll_view",
+                    "slivers": [
+                      {
+                        "type": "sliver_list",
+                        "source": "{{ global.listItems }}",
+                        "itemTemplate": {
+                          "type": "container",
+                          "height": 40,
+                          "margin": {
+                            "left": 10
+                          },
+                          "alignment": "centerLeft",
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item }}",
+                              "style": {
+                                "fontSize": 14,
+                                "color": "#000000"
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "top": 0,
+                  "right": 0,
+                  "bottom": 0,
+                  "visible": {
+                    ">=": [
+                      {
+                        "var": "global.menu"
+                      },
+                      0
+                    ]
+                  },
+                  "child": {
+                    "type": "container",
+                    "color": "#42000000",
+                    "onTap": {
+                      "call": "@global.hideMenu",
+                      "args": {}
+                    },
+                    "children": []
+                  }
+                },
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "top": 0,
+                  "right": 0,
+                  "bottom": 0,
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "global.menu"
+                      },
+                      0
+                    ]
+                  },
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "color": "#FFFFFF",
+                    "children": [
+                      {
+                        "type": "list",
+                        "source": "{{ global.expandGroups }}",
+                        "separator": "none",
+                        "item_template": {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "container",
+                              "layout": "row",
+                              "height": 45,
+                              "padding": {
+                                "left": 10
+                              },
+                              "alignment": "centerLeft",
+                              "onTap": {
+                                "call": "@global.toggleExpandGroup",
+                                "args": {
+                                  "i": "{{ loop.index }}"
+                                }
+                              },
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "value": "{{ loop.item.title }}",
+                                  "style": {
+                                    "fontSize": 16,
+                                    "color": "#000000"
+                                  }
+                                },
+                                {
+                                  "type": "expanded",
+                                  "child": {
+                                    "type": "container",
+                                    "children": []
+                                  }
+                                },
+                                {
+                                  "type": "icon",
+                                  "name": "collapse",
+                                  "size": 22,
+                                  "color": "#757575",
+                                  "visible": {
+                                    "==": [
+                                      {
+                                        "var": "global.activeExpandGroup"
+                                      },
+                                      "{{ loop.index }}"
+                                    ]
+                                  }
+                                },
+                                {
+                                  "type": "icon",
+                                  "name": "expand",
+                                  "size": 22,
+                                  "color": "#757575",
+                                  "visible": {
+                                    "!=": [
+                                      {
+                                        "var": "global.activeExpandGroup"
+                                      },
+                                      "{{ loop.index }}"
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "grid",
+                              "source": "{{ loop.item.children }}",
+                              "crossAxisCount": 2,
+                              "childAspectRatio": 3,
+                              "crossAxisSpacing": 0,
+                              "mainAxisSpacing": 0,
+                              "padding": 0,
+                              "shrinkWrap": true,
+                              "visible": {
+                                "==": [
+                                  {
+                                    "var": "global.activeExpandGroup"
+                                  },
+                                  "{{ loop.index }}"
+                                ]
+                              },
+                              "item_template": {
+                                "type": "container",
+                                "padding": 10,
+                                "onTap": {
+                                  "call": "@global.selectMenu0Child",
+                                  "args": {
+                                    "group": "{{ loop.item.group }}",
+                                    "title": "{{ loop.item.title }}"
+                                  }
+                                },
+                                "children": [
+                                  {
+                                    "type": "container",
+                                    "height": 35,
+                                    "layout": "column",
+                                    "mainAxisAlignment": "center",
+                                    "border": {
+                                      "color": "#2196F3",
+                                      "width": 1
+                                    },
+                                    "visible": {
+                                      "in": [
+                                        {
+                                          "var": "loop.item.title"
+                                        },
+                                        {
+                                          "var": "global.menu0TempByGroup.{{ loop.item.group }}"
+                                        }
+                                      ]
+                                    },
+                                    "children": [
+                                      {
+                                        "type": "text",
+                                        "value": "{{ loop.item.title }}",
+                                        "style": {
+                                          "fontSize": 14,
+                                          "color": "#2196F3",
+                                          "textAlign": "center"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "container",
+                                    "height": 35,
+                                    "layout": "column",
+                                    "mainAxisAlignment": "center",
+                                    "border": {
+                                      "color": "#9E9E9E",
+                                      "width": 1
+                                    },
+                                    "visible": {
+                                      "!": {
+                                        "in": [
+                                          {
+                                            "var": "loop.item.title"
+                                          },
+                                          {
+                                            "var": "global.menu0TempByGroup.{{ loop.item.group }}"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "children": [
+                                      {
+                                        "type": "text",
+                                        "value": "{{ loop.item.title }}",
+                                        "style": {
+                                          "fontSize": 14,
+                                          "color": "#222222",
+                                          "textAlign": "center"
+                                        }
+                                      }
+                                    ]
+                                  }
+                                ],
+                                "layout": "column"
+                              }
+                            }
+                          ]
+                        },
+                        "allowNestedScroll": true,
+                        "intrinsicHeight": false
+                      },
+                      {
+                        "type": "container",
+                        "layout": "row",
+                        "height": 50,
+                        "border": {
+                          "color": "#EEEEEE",
+                          "width": 0.5
+                        },
+                        "children": [
+                          {
+                            "type": "expanded",
+                            "child": {
+                              "type": "container",
+                              "height": 50,
+                              "layout": "column",
+                              "mainAxisAlignment": "center",
+                              "onTap": {
+                                "call": "@global.resetMenu0",
+                                "args": {}
+                              },
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "value": "重置",
+                                  "style": {
+                                    "fontSize": 14,
+                                    "color": "#2196F3",
+                                    "textAlign": "center"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "type": "expanded",
+                            "child": {
+                              "type": "container",
+                              "height": 50,
+                              "layout": "column",
+                              "mainAxisAlignment": "center",
+                              "onTap": {
+                                "call": "@global.confirmMenu0",
+                                "args": {}
+                              },
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "value": "确定",
+                                  "style": {
+                                    "fontSize": 14,
+                                    "color": "#2196F3",
+                                    "textAlign": "center"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "top": 0,
+                  "right": 0,
+                  "bottom": 0,
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "global.menu"
+                      },
+                      1
+                    ]
+                  },
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "color": "#FFFFFF",
+                    "children": [
+                      {
+                        "type": "list",
+                        "source": "{{ global.gridGroups }}",
+                        "separator": "none",
+                        "item_template": {
+                          "type": "container",
+                          "layout": "column",
+                          "children": [
+                            {
+                              "type": "container",
+                              "height": 45,
+                              "padding": {
+                                "left": 10
+                              },
+                              "alignment": "centerLeft",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "value": "{{ loop.item.title }}",
+                                  "style": {
+                                    "fontSize": 14,
+                                    "color": "#000000"
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "grid",
+                              "source": "{{ loop.item.children }}",
+                              "crossAxisCount": 2,
+                              "childAspectRatio": 3,
+                              "crossAxisSpacing": 0,
+                              "mainAxisSpacing": 0,
+                              "padding": 0,
+                              "shrinkWrap": true,
+                              "item_template": {
+                                "type": "container",
+                                "padding": 10,
+                                "onTap": {
+                                  "call": "@global.selectMenu1Child",
+                                  "args": {
+                                    "group": "{{ loop.item.group }}",
+                                    "title": "{{ loop.item.title }}"
+                                  }
+                                },
+                                "children": [
+                                  {
+                                    "type": "container",
+                                    "height": 35,
+                                    "layout": "column",
+                                    "mainAxisAlignment": "center",
+                                    "border": {
+                                      "color": "#2196F3",
+                                      "width": 1
+                                    },
+                                    "visible": {
+                                      "in": [
+                                        {
+                                          "var": "loop.item.title"
+                                        },
+                                        {
+                                          "var": "global.menu1TempByGroup.{{ loop.item.group }}"
+                                        }
+                                      ]
+                                    },
+                                    "children": [
+                                      {
+                                        "type": "text",
+                                        "value": "{{ loop.item.title }}",
+                                        "style": {
+                                          "fontSize": 14,
+                                          "color": "#2196F3",
+                                          "textAlign": "center"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "type": "container",
+                                    "height": 35,
+                                    "layout": "column",
+                                    "mainAxisAlignment": "center",
+                                    "border": {
+                                      "color": "#9E9E9E",
+                                      "width": 1
+                                    },
+                                    "visible": {
+                                      "!": {
+                                        "in": [
+                                          {
+                                            "var": "loop.item.title"
+                                          },
+                                          {
+                                            "var": "global.menu1TempByGroup.{{ loop.item.group }}"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "children": [
+                                      {
+                                        "type": "text",
+                                        "value": "{{ loop.item.title }}",
+                                        "style": {
+                                          "fontSize": 14,
+                                          "color": "#222222",
+                                          "textAlign": "center"
+                                        }
+                                      }
+                                    ]
+                                  }
+                                ],
+                                "layout": "column"
+                              }
+                            }
+                          ]
+                        },
+                        "allowNestedScroll": true,
+                        "intrinsicHeight": false
+                      },
+                      {
+                        "type": "container",
+                        "layout": "row",
+                        "height": 50,
+                        "border": {
+                          "color": "#EEEEEE",
+                          "width": 0.5
+                        },
+                        "children": [
+                          {
+                            "type": "expanded",
+                            "child": {
+                              "type": "container",
+                              "height": 50,
+                              "layout": "column",
+                              "mainAxisAlignment": "center",
+                              "onTap": {
+                                "call": "@global.resetMenu1",
+                                "args": {}
+                              },
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "value": "重置",
+                                  "style": {
+                                    "fontSize": 14,
+                                    "color": "#2196F3",
+                                    "textAlign": "center"
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "type": "expanded",
+                            "child": {
+                              "type": "container",
+                              "height": 50,
+                              "layout": "column",
+                              "mainAxisAlignment": "center",
+                              "onTap": {
+                                "call": "@global.confirmMenu1",
+                                "args": {}
+                              },
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "value": "确定",
+                                  "style": {
+                                    "fontSize": 14,
+                                    "color": "#2196F3",
+                                    "textAlign": "center"
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "top": 0,
+                  "right": 0,
+                  "visible": {
+                    "==": [
+                      {
+                        "var": "global.menu"
+                      },
+                      2
+                    ]
+                  },
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "height": 360,
+                    "color": "#FFFFFF",
+                    "children": [
+                      {
+                        "type": "list",
+                        "source": "{{ global.normalItems }}",
+                        "separator": "none",
+                        "item_template": {
+                          "type": "container",
+                          "layout": "row",
+                          "height": 45,
+                          "padding": {
+                            "horizontal": 10
+                          },
+                          "onTap": {
+                            "call": "@global.selectMenu2",
+                            "args": {
+                              "i": "{{ loop.index }}"
+                            }
+                          },
+                          "children": [
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item }}",
+                              "style": {
+                                "fontSize": 14,
+                                "color": "#2196F3"
+                              },
+                              "visible": {
+                                "==": [
+                                  {
+                                    "var": "global.menu2SelectedIndex"
+                                  },
+                                  "{{ loop.index }}"
+                                ]
+                              }
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ loop.item }}",
+                              "style": {
+                                "fontSize": 14,
+                                "color": "#222222"
+                              },
+                              "visible": {
+                                "!": {
+                                  "==": [
+                                    {
+                                      "var": "global.menu2SelectedIndex"
+                                    },
+                                    "{{ loop.index }}"
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "type": "expanded",
+                              "child": {
+                                "type": "container",
+                                "children": []
+                              }
+                            },
+                            {
+                              "type": "icon",
+                              "name": "check_circle",
+                              "size": 22,
+                              "color": "#2196F3",
+                              "visible": {
+                                "==": [
+                                  {
+                                    "var": "global.menu2SelectedIndex"
+                                  },
+                                  "{{ loop.index }}"
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        "allowNestedScroll": true
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

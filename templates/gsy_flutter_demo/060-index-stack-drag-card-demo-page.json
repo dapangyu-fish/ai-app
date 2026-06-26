@@ -1,0 +1,841 @@
+{
+  "dsl": "3.3",
+  "appid": "eb834aae-d630-5de0-aa2c-db6a5353684e",
+  "meta": {
+    "name": "gsy_flutter_demo/060-index-stack-drag-card-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "一个类似探探堆叠卡片例子",
+      "en": "Stacked card demo"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：一个类似探探堆叠卡片例子",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "一个类似探探堆叠卡片例子",
+      "sourcePath": "lib/widget/basic/index_stack_drag_card_demo_page.dart",
+      "deferredAlias": "index_stack_drag_card_demo_page",
+      "widgetClass": "IndexStackDragCardDemoPage",
+      "category": "basic",
+      "routeIndex": 60,
+      "portVersion": "json-dsl-draggable-card-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "一个类似探探堆叠卡片例子",
+      "upstreamSource": "lib/widget/basic/index_stack_drag_card_demo_page.dart",
+      "upstreamWidget": "IndexStackDragCardDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-draggable-card-v1",
+      "initialCards": [
+        {
+          "name": "GSY11111",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png"
+        },
+        {
+          "name": "GSY22222",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test.jpeg"
+        },
+        {
+          "name": "GSY33333",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/person.jpg"
+        },
+        {
+          "name": "GSY44444",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test_logo.png"
+        },
+        {
+          "name": "GSY555555",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/card_up.png"
+        },
+        {
+          "name": "GSY66666",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/card_down.png"
+        },
+        {
+          "name": "GSY77777",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png"
+        },
+        {
+          "name": "GSY88888",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test.jpeg"
+        },
+        {
+          "name": "GSY99999",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/person.jpg"
+        },
+        {
+          "name": "GSY1010101010",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test_logo.png"
+        }
+      ],
+      "cards": [
+        {
+          "name": "GSY11111",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png"
+        },
+        {
+          "name": "GSY22222",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test.jpeg"
+        },
+        {
+          "name": "GSY33333",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/person.jpg"
+        },
+        {
+          "name": "GSY44444",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test_logo.png"
+        },
+        {
+          "name": "GSY555555",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/card_up.png"
+        },
+        {
+          "name": "GSY66666",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/card_down.png"
+        },
+        {
+          "name": "GSY77777",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png"
+        },
+        {
+          "name": "GSY88888",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test.jpeg"
+        },
+        {
+          "name": "GSY99999",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/person.jpg"
+        },
+        {
+          "name": "GSY1010101010",
+          "image": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test_logo.png"
+        }
+      ]
+    },
+    "functions": {
+      "dismissTop": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@list_remove_at",
+            "args": {
+              "var": "global.cards",
+              "index": 0
+            }
+          },
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "==": [
+                  {
+                    "length": [
+                      {
+                        "var": "global.cards"
+                      }
+                    ]
+                  },
+                  0
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.cards",
+                    "value": "{{ global.initialCards }}"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "dismissByDrag": {
+        "params": [
+          "idx"
+        ],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "or": [
+                  {
+                    ">": [
+                      {
+                        "abs": [
+                          {
+                            "var": "event.offsetX"
+                          }
+                        ]
+                      },
+                      195
+                    ]
+                  },
+                  {
+                    "<": [
+                      {
+                        "var": "event.offsetX"
+                      },
+                      -97
+                    ]
+                  },
+                  {
+                    ">": [
+                      {
+                        "abs": [
+                          {
+                            "var": "event.offsetY"
+                          }
+                        ]
+                      },
+                      422
+                    ]
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@list_remove_at",
+                  "args": {
+                    "var": "global.cards",
+                    "index": {
+                      "var": "params.idx"
+                    }
+                  }
+                },
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        {
+                          "length": [
+                            {
+                              "var": "global.cards"
+                            }
+                          ]
+                        },
+                        0
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@set",
+                        "args": {
+                          "var": "global.cards",
+                          "value": {
+                            "var": "global.initialCards"
+                          }
+                        }
+                      }
+                    ],
+                    "else": []
+                  }
+                }
+              ],
+              "else": []
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "IndexStackDragCardDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateX": 32,
+              "translateY": 40,
+              "child": {
+                "type": "draggable",
+                "feedback": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      4,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.4.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.4.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                },
+                "onDragCanceled": {
+                  "call": "@global.dismissByDrag",
+                  "args": {
+                    "idx": 4
+                  }
+                },
+                "child": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      4,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.4.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.4.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                }
+              }
+            },
+            "left": 45,
+            "top": 150
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateX": 24,
+              "translateY": 30,
+              "child": {
+                "type": "draggable",
+                "feedback": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      3,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.3.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.3.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                },
+                "onDragCanceled": {
+                  "call": "@global.dismissByDrag",
+                  "args": {
+                    "idx": 3
+                  }
+                },
+                "child": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      3,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.3.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.3.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                }
+              }
+            },
+            "left": 45,
+            "top": 150
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateX": 16,
+              "translateY": 20,
+              "child": {
+                "type": "draggable",
+                "feedback": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      2,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.2.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.2.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                },
+                "onDragCanceled": {
+                  "call": "@global.dismissByDrag",
+                  "args": {
+                    "idx": 2
+                  }
+                },
+                "child": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      2,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.2.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.2.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                }
+              }
+            },
+            "left": 45,
+            "top": 150
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateX": 8,
+              "translateY": 10,
+              "child": {
+                "type": "draggable",
+                "feedback": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      1,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.1.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.1.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                },
+                "onDragCanceled": {
+                  "call": "@global.dismissByDrag",
+                  "args": {
+                    "idx": 1
+                  }
+                },
+                "child": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      1,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.1.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.1.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                }
+              }
+            },
+            "left": 45,
+            "top": 150
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "transform",
+              "translateX": 0,
+              "translateY": 0,
+              "child": {
+                "type": "draggable",
+                "feedback": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      0,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.0.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.0.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                },
+                "onDragCanceled": {
+                  "call": "@global.dismissByDrag",
+                  "args": {
+                    "idx": 0
+                  }
+                },
+                "child": {
+                  "type": "card",
+                  "width": 300,
+                  "padding": 0,
+                  "margin": 0,
+                  "borderRadius": 20,
+                  "elevation": 8,
+                  "visible": {
+                    "<": [
+                      0,
+                      {
+                        "length": [
+                          {
+                            "var": "global.cards"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "children": [
+                    {
+                      "type": "image",
+                      "src": "{{ global.cards.0.image }}",
+                      "fit": "cover",
+                      "width": 300,
+                      "height": 300,
+                      "paddingV": 0
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.cards.0.name }}",
+                          "style": {
+                            "fontSize": 18,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "height": 44,
+                      "alignment": "center"
+                    }
+                  ]
+                }
+              }
+            },
+            "left": 45,
+            "top": 150
+          },
+          {
+            "type": "positioned",
+            "child": {
+              "type": "text",
+              "value": "Swipe the front card",
+              "style": {
+                "fontSize": 14,
+                "color": "#666666",
+                "textAlign": "center"
+              }
+            },
+            "left": 0,
+            "right": 0,
+            "bottom": 28
+          }
+        ]
+      }
+    ]
+  }
+}

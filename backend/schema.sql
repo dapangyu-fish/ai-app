@@ -42,6 +42,34 @@ CREATE TABLE IF NOT EXISTS device_tokens (
     PRIMARY KEY (user_id, channel, token)
 );
 
+-- Agent 物理节点注册表。节点配置持久化在 Postgres；运行时在线状态由
+-- last_seen_ms + ttl_seconds 以及 agent-node /health 探测共同判断。
+CREATE TABLE IF NOT EXISTS agent_nodes (
+    node_id TEXT PRIMARY KEY,
+    display_name TEXT NOT NULL DEFAULT '',
+    url TEXT NOT NULL,
+    capacity INTEGER NOT NULL DEFAULT 1,
+    queue_max INTEGER NOT NULL DEFAULT 0,
+    build_commit TEXT NOT NULL DEFAULT '',
+    build_version TEXT NOT NULL DEFAULT '',
+    labels JSONB NOT NULL DEFAULT '[]'::jsonb,
+    owner_user_id TEXT NOT NULL DEFAULT '',
+    visibility TEXT NOT NULL DEFAULT 'public',
+    auth_public_key TEXT NOT NULL DEFAULT '',
+    auth_key_id TEXT NOT NULL DEFAULT '',
+    provider_mode TEXT NOT NULL DEFAULT '',
+    provider_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+    agent_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+    last_seen_ms BIGINT NOT NULL DEFAULT 0,
+    ttl_seconds INTEGER NOT NULL DEFAULT 120,
+    paused BOOLEAN NOT NULL DEFAULT FALSE,
+    pause_reason TEXT NOT NULL DEFAULT '',
+    paused_at_ms BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_agent_nodes_owner_visibility ON agent_nodes (owner_user_id, visibility);
+
 -- Registry 包富化目录（AI summary / tech_stack / 检索元数据）。
 -- 附加表，不替代 MinIO _index.json；详见 migrations/003_registry_packages.sql + LAUNCH_NOTES Part 8
 CREATE TABLE IF NOT EXISTS registry_packages (
@@ -70,7 +98,7 @@ CREATE TABLE IF NOT EXISTS registry_packages (
     updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 包点赞 / 下载（per-user，本地互动指标，不随 mirror 传播）
+-- 包点赞 / 下载（本地互动指标，不随 mirror 传播）
 CREATE TABLE IF NOT EXISTS package_likes (
     package_name TEXT NOT NULL,
     user_id      TEXT NOT NULL,
@@ -82,6 +110,52 @@ CREATE TABLE IF NOT EXISTS package_installs (
     user_id      TEXT NOT NULL,
     first_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY (package_name, user_id)
+);
+-- 每次成功运行/下载一行；install_count 使用该表统计。package_installs 保留为
+-- per-user/per-device 去重明细，兼容旧数据和独立用户语义。
+CREATE TABLE IF NOT EXISTS package_install_events (
+    id           BIGSERIAL PRIMARY KEY,
+    package_name TEXT NOT NULL,
+    user_id      TEXT NOT NULL DEFAULT '',
+    actor_type   TEXT NOT NULL DEFAULT '',
+    source       TEXT NOT NULL DEFAULT '',
+    user_agent   TEXT NOT NULL DEFAULT '',
+    ip_hash      TEXT NOT NULL DEFAULT '',
+    legacy_key   TEXT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- User-generated backend services for JSON-APPs.
+-- Code is stored outside the app database under FAAS_CODE_ROOT and mirrored to
+-- an operator-managed Git repository. Agent containers never receive the Git or
+-- OpenFaaS credentials.
+CREATE TABLE IF NOT EXISTS faas_services (
+    service_id      TEXT PRIMARY KEY,
+    owner_user_id   TEXT NOT NULL,
+    service_slug    TEXT NOT NULL,
+    function_name   TEXT NOT NULL UNIQUE,
+    status          TEXT NOT NULL DEFAULT 'draft'
+                    CHECK (status IN ('draft', 'deploying', 'ready', 'failed', 'disabled')),
+    active_commit   TEXT NOT NULL DEFAULT '',
+    active_path     TEXT NOT NULL DEFAULT '',
+    public_base_url TEXT NOT NULL DEFAULT '',
+    routes          JSONB NOT NULL DEFAULT '[]'::jsonb,
+    meta_json       JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS faas_deployments (
+    deployment_id   TEXT PRIMARY KEY,
+    service_id      TEXT NOT NULL REFERENCES faas_services(service_id) ON DELETE CASCADE,
+    owner_user_id   TEXT NOT NULL,
+    commit_sha      TEXT NOT NULL DEFAULT '',
+    status          TEXT NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'success', 'failed')),
+    error           TEXT NOT NULL DEFAULT '',
+    bundle_summary  JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    finished_at     TIMESTAMPTZ
 );
 
 -- Indexes for better performance
@@ -95,3 +169,11 @@ CREATE INDEX IF NOT EXISTS idx_registry_packages_category ON registry_packages(c
 CREATE INDEX IF NOT EXISTS idx_registry_packages_author ON registry_packages(author_id);
 CREATE INDEX IF NOT EXISTS idx_package_likes_name ON package_likes(package_name);
 CREATE INDEX IF NOT EXISTS idx_package_installs_name ON package_installs(package_name);
+CREATE INDEX IF NOT EXISTS idx_package_install_events_name ON package_install_events(package_name);
+CREATE INDEX IF NOT EXISTS idx_package_install_events_created_at ON package_install_events(created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_package_install_events_legacy_key
+    ON package_install_events(legacy_key)
+    WHERE legacy_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_faas_services_owner ON faas_services(owner_user_id);
+CREATE INDEX IF NOT EXISTS idx_faas_services_status ON faas_services(status);
+CREATE INDEX IF NOT EXISTS idx_faas_deployments_service_created ON faas_deployments(service_id, created_at DESC);

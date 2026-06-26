@@ -1,9 +1,17 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
+import 'package:web/web.dart' as web;
 
+import '../auth/auth_service.dart';
+import '../config/app_config.dart';
 import 'im_service.dart';
 
 class IMConversationPage extends StatefulWidget {
@@ -213,6 +221,15 @@ class _WebChatPageState extends State<_WebChatPage> {
   String get _conversationID =>
       widget.conversation['conversation_id']?.toString() ?? '';
 
+  String get _peerUserID => widget.conversation['user_id']?.toString() ?? '';
+  String get _groupID => widget.conversation['group_id']?.toString() ?? '';
+  int get _conversationType => widget.conversation['conversation_type'] is int
+      ? widget.conversation['conversation_type'] as int
+      : int.tryParse(
+              widget.conversation['conversation_type']?.toString() ?? '',
+            ) ??
+            1;
+
   @override
   void initState() {
     super.initState();
@@ -293,14 +310,9 @@ class _WebChatPageState extends State<_WebChatPage> {
       final sent = await IMService.instance.sendTextMessageAsMap(
         conversationID: _conversationID,
         text: text,
-        userID: widget.conversation['user_id']?.toString() ?? '',
-        groupID: widget.conversation['group_id']?.toString() ?? '',
-        conversationType: widget.conversation['conversation_type'] is int
-            ? widget.conversation['conversation_type'] as int
-            : int.tryParse(
-                    widget.conversation['conversation_type']?.toString() ?? '',
-                  ) ??
-                  1,
+        userID: _peerUserID,
+        groupID: _groupID,
+        conversationType: _conversationType,
       );
       if (!mounted) return;
       if (sent != null) {
@@ -315,6 +327,172 @@ class _WebChatPageState extends State<_WebChatPage> {
     } finally {
       if (mounted) setState(() => _sending = false);
     }
+  }
+
+  Future<void> _pickAndSendImage() async {
+    if (_sending) return;
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked == null || !mounted) return;
+    setState(() => _sending = true);
+    final placeholder = _localMessage('[图片上传中...]', contentType: 101);
+    setState(() => _messages = [..._messages, placeholder]);
+    _jumpToBottom();
+    try {
+      final bytes = await picked.readAsBytes();
+      final dim = await _readImageDim(bytes);
+      final upload = await _WebImMediaUploader.uploadBytes(
+        bytes,
+        fileName: picked.name,
+        purpose: 'image',
+        contentType: picked.mimeType,
+      );
+      if (upload == null) throw Exception('图片上传失败');
+      final sent = await IMService.instance.sendImageByUrlAsMap(
+        conversationID: _conversationID,
+        url: upload.publicUrl,
+        sourcePath: picked.name.isNotEmpty ? picked.name : upload.key,
+        uuid: upload.key,
+        width: dim?.$1 ?? 0,
+        height: dim?.$2 ?? 0,
+        size: bytes.length,
+        userID: _peerUserID,
+        groupID: _groupID,
+        conversationType: _conversationType,
+      );
+      _replacePlaceholder(placeholder, sent, '[图片发送失败]');
+    } catch (e) {
+      _replacePlaceholder(placeholder, null, '[图片发送失败]');
+      _toast(e);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<void> _pickAndSendVideo() async {
+    if (_sending) return;
+    final picked = await ImagePicker().pickVideo(
+      source: ImageSource.gallery,
+      maxDuration: const Duration(minutes: 3),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _sending = true);
+    final placeholder = _localMessage('[视频上传中...]', contentType: 101);
+    setState(() => _messages = [..._messages, placeholder]);
+    _jumpToBottom();
+    try {
+      final bytes = await picked.readAsBytes();
+      final upload = await _WebImMediaUploader.uploadBytes(
+        bytes,
+        fileName: picked.name,
+        purpose: 'video',
+        contentType: picked.mimeType ?? 'video/mp4',
+      );
+      if (upload == null) throw Exception('视频上传失败');
+      final sent = await IMService.instance.sendVideoByUrlAsMap(
+        conversationID: _conversationID,
+        videoUrl: upload.publicUrl,
+        videoSourcePath: picked.name.isNotEmpty ? picked.name : upload.key,
+        videoUuid: upload.key,
+        videoType: picked.mimeType ?? 'video/mp4',
+        videoSize: bytes.length,
+        duration: 0,
+        userID: _peerUserID,
+        groupID: _groupID,
+        conversationType: _conversationType,
+      );
+      _replacePlaceholder(placeholder, sent, '[视频发送失败]');
+    } catch (e) {
+      _replacePlaceholder(placeholder, null, '[视频发送失败]');
+      _toast(e);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  void _showAttachmentOptions() {
+    final cs = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _AttachmentAction(
+                icon: Icons.photo,
+                label: '图片',
+                color: cs.primary,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndSendImage();
+                },
+              ),
+              _AttachmentAction(
+                icon: Icons.videocam,
+                label: '视频',
+                color: cs.primary,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickAndSendVideo();
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Map<String, dynamic> _localMessage(String text, {required int contentType}) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return {
+      'client_msg_id': 'web_local_$now',
+      'send_id': IMService.instance.currentUserId ?? '',
+      'recv_id': _peerUserID,
+      'send_time': now,
+      'content_type': contentType,
+      'text': text,
+      'is_me': true,
+      'is_other': false,
+      'display_time': '',
+    };
+  }
+
+  void _replacePlaceholder(
+    Map<String, dynamic> placeholder,
+    Map<String, dynamic>? sent,
+    String failedText,
+  ) {
+    if (!mounted) return;
+    setState(() {
+      final id = placeholder['client_msg_id'];
+      final idx = _messages.indexWhere((m) => m['client_msg_id'] == id);
+      if (idx < 0) return;
+      final next = [..._messages];
+      next[idx] = sent ?? {...placeholder, 'text': failedText};
+      _messages = next;
+    });
+    _jumpToBottom();
+  }
+
+  Future<(int, int)?> _readImageDim(Uint8List bytes) async {
+    try {
+      final completer = Completer<(int, int)?>();
+      ui.decodeImageFromList(bytes, (image) {
+        completer.complete((image.width, image.height));
+      });
+      return completer.future.timeout(const Duration(seconds: 5));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _toast(Object e) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+    );
   }
 
   void _jumpToBottom() {
@@ -369,6 +547,11 @@ class _WebChatPageState extends State<_WebChatPage> {
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               child: Row(
                 children: [
+                  IconButton(
+                    tooltip: '添加',
+                    onPressed: _sending ? null : _showAttachmentOptions,
+                    icon: const Icon(Icons.add_circle_outline),
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _controller,
@@ -455,6 +638,43 @@ class _MessageBubble extends StatelessWidget {
   }
 }
 
+class _AttachmentAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _AttachmentAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: color.withAlpha(25),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12)),
+        ],
+      ),
+    );
+  }
+}
+
 class _MessageContent extends StatelessWidget {
   final Map<String, dynamic> message;
   final bool isMe;
@@ -474,7 +694,7 @@ class _MessageContent extends StatelessWidget {
         ]);
         if (url.isEmpty) return Text('图片', style: TextStyle(color: textColor));
         return GestureDetector(
-          onTap: () => _openUrl(url),
+          onTap: () => _openImagePreview(context, url),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Image.network(
@@ -507,7 +727,9 @@ class _MessageContent extends StatelessWidget {
         final videoUrl = message['video_url']?.toString() ?? '';
         final snapshot = message['video_snapshot_url']?.toString() ?? '';
         return GestureDetector(
-          onTap: videoUrl.isNotEmpty ? () => _openUrl(videoUrl) : null,
+          onTap: videoUrl.isNotEmpty
+              ? () => _openVideoPreview(context, videoUrl)
+              : null,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Stack(
@@ -583,6 +805,218 @@ class _MessageContent extends StatelessWidget {
           style: TextStyle(color: textColor, fontSize: 15),
         );
     }
+  }
+}
+
+void _openImagePreview(BuildContext context, String url) {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => _WebImagePreviewPage(url: url),
+    ),
+  );
+}
+
+void _openVideoPreview(BuildContext context, String url) {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => _WebVideoPreviewPage(url: url),
+    ),
+  );
+}
+
+void _downloadUrl(String url) {
+  final segments = Uri.tryParse(url)?.pathSegments ?? const <String>[];
+  final fileName = segments.isEmpty ? 'media' : segments.last;
+  web.HTMLAnchorElement()
+    ..href = url
+    ..download = fileName.isEmpty ? 'media' : fileName
+    ..target = '_blank'
+    ..click();
+}
+
+class _WebImagePreviewPage extends StatelessWidget {
+  final String url;
+
+  const _WebImagePreviewPage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 5,
+              child: Center(
+                child: Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                  webHtmlElementStrategy: WebHtmlElementStrategy.prefer,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.broken_image_outlined,
+                    color: Colors.white70,
+                    size: 48,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          _PreviewCloseButton(onPressed: () => Navigator.pop(context)),
+          _PreviewDownloadButton(onPressed: () => _downloadUrl(url)),
+        ],
+      ),
+    );
+  }
+}
+
+class _WebVideoPreviewPage extends StatefulWidget {
+  final String url;
+
+  const _WebVideoPreviewPage({required this.url});
+
+  @override
+  State<_WebVideoPreviewPage> createState() => _WebVideoPreviewPageState();
+}
+
+class _WebVideoPreviewPageState extends State<_WebVideoPreviewPage> {
+  VideoPlayerController? _controller;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _setup();
+  }
+
+  Future<void> _setup() async {
+    try {
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(widget.url),
+      );
+      await controller.initialize();
+      await controller.play();
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+      setState(() => _controller = controller);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = _controller;
+    Widget body;
+    if (_error != null) {
+      body = Center(
+        child: Text(_error!, style: const TextStyle(color: Colors.white70)),
+      );
+    } else if (controller == null) {
+      body = const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    } else {
+      body = Center(
+        child: AspectRatio(
+          aspectRatio: controller.value.aspectRatio,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              VideoPlayer(controller),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: VideoProgressIndicator(
+                  controller,
+                  allowScrubbing: true,
+                  colors: const VideoProgressColors(
+                    playedColor: Colors.white,
+                    bufferedColor: Colors.white38,
+                    backgroundColor: Colors.white24,
+                  ),
+                ),
+              ),
+              IconButton(
+                iconSize: 56,
+                color: Colors.white70,
+                icon: Icon(
+                  controller.value.isPlaying
+                      ? Icons.pause_circle_filled
+                      : Icons.play_circle_filled,
+                ),
+                onPressed: () {
+                  setState(() {
+                    controller.value.isPlaying
+                        ? controller.pause()
+                        : controller.play();
+                  });
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Positioned.fill(child: body),
+          _PreviewCloseButton(onPressed: () => Navigator.pop(context)),
+          _PreviewDownloadButton(onPressed: () => _downloadUrl(widget.url)),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreviewCloseButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _PreviewCloseButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 8,
+      left: 8,
+      child: IconButton(
+        icon: const Icon(Icons.close, color: Colors.white),
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
+class _PreviewDownloadButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const _PreviewDownloadButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 8,
+      right: 8,
+      child: IconButton(
+        icon: const Icon(Icons.download_rounded, color: Colors.white),
+        onPressed: onPressed,
+      ),
+    );
   }
 }
 
@@ -1035,6 +1469,91 @@ String _fmtDuration(int seconds) {
   final m = seconds ~/ 60;
   final s = seconds % 60;
   return '$m:${s.toString().padLeft(2, '0')}';
+}
+
+class _WebImUploadResult {
+  final String publicUrl;
+  final String key;
+
+  const _WebImUploadResult({required this.publicUrl, required this.key});
+}
+
+class _WebImMediaUploader {
+  static Future<_WebImUploadResult?> uploadBytes(
+    Uint8List bytes, {
+    required String fileName,
+    required String purpose,
+    String? contentType,
+  }) async {
+    final token = AuthService.token;
+    if (token == null) throw Exception('Please sign in first');
+    final ext = _extension(fileName, contentType);
+    final type = contentType ?? _fallbackContentType(purpose, ext);
+    final signResp = await http
+        .post(
+          Uri.parse('${AppConfig.backendUrl}/api/im/media/upload-url'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: json.encode({
+            'purpose': purpose,
+            'ext': ext,
+            'content_type': type,
+            'size': bytes.length,
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
+    if (signResp.statusCode != 200) {
+      throw Exception('上传授权失败 ${signResp.statusCode}');
+    }
+    final data = json.decode(signResp.body) as Map<String, dynamic>;
+    final putUrl = data['put_url']?.toString() ?? '';
+    final publicUrl = data['public_url']?.toString() ?? '';
+    final key = data['key']?.toString() ?? '';
+    if (putUrl.isEmpty || publicUrl.isEmpty || key.isEmpty) {
+      throw Exception('上传授权响应缺字段');
+    }
+    final putResp = await http
+        .put(Uri.parse(putUrl), headers: {'Content-Type': type}, body: bytes)
+        .timeout(const Duration(minutes: 2));
+    if (putResp.statusCode < 200 || putResp.statusCode >= 300) {
+      throw Exception('上传失败 ${putResp.statusCode}');
+    }
+    return _WebImUploadResult(publicUrl: publicUrl, key: key);
+  }
+
+  static String _extension(String fileName, String? contentType) {
+    final clean = fileName.split('?').first;
+    final dot = clean.lastIndexOf('.');
+    if (dot >= 0 && dot < clean.length - 1) {
+      return clean.substring(dot + 1).toLowerCase();
+    }
+    final type = contentType ?? '';
+    if (type.contains('png')) return 'png';
+    if (type.contains('webp')) return 'webp';
+    if (type.contains('gif')) return 'gif';
+    if (type.contains('quicktime')) return 'mov';
+    if (type.contains('webm')) return 'webm';
+    if (type.startsWith('video/')) return 'mp4';
+    return 'jpg';
+  }
+
+  static String _fallbackContentType(String purpose, String ext) {
+    if (purpose == 'video') {
+      return switch (ext) {
+        'mov' => 'video/quicktime',
+        'webm' => 'video/webm',
+        _ => 'video/mp4',
+      };
+    }
+    return switch (ext) {
+      'png' => 'image/png',
+      'webp' => 'image/webp',
+      'gif' => 'image/gif',
+      _ => 'image/jpeg',
+    };
+  }
 }
 
 Future<void> _openUrl(String url) async {

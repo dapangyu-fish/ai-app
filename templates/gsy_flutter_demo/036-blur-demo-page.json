@@ -1,0 +1,106 @@
+{
+  "dsl": "3.3",
+  "appid": "a8499eb6-3bbd-56b8-939c-2b8087d433e1",
+  "meta": {
+    "name": "gsy_flutter_demo/036-blur-demo-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "Blur 高斯模糊效果",
+      "en": "Blur Gaussian blur effect"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：Blur 高斯模糊效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "Blur 高斯模糊效果",
+      "sourcePath": "lib/widget/canvas/blur_demo_page.dart",
+      "deferredAlias": "blur_demo_page",
+      "widgetClass": "BlurDemoPage",
+      "category": "canvas",
+      "routeIndex": 36
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "Blur 高斯模糊效果",
+      "upstreamSource": "lib/widget/canvas/blur_demo_page.dart",
+      "upstreamWidget": "BlurDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "BlurDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "stack",
+              "fit": "expand",
+              "children": [
+                {
+                  "type": "positioned",
+                  "left": 0,
+                  "top": 0,
+                  "right": 0,
+                  "bottom": 0,
+                  "child": {
+                    "type": "image",
+                    "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                    "fit": "cover",
+                    "paddingV": 0
+                  }
+                },
+                {
+                  "type": "center",
+                  "child": {
+                    "type": "backdrop_blur",
+                    "sigmaX": 8,
+                    "sigmaY": 8,
+                    "borderRadius": 15,
+                    "child": {
+                      "type": "container",
+                      "width": 200,
+                      "height": 200,
+                      "color": "#26FFFFFF",
+                      "layout": "row",
+                      "mainAxisAlignment": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "ac_unit"
+                        },
+                        {
+                          "type": "text",
+                          "value": "哇！！",
+                          "style": {
+                            "fontSize": 14,
+                            "color": "#000000"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

@@ -74,8 +74,9 @@ import UserNotifications
     pushChannel?.invokeMethod("onDeviceToken", arguments: ["token": hex, "env": env])
   }
 
-  // 从 embedded.mobileprovision 读 Entitlements.aps-environment
-  // - dev / ad-hoc / enterprise / AppStore 真机：文件都在，按里头的 aps-environment 走
+  // 先从 Info.plist 读构建期写入的 APNs 环境，读不到再 fallback 到 embedded.mobileprovision。
+  // - Debug/Profile 明确写 development；Release 明确写 production。
+  // - dev / ad-hoc / enterprise / AppStore 真机：mobileprovision 文件在时按里头的 aps-environment 兜底。
   // - 模拟器：iOS 16+ 模拟器能拿真 APNs token 走 sandbox，但 bundle 里没 mobileprovision —
   //          所以单独短路返 development，不能让兜底落到 production（曾踩此坑：sim 注册成
   //          production 后 Apple 必返 BadDeviceToken，token 还会被自愈逻辑删掉）
@@ -83,6 +84,10 @@ import UserNotifications
     #if targetEnvironment(simulator)
     return "development"
     #else
+    if let env = Bundle.main.object(forInfoDictionaryKey: "MyAppAPNSEnvironment") as? String,
+       env == "development" || env == "production" {
+      return env
+    }
     guard let url = Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision"),
           let data = try? Data(contentsOf: url) else {
       return "production"

@@ -1,244 +1,362 @@
 # Backend Architecture
 
-最后更新：Redis 队列 + 独立 AI worker daemon 改造。
+最后更新：`myapp-ctl` 生产控制面、pull-mode agent-node、隔离运行时。
 
-## 0. 服务概览
+本文件只描述当前分支的真实运行链路。旧的裸跑 Flask、supervisor、
+`POST /chat` 直连 Claude CLI、手工 Redis/OpenIM 部署路径都已经废弃；部署和
+运维命令以 [deploy/production/README.md](../deploy/production/README.md) 为准。
 
-后端由 Flask API 进程和独立 AI worker daemon 组成，通过 supervisor 管理：
+## 1. System Overview
 
-```
-supervisor
-├─ ai-app    → gunicorn -k eventlet -w <N> -b 0.0.0.0:5566 app:app
-├─ ai-worker → cd backend && python ai_worker_daemon.py
-└─ registry → 独立的 registry_server.py（包发布服务，不在本文档范围）
-```
+生产/测试后端由 `myapp-ctl` 管理，核心服务运行在 Docker Compose 中：
 
-供应链：
-
-```
-客户端 ─HTTPS─▶ nginx ─▶ ai-app:5566
-                       │
-                       ├─ Supabase（鉴权 + 用户数据）       127.0.0.1:18000
-                       ├─ OpenIM HTTP/WS                  10001-10002
-                       ├─ MinIO                            127.0.0.1:19000
-                       ├─ Postgres（业务库）                127.0.0.1:5433
-                       ├─ Redis (OpenIM 专用)              docker 内网 only
-                       ├─ AI session Redis                 127.0.0.1:16379
-                       └─ ai-worker → claude CLI            /root/.nvm/.../claude
-```
-
-## 1. 模块划分（backend/*.py）
-
-| 文件 | 职责 |
-|------|------|
-| `app.py` | Flask app 工厂 + 路由注册 + SocketIO 初始化。`eventlet.monkey_patch()` 必须在最前 |
-| `config.py` | 全部环境变量集中点，`AI_PROVIDERS` / 数据库 / OpenIM / APNs / 路径常量 |
-| `auth.py` | Supabase 鉴权代理（注册/登录/OTP/refresh）+ `require_auth` 装饰器 |
-| `claude_chat.py` | **AI 聊天 API**：鉴权、配额、提交 Redis 队列、SSE 读 Redis stream |
-| `ai_session.py` | AI session Redis 状态、Redis 队列、Claude CLI worker 执行逻辑 |
-| `ai_worker_daemon.py` | 独立消费 Redis 队列并启动 Claude CLI 的 daemon |
-| `database.py` | Postgres 连接池 + 配额表读写 |
-| `store.py` | 应用市场（apps + components）增删查 |
-| `im.py` | OpenIM 桥接（token 签发 / 用户搜索 / 推送 token） |
-| `apns.py` | APNs HTTP/2 推送（iOS 端） |
-| `openim.py` | OpenIM 管理 API 调用（user_register / update_user_info） |
-| `registry_server.py` | 独立服务（不在 ai-app 进程里），包发布 |
-| `bytedance_asr_routes.py` + `bytedance_asr_service.py` | 豆包语音 WebSocket |
-
-## 2. AI 聊天当前流（**改造前快照**）
-
-### 2.1 端点
-
-```
-POST /chat                     SSE 流式返回 claude CLI 输出
-GET  /api/ai/session_status    查询 session 进程是否还活着（轻量）
-GET  /api/ai/providers         可用 provider 列表
+```text
+client
+  | HTTPS / SSE / WSS
+  v
+backend:5566
+  |-- auth.py                 Supabase auth proxy and require_auth
+  |-- claude_chat.py          AI chat API, provider/agent selection, SSE replay
+  |-- agent_nodes.py          public/private agent-node registry APIs
+  |-- im.py / openim.py       OpenIM token, user search, push-token bridge
+  |-- store.py                legacy store routes plus AI/IM upload URL helpers
+  |-- bytedance_asr_routes.py ASR websocket proxy
+  |
+  |-- ai-session-redis        AI queue, session metadata, SSE event streams
+  |-- jsonapp-postgres        quotas, device tokens, agent nodes, registry enrichment/social data
+  |-- app-minio               JSON apps, media, temporary generated files
+  |-- supabase-*              auth, REST, storage-compatible services
+  |-- openim-*                IM server, MySQL, Mongo, Redis, Kafka, MinIO
+  |
+  v
+ai-worker
+  |
+  v
+agent-node
+  | starts one Docker runtime container per active run
+  v
+myapp-agent-runtime
+  | Claude/Codex/OpenCode CLI with isolated env and mounted workspace
+  v
+agent-node provider proxy
+  |
+  v
+DeepSeek / MiniMax / custom provider
 ```
 
-### 2.2 调用链（claude_chat.py: chat()）
+`backend`, `ai-worker`, `registry`, `config-center`, and `user-center` share the
+backend image. `agent-node` and `agent-runtime` are separate images so AI
+execution can be updated independently from the HTTP API.
 
-```
-1. 鉴权 → require_auth
-2. 配额检查 → database.get_quota_info
-3. 解析 messages / session_id / provider
-4. increment_quota（先扣再说，半失败时配额可能损失 1，可接受）
-5. yield SSE chunks via generate():
-   ├─ 起 subprocess: claude CLI (stream-json output)
-   ├─ Popen.stdout 持续 readline
-   ├─ 每行解析为 stream_event / assistant / result 类型
-   ├─ 转写成业务 SSE 事件 yield 给客户端
-   └─ subprocess 结束 → yield "data: [DONE]"
-```
+## 2. Service Inventory
 
-### 2.3 进程管理
+| Service | Container | Responsibility |
+|---|---|---|
+| Backend API | `myapp-backend` | Flask/Gunicorn API, auth proxy, AI chat start/status/stream/result, IM bridge, upload endpoints |
+| AI worker | `myapp-ai-worker` | Moves accepted chat jobs into the agent pull queue and reconciles failed/finished states |
+| Registry | `myapp-registry` | JSON-APP/component publish, resolve, search, namespace, mirror, appid lookup |
+| Config Center | `myapp-config-center` | Public client config, APK upload/config links, remote flags |
+| User Center | `myapp-user-center` | Admin UI/API for user operations |
+| Agent node | `myapp-agent-node` plus optional `myapp-agent-node-<node>` | Pulls jobs, starts runtime containers, proxies provider calls, streams run events back |
+| Agent runtime | image only | Ubuntu 24.04 runtime with Claude/Codex/OpenCode tooling and a source snapshot under `/app` |
+| Infra | `jsonapp-postgres`, `ai-session-redis`, `app-minio` | Data, queue/session state, object storage |
+| Supabase | `supabase-*` | Auth and storage-compatible services |
+| OpenIM | `myapp-openim-*` | IM, WebSocket, message storage, OpenIM dependencies |
 
-- `_session_procs: dict[session_id, Popen]`：跟踪每个 session 的活进程
-- `_session_procs_lock`：线程锁保护
-- `session_status` 端点查 `proc.poll() is None` 判断是否存活
+Persistent state is bind-mounted under the configured data root, normally
+`/mnt/myapp`. Docker named volumes are not the source of truth for MyApp data.
 
-### 2.4 致命弱点（这一轮要修的）
+Important paths:
 
-**HTTP 连接 = 任务生命周期**，三处耦合：
-1. SSE 是 generator，只在 HTTP 连接活着的时候推
-2. eventlet greenlet 跟 HTTP 请求绑定，连接断 → greenlet 退出 → generator GC → 但 subprocess 不会立即被回收（claude CLI 仍在跑）
-3. 客户端断了之后，CLI 的 stdout 还在被 `readline` 读，但 yield 没人接 → eventlet 卡住或被 socket hangup 唤醒终止
-4. 客户端**重连没有任何接续机制**——只能从头来
-
-实际表现：
-- 客户端切后台 → iOS/Android 网络层关 socket → SSE 断 → CLI 进程残留几秒后被 OS / supervisor reload 时清掉，但生成结果**丢了**
-- 客户端没法"接着读"——`/chat` 请求是 POST + 推流，没有"按 session_id 续读"的接口
-
-## 3. 改造目标（feat/ai-background-push）
-
-### 3.1 新增 Redis（独立部署）
-
-为什么不复用 OpenIM 的 Redis：
-- OpenIM 那个挂在 docker `openim-docker_openim` 内部网络，宿主机 ai-app 进程根本访问不到
-- 它配了 `--appendonly yes` 给 OpenIM 做消息持久化；我们的数据是 24h TTL 的会话状态，**目的相反**
-- 共用一旦 OpenIM 挂了 / 占满内存，AI 也跟着挂；隔离更稳
-
-新 Redis 配置：
-- 容器名：`ai-session-redis`
-- 端口：宿主 `127.0.0.1:16379` → 容器 `6379`（仅本地，外网不开）
-- 密码：从 `.env` 读 `AI_SESSION_REDIS_PASSWORD`
-- 建议开启 appendonly（pending queue / session stream 可在 Redis 重启后恢复），仍保留 TTL 自动清
-- `maxmemory 256mb` + `maxmemory-policy allkeys-lru`
-- `restart: unless-stopped`
-
-### 3.2 Session 状态模型（Redis 数据结构）
-
-AI session 和全局调度在 Redis 里映射为这些 key：
-
-```
-ai:session:<session_id>:meta      Hash    元信息（status / quota / provider / 起止时间）
-ai:session:<session_id>:stream    Stream  SSE 事件序列（worker append，客户端按 entry id 续读）
-ai:session:<session_id>:abort     String  取消标记，短 TTL
-ai:queue:pending                  List    等待中的 AI 任务，FIFO
-ai:queue:running                  Hash    运行中任务的 worker/lease 元信息
-ai:queue:running:leases           ZSet    session_id → lease_until_ms，用于全局并发和存活判断
-
-session meta / stream 都设 TTL 86400s（24h），完工后自动清。
+```text
+/etc/myapp/ctl.json
+/etc/myapp/services.json
+/etc/myapp/secrets.d/*.env
+/etc/myapp/secrets.d/files/**
+/mnt/myapp/myapp-config.json
+/mnt/myapp/jsonapp-postgres/data
+/mnt/myapp/ai-session-redis/data
+/mnt/myapp/app-minio/data
+/mnt/myapp/agent-node/{state,workspaces,logs}
+/mnt/myapp/agent-nodes/<node-id>/
+/mnt/myapp/supabase-*
+/mnt/myapp/openim-*
 ```
 
-`meta` Hash 字段：
-| 字段 | 含义 |
-|------|------|
-| `status` | `queued` \| `running` \| `done` \| `failed` \| `aborted` |
-| `user_id` | 发起用户 |
-| `provider` | AI provider id |
-| `started_at` | epoch 毫秒 |
-| `finished_at` | epoch 毫秒（结束后写） |
-| `error` | 失败时的错误文本 |
-| `event_count` | stream event 数量（方便 O(1) 查总数） |
-| `final_text` | 完成时的最终文本（result 事件里的 text）|
-| `queued_job` | 当前排队 job 的 JSON，用于 force restart 时跳过旧 job |
+## 3. Client-Facing AI API
 
-### 3.3 新流程
+Current AI chat endpoints:
 
-```
-[1] POST /api/ai/chat/start        鉴权 + 配额检查
-                                   Redis Lua 原子判断 pending 是否满
-                                   未满：写 meta status=queued + RPUSH ai:queue:pending
-                                   已满：返回 429 AI_QUEUE_FULL
-
-[2] ai_worker_daemon.py            Redis Lua 原子判断 running lease 是否低于 AI_WORKER_MAX_CONCURRENCY
-                                   有空位：LPOP pending + 写 running lease
-                                   daemon 线程池启动 Claude CLI
-                                   CLI 输出每行 → Redis stream
-
-[3] GET /api/ai/chat/<id>/stream?last_id=N
-                                   SSE 端点可由任意 gunicorn worker 处理
-                                   - 先用 Redis Stream 回放 last_id 之后的事件
-                                   - queued 时定期发排队状态
-                                   - running 但 lease 过期时标 failed + needs_retry
-                                   - terminal 后推 [DONE]
-
-[4] GET /api/ai/chat/<id>/result   一次性返回 meta.final_text + status
-
-[5] GET /api/ai/chat/<id>/status   轻量轮询：返回 meta + queue_position + process_alive
+```text
+GET  /api/ai/providers?agent_scope=public|private
+POST /api/ai/chat/start
+POST /api/ai/chat/<session_id>/stream_token
+GET  /api/ai/chat/<session_id>/stream?last_id=<redis-stream-id>
+GET  /api/ai/chat/<session_id>/result
+GET  /api/ai/chat/<session_id>/status
+POST /api/ai/chat/<session_id>/abort
 ```
 
-### 3.4 客户端流程改造
+There is no supported legacy `POST /chat` route in the current control-plane
+path.
 
-```
-sendMessage(text):
-   1. POST /chat → 拿 session_id（已有）+ 立即开始流式
-   2. 同时 SSE 订阅 /chat/<session_id>/stream
-   3. 切后台 → SSE 自然断（iOS/Android 关 socket）
-   4. 回前台 → 重新订阅 /chat/<session_id>/stream?last_seq=N
-            → 后端从 N+1 重放 + 继续推
-   5. 任务结束（meta.status=done）→ 流自动 [DONE]
-```
+Chat start request shape:
 
-### 3.5 兼容性
-
-- **保留旧 `/chat` 端点 N 个版本**：旧客户端继续走老路（subprocess 直推 SSE，无 Redis）
-  - 老客户端不会遇到任何变化
-- 新客户端版本号触发新路径：检测到 backend 支持 `/chat/<id>/stream` 时切换
-- 配额扣减只发生在 worker 启动前（和现在一致），重复订阅不重复扣
-
-### 3.6 并发控制
-
-- worker 用 `concurrent.futures.ThreadPoolExecutor(max_workers=N)`
-- N 由 `.env` 配（建议 4-8，看服务器内存与 claude CLI 占用）
-- 队列满时新请求直接 429 + 提示"服务繁忙"
-
-### 3.7 关键风险点
-
-1. **eventlet + threading 混用**：worker 跑在普通 thread 里调 subprocess + Redis 客户端，eventlet monkey-patch 后 socket 都是协程的——subprocess.Popen 需要小心，**必须用 `redis-py` 而不是 `aioredis`**，要求 `redis>=5.0`（已支持 eventlet patch 后的 socket）
-2. **CLI 进程僵尸**：worker 必须 finally 里 `proc.wait()` + `_clear_session_proc`，否则进程表挤爆
-3. **Redis 连接池**：用 `redis.Redis(host=..., decode_responses=False)` 单例，按需连接
-4. **客户端 abort**：abort 时调 `POST /chat/<id>/abort`，后端 worker 看到 abort flag 杀 CLI 进程
-
-## 4. 部署流程（改动相关）
-
-```
-本机：
-1. backend/ 改代码 → commit + push 到 feat/ai-background-push
-2. 验证测试（本地起 redis 6379 + python app.py）
-
-服务器：
-1. ssh + cd /root/ai-app
-2. 编辑 backend/.env 加 AI_SESSION_REDIS_PASSWORD
-3. docker run ai-session-redis（详见 4.1）
-4. git checkout feat/ai-background-push && git pull
-5. /opt/ai-app-venv/bin/pip install -r backend/requirements.txt
-6. supervisorctl restart ai-app
-7. supervisorctl tail -f ai-app stdout 看启动日志
+```json
+{
+  "session_id": "uuid",
+  "messages": [{"role": "user", "content": "..."}],
+  "provider": "deepseek",
+  "agent": "claude",
+  "agent_scope": "public"
+}
 ```
 
-### 4.1 启动 ai-session-redis
+`agent_scope` is explicit:
+
+- `public`: use platform/public agent nodes.
+- `private`: use only the signed-in user's private nodes. No automatic fallback
+  to public nodes is performed.
+
+Provider and agent choices are also scope-aware. The provider list is built from
+online agent nodes plus configured provider metadata; a private-mode request can
+only pick providers reported by the user's own private nodes.
+
+## 4. AI Session And SSE Flow
+
+The HTTP request is not the worker lifecycle. The backend stores AI session state
+in Redis and clients can reconnect to the same stream.
+
+```text
+1. client -> POST /api/ai/chat/start
+   - require_auth
+   - validate provider / agent / scope
+   - check quota and queue limits
+   - write session metadata
+   - enqueue a job
+   - return session_id, status, queue position
+
+2. client -> GET /api/ai/chat/<id>/stream
+   - mobile: Authorization header
+   - web: short-lived stream_token query param
+   - read Redis stream from last_id
+   - emit queued/running/result/action/error events
+   - emit [DONE] when terminal
+
+3. worker/agent-node continue independently
+   - client disconnect does not kill the run
+   - client reconnects with last_id
+   - /result can recover final text and client_actions after stream loss
+```
+
+Redis keys are intentionally short-lived:
+
+```text
+ai:session:<session_id>:meta              hash
+ai:session:<session_id>:stream            stream
+ai:session:<session_id>:abort             string
+ai:queue:pending:<provider>               list
+ai:queue:running                          hash
+ai:queue:running:<provider>               hash
+ai:agent_pull:pending                     list
+ai:agent_pull:pending:user:<user_id>      list
+ai:agent_pull:job:<job_id>                hash with JSON spec/status fields
+ai:agent_pull:events:<job_id>             stream
+ai:agent_pull:artifact:<job_id>:<path>    string
+ai:agent_pull:node_running:<node_id>      set
+ai:agent_node:<node_id>                   hash, short-lived compatibility/cache state
+```
+
+Session metadata and stream data are TTL-based. The durable source for published
+apps and generated JSON files is object storage/Registry, not Redis. Durable
+agent-node registration lives in Postgres `agent_nodes`; Redis keeps queue,
+assignment, running, stream, and artifact state with TTLs.
+
+## 5. Agent Execution Model
+
+The compose default is pull mode (`AI_WORKER_EXECUTION_BACKEND=agent-pull`):
+
+```text
+backend queues job
+agent-node polls /api/ai/agent_pull/acquire
+backend assigns an eligible job
+agent-node starts myapp-agent-runtime container
+runtime runs Claude/Codex/OpenCode CLI
+agent-node records JSONL logs and streams events/artifacts back
+backend writes Redis stream events for clients
+```
+
+Pull mode means an extra agent host only needs outbound access to the backend.
+It does not need a public inbound port.
+
+The code also contains direct `agent-node` and `local` execution backends for
+controlled deployments and development, but they are not the default path in the
+production compose files.
+
+Scheduling behavior:
+
+- Each node reports `RUNS`, `CAP`, `QUEUE`, `QMAX`, version, labels, namespace,
+  provider list, and supported agents.
+- A paused node keeps heartbeating but receives no new work.
+- If a node is full, it receives no new job until `RUNS < CAP`.
+- Same-session affinity prefers the node that previously handled the session so
+  workspace and CLI session state can continue.
+- If the bound node is stale, removed, or paused, another eligible node can take
+  the job.
+
+`myapp-ctl agent ls` is local-only and current-only: it lists active runtime
+containers on the machine where the command is run. Cluster node visibility is
+handled by `myapp-ctl agent-node ls`.
+
+## 6. Public And Private Agent Nodes
+
+Public nodes belong to the platform. They are visible in the public namespace
+and can serve platform users.
+
+Private nodes belong to one user. Invariants:
+
+- A private registration token can only create a private node for its owner.
+- The backend stores only public key, metadata, heartbeat, capacity, and
+  provider/agent descriptors.
+- Long-lived provider keys stay on the user's private agent host.
+- A private node can only pull jobs for its owner.
+- `agent-node private ls/status` shows only the current user's node(s).
+- Admin `agent-node ls --namespace <user-id>` is required to inspect a user's
+  private namespace from the control plane.
+
+The app creates a one-time join token through:
+
+```text
+POST /api/ai/private_agent/join_token
+```
+
+The private host consumes it with:
 
 ```bash
-source /root/ai-app/backend/.env  # 拿到 AI_SESSION_REDIS_PASSWORD
-docker run -d \
-  --name ai-session-redis \
-  --restart unless-stopped \
-  -p 127.0.0.1:16379:6379 \
-  redis:7.4-alpine \
-  redis-server \
-    --requirepass "$AI_SESSION_REDIS_PASSWORD" \
-    --maxmemory 256mb \
-    --maxmemory-policy allkeys-lru \
-    --appendonly yes
+export MYAPP_PRIVATE_AGENT_JOIN_TOKEN='<copied from app settings>'
+myapp-ctl agent-node private join \
+  --backend https://<backend-host> \
+  --node-id my-private-agent \
+  --name "My private agent" \
+  --provider deepseek \
+  --agent claude \
+  --capacity 2 \
+  --queue-max 10 \
+  --pull
 ```
 
-回滚：`docker rm -f ai-session-redis` —— 不会影响 OpenIM 的 redis。
+The join command generates a local keypair, registers the public key, prompts
+for local provider configuration if needed, and starts only `agent-node` plus
+`agent-runtime`.
 
-### 4.2 启动 AI worker daemon
+## 7. Provider And Agent Abstraction
 
-生产必须在启动 Flask/gunicorn 之外，再启动一个 daemon 消费 Redis 队列：
+The backend treats provider configuration as data. Built-in provider templates
+can be filled during `myapp-ctl setup`, and custom providers can be added
+without changing code if they expose Anthropic-compatible Claude CLI variables.
+
+For Claude-compatible execution, the agent runtime receives environment values
+like:
+
+```text
+ANTHROPIC_BASE_URL
+ANTHROPIC_AUTH_TOKEN
+ANTHROPIC_MODEL
+ANTHROPIC_DEFAULT_OPUS_MODEL
+ANTHROPIC_DEFAULT_SONNET_MODEL
+ANTHROPIC_DEFAULT_HAIKU_MODEL
+CLAUDE_CODE_SUBAGENT_MODEL
+CLAUDE_CODE_EFFORT_LEVEL
+```
+
+For Codex-capable providers, provider metadata supplies Codex CLI model/provider
+settings. Provider support is exposed to clients as `supported_agents`; for
+example a provider can support `claude` only, while another supports both
+`claude` and `codex`.
+
+Runtime containers do not receive the real platform provider keys directly.
+Agent-node mints short-lived local proxy tokens, forwards provider requests, and
+revokes tokens after the run. Private nodes with local provider mode keep their
+own long-lived keys in the private host data root.
+
+## 8. Workspace And Artifacts
+
+Agent runtime workspaces are persisted under the data root:
+
+```text
+<data-root>/agent-node/workspaces/<user-id>/<session-id>/current
+<data-root>/agent-node/workspaces/<user-id>/<session-id>/runs/<job-id>
+```
+
+The goal is "one conversation keeps refining one app":
+
+- Later turns in the same session reuse the same workspace when possible.
+- The runtime can inspect current JSON, generated assets, templates, prompts,
+  validators, and relevant source files under `/app`.
+- The final app JSON is uploaded to object storage and emitted as a structured
+  client action, not as a free-form markdown tag that the client has to parse.
+
+Client action example:
+
+```json
+{
+  "client_actions": [
+    {
+      "type": "json_app_ready",
+      "url": "https://..."
+    }
+  ]
+}
+```
+
+The backend converts this into SSE/action state for the client and stores the
+same terminal state in Redis so reconnecting clients can recover it.
+
+## 9. Deployment Boundaries
+
+Use `myapp-ctl` for all deployment state:
 
 ```bash
-cd /root/ai-app/backend
-BACKEND_ENV_PATH=/etc/ai-app/backend.env /opt/ai-app-venv/bin/python ai_worker_daemon.py
+./deploy/production/install_ctl.sh
+myapp-ctl setup --host <public-ip-or-domain> --data-root /mnt/myapp
+myapp-ctl deploy --build
+myapp-ctl status
+myapp-ctl client-env --terminal-qr
 ```
 
-确认 daemon 已经启动后，`ai-app` 的 gunicorn worker 数可以按普通 API 吞吐调整。
-AI 并发由 Redis lease 上的 `AI_WORKER_MAX_CONCURRENCY` 全局控制，不再乘以 gunicorn worker 数。
+Routine updates should only touch the changed surface:
 
-## 5. 后续阶段（不在本次范围）
+```bash
+myapp-ctl update
+myapp-ctl deploy backend ai-worker --build --no-setup --no-test-user
+myapp-ctl deploy agent-node agent-runtime --build --no-setup --no-test-user
+```
 
-- Phase 2：完成时 push 通知（APNs alert + FCM data）
-- Phase 3（可选）：iOS Live Activity / Dynamic Island
-- Phase 4（可选）：跨设备 session 同步（用户 A 设备发的，B 设备能续）
+Do not restart Supabase, OpenIM, Postgres, Redis, or MinIO for ordinary backend,
+prompt, validator, or agent-runtime changes unless their config/storage layout
+actually changed.
+
+## 10. Failure Modes To Check First
+
+| Symptom | First checks |
+|---|---|
+| Client says queued forever | `myapp-ctl agent-node ls`, `myapp-ctl log ai-worker`, Redis queue state |
+| Agent starts then fails immediately | `myapp-ctl log agent-node`, runtime JSONL under `<data-root>/agent-node/logs/` |
+| SSE disconnected but generation continues | client should reconnect with `last_id`; inspect `/status` and `/result` |
+| Private mode says offline | private node heartbeat, provider/agent mismatch, node paused, wrong user namespace |
+| Provider missing from selector | `GET /api/ai/providers?agent_scope=...`, node provider report, provider-mode local/master config |
+| Generated JSON upload failed | backend validator logs, App MinIO health, upload credentials, object path permissions |
+| IM token 500 | OpenIM service health, backend OpenIM env, OpenIM admin token/API reachability |
+
+Preferred diagnostic order:
+
+```bash
+myapp-ctl status
+myapp-ctl agent-node ls
+myapp-ctl agent ls
+myapp-ctl log backend -n 200
+myapp-ctl log ai-worker -n 200
+myapp-ctl log agent-node -n 200
+curl -fsS http://127.0.0.1:5566/api/ai/providers
+curl -fsS http://127.0.0.1:5590/health
+```

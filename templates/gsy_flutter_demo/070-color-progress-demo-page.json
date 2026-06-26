@@ -1,0 +1,630 @@
+{
+  "dsl": "3.3",
+  "appid": "85dc1fb0-eee7-5dd9-baeb-0fd7dbdd3cd5",
+  "meta": {
+    "name": "gsy_flutter_demo/070-color-progress-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "彩色进度条",
+      "en": "Color progress bar"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：彩色进度条",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "彩色进度条",
+      "sourcePath": "lib/widget/basic/color_progress_demo_page.dart",
+      "deferredAlias": "color_progress_demo_page",
+      "widgetClass": "ColorProgressDemoPage",
+      "category": "basic",
+      "routeIndex": 70,
+      "portVersion": "json-dsl-primitives-v4"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "彩色进度条",
+      "upstreamSource": "lib/widget/basic/color_progress_demo_page.dart",
+      "upstreamWidget": "ColorProgressDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v4"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "ColorProgressDemoPage",
+        "layout": "column",
+        "backgroundColor": "#9E9E9E",
+        "children": [
+          {
+            "type": "expanded",
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [
+                {
+                  "type": "gradient_progress",
+                  "value": 0.5,
+                  "width": 290,
+                  "height": 5,
+                  "borderRadius": 8,
+                  "backgroundGradient": {
+                    "colors": [
+                      "#FFB79139",
+                      "#FF896A23"
+                    ],
+                    "begin": {
+                      "x": 0.99899,
+                      "y": 0.5
+                    },
+                    "end": {
+                      "x": 0,
+                      "y": 0.5
+                    },
+                    "stops": [
+                      0,
+                      1
+                    ]
+                  },
+                  "fillGradients": [
+                    {
+                      "colors": [
+                        "#FFFFE4A6",
+                        "#FFFFD898"
+                      ],
+                      "begin": {
+                        "x": 0.52576,
+                        "y": 0.80444
+                      },
+                      "end": {
+                        "x": 0.52576,
+                        "y": 0.20356
+                      },
+                      "stops": [
+                        0,
+                        1
+                      ]
+                    },
+                    {
+                      "colors": [
+                        "#FF85661E",
+                        "#0085651E",
+                        "#0085651E",
+                        "#4385651E",
+                        "#FF85661E"
+                      ],
+                      "begin": "topCenter",
+                      "end": "bottomCenter",
+                      "stops": [
+                        0,
+                        0.31865,
+                        0.5038,
+                        0.71541,
+                        1
+                      ]
+                    },
+                    {
+                      "colors": [
+                        "#FFFFFFFF",
+                        "#00FFB935"
+                      ],
+                      "begin": {
+                        "x": 1,
+                        "y": 0.5
+                      },
+                      "end": {
+                        "x": 0.5857,
+                        "y": 0.5
+                      },
+                      "stops": [
+                        0,
+                        1
+                      ]
+                    }
+                  ],
+                  "border": {
+                    "color": "#3A5C4012",
+                    "width": 1
+                  },
+                  "animation": {
+                    "mode": "mount",
+                    "durationMs": 2000,
+                    "curve": "fastOutSlowIn",
+                    "reverse": false
+                  }
+                },
+                {
+                  "type": "spacer",
+                  "height": 10
+                },
+                {
+                  "type": "gradient_progress",
+                  "value": 0.3,
+                  "width": 290,
+                  "height": 5,
+                  "borderRadius": 8,
+                  "backgroundGradient": {
+                    "colors": [
+                      "#FF5C0801",
+                      "#FF981402"
+                    ],
+                    "begin": {
+                      "x": 1,
+                      "y": 0.5
+                    },
+                    "end": {
+                      "x": 0,
+                      "y": 0.5
+                    },
+                    "stops": [
+                      0,
+                      1
+                    ]
+                  },
+                  "fillGradients": [
+                    {
+                      "colors": [
+                        "#FFFFE4A6",
+                        "#FFFFD898"
+                      ],
+                      "begin": {
+                        "x": 0.52576,
+                        "y": 0.80444
+                      },
+                      "end": {
+                        "x": 0.52576,
+                        "y": 0.20356
+                      },
+                      "stops": [
+                        0,
+                        1
+                      ]
+                    },
+                    {
+                      "colors": [
+                        "#FFB91804",
+                        "#00FF0000",
+                        "#04FF0101",
+                        "#00F30701",
+                        "#FFC81C03"
+                      ],
+                      "begin": "topCenter",
+                      "end": "bottomCenter",
+                      "stops": [
+                        0,
+                        0.31865,
+                        0.5038,
+                        0.71541,
+                        1
+                      ]
+                    },
+                    {
+                      "colors": [
+                        "#FFFFFFFF",
+                        "#00FFB935"
+                      ],
+                      "begin": {
+                        "x": 1,
+                        "y": 0.5
+                      },
+                      "end": {
+                        "x": 0.5857,
+                        "y": 0.5
+                      },
+                      "stops": [
+                        0,
+                        1
+                      ]
+                    }
+                  ],
+                  "border": {
+                    "color": "#45FF7C7C",
+                    "width": 1
+                  },
+                  "animation": {
+                    "mode": "mount",
+                    "durationMs": 2000,
+                    "curve": "fastOutSlowIn",
+                    "reverse": false
+                  }
+                },
+                {
+                  "type": "spacer",
+                  "height": 10
+                },
+                {
+                  "type": "gradient_progress",
+                  "value": 1,
+                  "width": 290,
+                  "height": 5,
+                  "borderRadius": 8,
+                  "backgroundGradient": {
+                    "colors": [
+                      "#FF000000",
+                      "#FF1C1C1C"
+                    ],
+                    "begin": {
+                      "x": 1,
+                      "y": 0.5
+                    },
+                    "end": {
+                      "x": 0,
+                      "y": 0.5
+                    },
+                    "stops": [
+                      0,
+                      1
+                    ]
+                  },
+                  "fillGradients": [
+                    {
+                      "colors": [
+                        "#FFA1A1A1",
+                        "#FFFFFFFF"
+                      ],
+                      "begin": {
+                        "x": 1,
+                        "y": 0.5
+                      },
+                      "end": {
+                        "x": 0,
+                        "y": 0.5
+                      },
+                      "stops": [
+                        0,
+                        1
+                      ]
+                    },
+                    {
+                      "colors": [
+                        "#FF616161",
+                        "#00434343",
+                        "#04FF0101",
+                        "#00F30701",
+                        "#00C81C03"
+                      ],
+                      "begin": "topCenter",
+                      "end": "bottomCenter",
+                      "stops": [
+                        0,
+                        0.31865,
+                        0.5038,
+                        0.71541,
+                        1
+                      ]
+                    },
+                    {
+                      "colors": [
+                        "#FFFFFFFF",
+                        "#00FFFFFF"
+                      ],
+                      "begin": {
+                        "x": 1,
+                        "y": 0.5
+                      },
+                      "end": {
+                        "x": 0.5857,
+                        "y": 0.5
+                      },
+                      "stops": [
+                        0,
+                        1
+                      ]
+                    }
+                  ],
+                  "border": {
+                    "color": "#45717171",
+                    "width": 1
+                  },
+                  "animation": {
+                    "mode": "mount",
+                    "durationMs": 2000,
+                    "curve": "fastOutSlowIn",
+                    "reverse": false
+                  }
+                },
+                {
+                  "type": "spacer",
+                  "height": 10
+                },
+                {
+                  "type": "gradient_progress",
+                  "value": 0.8,
+                  "width": 290,
+                  "height": 6,
+                  "borderRadius": 8,
+                  "backgroundGradient": {
+                    "colors": [
+                      "#FFB79139",
+                      "#FF896A23"
+                    ],
+                    "begin": {
+                      "x": 0.99899,
+                      "y": 0.5
+                    },
+                    "end": {
+                      "x": 0,
+                      "y": 0.5
+                    },
+                    "stops": [
+                      0,
+                      1
+                    ]
+                  },
+                  "fillGradients": [
+                    {
+                      "colors": [
+                        "#FFFFE4A6",
+                        "#FFFFD898"
+                      ],
+                      "begin": {
+                        "x": 0.52576,
+                        "y": 0.80444
+                      },
+                      "end": {
+                        "x": 0.52576,
+                        "y": 0.20356
+                      },
+                      "stops": [
+                        0,
+                        1
+                      ]
+                    },
+                    {
+                      "colors": [
+                        "#FF85661E",
+                        "#0085651E",
+                        "#0085651E",
+                        "#4385651E",
+                        "#FF85661E"
+                      ],
+                      "begin": "topCenter",
+                      "end": "bottomCenter",
+                      "stops": [
+                        0,
+                        0.31865,
+                        0.5038,
+                        0.71541,
+                        1
+                      ]
+                    },
+                    {
+                      "colors": [
+                        "#FFFFFFFF",
+                        "#00FFB935"
+                      ],
+                      "begin": {
+                        "x": 1,
+                        "y": 0.5
+                      },
+                      "end": {
+                        "x": 0.5857,
+                        "y": 0.5
+                      },
+                      "stops": [
+                        0,
+                        1
+                      ]
+                    }
+                  ],
+                  "border": {
+                    "color": "#3A5C4012",
+                    "width": 1
+                  },
+                  "animation": {
+                    "mode": "repeat",
+                    "durationMs": 3000,
+                    "curve": "bounceInOut",
+                    "reverse": true
+                  }
+                },
+                {
+                  "type": "spacer",
+                  "height": 10
+                },
+                {
+                  "type": "gradient_progress",
+                  "value": 0.4,
+                  "width": 290,
+                  "height": 6,
+                  "borderRadius": 8,
+                  "backgroundGradient": {
+                    "colors": [
+                      "#FF5C0801",
+                      "#FF981402"
+                    ],
+                    "begin": {
+                      "x": 1,
+                      "y": 0.5
+                    },
+                    "end": {
+                      "x": 0,
+                      "y": 0.5
+                    },
+                    "stops": [
+                      0,
+                      1
+                    ]
+                  },
+                  "fillGradients": [
+                    {
+                      "colors": [
+                        "#FFFFE4A6",
+                        "#FFFFD898"
+                      ],
+                      "begin": {
+                        "x": 0.52576,
+                        "y": 0.80444
+                      },
+                      "end": {
+                        "x": 0.52576,
+                        "y": 0.20356
+                      },
+                      "stops": [
+                        0,
+                        1
+                      ]
+                    },
+                    {
+                      "colors": [
+                        "#FFB91804",
+                        "#00FF0000",
+                        "#04FF0101",
+                        "#00F30701",
+                        "#FFC81C03"
+                      ],
+                      "begin": "topCenter",
+                      "end": "bottomCenter",
+                      "stops": [
+                        0,
+                        0.31865,
+                        0.5038,
+                        0.71541,
+                        1
+                      ]
+                    },
+                    {
+                      "colors": [
+                        "#FFFFFFFF",
+                        "#00FFB935"
+                      ],
+                      "begin": {
+                        "x": 1,
+                        "y": 0.5
+                      },
+                      "end": {
+                        "x": 0.5857,
+                        "y": 0.5
+                      },
+                      "stops": [
+                        0,
+                        1
+                      ]
+                    }
+                  ],
+                  "border": {
+                    "color": "#45FF7C7C",
+                    "width": 1
+                  },
+                  "animation": {
+                    "mode": "repeat",
+                    "durationMs": 3000,
+                    "curve": "bounceInOut",
+                    "reverse": true
+                  }
+                },
+                {
+                  "type": "spacer",
+                  "height": 10
+                },
+                {
+                  "type": "gradient_progress",
+                  "value": 0.7,
+                  "width": 290,
+                  "height": 6,
+                  "borderRadius": 8,
+                  "backgroundGradient": {
+                    "colors": [
+                      "#FF000000",
+                      "#FF1C1C1C"
+                    ],
+                    "begin": {
+                      "x": 1,
+                      "y": 0.5
+                    },
+                    "end": {
+                      "x": 0,
+                      "y": 0.5
+                    },
+                    "stops": [
+                      0,
+                      1
+                    ]
+                  },
+                  "fillGradients": [
+                    {
+                      "colors": [
+                        "#FFA1A1A1",
+                        "#FFFFFFFF"
+                      ],
+                      "begin": {
+                        "x": 1,
+                        "y": 0.5
+                      },
+                      "end": {
+                        "x": 0,
+                        "y": 0.5
+                      },
+                      "stops": [
+                        0,
+                        1
+                      ]
+                    },
+                    {
+                      "colors": [
+                        "#FF616161",
+                        "#00434343",
+                        "#04FF0101",
+                        "#00F30701",
+                        "#00C81C03"
+                      ],
+                      "begin": "topCenter",
+                      "end": "bottomCenter",
+                      "stops": [
+                        0,
+                        0.31865,
+                        0.5038,
+                        0.71541,
+                        1
+                      ]
+                    },
+                    {
+                      "colors": [
+                        "#FFFFFFFF",
+                        "#00FFFFFF"
+                      ],
+                      "begin": {
+                        "x": 1,
+                        "y": 0.5
+                      },
+                      "end": {
+                        "x": 0.5857,
+                        "y": 0.5
+                      },
+                      "stops": [
+                        0,
+                        1
+                      ]
+                    }
+                  ],
+                  "border": {
+                    "color": "#45717171",
+                    "width": 1
+                  },
+                  "animation": {
+                    "mode": "repeat",
+                    "durationMs": 3000,
+                    "curve": "bounceInOut",
+                    "reverse": true
+                  }
+                }
+              ],
+              "mainAxisAlignment": "center",
+              "crossAxisAlignment": "center",
+              "padding": {
+                "horizontal": 50
+              },
+              "color": "#9E9E9E"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

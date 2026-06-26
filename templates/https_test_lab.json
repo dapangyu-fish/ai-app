@@ -1,0 +1,1477 @@
+{
+  "dsl": "3.3",
+  "appid": "7c9e6f10-2a3b-4c5d-8e9f-0a1b2c3d4e5f",
+  "meta": {
+    "name": "https_test_lab",
+    "displayName": {
+      "zh": "FaaS 测试台",
+      "en": "FaaS Test Lab",
+      "default": "FaaS Test Lab"
+    },
+    "version": "1.4.0",
+    "type": "app",
+    "description": "FaaS 端到端连通性测试台（i18n + faas lib）：GET/POST/PUT/DELETE/SSE/真实 Supabase 鉴权/任意状态码。",
+    "author": "claude"
+  },
+  "dependencies": {
+    "faas": "^1.0.2"
+  },
+  "global": {
+    "variables": {
+      "locale": "zh",
+      "faasService": "svc-77be07ffad7b",
+      "userToken": null,
+      "_sseRet": null,
+      "resPing": null,
+      "resEchoGet": null,
+      "resEchoPost": null,
+      "resPut": null,
+      "resDelete": null,
+      "resHeaders": null,
+      "resStream": null,
+      "resAuth": null,
+      "resStatus": null
+    },
+    "computed": {},
+    "functions": {
+      "run_ping": {
+        "params": [],
+        "description": "run ping (GET /ping)",
+        "logic": [
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.faasService }}",
+              "route": "/ping"
+            },
+            "assign": "global.resPing"
+          },
+          {
+            "expression": {
+              "var": "global.resPing"
+            }
+          }
+        ]
+      },
+      "run_echo_get": {
+        "params": [],
+        "description": "run echo_get (GET /echo?from=faas-test-lab&n=1)",
+        "logic": [
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.faasService }}",
+              "route": "/echo?from=faas-test-lab&n=1"
+            },
+            "assign": "global.resEchoGet"
+          },
+          {
+            "expression": {
+              "var": "global.resEchoGet"
+            }
+          }
+        ]
+      },
+      "run_echo_post": {
+        "params": [],
+        "description": "run echo_post (POST /echo)",
+        "logic": [
+          {
+            "call": "@faas.post",
+            "args": {
+              "serviceId": "{{ global.faasService }}",
+              "route": "/echo",
+              "body": {
+                "hello": "world",
+                "n": 42
+              }
+            },
+            "assign": "global.resEchoPost"
+          },
+          {
+            "expression": {
+              "var": "global.resEchoPost"
+            }
+          }
+        ]
+      },
+      "run_put": {
+        "params": [],
+        "description": "run put (PUT /items/42)",
+        "logic": [
+          {
+            "call": "@faas.put",
+            "args": {
+              "serviceId": "{{ global.faasService }}",
+              "route": "/items/42",
+              "body": {
+                "name": "updated",
+                "price": 9.9
+              }
+            },
+            "assign": "global.resPut"
+          },
+          {
+            "expression": {
+              "var": "global.resPut"
+            }
+          }
+        ]
+      },
+      "run_delete": {
+        "params": [],
+        "description": "run delete (DELETE /items/42)",
+        "logic": [
+          {
+            "call": "@faas.del",
+            "args": {
+              "serviceId": "{{ global.faasService }}",
+              "route": "/items/42"
+            },
+            "assign": "global.resDelete"
+          },
+          {
+            "expression": {
+              "var": "global.resDelete"
+            }
+          }
+        ]
+      },
+      "run_headers": {
+        "params": [],
+        "description": "run headers (GET /headers)",
+        "logic": [
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.faasService }}",
+              "route": "/headers",
+              "headers": {
+                "X-User-Token": "demo-token-123",
+                "X-Demo": "hello",
+                "Authorization": "Bearer should-be-stripped"
+              }
+            },
+            "assign": "global.resHeaders"
+          },
+          {
+            "expression": {
+              "var": "global.resHeaders"
+            }
+          }
+        ]
+      },
+      "run_stream": {
+        "params": [],
+        "description": "run stream (GET /stream)",
+        "logic": [
+          {
+            "call": "@faas.sse",
+            "args": {
+              "serviceId": "{{ global.faasService }}",
+              "route": "/stream",
+              "method": "GET",
+              "bind": "global.resStream"
+            },
+            "assign": "global._sseRet"
+          },
+          {
+            "expression": {
+              "var": "global.resStream"
+            }
+          }
+        ]
+      },
+      "run_auth": {
+        "params": [],
+        "description": "run auth (POST /auth/verify)",
+        "logic": [
+          {
+            "call": "@get_auth_token",
+            "args": {
+              "bind": "global.userToken"
+            }
+          },
+          {
+            "call": "@faas.post",
+            "args": {
+              "serviceId": "{{ global.faasService }}",
+              "route": "/auth/verify",
+              "body": {},
+              "headers": {
+                "X-User-Token": "{{ global.userToken }}"
+              }
+            },
+            "assign": "global.resAuth"
+          },
+          {
+            "expression": {
+              "var": "global.resAuth"
+            }
+          }
+        ]
+      },
+      "run_status": {
+        "params": [],
+        "description": "run status (GET /status/418)",
+        "logic": [
+          {
+            "call": "@faas.get",
+            "args": {
+              "serviceId": "{{ global.faasService }}",
+              "route": "/status/418"
+            },
+            "assign": "global.resStatus"
+          },
+          {
+            "expression": {
+              "var": "global.resStatus"
+            }
+          }
+        ]
+      }
+    },
+    "i18n": {
+      "zh": {
+        "case": {
+          "ping": {
+            "title": "GET /ping",
+            "desc": "最基础的存活探针：GET 一个 FaaS 路由，期望 200 + {ok:true, message:'pong'}。",
+            "row0": "HTTP 状态码",
+            "row1": "响应体",
+            "row2": "错误"
+          },
+          "echo_get": {
+            "title": "GET /echo?from=…",
+            "desc": "GET + query 参数透传：后端把收到的 query 原样回显。",
+            "row0": "HTTP 状态码",
+            "row1": "回显 query",
+            "row2": "错误"
+          },
+          "echo_post": {
+            "title": "POST /echo",
+            "desc": "POST + JSON body 透传：后端回显请求体并返回 201。",
+            "row0": "HTTP 状态码",
+            "row1": "回显 body",
+            "row2": "错误"
+          },
+          "put": {
+            "title": "PUT /items/42",
+            "desc": "PUT + 动态路径段 + body：更新一条 mock 资源。",
+            "row0": "HTTP 状态码",
+            "row1": "更新结果",
+            "row2": "错误"
+          },
+          "delete": {
+            "title": "DELETE /items/42",
+            "desc": "DELETE + 动态路径段：删除一条 mock 资源。",
+            "row0": "HTTP 状态码",
+            "row1": "删除结果",
+            "row2": "错误"
+          },
+          "headers": {
+            "title": "GET /headers（看代理剥头）",
+            "desc": "后端回显它实际收到的请求头。可看到 invoke 代理剥掉了 Authorization/Cookie，自定义头 X-User-Token / X-Demo 能透传。",
+            "row0": "HTTP 状态码",
+            "row1": "后端收到的头",
+            "row2": "错误"
+          },
+          "stream": {
+            "title": "GET /stream（SSE）",
+            "desc": "text/event-stream 流式响应：后端推 5 个 tick + 1 个 done，客户端经 @faas.sse 累加 events。",
+            "row0": "SSE 状态",
+            "row1": "收到的事件",
+            "row2": "错误"
+          },
+          "auth": {
+            "title": "POST /auth/verify（真实 Supabase 鉴权）",
+            "desc": "客户端用 @get_auth_token 拿当前用户 token，放进自定义头 X-User-Token 传给后端；后端真实调用 Supabase /auth/v1/user 验证并回传裁决。",
+            "row0": "HTTP 状态码",
+            "row1": "鉴权结果",
+            "row2": "错误"
+          },
+          "status": {
+            "title": "GET /status/418",
+            "desc": "让后端返回任意状态码（418），验证客户端对非 2xx 响应的处理。",
+            "row0": "HTTP 状态码",
+            "row1": "响应体",
+            "row2": "错误"
+          }
+        },
+        "app": {
+          "title": "FaaS 测试台",
+          "subtitle": "每个入口 = 一个 FaaS 端到端用例。点进去运行，看真实 HTTP 状态码与响应体。",
+          "backend_label": "后端服务"
+        },
+        "action": {
+          "run": "▶ 运行测试",
+          "back": "← 返回列表",
+          "call": "调用"
+        }
+      },
+      "en": {
+        "case": {
+          "ping": {
+            "title": "GET /ping",
+            "desc": "Basic liveness probe: GET a FaaS route, expect 200 + {ok:true, message:'pong'}.",
+            "row0": "HTTP status",
+            "row1": "Response body",
+            "row2": "Error"
+          },
+          "echo_get": {
+            "title": "GET /echo?from=…",
+            "desc": "GET with query passthrough: the backend echoes the received query.",
+            "row0": "HTTP status",
+            "row1": "Echoed query",
+            "row2": "Error"
+          },
+          "echo_post": {
+            "title": "POST /echo",
+            "desc": "POST with JSON body: the backend echoes the body and returns 201.",
+            "row0": "HTTP status",
+            "row1": "Echoed body",
+            "row2": "Error"
+          },
+          "put": {
+            "title": "PUT /items/42",
+            "desc": "PUT with a dynamic path segment + body: update a mock resource.",
+            "row0": "HTTP status",
+            "row1": "Update result",
+            "row2": "Error"
+          },
+          "delete": {
+            "title": "DELETE /items/42",
+            "desc": "DELETE with a dynamic path segment: delete a mock resource.",
+            "row0": "HTTP status",
+            "row1": "Delete result",
+            "row2": "Error"
+          },
+          "headers": {
+            "title": "GET /headers (proxy header strip)",
+            "desc": "The backend echoes the headers it received. The invoke proxy strips Authorization/Cookie; custom headers (X-User-Token / X-Demo) pass through.",
+            "row0": "HTTP status",
+            "row1": "Received headers",
+            "row2": "Error"
+          },
+          "stream": {
+            "title": "GET /stream (SSE)",
+            "desc": "text/event-stream streaming: the backend pushes 5 ticks + 1 done; the client accumulates events via @faas.sse.",
+            "row0": "SSE status",
+            "row1": "Received events",
+            "row2": "Error"
+          },
+          "auth": {
+            "title": "POST /auth/verify (real Supabase auth)",
+            "desc": "The client gets the user token via @get_auth_token and passes it in the X-User-Token header; the backend really calls Supabase /auth/v1/user and returns the verdict.",
+            "row0": "HTTP status",
+            "row1": "Auth result",
+            "row2": "Error"
+          },
+          "status": {
+            "title": "GET /status/418",
+            "desc": "Make the backend return an arbitrary status (418) to test client handling of non-2xx responses.",
+            "row0": "HTTP status",
+            "row1": "Response body",
+            "row2": "Error"
+          }
+        },
+        "app": {
+          "title": "FaaS Test Lab",
+          "subtitle": "Each entry is one FaaS end-to-end test case. Tap to run and see the real HTTP status and response.",
+          "backend_label": "Backend"
+        },
+        "action": {
+          "run": "▶ Run test",
+          "back": "← Back",
+          "call": "Call"
+        }
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "{{ t('app.title') }}",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "text",
+                "value": "{{ t('app.title') }}",
+                "style": {
+                  "fontSize": 24,
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "button",
+                "label": "中",
+                "variant": "text",
+                "action": {
+                  "call": "@set_locale",
+                  "args": {
+                    "value": "zh"
+                  }
+                }
+              },
+              {
+                "type": "button",
+                "label": "EN",
+                "variant": "text",
+                "action": {
+                  "call": "@set_locale",
+                  "args": {
+                    "value": "en"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "value": "{{ t('app.subtitle') }}",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('app.backend_label') }}: {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}",
+            "style": {
+              "fontSize": 11,
+              "color": "#999999"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "button",
+            "label": "GET · {{ t('case.ping.title') }}",
+            "variant": "outlined",
+            "action": {
+              "type": "navigate",
+              "screen": "case_ping"
+            }
+          },
+          {
+            "type": "button",
+            "label": "GET · {{ t('case.echo_get.title') }}",
+            "variant": "outlined",
+            "action": {
+              "type": "navigate",
+              "screen": "case_echo_get"
+            }
+          },
+          {
+            "type": "button",
+            "label": "POST · {{ t('case.echo_post.title') }}",
+            "variant": "outlined",
+            "action": {
+              "type": "navigate",
+              "screen": "case_echo_post"
+            }
+          },
+          {
+            "type": "button",
+            "label": "PUT · {{ t('case.put.title') }}",
+            "variant": "outlined",
+            "action": {
+              "type": "navigate",
+              "screen": "case_put"
+            }
+          },
+          {
+            "type": "button",
+            "label": "DELETE · {{ t('case.delete.title') }}",
+            "variant": "outlined",
+            "action": {
+              "type": "navigate",
+              "screen": "case_delete"
+            }
+          },
+          {
+            "type": "button",
+            "label": "GET · {{ t('case.headers.title') }}",
+            "variant": "outlined",
+            "action": {
+              "type": "navigate",
+              "screen": "case_headers"
+            }
+          },
+          {
+            "type": "button",
+            "label": "GET · {{ t('case.stream.title') }}",
+            "variant": "outlined",
+            "action": {
+              "type": "navigate",
+              "screen": "case_stream"
+            }
+          },
+          {
+            "type": "button",
+            "label": "POST · {{ t('case.auth.title') }}",
+            "variant": "outlined",
+            "action": {
+              "type": "navigate",
+              "screen": "case_auth"
+            }
+          },
+          {
+            "type": "button",
+            "label": "GET · {{ t('case.status.title') }}",
+            "variant": "outlined",
+            "action": {
+              "type": "navigate",
+              "screen": "case_status"
+            }
+          }
+        ]
+      },
+      {
+        "id": "case_ping",
+        "title": "{{ t('case.ping.title') }}",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "{{ t('action.back') }}",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.ping.title') }}",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.ping.desc') }}",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('action.call') }}: GET {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/ping",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "button",
+            "label": "{{ t('action.run') }}",
+            "variant": "filled",
+            "action": {
+              "call": "@global.run_ping",
+              "args": {}
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.ping.row0') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resPing.status }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.ping.row1') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resPing.data }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.ping.row2') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resPing.error }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          }
+        ]
+      },
+      {
+        "id": "case_echo_get",
+        "title": "{{ t('case.echo_get.title') }}",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "{{ t('action.back') }}",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.echo_get.title') }}",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.echo_get.desc') }}",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('action.call') }}: GET {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/echo?from=faas-test-lab&n=1",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "button",
+            "label": "{{ t('action.run') }}",
+            "variant": "filled",
+            "action": {
+              "call": "@global.run_echo_get",
+              "args": {}
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.echo_get.row0') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resEchoGet.status }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.echo_get.row1') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resEchoGet.data }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.echo_get.row2') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resEchoGet.error }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          }
+        ]
+      },
+      {
+        "id": "case_echo_post",
+        "title": "{{ t('case.echo_post.title') }}",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "{{ t('action.back') }}",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.echo_post.title') }}",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.echo_post.desc') }}",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('action.call') }}: POST {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/echo",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "button",
+            "label": "{{ t('action.run') }}",
+            "variant": "filled",
+            "action": {
+              "call": "@global.run_echo_post",
+              "args": {}
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.echo_post.row0') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resEchoPost.status }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.echo_post.row1') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resEchoPost.data }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.echo_post.row2') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resEchoPost.error }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          }
+        ]
+      },
+      {
+        "id": "case_put",
+        "title": "{{ t('case.put.title') }}",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "{{ t('action.back') }}",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.put.title') }}",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.put.desc') }}",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('action.call') }}: PUT {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/items/42",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "button",
+            "label": "{{ t('action.run') }}",
+            "variant": "filled",
+            "action": {
+              "call": "@global.run_put",
+              "args": {}
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.put.row0') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resPut.status }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.put.row1') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resPut.data }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.put.row2') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resPut.error }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          }
+        ]
+      },
+      {
+        "id": "case_delete",
+        "title": "{{ t('case.delete.title') }}",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "{{ t('action.back') }}",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.delete.title') }}",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.delete.desc') }}",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('action.call') }}: DELETE {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/items/42",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "button",
+            "label": "{{ t('action.run') }}",
+            "variant": "filled",
+            "action": {
+              "call": "@global.run_delete",
+              "args": {}
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.delete.row0') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resDelete.status }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.delete.row1') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resDelete.data }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.delete.row2') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resDelete.error }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          }
+        ]
+      },
+      {
+        "id": "case_headers",
+        "title": "{{ t('case.headers.title') }}",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "{{ t('action.back') }}",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.headers.title') }}",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.headers.desc') }}",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('action.call') }}: GET {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/headers",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "button",
+            "label": "{{ t('action.run') }}",
+            "variant": "filled",
+            "action": {
+              "call": "@global.run_headers",
+              "args": {}
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.headers.row0') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resHeaders.status }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.headers.row1') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resHeaders.data }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.headers.row2') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resHeaders.error }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          }
+        ]
+      },
+      {
+        "id": "case_stream",
+        "title": "{{ t('case.stream.title') }}",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "{{ t('action.back') }}",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.stream.title') }}",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.stream.desc') }}",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('action.call') }}: GET {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/stream",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "button",
+            "label": "{{ t('action.run') }}",
+            "variant": "filled",
+            "action": {
+              "call": "@global.run_stream",
+              "args": {}
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.stream.row0') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resStream.status }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.stream.row1') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resStream.events }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.stream.row2') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resStream.error }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          }
+        ]
+      },
+      {
+        "id": "case_auth",
+        "title": "{{ t('case.auth.title') }}",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "{{ t('action.back') }}",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.auth.title') }}",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.auth.desc') }}",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('action.call') }}: POST {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/auth/verify",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "button",
+            "label": "{{ t('action.run') }}",
+            "variant": "filled",
+            "action": {
+              "call": "@global.run_auth",
+              "args": {}
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.auth.row0') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resAuth.status }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.auth.row1') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resAuth.data }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.auth.row2') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resAuth.error }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          }
+        ]
+      },
+      {
+        "id": "case_status",
+        "title": "{{ t('case.status.title') }}",
+        "layout": "column",
+        "padding": 16,
+        "scrollable": true,
+        "children": [
+          {
+            "type": "button",
+            "label": "{{ t('action.back') }}",
+            "variant": "text",
+            "action": {
+              "type": "back"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.status.title') }}",
+            "style": {
+              "fontSize": 20,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.status.desc') }}",
+            "style": {
+              "fontSize": 13,
+              "color": "#666666"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('action.call') }}: GET {{ app.backendUrl }}/api/faas/invoke/{{ global.faasService }}/status/418",
+            "style": {
+              "fontSize": 12,
+              "color": "#999999"
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "button",
+            "label": "{{ t('action.run') }}",
+            "variant": "filled",
+            "action": {
+              "call": "@global.run_status",
+              "args": {}
+            }
+          },
+          {
+            "type": "divider"
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.status.row0') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resStatus.status }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.status.row1') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resStatus.data }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ t('case.status.row2') }}:",
+            "style": {
+              "fontSize": 13,
+              "fontWeight": "bold"
+            }
+          },
+          {
+            "type": "text",
+            "value": "{{ global.resStatus.error }}",
+            "style": {
+              "fontSize": 12,
+              "color": "#333333"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

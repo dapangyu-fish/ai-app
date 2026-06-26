@@ -19,21 +19,33 @@ import os
 import subprocess
 import tempfile
 import threading
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 from flask import request, jsonify
+import requests
 
 from config import (
-    AI_PROVIDERS, CLAUDE_BIN,
-    SUMMARY_MAX_CONCURRENCY, SUMMARY_CLI_TIMEOUT,
+    AGENT_NODE_CONNECT_TIMEOUT_SECONDS, AGENT_NODE_TOKEN, AGENT_NODE_URL, AGENT_NODE_URLS,
+    AI_PROVIDERS, CLAUDE_BIN, DEFAULT_PROVIDER, AI_WORKER_EXECUTION_BACKEND,
+    SUMMARY_AGENT_NODE_URL, SUMMARY_EXECUTION_BACKEND, SUMMARY_MAX_CONCURRENCY, SUMMARY_CLI_TIMEOUT,
 )
+import ai_session
 
-# 受控词表 —— 让 CLI 只能从这里选，检索才对得齐
-CATEGORY_VOCAB = ["app", "library", "game", "demo", "tool"]
+# 受控词表 —— 让 CLI 只能从这里选，检索才对得齐。
+#
+# category 只描述“包的形态”，不要塞业务领域；业务领域放 domains，
+# 框架能力由 registry_catalog.py 的 tech_stack 确定性推导。
+CATEGORY_VOCAB = [
+    "app", "library", "game", "tool", "demo",
+    "launcher", "component", "template",
+]
 DOMAIN_VOCAB = [
-    "social", "productivity", "game", "media", "data",
-    "finance", "ui", "utility", "lifestyle", "education",
+    "ai", "chat", "social", "productivity", "game", "media",
+    "data", "finance", "ui", "utility", "lifestyle", "education",
+    "health", "developer", "business", "ecommerce", "maps",
+    "creative", "system",
 ]
 
 # summary 专用小池 —— 跟生成的大池隔离，限制同时跑的 CLI 数
@@ -62,6 +74,8 @@ def _build_summary_prompt(input_path: str, output_path: str) -> str:
 
 要求：
 - category / domains 只能用上面给的受控词表里的值，不要自创
+- category 是包形态：例如游戏选 game，组件库选 library/component，启动器选 launcher
+- domains 是业务领域：例如大模型聊天选 ai/chat，IM 选 social/chat，平台游戏选 game
 - summary 要具体（说清楚它能干啥），别写"这是一个应用"这种废话
 - 只输出 JSON 到文件，不要输出多余内容
 - 用 Write 工具把上面的 JSON 写到 `{output_path}`
@@ -69,16 +83,61 @@ def _build_summary_prompt(input_path: str, output_path: str) -> str:
 写完后用一句话告诉我你总结的是什么 app 即可。"""
 
 
-def _run_summary_cli(json_content: dict) -> dict:
-    """同步跑一次 summary CLI，返回结构化 dict。抛异常表示失败（调用方重试）。"""
-    provider = AI_PROVIDERS["deepseek"]  # summary 固定用 deepseek（便宜够用）
+def _summary_provider() -> dict:
+    provider_id = os.environ.get("SUMMARY_PROVIDER_ID", "deepseek").strip().lower().replace("_", "-") or DEFAULT_PROVIDER
+    provider = AI_PROVIDERS.get(provider_id) or AI_PROVIDERS.get(DEFAULT_PROVIDER)
+    if not provider:
+        raise RuntimeError("summary provider is not configured")
+    if not provider.get("configured"):
+        raise RuntimeError(f"summary provider is not configured: {provider.get('id') or provider_id}")
+    return provider
 
+
+def _summary_agent_node_url() -> str:
+    if SUMMARY_AGENT_NODE_URL:
+        return SUMMARY_AGENT_NODE_URL
+    if AGENT_NODE_URL:
+        return AGENT_NODE_URL
+    return AGENT_NODE_URLS[0] if AGENT_NODE_URLS else ""
+
+
+def _summary_agent_node_headers() -> dict:
+    headers = {"Content-Type": "application/json"}
+    if AGENT_NODE_TOKEN:
+        headers["Authorization"] = f"Bearer {AGENT_NODE_TOKEN}"
+    return headers
+
+
+def _summary_should_use_agent_node() -> bool:
+    backend = SUMMARY_EXECUTION_BACKEND
+    if backend in {"agent-node", "agent-pull", "isolated", "remote"}:
+        return True
+    if backend in {"local", "local-safe"}:
+        return False
+    return bool(_summary_agent_node_url()) and AI_WORKER_EXECUTION_BACKEND in {"agent-node", "agent-pull", "agent-node-pull", "pull"}
+
+
+def _isolated_cli_env(provider: dict, workspace: str) -> dict:
+    env = {
+        "HOME": workspace,
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8",
+        "PATH": os.environ.get("PATH", "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"),
+        "IS_SANDBOX": "1",
+        "AI_APP_WORKSPACE": workspace,
+        "AI_APP_PROJECT_ROOT": os.environ.get("SERVER_PROJECT_PATH", ""),
+    }
     cli_env = provider.get("cli_env", {})
-    env = os.environ.copy()
     for k, v in cli_env.items():
-        env[k] = v
+        if k and "=" not in str(k):
+            env[str(k)] = str(v)
     env.pop("ANTHROPIC_API_KEY", None)
-    env["IS_SANDBOX"] = "1"
+    return env
+
+
+def _run_summary_cli_local_safe(json_content: dict) -> dict:
+    """Local fallback for development: no backend process env inheritance."""
+    provider = _summary_provider()
 
     workdir = tempfile.mkdtemp(prefix="ai-summary-")
     input_path = os.path.join(workdir, "app.json")
@@ -95,7 +154,7 @@ def _run_summary_cli(json_content: dict) -> dict:
             "--session-id", str(uuid.uuid4()),
         ]
         subprocess.run(
-            cmd, cwd=workdir, env=env,
+            cmd, cwd=workdir, env=_isolated_cli_env(provider, workdir),
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             timeout=SUMMARY_CLI_TIMEOUT,
         )
@@ -105,7 +164,9 @@ def _run_summary_cli(json_content: dict) -> dict:
         with open(output_path, "r", encoding="utf-8") as f:
             result = json.load(f)
 
-        return _validate(result)
+        validated = _validate(result)
+        validated["model"] = provider.get("id") or DEFAULT_PROVIDER
+        return validated
     finally:
         # 清临时目录
         try:
@@ -113,6 +174,110 @@ def _run_summary_cli(json_content: dict) -> dict:
             shutil.rmtree(workdir, ignore_errors=True)
         except Exception:
             pass
+
+
+def _run_summary_agent_node(json_content: dict) -> dict:
+    """Run summary inside the same agent-node isolation boundary as generation."""
+    provider = _summary_provider()
+    agent_node_url = _summary_agent_node_url()
+    if not agent_node_url:
+        raise RuntimeError("summary agent-node url is not configured")
+
+    provider_mode = ai_session._agent_node_provider_mode_for_url(agent_node_url)
+    include_provider_secrets = provider_mode != "local"
+    run_id = f"summary-{uuid.uuid4().hex}"
+    session_id = f"summary-{uuid.uuid4().hex}"
+    prompt = _build_summary_prompt("/workspace/app.json", "/workspace/summary.json")
+    payload = ai_session._build_agent_node_payload(
+        run_id=run_id,
+        session_id=session_id,
+        user_id="registry-summary",
+        provider=provider,
+        runner="claude",
+        resume_id="",
+        turn_msg=prompt,
+        sys_prompt="",
+        include_provider_secrets=include_provider_secrets,
+    )
+    payload["initial_files"] = [
+        {
+            "path": "app.json",
+            "content": json.dumps(json_content, ensure_ascii=False),
+        }
+    ]
+
+    headers = _summary_agent_node_headers()
+    response = requests.post(
+        f"{agent_node_url}/v1/runs",
+        headers=headers,
+        json=payload,
+        timeout=AGENT_NODE_CONNECT_TIMEOUT_SECONDS,
+    )
+    if response.status_code >= 400:
+        raise RuntimeError(f"agent-node summary create failed {response.status_code}: {response.text[:500]}")
+
+    stop = None
+    stderr_tail: list[str] = []
+    deadline = time.time() + SUMMARY_CLI_TIMEOUT + 10
+    with requests.get(
+        f"{agent_node_url}/v1/runs/{run_id}/events",
+        headers=headers,
+        params={"follow": "1", "timeout": str(SUMMARY_CLI_TIMEOUT + 5)},
+        stream=True,
+        timeout=(AGENT_NODE_CONNECT_TIMEOUT_SECONDS, SUMMARY_CLI_TIMEOUT + 30),
+    ) as events_response:
+        if events_response.status_code >= 400:
+            raise RuntimeError(f"agent-node summary events failed {events_response.status_code}: {events_response.text[:500]}")
+        for raw_line in events_response.iter_lines(decode_unicode=True):
+            if time.time() > deadline:
+                break
+            if not raw_line:
+                continue
+            try:
+                item = json.loads(raw_line)
+            except json.JSONDecodeError:
+                continue
+            item_type = item.get("type")
+            if item_type == "stderr":
+                stderr_tail.append(str(item.get("line") or ""))
+                stderr_tail = stderr_tail[-10:]
+            elif item_type == "stop":
+                stop = item
+                break
+
+    if not stop:
+        try:
+            requests.post(
+                f"{agent_node_url}/v1/runs/{run_id}/abort",
+                headers=headers,
+                timeout=AGENT_NODE_CONNECT_TIMEOUT_SECONDS,
+            )
+        except Exception:
+            pass
+        raise RuntimeError("agent-node summary timed out")
+    if stop.get("status") != "done" or str(stop.get("returncode")) not in {"0", "None", ""}:
+        tail = "".join(stderr_tail)[-500:]
+        raise RuntimeError(f"agent-node summary failed status={stop.get('status')} returncode={stop.get('returncode')}: {tail}")
+
+    artifact = requests.get(
+        f"{agent_node_url}/v1/runs/{run_id}/artifact",
+        headers=headers,
+        params={"path": "summary.json"},
+        timeout=AGENT_NODE_CONNECT_TIMEOUT_SECONDS,
+    )
+    if artifact.status_code >= 400:
+        raise RuntimeError(f"agent-node summary artifact failed {artifact.status_code}: {artifact.text[:500]}")
+    result = json.loads(artifact.text)
+    validated = _validate(result)
+    validated["model"] = provider.get("id") or DEFAULT_PROVIDER
+    return validated
+
+
+def _run_summary_cli(json_content: dict) -> dict:
+    """同步跑一次 summary CLI，返回结构化 dict。抛异常表示失败（调用方重试）。"""
+    if _summary_should_use_agent_node():
+        return _run_summary_agent_node(json_content)
+    return _run_summary_cli_local_safe(json_content)
 
 
 def _validate(r: dict) -> dict:

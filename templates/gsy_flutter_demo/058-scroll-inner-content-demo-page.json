@@ -1,0 +1,380 @@
+{
+  "dsl": "3.3",
+  "appid": "5411ee0e-fe00-515c-ba3e-9de03c3c2f82",
+  "meta": {
+    "name": "gsy_flutter_demo/058-scroll-inner-content-demo-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "一个有趣的底部跟随和停靠例子",
+      "en": "Bottom follow + sticky demo"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：一个有趣的底部跟随和停靠例子",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "一个有趣的底部跟随和停靠例子",
+      "sourcePath": "lib/widget/scroll/scroll_inner_content_demo_page.dart",
+      "deferredAlias": "scroll_inner_content_demo_page",
+      "widgetClass": "ScrollInnerContentDemoPage",
+      "category": "scroll",
+      "routeIndex": 58,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-measured-layout-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "一个有趣的底部跟随和停靠例子",
+      "upstreamSource": "lib/widget/scroll/scroll_inner_content_demo_page.dart",
+      "upstreamWidget": "ScrollInnerContentDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-measured-layout-v1",
+      "content": "这是可滑动文本区域",
+      "buttonHeight": 40,
+      "contentMeasure": {
+        "x": 0,
+        "y": 176,
+        "left": 0,
+        "top": 176,
+        "width": 390,
+        "height": 140,
+        "right": 390,
+        "bottom": 316,
+        "viewportWidth": 390,
+        "viewportHeight": 844,
+        "safeTop": 0,
+        "safeBottom": 0,
+        "safeLeft": 0,
+        "safeRight": 0,
+        "toolbarHeight": 56
+      }
+    },
+    "functions": {
+      "addText": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.content",
+              "value": {
+                "cat": [
+                  {
+                    "var": "global.content"
+                  },
+                  "=｜-动态文本-｜="
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "removeText": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                ">": [
+                  {
+                    "str_len": [
+                      {
+                        "var": "global.content"
+                      }
+                    ]
+                  },
+                  8
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.content",
+                    "value": {
+                      "str_replace_first": [
+                        {
+                          "var": "global.content"
+                        },
+                        "=｜-动态文本-｜=",
+                        ""
+                      ]
+                    }
+                  }
+                }
+              ],
+              "else": []
+            }
+          }
+        ]
+      }
+    },
+    "computed": {
+      "buttonTop": {
+        "min": [
+          {
+            "max": [
+              0,
+              {
+                "-": [
+                  {
+                    "var": "global.contentMeasure.bottom"
+                  },
+                  {
+                    "+": [
+                      {
+                        "var": "global.contentMeasure.safeTop"
+                      },
+                      {
+                        "var": "global.contentMeasure.toolbarHeight"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "max": [
+              0,
+              {
+                "-": [
+                  {
+                    "-": [
+                      {
+                        "var": "global.contentMeasure.viewportHeight"
+                      },
+                      {
+                        "var": "global.buttonHeight"
+                      }
+                    ]
+                  },
+                  {
+                    "+": [
+                      {
+                        "var": "global.contentMeasure.safeTop"
+                      },
+                      {
+                        "var": "global.contentMeasure.toolbarHeight"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "bottomPadding": {
+        "if": [
+          {
+            ">=": [
+              {
+                "-": [
+                  {
+                    "var": "global.contentMeasure.bottom"
+                  },
+                  {
+                    "+": [
+                      {
+                        "var": "global.contentMeasure.safeTop"
+                      },
+                      {
+                        "var": "global.contentMeasure.toolbarHeight"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "max": [
+                  0,
+                  {
+                    "-": [
+                      {
+                        "-": [
+                          {
+                            "var": "global.contentMeasure.viewportHeight"
+                          },
+                          {
+                            "var": "global.buttonHeight"
+                          }
+                        ]
+                      },
+                      {
+                        "+": [
+                          {
+                            "var": "global.contentMeasure.safeTop"
+                          },
+                          {
+                            "var": "global.contentMeasure.toolbarHeight"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "var": "global.buttonHeight"
+          },
+          0
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "ScrollDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "custom_scroll_view",
+              "physics": "clamping",
+              "slivers": [
+                {
+                  "type": "sliver_box",
+                  "height": 120,
+                  "child": {
+                    "type": "container",
+                    "layout": "column",
+                    "color": "#FF5252",
+                    "children": [
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "layout": "column",
+                        "mainAxisAlignment": "center",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "点击右上角加减查看效果",
+                            "style": {
+                              "fontSize": 18,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "container",
+                        "height": 60,
+                        "alignment": "centerLeft",
+                        "layout": "column",
+                        "mainAxisAlignment": "center",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "我是文本2",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#000000"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "sliver_box",
+                  "child": {
+                    "type": "measured_box",
+                    "bind": "global.contentMeasure",
+                    "child": {
+                      "type": "container",
+                      "layout": "column",
+                      "color": "#F44336",
+                      "padding": {
+                        "bottom": {
+                          "var": "global.bottomPadding"
+                        }
+                      },
+                      "crossAxisAlignment": "start",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ global.content }}",
+                          "style": {
+                            "fontSize": 44,
+                            "color": "#000000"
+                          }
+                        }
+                      ]
+                    },
+                    "includeToolbar": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": {
+              "var": "global.buttonTop"
+            },
+            "child": {
+              "type": "container",
+              "height": 40,
+              "margin": {
+                "horizontal": 20
+              },
+              "color": "#2196F3",
+              "alignment": "center",
+              "layout": "column",
+              "mainAxisAlignment": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "#########",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#FFFFFF",
+                    "textAlign": "center"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "appBar": {
+          "title": "ScrollDemoPage",
+          "actions": [
+            {
+              "icon": "add_circle_outline",
+              "action": {
+                "call": "@global.addText",
+                "args": {}
+              }
+            },
+            {
+              "icon": "remove_circle_outline",
+              "action": {
+                "call": "@global.removeText",
+                "args": {}
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

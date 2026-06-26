@@ -1,0 +1,212 @@
+{
+  "dsl": "3.3",
+  "appid": "29905f5e-08d0-5feb-9adc-f80d5d700301",
+  "meta": {
+    "name": "gsy_flutter_demo/050-card-item-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "通过不同尺寸计算方式展示比例",
+      "en": "Ratio by size calculation"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：通过不同尺寸计算方式展示比例",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "通过不同尺寸计算方式展示比例",
+      "sourcePath": "lib/widget/basic/card_item_page.dart",
+      "deferredAlias": "card_item_page",
+      "widgetClass": "CardItemPage",
+      "category": "basic",
+      "routeIndex": 50
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "通过不同尺寸计算方式展示比例",
+      "upstreamSource": "lib/widget/basic/card_item_page.dart",
+      "upstreamWidget": "CardItemPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-primitives-v2"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "CardItemPage",
+        "layout": "column",
+        "backgroundColor": "#448AFF",
+        "children": [
+          {
+            "type": "card",
+            "layout": "row",
+            "padding": 0,
+            "margin": 5,
+            "borderRadius": 4,
+            "elevation": 1,
+            "children": [
+              {
+                "type": "image",
+                "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                "fit": "cover",
+                "borderRadius": 4,
+                "paddingV": 0,
+                "width": 70,
+                "height": 70
+              },
+              {
+                "type": "spacer",
+                "width": 10
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "text",
+                  "value": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+                  "style": {
+                    "fontSize": 15,
+                    "color": "#111111",
+                    "maxLines": 3,
+                    "overflow": "ellipsis"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "row",
+            "padding": 0,
+            "margin": 5,
+            "borderRadius": 4,
+            "elevation": 1,
+            "children": [
+              {
+                "type": "image",
+                "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/gsy_cat.png",
+                "fit": "cover",
+                "borderRadius": 4,
+                "paddingV": 0,
+                "widthFactor": 0.16666666666666666,
+                "heightFactor": 0.16666666666666666
+              },
+              {
+                "type": "spacer",
+                "width": 10
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "text",
+                  "value": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+                  "style": {
+                    "fontSize": {
+                      "*": [
+                        15,
+                        {
+                          "/": [
+                            390,
+                            414
+                          ]
+                        }
+                      ]
+                    },
+                    "color": "#111111",
+                    "maxLines": 3,
+                    "overflow": "ellipsis"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "row",
+            "padding": 0,
+            "margin": 5,
+            "borderRadius": 4,
+            "elevation": 1,
+            "children": [
+              {
+                "type": "image",
+                "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test.jpeg",
+                "fit": "cover",
+                "borderRadius": 4,
+                "paddingV": 0,
+                "width": 70,
+                "height": 70
+              },
+              {
+                "type": "spacer",
+                "width": 10
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "text",
+                  "value": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+                  "style": {
+                    "fontSize": 15,
+                    "color": "#111111",
+                    "maxLines": 3,
+                    "overflow": "ellipsis"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "row",
+            "padding": 0,
+            "margin": 5,
+            "borderRadius": 4,
+            "elevation": 1,
+            "children": [
+              {
+                "type": "image",
+                "src": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/gsy_flutter_demo/static/test.jpeg",
+                "fit": "cover",
+                "borderRadius": 4,
+                "paddingV": 0,
+                "widthFactor": 0.16666666666666666,
+                "heightFactor": 0.16666666666666666
+              },
+              {
+                "type": "spacer",
+                "width": 10
+              },
+              {
+                "type": "expanded",
+                "child": {
+                  "type": "text",
+                  "value": "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+                  "style": {
+                    "fontSize": {
+                      "*": [
+                        15,
+                        {
+                          "/": [
+                            390,
+                            414
+                          ]
+                        }
+                      ]
+                    },
+                    "color": "#111111",
+                    "maxLines": 3,
+                    "overflow": "ellipsis"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

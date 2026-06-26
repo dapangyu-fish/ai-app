@@ -10,7 +10,6 @@
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_openim_sdk/flutter_openim_sdk.dart';
 import '../i18n/framework_strings.dart';
 import 'chat_page.dart';
 import 'im_service_io.dart';
@@ -26,7 +25,7 @@ class CreateGroupPage extends StatefulWidget {
 
 class _CreateGroupPageState extends State<CreateGroupPage> {
   final _nameCtrl = TextEditingController();
-  List<FriendInfo> _friends = [];
+  List<Map<String, dynamic>> _friends = [];
   final Set<String> _selected = {};
   bool _loading = true;
   bool _creating = false;
@@ -45,7 +44,7 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
   }
 
   Future<void> _load() async {
-    final friends = await IMService.instance.getFriendList();
+    final friends = await IMService.instance.getFriendListAsMaps();
     if (!mounted) return;
     setState(() {
       _friends = friends;
@@ -186,36 +185,36 @@ class _CreateGroupPageState extends State<CreateGroupPage> {
                           itemCount: _friends.length,
                           itemBuilder: (_, i) {
                             final f = _friends[i];
-                            final id = f.userID ?? '';
+                            final id = f['user_id']?.toString() ?? '';
                             final checked = _selected.contains(id);
+                            final remark = f['remark']?.toString() ?? '';
+                            final nickname = f['nickname']?.toString() ?? '';
                             final name =
-                                (f.remark?.isNotEmpty == true
-                                    ? f.remark
-                                    : null) ??
-                                (f.nickname?.isNotEmpty == true
-                                    ? f.nickname
-                                    : null) ??
+                                (remark.isNotEmpty ? remark : null) ??
+                                (nickname.isNotEmpty ? nickname : null) ??
                                 id;
-                            final faceUrl = f.faceURL;
+                            final faceUrl = f['face_url']?.toString() ?? '';
 
                             return CheckboxListTile(
                               value: checked,
-                              onChanged: (v) {
-                                setState(() {
-                                  if (v == true) {
-                                    _selected.add(id);
-                                  } else {
-                                    _selected.remove(id);
-                                  }
-                                });
-                              },
+                              onChanged: id.isEmpty
+                                  ? null
+                                  : (v) {
+                                      setState(() {
+                                        if (v == true) {
+                                          _selected.add(id);
+                                        } else {
+                                          _selected.remove(id);
+                                        }
+                                      });
+                                    },
                               secondary: CircleAvatar(
                                 radius: 20,
                                 backgroundColor: cs.primaryContainer,
-                                backgroundImage: (faceUrl?.isNotEmpty ?? false)
-                                    ? CachedNetworkImageProvider(faceUrl!)
+                                backgroundImage: faceUrl.isNotEmpty
+                                    ? CachedNetworkImageProvider(faceUrl)
                                     : null,
-                                child: (faceUrl?.isEmpty ?? true)
+                                child: faceUrl.isEmpty
                                     ? Text(
                                         name.isNotEmpty
                                             ? name[0].toUpperCase()

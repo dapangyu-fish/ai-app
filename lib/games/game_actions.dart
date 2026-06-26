@@ -5,12 +5,15 @@
 //
 // 类别：
 // - @cell_path.*  : snake 用（advance / grow / contains / head）
+// - @matrix.*     : 通用二维数值网格辅助（放置/清行/多格碰撞）
+// - @polyomino.*  : 通用多格形状辅助（旋转等）
 // - @grid.*       : 网格辅助（random_empty）
 // - @scroll_list.*: tap_white_tile 用
 // - @score.*      : 分数操作（顺便 emit scoreChanged 事件）
 // - @game_over    : 触发结束（顺便 emit gameOver 事件）
 // - @game_reset   : 重置（关卡内重玩）
 
+import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' show Rect;
 
@@ -47,6 +50,15 @@ class GameActions {
           game.setScore(v);
           return null;
         }
+      case '@format_number':
+        {
+          final value = (args['value'] as num?)?.toInt() ?? 0;
+          final width = (args['width'] as num?)?.toInt() ?? 0;
+          final rawPad = args['pad']?.toString();
+          final pad = rawPad == null || rawPad.isEmpty ? '0' : rawPad[0];
+          final text = value.toString();
+          return width > 0 ? text.padLeft(width, pad) : text;
+        }
       case '@game_over':
         game.triggerGameOver();
         return null;
@@ -63,6 +75,21 @@ class GameActions {
           if (eventName == null || eventName.isEmpty) return false;
           final data = (args['data'] as Map?)?.cast<String, dynamic>() ?? {};
           game.emitEvent(eventName, data);
+          return true;
+        }
+      case '@print':
+      case '@debug.log':
+        {
+          if (args['enabled'] == false) return false;
+          final tag = args['tag']?.toString() ?? 'JSON GAME';
+          final message =
+              args['message']?.toString() ??
+              args['value']?.toString() ??
+              args['text']?.toString() ??
+              '';
+          final data = args['data'];
+          final suffix = data == null ? '' : ' ${jsonEncode(data)}';
+          debugPrint('[$tag] $message$suffix');
           return true;
         }
 
@@ -224,6 +251,128 @@ class GameActions {
           return false;
         }
 
+      // ---------- matrix / polyomino（通用多格棋盘，不绑定具体游戏） ----------
+      case '@matrix.clear':
+        {
+          final id = args['grid']?.toString();
+          final value = (args['value'] as num?)?.toInt() ?? 0;
+          if (id == null) return false;
+          final ent = game.entities[id];
+          if (ent is! ValueGridEntity) return false;
+          for (var r = 0; r < ent.rows; r++) {
+            for (var c = 0; c < ent.cols; c++) {
+              ent.cells[r][c] = value;
+            }
+          }
+          return true;
+        }
+      case '@matrix.can_place':
+        {
+          final id = args['grid']?.toString();
+          if (id == null) return false;
+          final ent = game.entities[id];
+          if (ent is! ValueGridEntity) return false;
+          final cells = _readCells(args['cells']);
+          if (cells.isEmpty) return false;
+          final x = _asInt(args['x']) ?? 0;
+          final y = _asInt(args['y']) ?? 0;
+          final allowAbove = args['allow_above'] != false;
+          final emptyValues = _readIntSet(args['empty_values']) ?? {0};
+          for (final cell in cells) {
+            final c = x + cell.x;
+            final r = y + cell.y;
+            if (c < 0 || c >= ent.cols || r >= ent.rows) return false;
+            if (r < 0) {
+              if (allowAbove) continue;
+              return false;
+            }
+            if (!emptyValues.contains(ent.cells[r][c])) return false;
+          }
+          return true;
+        }
+      case '@matrix.place':
+        {
+          final id = args['grid']?.toString();
+          if (id == null) return 0;
+          final ent = game.entities[id];
+          if (ent is! ValueGridEntity) return 0;
+          final cells = _readCells(args['cells']);
+          final x = _asInt(args['x']) ?? 0;
+          final y = _asInt(args['y']) ?? 0;
+          final value = _asInt(args['value']) ?? 0;
+          final onlyInBounds = args['only_in_bounds'] != false;
+          var count = 0;
+          for (final cell in cells) {
+            final c = x + cell.x;
+            final r = y + cell.y;
+            if (c < 0 || c >= ent.cols || r < 0 || r >= ent.rows) {
+              if (onlyInBounds) continue;
+              return count;
+            }
+            ent.cells[r][c] = value;
+            count++;
+          }
+          return count;
+        }
+      case '@matrix.clear_full_rows':
+        {
+          final id = args['grid']?.toString();
+          if (id == null) return {'cleared': 0, 'rows': const []};
+          final ent = game.entities[id];
+          if (ent is! ValueGridEntity) return {'cleared': 0, 'rows': const []};
+          final emptyValues = _readIntSet(args['empty_values']) ?? {0};
+          final fill = _asInt(args['fill']) ?? _asInt(args['value']) ?? 0;
+          final clearedRows = <int>[];
+          for (var r = 0; r < ent.rows; r++) {
+            if (ent.cells[r].every((v) => !emptyValues.contains(v))) {
+              clearedRows.add(r);
+            }
+          }
+          if (clearedRows.isEmpty) return {'cleared': 0, 'rows': const []};
+          final remaining = <List<int>>[];
+          for (var r = 0; r < ent.rows; r++) {
+            if (!clearedRows.contains(r)) {
+              remaining.add(List<int>.from(ent.cells[r]));
+            }
+          }
+          while (remaining.length < ent.rows) {
+            remaining.insert(0, List<int>.filled(ent.cols, fill));
+          }
+          for (var r = 0; r < ent.rows; r++) {
+            ent.cells[r] = remaining[r];
+          }
+          return {'cleared': clearedRows.length, 'rows': clearedRows};
+        }
+      case '@matrix.random_item':
+        {
+          final items = args['items'];
+          if (items is! List || items.isEmpty) return null;
+          final picked = items[_random.nextInt(items.length)];
+          return _deepCopyJson(picked);
+        }
+      case '@polyomino.rotate':
+        {
+          final cells = _readCells(args['cells']);
+          if (cells.isEmpty) return const [];
+          final direction = args['direction']?.toString() ?? 'cw';
+          final normalize = args['normalize'] != false;
+          final rotated = <_MatrixCell>[];
+          for (final cell in cells) {
+            if (direction == 'ccw' ||
+                direction == 'counter' ||
+                direction == 'counterclockwise' ||
+                direction == 'left') {
+              rotated.add(_MatrixCell(cell.y, -cell.x));
+            } else if (direction == 'flip') {
+              rotated.add(_MatrixCell(-cell.x, cell.y));
+            } else {
+              rotated.add(_MatrixCell(-cell.y, cell.x));
+            }
+          }
+          if (normalize) _normalizeCells(rotated);
+          return rotated.map((cell) => [cell.x, cell.y]).toList();
+        }
+
       // ---------- grid ----------
       case '@grid.random_empty':
         {
@@ -347,8 +496,11 @@ class GameActions {
           if (id == null || p is! List || p.length < 2) return null;
           final ent = game.entities[id];
           if (ent is! PixelEntity) return null;
-          ent.x = (p[0] as num).toDouble();
-          ent.y = (p[1] as num).toDouble();
+          final x = _asDouble(p[0]);
+          final y = _asDouble(p[1]);
+          if (x == null || y == null) return null;
+          ent.x = x;
+          ent.y = y;
           return null;
         }
       case '@pixel.set_velocity':
@@ -358,8 +510,11 @@ class GameActions {
           if (id == null || v is! List || v.length < 2) return null;
           final ent = game.entities[id];
           if (ent is! PixelEntity) return null;
-          ent.vx = (v[0] as num).toDouble();
-          ent.vy = (v[1] as num).toDouble();
+          final vx = _asDouble(v[0]);
+          final vy = _asDouble(v[1]);
+          if (vx == null || vy == null) return null;
+          ent.vx = vx;
+          ent.vy = vy;
           return null;
         }
       case '@pixel.add_velocity':
@@ -369,8 +524,11 @@ class GameActions {
           if (id == null || dv is! List || dv.length < 2) return null;
           final ent = game.entities[id];
           if (ent is! PixelEntity) return null;
-          ent.vx += (dv[0] as num).toDouble();
-          ent.vy += (dv[1] as num).toDouble();
+          final dvx = _asDouble(dv[0]);
+          final dvy = _asDouble(dv[1]);
+          if (dvx == null || dvy == null) return null;
+          ent.vx += dvx;
+          ent.vy += dvy;
           return null;
         }
 
@@ -409,28 +567,29 @@ class GameActions {
       case '@entity.get':
         {
           final id = args['id']?.toString();
-          final field = args['field']?.toString();
+          final field = args['field']?.toString() ?? args['path']?.toString();
           if (id == null || field == null) return null;
           return _readEntityField(game.entities[id], field);
         }
       case '@entity.set':
         {
           final id = args['id']?.toString();
-          final field = args['field']?.toString();
+          final field = args['field']?.toString() ?? args['path']?.toString();
           if (id == null || field == null) return false;
           return _writeEntityField(game.entities[id], field, args['value']);
         }
       case '@entity.add':
         {
           final id = args['id']?.toString();
-          final field = args['field']?.toString();
-          final by = (args['by'] as num?)?.toDouble() ?? 0;
+          final field = args['field']?.toString() ?? args['path']?.toString();
+          final rawBy = args.containsKey('by') ? args['by'] : args['value'];
+          final by = _asDouble(rawBy) ?? 0;
           if (id == null || field == null) return false;
           final current = _readEntityField(game.entities[id], field);
           if (current is! num) return false;
           var next = current.toDouble() + by;
-          final minV = (args['min'] as num?)?.toDouble();
-          final maxV = (args['max'] as num?)?.toDouble();
+          final minV = _asDouble(args['min']);
+          final maxV = _asDouble(args['max']);
           if (minV != null && next < minV) next = minV;
           if (maxV != null && next > maxV) next = maxV;
           return _writeEntityField(game.entities[id], field, next);
@@ -446,6 +605,38 @@ class GameActions {
           if (velocity == 0) return false;
           entity.flipX = invert ? velocity > 0 : velocity < 0;
           return true;
+        }
+
+      // ---------- 通用音频 ----------
+      case '@audio.play':
+        {
+          final id = args['id']?.toString() ?? args['source']?.toString();
+          if (id == null || id.isEmpty) return false;
+          return game.audio.play(
+            id,
+            loop: args['loop'] is bool ? args['loop'] == true : null,
+            volume: _asDouble(args['volume']),
+            restart: args['restart'] != false,
+          );
+        }
+      case '@audio.stop':
+        {
+          return game.audio.stop(args['id']?.toString());
+        }
+      case '@audio.pause':
+        {
+          return game.audio.pause(args['id']?.toString());
+        }
+      case '@audio.resume':
+        {
+          return game.audio.resume(args['id']?.toString());
+        }
+      case '@audio.set_volume':
+        {
+          final id = args['id']?.toString();
+          final volume = _asDouble(args['volume']);
+          if (id == null || volume == null) return false;
+          return game.audio.setVolume(id, volume);
         }
 
       // ---------- 碰撞检测 ----------
@@ -495,9 +686,15 @@ class GameActions {
         {
           final mapId = args['map']?.toString() ?? args['id']?.toString();
           final source = args['source']?.toString();
-          if (mapId == null || source == null || source.isEmpty) return false;
+          final mapData = (args['map_data'] as Map?)?.cast<String, dynamic>();
+          if (mapId == null) return false;
           final ent = game.entities[mapId];
           if (ent is! TiledMapEntity) return false;
+          if (mapData != null) {
+            ent.loadMapData(mapData);
+            return true;
+          }
+          if (source == null || source.isEmpty) return false;
           ent.loadSource(source);
           return true;
         }
@@ -512,6 +709,25 @@ class GameActions {
             game.despawnEntity(id, consumeTiledObject: false);
           }
           return ids.length;
+        }
+      case '@tiled.remove_object':
+        {
+          final mapId = args['map']?.toString();
+          final layer = args['layer']?.toString();
+          final rawObjectId = args['object_id'] ?? args['objectId'];
+          final objectId = rawObjectId is num
+              ? rawObjectId.toInt()
+              : int.tryParse(rawObjectId?.toString() ?? '');
+          if (mapId == null || layer == null || objectId == null) {
+            return false;
+          }
+          final map = game.entities[mapId];
+          if (map is! TiledMapEntity) return false;
+          final removed = map.removeObject(layer, objectId);
+          if (removed) {
+            game.consumedTiledObjectKeys.add('$mapId/$layer/$objectId');
+          }
+          return removed;
         }
       case '@tiled.spawn_objects':
         {
@@ -694,18 +910,30 @@ class GameActions {
   }
 
   static dynamic _readEntityField(GameEntity? entity, String field) {
+    if (entity != null && field == 'priority') return entity.priority;
+    if (entity != null && field.startsWith('render.')) {
+      return entity.renderConfig[field.substring('render.'.length)];
+    }
     if (entity is PixelEntity) {
       if (field.startsWith('state.')) {
         return entity.state[field.substring('state.'.length)];
       }
       switch (field) {
+        case 'position':
+          return [entity.x, entity.y];
+        case 'size':
+          return [entity.w, entity.h];
+        case 'velocity':
+          return [entity.vx, entity.vy];
         case 'x':
           return entity.x;
         case 'y':
           return entity.y;
         case 'w':
+        case 'width':
           return entity.w;
         case 'h':
+        case 'height':
           return entity.h;
         case 'vx':
           return entity.vx;
@@ -733,10 +961,52 @@ class GameActions {
     String field,
     dynamic value,
   ) {
+    if (entity != null && field == 'priority') {
+      final n = _asDouble(value);
+      if (n == null) return false;
+      entity.priority = n.round();
+      return true;
+    }
+    if (entity != null && field.startsWith('render.')) {
+      entity.renderConfig[field.substring('render.'.length)] = value;
+      return true;
+    }
     if (entity is PixelEntity) {
       if (field.startsWith('state.')) {
         entity.state[field.substring('state.'.length)] = value;
         return true;
+      }
+      switch (field) {
+        case 'position':
+          return _writePixelPair(
+            value,
+            (a, b) {
+              entity.x = a;
+              entity.y = b;
+            },
+            firstKeys: const ['x'],
+            secondKeys: const ['y'],
+          );
+        case 'size':
+          return _writePixelPair(
+            value,
+            (a, b) {
+              entity.w = a;
+              entity.h = b;
+            },
+            firstKeys: const ['w', 'width'],
+            secondKeys: const ['h', 'height'],
+          );
+        case 'velocity':
+          return _writePixelPair(
+            value,
+            (a, b) {
+              entity.vx = a;
+              entity.vy = b;
+            },
+            firstKeys: const ['vx', 'x'],
+            secondKeys: const ['vy', 'y'],
+          );
       }
       switch (field) {
         case 'autoMove':
@@ -744,7 +1014,7 @@ class GameActions {
           entity.autoMove = value == true;
           return true;
       }
-      final n = (value as num?)?.toDouble();
+      final n = _asDouble(value);
       if (n == null) return false;
       switch (field) {
         case 'x':
@@ -754,9 +1024,11 @@ class GameActions {
           entity.y = n;
           return true;
         case 'w':
+        case 'width':
           entity.w = n;
           return true;
         case 'h':
+        case 'height':
           entity.h = n;
           return true;
         case 'vx':
@@ -768,7 +1040,7 @@ class GameActions {
       }
     }
     if (entity is ParallaxEntity) {
-      final n = (value as num?)?.toDouble();
+      final n = _asDouble(value);
       if (n == null) return false;
       switch (field) {
         case 'speedX':
@@ -786,21 +1058,19 @@ class GameActions {
   static Rect? _rectFromArgs(Map<String, dynamic> args, GameEntity? entity) {
     final raw = args['rect'];
     if (raw is List && raw.length >= 4) {
-      final x = (raw[0] as num?)?.toDouble();
-      final y = (raw[1] as num?)?.toDouble();
-      final w = (raw[2] as num?)?.toDouble();
-      final h = (raw[3] as num?)?.toDouble();
+      final x = _asDouble(raw[0]);
+      final y = _asDouble(raw[1]);
+      final w = _asDouble(raw[2]);
+      final h = _asDouble(raw[3]);
       if (x != null && y != null && w != null && h != null) {
         return Rect.fromLTWH(x, y, w, h);
       }
     }
     if (raw is Map) {
-      final x = (raw['x'] as num?)?.toDouble();
-      final y = (raw['y'] as num?)?.toDouble();
-      final w =
-          (raw['w'] as num?)?.toDouble() ?? (raw['width'] as num?)?.toDouble();
-      final h =
-          (raw['h'] as num?)?.toDouble() ?? (raw['height'] as num?)?.toDouble();
+      final x = _asDouble(raw['x']);
+      final y = _asDouble(raw['y']);
+      final w = _asDouble(raw['w']) ?? _asDouble(raw['width']);
+      final h = _asDouble(raw['h']) ?? _asDouble(raw['height']);
       if (x != null && y != null && w != null && h != null) {
         return Rect.fromLTWH(x, y, w, h);
       }
@@ -809,6 +1079,86 @@ class GameActions {
       return Rect.fromLTWH(entity.x, entity.y, entity.w, entity.h);
     }
     return null;
+  }
+
+  static double? _asDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) return double.tryParse(value.trim());
+    return null;
+  }
+
+  static int? _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) return int.tryParse(value.trim());
+    return null;
+  }
+
+  static Set<int>? _readIntSet(dynamic raw) {
+    if (raw is num) return {raw.toInt()};
+    if (raw is! List) return null;
+    final out = raw.map(_asInt).whereType<int>().toSet();
+    return out.isEmpty ? null : out;
+  }
+
+  static List<_MatrixCell> _readCells(dynamic raw) {
+    if (raw is! List) return const [];
+    final cells = <_MatrixCell>[];
+    for (final item in raw) {
+      if (item is List && item.length >= 2) {
+        final x = _asInt(item[0]);
+        final y = _asInt(item[1]);
+        if (x != null && y != null) cells.add(_MatrixCell(x, y));
+      } else if (item is Map) {
+        final x = _asInt(item['x'] ?? item['col'] ?? item['c']);
+        final y = _asInt(item['y'] ?? item['row'] ?? item['r']);
+        if (x != null && y != null) cells.add(_MatrixCell(x, y));
+      }
+    }
+    return cells;
+  }
+
+  static void _normalizeCells(List<_MatrixCell> cells) {
+    if (cells.isEmpty) return;
+    final minX = cells.map((c) => c.x).reduce(min);
+    final minY = cells.map((c) => c.y).reduce(min);
+    for (var i = 0; i < cells.length; i++) {
+      cells[i] = _MatrixCell(cells[i].x - minX, cells[i].y - minY);
+    }
+  }
+
+  static dynamic _deepCopyJson(dynamic value) {
+    if (value is List) return value.map(_deepCopyJson).toList();
+    if (value is Map) {
+      return value.map(
+        (key, item) => MapEntry(key.toString(), _deepCopyJson(item)),
+      );
+    }
+    return value;
+  }
+
+  static bool _writePixelPair(
+    dynamic value,
+    void Function(double first, double second) apply, {
+    required List<String> firstKeys,
+    required List<String> secondKeys,
+  }) {
+    double? first;
+    double? second;
+    if (value is List && value.length >= 2) {
+      first = _asDouble(value[0]);
+      second = _asDouble(value[1]);
+    } else if (value is Map) {
+      for (final key in firstKeys) {
+        first ??= _asDouble(value[key]);
+      }
+      for (final key in secondKeys) {
+        second ??= _asDouble(value[key]);
+      }
+    }
+    if (first == null || second == null) return false;
+    apply(first, second);
+    return true;
   }
 
   static bool _platformerStep(JsonFlameGame game, Map<String, dynamic> args) {
@@ -841,6 +1191,14 @@ class GameActions {
     final speed = (args['speed'] as num?)?.toDouble() ?? 320;
     final oneWayTypes = _readStringSet(args['one_way_types']);
     final oneWayTilesets = _readStringSet(args['one_way_tilesets']);
+
+    player.state['blockedLeft'] = false;
+    player.state['blockedRight'] = false;
+    player.state['blockedUp'] = false;
+    player.state['blockedDown'] = false;
+    player.state['xCollision'] = null;
+    player.state['yCollision'] = null;
+    player.state['onGroundCollision'] = null;
 
     final onGround = player.state['onGround'] == true;
     if (autoRun != null) {
@@ -1289,7 +1647,9 @@ class GameActions {
     String text,
     Map<String, dynamic> context,
   ) {
-    final fullMatch = RegExp(r'^\s*\{\{\s*(.+?)\s*\}\}\s*$').firstMatch(text);
+    // `[^{}]` 而非 `.+?`：避免「{{ 开头 }} 结尾」的混合模板被整体误匹配成单变量
+    // → null。混合模板走下面的逐个插值。（同 interpreter.resolveExpression）
+    final fullMatch = RegExp(r'^\s*\{\{\s*([^{}]+?)\s*\}\}\s*$').firstMatch(text);
     if (fullMatch != null) {
       return _readTemplatePath(context, fullMatch.group(1)!.trim());
     }
@@ -1394,9 +1754,12 @@ class GameActions {
       }
       if (dx > 0) {
         player.x = solid.left - player.w;
+        player.state['blockedRight'] = true;
       } else {
         player.x = solid.right;
+        player.state['blockedLeft'] = true;
       }
+      player.state['xCollision'] = collision.toMap();
       player.vx = 0;
     }
   }
@@ -1410,30 +1773,78 @@ class GameActions {
   }) {
     player.state['onGround'] = false;
     if (dy == 0) return;
+    final previousY = player.y;
+    final previousBottom = previousY + player.h;
     player.y += dy;
     var rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
-    for (final collision in map.collisionRectsIn(rect).where((c) => c.solid)) {
-      if (dy < 0 &&
-          _isOneWayPlatform(
+    final collisions = map.collisionRectsIn(rect).where((c) => c.solid);
+    if (dy < 0) {
+      final hit = _bestUpwardCollision(
+        rect,
+        collisions.where(
+          (collision) => !_isOneWayPlatform(
             collision,
             oneWayTypes: oneWayTypes,
             oneWayTilesets: oneWayTilesets,
-          )) {
-        continue;
-      }
+          ),
+        ),
+      );
+      if (hit == null) return;
+      player.y = hit.rect.bottom;
+      player.state['blockedUp'] = true;
+      player.state['yCollision'] = hit.toMap();
+      player.vy = 0;
+      return;
+    }
+
+    for (final collision in collisions) {
       final solid = collision.rect;
       rect = Rect.fromLTWH(player.x, player.y, player.w, player.h);
       if (!solid.overlaps(rect)) continue;
-      if (dy > 0) {
-        final slopeTop = _slopeTopAt(collision, rect, map.scale);
-        player.y = slopeTop - player.h;
-        player.state['onGround'] = true;
-        player.state['doubleJumpUsed'] = false;
-      } else {
-        player.y = solid.bottom;
+      final slopeTop = _slopeTopAt(collision, rect, map.scale);
+      // Only land on a top surface when the actor approached it from above.
+      // Without this guard, side contact with tall solids (pipes, walls,
+      // crates) can be resolved as a vertical landing and the actor appears
+      // to climb the obstacle while holding horizontal movement.
+      final landingSlop = max(2.0, min(8.0, map.tileHeight * map.scale * 0.25));
+      if (previousBottom > slopeTop + landingSlop) {
+        continue;
       }
+      player.y = slopeTop - player.h;
+      player.state['onGround'] = true;
+      player.state['blockedDown'] = true;
+      player.state['onGroundCollision'] = collision.toMap();
+      player.state['doubleJumpUsed'] = false;
+      player.state['yCollision'] = collision.toMap();
       player.vy = 0;
     }
+  }
+
+  static TiledTileCollision? _bestUpwardCollision(
+    Rect actor,
+    Iterable<TiledTileCollision> collisions,
+  ) {
+    TiledTileCollision? best;
+    double? bestBottom;
+    double? bestScore;
+    for (final collision in collisions) {
+      final solid = collision.rect;
+      if (!solid.overlaps(actor)) continue;
+      final overlap =
+          min(actor.right, solid.right) - max(actor.left, solid.left);
+      if (overlap <= 0) continue;
+      final centerDistance = (actor.center.dx - solid.center.dx).abs();
+      final score = centerDistance - overlap * 0.25;
+      final bottom = solid.bottom;
+      if (best == null ||
+          bottom > bestBottom! + 0.001 ||
+          ((bottom - bestBottom).abs() <= 0.001 && score < bestScore!)) {
+        best = collision;
+        bestBottom = bottom;
+        bestScore = score;
+      }
+    }
+    return best;
   }
 
   static double _slopeTopAt(
@@ -1503,4 +1914,11 @@ class _SlideResult {
   final int score;
   final bool moved;
   _SlideResult(this.line, this.score, this.moved);
+}
+
+class _MatrixCell {
+  final int x;
+  final int y;
+
+  const _MatrixCell(this.x, this.y);
 }

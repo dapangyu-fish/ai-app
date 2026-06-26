@@ -1,0 +1,287 @@
+{
+  "dsl": "3.3",
+  "appid": "54d5da86-a528-5e60-8b0e-43150b65327b",
+  "meta": {
+    "name": "gsy_flutter_demo/003-scroll-listener-demo-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "列表滑动监听",
+      "en": "List scroll listener"
+    },
+    "description": "ScrollListenerDemoPage：列表滑动监听",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "列表滑动监听",
+      "sourcePath": "lib/widget/scroll/scroll_listener_demo_page.dart",
+      "deferredAlias": "scroll_listener_demo_page",
+      "widgetClass": "ScrollListenerDemoPage",
+      "category": "scroll",
+      "routeIndex": 3
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "items": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99
+      ],
+      "offset": 0,
+      "notify": "",
+      "isEnd": false
+    },
+    "functions": {
+      "updateScroll": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@to_int",
+            "args": {
+              "value": {
+                "var": "event.offset"
+              }
+            },
+            "assign": "global.offset"
+          },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.isEnd",
+              "value": {
+                "var": "event.isEnd"
+              }
+            }
+          }
+        ]
+      },
+      "updateNotify": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.notify",
+              "value": "{{ event.type }}"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "ScrollListenerDemoPage",
+        "layout": "column",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "list",
+            "controller": "scrollListener",
+            "source": "{{ global.items }}",
+            "separator": "none",
+            "onScroll": {
+              "call": "@global.updateScroll",
+              "args": {}
+            },
+            "onScrollNotification": {
+              "call": "@global.updateNotify",
+              "args": {}
+            },
+            "item_template": {
+              "type": "card",
+              "layout": "column",
+              "padding": 0,
+              "margin": 4,
+              "borderRadius": 4,
+              "elevation": 1,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "height": 60,
+                  "padding": 0,
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "start",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "Item {{ loop.item }}",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#000000",
+                        "paddingV": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "footerButtons": [
+          {
+            "type": "button",
+            "variant": "text",
+            "label": "position: {{ global.offset }}",
+            "style": {
+              "paddingH": 8,
+              "paddingV": 8,
+              "fontSize": 14
+            },
+            "action": {
+              "call": "@scroll_to_top",
+              "args": {
+                "controller": "scrollListener",
+                "durationMs": 1000,
+                "curve": "bounceInOut"
+              }
+            }
+          },
+          {
+            "type": "spacer",
+            "width": 0.3,
+            "height": 30
+          },
+          {
+            "type": "button",
+            "variant": "text",
+            "label": "{{ global.notify }}",
+            "style": {
+              "paddingH": 8,
+              "paddingV": 8,
+              "fontSize": 14
+            },
+            "action": {
+              "call": "@print",
+              "args": {
+                "value": ""
+              }
+            }
+          },
+          {
+            "type": "button",
+            "variant": "text",
+            "label": "到达底部",
+            "visible": {
+              "var": "global.isEnd"
+            },
+            "style": {
+              "paddingH": 8,
+              "paddingV": 8,
+              "fontSize": 14
+            },
+            "action": {
+              "call": "@print",
+              "args": {
+                "value": ""
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

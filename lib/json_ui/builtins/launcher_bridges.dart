@@ -2,7 +2,7 @@
 // ───────────────────────────────────────────────────────────
 // 用户可以用纯 JSON 写自己的 launcher（启动器），通过这些桥接函数访问：
 //   - @my_apps_list / _delete / _share —— 本地保存的 JSON-APP 管理
-//   - @launch_app —— 从 launcher 内部跳进市场上 / 本地的另一个 JSON-APP
+//   - @launch_app —— 从 launcher 内部跳进市场上 / 本地 / 依赖中的 JSON-APP
 //   - @market_list（后续）—— 从 Registry 拉市场列表
 //   - @settings_*（后续）—— 主题/语言/缓存/默认启动 App
 //   - @auth_*（后续）—— 当前用户/登出
@@ -17,6 +17,7 @@ import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 import '../../platform/native_fs.dart';
 import '../cache_manager.dart';
+import '../dependency_loader.dart';
 import '../interpreter.dart';
 import '../semver.dart';
 import '../../auth/auth_service.dart';
@@ -203,7 +204,7 @@ class LauncherBridges {
 
   // ========== launch_app ==========
 
-  /// @launch_app({kind: "local"|"market", fileName?, name?, version?, isStartupRoot?})
+  /// @launch_app({kind: "local"|"market"|"dependency", fileName?, name?, version?, isStartupRoot?})
   /// 从当前 JSON-APP 启动另一个 JSON-APP（典型：launcher → 用户选的 app）。
   ///
   /// 单 interpreter 架构下嵌套启动靠 [JsonInterpreter.pushState] /
@@ -237,6 +238,7 @@ class LauncherBridges {
           name,
           constraint,
           type: 'app',
+          preferLatest: true,
         );
         if (config == null) {
           debugPrint('[@launch_app] 市场获取失败: $name@$version');
@@ -262,6 +264,39 @@ class LauncherBridges {
         displayName = resolveDisplayName(
           meta,
           fallback: meta?['name']?.toString() ?? fileName,
+        );
+      } else if (kind == 'dependency') {
+        final name = args['name']?.toString();
+        if (name == null || name.isEmpty) {
+          debugPrint('[@launch_app] kind=dependency 必须传 name');
+          return false;
+        }
+        final module = interpreter.depLoader.modules[name];
+        if (module != null) {
+          config = module.config;
+        } else {
+          final deps = interpreter.rawConfig?['dependencies'];
+          final rawSpec = deps is Map<String, dynamic> ? deps[name] : null;
+          if (rawSpec == null) {
+            debugPrint('[@launch_app] 依赖未声明: $name');
+            return false;
+          }
+          final spec = DependencySpec.fromJson(name, rawSpec);
+          config = await CacheManager.instance.getResource(
+            name,
+            spec.constraint,
+            type: spec.resourceType,
+            preferLatest: true,
+          );
+          if (config == null) {
+            debugPrint('[@launch_app] 依赖获取失败: $name@${spec.constraint}');
+            return false;
+          }
+        }
+        final meta = config['meta'] as Map<String, dynamic>?;
+        displayName = resolveDisplayName(
+          meta ?? {'name': name},
+          fallback: name,
         );
       } else {
         debugPrint('[@launch_app] 未知 kind: $kind');
@@ -405,14 +440,16 @@ class LauncherBridges {
   // 框架 UI 不会跟着切。launcher 替代了原生主页，用户在 launcher 设置里切
   // "Deutsch" 期望整个 app（包括框架 UI）一起切，所以另开一对桥接：
 
-  /// @get_framework_locale → 'zh'/'en'/'de'/'es' 或 'system'（跟随系统时）
+  /// @get_framework_locale → 'zh'/'en'/'de'/'es'/'fr'/'pt'/'ca'/'hi'/'ko'/'ja'/'it'
+  /// 或 'system'（跟随系统时）
   static String _getFrameworkLocale() {
     final v = appLocale.value;
     if (v == null) return 'system';
     return v.languageCode;
   }
 
-  /// @set_framework_locale({value: 'zh'|'en'|'de'|'es'|'system'}) → bool
+  /// @set_framework_locale({value: 'zh'|'en'|'de'|'es'|'fr'|'pt'|'ca'|'hi'|'ko'|'ja'|'it'|'system'}) → bool
+  /// （value 接受任意框架支持的语言简码，见 framework_strings.dart 的 supportedLocales）
   /// 同步 LocaleController.setLocale + interpreter.global.locale，
   /// MaterialApp 跟着 appLocale 重建，JSON-APP 模板 {{ t('xxx') }} 也跟着切。
   static Future<bool> _setFrameworkLocale(

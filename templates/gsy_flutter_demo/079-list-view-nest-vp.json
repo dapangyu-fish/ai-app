@@ -1,0 +1,233 @@
+{
+  "dsl": "3.3",
+  "appid": "0df66472-7a55-5a1b-90f9-47808c4229e9",
+  "meta": {
+    "name": "gsy_flutter_demo/079-list-view-nest-vp",
+    "version": "0.1.1",
+    "type": "app",
+    "displayName": {
+      "zh": "垂直  ListView 嵌套垂直  ViewPager",
+      "en": "Vertical ListView nestedVertical ViewPager"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：垂直  ListView 嵌套垂直  ViewPager",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "垂直  ListView 嵌套垂直  ViewPager",
+      "sourcePath": "lib/widget/scroll/vp_list_demo_page.dart",
+      "deferredAlias": "vp_list_demo_page",
+      "widgetClass": "ListViewNestVP",
+      "category": "scroll",
+      "routeIndex": 79,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-scroll-drag-handoff-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "垂直  ListView 嵌套垂直  ViewPager",
+      "upstreamSource": "lib/widget/scroll/vp_list_demo_page.dart",
+      "upstreamWidget": "ListViewNestVP",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-scroll-drag-handoff-v1",
+      "items": [
+        {
+          "index": 0
+        },
+        {
+          "index": 1
+        },
+        {
+          "index": 2
+        },
+        {
+          "index": 3
+        },
+        {
+          "index": 4
+        }
+      ]
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "ListViewNestVP",
+        "layout": "column",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "expanded",
+            "child": {
+              "type": "scroll_drag_handoff",
+              "axis": "vertical",
+              "defaultController": "listvp.list",
+              "touchController": "listvp.page",
+              "touchStart": 0,
+              "touchEnd": 300,
+              "touchRequiresDefaultAtMin": true,
+              "switches": [
+                {
+                  "from": "listvp.page",
+                  "to": "listvp.list",
+                  "when": "fromAtMaxAndForward"
+                }
+              ],
+              "child": {
+                "type": "list",
+                "source": "{{ global.items }}",
+                "separator": "none",
+                "item_template": {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "container",
+                      "children": [
+                        {
+                          "type": "positioned",
+                          "child": {
+                            "type": "page_view",
+                            "scrollDirection": "vertical",
+                            "children": [
+                              {
+                                "type": "container",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "0",
+                                    "style": {
+                                      "fontSize": 40,
+                                      "color": "#FFFF8D",
+                                      "textAlign": "center"
+                                    }
+                                  }
+                                ],
+                                "layout": "column",
+                                "color": "#FF5252",
+                                "alignment": "center",
+                                "mainAxisAlignment": "center"
+                              },
+                              {
+                                "type": "container",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "1",
+                                    "style": {
+                                      "fontSize": 40,
+                                      "color": "#FFFF8D",
+                                      "textAlign": "center"
+                                    }
+                                  }
+                                ],
+                                "layout": "column",
+                                "color": "#FF5252",
+                                "alignment": "center",
+                                "mainAxisAlignment": "center"
+                              },
+                              {
+                                "type": "container",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "2",
+                                    "style": {
+                                      "fontSize": 40,
+                                      "color": "#FFFF8D",
+                                      "textAlign": "center"
+                                    }
+                                  }
+                                ],
+                                "layout": "column",
+                                "color": "#FF5252",
+                                "alignment": "center",
+                                "mainAxisAlignment": "center"
+                              },
+                              {
+                                "type": "container",
+                                "children": [
+                                  {
+                                    "type": "text",
+                                    "value": "3",
+                                    "style": {
+                                      "fontSize": 40,
+                                      "color": "#FFFF8D",
+                                      "textAlign": "center"
+                                    }
+                                  }
+                                ],
+                                "layout": "column",
+                                "color": "#FF5252",
+                                "alignment": "center",
+                                "mainAxisAlignment": "center"
+                              }
+                            ],
+                            "controller": "listvp.page",
+                            "physics": "never"
+                          },
+                          "left": 0,
+                          "top": 0,
+                          "right": 0,
+                          "bottom": 0
+                        }
+                      ],
+                      "layout": "stack",
+                      "height": 300,
+                      "visible": {
+                        "==": [
+                          {
+                            "var": "loop.index"
+                          },
+                          0
+                        ]
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "Item {{ loop.index }}",
+                          "style": {
+                            "fontSize": 40,
+                            "color": "#2196F3",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "layout": "column",
+                      "height": 300,
+                      "color": "#69F0AE",
+                      "alignment": "center",
+                      "mainAxisAlignment": "center",
+                      "visible": {
+                        "!=": [
+                          {
+                            "var": "loop.index"
+                          },
+                          0
+                        ]
+                      }
+                    }
+                  ],
+                  "layout": "column"
+                },
+                "controller": "listvp.list",
+                "physics": "never",
+                "expand": false,
+                "allowNestedScroll": true
+              }
+            }
+          }
+        ],
+        "appBar": {
+          "title": "ListViewNestVP"
+        }
+      }
+    ]
+  }
+}

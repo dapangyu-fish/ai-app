@@ -1,0 +1,106 @@
+{
+  "dsl": "3.3",
+  "appid": "480c01a2-cadf-51bc-bb77-2c4e472f6ef7",
+  "meta": {
+    "name": "gsy_flutter_demo/021-anima-demo-page2",
+    "version": "0.1.4",
+    "type": "app",
+    "displayName": {
+      "zh": "控件展开动画效果",
+      "en": "Expand animation"
+    },
+    "description": "AnimaDemoPage2：控件展开动画效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "控件展开动画效果",
+      "sourcePath": "lib/widget/animation/anima_demo_page2.dart",
+      "deferredAlias": "anima_demo_page2",
+      "widgetClass": "AnimaDemoPage2",
+      "category": "animation",
+      "routeIndex": 21,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "collapsed": false,
+      "portVersion": "json-dsl-clean-v1",
+      "portStatus": "ported_json"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "AnimaDemoPage2",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "child": {
+              "type": "circular_reveal",
+              "visibleWhen": {
+                "!": [
+                  {
+                    "var": "global.collapsed"
+                  }
+                ]
+              },
+              "durationMs": 500,
+              "curve": "easeInSine",
+              "centerXFactor": 0.5,
+              "centerYFactor": 0.5,
+              "minRadius": 0,
+              "maxRadius": 250,
+              "child": {
+                "type": "center",
+                "child": {
+                  "type": "container",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "我我我我我我我我我我我说",
+                      "style": {}
+                    }
+                  ],
+                  "layout": "column",
+                  "alignment": "center",
+                  "width": 250,
+                  "height": 250,
+                  "color": "#69F0AE"
+                }
+              }
+            },
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0
+          }
+        ],
+        "backgroundColor": "#448AFF",
+        "floatingActionButton": {
+          "type": "floating_action_button",
+          "label": "点我",
+          "action": {
+            "call": "@set",
+            "args": {
+              "var": "global.collapsed",
+              "value": {
+                "!": [
+                  {
+                    "var": "global.collapsed"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}

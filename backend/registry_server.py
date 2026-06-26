@@ -9,6 +9,7 @@ JSON-DSL Registry Server
 """
 
 import io
+import hashlib
 import json
 import os
 import re
@@ -41,6 +42,7 @@ from registry_mirror import (
     start_background_sync,
 )
 import registry_catalog
+from validate_json_app import validate_json_content
 from flask import redirect, Response
 
 BUCKET_APP = "json-app"
@@ -51,6 +53,21 @@ PORT = 3254
 
 app = Flask(__name__)
 
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers.setdefault("Access-Control-Allow-Origin", "*")
+    response.headers.setdefault(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, OPTIONS",
+    )
+    response.headers.setdefault(
+        "Access-Control-Allow-Headers",
+        "Authorization, Content-Type, X-Requested-With",
+    )
+    response.headers.setdefault("Access-Control-Max-Age", "86400")
+    return response
+
 # MinIO 客户端
 minio_client = Minio(
     MINIO_ENDPOINT,
@@ -58,6 +75,33 @@ minio_client = Minio(
     secret_key=MINIO_SECRET_KEY,
     secure=MINIO_SECURE,
 )
+
+
+def _ensure_buckets():
+    """确保 registry 用到的 MinIO 桶存在且 public-read（幂等）。
+
+    全新 all-in-one 部署里这些桶从未被创建过（没人发布过组件），_save_index /
+    mirror 同步首次写入时就会 NoSuchBucket，普通 publish 也一样会炸。registry
+    必须保证自己的存储桶存在，并设 public-read（与既有 json-component/models
+    约定一致），客户端才能凭 MINIO_PUBLIC_URL 直链下载包文件。
+    """
+    for bucket in (BUCKET_COMPONENT, BUCKET_APP):
+        try:
+            if not minio_client.bucket_exists(bucket):
+                minio_client.make_bucket(bucket)
+                print(f"[Registry] 建桶 {bucket}")
+            policy = {
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": {"AWS": ["*"]},
+                    "Action": ["s3:GetObject"],
+                    "Resource": [f"arn:aws:s3:::{bucket}/*"],
+                }],
+            }
+            minio_client.set_bucket_policy(bucket, json.dumps(policy))
+        except Exception as e:  # 不让建桶失败拖垮启动；下次启动/发布会重试
+            print(f"[Registry] WARN ensure bucket {bucket} 失败: {e}")
 
 # ═══════════════════════════════════════════════════════════
 # 工具函数
@@ -125,6 +169,53 @@ def require_auth(f):
     return decorated
 
 
+def _optional_bearer_user_id():
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return None
+    token = auth[7:]
+
+    admin_token = os.environ.get("REGISTRY_ADMIN_TOKEN", "")
+    if admin_token and token == admin_token:
+        return os.environ.get(
+            "REGISTRY_ADMIN_AUTHOR_ID",
+            os.environ.get("REGISTRY_ADMIN_AUTHOR_EMAIL", "admin"),
+        ).strip() or "admin"
+
+    try:
+        resp = requests.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers=_supabase_headers(token),
+            timeout=8,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("id")
+    except Exception:
+        pass
+    return None
+
+
+def _clean_install_actor_id(value):
+    value = str(value or "").strip()
+    if not value:
+        return ""
+    value = re.sub(r"[^a-zA-Z0-9_.:@-]", "_", value)
+    return value[:160]
+
+
+def _install_ip_hash():
+    raw_ip = (
+        request.headers.get("CF-Connecting-IP")
+        or request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        or request.remote_addr
+        or ""
+    )
+    if not raw_ip:
+        return ""
+    salt = os.environ.get("REGISTRY_INSTALL_IP_HASH_SALT", "myapp-registry-install")
+    return hashlib.sha256(f"{salt}:{raw_ip}".encode("utf-8")).hexdigest()
+
+
 def _load_index():
     """从 MinIO 加载全局索引文件"""
     try:
@@ -164,6 +255,44 @@ def _download_url_for_version(name, version, package_info, path):
         return f"{MINIO_PUBLIC_URL}/{BUCKET_COMPONENT}/{path}/{filename}"
     # 镜像版本走本地 /mirror/file，触发按需缓存
     return f"{REGISTRY_BASE_URL.rstrip('/')}/mirror/file/{name}/{version}"
+
+
+def _resolve_appid_payload(appid):
+    """按 appid 解析公开包。只读接口，用于 Web 分享链接直达 JSON-APP。"""
+    appid = (appid or "").strip()
+    uuid_pattern = re.compile(
+        r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+    )
+    if not uuid_pattern.match(appid):
+        return {"error": "appid 格式必须是标准 UUID（带连字符）"}, 400
+
+    index = _load_index()
+    for name, info in index.get('packages', {}).items():
+        if str(info.get('appid', '')).lower() != appid.lower():
+            continue
+
+        versions = info.get('versions') or []
+        version = info.get('latest') or (versions[0] if versions else None)
+        if not version:
+            return {"error": f"appid '{appid}' 对应的包没有可用版本"}, 404
+
+        path = info.get('path') or name
+        download_url = _download_url_for_version(name, version, info, path)
+        return {
+            "appid": info.get('appid') or appid,
+            "name": name,
+            "version": version,
+            "download_url": download_url,
+            "displayName": info.get('displayName') or info.get('display_name'),
+            "description": info.get('description', ''),
+            "author": info.get('author', ''),
+            "type": info.get('meta_type', 'app'),
+            "registry_type": info.get('type', 'user'),
+            "latest": info.get('latest'),
+            "source": get_version_source(info, version),
+        }, 200
+
+    return {"error": f"appid '{appid}' 不存在"}, 404
 
 
 def _validate_namespace_name(name):
@@ -356,7 +485,12 @@ def resolve():
     GET /resolve?name=common-ui&version=^1.0.0
     """
     name = request.args.get('name', '').strip()
+    appid = request.args.get('appid', '').strip() or request.args.get('app_id', '').strip()
     version_constraint = request.args.get('version', '*').strip()
+
+    if appid and not name:
+        payload, status = _resolve_appid_payload(appid)
+        return jsonify(payload), status
 
     if not name:
         return jsonify({"error": "缺少 name 参数"}), 400
@@ -385,20 +519,34 @@ def resolve():
         "name": name,
         "version": best_version,
         "download_url": download_url,
+        "appid": package_info.get('appid'),
         "type": package_info.get('type', 'user'),
         "latest": package_info.get('latest'),
         "source": get_version_source(package_info, best_version),
     })
 
 
+@app.route('/resolve_appid', methods=['GET'])
+def resolve_appid():
+    """
+    按 appid 解析公开 JSON-APP。
+    GET /resolve_appid?appid=08ad186c-...
+    """
+    appid = request.args.get('appid', '').strip() or request.args.get('app_id', '').strip()
+    payload, status = _resolve_appid_payload(appid)
+    return jsonify(payload), status
+
+
 @app.route('/packages', methods=['GET'])
 def list_packages():
     """
     列出所有可用的包
-    GET /packages?type=app&page=1&per_page=20&q=chat
+    GET /packages?type=app&page=1&per_page=20&q=chat&namespace=/
     """
     filter_type = request.args.get('type', '').strip()
     query = (request.args.get('q') or request.args.get('search') or '').strip().lower()
+    namespace_arg = request.args.get('namespace')
+    namespace = namespace_arg.strip() if namespace_arg is not None else None
     page = _parse_positive_int(request.args.get('page'), 1)
     per_page = _parse_positive_int(request.args.get('per_page'), 20, max_value=100)
 
@@ -407,6 +555,13 @@ def list_packages():
 
     packages = []
     for name, info in index['packages'].items():
+        if namespace is not None:
+            if namespace in ('', '/', '_official_'):
+                if '/' in name:
+                    continue
+            elif not name.startswith(f"{namespace}/"):
+                continue
+
         # 获取最新版本的元数据
         latest_version = info.get('latest', info['versions'][0] if info['versions'] else '1.0.0')
         path = info['path']
@@ -445,6 +600,7 @@ def list_packages():
         pkg = {
             "name": name,
             "version": latest_version,
+            "appid": info.get('appid'),
             "displayName": display_name,
             "description": description,
             "author": author,
@@ -472,6 +628,7 @@ def list_packages():
         "total_pages": (total + per_page - 1) // per_page if total else 0,
         "has_more": end < total,
         "q": query,
+        "namespace": namespace,
     })
 
 
@@ -526,6 +683,54 @@ def my_namespaces():
     except Exception as e:
         print(f"[Registry] Error fetching namespaces: {e}")
         return jsonify({"error": "获取命名空间失败"}), 500
+
+
+@app.route('/namespaces', methods=['GET'])
+def list_public_namespaces():
+    """
+    列出探索页可切换的公开空间（从包索引归纳）。
+    GET /namespaces?q=gsy
+    """
+    query = (request.args.get('q') or request.args.get('search') or '').strip().lower()
+    index = _load_index()
+    buckets = {
+        '/': {
+            'name': '/',
+            'display_name': 'Official',
+            'package_count': 0,
+            'latest_created_at': '',
+        }
+    }
+
+    for name, info in (index.get('packages') or {}).items():
+        namespace = name.split('/', 1)[0] if '/' in name else '/'
+        bucket = buckets.setdefault(namespace, {
+            'name': namespace,
+            'display_name': namespace,
+            'package_count': 0,
+            'latest_created_at': '',
+        })
+        bucket['package_count'] += 1
+        created_at = info.get('created_at') or ''
+        if created_at > (bucket.get('latest_created_at') or ''):
+            bucket['latest_created_at'] = created_at
+
+    namespaces = list(buckets.values())
+    if query:
+        namespaces = [
+            ns for ns in namespaces
+            if query in ns['name'].lower()
+            or query in ns.get('display_name', '').lower()
+        ]
+
+    namespaces.sort(
+        key=lambda ns: (
+            0 if ns['name'] == '/' else 1,
+            -(ns.get('package_count') or 0),
+            ns['name'],
+        )
+    )
+    return jsonify({"namespaces": namespaces, "total": len(namespaces), "q": query})
 
 
 @app.route('/namespace/check', methods=['GET'])
@@ -752,6 +957,8 @@ def publish():
             print(f"[Registry] Error checking namespace permission: {e}")
             return jsonify({"error": "权限检查失败"}), 500
 
+    validation_warnings = []
+
     # ── 索引读+改+写 必须在同一把 index_lock 内，否则会和 mirror sync 抢写 ──
     with index_lock:
         index = _load_index()
@@ -809,6 +1016,26 @@ def publish():
         json_content['meta']['author'] = author_name or json_content['meta'].get('author', '')
         json_content['appid'] = appid
         display_name = json_content['meta'].get('displayName')
+
+        # ── JSON-DSL 静态发布门禁 ──
+        # Agent 生成提示词会要求上传前本地跑 validate_json_app.py，但客户端/脚本/旧
+        # Agent 都可能绕过。Registry 是最后一道门：ERROR 级问题直接拒绝发布，
+        # WARN 随响应返回但不阻塞。
+        findings = validate_json_content(json_content)
+        validation_errors = [f for f in findings if f.level == "ERROR"]
+        validation_warnings = [f for f in findings if f.level == "WARN"]
+        if validation_errors:
+            return jsonify({
+                "error": "JSON-APP 静态校验失败，请修复后再发布",
+                "validation_errors": [
+                    {"path": f.path, "message": f.message}
+                    for f in validation_errors[:50]
+                ],
+                "validation_warnings": [
+                    {"path": f.path, "message": f.message}
+                    for f in validation_warnings[:50]
+                ],
+            }), 400
 
         # ── 上传到 MinIO ──
         path = full_name
@@ -883,7 +1110,11 @@ def publish():
         "name": full_name,
         "version": version,
         "appid": appid,
-        "download_url": download_url
+        "download_url": download_url,
+        "validation_warnings": [
+            {"path": f.path, "message": f.message}
+            for f in validation_warnings[:50]
+        ],
     })
 
 
@@ -1153,10 +1384,29 @@ def user_profile(author_id):
 
 
 @app.route('/packages/<path:name>/install', methods=['POST'])
-@require_auth
 def package_install(name):
-    """下载埋点（per-user 去重）。客户端运行/下载时调。"""
-    registry_catalog.record_install(name, request.supabase_user.get("id"))
+    """运行/下载埋点。登录、游客和未登录 Web 都可记录；每次成功运行都计数。"""
+    with index_lock:
+        index = _load_index()
+        if name not in index.get("packages", {}):
+            return jsonify({"error": f"包 '{name}' 不存在"}), 404
+
+    body = request.get_json(silent=True) or {}
+    user_id = _optional_bearer_user_id()
+    actor_type = "user" if user_id else "guest"
+    actor_id = _clean_install_actor_id(user_id or body.get("client_user_id"))
+    if not actor_id:
+        actor_type = "anonymous"
+        actor_id = f"anon:{_install_ip_hash()[:32] or 'unknown'}"
+    source = _clean_install_actor_id(body.get("source") or request.args.get("source") or "")
+    registry_catalog.record_install(
+        name,
+        actor_id,
+        actor_type=actor_type,
+        source=source,
+        user_agent=request.headers.get("User-Agent", ""),
+        ip_hash=_install_ip_hash(),
+    )
     return jsonify({"ok": True})
 
 
@@ -1283,6 +1533,7 @@ def _maybe_start_enrich_worker():
 
 
 # gunicorn 不走 __main__，import 时就把后台线程起起来（advisory lock 保证多 worker 只一个干活）
+_ensure_buckets()
 _maybe_start_mirror_sync()
 _maybe_start_enrich_worker()
 

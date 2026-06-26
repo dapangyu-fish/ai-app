@@ -1,0 +1,209 @@
+{
+  "dsl": "3.3",
+  "appid": "73621a8e-87ed-51de-814f-d1d5047718f6",
+  "meta": {
+    "name": "gsy_flutter_demo/059-bottom-anim-nav-page",
+    "version": "0.1.2",
+    "type": "app",
+    "displayName": {
+      "zh": "一个有趣的圆形选择器",
+      "en": "Circular selector demo"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：一个有趣的圆形选择器",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "一个有趣的圆形选择器",
+      "sourcePath": "lib/widget/basic/bottom_anim_nav_page.dart",
+      "deferredAlias": "bottom_anim_nav_page",
+      "widgetClass": "BottomAnimNavPage",
+      "category": "basic",
+      "routeIndex": 59,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-bottom-sheet-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "一个有趣的圆形选择器",
+      "upstreamSource": "lib/widget/basic/bottom_anim_nav_page.dart",
+      "upstreamWidget": "BottomAnimNavPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-bottom-sheet-v1",
+      "selected": 0,
+      "items": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ]
+    },
+    "functions": {
+      "show": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_bottom_sheet",
+            "args": {
+              "backgroundColor": "#00000000",
+              "padding": 0,
+              "borderRadius": 0,
+              "useSafeArea": false,
+              "isDismissible": true,
+              "enableDrag": true,
+              "content": {
+                "type": "container",
+                "layout": "stack",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [],
+                    "width": 680,
+                    "height": 260,
+                    "shape": "circle",
+                    "color": "#BEFF5252"
+                  },
+                  {
+                    "type": "radial_layout",
+                    "source": "{{ global.items }}",
+                    "radius": 140,
+                    "childSize": 52,
+                    "startAngleDeg": 200,
+                    "sweepAngleDeg": 140,
+                    "itemTemplate": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item }}",
+                          "style": {
+                            "fontSize": 20,
+                            "color": "#FFFFFF",
+                            "textAlign": "center"
+                          }
+                        }
+                      ],
+                      "shape": "circle",
+                      "color": "#F44336",
+                      "border": {
+                        "color": "#FFFFFF",
+                        "width": 1
+                      },
+                      "alignment": "center",
+                      "onTap": {
+                        "call": "@global.select",
+                        "args": {
+                          "i": "{{ loop.item }}"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "height": 300,
+                "alignment": "bottomCenter"
+              }
+            }
+          }
+        ]
+      },
+      "select": {
+        "params": [
+          "i"
+        ],
+        "logic": [
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.selected",
+              "value": {
+                "var": "params.i"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "ViewPagerDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#0D1B2A",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "children": [],
+              "color": "#0D1B2A"
+            }
+          },
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "bottom": 50,
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "mainAxisAlignment": "center",
+              "alignment": "center",
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "mainAxisAlignment": "center",
+                  "alignment": "center",
+                  "width": 92,
+                  "height": 44,
+                  "color": "#F44336",
+                  "borderRadius": 2,
+                  "onTap": {
+                    "call": "@global.show",
+                    "args": {}
+                  },
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "Show",
+                      "style": {
+                        "fontSize": 22,
+                        "color": "#FFFFFF",
+                        "textAlign": "center"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

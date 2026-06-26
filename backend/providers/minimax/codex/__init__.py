@@ -1,0 +1,2 @@
+"""MiniMax Codex adapter."""
+

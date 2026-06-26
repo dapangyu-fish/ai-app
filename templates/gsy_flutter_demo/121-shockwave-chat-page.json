@@ -1,0 +1,122 @@
+{
+  "dsl": "3.3",
+  "appid": "c1849b64-5665-54f7-a387-e4c24a209973",
+  "meta": {
+    "name": "gsy_flutter_demo/121-shockwave-chat-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "Shock Wave Chat",
+      "en": "Shock Wave Chat"
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：Shock Wave Chat",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "Shock Wave Chat",
+      "sourcePath": "lib/widget/scroll/shock_wave_chat_page.dart",
+      "deferredAlias": "shock_wave_chat_page",
+      "widgetClass": "ShockwaveChatPage",
+      "category": "scroll",
+      "routeIndex": 121,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-web-fallback-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "Shock Wave Chat",
+      "upstreamSource": "lib/widget/scroll/shock_wave_chat_page.dart",
+      "upstreamWidget": "ShockwaveChatPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-web-fallback-v1",
+      "messages": [
+        {
+          "me": false,
+          "text": "Shock Wave Chat"
+        },
+        {
+          "me": true,
+          "text": "tap the surface"
+        },
+        {
+          "me": false,
+          "text": "waves ripple behind messages"
+        },
+        {
+          "me": true,
+          "text": "JSON DSL"
+        }
+      ]
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "Elastic Bounce",
+        "layout": "stack",
+        "backgroundColor": "#DD000000",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "height": 56,
+            "child": {
+              "type": "container",
+              "height": 56,
+              "color": "#2196F3",
+              "alignment": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "value": "Elastic Bounce",
+                  "style": {
+                    "fontSize": 20,
+                    "fontWeight": "w500",
+                    "color": "#FFFFFF",
+                    "textAlign": "center"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 56,
+            "bottom": 0,
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "crossAxisAlignment": "center",
+              "padding": {
+                "top": 30
+              },
+              "children": [
+                {
+                  "type": "text",
+                  "value": "当前效果不支持 Web ，请在 App 查看",
+                  "style": {
+                    "fontSize": 14,
+                    "color": "#FFFFFF",
+                    "textAlign": "center"
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "appBar": {
+          "title": "Elastic Bounce"
+        }
+      }
+    ]
+  }
+}

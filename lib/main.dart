@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'i18n/runtime_extra_i18n.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart'
@@ -19,7 +20,9 @@ import 'i18n/framework_strings.dart';
 import 'i18n/locale_controller.dart';
 import 'i18n/language_switcher.dart';
 import 'i18n/meta_helper.dart';
+import 'theme/theme_controller.dart';
 import 'platform/native_fs.dart';
+import 'platform/local_json_debug_status.dart';
 import 'json_ui/interpreter.dart';
 import 'json_ui/cache_manager.dart';
 import 'json_ui/semver.dart';
@@ -30,7 +33,9 @@ import 'json_ui/widgets/drawer_helper.dart' as drawer_helper;
 import 'designer/designer_ball.dart';
 import 'designer/market_detail_page.dart';
 import 'designer/market_favorites.dart';
+import 'designer/registry_usage_service.dart';
 import 'designer/settings_page.dart';
+import 'designer/hidden_env_entry.dart';
 import 'designer/ai_chat_service.dart';
 import 'designer/app_storage.dart';
 import 'designer/default_startup_prefs.dart';
@@ -38,6 +43,7 @@ import 'auth/auth_service.dart';
 import 'auth/auth_page.dart';
 import 'im/im_conversation_entry.dart';
 import 'im/im_service.dart';
+import 'navigation/app_route_observer.dart';
 import 'onboarding/onboarding_keys.dart';
 import 'onboarding/onboarding_service.dart';
 
@@ -50,12 +56,6 @@ final interpreterProvider = ChangeNotifierProvider<JsonInterpreter>((ref) {
   return JsonInterpreter();
 });
 
-/// 全局主题模式（light/dark/system）。被 MaterialApp 监听用于运行时切主题。
-/// JSON-APP 通过 @set_theme 写它，框架自动重建。
-final ValueNotifier<ThemeMode> appThemeMode = ValueNotifier<ThemeMode>(
-  ThemeMode.system,
-);
-
 /// 全局 App 生命周期事件总线（resume / pause / inactive / detached / hidden）。
 /// JSON-APP 在 global.lifecycle.onResume 等字段声明步骤，
 /// 解释器订阅这个 notifier 调度对应回调。
@@ -64,6 +64,243 @@ final ValueNotifier<String> appLifecycleEvent = ValueNotifier<String>('init');
 /// app 进程启动时刻。splash 用它算"已经过去多久"，决定还要不要再展示一会儿
 /// （达到 RemoteConfigService.splashDuration 才放行）。
 final DateTime appStartTime = DateTime.now();
+
+const List<String> _localJsonDebugParamNames = [
+  'local_json',
+  'json_path',
+  'json_app',
+];
+
+const List<String> _remoteJsonParamNames = [
+  'remote_file',
+  'remote_json',
+  'remote_json_url',
+];
+
+const List<String> _webAppIdParamNames = ['appid', 'app_id'];
+
+String? _localJsonDebugSource() {
+  final params = Uri.base.queryParameters;
+  for (final name in _localJsonDebugParamNames) {
+    final value = params[name]?.trim();
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return null;
+}
+
+String? _remoteJsonSource() {
+  if (!kIsWeb) return null;
+  final params = Uri.base.queryParameters;
+  for (final name in _remoteJsonParamNames) {
+    final value = params[name]?.trim();
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return null;
+}
+
+String? _webAppIdSource() {
+  if (!kIsWeb) return null;
+  final params = Uri.base.queryParameters;
+  for (final name in _webAppIdParamNames) {
+    final value = params[name]?.trim();
+    if (value != null && value.isNotEmpty) return value;
+  }
+  return null;
+}
+
+bool _isLocalDebugHost() {
+  if (!kIsWeb) return true;
+  final host = Uri.base.host.toLowerCase();
+  return host.isEmpty ||
+      host == 'localhost' ||
+      host == '127.0.0.1' ||
+      host == '::1' ||
+      host == '[::1]';
+}
+
+bool _isAllowedHostedRemoteJsonSource(String source) {
+  final uri = Uri.tryParse(source);
+  if (uri == null || !uri.hasScheme || !uri.hasAuthority) return false;
+  if (uri.scheme != 'http' && uri.scheme != 'https') return false;
+  final host = uri.host.toLowerCase();
+  return host == 'localhost' ||
+      host == '127.0.0.1' ||
+      host == '::1' ||
+      host == '[::1]';
+}
+
+String? _lastUiCrashKey;
+DateTime? _lastUiCrashAt;
+
+void _routeJsonUiCrash(FlutterErrorDetails details) {
+  final page = CurrentPageState.instance;
+  if (!page.isInJsonApp) return;
+  if (page.frameworkPage == 'crash') return;
+
+  final error = details.exception.toString();
+  final stack = details.stack?.toString() ?? '';
+  final appName = page.jsonAppName ?? 'JSON App';
+  final key = '$appName|$error|${stack.split('\n').take(3).join('|')}';
+  final now = DateTime.now();
+  if (_lastUiCrashKey == key &&
+      _lastUiCrashAt != null &&
+      now.difference(_lastUiCrashAt!) < const Duration(seconds: 2)) {
+    return;
+  }
+  _lastUiCrashKey = key;
+  _lastUiCrashAt = now;
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    final navState = JsonDslApp.navigatorKey.currentState;
+    if (navState == null || !navState.mounted) {
+      debugPrint('[JSON-APP] UI crash before nav ready: $error\n$stack');
+      return;
+    }
+    if (CurrentPageState.instance.frameworkPage == 'crash') return;
+    debugPrint('========================================');
+    debugPrint('[JSON-APP] UI 渲染/布局崩溃');
+    debugPrint('应用: $appName');
+    debugPrint('错误: $error');
+    debugPrint('========================================');
+    debugPrint(stack);
+    debugPrint('========================================');
+    navState.push(
+      MaterialPageRoute(
+        builder: (_) =>
+            _CrashPage(error: error, stackTrace: stack, fileName: appName),
+      ),
+    );
+  });
+}
+
+void _sendUiCrashToAi(FlutterErrorDetails details) {
+  final page = CurrentPageState.instance;
+  final appName = page.jsonAppName ?? 'JSON App';
+  final stack = details.stack?.toString() ?? '';
+  final crashMsg =
+      'JSON-APP UI 渲染/布局崩溃，请分析原因并输出修复后的完整 JSON：\n\n'
+      '## 应用\n$appName\n\n'
+      '## 错误\n${details.exception}\n\n'
+      '## 堆栈\n$stack';
+  DesignerBall.sendCrashReport?.call(crashMsg);
+}
+
+class _InlineRenderCrashWidget extends StatelessWidget {
+  final FlutterErrorDetails details;
+  final bool compact;
+
+  const _InlineRenderCrashWidget({
+    required this.details,
+    required this.compact,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = T.lookup(
+      appLocale.value ??
+          Localizations.maybeLocaleOf(context) ??
+          const Locale('zh', 'CN'),
+    );
+    final maxWidth = compact ? 220.0 : 360.0;
+    final maxHeight = compact ? 64.0 : 220.0;
+
+    return Align(
+      alignment: Alignment.topLeft,
+      widthFactor: 1,
+      heightFactor: 1,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.all(4),
+            padding: EdgeInsets.all(compact ? 8 : 12),
+            decoration: BoxDecoration(
+              color: Colors.red.withValues(alpha: 0.1),
+              border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: compact
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          t.uiRenderCrash,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: Colors.red,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Flexible(
+                              child: Text(
+                                t.uiRenderCrash,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          details.exception.toString(),
+                          maxLines: 4,
+                          overflow: TextOverflow.fade,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 12,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: TextButton.icon(
+                            onPressed: CurrentPageState.instance.isInJsonApp
+                                ? () => _sendUiCrashToAi(details)
+                                : null,
+                            icon: const Icon(Icons.auto_fix_high, size: 16),
+                            label: Text(t.crashAiFix),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _AppLifecycleObserver extends WidgetsBindingObserver {
   @override
@@ -98,6 +335,7 @@ void main() async {
   appStartTime;
 
   WidgetsFlutterBinding.ensureInitialized();
+  final localJsonDebug = _localJsonDebugSource() != null && _isLocalDebugHost();
 
   // Firebase Core 初始化 —— FirebaseMessaging 等所有 firebase_xxx 插件都依赖它。
   // Android 自动从 android/app/google-services.json 读配置；其他平台暂时不开 FCM 跳过。
@@ -118,6 +356,9 @@ void main() async {
   // 加载用户语言偏好（SharedPreferences app_locale；未设置则跟随系统）
   await LocaleController.loadFromPrefs();
 
+  // 加载用户主题偏好（SharedPreferences app_theme_mode；未设置则跟随系统）
+  await ThemeController.loadFromPrefs();
+
   // 注册 app 生命周期监听（resume / pause / inactive / detached / hidden）
   WidgetsBinding.instance.addObserver(_AppLifecycleObserver());
 
@@ -131,46 +372,10 @@ void main() async {
 
   // 捕捉全局渲染和布局异常（防止布局越界等导致直接白屏）
   ErrorWidget.builder = (FlutterErrorDetails details) {
-    // 没有 context；按 appLocale.value（用户偏好）选 i18n
-    final t = T.lookup(appLocale.value ?? const Locale('zh', 'CN'));
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        margin: const EdgeInsets.all(8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.red.withValues(alpha: 0.1),
-          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.error_outline, color: Colors.red, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    t.uiRenderCrash,
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                details.exception.toString(),
-                style: const TextStyle(color: Colors.red, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-      ),
+    _routeJsonUiCrash(details);
+    return _InlineRenderCrashWidget(
+      details: details,
+      compact: CurrentPageState.instance.isInJsonApp,
     );
   };
 
@@ -204,12 +409,12 @@ void main() async {
   // 并行：恢复鉴权 + 拉取远程配置（1s 超时，超时 fall back 到缓存/默认值）。
   // 配置必须早于 splash 渲染拿到，splash_text / splash_duration_ms 才能正确生效。
   await Future.wait([
-    AuthService.restoreSession(),
+    if (!localJsonDebug) AuthService.restoreSession(),
     AiChatService.loadProvider(),
-    RemoteConfigService.instance.bootstrap(),
+    if (!localJsonDebug) RemoteConfigService.instance.bootstrap(),
   ]);
   // 如果已登录，后台初始化 IM 连接
-  if (AuthService.isLoggedIn) {
+  if (!localJsonDebug && AuthService.isLoggedIn) {
     IMService.instance.restoreSession();
   }
   runApp(const ProviderScope(child: JsonDslApp()));
@@ -248,6 +453,7 @@ class JsonDslApp extends ConsumerWidget {
     return MaterialApp(
       title: 'MyApp',
       navigatorKey: navigatorKey,
+      navigatorObservers: [appRouteObserver],
       debugShowCheckedModeBanner: false,
       locale: locale, // null = 跟随系统
       supportedLocales: T.supportedLocales,
@@ -439,6 +645,9 @@ class JsonDslApp extends ConsumerWidget {
       themeMode: mode,
       // 使用 builder 注入悬浮球，凌驾于所有路由之上
       builder: (context, child) {
+        if (_localJsonDebugSource() != null && _isLocalDebugHost()) {
+          return child ?? const SizedBox.shrink();
+        }
         return DesignerBall(
           child: child ?? const SizedBox.shrink(),
           getCurrentConfig: () => ProviderScope.containerOf(
@@ -468,7 +677,347 @@ class JsonDslApp extends ConsumerWidget {
           },
         );
       },
-      home: const _SplashGate(child: _AuthGate()),
+      home:
+          _LocalJsonDebugLoader.maybeBuild() ??
+          _WebAppIdStartupLoader.maybeBuild() ??
+          const _SplashGate(child: _AuthGate()),
+    );
+  }
+}
+
+class _LocalJsonDebugLoader extends ConsumerStatefulWidget {
+  final String source;
+  final bool hostedRemote;
+
+  const _LocalJsonDebugLoader({
+    required this.source,
+    this.hostedRemote = false,
+  });
+
+  static Widget? maybeBuild() {
+    final source = _localJsonDebugSource();
+    if (source != null) {
+      if (!_isLocalDebugHost()) return null;
+      return _LocalJsonDebugLoader(source: source);
+    }
+    final remoteSource = _remoteJsonSource();
+    if (remoteSource == null) return null;
+    return _LocalJsonDebugLoader(source: remoteSource, hostedRemote: true);
+  }
+
+  @override
+  ConsumerState<_LocalJsonDebugLoader> createState() =>
+      _LocalJsonDebugLoaderState();
+}
+
+class _LocalJsonDebugLoaderState extends ConsumerState<_LocalJsonDebugLoader> {
+  bool _loading = true;
+  String? _error;
+  String? _fileName;
+
+  void _publishDebugStatus(
+    String status, {
+    String? error,
+    String? fileName,
+  }) {
+    if (!kIsWeb) return;
+    setLocalJsonDebugStatus({
+      'status': status,
+      'source': widget.source,
+      'hostedRemote': widget.hostedRemote,
+      if (error != null) 'error': error,
+      if (fileName != null) 'fileName': fileName,
+      'updatedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<String> _readJsonSource(String source) async {
+    if (widget.hostedRemote &&
+        !_isAllowedHostedRemoteJsonSource(source)) {
+      throw Exception(
+        'remote_file only supports loopback http(s) URLs: $source',
+      );
+    }
+    final uri = Uri.tryParse(source);
+    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+      final resp = await http.get(uri).timeout(const Duration(seconds: 20));
+      if (resp.statusCode != 200) {
+        throw Exception('HTTP ${resp.statusCode}: $source');
+      }
+      return resp.body;
+    }
+
+    if (kIsWeb) {
+      final helper = Uri.parse(
+        Uri.base.queryParameters['local_json_server'] ??
+            'http://127.0.0.1:8765/json',
+      );
+      final query = Map<String, String>.from(helper.queryParameters)
+        ..['path'] = source;
+      final resp = await http
+          .get(helper.replace(queryParameters: query))
+          .timeout(const Duration(seconds: 20));
+      if (resp.statusCode != 200) {
+        throw Exception('Local JSON helper ${resp.statusCode}: ${resp.body}');
+      }
+      return resp.body;
+    }
+
+    final content = await NativeFs.readStringAbs(source);
+    if (content == null) {
+      throw Exception('File not found or unreadable: $source');
+    }
+    return content;
+  }
+
+  Future<void> _load() async {
+    _publishDebugStatus('loading');
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final jsonStr = await _readJsonSource(widget.source);
+      final config = json.decode(jsonStr) as Map<String, dynamic>;
+      final interpreter = ref.read(interpreterProvider);
+      interpreter.loadConfig(config);
+      await interpreter.executeSteps();
+      final meta = config['meta'] as Map<String, dynamic>?;
+      final fallback = widget.source.split('/').last;
+      final fileName = resolveDisplayName(meta, fallback: fallback);
+      if (!mounted) return;
+      _publishDebugStatus('loaded', fileName: fileName);
+      setState(() {
+        _fileName = fileName;
+        _loading = false;
+      });
+    } catch (e, stack) {
+      debugPrint('[LocalJsonDebug] load failed: $e\n$stack');
+      if (!mounted) return;
+      _publishDebugStatus('error', error: e.toString());
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('local_json_debug');
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (_error != null) {
+      final cs = Theme.of(context).colorScheme;
+      return Scaffold(
+        appBar: AppBar(title: const Text('Local JSON Debug')),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Failed to load local JSON',
+                  style: TextStyle(
+                    color: cs.error,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SelectableText(widget.source),
+                const SizedBox(height: 12),
+                SelectableText(_error!, style: TextStyle(color: cs.error)),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return JsonScreenView(
+      fileName: _fileName ?? 'Local JSON',
+      isStartupRoot: true,
+    );
+  }
+}
+
+class _WebAppIdStartupLoader extends ConsumerStatefulWidget {
+  final String appid;
+
+  const _WebAppIdStartupLoader({required this.appid});
+
+  static Widget? maybeBuild() {
+    final appid = _webAppIdSource();
+    if (appid == null) return null;
+    return _WebAppIdStartupLoader(appid: appid);
+  }
+
+  @override
+  ConsumerState<_WebAppIdStartupLoader> createState() =>
+      _WebAppIdStartupLoaderState();
+}
+
+class _WebAppIdStartupLoaderState
+    extends ConsumerState<_WebAppIdStartupLoader> {
+  bool _loading = true;
+  String? _error;
+  String? _fileName;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  bool _isValidUuid(String value) {
+    return RegExp(
+      r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+    ).hasMatch(value);
+  }
+
+  Future<Map<String, dynamic>> _resolveApp() async {
+    final appid = widget.appid.trim();
+    if (!_isValidUuid(appid)) {
+      throw Exception('Invalid appid: $appid');
+    }
+
+    final uri = Uri.parse(
+      '${AppConfig.registryUrl}/resolve_appid',
+    ).replace(queryParameters: {'appid': appid});
+    final resp = await http.get(uri).timeout(const Duration(seconds: 20));
+    final data = json.decode(resp.body) as Map<String, dynamic>;
+    if (resp.statusCode != 200) {
+      throw Exception(data['error']?.toString() ?? 'HTTP ${resp.statusCode}');
+    }
+    return data;
+  }
+
+  Future<Map<String, dynamic>> _downloadConfig(
+    Map<String, dynamic> resolved,
+  ) async {
+    final downloadUrl = resolved['download_url']?.toString() ?? '';
+    if (downloadUrl.isEmpty) {
+      final name = resolved['name']?.toString() ?? '';
+      final version = resolved['version']?.toString() ?? '*';
+      if (name.isEmpty) {
+        throw Exception(T.current.mainCantResolveAppConfigError);
+      }
+      final config = await CacheManager.instance.getResource(
+        name,
+        VersionConstraint.parse(version),
+        type: 'app',
+      );
+      if (config == null) {
+        throw Exception(T.current.mainCantResolveAppConfigError);
+      }
+      return config;
+    }
+
+    final resp = await http
+        .get(Uri.parse(downloadUrl))
+        .timeout(const Duration(seconds: 30));
+    if (resp.statusCode != 200) {
+      throw Exception('Download HTTP ${resp.statusCode}');
+    }
+    return json.decode(resp.body) as Map<String, dynamic>;
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final resolved = await _resolveApp();
+      final config = await _downloadConfig(resolved);
+      final interpreter = ref.read(interpreterProvider);
+      interpreter.loadConfig(config);
+      await interpreter.executeSteps();
+      unawaited(
+        RegistryUsageService.recordRun(
+          resolved['name']?.toString() ?? '',
+          source: 'web_appid_startup',
+        ),
+      );
+
+      final meta = config['meta'] as Map<String, dynamic>?;
+      final fallback =
+          resolved['displayName']?.toString() ??
+          resolved['name']?.toString() ??
+          widget.appid;
+      final fileName = resolveDisplayName(meta, fallback: fallback);
+      if (!mounted) return;
+      setState(() {
+        _fileName = fileName;
+        _loading = false;
+      });
+    } catch (e, stack) {
+      debugPrint('[WebAppIdStartup] load failed: $e\n$stack');
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    CurrentPageState.instance.setFrameworkPage('web_appid_startup');
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    if (_error != null) {
+      final cs = Theme.of(context).colorScheme;
+      return Scaffold(
+        appBar: AppBar(title: const Text('MyApp')),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Failed to open app',
+                  style: TextStyle(
+                    color: cs.error,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SelectableText(widget.appid),
+                const SizedBox(height: 12),
+                SelectableText(_error!, style: TextStyle(color: cs.error)),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: _load,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return JsonScreenView(
+      fileName: _fileName ?? widget.appid,
+      isStartupRoot: true,
     );
   }
 }
@@ -579,11 +1128,17 @@ class _AuthGate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     CurrentPageState.instance.setFrameworkPage('auth_gate');
-    return ValueListenableBuilder<bool>(
-      valueListenable: AuthService.authNotifier,
-      builder: (context, loggedIn, _) {
-        if (loggedIn) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([
+        AuthService.authNotifier,
+        AuthService.guestNotifier,
+      ]),
+      builder: (context, _) {
+        if (AuthService.isLoggedIn) {
           IMService.instance.login();
+          return const FilePickerPage();
+        }
+        if (AuthService.isGuestMode) {
           return const FilePickerPage();
         }
         return AuthPage(onAuthSuccess: () {});
@@ -805,14 +1360,19 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
     });
 
     try {
-      final name = app['name'] as String;
-      final version = app['version'] as String;
+      final name = app['name']?.toString() ?? '';
+      final version = app['version']?.toString().trim() ?? '';
+      if (name.isEmpty) {
+        throw Exception(T.current.mainCantResolveAppConfigError);
+      }
 
-      // 使用 CacheManager 走统一的热更新缓存策略，传确切的版本号进行约束
+      // 市场详情页选择的是要运行的具体版本；这里必须精确解析，避免
+      // "^1.5.1 + preferLatest" 把旧版本又升级成最新版，导致版本对比失真。
       final config = await CacheManager.instance.getResource(
         name,
-        VersionConstraint.parse('^$version'),
+        VersionConstraint.parse(version.isEmpty ? '*' : version),
         type: 'app',
+        preferLatest: version.isEmpty,
       );
 
       if (config == null) {
@@ -822,6 +1382,12 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
       final interpreter = ref.read(interpreterProvider);
       interpreter.loadConfig(config);
       await interpreter.executeSteps();
+      unawaited(
+        RegistryUsageService.recordRun(
+          name,
+          source: isStartupRoot ? 'startup_market' : 'market',
+        ),
+      );
 
       // 用 displayName（多语言）作为 fileName 标题；优先 config.meta，再回退到 app dict
       final configMeta = config['meta'] as Map<String, dynamic>?;
@@ -974,12 +1540,14 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
               // Top bar
               Row(
                 children: [
-                  Text(
-                    t.homeAppTitle,
-                    style: GoogleFonts.inter(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: cs.onSurface,
+                  HiddenEnvEntry(
+                    child: Text(
+                      t.homeAppTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: cs.onSurface,
+                      ),
                     ),
                   ),
                   const Spacer(),
@@ -1066,6 +1634,17 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                           ),
                         ),
                       ],
+                    )
+                  else
+                    IconButton(
+                      tooltip: t.authLoginButton,
+                      icon: Icon(
+                        Icons.account_circle_outlined,
+                        color: cs.onSurface,
+                      ),
+                      onPressed: () {
+                        AuthService.exitGuestMode();
+                      },
                     ),
                 ],
               ),
@@ -1096,7 +1675,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                     child: KeyedSubtree(
                       key: OnboardingKeys.marketCard,
                       child: _buildEntryCard(
-                        icon: Icons.store_outlined,
+                        icon: Icons.travel_explore_outlined,
                         title: t.homeMarket,
                         subtitle: t.homeMarketSubtitle,
                         onTap: _loading ? null : _openMarket,
@@ -1136,9 +1715,17 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
                           messenger.showSnackBar(
                             const SnackBar(
                               content: Text(
-                                'IM 仅支持 iOS / Android（OpenIM SDK 限制）。请在 iOS 模拟器或真机上运行。',
+                                'IM 仅支持 iOS / Android / Web（OpenIM SDK 限制）。桌面端暂不支持。',
                               ),
                               duration: Duration(seconds: 3),
+                            ),
+                          );
+                          return;
+                        }
+                        if (!AuthService.isLoggedIn) {
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(T.of(context).chatErrPleaseLogin),
                             ),
                           );
                           return;
@@ -1369,7 +1956,7 @@ class _FilePickerPageState extends ConsumerState<FilePickerPage> {
 }
 
 // ============================================================
-// 应用市场页面
+// 探索页面
 // ============================================================
 
 class _MarketPage extends StatefulWidget {
@@ -1391,12 +1978,18 @@ class _MarketPageState extends State<_MarketPage> {
   int _page = 1;
   String? _error;
   int _selectedTabIndex = 0; // 0: App, 1: Library
+  List<Map<String, dynamic>> _namespaces = const [
+    {'name': '/', 'display_name': 'Official', 'package_count': 0},
+  ];
+  bool _namespacesLoading = true;
+  String _selectedNamespace = '/';
   final TextEditingController _searchController = TextEditingController();
   Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
+    _fetchNamespaces();
     _fetchApps();
   }
 
@@ -1405,6 +1998,42 @@ class _MarketPageState extends State<_MarketPage> {
     _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchNamespaces() async {
+    try {
+      final resp = await http
+          .get(Uri.parse('${AppConfig.registryUrl}/namespaces'))
+          .timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) throw Exception('HTTP ${resp.statusCode}');
+      final data = json.decode(resp.body) as Map<String, dynamic>;
+      final list = (data['namespaces'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .toList();
+      final hasOfficial = list.any((ns) => ns['name']?.toString() == '/');
+      final namespaces = [
+        if (!hasOfficial)
+          <String, dynamic>{
+            'name': '/',
+            'display_name': 'Official',
+            'package_count': 0,
+          },
+        ...list,
+      ];
+      if (!mounted) return;
+      setState(() {
+        _namespaces = namespaces;
+        _namespacesLoading = false;
+        if (!_namespaces.any(
+          (ns) => ns['name']?.toString() == _selectedNamespace,
+        )) {
+          _selectedNamespace = '/';
+        }
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _namespacesLoading = false);
+    }
   }
 
   Future<void> _fetchApps({bool reset = true}) async {
@@ -1462,6 +2091,7 @@ class _MarketPageState extends State<_MarketPage> {
           'type': type,
           'page': nextPage.toString(),
           'per_page': _pageSize.toString(),
+          'namespace': _selectedNamespace,
           if (query.isNotEmpty) 'q': query,
         },
       );
@@ -1513,6 +2143,64 @@ class _MarketPageState extends State<_MarketPage> {
       });
       _fetchApps();
     }
+  }
+
+  String _spaceLabel(BuildContext context) => localePick(context, '空间', 'Space');
+
+  String _officialSpaceLabel(BuildContext context) =>
+      localePick(context, '官方', 'Official');
+
+  String _namespaceLabel(BuildContext context, Map<String, dynamic> ns) {
+    final name = ns['name']?.toString() ?? '/';
+    final displayName = name == '/'
+        ? _officialSpaceLabel(context)
+        : (ns['display_name']?.toString().isNotEmpty == true
+              ? ns['display_name'].toString()
+              : name);
+    final count = ns['package_count'];
+    final suffix = count is num ? ' · ${count.toInt()}' : '';
+    return name == '/' ? '$displayName /$suffix' : '$displayName$suffix';
+  }
+
+  void _onNamespaceChanged(String? namespace) {
+    if (namespace == null || namespace == _selectedNamespace) return;
+    setState(() => _selectedNamespace = namespace);
+    if (_selectedTabIndex != 2) {
+      _fetchApps();
+    }
+  }
+
+  Widget _buildNamespaceSelector(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return DropdownMenu<String>(
+          key: ValueKey(_selectedNamespace),
+          width: constraints.maxWidth,
+          initialSelection: _selectedNamespace,
+          enabled: !_namespacesLoading && _selectedTabIndex != 2,
+          enableFilter: true,
+          requestFocusOnTap: true,
+          leadingIcon: const Icon(Icons.travel_explore_outlined),
+          label: Text(_spaceLabel(context)),
+          inputDecorationTheme: InputDecorationTheme(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
+          ),
+          dropdownMenuEntries: _namespaces.map((ns) {
+            final name = ns['name']?.toString() ?? '/';
+            return DropdownMenuEntry<String>(
+              value: name,
+              label: _namespaceLabel(context, ns),
+            );
+          }).toList(),
+          onSelected: _onNamespaceChanged,
+        );
+      },
+    );
   }
 
   @override
@@ -1615,11 +2303,7 @@ class _MarketPageState extends State<_MarketPage> {
                         ),
                       ),
                       child: Text(
-                        Localizations.localeOf(
-                              context,
-                            ).languageCode.startsWith('zh')
-                            ? '收藏'
-                            : 'Favorites',
+                        localePick(context, '收藏', 'Favorites'),
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 15,
@@ -1666,6 +2350,10 @@ class _MarketPageState extends State<_MarketPage> {
                 isDense: true,
               ),
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: _buildNamespaceSelector(context),
           ),
           Expanded(child: _buildMarketBody(context, cs, t)),
         ],
@@ -1839,13 +2527,17 @@ class _MarketPageState extends State<_MarketPage> {
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () async {
-          // 先进详情页；详情页"运行"会 pop 返回 'run'，这里再 pop 市场 + 加载
-          final result = await Navigator.of(context).push<String>(
+          // 先进详情页；详情页"运行"会 pop 返回带 version 的 app map。
+          final result = await Navigator.of(context).push<Object?>(
             MaterialPageRoute(builder: (_) => MarketAppDetailPage(app: app)),
           );
-          if (result == 'run' && context.mounted) {
+          if (result is Map && context.mounted) {
             Navigator.of(context).pop();
-            widget.onSelect(app);
+            await widget.onSelect(Map<String, dynamic>.from(result));
+          } else if (result == 'run' && context.mounted) {
+            // 兼容旧详情页返回值。
+            Navigator.of(context).pop();
+            await widget.onSelect(app);
           } else if (_selectedTabIndex == 2 && mounted) {
             // 收藏 tab：返回时刷新（详情页里可能取消了收藏）
             _fetchApps();
@@ -1948,40 +2640,169 @@ class _MarketPageState extends State<_MarketPage> {
 // JSON 渲染页面
 // ============================================================
 
-// 检测子树里是否存在会返回 Expanded 的 widget（list、非 shrinkWrap 的 grid、
-// refresh —— refresh 自身也包了 Expanded）。命中时屏幕级别要走 Column 而不是
-// SingleChildScrollView，否则 Expanded 在 unbounded 高度里会抛 RenderFlex 异常。
-bool _containsListInChildren(List<dynamic> children) {
+// 检测子树里是否存在必须吃满有界高度的 widget（非 shrinkWrap list/grid、
+// refresh、顶层/纵向 flex 等）。命中时屏幕级别要走 Column 而不是
+// SingleChildScrollView，否则 Expanded/ListView 在 unbounded 高度里会抛
+// RenderFlex 异常。
+//
+// 注意：横向 Row 里的 expanded/flexible 是正常的两列/左右布局写法，不应该让
+// 整个长页面失去外层滚动。这里会跟踪父级 flex 方向，只把纵向 flex 视为需要
+// 有界高度。
+bool _containsListInChildren(
+  List<dynamic> children, {
+  String parentLayout = 'column',
+}) {
   for (final child in children) {
     if (child is Map<String, dynamic>) {
-      final type = child['type'];
-      if (type == 'list') return true;
-      if (type == 'grid' && child['shrinkWrap'] != true) return true;
-      if (type == 'refresh') return true;
-      // flame_game 跟 list 一样想吃无限高度（Flame GameWidget 占满父级），
-      // 没显式给 height 时屏幕级要走 Column 而不是 SingleChildScrollView。
-      if (type == 'flame_game' && child['height'] == null) return true;
-      // expanded 只在 Flex 父级里有效——出现在屏幕顶层就必须走 Column 布局，
-      // 否则 SingleChildScrollView 给的是 unbounded 高度，Expanded 直接哑火。
-      if (type == 'expanded') return true;
-      // ref 引用的模板里可能塞 list/refresh/expanded（典型：launcher 组件库），
-      // 这边解析阶段没法看进 dep 模板，保守按 Column 处理（拿不到滚动条但不崩；
-      // 如果 ref 出来是个短小的 leaf，组件作者自己负责裹个 SingleChildScrollView）。
-      if (type == 'ref') return true;
-      // 递归 children 字段
-      final subChildren = child['children'] as List<dynamic>?;
-      if (subChildren != null && _containsListInChildren(subChildren)) {
-        return true;
-      }
-      // 递归单 child 字段（refresh / padding / align / center 等）
-      final singleChild = child['child'];
-      if (singleChild is Map<String, dynamic> &&
-          _containsListInChildren([singleChild])) {
+      if (_needsBoundedVerticalParent(child, parentLayout: parentLayout)) {
         return true;
       }
     }
   }
   return false;
+}
+
+bool _needsBoundedVerticalParent(
+  Map<String, dynamic> child, {
+  required String parentLayout,
+}) {
+  final type = child['type'];
+  if (type == 'list' && child['shrinkWrap'] != true) return true;
+  if (type == 'cupertino_refresh_list' && child['shrinkWrap'] != true) {
+    return true;
+  }
+  if (type == 'reorderable_list') return true;
+  if (type == 'grid' && child['shrinkWrap'] != true) return true;
+  if (type == 'refresh') return true;
+  // flame_game 跟 list 一样想吃无限高度（Flame GameWidget 占满父级），
+  // 没显式给 height 时屏幕级要走 Column 而不是 SingleChildScrollView。
+  if (type == 'flame_game' && child['height'] == null) return true;
+  // ref 引用的模板里可能塞 list/refresh/expanded（典型：launcher 组件库），
+  // 这边解析阶段没法看进 dep 模板，保守按 Column 处理（拿不到滚动条但不崩；
+  // 如果 ref 出来是个短小的 leaf，组件作者自己负责裹个 SingleChildScrollView）。
+  if (type == 'ref') return true;
+
+  final position = child['position'];
+  final isFlexPosition =
+      position is Map<String, dynamic> && position['type'] == 'flex';
+  final isFlexNode = type == 'expanded' || type == 'flexible' || isFlexPosition;
+  if (isFlexNode && parentLayout != 'row') return true;
+
+  // 递归 children 字段。不同容器的默认 layout 不同：container 默认 row，
+  // card/screen 默认 column。判断错会把正常两列卡片页误判成不可滚。
+  final subChildren = child['children'] as List<dynamic>?;
+  if (subChildren != null &&
+      _containsListInChildren(
+        subChildren,
+        parentLayout: _childrenLayoutForNode(child),
+      )) {
+    return true;
+  }
+
+  // 递归单 child 字段（refresh / padding / align / center / expanded 等）。
+  // 单 child wrapper 自身不是 Flex 父级，所以内部 expanded 仍然需要被拦住。
+  final singleChild = child['child'];
+  if (singleChild is Map<String, dynamic> &&
+      _needsBoundedVerticalParent(singleChild, parentLayout: 'box')) {
+    return true;
+  }
+
+  return false;
+}
+
+String _childrenLayoutForNode(Map<String, dynamic> child) {
+  final rawLayout = child['layout']?.toString();
+  if (rawLayout != null && rawLayout.isNotEmpty) return rawLayout;
+  final type = child['type'];
+  if (type == 'container') return 'row';
+  if (type == 'card') return 'column';
+  if (type == 'stack') return 'stack';
+  if (type == 'wrap') return 'wrap';
+  return 'column';
+}
+
+List<dynamic> _screenChildren(Map<String, dynamic> screenConfig) {
+  final children = screenConfig['children'];
+  if (children is List<dynamic>) return children;
+
+  // Compatibility for AI-generated JSON that uses a Flutter-like
+  // screen.body shape. The canonical DSL field remains screen.children.
+  final body = screenConfig['body'];
+  if (body is List<dynamic>) return body;
+  if (body is Map<String, dynamic>) return [body];
+  return const [];
+}
+
+void _handleJsonScreenBack(BuildContext context, JsonInterpreter interpreter) {
+  if (interpreter.canNavigateBack) {
+    interpreter.navigateBack();
+  } else {
+    interpreter.dismissAllModals();
+    Navigator.of(context).maybePop();
+  }
+}
+
+Map<String, dynamic> _screenContentConfig(Map<String, dynamic> screenConfig) {
+  if (screenConfig['children'] is List<dynamic>) return screenConfig;
+
+  final body = screenConfig['body'];
+  if (body is Map<String, dynamic> &&
+      body['type'] == 'container' &&
+      body['children'] is List<dynamic>) {
+    final merged = Map<String, dynamic>.from(screenConfig);
+    merged['children'] = body['children'];
+    if (body.containsKey('layout')) merged['layout'] = body['layout'];
+    if (body.containsKey('padding')) merged['padding'] = body['padding'];
+    return merged;
+  }
+  return screenConfig;
+}
+
+bool _shouldShowWebJsonBackButton({
+  required BuildContext context,
+  required JsonInterpreter interpreter,
+  required bool isStartupRoot,
+  required bool hasFrameworkBackButton,
+}) {
+  if (!kIsWeb || hasFrameworkBackButton) return false;
+  if (interpreter.canNavigateBack) return true;
+  if (isStartupRoot) return false;
+  final route = ModalRoute.of(context);
+  return route?.canPop ?? Navigator.of(context).canPop();
+}
+
+class _WebJsonBackOverlay extends StatelessWidget {
+  final Widget child;
+  final VoidCallback onBack;
+
+  const _WebJsonBackOverlay({required this.child, required this.onBack});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Stack(
+      children: [
+        Positioned.fill(child: child),
+        PositionedDirectional(
+          top: 12,
+          start: 12,
+          child: Material(
+            color: cs.surface.withValues(alpha: 0.86),
+            elevation: 6,
+            shadowColor: Colors.black.withValues(alpha: 0.22),
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: IconButton(
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              icon: const Icon(Icons.arrow_back_rounded),
+              color: cs.onSurface,
+              onPressed: onBack,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// 根据当前 screen ID 渲染对应的 JSON 页面
@@ -2075,8 +2896,12 @@ class JsonScreenView extends ConsumerWidget {
     JsonInterpreter interpreter,
     List<dynamic> screens,
   ) {
-    final children = screenConfig['children'] as List<dynamic>? ?? [];
-    final hasListWidget = _containsListInChildren(children);
+    final contentConfig = _screenContentConfig(screenConfig);
+    final children = _screenChildren(contentConfig);
+    final hasListWidget = _containsListInChildren(
+      children,
+      parentLayout: (contentConfig['layout'] ?? 'column').toString(),
+    );
 
     final childWidgets = children
         .whereType<Map<String, dynamic>>()
@@ -2092,8 +2917,14 @@ class JsonScreenView extends ConsumerWidget {
 
     // 自定义 appBar（screen.appBar Map 配置时启用）
     final customAppBarConfig = screenConfig['appBar'];
-    PreferredSizeWidget appBar;
-    if (customAppBarConfig is Map<String, dynamic>) {
+    PreferredSizeWidget? appBar;
+    var hasFrameworkBackButton = false;
+    if (customAppBarConfig == false) {
+      appBar = null;
+    } else if (customAppBarConfig is Map<String, dynamic>) {
+      final leading = customAppBarConfig['leading'];
+      hasFrameworkBackButton =
+          leading is Map<String, dynamic> && leading['action'] is Map;
       appBar = appbar_helper.buildAppBar(
         context,
         customAppBarConfig,
@@ -2109,6 +2940,7 @@ class JsonScreenView extends ConsumerWidget {
       // 否则 Navigator 会自动塞 BackButton 进来）。
       // JSON-APP 内部 navigate 出来的子 screen，canNavigateBack=true 时正常显示返回。
       final hideLeading = isStartupRoot && !interpreter.canNavigateBack;
+      hasFrameworkBackButton = !hideLeading;
       appBar = AppBar(
         title: Text(titleText),
         centerTitle: true,
@@ -2117,14 +2949,7 @@ class JsonScreenView extends ConsumerWidget {
             ? null
             : IconButton(
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  // 优先回退到上一屏；历史栈空时退出整个 JSON-APP
-                  if (interpreter.canNavigateBack) {
-                    interpreter.navigateBack();
-                  } else {
-                    Navigator.of(context).maybePop();
-                  }
-                },
+                onPressed: () => _handleJsonScreenBack(context, interpreter),
               ),
       );
     }
@@ -2136,30 +2961,48 @@ class JsonScreenView extends ConsumerWidget {
       drawer = drawer_helper.buildDrawer(context, drawerConfig, interpreter);
     }
 
+    final footerButtonsConfig = screenConfig['footerButtons'];
+    final footerButtons = footerButtonsConfig is List
+        ? footerButtonsConfig
+              .whereType<Map<String, dynamic>>()
+              .map((childJson) => interpreter.buildWidget(context, childJson))
+              .toList()
+        : null;
+    final floatingActionButtonConfig = screenConfig['floatingActionButton'];
+    final floatingActionButton =
+        floatingActionButtonConfig is Map<String, dynamic>
+        ? interpreter.buildWidget(context, floatingActionButtonConfig)
+        : null;
+
     // screen.layout=stack 时，需要全屏 Stack（绝对定位才有参考系），
     // 不能再放进 SingleChildScrollView 里——否则 Stack 高度坍缩到子项最大尺寸
-    final isStackLayout = (screenConfig['layout'] ?? 'column') == 'stack';
+    final isStackLayout = (contentConfig['layout'] ?? 'column') == 'stack';
 
     final Widget bodyContent;
     if (isStackLayout) {
       bodyContent = buildScreenLayout(screenConfig, childWidgets);
     } else if (hasListWidget) {
-      bodyContent = Padding(
-        padding: EdgeInsets.all(
-          (screenConfig['padding'] as num?)?.toDouble() ?? 0,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: childWidgets,
-        ),
-      );
+      bodyContent = buildScreenLayout(contentConfig, childWidgets);
     } else {
       bodyContent = SingleChildScrollView(
-        child: buildScreenLayout(screenConfig, childWidgets),
+        child: buildScreenLayout(contentConfig, childWidgets),
       );
     }
 
-    return PopScope(
+    final onLoad = screenConfig['onLoad'];
+    final body =
+        _shouldShowWebJsonBackButton(
+          context: context,
+          interpreter: interpreter,
+          isStartupRoot: isStartupRoot,
+          hasFrameworkBackButton: hasFrameworkBackButton,
+        )
+        ? _WebJsonBackOverlay(
+            onBack: () => _handleJsonScreenBack(context, interpreter),
+            child: bodyContent,
+          )
+        : bodyContent;
+    final screen = PopScope(
       // 拦截系统返回手势（iOS edge swipe / Android 返回键）：
       //   - 内部 JSON 历史栈非空 → 拦下来走 navigateBack
       //   - isStartupRoot → 整个就这个 app，没地方退，也拦下来吃掉
@@ -2181,10 +3024,70 @@ class JsonScreenView extends ConsumerWidget {
         backgroundColor: bgColor,
         appBar: appBar,
         drawer: drawer,
-        body: SafeArea(child: bodyContent),
+        persistentFooterButtons: footerButtons,
+        floatingActionButton: floatingActionButton,
+        body: SafeArea(child: body),
       ),
     );
+
+    if (onLoad is Map<String, dynamic>) {
+      return _JsonScreenOnLoad(
+        screenId: interpreter.currentScreenId,
+        onLoad: onLoad,
+        interpreter: interpreter,
+        child: screen,
+      );
+    }
+
+    return screen;
   }
+}
+
+class _JsonScreenOnLoad extends StatefulWidget {
+  final String screenId;
+  final Map<String, dynamic> onLoad;
+  final JsonInterpreter interpreter;
+  final Widget child;
+
+  const _JsonScreenOnLoad({
+    required this.screenId,
+    required this.onLoad,
+    required this.interpreter,
+    required this.child,
+  });
+
+  @override
+  State<_JsonScreenOnLoad> createState() => _JsonScreenOnLoadState();
+}
+
+class _JsonScreenOnLoadState extends State<_JsonScreenOnLoad> {
+  String? _loadedScreenId;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleIfNeeded();
+  }
+
+  @override
+  void didUpdateWidget(covariant _JsonScreenOnLoad oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.screenId != widget.screenId) {
+      _scheduleIfNeeded();
+    }
+  }
+
+  void _scheduleIfNeeded() {
+    if (_loadedScreenId == widget.screenId) return;
+    _loadedScreenId = widget.screenId;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      widget.interpreter.executeAction(widget.onLoad, context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 // ============================================================
@@ -2252,12 +3155,16 @@ class _CrashPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: SingleChildScrollView(
-                  child: Text(
-                    stackTrace,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontFamily: 'monospace',
-                      color: cs.onSurface,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Text(
+                      stackTrace,
+                      softWrap: false,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'monospace',
+                        color: cs.onSurface,
+                      ),
                     ),
                   ),
                 ),
@@ -2365,7 +3272,8 @@ class _TabScreenViewState extends State<_TabScreenView> {
 
     // 当前 tab 配置
     final currentTab = tabs[_currentIndex] as Map<String, dynamic>;
-    final tabChildren = currentTab['children'] as List<dynamic>? ?? [];
+    final currentTabContent = _screenContentConfig(currentTab);
+    final tabChildren = _screenChildren(currentTabContent);
     final tabBgColorStr = currentTab['backgroundColor'] as String?;
 
     Color? tabBgColor;
@@ -2375,7 +3283,10 @@ class _TabScreenViewState extends State<_TabScreenView> {
     }
 
     // 构建当前 tab 的内容
-    final hasListWidget = _containsListInChildren(tabChildren);
+    final hasListWidget = _containsListInChildren(
+      tabChildren,
+      parentLayout: (currentTabContent['layout'] ?? 'column').toString(),
+    );
     final childWidgets = tabChildren
         .whereType<Map<String, dynamic>>()
         .map((childJson) => widget.interpreter.buildWidget(context, childJson))
@@ -2383,6 +3294,7 @@ class _TabScreenViewState extends State<_TabScreenView> {
 
     final padding =
         (currentTab['padding'] as num?)?.toDouble() ??
+        (currentTabContent['padding'] as num?)?.toDouble() ??
         (widget.screenConfig['padding'] as num?)?.toDouble() ??
         0;
 
@@ -2452,13 +3364,7 @@ class _TabScreenViewState extends State<_TabScreenView> {
               ? null
               : IconButton(
                   icon: const Icon(Icons.arrow_back),
-                  onPressed: () {
-                    if (interpreter.canNavigateBack) {
-                      interpreter.navigateBack();
-                    } else {
-                      Navigator.of(context).maybePop();
-                    }
-                  },
+                  onPressed: () => _handleJsonScreenBack(context, interpreter),
                 ),
         ),
         body: SafeArea(child: body),
@@ -2989,19 +3895,39 @@ class _PublishDialogState extends State<_PublishDialog> {
     final t = T.of(context);
 
     return AlertDialog(
-      title: Row(
+      title: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: Text(t.publishDialogTitle)),
-          TextButton.icon(
-            onPressed: _inviteMember,
-            icon: const Icon(Icons.person_add, size: 18),
-            label: Text(t.publishInviteMember),
+          Text(
+            t.publishDialogTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(width: 8),
-          TextButton.icon(
-            onPressed: _createNamespace,
-            icon: const Icon(Icons.add, size: 18),
-            label: Text(t.publishCreateNamespace),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              TextButton.icon(
+                onPressed: _inviteMember,
+                icon: const Icon(Icons.person_add, size: 18),
+                label: Text(
+                  t.publishInviteMember,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              TextButton.icon(
+                onPressed: _createNamespace,
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(
+                  t.publishCreateNamespace,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ],
       ),

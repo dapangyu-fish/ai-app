@@ -1,0 +1,201 @@
+{
+  "dsl": "3.3",
+  "appid": "7c54d820-62b6-5b6f-ba18-b3938ddc6db8",
+  "meta": {
+    "name": "gsy_flutter_demo/066-anim-bubble-gum-demo-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "一个国外友人很惊艳的动画效果",
+      "en": "Impressive animation demo"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例（纯 JSON DSL）：一个国外友人很惊艳的动画效果",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "一个国外友人很惊艳的动画效果",
+      "sourcePath": "lib/widget/animation/anim_bubble_gum.dart",
+      "deferredAlias": "anim_bubble_gum",
+      "widgetClass": "AnimBubbleGumDemoPage",
+      "category": "animation",
+      "routeIndex": 66,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-particle-stream-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "一个国外友人很惊艳的动画效果",
+      "upstreamSource": "lib/widget/animation/anim_bubble_gum.dart",
+      "upstreamWidget": "AnimBubbleGumDemoPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-particle-stream-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "AnimBubbleGumDemoPage",
+        "layout": "stack",
+        "backgroundColor": "#F8BBD0",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "child": {
+              "type": "particle_stream_canvas",
+              "backgroundColor": "#F8BBD0",
+              "intervalMs": 50,
+              "appendCount": 29,
+              "maxCount": 299,
+              "runImmediately": true,
+              "x": {
+                "+": [
+                  {
+                    "/": [
+                      "w",
+                      2
+                    ]
+                  },
+                  {
+                    "*": [
+                      "w",
+                      0.1,
+                      {
+                        "cos": {
+                          "/": [
+                            "seq",
+                            59
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "y": {
+                "+": [
+                  {
+                    "/": [
+                      "h",
+                      2
+                    ]
+                  },
+                  {
+                    "*": [
+                      "h",
+                      0.1,
+                      {
+                        "cos": {
+                          "/": [
+                            "seq",
+                            99
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "radius": {
+                "+": [
+                  {
+                    "/": [
+                      "w",
+                      10
+                    ]
+                  },
+                  {
+                    "*": [
+                      {
+                        "/": [
+                          "h",
+                          20
+                        ]
+                      },
+                      {
+                        "sin": {
+                          "/": [
+                            {
+                              "/": [
+                                "seq",
+                                79
+                              ]
+                            },
+                            6
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "hue": {
+                "%": [
+                  {
+                    "+": [
+                      340,
+                      {
+                        "*": [
+                          "seq",
+                          0.2
+                        ]
+                      }
+                    ]
+                  },
+                  360
+                ]
+              },
+              "saturation": 0.75,
+              "lightness": {
+                "min": [
+                  1,
+                  {
+                    "+": [
+                      0.1,
+                      {
+                        "*": [
+                          0.1,
+                          {
+                            "abs": {
+                              "sin": {
+                                "/": [
+                                  "seq",
+                                  49
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "alpha": 1,
+              "linearLightnessOffset": 0.7,
+              "radialHighlight": true,
+              "radialHighlightColor": "#53FFFFFF",
+              "postRotate": {
+                "/": [
+                  "pi",
+                  10800
+                ]
+              }
+            }
+          }
+        ],
+        "appBar": {
+          "title": "AnimBubbleGumDemoPage"
+        }
+      }
+    ]
+  }
+}

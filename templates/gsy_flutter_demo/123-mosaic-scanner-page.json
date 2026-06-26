@@ -1,0 +1,99 @@
+{
+  "dsl": "3.3",
+  "appid": "d96c650e-7d95-5766-b6c5-ad900bbb1891",
+  "meta": {
+    "name": "gsy_flutter_demo/123-mosaic-scanner-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "Mosaic Scanner ",
+      "en": "Mosaic Scanner "
+    },
+    "description": "gsy_flutter_demo JSON 纯实现子示例：Mosaic Scanner ",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "Mosaic Scanner ",
+      "sourcePath": "lib/widget/visual/mosaic_scanner_page.dart",
+      "deferredAlias": "mosaic_scanner_page",
+      "widgetClass": "MosaicScannerPage",
+      "category": "visual",
+      "routeIndex": 123,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-web-fallback-v1"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "upstreamTitle": "Mosaic Scanner ",
+      "upstreamSource": "lib/widget/visual/mosaic_scanner_page.dart",
+      "upstreamWidget": "MosaicScannerPage",
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-web-fallback-v1"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "",
+        "layout": "stack",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "height": 56,
+            "child": {
+              "type": "container",
+              "height": 56,
+              "color": "#2196F3",
+              "children": []
+            }
+          },
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 56,
+            "bottom": 0,
+            "child": {
+              "type": "container",
+              "layout": "column",
+              "alignment": "center",
+              "mainAxisAlignment": "center",
+              "crossAxisAlignment": "center",
+              "children": [
+                {
+                  "type": "container",
+                  "padding": {
+                    "top": 30
+                  },
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "当前效果不支持 Web ，请在 App 查看",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#212121",
+                        "textAlign": "center"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "appBar": {
+          "title": ""
+        }
+      }
+    ]
+  }
+}

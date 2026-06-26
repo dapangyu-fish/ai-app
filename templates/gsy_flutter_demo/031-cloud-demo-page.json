@@ -1,0 +1,111 @@
+{
+  "dsl": "3.3",
+  "appid": "f918e26c-f415-515f-9208-b57fee896989",
+  "meta": {
+    "name": "gsy_flutter_demo/031-cloud-demo-page",
+    "version": "0.1.5",
+    "type": "app",
+    "displayName": {
+      "zh": "自定义布局实现云词图展示",
+      "en": "Word cloud with custom layout"
+    },
+    "description": "CloudDemoPage：自定义布局实现云词图展示",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "自定义布局实现云词图展示",
+      "sourcePath": "lib/widget/basic/cloud/cloud_demo_page.dart",
+      "deferredAlias": "cloud_demo_page",
+      "widgetClass": "CloudDemoPage",
+      "category": "basic",
+      "routeIndex": 31,
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v2"
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "portStatus": "ported_json",
+      "portVersion": "json-dsl-clean-v2"
+    },
+    "functions": {}
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "CloudDemoPage",
+        "layout": "stack",
+        "children": [
+          {
+            "type": "positioned",
+            "left": 0,
+            "right": 0,
+            "top": 0,
+            "bottom": 0,
+            "child": {
+              "type": "center",
+              "child": {
+                "type": "spiral_flow",
+                "ratio": 1,
+                "fitToSquare": true,
+                "padding": {
+                  "vertical": 10,
+                  "horizontal": 6
+                },
+                "color": "#795548",
+                "children": [
+                  { "type": "text", "value": "CloudGSY11111", "style": { "fontSize": 10, "color": "#FFFFD740" } },
+                  { "type": "text", "value": "CloudGSY3333333T", "style": { "fontSize": 16, "color": "#FFEEFF41" } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSYXXXXXXX", "style": { "fontSize": 14, "color": "#FF000000" } } },
+                  { "type": "text", "value": "CloudGSY55", "style": { "fontSize": 33, "color": "#DD000000" } },
+                  { "type": "text", "value": "CloudGSYAA", "style": { "fontSize": 15, "color": "#FF448AFF" } },
+                  { "type": "text", "value": "CloudGSY44", "style": { "fontSize": 16, "color": "#FF536DFE" } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSYBWWWWWW", "style": { "fontSize": 12, "color": "#FFFF5722" } } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSY<<<", "style": { "fontSize": 20, "color": "#FF2196F3" } } },
+                  { "type": "text", "value": "FFFFFFFFFFFFFF", "style": { "fontSize": 12, "color": "#FF2196F3" } },
+                  { "type": "text", "value": "BBBBBBBBBBB", "style": { "fontSize": 14, "color": "#FF7C4DFF" } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSY%%%%", "style": { "fontSize": 20, "color": "#FFFF9800" } } },
+                  { "type": "text", "value": "CloudGSY%%%%%%%", "style": { "fontSize": 12, "color": "#FF2196F3" } },
+                  { "type": "text", "value": "CloudGSY&&&&", "style": { "fontSize": 10, "color": "#FF536DFE" } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSYCCCC", "style": { "fontSize": 14, "color": "#FFFFFF00" } } },
+                  { "type": "text", "value": "CloudGSY****", "style": { "fontSize": 13, "color": "#FF448AFF" } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSYRRRR", "style": { "fontSize": 12, "color": "#FFFF5252" } } },
+                  { "type": "text", "value": "CloudGSYFFFFF", "style": { "fontSize": 12, "color": "#FF2196F3" } },
+                  { "type": "text", "value": "CloudGSYBBBBBBB", "style": { "fontSize": 15, "color": "#FF18FFFF" } },
+                  { "type": "text", "value": "CloudGSY222222", "style": { "fontSize": 16, "color": "#FF2196F3" } },
+                  { "type": "text", "value": "CloudGSY1111111111111111", "style": { "fontSize": 19, "color": "#FF64FFDA" } },
+                  { "type": "text", "value": "CloudGSY####", "style": { "fontSize": 12, "color": "#8A000000" } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSYFDWE", "style": { "fontSize": 14, "color": "#FFE040FB" } } },
+                  { "type": "text", "value": "CloudGSY22222", "style": { "fontSize": 19, "color": "#FF536DFE" } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSY44444", "style": { "fontSize": 18, "color": "#FFFFFF00" } } },
+                  { "type": "text", "value": "CloudGSY33333", "style": { "fontSize": 17, "color": "#FF40C4FF" } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSYXXXXXXXX", "style": { "fontSize": 16, "color": "#FF2196F3" } } },
+                  { "type": "text", "value": "CloudGSYFFFFFFFF", "style": { "fontSize": 14, "color": "#42000000" } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSYZUuzzuuu", "style": { "fontSize": 16, "color": "#FF2196F3" } } },
+                  { "type": "text", "value": "CloudGSYVVVVVVVVV", "style": { "fontSize": 12, "color": "#FFFF9800" } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSY222223", "style": { "fontSize": 13, "color": "#42000000" } } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSYGFD", "style": { "fontSize": 14, "color": "#FFFFFF00" } } },
+                  { "type": "text", "value": "GGGGGGGGGG", "style": { "fontSize": 14, "color": "#FF7C4DFF" } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSYFFFFFF", "style": { "fontSize": 10, "color": "#FF448AFF" } } },
+                  { "type": "text", "value": "CloudGSY222", "style": { "fontSize": 12, "color": "#FFEEFF41" } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSY6666", "style": { "fontSize": 20, "color": "#FF2196F3" } } },
+                  { "type": "text", "value": "CloudGSY33333", "style": { "fontSize": 14, "color": "#FF009688" } },
+                  { "type": "text", "value": "YYYYYYYYYYYYYY", "style": { "fontSize": 14, "color": "#FF7C4DFF" } },
+                  { "type": "text", "value": "CloudGSY  3  ", "style": { "fontSize": 10, "color": "#FF2196F3" } },
+                  { "type": "transform", "rotateZ": 90, "child": { "type": "text", "value": "CloudGSYYYYYY", "style": { "fontSize": 17, "color": "#8A000000" } } },
+                  { "type": "text", "value": "CloudGSYCC", "style": { "fontSize": 11, "color": "#FF40C4FF" } },
+                  { "type": "text", "value": "CloudGSYGGGGG", "style": { "fontSize": 10, "color": "#FF7C4DFF" } }
+                ]
+              }
+            }
+          }
+        ],
+        "padding": 0,
+        "backgroundColor": "#FFFFFF"
+      }
+    ]
+  }
+}

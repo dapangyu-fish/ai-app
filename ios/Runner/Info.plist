@@ -29,6 +29,8 @@
 	     也不需要 ERN/CCATS。改动加密能力时记得回来重新审视这个值 -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>MyAppAPNSEnvironment</key>
+	<string>$(MYAPP_APNS_ENVIRONMENT)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

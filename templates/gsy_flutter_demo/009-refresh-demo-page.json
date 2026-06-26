@@ -1,0 +1,176 @@
+{
+  "dsl": "3.3",
+  "appid": "f471e5d7-d569-515b-9a8a-1b4d960c8bef",
+  "meta": {
+    "name": "gsy_flutter_demo/009-refresh-demo-page",
+    "version": "0.1.3",
+    "type": "app",
+    "displayName": {
+      "zh": "简单上下刷新",
+      "en": "Simple pull refresh"
+    },
+    "description": "gsy_flutter_demo JSON 移植子示例：简单上下刷新",
+    "author": "fish",
+    "upstream": {
+      "repository": "https://github.com/CarGuo/gsy_flutter_demo",
+      "routeTitle": "简单上下刷新",
+      "sourcePath": "lib/widget/basic/refresh_demo_page.dart",
+      "deferredAlias": "refresh_demo_page",
+      "widgetClass": "RefreshDemoPage",
+      "category": "basic",
+      "routeIndex": 9
+    }
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "dataList": [],
+      "isLoadingMore": false
+    },
+    "functions": {
+      "refresh": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@delay",
+            "args": {
+              "ms": 2000
+            }
+          },
+          {
+            "call": "@list_clear",
+            "args": {
+              "var": "global.dataList"
+            }
+          },
+          {
+            "call": "@loop_by_num",
+            "args": {
+              "count": 30,
+              "body": [
+                {
+                  "call": "@list_add",
+                  "args": {
+                    "var": "global.dataList",
+                    "item": "refresh"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "loadMore": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@if",
+            "args": {
+              "condition": {
+                "!": [
+                  {
+                    "var": "global.isLoadingMore"
+                  }
+                ]
+              },
+              "then": [
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.isLoadingMore",
+                    "value": true
+                  }
+                },
+                {
+                  "call": "@delay",
+                  "args": {
+                    "ms": 2000
+                  }
+                },
+                {
+                  "call": "@loop_by_num",
+                  "args": {
+                    "count": 30,
+                    "body": [
+                      {
+                        "call": "@list_add",
+                        "args": {
+                          "var": "global.dataList",
+                          "item": "loadmore"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.isLoadingMore",
+                    "value": false
+                  }
+                }
+              ],
+              "else": []
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "RefreshDemoPage",
+        "layout": "column",
+        "backgroundColor": "#FFFFFF",
+        "children": [
+          {
+            "type": "list",
+            "source": "{{ global.dataList }}",
+            "initialRefresh": true,
+            "emptyState": "none",
+            "item_template": {
+              "type": "card",
+              "layout": "column",
+              "padding": 0,
+              "margin": 4,
+              "borderRadius": 4,
+              "elevation": 1,
+              "children": [
+                {
+                  "type": "container",
+                  "layout": "column",
+                  "children": [
+                    {
+                      "type": "text",
+                      "value": "Item {{ loop.item }} {{ loop.index }}",
+                      "style": {
+                        "fontSize": 14,
+                        "color": "#000000"
+                      }
+                    }
+                  ],
+                  "height": 60,
+                  "padding": 0,
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "start"
+                }
+              ]
+            },
+            "separator": "none",
+            "onRefresh": {
+              "call": "@global.refresh",
+              "args": {}
+            },
+            "onLoadMore": {
+              "call": "@global.loadMore",
+              "args": {}
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
