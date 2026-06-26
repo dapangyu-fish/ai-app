@@ -419,7 +419,118 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   @override
+  // ── 打字机缓冲（AI 回复平滑吐字）──────────────────────────────────────
+  // 真实生成里 codex/opencode 等按「整条消息」吐文本（非 token deltas），加上 SSE 成批投递，
+  // 直接整段上屏会「一大段一大段」跳。这里把「已收到全文」(_typeFull) 与「已显示长度」
+  // (_typeShown) 解耦，用一个 ~60fps timer 平滑地把显示推进到目标，体感像逐字流式。
+  // 对所有 provider/agent + demo 回放都生效，且免疫 SSE 突发。
+  Timer? _typeTimer;
+  String _typeFull = '';
+  int _typeShown = 0;
+  bool _typeIsThinking = false;
+  int _typeScrollTick = 0;
+  // 打字机归属的会话：与流同理，active 切走后不能再把这条流的文字写进别的会话桶。
+  String _typeOwnerSid = '';
+
+  // 设置打字机目标（目标只增不减，_typeShown 持续往后吐）
+  void _setTypewriterTarget(String full) {
+    _typeOwnerSid = _chatService.sessionId; // 调用点已过 isCurrentStream，等于流归属 sid
+    _typeFull = full;
+    if (_typeShown > _typeFull.length) _typeShown = _typeFull.length;
+    if (_typeShown < _typeFull.length) _ensureTypeTimer();
+  }
+
+  void _ensureTypeTimer() {
+    _typeTimer ??= Timer.periodic(
+      const Duration(milliseconds: 16),
+      (_) => _tickTypewriter(),
+    );
+  }
+
+  void _tickTypewriter() {
+    if (!mounted || _typeTimer == null) return;
+    // 归属会话已不是当前 active（用户切走 / loadSession 改了 active）→ 停表，
+    // 不把这条流的文字写进别的会话桶。该会话内容靠切回时的 resume 复原。
+    if (_chatService.sessionId != _typeOwnerSid) {
+      _typeTimer?.cancel();
+      _typeTimer = null;
+      return;
+    }
+    if (_typeShown >= _typeFull.length) {
+      // 追平 → 停掉省电，下个目标到来再起
+      _typeTimer?.cancel();
+      _typeTimer = null;
+      return;
+    }
+    final remaining = _typeFull.length - _typeShown;
+    // 自适应速率：落后越多吐越快（保证不拖尾），每帧 1~40 字
+    int step;
+    if (remaining <= 3) {
+      step = remaining;
+    } else {
+      step = remaining ~/ 6;
+      if (step < 1) step = 1;
+      if (step > 40) step = 40;
+    }
+    _typeShown += step;
+    if (_typeShown > _typeFull.length) _typeShown = _typeFull.length;
+    // 不要把 emoji（UTF-16 代理对）切一半，否则会闪一帧 �
+    if (_typeShown < _typeFull.length) {
+      final unit = _typeFull.codeUnitAt(_typeShown - 1);
+      if (unit >= 0xD800 && unit <= 0xDBFF) _typeShown += 1;
+    }
+    if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+      setState(() {
+        _messages.last = ChatMessage(
+          role: 'assistant',
+          content: _typeFull.substring(0, _typeShown),
+        );
+      });
+      if (_typeScrollTick++ % 4 == 0) _scrollToBottom();
+    }
+  }
+
+  // 立即补全并停掉打字机（流结束/出错/切流时调用），保证最终文本完整。
+  // 只改 _messages，不自带 setState —— 由调用方所在的 setState/重建负责刷新。
+  void _flushTypewriter() {
+    _typeTimer?.cancel();
+    _typeTimer = null;
+    if (_typeFull.isNotEmpty &&
+        _typeShown < _typeFull.length &&
+        _messages.isNotEmpty &&
+        _messages.last.role == 'assistant') {
+      _typeShown = _typeFull.length;
+      _messages.last = ChatMessage(role: 'assistant', content: _typeFull);
+    }
+  }
+
+  // 复位打字机（新一轮 / 切流 / 出错）
+  void _resetTypewriter() {
+    _typeTimer?.cancel();
+    _typeTimer = null;
+    _typeFull = '';
+    _typeShown = 0;
+    _typeIsThinking = false;
+  }
+
+  // 思考→正文：补全思考气泡，再开一个空正文气泡，打字机从 0 指向正文。
+  // 只改 _messages，由调用方的 setState 刷新。
+  void _startContentBubbleAfterThinking(String content) {
+    _typeTimer?.cancel();
+    _typeTimer = null;
+    if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+      _messages.last = ChatMessage(role: 'assistant', content: _typeFull); // 思考补全
+    }
+    _messages.add(ChatMessage(role: 'assistant', content: ''));
+    _typeIsThinking = false;
+    _typeOwnerSid = _chatService.sessionId;
+    _typeFull = content;
+    _typeShown = 0;
+    _ensureTypeTimer();
+  }
+
   void dispose() {
+    _typeTimer?.cancel();
     _longPressTimer?.cancel();
     _streamSub?.cancel();
     _appResumeFollowUpTimer?.cancel();
@@ -493,7 +604,9 @@ class _DesignerBallState extends State<DesignerBall>
 
   void _schedulePersistActiveMessages() {
     final sid = _chatService.sessionId;
-    if (sid.isEmpty || !_isCommittedSession(sid)) return;
+    // 放宽落盘门禁：committed 或「桶非空」即可存。否则"发出后立刻切走"窗口里、尚未
+    // committed 的新会话桶一个字节都落不了盘，切回就全空（BUG2）。
+    if (sid.isEmpty || (!_isCommittedSession(sid) && _messages.isEmpty)) return;
     final snapshot = List<ChatMessage>.from(_messages);
     _messagePersistTimer?.cancel();
     _messagePersistTimer = Timer(const Duration(milliseconds: 350), () {
@@ -505,7 +618,7 @@ class _DesignerBallState extends State<DesignerBall>
     _messagePersistTimer?.cancel();
     _messagePersistTimer = null;
     final sid = _chatService.sessionId;
-    if (sid.isEmpty || !_isCommittedSession(sid)) return;
+    if (sid.isEmpty || (!_isCommittedSession(sid) && _messages.isEmpty)) return;
     await _persistMessagesForSession(sid, List<ChatMessage>.from(_messages));
   }
 
@@ -513,7 +626,7 @@ class _DesignerBallState extends State<DesignerBall>
     String sid,
     List<ChatMessage> messages,
   ) async {
-    if (sid.isEmpty || !_isCommittedSession(sid)) return;
+    if (sid.isEmpty || (!_isCommittedSession(sid) && messages.isEmpty)) return;
     final prefs = await SharedPreferences.getInstance();
     if (messages.isEmpty) {
       await prefs.remove(_messageBucketKey(sid));
@@ -601,6 +714,8 @@ class _DesignerBallState extends State<DesignerBall>
   }) {
     final sub = _streamSub;
     _streamEpoch++;
+    _flushTypewriter(); // 切后台前补全已收到全文，commitPartial 才能存到完整内容
+    _resetTypewriter();
     if (sub != null) {
       debugPrint('[DesignerBall] $reason: detach local AI stream');
       if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
@@ -690,7 +805,14 @@ class _DesignerBallState extends State<DesignerBall>
     _sessionReconcileInFlight = true;
     try {
       final statusData = await _chatService.probeActiveSessionStatus();
-      if (!mounted || !_chatMode || _streamSub != null) return;
+      // await 期间用户可能切换/新建会话；sid 已不是当初对账的那条就直接放弃，
+      // 否则后面的 resume/flush 会落到错误的会话桶。
+      if (!mounted ||
+          !_chatMode ||
+          _streamSub != null ||
+          _chatService.sessionId != sid) {
+        return;
+      }
       if (statusData == null) return;
 
       final status = statusData['status'] as String? ?? '';
@@ -1081,16 +1203,242 @@ class _DesignerBallState extends State<DesignerBall>
   // 对话模式
   // ════════════════════════════════════════════════════════
 
+  // 未登录时按住悬浮球：给两个选项 —— 请登录 / Demo 体验模式。
   void _showLoginRequired() {
-    final ctx = JsonDslApp.navigatorKey.currentContext ?? context;
-    final messenger = ScaffoldMessenger.maybeOf(ctx);
-    messenger?.hideCurrentSnackBar();
-    messenger?.showSnackBar(
-      SnackBar(
-        content: Text(T.current.chatErrPleaseLogin),
-        duration: const Duration(seconds: 2),
-      ),
+    final navContext = JsonDslApp.navigatorKey.currentContext ?? context;
+    showModalBottomSheet<void>(
+      context: navContext,
+      showDragHandle: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                child: Text(
+                  '用 AI 创建应用',
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.login_rounded, color: cs.primary),
+                title: Text(T.current.chatErrPleaseLogin), // 请登录
+                subtitle: const Text('用真实账号创建并保存你的应用'),
+                onTap: () => Navigator.of(ctx).pop(),
+                // 未登录时 AuthGate 已经把登录页显示在底层，pop 即可看到登录表单
+              ),
+              ListTile(
+                leading: Icon(Icons.play_circle_outline, color: cs.primary),
+                title: const Text('Demo 体验模式'),
+                subtitle: const Text('免登录，点一下示例需求即可生成可运行的 App'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  unawaited(_enterDemoAndPrompt());
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  // Demo：登录预置假账号 → 进入对话模式 → 弹示例需求列表。
+  Future<void> _enterDemoAndPrompt() async {
+    final navContext = JsonDslApp.navigatorKey.currentContext ?? context;
+    try {
+      await AuthService.enterDemoMode();
+    } catch (e) {
+      ScaffoldMessenger.maybeOf(navContext)?.showSnackBar(
+        SnackBar(content: Text('Demo 模式暂不可用：$e')),
+      );
+      return;
+    }
+    await _enterChatMode(); // 此时已登录，门禁通过
+    _showDemoPromptList();
+  }
+
+  // Demo 示例需求：每条对应一个特殊 UUID，服务端识别后走预录回放。
+  // UUID 必须与后端 demo_replay.DEMO_SESSIONS 一致。
+  static const List<Map<String, String>> _demoPrompts = [
+    {
+      'uuid': '00000000-0000-0000-0000-000000000001',
+      'title': '论坛 / 贴吧类 App（全栈）',
+      'prompt':
+          '创建一个论坛类型的 App：要有用户个人页面（显示真实头像）、可以创建讨论区（类似贴吧的「吧」）、可以发帖、评论、点赞。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000002',
+      'title': '番茄钟（纯前端）',
+      'prompt': '做一个番茄钟：25 分钟倒计时，开始 / 暂停 / 重置，结束提醒。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000003',
+      'title': '计算器',
+      'prompt': '做一个计算器，支持加减乘除、百分比和清除。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000004',
+      'title': '多页面 App 示例',
+      'prompt': '做一个有 5 个页面、底部导航切换的多页面 App。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000005',
+      'title': '媒体播放',
+      'prompt': '做一个媒体展示 App，能播放视频、展示图片。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000006',
+      'title': '视频浏览',
+      'prompt': '做一个视频浏览 App：列表 + 点进去播放。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000007',
+      'title': '拍照巡检',
+      'prompt': '做一个拍照巡检 App：拍照记录设备状态，生成巡检单。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000008',
+      'title': '课程播放器',
+      'prompt': '做一个在线课程播放器：章节列表 + 视频播放 + 学习进度。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000009',
+      'title': '运维数据看板',
+      'prompt': '做一个运维数据仪表盘：服务状态、指标图表、告警列表。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000010',
+      'title': '智能家居',
+      'prompt': '做一个智能家居控制面板：灯光、空调、场景一键控制。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000011',
+      'title': '旅行通行证',
+      'prompt': '做一个旅行通行证 App：行程卡片、二维码、登机信息。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000012',
+      'title': '像素三消游戏',
+      'prompt': '做一个像素风格的三消小游戏。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000013',
+      'title': '记账预算',
+      'prompt': '做一个记账 App：收支记录、分类统计、月度预算。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000014',
+      'title': '客户管理 CRM',
+      'prompt': '做一个轻量 CRM：客户列表、跟进记录、状态标签。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000015',
+      'title': '习惯打卡',
+      'prompt': '做一个习惯打卡 App：每日打卡、连续天数、热力图。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000016',
+      'title': '笔记',
+      'prompt': '做一个笔记 App：新建、编辑、列表、搜索。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000017',
+      'title': '健身训练',
+      'prompt': '做一个健身训练 App：训练计划、动作计时、记录。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000018',
+      'title': '超级 App 首页',
+      'prompt': '做一个超级 App 首页：多功能入口聚合、轮播、九宫格。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000019',
+      'title': '文本收集器',
+      'prompt': '做一个文本收集器：快速记录、列表管理、复制。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000020',
+      'title': '2048 数字游戏',
+      'prompt': '做一个 2048 数字合并游戏。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000021',
+      'title': '贪吃蛇',
+      'prompt': '做一个贪吃蛇小游戏：吃食物变长、撞墙结束。',
+    },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000022',
+      'title': 'Flappy Bird',
+      'prompt': '做一个 Flappy Bird 点击飞行小游戏。',
+    },
+  ];
+
+  void _showDemoPromptList() {
+    final navContext = JsonDslApp.navigatorKey.currentContext ?? context;
+    showModalBottomSheet<void>(
+      context: navContext,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return SafeArea(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.7,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      '选择一个示例需求（Demo）',
+                      style: Theme.of(ctx).textTheme.titleMedium,
+                    ),
+                  ),
+                ),
+                Flexible(
+                  child: ListView(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
+                    children: [
+                      for (final p in _demoPrompts)
+                        ListTile(
+                          leading: Icon(Icons.auto_awesome, color: cs.primary),
+                          title: Text(p['title']!),
+                          subtitle: Text(
+                            p['prompt']!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          onTap: () {
+                            Navigator.of(ctx).pop();
+                            unawaited(_fireDemoTask(p['uuid']!, p['prompt']!));
+                          },
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 触发一个 demo 任务：把 active session 的 id 固定成特殊 UUID 再正常发送，
+  // 服务端据此走回放（不路由 agent-node、不建 FaaS）。
+  Future<void> _fireDemoTask(String uuid, String promptText) async {
+    await _chatService.createDemoSession(uuid);
+    _sendTextToAi(promptText);
   }
 
   Future<void> _enterChatMode() async {
@@ -1201,6 +1549,11 @@ class _DesignerBallState extends State<DesignerBall>
   }
 
   void _startListening() {
+    // Demo 模式不做语音识别，改弹示例需求列表（点一条即假装触发 AI 任务）。
+    if (AuthService.isDemoMode) {
+      _showDemoPromptList();
+      return;
+    }
     _recordStartPos = Offset(_left, _top);
     _dragCancelling = false;
     _accumulatedTranscript = ''; // 清空累积文本
@@ -1354,7 +1707,22 @@ class _DesignerBallState extends State<DesignerBall>
   void _attachAiStream(Stream<ChatEvent> stream) {
     _startSessionReconcileTimer();
     final streamEpoch = ++_streamEpoch;
-    bool isCurrentStream() => mounted && streamEpoch == _streamEpoch;
+    // 绑定这条流归属的会话。active 一旦在流存活期内被切走——用户新建/切换会话，或
+    // _onAuthChanged → loadSession 改了 _activeSessionId 却没 ++epoch——这条流的迟到
+    // 事件必须丢弃，绝不能写进当前 active 桶（BUG1 串桶根因：epoch 守卫挡不住"active
+    // 变了但 epoch 没变"）。
+    final streamSid = _chatService.sessionId;
+    bool isCurrentStream() {
+      if (!mounted || streamEpoch != _streamEpoch) return false;
+      if (_chatService.sessionId != streamSid) {
+        debugPrint(
+          '[DesignerBall] stream-sid-mismatch drop streamSid=$streamSid '
+          'active=${_chatService.sessionId}',
+        );
+        return false;
+      }
+      return true;
+    }
     // 用于累积流式事件中的指令，[DONE] 时统一处理
     Map<String, dynamic>? pendingJsonApp;
     String? pendingRequestAction;
@@ -1391,6 +1759,8 @@ class _DesignerBallState extends State<DesignerBall>
         //    backend 把 error 和 needs_retry:true 一起塞过来）
         if (event.needsRetry) {
           setState(() {
+            _flushTypewriter(); // 补全已流出的 partial，再挂中断/重试
+            _typeIsThinking = false;
             _isThinking = false;
             _isGeneratingJson = false;
             _generatingStatusMessage = T.current.chatStatusGenerating;
@@ -1425,6 +1795,7 @@ class _DesignerBallState extends State<DesignerBall>
           return;
         }
         if (event.error != null && event.content == null) {
+          _resetTypewriter(); // 停掉打字机，避免下一帧覆盖错误文案
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
@@ -1469,44 +1840,34 @@ class _DesignerBallState extends State<DesignerBall>
         }
 
         if (event.thinking != null) {
-          // 思考过程 → 只更新最后一条消息（如果是空的或思考消息）
-          setState(() {
-            _isThinking = false;
-            // ⚠️ 不要在这里关 _isGeneratingJson：后端在 thinking 块开始时
-            // 会主动发 status="thinking" 让转圈亮起来；如果这里关掉，转圈
-            // 会被 thinking_delta 第一帧立刻熄掉，用户体感"无反应"。
-            // 转圈的关闭由真正的内容到达（event.content）或 onDone 负责。
-            if (_messages.isNotEmpty &&
-                _messages.last.role == 'assistant' &&
-                (_messages.last.content.isEmpty ||
-                    _messages.last.content.startsWith('💭'))) {
-              _messages.last = ChatMessage(
-                role: 'assistant',
-                content: '💭 ${event.thinking!}',
-              );
-            }
-          });
-          _scrollToBottom();
+          // 思考过程 → 经打字机平滑吐字（仍只更新空气泡或思考气泡）。
+          // ⚠️ 不要在这里关 _isGeneratingJson：后端在 thinking 块开始时会主动发
+          // status="thinking" 让转圈亮起来；这里关掉会被第一帧立刻熄掉，体感"无反应"。
+          final eligible = _messages.isNotEmpty &&
+              _messages.last.role == 'assistant' &&
+              (_typeIsThinking || _messages.last.content.isEmpty);
+          if (eligible) {
+            setState(() => _isThinking = false);
+            _typeIsThinking = true;
+            _setTypewriterTarget('💭 ${event.thinking!}');
+          }
           return;
         }
         if (event.content != null) {
+          final wasThinking = _typeIsThinking;
           setState(() {
             _isThinking = false;
             _isGeneratingJson = false;
-            if (_messages.isNotEmpty &&
-                _messages.last.role == 'assistant' &&
-                _messages.last.content.startsWith('💭')) {
-              _messages.add(
-                ChatMessage(role: 'assistant', content: event.content!),
-              );
-            } else if (_messages.isNotEmpty &&
-                _messages.last.role == 'assistant') {
-              _messages.last = ChatMessage(
-                role: 'assistant',
-                content: event.content!,
-              );
+            if (wasThinking) {
+              // 思考→正文：补全思考气泡 + 开新正文气泡 + 打字机指向正文
+              _startContentBubbleAfterThinking(event.content!);
             }
           });
+          if (!wasThinking &&
+              _messages.isNotEmpty &&
+              _messages.last.role == 'assistant') {
+            _setTypewriterTarget(event.content!);
+          }
           _scrollToBottom();
         }
         if (event.quota != null) {
@@ -1516,6 +1877,7 @@ class _DesignerBallState extends State<DesignerBall>
       onError: (e) {
         if (!isCurrentStream()) return;
         _streamSub = null;
+        _resetTypewriter(); // 停掉打字机，避免下一帧覆盖错误文案
         setState(() {
           _isThinking = false;
           _isGeneratingJson = false;
@@ -1547,6 +1909,8 @@ class _DesignerBallState extends State<DesignerBall>
           'pendingJsonApp=${pendingJsonApp != null}',
         );
         setState(() {
+          _flushTypewriter(); // 补全正文，停掉打字机
+          _typeIsThinking = false;
           _isGeneratingJson = false;
           _generatingStatusMessage = T.current.chatStatusGenerating;
 
@@ -1618,6 +1982,9 @@ class _DesignerBallState extends State<DesignerBall>
   }) async {
     if (!mounted) return;
     if (_resumeInFlight) return;
+    // 捕获「要恢复的会话」。下面 tryResumeUnfinished 有网络 await，期间用户可能
+    // 切换/新建会话；恢复结果只能应用回这同一条会话，否则会串进别的会话桶。
+    final resumingSid = _chatService.sessionId;
     if (_streamSub != null) {
       if (!forceDetachLocalStream) return;
       _detachAiStreamForLifecycle(
@@ -1630,7 +1997,10 @@ class _DesignerBallState extends State<DesignerBall>
       final result = await _chatService.tryResumeUnfinished(
         forceDetachLocalClient: forceDetachLocalStream,
       );
-      if (!mounted) return;
+      // ⚠️ await 回来后 active 若已变（用户新开/切换了会话），丢弃结果——
+      // 这些 _ensureUserMessage/_upsertAssistantMessage 都走「活的」_messages
+      // getter，会写进当前会话桶，应用旧会话结果就是「消息跑到别的会话」的根因。
+      if (!mounted || _chatService.sessionId != resumingSid) return;
       switch (result) {
         case ResumeNothing():
           setState(() {
@@ -1720,12 +2090,15 @@ class _DesignerBallState extends State<DesignerBall>
   void _upsertAssistantMessage(String content) {
     final displayContent = AiChatService.cleanAssistantDisplayText(content);
     if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+      // 别用更短的 final_text 覆盖本地已流式累积的更完整内容（"只剩用户+JSON"根因）
+      if (_messages.last.content.length > displayContent.length) return;
       _messages.last = ChatMessage(role: 'assistant', content: displayContent);
       return;
     }
     for (var i = _messages.length - 1; i >= 0; i--) {
       if (_messages[i].role == 'user') break;
       if (_messages[i].role == 'assistant') {
+        if (_messages[i].content.length > displayContent.length) return;
         _messages[i] = ChatMessage(role: 'assistant', content: displayContent);
         return;
       }
@@ -2087,6 +2460,8 @@ class _DesignerBallState extends State<DesignerBall>
   /// 但 _isGeneratingJson 没被清，B 的视图还在转圈。
   void _cancelCurrentStream() {
     _streamEpoch++;
+    _flushTypewriter(); // 把已收到的全文补全到气泡，再复位（下面 commitPartial 才存到完整内容）
+    _resetTypewriter();
     if (_streamSub != null) {
       // 保存已收到的部分回复到对话历史
       if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
@@ -2148,7 +2523,22 @@ class _DesignerBallState extends State<DesignerBall>
     // 直接发送给 AI
     _cancelCurrentStream();
     final streamEpoch = ++_streamEpoch;
-    bool isCurrentStream() => mounted && streamEpoch == _streamEpoch;
+    // 绑定这条流归属的会话。active 一旦在流存活期内被切走——用户新建/切换会话，或
+    // _onAuthChanged → loadSession 改了 _activeSessionId 却没 ++epoch——这条流的迟到
+    // 事件必须丢弃，绝不能写进当前 active 桶（BUG1 串桶根因：epoch 守卫挡不住"active
+    // 变了但 epoch 没变"）。
+    final streamSid = _chatService.sessionId;
+    bool isCurrentStream() {
+      if (!mounted || streamEpoch != _streamEpoch) return false;
+      if (_chatService.sessionId != streamSid) {
+        debugPrint(
+          '[DesignerBall] stream-sid-mismatch drop streamSid=$streamSid '
+          'active=${_chatService.sessionId}',
+        );
+        return false;
+      }
+      return true;
+    }
     _streamSub = _chatService
         .sendStream(crashReport, contextMessages: _aiConversationPayload())
         .listen(

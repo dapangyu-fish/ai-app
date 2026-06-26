@@ -801,6 +801,29 @@ class AiChatService {
     return fresh;
   }
 
+  /// Demo 模式：创建一个 id 固定为特殊 UUID 的会话并设为 active。
+  /// 之后正常 sendStream → _postStart 会把 body['session_id'] 设成该 UUID，
+  /// 服务端识别后走 demo 回放（不路由 agent-node、不建 FaaS）。
+  Future<SessionMeta> createDemoSession(String demoUuid) async {
+    abortLocal();
+    _aborting = false;
+    _lastEntryId = '0';
+    _sessions.removeWhere((s) => !s.committed);
+    _sessions.removeWhere((s) => s.id == demoUuid); // 同一个 demo 不堆积
+    final fresh = SessionMeta(
+      id: demoUuid,
+      providerId: _selectedProvider,
+      agentId: selectedAgentForProvider(_selectedProvider),
+      agentScope: _selectedAgentScope,
+    );
+    _sessions.add(fresh);
+    _activeSessionId = fresh.id;
+    await _syncDefaultsFromActive();
+    await _persistSessions();
+    debugPrint('[AI_CHAT] createDemoSession: sid=$demoUuid');
+    return fresh;
+  }
+
   /// 切换 active session。老流只关本地，不杀后端 worker。
   Future<void> switchToSession(String sid) async {
     if (sid == _activeSessionId) return;
@@ -1208,6 +1231,16 @@ class AiChatService {
           )
           .timeout(const Duration(seconds: 8));
       if (resp.statusCode != 200) return const ResumeNothing();
+      // ⚠️ 这次 /status 网络调用期间，用户可能已经切换/新建了会话。若 active 不再是
+      // 当初要恢复的那条，绝不能把它的结果带出去——否则上层会用「活的」_messages
+      // getter 把这条旧会话的内容写进当前会话桶（串桶 bug）。
+      if (_active?.id != active.id) {
+        debugPrint(
+          '[AI_CHAT] tryResumeUnfinished: active 在 await 间隙已切换 '
+          '(${active.id} → ${_active?.id})，放弃恢复',
+        );
+        return const ResumeNothing();
+      }
       final data = json.decode(resp.body) as Map<String, dynamic>;
       final status = data['status'] as String? ?? '';
       final procAlive = data['process_alive'] == true;

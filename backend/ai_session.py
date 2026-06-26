@@ -95,6 +95,25 @@ _CLI_LOG_DIR = os.environ.get("CLAUDE_CLI_LOG_DIR", "/mnt/storage00/log")
 _cli_log_lock = threading.Lock()
 _cli_log_warned = False
 
+# ── Demo 录制（一次性，部署主机用）──────────────────────────────────
+# 设置 AI_DEMO_RECORD_SESSION_ID + AI_DEMO_RECORD_PATH 后，把该 session 的业务事件
+# tee 成 jsonl（每行一个事件），并在终态写一行 {"_demo_final": {...}} 哨兵，供
+# demo_replay.py 原样回放。只录制指定 session，对其它会话零开销。
+_DEMO_RECORD_SESSION_ID = os.environ.get("AI_DEMO_RECORD_SESSION_ID", "").strip()
+_DEMO_RECORD_PATH = os.environ.get("AI_DEMO_RECORD_PATH", "").strip()
+_demo_record_lock = threading.Lock()
+
+
+def _demo_record_line(session_id: str, obj: dict) -> None:
+    if not _DEMO_RECORD_SESSION_ID or session_id != _DEMO_RECORD_SESSION_ID or not _DEMO_RECORD_PATH:
+        return
+    try:
+        with _demo_record_lock:
+            with open(_DEMO_RECORD_PATH, "a", encoding="utf-8") as f:
+                f.write(json.dumps(obj, ensure_ascii=False) + "\n")
+    except Exception as e:  # 录制失败不能影响正常生成
+        logger.warning("[DEMO-REC] write failed sid=%s: %s", session_id, e)
+
 _WORKSPACE_ROOT = os.environ.get("AI_AGENT_WORKSPACE_ROOT", "/tmp/ai-workspaces")
 _WORKSPACE_RETENTION_SECONDS = int(os.environ.get("AI_AGENT_WORKSPACE_RETENTION_SECONDS", "604800"))
 
@@ -571,6 +590,12 @@ class SessionStore:
             pipe.hdel(_meta_key(session_id), "queued_job")
         pipe.expire(_meta_key(session_id), AI_SESSION_REDIS_TTL_SECONDS)
         pipe.execute()
+        if status in TERMINAL_STATUSES:
+            _demo_record_line(session_id, {"_demo_final": {
+                "final_text": final_text,
+                "final_thinking": final_thinking,
+                "client_actions": client_actions or [],
+            }})
 
     # ─── stream ───
     def append_event(self, session_id: str, event: dict) -> None:
@@ -588,6 +613,7 @@ class SessionStore:
             pipe.execute()
         except Exception as e:
             logger.exception(f"[SESSION] append_event 失败 sid={session_id}: {e}")
+        _demo_record_line(session_id, event)
 
     def read_events(self, session_id: str, last_id: str = "0",
                     block_ms: int = 5000, count: int = 100) -> List[Tuple[str, dict]]:

@@ -1,0 +1,814 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "super-app-home",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "超级 App 首页：多功能入口聚合、轮播、九宫格",
+    "author": "fish",
+    "displayName": "超级 App"
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "serviceGrid": [
+        {
+          "icon": "shopping_cart",
+          "label": "商城",
+          "color": "#FF6B6B",
+          "bgColor": "#FFF0F0"
+        },
+        {
+          "icon": "restaurant",
+          "label": "外卖",
+          "color": "#FF922B",
+          "bgColor": "#FFF3E8"
+        },
+        {
+          "icon": "local_laundry_service",
+          "label": "洗护",
+          "color": "#20C997",
+          "bgColor": "#E8FBF4"
+        },
+        {
+          "icon": "local_pharmacy",
+          "label": "医药",
+          "color": "#339AF0",
+          "bgColor": "#E8F2FD"
+        },
+        {
+          "icon": "theaters",
+          "label": "影票",
+          "color": "#845EF7",
+          "bgColor": "#F0EBFD"
+        },
+        {
+          "icon": "map",
+          "label": "出行",
+          "color": "#F59F00",
+          "bgColor": "#FFF8E6"
+        },
+        {
+          "icon": "payment",
+          "label": "缴费",
+          "color": "#F06595",
+          "bgColor": "#FDE8F0"
+        },
+        {
+          "icon": "health_and_safety",
+          "label": "健康",
+          "color": "#38D9A9",
+          "bgColor": "#E6FCF5"
+        },
+        {
+          "icon": "menu_book",
+          "label": "阅读",
+          "color": "#748FFC",
+          "bgColor": "#EDF0FF"
+        }
+      ],
+      "recentItems": [
+        {
+          "title": "最近浏览：夏季轻薄 T 恤",
+          "time": "10 分钟前",
+          "icon": "history"
+        },
+        {
+          "title": "您的订单已发货",
+          "time": "2 小时前",
+          "icon": "inventory_2"
+        },
+        {
+          "title": "优惠券即将到期",
+          "time": "5 小时前",
+          "icon": "payments"
+        }
+      ]
+    },
+    "functions": {
+      "onServiceTap": {
+        "params": [
+          "item"
+        ],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "{{ '即将打开：' + item.label }}"
+            }
+          }
+        ]
+      },
+      "refresh": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "页面已刷新"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "超级 App",
+        "layout": "column",
+        "backgroundColor": "#F3F4F6",
+        "appBar": {
+          "title": "超级 App",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.refresh",
+                "args": {}
+              },
+              "icon": "notification",
+              "style": {
+                "textColor": "#374151",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            },
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.refresh",
+                "args": {}
+              },
+              "icon": "settings",
+              "style": {
+                "textColor": "#374151",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        },
+        "children": [
+          {
+            "type": "page_view",
+            "viewportFraction": 0.88,
+            "children": [
+              {
+                "type": "card",
+                "layout": "column",
+                "color": "#2563EB",
+                "padding": 24,
+                "margin": 6,
+                "elevation": 0,
+                "borderRadius": 18,
+                "height": 152,
+                "mainAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "auto_awesome",
+                        "size": 32,
+                        "color": "#FFFFFF"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 14
+                      },
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "欢迎来到超级 App",
+                            "style": {
+                              "fontSize": 22,
+                              "fontWeight": "bold",
+                              "color": "#FFFFFF"
+                            }
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 6
+                          },
+                          {
+                            "type": "text",
+                            "value": "一站式生活服务平台 · 尽享便捷",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#FFFFFFD9"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "card",
+                "layout": "column",
+                "color": "#059669",
+                "padding": 24,
+                "margin": 6,
+                "elevation": 0,
+                "borderRadius": 18,
+                "height": 152,
+                "mainAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "star",
+                        "size": 32,
+                        "color": "#FFFFFF"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 14
+                      },
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "限时特惠",
+                            "style": {
+                              "fontSize": 22,
+                              "fontWeight": "bold",
+                              "color": "#FFFFFF"
+                            }
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 6
+                          },
+                          {
+                            "type": "text",
+                            "value": "精选好物低至 5 折 · 抢购中",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#FFFFFFD9"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "card",
+                "layout": "column",
+                "color": "#D97706",
+                "padding": 24,
+                "margin": 6,
+                "elevation": 0,
+                "borderRadius": 18,
+                "height": 152,
+                "mainAxisAlignment": "center",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "row",
+                    "crossAxisAlignment": "center",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "favorite",
+                        "size": 32,
+                        "color": "#FFFFFF"
+                      },
+                      {
+                        "type": "spacer",
+                        "width": 14
+                      },
+                      {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "每日签到有礼",
+                            "style": {
+                              "fontSize": 22,
+                              "fontWeight": "bold",
+                              "color": "#FFFFFF"
+                            }
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 6
+                          },
+                          {
+                            "type": "text",
+                            "value": "连续签到赢积分兑好礼",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#FFFFFFD9"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "container",
+            "layout": "row",
+            "children": [
+              {
+                "type": "container",
+                "width": 8,
+                "height": 8,
+                "borderRadius": 4,
+                "color": "#2563EB",
+                "margin": 3
+              },
+              {
+                "type": "container",
+                "width": 6,
+                "height": 6,
+                "borderRadius": 3,
+                "color": "#D1D5DB",
+                "margin": 3
+              },
+              {
+                "type": "container",
+                "width": 6,
+                "height": 6,
+                "borderRadius": 3,
+                "color": "#D1D5DB",
+                "margin": 3
+              }
+            ],
+            "mainAxisAlignment": "center",
+            "margin": 4
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "people",
+                              "size": 18,
+                              "color": "#2563EB"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "今日访客",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "12,860",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "receipt",
+                              "size": 18,
+                              "color": "#059669"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "订单数",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "486",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "chat",
+                              "size": 18,
+                              "color": "#D97706"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "未读消息",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "23",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "expanded",
+                    "child": {
+                      "type": "card",
+                      "layout": "column",
+                      "color": "#FFFFFF",
+                      "padding": 14,
+                      "margin": 6,
+                      "elevation": 0,
+                      "borderRadius": 14,
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "schedule",
+                              "size": 18,
+                              "color": "#DC2626"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 8
+                            },
+                            {
+                              "type": "text",
+                              "value": "待处理",
+                              "style": {
+                                "fontSize": 13,
+                                "color": "#6B7280"
+                              }
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 8
+                        },
+                        {
+                          "type": "text",
+                          "value": "5",
+                          "style": {
+                            "fontSize": 21,
+                            "fontWeight": "bold",
+                            "color": "#111827",
+                            "maxLines": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ],
+            "margin": 8
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "text",
+                "value": "功能服务",
+                "style": {
+                  "fontSize": 17,
+                  "fontWeight": "bold",
+                  "color": "#111827"
+                }
+              },
+              {
+                "type": "spacer",
+                "height": 4
+              },
+              {
+                "type": "text",
+                "value": "全部服务 · 点击进入",
+                "style": {
+                  "fontSize": 12,
+                  "color": "#9CA3AF"
+                }
+              }
+            ],
+            "padding": 16
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "grid",
+                "source": "{{ global.serviceGrid }}",
+                "crossAxisCount": 3,
+                "crossAxisSpacing": 10,
+                "mainAxisSpacing": 10,
+                "shrinkWrap": true,
+                "padding": 16,
+                "childAspectRatio": 0.92,
+                "item_template": {
+                  "type": "card",
+                  "layout": "column",
+                  "color": "#FFFFFF",
+                  "padding": 0,
+                  "elevation": 0,
+                  "borderRadius": 14,
+                  "mainAxisAlignment": "center",
+                  "crossAxisAlignment": "center",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center",
+                      "color": "{{ item.bgColor }}",
+                      "borderRadius": 16,
+                      "padding": 14,
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "{{ item.icon }}",
+                          "size": 26,
+                          "color": "{{ item.color }}"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "spacer",
+                      "height": 10
+                    },
+                    {
+                      "type": "text",
+                      "value": "{{ item.label }}",
+                      "style": {
+                        "fontSize": 13,
+                        "color": "#374151",
+                        "fontWeight": "500"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "color": "#F9FAFB",
+            "borderRadius": 16,
+            "margin": 12
+          },
+          {
+            "type": "container",
+            "layout": "column",
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "crossAxisAlignment": "center",
+                "padding": 16,
+                "children": [
+                  {
+                    "type": "text",
+                    "value": "最近动态",
+                    "style": {
+                      "fontSize": 17,
+                      "fontWeight": "bold",
+                      "color": "#111827"
+                    }
+                  },
+                  {
+                    "type": "spacer"
+                  },
+                  {
+                    "type": "button",
+                    "label": "全部",
+                    "variant": "text",
+                    "action": {
+                      "call": "@global.refresh",
+                      "args": {}
+                    },
+                    "style": {
+                      "textColor": "#2563EB",
+                      "fontSize": 13
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "list",
+                "source": "{{ global.recentItems }}",
+                "shrinkWrap": true,
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "padding": 14,
+                  "crossAxisAlignment": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "name": "{{ item.icon }}",
+                      "size": 20,
+                      "color": "#9CA3AF"
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 12
+                    },
+                    {
+                      "type": "expanded",
+                      "child": {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ item.title }}",
+                            "style": {
+                              "fontSize": 14,
+                              "color": "#1F2937"
+                            }
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 3
+                          },
+                          {
+                            "type": "text",
+                            "value": "{{ item.time }}",
+                            "style": {
+                              "fontSize": 12,
+                              "color": "#9CA3AF"
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "type": "icon",
+                      "name": "chevron_right",
+                      "size": 18,
+                      "color": "#D1D5DB"
+                    }
+                  ]
+                }
+              }
+            ],
+            "color": "#FFFFFF",
+            "borderRadius": 16,
+            "margin": 12
+          },
+          {
+            "type": "spacer",
+            "height": 24
+          }
+        ]
+      }
+    ]
+  }
+}

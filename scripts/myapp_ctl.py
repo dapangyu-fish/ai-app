@@ -2156,6 +2156,33 @@ def _run_supabase_auth_migrations(*, dry_run: bool) -> int:
     return _run(cmd, capture=False).returncode
 
 
+def _deploy_should_ensure_demo_assets(names: list[str]) -> bool:
+    return "backend" in names
+
+
+def _ensure_demo_bucket_assets(*, dry_run: bool) -> int:
+    """集群初始化的一部分：部署后确保 demo 对象存储桶就绪并把 demo app.json 固定上传。
+
+    在 myapp-backend 容器内执行 demo_replay.ensure_demo_assets()，复用其 MinIO 凭据与网络。
+    免登录 demo 模式回放时直接返回该桶的固定公共 URL（不再每次临时上传）。失败不阻断部署。"""
+    cmd = [
+        "docker", "exec", "-w", "/app/backend", "myapp-backend",
+        "python3", "-c",
+        "import demo_replay; print('demo assets:', demo_replay.ensure_demo_assets())",
+    ]
+    print("+ " + " ".join(cmd))
+    if dry_run:
+        return 0
+    info = _docker_inspect("myapp-backend")
+    if not info or info.get("State", {}).get("Status") != "running":
+        print("myapp-backend 未运行；跳过 demo 桶初始化（下次部署会补）", file=sys.stderr)
+        return 0  # 非阻断
+    result = _run(cmd, capture=False)
+    if result.returncode != 0:
+        print("demo 桶初始化失败（非阻断，可稍后重新部署或手动重试）", file=sys.stderr)
+    return 0  # 永不阻断部署
+
+
 def _compose_specs_for_names(names: list[str]) -> list[dict]:
     services = _services()
     seen: set[tuple[str, tuple[str, ...]]] = set()
@@ -2366,6 +2393,9 @@ def cmd_deploy(args) -> int:
         rc = _run_supabase_auth_migrations(dry_run=args.dry_run)
         if rc != 0:
             return rc
+    if _deploy_should_ensure_demo_assets(names):
+        # 非阻断：确保 demo 对象存储桶就绪并固定上传 demo app.json（集群初始化的一部分）
+        _ensure_demo_bucket_assets(dry_run=args.dry_run)
     if not args.dry_run and not args.no_test_user and _deploy_can_seed_test_user(names):
         rc = _maybe_seed_test_user(args)
         if rc != 0:

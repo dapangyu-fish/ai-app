@@ -287,6 +287,7 @@ def list_agents():
 
 import time as _time
 import ai_session
+import demo_replay
 
 _CHAT_START_LOCK_TTL_SECONDS = int(os.environ.get("AI_CHAT_START_LOCK_TTL_SECONDS", "45"))
 _CHAT_START_LOCK_WAIT_SECONDS = float(os.environ.get("AI_CHAT_START_LOCK_WAIT_SECONDS", "3"))
@@ -348,6 +349,14 @@ def chat_start():
     """
     user_id = request.supabase_user.get("id")
     role = request.user_role
+
+    # Demo 回放：特殊 UUID（00000000-...-000000000001/0002）直接回放预录 jsonl，
+    # 在 quota / agent / provider / has_available_agent_node / submit_worker 之前短路，
+    # 因此不消耗配额、不校验/路由任何 agent-node、不创建 FaaS、不进队列/lease。
+    # session 归属为当前（demo）账号 → stream/result 归属校验天然隔离真实用户。
+    _demo_body = request.get_json(silent=True) or {}
+    if demo_replay.is_demo_uuid(_demo_body.get("session_id")):
+        return demo_replay.start(_demo_body.get("session_id"), user_id)
 
     used, limit, remaining = get_quota_info(
         user_id, role, ROLE_QUOTAS,
@@ -652,6 +661,10 @@ def _build_sse_stream(session_id: str, last_id: str):
         # 客户端 idle timeout 不会触发（心跳还在），所以必须 backend 主动告诉它
         if status == ai_session.STATUS_RUNNING and _time.time() >= next_zombie_check:
             next_zombie_check = _time.time() + 10
+            # Demo 回放没有本地进程/agent-node 运行态，回放线程会很快落到 terminal；
+            # 不能让僵尸检测把它误判成 FAILED。
+            if meta.get("provider") == demo_replay.DEMO_PROVIDER:
+                continue
             if not ai_session.is_session_proc_alive(session_id, meta=meta):
                 if ai_session.is_remote_agent_session_alive(session_id, meta):
                     logger.debug("[CHAT_STREAM] sid=%s local lease missing but remote agent run is alive", session_id)

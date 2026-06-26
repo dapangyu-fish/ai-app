@@ -4,6 +4,7 @@
 """
 
 import base64
+import os
 import time
 import requests
 from functools import wraps
@@ -334,6 +335,37 @@ def refresh_token():
         "refresh_token": data["refresh_token"],
         "expires_in": data.get("expires_in", 3600),
         "user": _extract_user_info(user),
+    })
+
+
+def demo_login():
+    """Demo 模式登录：用预置的专用 demo 账号做 password grant，拿到一个**真实可验证**的 JWT。
+    FaaS 公共组靠这个 JWT 派生不可伪造的组内假名（HMAC(secret, app_id‖uid)），从而把
+    demo 账号的数据与真实用户隔离。账号需在部署主机预先创建（见 demo-replay 运维清单），
+    凭据放在后端 env（DEMO_ACCOUNT_EMAIL / DEMO_ACCOUNT_PASSWORD），绝不下发到客户端。"""
+    email = os.environ.get("DEMO_ACCOUNT_EMAIL", "").strip()
+    password = os.environ.get("DEMO_ACCOUNT_PASSWORD", "").strip()
+    if not email or not password:
+        return jsonify({"error": "demo 模式未配置", "code": "DEMO_NOT_CONFIGURED"}), 503
+    try:
+        resp = requests.post(
+            f"{SUPABASE_URL}/auth/v1/token?grant_type=password",
+            headers=_supabase_headers(),
+            json={"email": email, "password": password},
+            timeout=15,
+        )
+        data = resp.json()
+    except Exception:
+        return jsonify({"error": "demo 账号暂不可用", "code": "DEMO_UNAVAILABLE"}), 503
+    if resp.status_code >= 400 or "access_token" not in data:
+        return jsonify({"error": "demo 账号暂不可用", "code": "DEMO_UNAVAILABLE"}), 503
+    user = data.get("user", {})
+    return jsonify({
+        "access_token": data["access_token"],
+        "refresh_token": data["refresh_token"],
+        "expires_in": data.get("expires_in", 3600),
+        "user": _extract_user_info(user),
+        "demo": True,
     })
 
 

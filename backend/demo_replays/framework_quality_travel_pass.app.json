@@ -1,0 +1,924 @@
+{
+  "dsl": "3.3",
+  "meta": {
+    "name": "travel-pass",
+    "version": "1.0.0",
+    "type": "app",
+    "description": "行程卡片、二维码、登机信息一站式管理",
+    "author": "ai",
+    "displayName": "旅行通行证"
+  },
+  "dependencies": {},
+  "global": {
+    "variables": {
+      "trips": [
+        {
+          "id": "1",
+          "from": "上海",
+          "fromCode": "PVG",
+          "to": "北京",
+          "toCode": "PEK",
+          "flight": "MU 5107",
+          "date": "2026-06-25",
+          "departureTime": "10:05",
+          "arrivalTime": "12:30",
+          "seat": "12A",
+          "gate": "23",
+          "terminal": "2",
+          "status": "boarding",
+          "statusLabel": "正在登机",
+          "baggage": "B-08",
+          "duration": "2h 25m",
+          "weather": "晴 28°C",
+          "progress": 0.75,
+          "checkpoints": [
+            {
+              "time": "07:30",
+              "title": "值机完成",
+              "desc": "2 号航站楼 · B 区安检"
+            },
+            {
+              "time": "08:45",
+              "title": "安检通过",
+              "desc": "快速通道 · 已通过"
+            },
+            {
+              "time": "09:15",
+              "title": "登机口开放",
+              "desc": "Gate 23 · 步行约 8 分钟"
+            },
+            {
+              "time": "09:45",
+              "title": "开始登机",
+              "desc": "优先登机 · Zone 2"
+            },
+            {
+              "time": "10:05",
+              "title": "预计起飞",
+              "desc": "MU 5107 · 靠窗 12A"
+            }
+          ],
+          "qrData": "BC:MU5107:20260625:12A:PVG-PEK:CN001"
+        },
+        {
+          "id": "2",
+          "from": "北京",
+          "fromCode": "PEK",
+          "to": "广州",
+          "toCode": "CAN",
+          "flight": "CZ 3102",
+          "date": "2026-06-28",
+          "departureTime": "14:20",
+          "arrivalTime": "17:45",
+          "seat": "8C",
+          "gate": "15",
+          "terminal": "3",
+          "status": "upcoming",
+          "statusLabel": "即将出行",
+          "baggage": "C-12",
+          "duration": "3h 25m",
+          "weather": "多云 32°C",
+          "progress": 0.1,
+          "checkpoints": [
+            {
+              "time": "12:00",
+              "title": "开放值机",
+              "desc": "线上值机已开放"
+            },
+            {
+              "time": "12:20",
+              "title": "到达机场",
+              "desc": "3 号航站楼出发层"
+            },
+            {
+              "time": "13:30",
+              "title": "建议安检",
+              "desc": "预留充足过检时间"
+            },
+            {
+              "time": "13:50",
+              "title": "登机口开放",
+              "desc": "Gate 15 · 步行约 6 分钟"
+            },
+            {
+              "time": "14:20",
+              "title": "预计起飞",
+              "desc": "CZ 3102 · 过道 8C"
+            }
+          ],
+          "qrData": "BC:CZ3102:20260628:8C:PEK-CAN:CN002"
+        }
+      ],
+      "currentTripIndex": 0
+    },
+    "functions": {
+      "selectTrip": {
+        "params": [
+          "index"
+        ],
+        "logic": [
+          {
+            "var": "global.currentTripIndex",
+            "op": "set",
+            "value": "{{ params.index }}"
+          }
+        ]
+      },
+      "shareTrip": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "行程卡已准备分享"
+            }
+          }
+        ]
+      },
+      "addPass": {
+        "params": [],
+        "logic": [
+          {
+            "call": "@show_toast",
+            "args": {
+              "message": "添加登机牌功能即将上线"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "steps": [],
+  "ui": {
+    "screens": [
+      {
+        "id": "home",
+        "title": "旅行通行证",
+        "layout": "column",
+        "children": [
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 20,
+            "margin": 14,
+            "elevation": 1,
+            "borderRadius": 22,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.trips[global.currentTripIndex].fromCode }}",
+                        "fontSize": 30,
+                        "fontWeight": "bold",
+                        "color": "#111827"
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 2
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.trips[global.currentTripIndex].from }}",
+                        "fontSize": 12,
+                        "color": "#6B7280"
+                      }
+                    ],
+                    "crossAxisAlignment": "start"
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "icon",
+                        "name": "forward",
+                        "size": 22,
+                        "color": "#2563EB"
+                      }
+                    ],
+                    "mainAxisAlignment": "center",
+                    "padding": 16
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "text",
+                        "value": "{{ global.trips[global.currentTripIndex].toCode }}",
+                        "fontSize": 30,
+                        "fontWeight": "bold",
+                        "color": "#111827"
+                      },
+                      {
+                        "type": "spacer",
+                        "height": 2
+                      },
+                      {
+                        "type": "text",
+                        "value": "{{ global.trips[global.currentTripIndex].to }}",
+                        "fontSize": 12,
+                        "color": "#6B7280"
+                      }
+                    ],
+                    "crossAxisAlignment": "end"
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 16
+              },
+              {
+                "type": "divider",
+                "color": "#E5E7EB"
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "calendar",
+                              "size": 15,
+                              "color": "#6B7280"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 6
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ global.trips[global.currentTripIndex].date }}",
+                              "fontSize": 13,
+                              "color": "#6B7280"
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "clock",
+                              "size": 15,
+                              "color": "#6B7280"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 6
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ global.trips[global.currentTripIndex].departureTime }} — {{ global.trips[global.currentTripIndex].arrivalTime }}",
+                              "fontSize": 13,
+                              "color": "#6B7280"
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "weekend",
+                              "size": 15,
+                              "color": "#6B7280"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 6
+                            },
+                            {
+                              "type": "text",
+                              "value": "{{ global.trips[global.currentTripIndex].flight }} · {{ global.trips[global.currentTripIndex].seat }}",
+                              "fontSize": 15,
+                              "fontWeight": "bold",
+                              "color": "#2563EB"
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "container",
+                          "layout": "row",
+                          "children": [
+                            {
+                              "type": "icon",
+                              "name": "location",
+                              "size": 15,
+                              "color": "#6B7280"
+                            },
+                            {
+                              "type": "spacer",
+                              "width": 6
+                            },
+                            {
+                              "type": "text",
+                              "value": "T{{ global.trips[global.currentTripIndex].terminal }} · Gate {{ global.trips[global.currentTripIndex].gate }}",
+                              "fontSize": 13,
+                              "color": "#6B7280"
+                            }
+                          ],
+                          "crossAxisAlignment": "center"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 10
+                  },
+                  {
+                    "type": "container",
+                    "layout": "column",
+                    "children": [
+                      {
+                        "type": "qr_code",
+                        "data": "{{ global.trips[global.currentTripIndex].qrData }}",
+                        "size": 76,
+                        "color": "#111827"
+                      }
+                    ],
+                    "width": 92,
+                    "height": 92,
+                    "color": "#FFFFFF",
+                    "borderRadius": 14,
+                    "mainAxisAlignment": "center",
+                    "crossAxisAlignment": "center"
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "divider",
+                "color": "#E5E7EB"
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "progress",
+                "value": "{{ global.trips[global.currentTripIndex].progress }}",
+                "color": "#2563EB",
+                "backgroundColor": "#E5E7EB",
+                "height": 6
+              },
+              {
+                "type": "spacer",
+                "height": 6
+              },
+              {
+                "type": "text",
+                "value": "{{ global.trips[global.currentTripIndex].statusLabel }}",
+                "fontSize": 13,
+                "fontWeight": "600",
+                "color": "#2563EB"
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 18,
+            "margin": 14,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "timeline",
+                    "size": 20,
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "text",
+                    "value": "行程时间线",
+                    "fontSize": 17,
+                    "fontWeight": "bold",
+                    "color": "#111827"
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "grid",
+                "source": "{{ global.trips[global.currentTripIndex].checkpoints }}",
+                "crossAxisCount": 1,
+                "childAspectRatio": 4.0,
+                "spacing": 8,
+                "shrinkWrap": true,
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.time }}",
+                          "fontSize": 13,
+                          "fontWeight": "bold",
+                          "color": "#2563EB"
+                        }
+                      ],
+                      "width": 54,
+                      "height": 42,
+                      "color": "#EEF2FF",
+                      "borderRadius": 14,
+                      "mainAxisAlignment": "center",
+                      "crossAxisAlignment": "center"
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 12
+                    },
+                    {
+                      "type": "expanded",
+                      "flex": 1,
+                      "child": {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.title }}",
+                            "fontSize": 15,
+                            "fontWeight": "bold",
+                            "color": "#111827"
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 3
+                          },
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.desc }}",
+                            "fontSize": 12,
+                            "color": "#6B7280"
+                          }
+                        ]
+                      }
+                    }
+                  ],
+                  "padding": 12,
+                  "color": "#F9FAFB",
+                  "borderRadius": 16,
+                  "crossAxisAlignment": "start"
+                }
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 18,
+            "margin": 14,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "info",
+                    "size": 20,
+                    "color": "#2563EB"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "text",
+                    "value": "登机信息",
+                    "fontSize": 17,
+                    "fontWeight": "bold",
+                    "color": "#111827"
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 14
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "location",
+                          "size": 18,
+                          "color": "#2563EB"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "text",
+                          "value": "登机口",
+                          "fontSize": 11,
+                          "color": "#9CA3AF"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 3
+                        },
+                        {
+                          "type": "text",
+                          "value": "Gate {{ global.trips[global.currentTripIndex].gate }}",
+                          "fontSize": 14,
+                          "fontWeight": "600",
+                          "color": "#111827"
+                        }
+                      ],
+                      "padding": 14,
+                      "color": "#F9FAFB",
+                      "borderRadius": 14
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 10
+                  },
+                  {
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "schedule",
+                          "size": 18,
+                          "color": "#2563EB"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "text",
+                          "value": "航站楼",
+                          "fontSize": 11,
+                          "color": "#9CA3AF"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 3
+                        },
+                        {
+                          "type": "text",
+                          "value": "T{{ global.trips[global.currentTripIndex].terminal }} 号航站楼",
+                          "fontSize": 14,
+                          "fontWeight": "600",
+                          "color": "#111827"
+                        }
+                      ],
+                      "padding": 14,
+                      "color": "#F9FAFB",
+                      "borderRadius": 14
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "spacer",
+                "height": 10
+              },
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "inventory_2",
+                          "size": 18,
+                          "color": "#2563EB"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "text",
+                          "value": "行李转盘",
+                          "fontSize": 11,
+                          "color": "#9CA3AF"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 3
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ global.trips[global.currentTripIndex].baggage }}",
+                          "fontSize": 14,
+                          "fontWeight": "600",
+                          "color": "#111827"
+                        }
+                      ],
+                      "padding": 14,
+                      "color": "#F9FAFB",
+                      "borderRadius": 14
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 10
+                  },
+                  {
+                    "type": "expanded",
+                    "flex": 1,
+                    "child": {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "name": "wb_sunny",
+                          "size": 18,
+                          "color": "#2563EB"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 6
+                        },
+                        {
+                          "type": "text",
+                          "value": "目的地天气",
+                          "fontSize": 11,
+                          "color": "#9CA3AF"
+                        },
+                        {
+                          "type": "spacer",
+                          "height": 3
+                        },
+                        {
+                          "type": "text",
+                          "value": "{{ global.trips[global.currentTripIndex].weather }}",
+                          "fontSize": 14,
+                          "fontWeight": "600",
+                          "color": "#111827"
+                        }
+                      ],
+                      "padding": 14,
+                      "color": "#F9FAFB",
+                      "borderRadius": 14
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "card",
+            "layout": "column",
+            "color": "#FFFFFF",
+            "padding": 18,
+            "margin": 24,
+            "elevation": 0,
+            "borderRadius": 20,
+            "children": [
+              {
+                "type": "container",
+                "layout": "row",
+                "children": [
+                  {
+                    "type": "icon",
+                    "name": "receipt",
+                    "size": 20,
+                    "color": "#6B7280"
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "text",
+                    "value": "其他行程",
+                    "fontSize": 17,
+                    "fontWeight": "bold",
+                    "color": "#111827"
+                  }
+                ],
+                "crossAxisAlignment": "center"
+              },
+              {
+                "type": "spacer",
+                "height": 12
+              },
+              {
+                "type": "grid",
+                "source": "{{ global.trips }}",
+                "crossAxisCount": 1,
+                "childAspectRatio": 4.5,
+                "spacing": 8,
+                "shrinkWrap": true,
+                "item_template": {
+                  "type": "container",
+                  "layout": "row",
+                  "children": [
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [],
+                      "width": 4,
+                      "height": 56,
+                      "color": "#2563EB",
+                      "borderRadius": 2
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 12
+                    },
+                    {
+                      "type": "expanded",
+                      "flex": 1,
+                      "child": {
+                        "type": "container",
+                        "layout": "column",
+                        "children": [
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.from }} → {{ loop.item.to }}",
+                            "fontSize": 15,
+                            "fontWeight": "bold",
+                            "color": "#111827"
+                          },
+                          {
+                            "type": "spacer",
+                            "height": 3
+                          },
+                          {
+                            "type": "text",
+                            "value": "{{ loop.item.flight }} · {{ loop.item.date }} · {{ loop.item.departureTime }}",
+                            "fontSize": 12,
+                            "color": "#6B7280"
+                          }
+                        ]
+                      }
+                    },
+                    {
+                      "type": "container",
+                      "layout": "column",
+                      "children": [
+                        {
+                          "type": "text",
+                          "value": "{{ loop.item.statusLabel }}",
+                          "fontSize": 11,
+                          "fontWeight": "600",
+                          "color": "#2563EB"
+                        }
+                      ],
+                      "padding": 10,
+                      "color": "#EEF2FF",
+                      "borderRadius": 20
+                    },
+                    {
+                      "type": "spacer",
+                      "width": 4
+                    },
+                    {
+                      "type": "icon",
+                      "name": "chevron_right",
+                      "size": 18,
+                      "color": "#D1D5DB"
+                    }
+                  ],
+                  "padding": 12,
+                  "color": "#F9FAFB",
+                  "borderRadius": 14,
+                  "crossAxisAlignment": "center"
+                }
+              }
+            ]
+          }
+        ],
+        "backgroundColor": "#F2F4F7",
+        "appBar": {
+          "title": "旅行通行证",
+          "centerTitle": true,
+          "backgroundColor": "#FFFFFF",
+          "color": "#111827",
+          "elevation": 0,
+          "actions": [
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.addPass",
+                "args": {}
+              },
+              "icon": "add",
+              "style": {
+                "textColor": "#111827",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            },
+            {
+              "type": "button",
+              "label": "",
+              "variant": "text",
+              "action": {
+                "call": "@global.shareTrip",
+                "args": {}
+              },
+              "icon": "share",
+              "style": {
+                "textColor": "#111827",
+                "fontSize": 18,
+                "paddingH": 10,
+                "paddingV": 8
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
