@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-06-30
+### Added
+- **P2 复现性**：Python 依赖全 uv-lock（`backend/requirements.lock` + faas-runtime/agent-node base 各一份，`pip --require-hashes`）；CLI 钉 `claude-code@2.1.195`/`opencode-ai@1.17.11`；base 镜像 FROM digest 钉；Flutter `.fvmrc`=3.41.8。
+- **P4 DSL 契约**：客户端 `loadConfig` DSL 载入闸（`kSupportedDsl`）；后端 `json_app_builder`/`validate_json_app` 发布期 dsl 窗口 gate；`JSON-DSL.md` 版本纪律。
+- **P3**：`registry _index.json` schema 版本闸；`backend/migrate.py` 平台 schema 迁移 runner（自举 `schema_migrations`）。
+
 ## [1.2.0] - 2026-06-29
 ### Added
 - **版本管理 P1**：引入 `VERSION` 单一真相源（`1.2.0`）。
