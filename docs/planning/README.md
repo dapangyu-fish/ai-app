@@ -9,3 +9,6 @@
 | 文档 | 主题 | 状态 |
 |------|------|------|
 | [push-jsonapp-isolation.md](push-jsonapp-isolation.md) | JSON-APP 维度的推送隔离 + 点击深链跳转 + 主动授权 | 提案（待实现） |
+| [app-share-link-qr.md](app-share-link-qr.md) | App 分享链接 + 二维码，深链打开 AI 生成的 JSON-APP（含未装兜底） | 提案（待实现） |
+| [audio-support.md](audio-support.md) | JSON-APP 音频支持：播放 / 录音 / 上传 / 可复用音频 UI（flame 播放引擎下沉复用） | 提案（待实现） |
+| [faas-scale-out.md](faas-scale-out.md) | FaaS 横向扩容：多节点 Docker FaaS + 后端二级路由 + 用户私有 faas 节点 | 提案（待实现） |
