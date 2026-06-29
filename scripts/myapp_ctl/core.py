@@ -1,0 +1,3568 @@
+#!/usr/bin/env python3
+"""Control CLI for MyApp backend hosts.
+
+The CLI is intentionally small and dependency-free: service inventory is data
+in /etc/myapp/*.json, secrets are host-local files, and Docker/Compose do the
+actual process management.
+"""
+
+from __future__ import annotations
+
+import argparse
+import ast
+import base64
+import getpass
+import hashlib
+import hmac
+import json
+import os
+import re
+import secrets as py_secrets
+import shlex
+import shutil
+import signal
+import socket
+import subprocess
+import sys
+import threading
+import time
+from pathlib import Path
+from urllib.parse import quote, urlencode, urlparse
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
+
+
+CONFIG_PATH = Path(os.environ.get("MYAPP_CTL_CONFIG", "/etc/myapp/ctl.json"))
+SERVICES_PATH = Path(os.environ.get("MYAPP_CTL_SERVICES", "/etc/myapp/services.json"))
+LANGUAGE_PATH = Path(os.environ.get("MYAPP_CTL_LANGUAGE_PATH", "/etc/myapp/ctl-language"))
+DEFAULT_DATA_ROOT = "/mnt/myapp"
+SUPABASE_POSTGRES_IMAGE = "supabase/postgres:15.8.1.085"
+
+DATA_ROOT_DIRS = [
+    "state",
+    "logs",
+    "secrets.d/files/apns",
+    "secrets.d/files/fcm",
+    "faas/code",
+    "faas/logs",
+    "faas/tmp",
+    "backend",
+    "ai-worker",
+    "registry",
+    "config-center/data",
+    "user-center",
+    "agent-runtime",
+    "agent-node/state",
+    "agent-node/workspaces",
+    "agent-node/logs",
+    "agent-nodes",
+    "edge-nginx/conf.d",
+    "edge-nginx/certs",
+    "edge-nginx/logs",
+    "static/website",
+    "static/webapp",
+    "jsonapp-postgres/data",
+    "ai-session-redis/data",
+    "app-minio/data",
+    "supabase-studio",
+    "supabase-kong",
+    "supabase-auth",
+    "supabase-rest",
+    "supabase-realtime",
+    "supabase-storage/data",
+    "supabase-imgproxy",
+    "supabase-meta",
+    "supabase-edge-functions/deno-cache",
+    "supabase-analytics",
+    "supabase-db/data",
+    "supabase-db/config",
+    "supabase-vector",
+    "supabase-pooler",
+    "openim-mysql/data",
+    "openim-mongo/data",
+    "openim-redis/data",
+    "openim-kafka/data",
+    "openim-etcd/data",
+    "openim-minio/data",
+    "openim-server/logs",
+]
+
+DEPLOY_ORDER = [
+    "agent-runtime",
+    "faas-runtime",
+    "jsonapp-postgres",
+    "ai-session-redis",
+    "app-minio",
+    "supabase-db",
+    "supabase-analytics",
+    "supabase-studio",
+    "supabase-kong",
+    "supabase-auth",
+    "supabase-rest",
+    "supabase-realtime",
+    "supabase-imgproxy",
+    "supabase-storage",
+    "supabase-meta",
+    "supabase-edge-functions",
+    "supabase-vector",
+    "supabase-pooler",
+    "openim-mysql",
+    "openim-mongo",
+    "openim-redis",
+    "openim-kafka",
+    "openim-etcd",
+    "openim-minio",
+    "openim-server",
+    "agent-node",
+    "registry",
+    "backend",
+    "ai-worker",
+    "faas-push-worker",
+    "config-center",
+    "user-center",
+    "edge-nginx",
+]
+IMAGE_TARGETS = {
+    "agent-runtime": ("agent_runtime", "deploy/production/Dockerfile.agent-runtime"),
+    "faas-runtime": ("faas_runtime", "deploy/production/Dockerfile.faas-runtime"),
+    "agent-node": ("agent_node", "deploy/production/Dockerfile.agent-node"),
+    "backend": ("backend", "deploy/production/Dockerfile.backend"),
+}
+IMAGE_BASE_TARGETS = {
+    "agent-runtime": ("agent_runtime_base", "deploy/production/Dockerfile.agent-runtime-base"),
+    "faas-runtime": ("faas_runtime_base", "deploy/production/Dockerfile.faas-runtime-base"),
+    "agent-node": ("agent_node_base", "deploy/production/Dockerfile.agent-node-base"),
+    "backend": ("backend_base", "deploy/production/Dockerfile.backend-base"),
+}
+BACKEND_IMAGE_SERVICES = {"backend", "ai-worker", "registry", "config-center", "user-center", "faas-control", "faas-worker", "faas-push-worker"}
+FAAS_IMAGE_SERVICES = {"faas-control", "faas-worker", "faas-runtime"}
+DEFAULT_NETWORKS = ["myapp_default", "myapp_agent_runtime"]
+COMPOSE_ENV_FILE_NAMES = [
+    "backend.env",
+    "supabase.env",
+    "openim.env",
+    "edge.env",
+    "faas.env",
+    "ai-providers.env",
+    "agent.env",
+    "push.env",
+    "config-center.env",
+    "user-center.env",
+]
+_SETUP_SECRET_FILE_CONTAINER_ROOT = "/etc/myapp/secret-files"
+_SETUP_SECRET_FILE_HOST_DIR = "files"
+EDGE_ROUTE_SPECS = [
+    {"key": "website", "label": "Website", "kind": "static", "root": "/usr/share/nginx/website"},
+    {"key": "webapp", "label": "Web app", "kind": "static", "root": "/usr/share/nginx/webapp"},
+    {"key": "backend", "label": "Backend API", "kind": "proxy", "upstream": "http://backend:5566"},
+    {"key": "auth", "label": "Supabase Auth", "kind": "proxy", "upstream": "http://supabase-kong:8000"},
+    {"key": "oss", "label": "MinIO endpoint", "kind": "proxy", "upstream": "http://app-minio:9000"},
+    {"key": "oss_console", "label": "MinIO console", "kind": "proxy", "upstream": "http://app-minio:9090"},
+    {"key": "registry", "label": "App registry", "kind": "proxy", "upstream": "http://registry:3254"},
+    {"key": "config_center", "label": "Config Center", "kind": "proxy", "upstream": "http://config-center:5000"},
+    {"key": "user_center", "label": "User Center", "kind": "proxy", "upstream": "http://user-center:5567"},
+    {
+        "key": "openim",
+        "label": "OpenIM",
+        "kind": "openim",
+        "api_upstream": "http://myapp-openim-server:10002",
+        "ws_upstream": "http://myapp-openim-server:10001",
+    },
+]
+_LANG = "en"
+_LANGUAGES = {  # AUTONYM_FR_MARKER
+    "zh": "中文",
+    "en": "English",
+    "de": "Deutsch",
+    "es": "Español",
+    "fr": "Français",
+    "pt": "Português",
+    "ca": "Català",
+    "hi": "हिन्दी",
+    "ko": "한국어",
+    "ja": "日本語",
+    "it": "Italiano",
+}
+from ._messages import _MESSAGES  # i18n catalog (data extracted, unchanged)
+
+
+class _CtlHelpFormatter(argparse.RawTextHelpFormatter):
+    def __init__(self, prog: str, *args, **kwargs):
+        width = shutil.get_terminal_size((100, 24)).columns
+        super().__init__(prog, *args, max_help_position=30, width=min(max(width, 88), 120), **kwargs)
+
+
+class _CtlArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        self.print_usage(sys.stderr)
+        self.exit(
+            2,
+            _tx(
+                "%(prog)s: error: %(message)s\n",
+                zh="%(prog)s: 错误: %(message)s\n",
+                de="%(prog)s: Fehler: %(message)s\n",
+                es="%(prog)s: error: %(message)s\n",
+            ) % {"prog": self.prog, "message": message},
+        )
+
+
+def _new_parser(*args, **kwargs) -> argparse.ArgumentParser:
+    _install_argparse_i18n()
+    kwargs.setdefault("formatter_class", _CtlHelpFormatter)
+    return _CtlArgumentParser(*args, **kwargs)
+
+
+def _add_subcommands(parser: argparse.ArgumentParser, dest: str, *, required: bool = True):
+    return parser.add_subparsers(
+        dest=dest,
+        required=required,
+        title=_tx("commands", zh="命令", de="Befehle", es="comandos"),
+        metavar=_tx("<command>", zh="<命令>", de="<Befehl>", es="<comando>"),
+    )
+
+
+def _load_json(path: Path, default: dict) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return default
+
+
+def _save_json(path: Path, data: dict, mode: int | None = None) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    if mode is not None:
+        os.chmod(tmp, mode)
+    tmp.replace(path)
+    if mode is not None:
+        os.chmod(path, mode)
+
+
+def _default_cfg() -> dict:
+    return {
+        "paths": {
+            "root": "/opt/myapp",
+            "source": "/opt/myapp/current",
+            "data_root": DEFAULT_DATA_ROOT,
+            "state": f"{DEFAULT_DATA_ROOT}/state",
+            "logs": f"{DEFAULT_DATA_ROOT}/logs",
+            "secrets_dir": "/etc/myapp/secrets.d",
+            "runtime_secrets_dir": f"{DEFAULT_DATA_ROOT}/secrets.d",
+            "agent_log_dir": f"{DEFAULT_DATA_ROOT}/agent-node/logs",
+            "config_bundle": f"{DEFAULT_DATA_ROOT}/myapp-config.json",
+        },
+        "domains": {},
+    }
+
+
+def _cfg() -> dict:
+    return _load_json(CONFIG_PATH, _default_cfg())
+
+
+def _data_root_from_cfg(cfg: dict | None = None) -> Path:
+    cfg = cfg or _cfg()
+    raw = (
+        os.environ.get("MYAPP_DATA_ROOT")
+        or cfg.get("paths", {}).get("data_root")
+        or DEFAULT_DATA_ROOT
+    )
+    path = Path(str(raw)).expanduser()
+    if not path.is_absolute():
+        path = (Path.cwd() / path).resolve()
+    return path
+
+
+def _apply_data_root_to_cfg(cfg: dict, data_root: Path) -> dict:
+    root = str(data_root)
+    paths = cfg.setdefault("paths", {})
+    paths["data_root"] = root
+    paths.setdefault("root", "/opt/myapp")
+    paths.setdefault("source", "/opt/myapp/current")
+    paths["state"] = str(data_root / "state")
+    paths["logs"] = str(data_root / "logs")
+    paths.setdefault("secrets_dir", "/etc/myapp/secrets.d")
+    paths["runtime_secrets_dir"] = str(data_root / "secrets.d")
+    paths["agent_log_dir"] = str(data_root / "agent-node" / "logs")
+    paths["config_bundle"] = str(data_root / "myapp-config.json")
+    return cfg
+
+
+def _default_config_bundle_path(cfg: dict | None = None) -> Path:
+    cfg = cfg or _cfg()
+    configured = cfg.get("paths", {}).get("config_bundle")
+    if configured:
+        return Path(str(configured)).expanduser()
+    return _data_root_from_cfg(cfg) / "myapp-config.json"
+
+
+def _ensure_data_root_config(data_root: str | None = None, *, interactive: bool = False) -> Path:
+    cfg = _cfg()
+    existing = str(cfg.get("paths", {}).get("data_root") or "").strip()
+    selected = data_root or os.environ.get("MYAPP_DATA_ROOT") or existing or DEFAULT_DATA_ROOT
+    prompted = False
+    if interactive and sys.stdin.isatty():
+        should_prompt = not data_root and not cfg.get("paths", {}).get("data_root_prompted")
+        if should_prompt:
+            selected = _prompt_line("MyApp data root (all persistent service data)", default=selected or DEFAULT_DATA_ROOT, required=True)
+            prompted = True
+    root = Path(str(selected)).expanduser()
+    if not root.is_absolute():
+        root = (Path.cwd() / root).resolve()
+    if str(root) in {"/", "/mnt", "/var", "/opt", "/etc"}:
+        raise ValueError(f"unsafe MyApp data root: {root}")
+    _apply_data_root_to_cfg(cfg, root)
+    cfg.setdefault("paths", {})["data_root_prompted"] = bool(
+        cfg.get("paths", {}).get("data_root_prompted") or prompted or data_root or os.environ.get("MYAPP_DATA_ROOT")
+    )
+    _save_json(CONFIG_PATH, cfg, mode=0o644)
+    if interactive:
+        print(f"Using MyApp data root: {root}")
+    return root
+
+
+def _ensure_data_root_layout(data_root: Path | None = None) -> Path:
+    root = data_root or _data_root_from_cfg()
+    root.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(root, 0o755)
+    except OSError:
+        pass
+    parent_dirs: set[Path] = set()
+    leaf_dirs: set[Path] = set()
+    for rel in DATA_ROOT_DIRS:
+        path = root / rel
+        path.mkdir(parents=True, exist_ok=True)
+        leaf_dirs.add(path)
+        parent = path.parent
+        while parent != root and root in parent.parents:
+            parent_dirs.add(parent)
+            parent = parent.parent
+    for path in sorted(parent_dirs - leaf_dirs, key=lambda p: len(p.parts)):
+        try:
+            os.chmod(path, 0o755)
+        except OSError:
+            pass
+    for path in sorted(leaf_dirs, key=lambda p: len(p.parts)):
+        try:
+            os.chmod(path, 0o777)
+        except OSError:
+            pass
+    for path in [
+        root / "secrets.d",
+        root / "secrets.d" / "files",
+        root / "secrets.d" / "files" / "apns",
+        root / "secrets.d" / "files" / "fcm",
+    ]:
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+            os.chmod(path, 0o700)
+        except OSError:
+            pass
+    return root
+
+
+
+
+def _t(key: str, **kwargs) -> str:
+    row = _MESSAGES.get(key, {})
+    text = row.get(_LANG) or row.get("en") or key
+    return text.format(**kwargs) if kwargs else text
+
+
+def _tx(en: str, *, zh: str | None = None, de: str | None = None, es: str | None = None) -> str:
+    row = {"en": en, "zh": zh, "de": de, "es": es}
+    return row.get(_LANG) or row["en"]
+
+
+_ARGPARSE_I18N = {
+    "usage: ": {
+        "zh": "用法: ",
+        "en": "usage: ",
+        "de": "Verwendung: ",
+        "es": "uso: ",
+    },
+    "options": {
+        "zh": "选项",
+        "en": "options",
+        "de": "Optionen",
+        "es": "opciones",
+    },
+    "positional arguments": {
+        "zh": "位置参数",
+        "en": "positional arguments",
+        "de": "Positionsargumente",
+        "es": "argumentos posicionales",
+    },
+    "show this help message and exit": {
+        "zh": "显示此帮助信息并退出",
+        "en": "show this help message and exit",
+        "de": "diese Hilfe anzeigen und beenden",
+        "es": "muestra esta ayuda y termina",
+    },
+    "error: ": {
+        "zh": "错误: ",
+        "en": "error: ",
+        "de": "Fehler: ",
+        "es": "error: ",
+    },
+    "the following arguments are required: %s": {
+        "zh": "缺少必填参数: %s",
+        "en": "the following arguments are required: %s",
+        "de": "folgende Argumente sind erforderlich: %s",
+        "es": "faltan los argumentos obligatorios: %s",
+    },
+    "invalid choice: %(value)r (choose from %(choices)s)": {
+        "zh": "无效选项: %(value)r (可选: %(choices)s)",
+        "en": "invalid choice: %(value)r (choose from %(choices)s)",
+        "de": "ungueltige Auswahl: %(value)r (waehle aus %(choices)s)",
+        "es": "opcion invalida: %(value)r (elige entre %(choices)s)",
+    },
+    "unrecognized arguments: %s": {
+        "zh": "无法识别的参数: %s",
+        "en": "unrecognized arguments: %s",
+        "de": "unbekannte Argumente: %s",
+        "es": "argumentos no reconocidos: %s",
+    },
+    "argument %(argument_name)s: %(message)s": {
+        "zh": "参数 %(argument_name)s: %(message)s",
+        "en": "argument %(argument_name)s: %(message)s",
+        "de": "Argument %(argument_name)s: %(message)s",
+        "es": "argumento %(argument_name)s: %(message)s",
+    },
+}
+
+
+def _argparse_gettext(text: str) -> str:
+    row = _ARGPARSE_I18N.get(text)
+    if not row:
+        return text
+    return row.get(_LANG) or row.get("en") or text
+
+
+def _install_argparse_i18n() -> None:
+    argparse._ = _argparse_gettext
+
+
+def _preinitialize_language(raw_args: list[str]) -> None:
+    cli_lang = None
+    for index, item in enumerate(raw_args):
+        if item == "--lang" and index + 1 < len(raw_args):
+            cli_lang = _normalize_lang(raw_args[index + 1])
+            break
+        if item.startswith("--lang="):
+            cli_lang = _normalize_lang(item.split("=", 1)[1])
+            break
+    env_lang = _normalize_lang(os.environ.get("MYAPP_CTL_LANG") or os.environ.get("MYAPP_LANG"))
+    cfg = _cfg()
+    file_lang = _read_language_preference_file()
+    saved_lang = _normalize_lang(str(cfg.get("language") or cfg.get("lang") or ""))
+    _set_runtime_language(cli_lang or env_lang or file_lang or saved_lang or "zh")
+
+
+def _normalize_lang(value: str | None) -> str | None:
+    if not value:
+        return None
+    value = value.strip().lower()
+    aliases = {
+        "cn": "zh",
+        "zh-cn": "zh",
+        "chinese": "zh",
+        "deutsch": "de",
+        "german": "de",
+        "spanish": "es",
+        "espanol": "es",
+        "español": "es",
+        "english": "en",
+    }
+    value = aliases.get(value, value)
+    return value if value in _LANGUAGES else None
+
+
+def _set_runtime_language(lang: str | None) -> None:
+    global _LANG
+    normalized = _normalize_lang(lang)
+    if normalized:
+        _LANG = normalized
+
+
+def _read_language_preference_file() -> str | None:
+    try:
+        return _normalize_lang(LANGUAGE_PATH.read_text(encoding="utf-8").strip())
+    except OSError:
+        return None
+
+
+def _write_language_preference(lang: str, cfg: dict | None = None) -> None:
+    normalized = _normalize_lang(lang)
+    if not normalized:
+        return
+    try:
+        LANGUAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        tmp = LANGUAGE_PATH.with_suffix(LANGUAGE_PATH.suffix + ".tmp")
+        tmp.write_text(normalized + "\n", encoding="utf-8")
+        os.chmod(tmp, 0o644)
+        tmp.replace(LANGUAGE_PATH)
+        os.chmod(LANGUAGE_PATH, 0o644)
+    except OSError:
+        pass
+    if cfg is None:
+        cfg = _cfg()
+    cfg["language"] = normalized
+    _save_json(CONFIG_PATH, cfg)
+
+
+def _choose_language_interactive() -> str:
+    print(_MESSAGES["language_prompt"]["en"])
+    for index, (code, name) in enumerate(_LANGUAGES.items(), start=1):
+        print(f"  {index}) {code} - {name}")
+    while True:
+        value = input("language [1]: ").strip()
+        if not value:
+            return "zh"
+        if value.isdigit():
+            idx = int(value)
+            codes = list(_LANGUAGES)
+            if 1 <= idx <= len(codes):
+                return codes[idx - 1]
+        normalized = _normalize_lang(value)
+        if normalized:
+            return normalized
+        print("please choose one of: " + ", ".join(_LANGUAGES))
+
+
+def _is_config_lang_command(args) -> bool:
+    return getattr(args, "cmd", None) == "config" and getattr(args, "config_cmd", None) == "lang"
+
+
+def _is_help_command(args) -> bool:
+    return getattr(args, "cmd", None) == "help"
+
+
+def _initialize_language(args) -> None:
+    env_lang = _normalize_lang(os.environ.get("MYAPP_CTL_LANG") or os.environ.get("MYAPP_LANG"))
+    cli_lang = _normalize_lang(getattr(args, "lang", None))
+    cfg = _cfg()
+    file_lang = _read_language_preference_file()
+    saved_lang = _normalize_lang(str(cfg.get("language") or cfg.get("lang") or ""))
+    lang = cli_lang or env_lang or file_lang or saved_lang
+    if not lang and sys.stdin.isatty() and not _is_config_lang_command(args) and not _is_help_command(args):
+        lang = _choose_language_interactive()
+        _write_language_preference(lang, cfg)
+        _set_runtime_language(lang)
+        print(_t("language_saved", language=f"{lang} - {_LANGUAGES[lang]}"))
+        return
+    _set_runtime_language(lang or "zh")
+
+
+
+
+def _run_with_heartbeat(cmd: list[str]) -> subprocess.CompletedProcess:
+    proc = subprocess.Popen(cmd)
+    done = threading.Event()
+
+    def beat() -> None:
+        spinner = "|/-\\"
+        started = time.time()
+        index = 0
+        while not done.wait(10):
+            elapsed = int(time.time() - started)
+            marker = spinner[index % len(spinner)]
+            index += 1
+            if sys.stderr.isatty():
+                print(f"\r# {_t('running')} {marker} {elapsed}s: {cmd[0]}", end="", file=sys.stderr, flush=True)
+            else:
+                print(f"# {_t('running')} {elapsed}s: {' '.join(cmd[:4])}", file=sys.stderr, flush=True)
+        if sys.stderr.isatty():
+            print("\r" + " " * 80 + "\r", end="", file=sys.stderr, flush=True)
+
+    thread = threading.Thread(target=beat, daemon=True)
+    thread.start()
+    returncode = proc.wait()
+    done.set()
+    thread.join(timeout=1)
+    return subprocess.CompletedProcess(cmd, returncode)
+
+
+def _run(cmd: list[str], *, capture: bool = True) -> subprocess.CompletedProcess:
+    kwargs = {"text": True}
+    if capture:
+        kwargs.update({"stdout": subprocess.PIPE, "stderr": subprocess.PIPE})
+        return subprocess.run(cmd, **kwargs)
+    return _run_with_heartbeat(cmd)
+
+
+def _run_capture_text(cmd: list[str], *, input_text: str | None = None) -> subprocess.CompletedProcess:
+    return subprocess.run(cmd, input=input_text, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+def _docker_inspect(name: str) -> dict | None:
+    proc = _run(["docker", "inspect", name])
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return None
+    try:
+        rows = json.loads(proc.stdout)
+    except json.JSONDecodeError:
+        return None
+    return rows[0] if rows else None
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+_AGENT_NODE_INSTANCE_OPTIONAL_PREFIXES = (
+    "AGENT_NODE_POLL_",
+    "AGENT_NODE_EVENT_",
+    "AGENT_NODE_RUN_",
+    "AGENT_NODE_CONTAINER_",
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _image_exists(image: str) -> bool:
+    return _run(["docker", "image", "inspect", image]).returncode == 0
+
+
+def _source_dir() -> Path:
+    cfg = _cfg()
+    candidates = [
+        os.environ.get("MYAPP_SOURCE_DIR"),
+        cfg.get("paths", {}).get("source"),
+        str(Path(cfg.get("paths", {}).get("root", "/opt/myapp")) / "current"),
+        "/opt/myapp/current",
+        os.getcwd(),
+    ]
+    for raw in candidates:
+        if not raw:
+            continue
+        path = Path(str(raw))
+        if (path / "deploy/production").is_dir() and (path / "backend").is_dir():
+            return path
+    return Path(os.getcwd())
+
+
+def _build_commit_for_source(source_dir: Path) -> str:
+    override = str(os.environ.get("MYAPP_BUILD_COMMIT") or "").strip()
+    if override:
+        return override[:128]
+    for marker in (".myapp-build-commit", ".myapp-build-version"):
+        try:
+            value = (source_dir / marker).read_text(encoding="utf-8").strip()
+        except OSError:
+            value = ""
+        if value:
+            return value[:128]
+    if not shutil.which("git"):
+        return "unknown"
+    proc = _run(["git", "-C", str(source_dir), "rev-parse", "--verify", "HEAD"])
+    if proc.returncode == 0:
+        commit = proc.stdout.strip()
+        if commit:
+            return commit[:128]
+    return "unknown"
+
+
+def _configured_image(target: str) -> str:
+    cfg_images = _cfg().get("images", {})
+    key, _ = IMAGE_TARGETS[target]
+    default = f"dapangyu/myapp-{target}:agent-control-plane"
+    return str(cfg_images.get(key) or default)
+
+
+def _configured_base_image(target: str) -> str:
+    cfg_images = _cfg().get("images", {})
+    key, _ = IMAGE_BASE_TARGETS[target]
+    default = f"dapangyu/myapp-{target}-base:agent-control-plane"
+    return str(cfg_images.get(key) or default)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _run_or_print(cmd: list[str], *, dry_run: bool) -> int:
+    print("+ " + " ".join(cmd))
+    if dry_run:
+        return 0
+    return _run(cmd, capture=False).returncode
+
+
+
+
+
+
+def _print_table(rows: list[dict], columns: list[tuple[str, str]]) -> None:
+    if not rows:
+        print("(empty)")
+        return
+    widths = [max(len(title), *(len(str(row.get(key, ""))) for row in rows)) for key, title in columns]
+    print("  ".join(title.ljust(widths[i]) for i, (_, title) in enumerate(columns)))
+    print("  ".join("-" * width for width in widths))
+    for row in rows:
+        print("  ".join(str(row.get(key, "")).ljust(widths[i]) for i, (key, _) in enumerate(columns)))
+
+
+
+
+
+
+def _normalize_image_mirror(mirror: str | None) -> str | None:
+    value = (mirror or "").strip().rstrip("/")
+    return value or None
+
+
+def _pull_image(image: str, *, mirror: str | None, dry_run: bool) -> int:
+    mirror = _normalize_image_mirror(mirror)
+    if mirror:
+        source = f"{mirror}/{image}"
+        rc = _run_or_print(["docker", "pull", source], dry_run=dry_run)
+        if rc != 0:
+            return rc
+        return _run_or_print(["docker", "tag", source, image], dry_run=dry_run)
+    return _run_or_print(["docker", "pull", image], dry_run=dry_run)
+
+
+
+
+
+
+
+
+
+
+def _deploy_images(
+    targets: list[str],
+    *,
+    action: str,
+    dry_run: bool,
+    mirror: str | None = None,
+    include_base: bool = False,
+) -> int:
+    source_dir = _source_dir()
+    build_commit = ""
+    build_version = ""
+    base_done: set[str] = set()
+    for target in targets:
+        image = _configured_image(target)
+        if action == "build":
+            if not build_commit:
+                build_commit = _build_commit_for_source(source_dir)
+                build_version = str(os.environ.get("MYAPP_BUILD_VERSION") or build_commit).strip()[:128] or build_commit
+            base_image = _configured_base_image(target)
+            if include_base and target not in base_done:
+                _, base_dockerfile = IMAGE_BASE_TARGETS[target]
+                base_cmd = [
+                    "docker",
+                    "build",
+                    "-f",
+                    str(source_dir / base_dockerfile),
+                    "-t",
+                    base_image,
+                    str(source_dir),
+                ]
+                rc = _run_or_print(base_cmd, dry_run=dry_run)
+                if rc != 0:
+                    return rc
+                base_done.add(target)
+            _, dockerfile = IMAGE_TARGETS[target]
+            cmd = [
+                "docker",
+                "build",
+                "--build-arg",
+                f"BASE_IMAGE={base_image}",
+                "--build-arg",
+                f"MYAPP_BUILD_COMMIT={build_commit}",
+                "--build-arg",
+                f"MYAPP_BUILD_VERSION={build_version}",
+                "-f",
+                str(source_dir / dockerfile),
+                "-t",
+                image,
+                str(source_dir),
+            ]
+        elif action == "push":
+            if include_base and target not in base_done:
+                rc = _run_or_print(["docker", "push", _configured_base_image(target)], dry_run=dry_run)
+                if rc != 0:
+                    return rc
+                base_done.add(target)
+            cmd = ["docker", "push", image]
+        elif action == "pull":
+            if include_base and target not in base_done:
+                rc = _pull_image(_configured_base_image(target), mirror=mirror, dry_run=dry_run)
+                if rc != 0:
+                    return rc
+                base_done.add(target)
+            rc = _pull_image(image, mirror=mirror, dry_run=dry_run)
+            if rc != 0:
+                return rc
+            continue
+        else:
+            raise ValueError(action)
+        rc = _run_or_print(cmd, dry_run=dry_run)
+        if rc != 0:
+            return rc
+    return 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _remove_path(path: Path, *, dry_run: bool) -> int:
+    print(f"+ rm -rf {path}")
+    if dry_run or not path.exists():
+        return 0
+    if path.is_dir() and not path.is_symlink():
+        shutil.rmtree(path)
+    else:
+        path.unlink()
+    return 0
+
+
+def _remove_installed_config_path(path: Path, *, dry_run: bool) -> int:
+    if not path.is_absolute():
+        print(f"# skip non-installed config path: {path}")
+        return 0
+    data_root = _data_root_from_cfg()
+    try:
+        path.resolve().relative_to(data_root.resolve())
+        print(f"# preserve data-root config path: {path}")
+        return 0
+    except (OSError, ValueError):
+        pass
+    return _remove_path(path, dry_run=dry_run)
+
+
+
+
+def _docker_network_exists(name: str) -> bool:
+    return _run(["docker", "network", "inspect", name]).returncode == 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _secret_dir() -> Path:
+    return Path(_cfg().get("paths", {}).get("secrets_dir", "/etc/myapp/secrets.d"))
+
+
+def _runtime_secret_dir(data_root: Path | None = None) -> Path:
+    configured = str(_cfg().get("paths", {}).get("runtime_secrets_dir") or "").strip()
+    if configured:
+        path = Path(configured).expanduser()
+        if not path.is_absolute():
+            path = (Path.cwd() / path).resolve()
+        return path
+    root = data_root or _data_root_from_cfg()
+    return root / "secrets.d"
+
+
+def _secret_path(group: str) -> Path:
+    return _secret_dir() / f"{group.replace('/', '_').replace('..', '_')}.env"
+
+
+def _runtime_secret_path(group: str, data_root: Path | None = None) -> Path:
+    return _runtime_secret_dir(data_root) / f"{group.replace('/', '_').replace('..', '_')}.env"
+
+
+def _copy_file_secure(src: Path, dst: Path, *, mode: int = 0o600) -> None:
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dst.with_name(dst.name + ".tmp")
+    shutil.copy2(src, tmp)
+    os.chmod(tmp, mode)
+    tmp.replace(dst)
+    os.chmod(dst, mode)
+
+
+def _sync_runtime_secrets_from_host_config(data_root: Path | None = None) -> None:
+    """Materialize runtime env files under data root from host-local config.
+
+    `/etc/myapp/secrets.d` is the durable host configuration and last cluster
+    secret backup. Compose services consume the data-root copy so wiping
+    `/mnt/myapp` never deletes the source of truth.
+    """
+    source = _secret_dir()
+    target = _runtime_secret_dir(data_root)
+    target.mkdir(parents=True, exist_ok=True)
+    os.chmod(target, 0o700)
+    for name in COMPOSE_ENV_FILE_NAMES:
+        src = source / name
+        dst = target / name
+        if src.exists():
+            _copy_file_secure(src, dst, mode=0o600)
+        elif dst.exists():
+            dst.unlink()
+    src_files = source / _SETUP_SECRET_FILE_HOST_DIR
+    dst_files = target / _SETUP_SECRET_FILE_HOST_DIR
+    if src_files.exists():
+        # Sync in-place. NEVER rmtree/replace dst_files itself: bind mounts into
+        # running containers (/etc/myapp/secret-files) pin the directory inode, so
+        # replacing it makes the container see an empty dir until it is recreated
+        # (this is what stranded the FaaS git deploy key after a sync).
+        dst_files.mkdir(parents=True, exist_ok=True)
+        os.chmod(dst_files, 0o700)
+        kept = set()
+        for src_child in src_files.rglob("*"):
+            rel = src_child.relative_to(src_files)
+            dst_child = dst_files / rel
+            if src_child.is_dir():
+                dst_child.mkdir(parents=True, exist_ok=True)
+                try:
+                    os.chmod(dst_child, 0o700)
+                except OSError:
+                    pass
+            elif src_child.is_file():
+                kept.add(rel)
+                _copy_file_secure(src_child, dst_child, mode=0o600)
+        for dst_child in list(dst_files.rglob("*")):
+            if dst_child.is_file() and dst_child.relative_to(dst_files) not in kept:
+                try:
+                    dst_child.unlink()
+                except OSError:
+                    pass
+    elif dst_files.exists():
+        for dst_child in list(dst_files.iterdir()):
+            if dst_child.is_dir():
+                shutil.rmtree(dst_child)
+            else:
+                try:
+                    dst_child.unlink()
+                except OSError:
+                    pass
+
+
+def _decode_env_value(value: str) -> str:
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        try:
+            decoded = ast.literal_eval(value)
+            return str(decoded)
+        except (SyntaxError, ValueError):
+            return value[1:-1]
+    return value
+
+
+def _quote_env_value(value: object) -> str:
+    text = "" if value is None else str(value)
+    if text and re.fullmatch(r"[A-Za-z0-9_./:@%+=,\-\[\]]+", text):
+        return text
+    escaped = (
+        text.replace("\\", "\\\\")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+        .replace('"', '\\"')
+    )
+    return f'"{escaped}"'
+
+
+def _parse_env(path: Path) -> dict[str, str]:
+    if not path.exists():
+        return {}
+    data = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        data[key.strip()] = _decode_env_value(value)
+    return data
+
+
+def _write_env(path: Path, data: dict[str, str]) -> None:
+    body = "".join(f"{key}={_quote_env_value(value)}\n" for key, value in sorted(data.items()))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(body, encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    tmp.replace(path)
+    os.chmod(path, 0o600)
+
+
+def _setup_secret_host_root() -> Path:
+    return _secret_dir() / _SETUP_SECRET_FILE_HOST_DIR
+
+
+def _setup_secret_container_path(*parts: str) -> str:
+    safe_parts = [part.strip("/").replace("..", "") for part in parts if part]
+    return "/".join([_SETUP_SECRET_FILE_CONTAINER_ROOT.rstrip("/"), *safe_parts])
+
+
+def _write_secret_file(*, subdir: str, filename: str, content: str) -> str:
+    safe_name = Path(filename).name
+    if not safe_name:
+        raise ValueError("secret filename is empty")
+    host_dir = _setup_secret_host_root() / subdir
+    host_dir.mkdir(parents=True, exist_ok=True)
+    os.chmod(host_dir, 0o700)
+    host_path = host_dir / safe_name
+    body = content if content.endswith("\n") else content + "\n"
+    tmp = host_path.with_suffix(host_path.suffix + ".tmp")
+    tmp.write_text(body, encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    tmp.replace(host_path)
+    os.chmod(host_path, 0o600)
+    return _setup_secret_container_path(subdir, safe_name)
+
+
+def _truthy_env(value: str | None) -> bool:
+    return (value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _prompt_line(prompt: str, *, default: str = "", required: bool = False, secret: bool = False) -> str:
+    suffix = ""
+    if default and secret:
+        suffix = " [keep existing]"
+    elif default:
+        suffix = f" [{default}]"
+    while True:
+        label = f"{prompt}{suffix}: "
+        if secret and sys.stdin.isatty():
+            value = getpass.getpass(label)
+        else:
+            value = input(label)
+        value = value.strip()
+        if value:
+            return value
+        if default:
+            return default
+        if not required:
+            return ""
+        print(_t("required_value"), file=sys.stderr)
+
+
+def _prompt_bool(prompt: str, *, default: bool = False) -> bool:
+    suffix = "Y/n" if default else "y/N"
+    while True:
+        value = input(f"{prompt} [{suffix}]: ").strip().lower()
+        if not value:
+            return default
+        if value in {"y", "yes", "1", "true"}:
+            return True
+        if value in {"n", "no", "0", "false"}:
+            return False
+        print(_t("enter_yes_no"), file=sys.stderr)
+
+
+def _prompt_multiline(prompt: str, *, default: str = "", required: bool = False) -> str:
+    print(prompt)
+    if default:
+        print(_t("input_file_or_paste_keep"))
+    elif required:
+        print(_t("input_file_or_paste_required"))
+    else:
+        print(_t("input_file_or_paste_skip"))
+    while True:
+        try:
+            first = input()
+        except EOFError:
+            first = ""
+        if first == "" and (default or not required):
+            return default
+        if first.strip() == "EOF":
+            if default:
+                return default
+            if not required:
+                return ""
+            print(_t("required_multiline"), file=sys.stderr)
+            continue
+
+        candidate = first.strip()
+        path_text = candidate[1:] if candidate.startswith("@") else candidate
+        looks_like_path = candidate.startswith("@") or path_text.startswith(("/", "~", "./", "../"))
+        if looks_like_path:
+            path = Path(path_text).expanduser()
+            try:
+                return path.read_text(encoding="utf-8").strip()
+            except OSError as exc:
+                print(_t("file_read_error", path=str(path), error=exc), file=sys.stderr)
+                if required:
+                    continue
+                return default
+
+        if not first and required:
+            print(_t("required_multiline"), file=sys.stderr)
+            continue
+        lines: list[str] = []
+        if first:
+            lines.append(first)
+        while True:
+            try:
+                line = input()
+            except EOFError:
+                line = "EOF"
+            if line == "EOF":
+                break
+            lines.append(line)
+        value = "\n".join(lines).strip()
+        if value:
+            return value
+        if default:
+            return default
+        if not required:
+            return ""
+        print(_t("required_multiline"), file=sys.stderr)
+
+
+def _normalize_provider_id(value: str) -> str:
+    normalized = re.sub(r"[^a-z0-9]+", "-", value.strip().lower()).strip("-")
+    return normalized or "custom"
+
+
+def _provider_prefix(provider_id: str) -> str:
+    return "".join(ch.upper() if ch.isalnum() else "_" for ch in provider_id)
+
+
+def _split_csv(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+_PROVIDER_REGISTRY = None
+_PROVIDER_REGISTRY_ATTEMPTED = False
+
+
+def _provider_registry():
+    global _PROVIDER_REGISTRY, _PROVIDER_REGISTRY_ATTEMPTED
+    if _PROVIDER_REGISTRY_ATTEMPTED:
+        return _PROVIDER_REGISTRY
+    _PROVIDER_REGISTRY_ATTEMPTED = True
+    candidates = []
+    try:
+        script_root = Path(__file__).resolve().parents[1]
+        candidates.append(script_root)
+    except Exception:
+        pass
+    try:
+        source = Path(_cfg().get("paths", {}).get("source", "")).expanduser()
+        if source:
+            candidates.append(source)
+    except Exception:
+        pass
+    for root in candidates:
+        provider_root = root / "backend"
+        if not root or not (provider_root / "providers" / "registry.py").exists():
+            continue
+        text = str(provider_root)
+        if text not in sys.path:
+            sys.path.insert(0, text)
+        try:
+            from providers import registry
+        except Exception:
+            continue
+        _PROVIDER_REGISTRY = registry
+        return _PROVIDER_REGISTRY
+    return None
+
+
+def _builtin_provider(provider_id: str) -> dict:
+    registry = _provider_registry()
+    if registry:
+        return registry.builtin_provider(provider_id)
+    return {}
+
+
+def _ai_provider_ids_from_env(env: dict[str, str]) -> list[str]:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_ids_from_env(env)
+    ids = [_normalize_provider_id(item) for item in _split_csv(env.get("AI_PROVIDER_IDS", ""))]
+    seen = set()
+    out: list[str] = []
+    for provider_id in ids:
+        if provider_id not in seen:
+            out.append(provider_id)
+            seen.add(provider_id)
+    if out:
+        return out
+    for key, value in env.items():
+        if key.endswith("_ANTHROPIC_AUTH_TOKEN") and value:
+            out.append(_normalize_provider_id(key[: -len("_ANTHROPIC_AUTH_TOKEN")]))
+    for key, value in env.items():
+        if key.endswith("_CODEX_BASE_URL") and value:
+            provider_id = _normalize_provider_id(key[: -len("_CODEX_BASE_URL")])
+            prefix = _provider_prefix(provider_id)
+            env_key = env.get(f"{prefix}_CODEX_ENV_KEY") or f"{prefix}_CODEX_AUTH_TOKEN"
+            if env.get(f"{prefix}_CODEX_MODEL") and env_key and env.get(env_key) and provider_id not in out:
+                out.append(provider_id)
+    for key, value in env.items():
+        if key.endswith("_CODEX_AUTH_MODE") and str(value or "").strip().lower().replace("_", "-") in {"native", "native-codex"}:
+            provider_id = _normalize_provider_id(key[: -len("_CODEX_AUTH_MODE")])
+            prefix = _provider_prefix(provider_id)
+            if (
+                env.get(f"{prefix}_CODEX_MODEL")
+                and env.get(f"{prefix}_CODEX_HOME_PATH")
+                and env.get(f"{prefix}_CODEX_MACHINE_ID_PATH")
+                and provider_id not in out
+            ):
+                out.append(provider_id)
+    for key, value in env.items():
+        if key.endswith("_OPENCODE_BASE_URL") and value:
+            provider_id = _normalize_provider_id(key[: -len("_OPENCODE_BASE_URL")])
+            prefix = _provider_prefix(provider_id)
+            env_key = env.get(f"{prefix}_OPENCODE_ENV_KEY") or f"{prefix}_OPENCODE_AUTH_TOKEN"
+            if env.get(f"{prefix}_OPENCODE_MODEL") and env_key and env.get(env_key) and provider_id not in out:
+                out.append(provider_id)
+    return out
+
+
+def _provider_has_anthropic_adapter(env: dict[str, str], provider_id: str) -> bool:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_has_anthropic_adapter(env, provider_id)
+    prefix = _provider_prefix(provider_id)
+    return bool(
+        env.get(f"{prefix}_ANTHROPIC_BASE_URL")
+        and env.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN")
+        and env.get(f"{prefix}_ANTHROPIC_MODEL")
+    )
+
+
+def _provider_has_codex_responses_adapter(env: dict[str, str], provider_id: str) -> bool:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_has_codex_responses_adapter(env, provider_id)
+    prefix = _provider_prefix(provider_id)
+    if (env.get(f"{prefix}_CODEX_AUTH_MODE") or "").strip().lower().replace("_", "-") in {"native", "native-codex"}:
+        return bool(
+            env.get(f"{prefix}_CODEX_MODEL")
+            and env.get(f"{prefix}_CODEX_HOME_PATH")
+            and env.get(f"{prefix}_CODEX_MACHINE_ID_PATH")
+        )
+    env_key = env.get(f"{prefix}_CODEX_ENV_KEY") or f"{prefix}_CODEX_AUTH_TOKEN"
+    return bool(
+        env.get(f"{prefix}_CODEX_BASE_URL")
+        and env.get(f"{prefix}_CODEX_MODEL")
+        and env_key
+        and env.get(env_key)
+        and (env.get(f"{prefix}_CODEX_WIRE_API") or "responses").strip().lower() == "responses"
+    )
+
+
+def _provider_has_opencode_adapter(env: dict[str, str], provider_id: str) -> bool:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_has_opencode_adapter(env, provider_id)
+    prefix = _provider_prefix(provider_id)
+    env_key = env.get(f"{prefix}_OPENCODE_ENV_KEY") or f"{prefix}_OPENCODE_AUTH_TOKEN"
+    return bool(
+        env.get(f"{prefix}_OPENCODE_BASE_URL")
+        and env.get(f"{prefix}_OPENCODE_MODEL")
+        and env_key
+        and env.get(env_key)
+    )
+
+
+def _provider_codex_adapter_kind(env: dict[str, str], provider_id: str) -> str:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_codex_adapter_kind(env, provider_id)
+    prefix = _provider_prefix(provider_id)
+    if (env.get(f"{prefix}_CODEX_AUTH_MODE") or "").strip().lower().replace("_", "-") in {"native", "native-codex"}:
+        return "native-codex"
+    relay = (env.get(f"{prefix}_CODEX_RELAY") or "").strip().lower().replace("_", "-")
+    upstream_wire_api = (env.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API") or "").strip().lower().replace("_", "-")
+    if relay or upstream_wire_api in {"chat-completions", "openai-chat-completions"}:
+        return "openai-chat-completions-relay"
+    return "openai-responses"
+
+
+def _provider_allows_agent(env: dict[str, str], provider_id: str, agent_id: str) -> bool:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_allows_agent(env, provider_id, agent_id)
+    prefix = _provider_prefix(provider_id)
+    raw = env.get(f"{prefix}_SUPPORTED_AGENTS", "")
+    if raw:
+        allowed = {
+            str(item or "").strip().lower().replace("_", "-")
+            for item in raw.split(",")
+            if str(item or "").strip()
+        }
+        return str(agent_id or "").strip().lower().replace("_", "-") in allowed
+    return True
+
+
+def _builtin_supported_agents(existing: dict[str, str], prefix: str) -> str:
+    registry = _provider_registry()
+    if registry:
+        return registry.builtin_supported_agents(existing, prefix)
+    raw = existing.get(f"{prefix}_SUPPORTED_AGENTS", "").strip()
+    if not raw:
+        return "claude,codex,opencode"
+    agents = [
+        item.strip().lower().replace("_", "-")
+        for item in raw.split(",")
+        if item.strip()
+    ]
+    if set(agents) == {"claude", "codex"}:
+        return "claude,codex,opencode"
+    return ",".join(agents)
+
+
+
+
+def _ai_provider_capabilities_from_env(
+    env: dict[str, str],
+    *,
+    provider_filter: list[str] | None = None,
+    agent_filter: list[str] | None = None,
+) -> list[dict[str, object]]:
+    registry = _provider_registry()
+    if registry:
+        return registry.provider_capabilities_from_env(
+            env,
+            provider_filter=provider_filter,
+            agent_filter=agent_filter,
+        )
+    allowed_providers = {
+        _normalize_provider_id(item)
+        for item in (provider_filter or [])
+        if str(item or "").strip()
+    }
+    allowed_agents = {
+        str(item or "").strip().lower().replace("_", "-")
+        for item in (agent_filter or [])
+        if str(item or "").strip()
+    }
+    capabilities: list[dict[str, object]] = []
+    for provider_id in _ai_provider_ids_from_env(env):
+        if allowed_providers and provider_id not in allowed_providers:
+            continue
+        if (
+            _provider_has_anthropic_adapter(env, provider_id)
+            and _provider_allows_agent(env, provider_id, "claude")
+            and (not allowed_agents or "claude" in allowed_agents)
+        ):
+            capabilities.append(
+                {
+                    "provider_id": provider_id,
+                    "agent_id": "claude",
+                    "adapter_kind": "anthropic",
+                    "status": "configured",
+                    "enabled": True,
+                }
+            )
+        if (
+            _provider_has_codex_responses_adapter(env, provider_id)
+            and _provider_allows_agent(env, provider_id, "codex")
+            and (not allowed_agents or "codex" in allowed_agents)
+        ):
+            capabilities.append(
+                {
+                    "provider_id": provider_id,
+                    "agent_id": "codex",
+                    "adapter_kind": _provider_codex_adapter_kind(env, provider_id),
+                    "status": "configured",
+                    "enabled": True,
+                }
+            )
+        if (
+            _provider_has_opencode_adapter(env, provider_id)
+            and _provider_allows_agent(env, provider_id, "opencode")
+            and (not allowed_agents or "opencode" in allowed_agents)
+        ):
+            capabilities.append(
+                {
+                    "provider_id": provider_id,
+                    "agent_id": "opencode",
+                    "adapter_kind": "opencode",
+                    "status": "configured",
+                    "enabled": True,
+                }
+            )
+    return capabilities
+
+
+def _ai_providers_configured(path: Path | None = None) -> bool:
+    env = _parse_env(path or _secret_path("ai-providers"))
+    return bool(_ai_provider_capabilities_from_env(env))
+
+
+def _default_agent_from_provider_env(env: dict[str, str], provider_id: str) -> str:
+    registry = _provider_registry()
+    if registry:
+        return registry.default_agent_from_provider_env(env, provider_id)
+    if _provider_has_anthropic_adapter(env, provider_id):
+        return "claude"
+    if _provider_has_codex_responses_adapter(env, provider_id):
+        return "codex"
+    if _provider_has_opencode_adapter(env, provider_id):
+        return "opencode"
+    return "claude"
+
+
+def _base_provider_env(
+    *,
+    prefix: str,
+    name: str,
+    description: str,
+    base_url: str,
+    token: str,
+    model: str,
+    effort: str = "max",
+    visible: str = "1",
+) -> dict[str, str]:
+    return {
+        f"{prefix}_PROVIDER_NAME": name,
+        f"{prefix}_PROVIDER_DESCRIPTION": description,
+        f"{prefix}_PROVIDER_VISIBLE": visible,
+        f"{prefix}_ANTHROPIC_BASE_URL": base_url,
+        f"{prefix}_ANTHROPIC_AUTH_TOKEN": token,
+        f"{prefix}_ANTHROPIC_MODEL": model,
+        f"{prefix}_ANTHROPIC_DEFAULT_OPUS_MODEL": model,
+        f"{prefix}_ANTHROPIC_DEFAULT_SONNET_MODEL": model,
+        f"{prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL": model,
+        f"{prefix}_CLAUDE_CODE_SUBAGENT_MODEL": model,
+        f"{prefix}_CLAUDE_CODE_EFFORT_LEVEL": effort,
+    }
+
+
+def _prompt_deepseek_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
+    provider_id = "deepseek"
+    prefix = _provider_prefix(provider_id)
+    builtin = _builtin_provider(provider_id)
+    adapters = builtin.get("adapters") if isinstance(builtin.get("adapters"), dict) else {}
+    claude = adapters.get("claude") or {}
+    codex = adapters.get("codex") or {}
+    opencode = adapters.get("opencode") or {}
+    worker = builtin.get("worker") if isinstance(builtin.get("worker"), dict) else {}
+    model = _prompt_line(f"{provider_id} model", default=existing.get(f"{prefix}_ANTHROPIC_MODEL", claude.get("model", "deepseek-v4-pro[1m]")))
+    base_url = _prompt_line(
+        f"{provider_id} Anthropic base URL",
+        default=existing.get(f"{prefix}_ANTHROPIC_BASE_URL", claude.get("base_url", "https://api.deepseek.com/anthropic")),
+    )
+    token = _prompt_line(
+        f"{provider_id} Anthropic auth token",
+        default=existing.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""),
+        required=True,
+        secret=True,
+    )
+    data = _base_provider_env(
+        prefix=prefix,
+        name=builtin.get("name", "DeepSeek V4 Pro"),
+        description=builtin.get("setup_description", "DeepSeek Anthropic-compatible Claude Code provider"),
+        base_url=base_url,
+        token=token,
+        model=model,
+    )
+    data[f"{prefix}_SUPPORTED_AGENTS"] = _builtin_supported_agents(existing, prefix)
+    data.update(
+        {
+            f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", codex.get("provider_name", "DeepSeek")),
+            f"{prefix}_CODEX_BASE_URL": existing.get(f"{prefix}_CODEX_BASE_URL", codex.get("base_url", "https://api.deepseek.com/v1")),
+            f"{prefix}_CODEX_MODEL": existing.get(f"{prefix}_CODEX_MODEL", codex.get("model", "deepseek-v4-pro")),
+            f"{prefix}_CODEX_ENV_KEY": existing.get(f"{prefix}_CODEX_ENV_KEY", codex.get("env_key", f"{prefix}_ANTHROPIC_AUTH_TOKEN")),
+            f"{prefix}_CODEX_WIRE_API": existing.get(f"{prefix}_CODEX_WIRE_API", codex.get("wire_api", "responses")),
+            f"{prefix}_CODEX_UPSTREAM_WIRE_API": existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", codex.get("upstream_wire_api", "chat-completions")),
+            f"{prefix}_CODEX_RELAY": existing.get(f"{prefix}_CODEX_RELAY", codex.get("relay", "codex-relay")),
+            f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", str(codex.get("context_window", "262144"))),
+            f"{prefix}_OPENCODE_PROVIDER_NAME": existing.get(f"{prefix}_OPENCODE_PROVIDER_NAME", opencode.get("provider_name", "DeepSeek")),
+            f"{prefix}_OPENCODE_BASE_URL": existing.get(f"{prefix}_OPENCODE_BASE_URL", opencode.get("base_url", "https://api.deepseek.com/v1")),
+            f"{prefix}_OPENCODE_MODEL": existing.get(f"{prefix}_OPENCODE_MODEL", opencode.get("model", "deepseek-v4-pro")),
+            f"{prefix}_OPENCODE_ENV_KEY": existing.get(f"{prefix}_OPENCODE_ENV_KEY", opencode.get("env_key", f"{prefix}_ANTHROPIC_AUTH_TOKEN")),
+            f"{prefix}_OPENCODE_PROVIDER_NPM": existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", opencode.get("provider_npm", "@ai-sdk/openai-compatible")),
+        }
+    )
+    data[f"{prefix}_AI_WORKER_MAX_CONCURRENCY"] = existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", worker.get("max_concurrency", "20"))
+    data[f"{prefix}_AI_WORKER_QUEUE_MAX"] = existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", worker.get("queue_max", "100"))
+    return provider_id, data
+
+
+def _prompt_minimax_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
+    provider_id = "minimax"
+    prefix = _provider_prefix(provider_id)
+    builtin = _builtin_provider(provider_id)
+    adapters = builtin.get("adapters") if isinstance(builtin.get("adapters"), dict) else {}
+    claude = adapters.get("claude") or {}
+    codex = adapters.get("codex") or {}
+    opencode = adapters.get("opencode") or {}
+    worker = builtin.get("worker") if isinstance(builtin.get("worker"), dict) else {}
+    model = _prompt_line(f"{provider_id} model", default=existing.get(f"{prefix}_ANTHROPIC_MODEL", claude.get("model", "MiniMax-M3")))
+    base_url = _prompt_line(
+        f"{provider_id} Anthropic base URL",
+        default=existing.get(f"{prefix}_ANTHROPIC_BASE_URL", claude.get("base_url", "https://api.minimaxi.com/anthropic")),
+    )
+    token = _prompt_line(
+        f"{provider_id} Anthropic auth token",
+        default=existing.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""),
+        required=True,
+        secret=True,
+    )
+    data = _base_provider_env(
+        prefix=prefix,
+        name=builtin.get("name", "MiniMax M3"),
+        description=builtin.get("setup_description", "MiniMax Anthropic-compatible and native Responses provider"),
+        base_url=base_url,
+        token=token,
+        model=model,
+    )
+    data.update(
+        {
+            f"{prefix}_SUPPORTED_AGENTS": _builtin_supported_agents(existing, prefix),
+            f"{prefix}_AI_WORKER_MAX_CONCURRENCY": existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", worker.get("max_concurrency", "5")),
+            f"{prefix}_AI_WORKER_QUEUE_MAX": existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", worker.get("queue_max", "20")),
+            f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", codex.get("provider_name", "MiniMax")),
+            f"{prefix}_CODEX_BASE_URL": existing.get(f"{prefix}_CODEX_BASE_URL", codex.get("base_url", "https://api.minimaxi.com/v1")),
+            f"{prefix}_CODEX_MODEL": existing.get(f"{prefix}_CODEX_MODEL", codex.get("model", model)),
+            f"{prefix}_CODEX_ENV_KEY": existing.get(f"{prefix}_CODEX_ENV_KEY", codex.get("env_key", f"{prefix}_ANTHROPIC_AUTH_TOKEN")),
+            f"{prefix}_CODEX_WIRE_API": existing.get(f"{prefix}_CODEX_WIRE_API", codex.get("wire_api", "responses")),
+            f"{prefix}_CODEX_UPSTREAM_WIRE_API": existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", codex.get("upstream_wire_api", "")),
+            f"{prefix}_CODEX_RELAY": existing.get(f"{prefix}_CODEX_RELAY", codex.get("relay", "")),
+            f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", str(codex.get("context_window", "512000"))),
+            f"{prefix}_OPENCODE_PROVIDER_NAME": existing.get(f"{prefix}_OPENCODE_PROVIDER_NAME", opencode.get("provider_name", "MiniMax")),
+            f"{prefix}_OPENCODE_BASE_URL": existing.get(f"{prefix}_OPENCODE_BASE_URL", opencode.get("base_url", "https://api.minimaxi.com/v1")),
+            f"{prefix}_OPENCODE_MODEL": existing.get(f"{prefix}_OPENCODE_MODEL", opencode.get("model", model)),
+            f"{prefix}_OPENCODE_ENV_KEY": existing.get(f"{prefix}_OPENCODE_ENV_KEY", opencode.get("env_key", f"{prefix}_ANTHROPIC_AUTH_TOKEN")),
+            f"{prefix}_OPENCODE_PROVIDER_NPM": existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", opencode.get("provider_npm", "@ai-sdk/openai-compatible")),
+        }
+    )
+    return provider_id, data
+
+
+def _prompt_volcengine_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
+    """火山引擎 (Volcengine) — an AGGREGATION platform, so you pick a model and the
+    provider id becomes ``volcengine-<model>`` (the selector then shows e.g.
+    ``volcengine-glm-latest`` / ``volcengine-doubao``). Add it again for another
+    model. One ARK key serves all three agents; the three wire formats are all
+    native (no relay):
+      claude   -> {base}/api/coding        (Anthropic /v1/messages)
+      codex    -> {base}/api/coding/v3     (Responses API, DIRECT — like minimax)
+      opencode -> {base}/api/coding/v3     (OpenAI-compatible /chat/completions)
+    """
+    model = _prompt_line("volcengine model (e.g. glm-latest, doubao-seed-1-6)", required=True).strip()
+    provider_id = f"volcengine-{_normalize_provider_id(model)}"
+    prefix = _provider_prefix(provider_id)
+    token = _prompt_line(
+        f"{provider_id} Volcengine ARK API key (ark-...)",
+        default=existing.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""),
+        required=True,
+        secret=True,
+    )
+    anthropic_base = "https://ark.cn-beijing.volces.com/api/coding"
+    openai_base = "https://ark.cn-beijing.volces.com/api/coding/v3"
+    data = _base_provider_env(
+        prefix=prefix,
+        name=provider_id,
+        description=f"Volcengine (火山引擎) aggregated provider — {model}",
+        base_url=anthropic_base,
+        token=token,
+        model=model,
+    )
+    data.update(
+        {
+            f"{prefix}_SUPPORTED_AGENTS": existing.get(f"{prefix}_SUPPORTED_AGENTS", "claude,codex,opencode"),
+            f"{prefix}_AI_WORKER_MAX_CONCURRENCY": existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "10"),
+            f"{prefix}_AI_WORKER_QUEUE_MAX": existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "50"),
+            # codex: volcengine /api/coding/v3 speaks the Responses API natively -> DIRECT, no relay
+            f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", "volcengine-coding-plan"),
+            f"{prefix}_CODEX_BASE_URL": existing.get(f"{prefix}_CODEX_BASE_URL", openai_base),
+            f"{prefix}_CODEX_MODEL": existing.get(f"{prefix}_CODEX_MODEL", model),
+            f"{prefix}_CODEX_ENV_KEY": existing.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
+            f"{prefix}_CODEX_WIRE_API": existing.get(f"{prefix}_CODEX_WIRE_API", "responses"),
+            f"{prefix}_CODEX_UPSTREAM_WIRE_API": existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", ""),
+            f"{prefix}_CODEX_RELAY": existing.get(f"{prefix}_CODEX_RELAY", ""),
+            f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "262144"),
+            # opencode: OpenAI-compatible
+            f"{prefix}_OPENCODE_PROVIDER_NAME": existing.get(f"{prefix}_OPENCODE_PROVIDER_NAME", "volcengine"),
+            f"{prefix}_OPENCODE_BASE_URL": existing.get(f"{prefix}_OPENCODE_BASE_URL", openai_base),
+            f"{prefix}_OPENCODE_MODEL": existing.get(f"{prefix}_OPENCODE_MODEL", model),
+            f"{prefix}_OPENCODE_ENV_KEY": existing.get(f"{prefix}_OPENCODE_ENV_KEY", f"{prefix}_ANTHROPIC_AUTH_TOKEN"),
+            f"{prefix}_OPENCODE_PROVIDER_NPM": existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", "@ai-sdk/openai-compatible"),
+        }
+    )
+    return provider_id, data
+
+
+def _native_codex_default_user_spec(codex_home: str) -> str:
+    try:
+        stat_result = Path(codex_home).stat()
+        return f"{stat_result.st_uid}:{stat_result.st_gid}"
+    except OSError:
+        return f"{os.getuid()}:{os.getgid()}"
+
+
+def _prompt_native_codex_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
+    provider_id = "native-codex"
+    prefix = _provider_prefix(provider_id)
+    builtin = _builtin_provider(provider_id)
+    adapters = builtin.get("adapters") if isinstance(builtin.get("adapters"), dict) else {}
+    codex = adapters.get("codex") or {}
+    worker = builtin.get("worker") if isinstance(builtin.get("worker"), dict) else {}
+    default_home = existing.get(f"{prefix}_CODEX_HOME_PATH", "")
+    if not default_home:
+        default_home = str((Path.home() / ".codex").expanduser().resolve(strict=False))
+    codex_home = _prompt_line(
+        "native Codex host ~/.codex path",
+        default=default_home,
+        required=True,
+    )
+    codex_home = str(Path(codex_home).expanduser().resolve(strict=False))
+    machine_id_path = _prompt_line(
+        "native Codex host /etc/machine-id path",
+        default=existing.get(f"{prefix}_CODEX_MACHINE_ID_PATH", codex.get("machine_id_path", "/etc/machine-id")),
+        required=True,
+    )
+    machine_id_path = str(Path(machine_id_path).expanduser().resolve(strict=False))
+    container_user = _prompt_line(
+        "native Codex runtime UID:GID",
+        default=existing.get(f"{prefix}_CODEX_CONTAINER_USER", _native_codex_default_user_spec(codex_home)),
+        required=True,
+    )
+    if not re.match(r"^[0-9]+:[0-9]+$", container_user):
+        print("native Codex runtime UID:GID must look like 1000:1000", file=sys.stderr)
+        return _prompt_native_codex_provider(existing)
+    data = {
+        f"{prefix}_PROVIDER_NAME": existing.get(f"{prefix}_PROVIDER_NAME", builtin.get("name", "Native Codex GPT-5.5")),
+        f"{prefix}_PROVIDER_DESCRIPTION": existing.get(
+            f"{prefix}_PROVIDER_DESCRIPTION",
+            builtin.get("setup_description", "Native Codex CLI plan login; no API token is stored by MyApp"),
+        ),
+        f"{prefix}_PROVIDER_VISIBLE": existing.get(f"{prefix}_PROVIDER_VISIBLE", "1"),
+        f"{prefix}_SUPPORTED_AGENTS": "codex",
+        f"{prefix}_AI_WORKER_MAX_CONCURRENCY": existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", worker.get("max_concurrency", "1")),
+        f"{prefix}_AI_WORKER_QUEUE_MAX": existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", worker.get("queue_max", "20")),
+        f"{prefix}_CODEX_PROVIDER_NAME": existing.get(f"{prefix}_CODEX_PROVIDER_NAME", codex.get("provider_name", "Native Codex")),
+        f"{prefix}_CODEX_MODEL": _prompt_line(
+            "native Codex model",
+            default=existing.get(f"{prefix}_CODEX_MODEL", codex.get("model", "gpt-5.5")),
+            required=True,
+        ),
+        f"{prefix}_CODEX_AUTH_MODE": "native",
+        f"{prefix}_CODEX_WIRE_API": "native",
+        f"{prefix}_CODEX_BASE_URL": "",
+        f"{prefix}_CODEX_ENV_KEY": "",
+        f"{prefix}_CODEX_HOME_PATH": codex_home,
+        f"{prefix}_CODEX_MACHINE_ID_PATH": machine_id_path,
+        f"{prefix}_CODEX_CONTAINER_USER": container_user,
+        f"{prefix}_CODEX_CONTEXT_WINDOW": existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", str(codex.get("context_window", "512000"))),
+    }
+    return provider_id, data
+
+
+def _prompt_custom_provider(existing: dict[str, str]) -> tuple[str, dict[str, str]]:
+    provider_id = _normalize_provider_id(_prompt_line("custom provider id", required=True))
+    prefix = _provider_prefix(provider_id)
+    data: dict[str, str] = {
+        f"{prefix}_PROVIDER_NAME": _prompt_line(
+            f"{provider_id} display name",
+            default=existing.get(f"{prefix}_PROVIDER_NAME", provider_id),
+        ),
+        f"{prefix}_PROVIDER_DESCRIPTION": _prompt_line(
+            f"{provider_id} description",
+            default=existing.get(f"{prefix}_PROVIDER_DESCRIPTION", "Custom AI provider"),
+        ),
+        f"{prefix}_PROVIDER_VISIBLE": existing.get(f"{prefix}_PROVIDER_VISIBLE", "1"),
+    }
+    add_claude = _prompt_bool(
+        f"Add Claude Code via Anthropic-compatible API for {provider_id}?",
+        default=bool(existing.get(f"{prefix}_ANTHROPIC_MODEL")),
+    )
+    model = existing.get(f"{prefix}_ANTHROPIC_MODEL", "")
+    if add_claude:
+        model = _prompt_line(f"{provider_id} ANTHROPIC_MODEL", default=model, required=True)
+        base_url = _prompt_line(
+            f"{provider_id} ANTHROPIC_BASE_URL",
+            default=existing.get(f"{prefix}_ANTHROPIC_BASE_URL", ""),
+            required=True,
+        )
+        token = _prompt_line(
+            f"{provider_id} ANTHROPIC_AUTH_TOKEN",
+            default=existing.get(f"{prefix}_ANTHROPIC_AUTH_TOKEN", ""),
+            required=True,
+            secret=True,
+        )
+        data.update(
+            _base_provider_env(
+                prefix=prefix,
+                name=data[f"{prefix}_PROVIDER_NAME"],
+                description=data[f"{prefix}_PROVIDER_DESCRIPTION"],
+                base_url=base_url,
+                token=token,
+                model=model,
+                effort=_prompt_line(
+                    f"{provider_id} CLAUDE_CODE_EFFORT_LEVEL",
+                    default=existing.get(f"{prefix}_CLAUDE_CODE_EFFORT_LEVEL", "max"),
+                ),
+            )
+        )
+        data[f"{prefix}_ANTHROPIC_DEFAULT_OPUS_MODEL"] = _prompt_line(
+            f"{provider_id} ANTHROPIC_DEFAULT_OPUS_MODEL",
+            default=existing.get(f"{prefix}_ANTHROPIC_DEFAULT_OPUS_MODEL", model),
+            required=True,
+        )
+        data[f"{prefix}_ANTHROPIC_DEFAULT_SONNET_MODEL"] = _prompt_line(
+            f"{provider_id} ANTHROPIC_DEFAULT_SONNET_MODEL",
+            default=existing.get(f"{prefix}_ANTHROPIC_DEFAULT_SONNET_MODEL", model),
+            required=True,
+        )
+        data[f"{prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL"] = _prompt_line(
+            f"{provider_id} ANTHROPIC_DEFAULT_HAIKU_MODEL",
+            default=existing.get(f"{prefix}_ANTHROPIC_DEFAULT_HAIKU_MODEL", model),
+            required=True,
+        )
+        data[f"{prefix}_CLAUDE_CODE_SUBAGENT_MODEL"] = _prompt_line(
+            f"{provider_id} CLAUDE_CODE_SUBAGENT_MODEL",
+            default=existing.get(f"{prefix}_CLAUDE_CODE_SUBAGENT_MODEL", model),
+            required=True,
+        )
+    data[f"{prefix}_AI_WORKER_MAX_CONCURRENCY"] = _prompt_line(
+        f"{provider_id} worker max concurrency",
+        default=existing.get(f"{prefix}_AI_WORKER_MAX_CONCURRENCY", "3"),
+    )
+    data[f"{prefix}_AI_WORKER_QUEUE_MAX"] = _prompt_line(
+        f"{provider_id} worker queue max",
+        default=existing.get(f"{prefix}_AI_WORKER_QUEUE_MAX", "50"),
+    )
+    if _prompt_bool(
+        f"Add Codex via OpenAI Responses API for {provider_id}?",
+        default=bool(existing.get(f"{prefix}_CODEX_MODEL")),
+    ):
+        data[f"{prefix}_CODEX_PROVIDER_NAME"] = _prompt_line(
+            f"{provider_id} CODEX provider name",
+            default=existing.get(f"{prefix}_CODEX_PROVIDER_NAME", provider_id),
+        )
+        data[f"{prefix}_CODEX_BASE_URL"] = _prompt_line(
+            f"{provider_id} CODEX base URL",
+            default=existing.get(f"{prefix}_CODEX_BASE_URL", ""),
+            required=True,
+        )
+        data[f"{prefix}_CODEX_MODEL"] = _prompt_line(
+            f"{provider_id} CODEX model",
+            default=existing.get(f"{prefix}_CODEX_MODEL", model),
+            required=True,
+        )
+        data[f"{prefix}_CODEX_ENV_KEY"] = _prompt_line(
+            f"{provider_id} CODEX token env key",
+            default=existing.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_CODEX_AUTH_TOKEN"),
+        )
+        code_token_key = data[f"{prefix}_CODEX_ENV_KEY"]
+        data[code_token_key] = _prompt_line(
+            f"{provider_id} CODEX auth token",
+            default=existing.get(code_token_key, ""),
+            required=True,
+            secret=True,
+        )
+        data[f"{prefix}_CODEX_WIRE_API"] = _prompt_line(
+            f"{provider_id} CODEX wire api",
+            default=existing.get(f"{prefix}_CODEX_WIRE_API", "responses"),
+        )
+        data[f"{prefix}_CODEX_CONTEXT_WINDOW"] = _prompt_line(
+            f"{provider_id} CODEX context window",
+            default=existing.get(f"{prefix}_CODEX_CONTEXT_WINDOW", "200000"),
+        )
+        use_relay = _prompt_bool(
+            f"Use codex-relay to convert Codex Responses to upstream chat/completions for {provider_id}?",
+            default=bool(existing.get(f"{prefix}_CODEX_RELAY")),
+        )
+        if use_relay:
+            data[f"{prefix}_CODEX_RELAY"] = _prompt_line(
+                f"{provider_id} CODEX relay",
+                default=existing.get(f"{prefix}_CODEX_RELAY", "codex-relay"),
+            )
+            data[f"{prefix}_CODEX_UPSTREAM_WIRE_API"] = _prompt_line(
+                f"{provider_id} CODEX upstream wire api",
+                default=existing.get(f"{prefix}_CODEX_UPSTREAM_WIRE_API", "chat-completions"),
+            )
+    if _prompt_bool(
+        f"Add OpenCode via OpenCode provider adapter for {provider_id}?",
+        default=bool(existing.get(f"{prefix}_OPENCODE_MODEL")),
+    ):
+        data[f"{prefix}_OPENCODE_PROVIDER_NAME"] = _prompt_line(
+            f"{provider_id} OPENCODE provider name",
+            default=existing.get(f"{prefix}_OPENCODE_PROVIDER_NAME", existing.get(f"{prefix}_CODEX_PROVIDER_NAME", provider_id)),
+        )
+        data[f"{prefix}_OPENCODE_BASE_URL"] = _prompt_line(
+            f"{provider_id} OPENCODE base URL",
+            default=existing.get(f"{prefix}_OPENCODE_BASE_URL", existing.get(f"{prefix}_CODEX_BASE_URL", "")),
+            required=True,
+        )
+        data[f"{prefix}_OPENCODE_MODEL"] = _prompt_line(
+            f"{provider_id} OPENCODE model",
+            default=existing.get(f"{prefix}_OPENCODE_MODEL", existing.get(f"{prefix}_CODEX_MODEL", model)),
+            required=True,
+        )
+        data[f"{prefix}_OPENCODE_ENV_KEY"] = _prompt_line(
+            f"{provider_id} OPENCODE token env key",
+            default=existing.get(f"{prefix}_OPENCODE_ENV_KEY", existing.get(f"{prefix}_CODEX_ENV_KEY", f"{prefix}_OPENCODE_AUTH_TOKEN")),
+        )
+        opencode_token_key = data[f"{prefix}_OPENCODE_ENV_KEY"]
+        data[opencode_token_key] = _prompt_line(
+            f"{provider_id} OPENCODE auth token",
+            default=existing.get(opencode_token_key, ""),
+            required=True,
+            secret=True,
+        )
+        data[f"{prefix}_OPENCODE_PROVIDER_NPM"] = _prompt_line(
+            f"{provider_id} OPENCODE provider npm package",
+            default=existing.get(f"{prefix}_OPENCODE_PROVIDER_NPM", "@ai-sdk/openai-compatible"),
+        )
+    if not _ai_provider_capabilities_from_env({**existing, **data}, provider_filter=[provider_id]):
+        print(f"{provider_id} has no configured adapter; add at least Claude, Codex, or OpenCode", file=sys.stderr)
+        return _prompt_custom_provider(existing)
+    ordered_agents = ["claude", "codex", "opencode"]
+    caps = _ai_provider_capabilities_from_env({**existing, **data}, provider_filter=[provider_id])
+    supported = [
+        agent_id
+        for agent_id in ordered_agents
+        if any(cap.get("agent_id") == agent_id for cap in caps)
+    ]
+    data[f"{prefix}_SUPPORTED_AGENTS"] = ",".join(supported)
+    return provider_id, data
+
+
+def _setup_ai_providers(*, force: bool = False, path: Path | None = None, title: str = "AI provider setup") -> int:
+    path = path or _secret_path("ai-providers")
+    existing = _parse_env(path)
+    if existing and not force and _ai_providers_configured(path):
+        if _prompt_bool(f"AI providers are already configured at {path}. Keep current provider config?", default=True):
+            print("kept existing AI provider config")
+            return 0
+    data = dict(existing) if not force else {}
+    provider_ids: list[str] = []
+    path.parent.mkdir(parents=True, exist_ok=True)
+    print(title)
+    print(f"provider env: {path}")
+    while True:
+        print("  1) deepseek")
+        print("  2) minimax")
+        print("  3) volcengine  (火山引擎; aggregator — pick a model, adds volcengine-<model>)")
+        print("  4) native-codex")
+        print("  5) custom")
+        choice = _prompt_line("select provider", default="1" if not provider_ids else "n")
+        if choice.lower() in {"n", "next", "done", "q", "quit"} and provider_ids:
+            break
+        if choice == "1" or choice.lower() == "deepseek":
+            provider_id, values = _prompt_deepseek_provider(existing)
+        elif choice == "2" or choice.lower() == "minimax":
+            provider_id, values = _prompt_minimax_provider(existing)
+        elif choice == "3" or choice.lower() in {"volcengine", "volc", "huoshan", "ark"}:
+            provider_id, values = _prompt_volcengine_provider(existing)
+        elif choice == "4" or choice.lower() in {"native-codex", "native_codex", "codex-native"}:
+            provider_id, values = _prompt_native_codex_provider(existing)
+        elif choice == "5" or choice.lower() in {"custom", "other"}:
+            provider_id, values = _prompt_custom_provider(existing)
+        else:
+            print("unknown provider choice", file=sys.stderr)
+            continue
+        data.update(values)
+        if provider_id not in provider_ids:
+            provider_ids.append(provider_id)
+        if not _prompt_bool("add another provider?", default=False):
+            break
+    if not provider_ids:
+        print("no AI provider configured", file=sys.stderr)
+        return 1
+    data["AI_PROVIDER_IDS"] = ",".join(provider_ids)
+    default_provider = _prompt_line("default provider", default=provider_ids[0])
+    data["AI_DEFAULT_PROVIDER"] = default_provider if default_provider in provider_ids else provider_ids[0]
+    data["AI_DEFAULT_AGENT"] = _prompt_line(
+        "default agent",
+        default=_default_agent_from_provider_env(data, data["AI_DEFAULT_PROVIDER"]),
+    )
+    _write_env(path, data)
+    print(f"updated AI providers: {', '.join(provider_ids)}")
+    return 0
+
+
+def _setup_apns_push(existing: dict[str, str], data: dict[str, str]) -> None:
+    key_id = _prompt_line("APNs Key ID", default=existing.get("APNS_KEY_ID", ""), required=True)
+    team_id = _prompt_line("APNs Team ID", default=existing.get("APNS_TEAM_ID", ""), required=True)
+    bundle_id = _prompt_line("APNs Bundle ID", default=existing.get("APNS_BUNDLE_ID", ""), required=True)
+    use_sandbox = _prompt_bool("APNs use sandbox by default?", default=_truthy_env(existing.get("APNS_USE_SANDBOX", "true")))
+    current_path = existing.get("APNS_KEY_PATH", "")
+    p8 = _prompt_multiline("APNs .p8 private key", default="" if not current_path else "__KEEP__", required=not bool(current_path))
+    key_path = current_path
+    if p8 and p8 != "__KEEP__":
+        key_path = _write_secret_file(subdir="apns", filename=f"AuthKey_{key_id}.p8", content=p8)
+    data.update(
+        {
+            "APNS_KEY_ID": key_id,
+            "APNS_TEAM_ID": team_id,
+            "APNS_BUNDLE_ID": bundle_id,
+            "APNS_USE_SANDBOX": "true" if use_sandbox else "false",
+        }
+    )
+    if key_path:
+        data["APNS_KEY_PATH"] = key_path
+
+
+def _setup_fcm_push(existing: dict[str, str], data: dict[str, str]) -> None:
+    current_path = existing.get("FCM_SERVICE_ACCOUNT_PATH", "")
+    raw_json = _prompt_multiline("FCM service account JSON", default="" if not current_path else "__KEEP__", required=not bool(current_path))
+    service_account_path = current_path
+    parsed: dict | None = None
+    if raw_json and raw_json != "__KEEP__":
+        try:
+            parsed = json.loads(raw_json)
+        except json.JSONDecodeError as exc:
+            print(f"invalid FCM service account JSON: {exc}", file=sys.stderr)
+            raise SystemExit(1)
+        service_account_path = _write_secret_file(
+            subdir="fcm",
+            filename="service-account.json",
+            content=json.dumps(parsed, indent=2, ensure_ascii=False),
+        )
+    default_project = existing.get("FCM_PROJECT_ID", "") or (str(parsed.get("project_id")) if parsed and parsed.get("project_id") else "")
+    project_id = _prompt_line("FCM project id", default=default_project, required=True)
+    data["FCM_PROJECT_ID"] = project_id
+    if service_account_path:
+        data["FCM_SERVICE_ACCOUNT_PATH"] = service_account_path
+
+
+def _setup_getui_push(existing: dict[str, str], data: dict[str, str]) -> None:
+    data["GETUI_BASE_URL"] = _prompt_line("GeTui base URL", default=existing.get("GETUI_BASE_URL", "https://restapi.getui.com/v2"))
+    data["GETUI_APP_ID"] = _prompt_line("GeTui App ID", default=existing.get("GETUI_APP_ID", ""), required=True)
+    data["GETUI_APP_KEY"] = _prompt_line("GeTui App Key", default=existing.get("GETUI_APP_KEY", ""), required=True, secret=True)
+    app_secret = _prompt_line("GeTui App Secret (optional)", default=existing.get("GETUI_APP_SECRET", ""), secret=True)
+    if app_secret:
+        data["GETUI_APP_SECRET"] = app_secret
+    data["GETUI_MASTER_SECRET"] = _prompt_line(
+        "GeTui Master Secret",
+        default=existing.get("GETUI_MASTER_SECRET", ""),
+        required=True,
+        secret=True,
+    )
+    data["GETUI_TTL_MS"] = _prompt_line("GeTui TTL ms", default=existing.get("GETUI_TTL_MS", "7200000"))
+
+
+def _setup_push_providers(*, force: bool = False) -> int:
+    path = _secret_path("push")
+    existing = _parse_env(path)
+    data = {} if force else dict(existing)
+    print("Optional push setup. Skip a channel if it is not needed now.")
+    if _prompt_bool("configure APNs?", default=bool(existing.get("APNS_KEY_PATH") and existing.get("APNS_KEY_ID"))):
+        _setup_apns_push(existing, data)
+    if _prompt_bool("configure FCM?", default=bool(existing.get("FCM_SERVICE_ACCOUNT_PATH") and existing.get("FCM_PROJECT_ID"))):
+        _setup_fcm_push(existing, data)
+    if _prompt_bool("configure GeTui?", default=bool(existing.get("GETUI_APP_ID") and existing.get("GETUI_MASTER_SECRET"))):
+        _setup_getui_push(existing, data)
+    if data:
+        _write_env(path, data)
+        print("updated optional push config")
+    else:
+        print("push config skipped")
+    return 0
+
+
+def _setup_asr_provider(*, force: bool = False) -> int:
+    path = _secret_path("backend")
+    existing = _parse_env(path)
+    data = dict(existing)
+    default_enabled = bool(existing.get("BYTEDANCE_ASR_APP_KEY") and existing.get("BYTEDANCE_ASR_ACCESS_KEY"))
+    print("Optional speech recognition setup.")
+    if not _prompt_bool("configure ByteDance ASR?", default=default_enabled):
+        print("ASR config skipped")
+        return 0
+    data["BYTEDANCE_ASR_APP_KEY"] = _prompt_line(
+        "ByteDance ASR App Key",
+        default=existing.get("BYTEDANCE_ASR_APP_KEY", ""),
+        required=True,
+        secret=True,
+    )
+    data["BYTEDANCE_ASR_ACCESS_KEY"] = _prompt_line(
+        "ByteDance ASR Access Key",
+        default=existing.get("BYTEDANCE_ASR_ACCESS_KEY", ""),
+        required=True,
+        secret=True,
+    )
+    data["BYTEDANCE_ASR_RESOURCE_ID"] = _prompt_line(
+        "ByteDance ASR Resource ID",
+        default=existing.get("BYTEDANCE_ASR_RESOURCE_ID", "volc.bigasr.sauc.duration"),
+    )
+    data["BYTEDANCE_ASR_WS_URL"] = _prompt_line(
+        "ByteDance ASR WebSocket URL",
+        default=existing.get("BYTEDANCE_ASR_WS_URL", "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel"),
+    )
+    _write_env(path, data)
+    print("updated optional ASR config")
+    return 0
+
+
+def _smtp_already_configured(existing: dict[str, str]) -> bool:
+    host = existing.get("SMTP_HOST", "").strip().lower()
+    return bool(host and host != "localhost" and existing.get("SMTP_ADMIN_EMAIL"))
+
+
+def _prompt_port(prompt: str, *, default: str) -> str:
+    while True:
+        value = _prompt_line(prompt, default=default, required=True)
+        try:
+            port = int(value)
+        except ValueError:
+            print("port must be a number", file=sys.stderr)
+            continue
+        if 1 <= port <= 65535:
+            return str(port)
+        print("port must be between 1 and 65535", file=sys.stderr)
+
+
+def _setup_email_provider(*, force: bool = False) -> int:
+    path = _secret_path("supabase")
+    existing = _parse_env(path)
+    data = dict(existing)
+    default_enabled = _smtp_already_configured(existing)
+    print(_t("optional_email_title"))
+    if not _prompt_bool(_t("configure_smtp_prompt"), default=default_enabled):
+        print(_t("smtp_config_skipped"))
+        return 0
+    data["ENABLE_EMAIL_SIGNUP"] = "true" if _prompt_bool(
+        _t("enable_email_signup_prompt"),
+        default=_truthy_env(existing.get("ENABLE_EMAIL_SIGNUP", "true")),
+    ) else "false"
+    autoconfirm_default = _truthy_env(existing.get("ENABLE_EMAIL_AUTOCONFIRM", "false")) if default_enabled else False
+    data["ENABLE_EMAIL_AUTOCONFIRM"] = "true" if _prompt_bool(
+        _t("email_autoconfirm_prompt"),
+        default=autoconfirm_default,
+    ) else "false"
+    data["SMTP_ADMIN_EMAIL"] = _prompt_line(
+        _t("smtp_admin_email_prompt"),
+        default=existing.get("SMTP_ADMIN_EMAIL", "noreply@example.local"),
+        required=True,
+    )
+    data["SMTP_HOST"] = _prompt_line(
+        _t("smtp_host_prompt"),
+        default="" if existing.get("SMTP_HOST") == "localhost" else existing.get("SMTP_HOST", ""),
+        required=True,
+    )
+    data["SMTP_PORT"] = _prompt_port(
+        _t("smtp_port_prompt"),
+        default=existing.get("SMTP_PORT", "587"),
+    )
+    data["SMTP_USER"] = _prompt_line(
+        _t("smtp_user_prompt"),
+        default=existing.get("SMTP_USER", ""),
+    )
+    data["SMTP_PASS"] = _prompt_line(
+        _t("smtp_pass_prompt"),
+        default=existing.get("SMTP_PASS", ""),
+        secret=True,
+    )
+    data["SMTP_SENDER_NAME"] = _prompt_line(
+        _t("smtp_sender_name_prompt"),
+        default=existing.get("SMTP_SENDER_NAME", "myapp"),
+    )
+    data.setdefault("MAILER_URLPATHS_CONFIRMATION", "/auth/v1/verify")
+    data.setdefault("MAILER_URLPATHS_EMAIL_CHANGE", "/auth/v1/verify")
+    data.setdefault("MAILER_URLPATHS_INVITE", "/auth/v1/verify")
+    data.setdefault("MAILER_URLPATHS_RECOVERY", "/auth/v1/verify")
+    _write_env(path, data)
+    print(_t("smtp_config_updated"))
+    return 0
+
+
+def _run_setup_wizard(
+    *,
+    host: str | None = None,
+    force: bool = False,
+    include_ingress: bool = True,
+    include_ai: bool = True,
+    include_asr: bool = True,
+    include_email: bool = True,
+    include_push: bool = True,
+) -> int:
+    rc = _init_stack_secrets(host=host, force=False, quiet=True)
+    if rc != 0:
+        return rc
+    if include_ingress:
+        class _IngressSetupArgs:
+            pass
+
+        ingress_args = _IngressSetupArgs()
+        ingress_args.host = host
+        ingress_args.crt = None
+        ingress_args.key = None
+        ingress_args.http_port = None
+        ingress_args.https_port = None
+        ingress_args.http_only = False
+        ingress_args.client_max_body_size = None
+        ingress_args.yes = False
+        rc = _setup_ingress_from_args(ingress_args, interactive=sys.stdin.isatty())
+        if rc != 0:
+            return rc
+    if include_ai:
+        rc = _setup_ai_providers(force=force)
+        if rc != 0:
+            return rc
+    if include_asr:
+        rc = _setup_asr_provider(force=force)
+        if rc != 0:
+            return rc
+    if include_email:
+        rc = _setup_email_provider(force=force)
+        if rc != 0:
+            return rc
+    if include_push:
+        rc = _setup_push_providers(force=force)
+        if rc != 0:
+            return rc
+    return 0
+
+
+
+
+
+
+
+
+
+
+def _prompt_secret(prompt: str) -> str:
+    label = f"{prompt}: "
+    if sys.stdin.isatty():
+        return getpass.getpass(label).strip()
+    return input(label).strip()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _rand_hex(bytes_len: int) -> str:
+    return py_secrets.token_hex(bytes_len)
+
+
+def _rand_token(length: int = 32) -> str:
+    token = py_secrets.token_urlsafe(length)
+    return token.replace("-", "").replace("_", "")[:length]
+
+
+def _b64url(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def _mint_supabase_jwt(secret: str, role: str) -> str:
+    now = int(time.time())
+    payload = {
+        "role": role,
+        "iss": "supabase",
+        "iat": now,
+        "exp": now + 5 * 365 * 24 * 3600,
+    }
+    header_b64 = _b64url(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
+    payload_b64 = _b64url(json.dumps(payload, separators=(",", ":")).encode())
+    signing_input = f"{header_b64}.{payload_b64}".encode()
+    sig = hmac.new(secret.encode(), signing_input, hashlib.sha256).digest()
+    return f"{header_b64}.{payload_b64}.{_b64url(sig)}"
+
+
+def _public_host(explicit: str | None = None) -> str:
+    if explicit:
+        return explicit
+    cfg = _cfg()
+    node_ip = cfg.get("node", {}).get("public_ip")
+    if node_ip:
+        return str(node_ip)
+    backend = str(cfg.get("domains", {}).get("backend") or "")
+    parsed = urlparse(backend)
+    if parsed.hostname:
+        return parsed.hostname
+    return "127.0.0.1"
+
+
+
+
+
+
+def _is_replaceable_default_url(value: object, *, previous_host: str = "") -> bool:
+    text = str(value or "").strip()
+    if not text:
+        return True
+    parsed = urlparse(text)
+    hostname = (parsed.hostname or "").lower()
+    if hostname in {"127.0.0.1", "localhost"}:
+        return True
+    return bool(previous_host and hostname == previous_host.lower())
+
+
+def _persist_public_host_if_explicit(host: str | None, public_host: str) -> None:
+    if not host:
+        return
+    cfg = _cfg()
+    node = cfg.setdefault("node", {})
+    previous_host = str(node.get("public_ip") or "").strip()
+    node["public_ip"] = public_host
+    domains = cfg.setdefault("domains", {})
+    default_domains = {
+        "backend": f"http://{public_host}:5566",
+        "registry": f"http://{public_host}:3254",
+        "oss": f"http://{public_host}:9000",
+        "config_center": f"http://{public_host}:5000",
+    }
+    for key, value in default_domains.items():
+        if _is_replaceable_default_url(domains.get(key), previous_host=previous_host):
+            domains[key] = value
+    domains.setdefault("agent_node", "http://agent-node:5590")
+    _save_json(CONFIG_PATH, cfg, mode=0o644)
+
+
+_IMAGE_ENV_KEYS = {
+    "MYAPP_BACKEND_IMAGE",
+    "MYAPP_FAAS_RUNTIME_IMAGE",
+    "MYAPP_AGENT_NODE_IMAGE",
+    "MYAPP_AGENT_RUNTIME_IMAGE",
+}
+_LEGACY_OFFICIAL_IMAGE_PREFIX = "dapangyufish/myapp-"
+
+
+def _should_replace_env_value(group: str, key: str, current: str, *, force: bool) -> bool:
+    if force or not current:
+        return True
+    if group == "backend" and key in _IMAGE_ENV_KEYS:
+        return current.strip().startswith(_LEGACY_OFFICIAL_IMAGE_PREFIX)
+    if group == "faas" and key == "FAAS_LOCAL_DOCKER_IMAGE":
+        current_value = current.strip()
+        return (
+            current_value.startswith(_LEGACY_OFFICIAL_IMAGE_PREFIX)
+            or current_value == _configured_image("backend")
+            or current_value == "dapangyu/myapp-backend:agent-control-plane"
+        )
+    return False
+
+
+def _merge_env_group(group: str, values: dict[str, str], *, force: bool = False) -> list[str]:
+    path = _secret_path(group)
+    data = _parse_env(path)
+    changed: list[str] = []
+    for key, value in values.items():
+        if _should_replace_env_value(group, key, data.get(key, ""), force=force):
+            data[key] = value
+            changed.append(key)
+    if changed:
+        _write_env(path, data)
+    return changed
+
+
+def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: bool = False, write_snapshot: bool = True) -> int:
+    public_host = _public_host(host)
+    _persist_public_host_if_explicit(host, public_host)
+    data_root = _ensure_data_root_layout(_data_root_from_cfg())
+    secret_dir = _secret_dir()
+    secret_dir.mkdir(parents=True, exist_ok=True)
+
+    existing_backend = _parse_env(_secret_path("backend"))
+    existing_supabase = _parse_env(_secret_path("supabase"))
+    existing_openim = _parse_env(_secret_path("openim"))
+
+    jwt_secret = existing_supabase.get("JWT_SECRET") if not force else ""
+    jwt_secret = jwt_secret or _rand_hex(32)
+    anon_key = existing_supabase.get("ANON_KEY") if not force else ""
+    service_role_key = existing_supabase.get("SERVICE_ROLE_KEY") if not force else ""
+    anon_key = anon_key or _mint_supabase_jwt(jwt_secret, "anon")
+    service_role_key = service_role_key or _mint_supabase_jwt(jwt_secret, "service_role")
+
+    openim_secret = existing_openim.get("OPENIM_SECRET") if not force else ""
+    openim_secret = openim_secret or _rand_hex(32)
+    openim_webhook_secret = existing_backend.get("OPENIM_WEBHOOK_SECRET") if not force else ""
+    openim_webhook_secret = openim_webhook_secret or existing_openim.get("OPENIM_WEBHOOK_SECRET", "")
+    openim_webhook_secret = openim_webhook_secret or _rand_hex(32)
+
+    backend_defaults = {
+        "MYAPP_BACKEND_IMAGE": _configured_image("backend"),
+        "MYAPP_FAAS_RUNTIME_IMAGE": _configured_image("faas-runtime"),
+        "MYAPP_AGENT_NODE_IMAGE": _configured_image("agent-node"),
+        "MYAPP_AGENT_RUNTIME_IMAGE": _configured_image("agent-runtime"),
+        "MYAPP_DATA_ROOT": str(data_root),
+        "MYAPP_RUNTIME_SECRETS_DIR": str(_runtime_secret_dir(data_root)),
+        "PUBLIC_HOST": public_host,
+        "BACKEND_PORT": "5566",
+        "REGISTRY_PORT": "3254",
+        "CONFIG_CENTER_PORT": "5000",
+        "USER_CENTER_PORT": "5567",
+        "BACKEND_GUNICORN_WORKERS": "10",
+        "JSONAPP_DB_USER": "jsonapp",
+        "JSONAPP_DB_NAME": "jsonapp",
+        "JSONAPP_DB_PASSWORD": _rand_token(32),
+        "BACKEND_REDIS_PASSWORD": _rand_token(32),
+        "APP_MINIO_ACCESS_KEY": "app" + _rand_hex(8),
+        "APP_MINIO_SECRET_KEY": _rand_token(40),
+        "APP_MINIO_PORT": "9000",
+        "APP_MINIO_CONSOLE_PORT": "9090",
+        "SUPABASE_URL": f"http://{public_host}:18000",
+        "SUPABASE_ANON_KEY": anon_key,
+        "SUPABASE_SERVICE_KEY": service_role_key,
+        # Local HS256 verification of caller JWTs on the FaaS invoke hot path
+        # (avoids a GoTrue round-trip per invoke). Same secret GoTrue signs with.
+        "SUPABASE_JWT_SECRET": jwt_secret,
+        "OPENIM_API_URL": f"http://{public_host}:10002",
+        "OPENIM_WS_URL": f"ws://{public_host}:10001",
+        "OPENIM_SECRET": openim_secret,
+        "OPENIM_WEBHOOK_SECRET": openim_webhook_secret,
+        "FLASK_SECRET_KEY": _rand_hex(32),
+        "REGISTRY_ADMIN_TOKEN": _rand_hex(32),
+        "REGISTRY_ADMIN_AUTHOR_EMAIL": "2501808198@qq.com",
+        "REGISTRY_ADMIN_AUTHOR_NAME": "fish",
+        "REGISTRY_ADMIN_AUTHOR_ID": "2501808198@qq.com",
+        "AI_WORKER_MAX_CONCURRENCY": "20",
+        "AI_WORKER_QUEUE_MAX": "100",
+        "DEEPSEEK_AI_WORKER_MAX_CONCURRENCY": "20",
+        "DEEPSEEK_AI_WORKER_QUEUE_MAX": "100",
+        "MINIMAX_AI_WORKER_MAX_CONCURRENCY": "5",
+        "MINIMAX_AI_WORKER_QUEUE_MAX": "20",
+    }
+    supabase_defaults = {
+        "MYAPP_DATA_ROOT": str(data_root),
+        "HOST_IP": public_host,
+        "POSTGRES_PASSWORD": _rand_token(32),
+        "JWT_SECRET": jwt_secret,
+        "ANON_KEY": anon_key,
+        "SERVICE_ROLE_KEY": service_role_key,
+        "SUPABASE_PUBLISHABLE_KEY": anon_key,
+        "SUPABASE_SECRET_KEY": service_role_key,
+        "DASHBOARD_USERNAME": "admin",
+        "DASHBOARD_PASSWORD": _rand_token(24),
+        "SECRET_KEY_BASE": _rand_hex(32),
+        "VAULT_ENC_KEY": _rand_hex(16),
+        "PG_META_CRYPTO_KEY": _rand_hex(32),
+        "LOGFLARE_PUBLIC_ACCESS_TOKEN": _rand_hex(24),
+        "LOGFLARE_PRIVATE_ACCESS_TOKEN": _rand_hex(24),
+        "ANON_KEY_ASYMMETRIC": "",
+        "SERVICE_ROLE_KEY_ASYMMETRIC": "",
+        "JWT_KEYS": "[]",
+        "JWT_JWKS": "{\"keys\":[]}",
+        "POSTGRES_HOST": "db",
+        "POSTGRES_DB": "postgres",
+        "POSTGRES_PORT": "15432",
+        "POOLER_TENANT_ID": "myapp" + _rand_hex(4),
+        "POOLER_PROXY_PORT_TRANSACTION": "6543",
+        "POOLER_DEFAULT_POOL_SIZE": "20",
+        "POOLER_MAX_CLIENT_CONN": "100",
+        "POOLER_DB_POOL_SIZE": "5",
+        "KONG_HTTP_PORT": "18000",
+        "KONG_HTTPS_PORT": "18443",
+        "API_EXTERNAL_URL": f"http://{public_host}:18000",
+        "SUPABASE_PUBLIC_URL": f"http://{public_host}:18000",
+        "SITE_URL": f"http://{public_host}:18000",
+        "SAML_EXTERNAL_URL": "",
+        "ADDITIONAL_REDIRECT_URLS": "",
+        "DISABLE_SIGNUP": "false",
+        "ENABLE_EMAIL_SIGNUP": "true",
+        "ENABLE_EMAIL_AUTOCONFIRM": "true",
+        "ENABLE_PHONE_SIGNUP": "false",
+        "ENABLE_PHONE_AUTOCONFIRM": "false",
+        "ENABLE_ANONYMOUS_USERS": "false",
+        "JWT_EXPIRY": "3600",
+        "MAILER_URLPATHS_CONFIRMATION": "/auth/v1/verify",
+        "MAILER_URLPATHS_EMAIL_CHANGE": "/auth/v1/verify",
+        "MAILER_URLPATHS_INVITE": "/auth/v1/verify",
+        "MAILER_URLPATHS_RECOVERY": "/auth/v1/verify",
+        "SMTP_ADMIN_EMAIL": "noreply@example.local",
+        "SMTP_HOST": "localhost",
+        "SMTP_PORT": "587",
+        "SMTP_USER": "",
+        "SMTP_PASS": "",
+        "SMTP_SENDER_NAME": "myapp",
+        "GITHUB_ENABLED": "false",
+        "GITHUB_CLIENT_ID": "",
+        "GITHUB_SECRET": "",
+        "GOOGLE_ENABLED": "false",
+        "GOOGLE_CLIENT_ID": "",
+        "GOOGLE_SECRET": "",
+        "GOOGLE_PROJECT_ID": "",
+        "GOOGLE_PROJECT_NUMBER": "",
+        "AZURE_ENABLED": "false",
+        "AZURE_CLIENT_ID": "",
+        "AZURE_SECRET": "",
+        "MFA_PHONE_ENROLL_ENABLED": "false",
+        "MFA_PHONE_VERIFY_ENABLED": "false",
+        "MFA_TOTP_ENROLL_ENABLED": "false",
+        "MFA_TOTP_VERIFY_ENABLED": "false",
+        "MFA_MAX_ENROLLED_FACTORS": "10",
+        "SAML_ENABLED": "false",
+        "SAML_PRIVATE_KEY": "",
+        "SAML_ALLOW_ENCRYPTED_ASSERTIONS": "false",
+        "SAML_RELAY_STATE_VALIDITY_PERIOD": "300",
+        "SAML_RATE_LIMIT_ASSERTION": "",
+        "SMS_PROVIDER": "",
+        "SMS_OTP_EXP": "60",
+        "SMS_OTP_LENGTH": "6",
+        "SMS_MAX_FREQUENCY": "",
+        "SMS_TWILIO_ACCOUNT_SID": "",
+        "SMS_TWILIO_AUTH_TOKEN": "",
+        "SMS_TWILIO_MESSAGE_SERVICE_SID": "",
+        "SMS_TEMPLATE": "",
+        "SMS_TEST_OTP": "",
+        "PGRST_DB_SCHEMAS": "public,storage,graphql_public",
+        "PGRST_DB_EXTRA_SEARCH_PATH": "public,extensions",
+        "PGRST_DB_MAX_ROWS": "1000",
+        "FUNCTIONS_VERIFY_JWT": "false",
+        "STUDIO_DEFAULT_ORGANIZATION": "Default Organization",
+        "STUDIO_DEFAULT_PROJECT": "Default Project",
+        "OPENAI_API_KEY": "",
+        "STORAGE_TENANT_ID": "stub",
+        "GLOBAL_S3_BUCKET": "stub",
+        "IMGPROXY_AUTO_WEBP": "true",
+        "S3_PROTOCOL_ACCESS_KEY_ID": "s3" + _rand_hex(8),
+        "S3_PROTOCOL_ACCESS_KEY_SECRET": _rand_token(32),
+        "REGION": "local",
+        "DOCKER_SOCKET_LOCATION": "/var/run/docker.sock",
+    }
+    openim_defaults = {
+        "MYAPP_DATA_ROOT": str(data_root),
+        "HOST_IP": public_host,
+        "OPENIM_MYSQL_ROOT_PASSWORD": _rand_token(32),
+        "OPENIM_MYSQL_PASSWORD": _rand_token(32),
+        "OPENIM_MONGO_PASSWORD": _rand_token(32),
+        "OPENIM_REDIS_PASSWORD": _rand_token(32),
+        "OPENIM_MINIO_ACCESS_KEY": "openim" + _rand_hex(4),
+        "OPENIM_MINIO_SECRET_KEY": _rand_token(32),
+        "OPENIM_SECRET": openim_secret,
+        "OPENIM_WEBHOOK_SECRET": openim_webhook_secret,
+        "OPENIM_MYSQL_PORT": "13306",
+        "OPENIM_MONGO_PORT": "37017",
+        "OPENIM_REDIS_PORT": "16379",
+        "OPENIM_MINIO_PORT": "10005",
+        "OPENIM_MINIO_CONSOLE_PORT": "10006",
+        "OPENIM_WS_PORT": "10001",
+        "OPENIM_API_PORT": "10002",
+        "OPENIM_ADMIN_PORT": "10009",
+    }
+    agent_defaults = {
+        "AGENT_NODE_TOKEN": _rand_hex(24),
+        "AGENT_NODE_REGISTRATION_TOKEN": _rand_hex(24),
+        "AGENT_NODE_ID": _cfg().get("node", {}).get("id", os.uname().nodename),
+        "AGENT_NODE_PROVIDER_MODE": "master",
+        "AGENT_NODE_PULL_ENABLED": "1",
+        "AGENT_NODE_CAPACITY": "10",
+        "AGENT_NODE_QUEUE_MAX": "100",
+    }
+    config_center_defaults = {
+        "CONFIG_CENTER_ADMIN_USERNAME": "admin",
+        "CONFIG_CENTER_ADMIN_PASSWORD": _rand_token(24),
+        "CONFIG_CENTER_SESSION_SECRET": _rand_hex(32),
+    }
+    user_center_defaults = {
+        "USER_CENTER_ADMIN_USERNAME": "admin",
+        "USER_CENTER_ADMIN_PASSWORD": _rand_token(24),
+        "USER_CENTER_SESSION_SECRET": _rand_hex(32),
+        "USER_CENTER_COOKIE_SECURE": "false",
+    }
+    edge_defaults = {
+        "MYAPP_DATA_ROOT": str(data_root),
+        "EDGE_NGINX_HTTP_PORT": "80",
+        "EDGE_NGINX_HTTPS_PORT": "443",
+        "EDGE_NGINX_ENABLE_TLS": "false",
+        "EDGE_NGINX_CLIENT_MAX_BODY_SIZE": "2g",
+        "EDGE_NGINX_PROXY_READ_TIMEOUT": "3600s",
+        "EDGE_NGINX_PROXY_SEND_TIMEOUT": "3600s",
+        "EDGE_NGINX_PROXY_CONNECT_TIMEOUT": "60s",
+    }
+    faas_defaults = {
+        "FAAS_ENABLED": "1",
+        "FAAS_REQUIRE_AUTH": "0",
+        "FAAS_CODE_ROOT": "/mnt/myapp/faas/code",
+        "FAAS_MAX_SERVICES_PER_USER": "10",
+        # MUST be non-empty or the invoke proxy can never inject a caller pseudonym
+        # → every authenticated FaaS write returns 401 "login required". Stable per
+        # deploy (rotating it changes all consumer pseudonyms → data ownership).
+        "FAAS_CALLER_PSEUDONYM_SECRET": _rand_token(32),
+        "FAAS_RUN_TOKEN_SECRET": _rand_hex(32),
+        "FAAS_GIT_ENABLED": "1",
+        "FAAS_GIT_PUSH_ENABLED": "0",
+        "FAAS_GIT_REMOTE": "",
+        "FAAS_GIT_BRANCH": "main",
+        "FAAS_GIT_AUTHOR_NAME": "myapp-faas-bot",
+        "FAAS_GIT_AUTHOR_EMAIL": "myapp-faas-bot@localhost",
+        "FAAS_GIT_SSH_KEY_PATH": "",
+        "FAAS_GIT_KNOWN_HOSTS_PATH": "",
+        "FAAS_DEPLOY_MODE": "local-docker",
+        "FAAS_DEPLOY_SCRIPT": "",
+        "FAAS_PUBLIC_BASE_URL": f"http://{public_host}:5566",
+        "FAAS_RUNTIME_BUNDLE_BASE_URL": f"http://{public_host}:5566",
+        "FAAS_RUNTIME_TOKEN": _rand_hex(32),
+        "FAAS_FUNCTION_PREFIX": "myapp",
+        "FAAS_LOCAL_DOCKER_IMAGE": _configured_image("faas-runtime"),
+        "FAAS_LOCAL_DOCKER_NETWORK": "myapp_default",
+        "FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT": "/mnt/myapp/faas/code",
+        "FAAS_LOCAL_DOCKER_HOST_CODE_ROOT": str(data_root / "faas" / "code"),
+        "FAAS_LOCAL_DOCKER_START_ON_DEPLOY": "1",
+        "FAAS_LOCAL_DOCKER_START_TIMEOUT_SECONDS": "15",
+    }
+
+    changed = {
+        "backend": _merge_env_group("backend", backend_defaults, force=force),
+        "supabase": _merge_env_group("supabase", supabase_defaults, force=force),
+        "openim": _merge_env_group("openim", openim_defaults, force=force),
+        "agent": _merge_env_group("agent", agent_defaults, force=force),
+        "edge": _merge_env_group("edge", edge_defaults, force=force),
+        "faas": _merge_env_group("faas", faas_defaults, force=force),
+        "config-center": _merge_env_group("config-center", config_center_defaults, force=force),
+        "user-center": _merge_env_group("user-center", user_center_defaults, force=force),
+    }
+    if not quiet:
+        rows = [{"group": group, "keys": len(keys)} for group, keys in changed.items()]
+        _print_table(rows, [("group", "GROUP"), ("keys", "CHANGED_KEYS")])
+    if write_snapshot:
+        _safe_write_default_config_snapshot()
+    return 0
+
+
+def _redact(value: str) -> str:
+    digest = hashlib.sha256(value.encode()).hexdigest()[:8]
+    return f"<redacted len={len(value)} sha256:{digest}>"
+
+
+def _bundle_secret_files(*, redacted: bool) -> list[dict]:
+    root = _setup_secret_host_root()
+    if not root.exists():
+        return []
+    rows = []
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = str(path.relative_to(_secret_dir()))
+        stat = path.stat()
+        if redacted:
+            content_b64 = _redact(path.read_bytes().hex())
+        else:
+            content_b64 = base64.b64encode(path.read_bytes()).decode("ascii")
+        rows.append({"path": rel, "mode": oct(stat.st_mode & 0o777), "content_b64": content_b64})
+    return rows
+
+
+def _config_bundle(*, redacted: bool = True) -> dict:
+    secrets: dict[str, dict[str, str]] = {}
+    secret_dir = _secret_dir()
+    if secret_dir.exists():
+        for path in sorted(secret_dir.glob("*.env")):
+            data = _parse_env(path)
+            secrets[path.stem] = {key: (_redact(value) if redacted else value) for key, value in sorted(data.items())}
+    return {
+        "type": "myapp.config.bundle",
+        "version": 1,
+        "exported_at": int(time.time()),
+        "host": socket.gethostname(),
+        "language": _LANG,
+        "config_path": str(CONFIG_PATH),
+        "services_path": str(SERVICES_PATH),
+        "config": _load_json(CONFIG_PATH, {}),
+        "services": _load_json(SERVICES_PATH, {}),
+        "secrets": secrets,
+        "secret_files": _bundle_secret_files(redacted=redacted),
+    }
+
+
+def _serialize_config_bundle(bundle: dict, *, fmt: str = "json") -> str:
+    if fmt == "yaml":
+        try:
+            import yaml  # type: ignore
+        except ImportError as exc:
+            raise RuntimeError("YAML export requires PyYAML; use --format json") from exc
+        return yaml.safe_dump(bundle, allow_unicode=True, sort_keys=False)
+    return json.dumps(bundle, indent=2, ensure_ascii=False) + "\n"
+
+
+
+
+def _write_config_bundle(path: Path, bundle: dict, *, fmt: str = "json") -> None:
+    body = _serialize_config_bundle(bundle, fmt=fmt)
+    if str(path) == "-":
+        print(body, end="")
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(body, encoding="utf-8")
+    os.chmod(tmp, 0o600)
+    tmp.replace(path)
+    os.chmod(path, 0o600)
+
+
+def _write_default_config_snapshot() -> None:
+    path = _default_config_bundle_path()
+    _write_config_bundle(path, _config_bundle(redacted=False))
+
+
+def _load_config_bundle(path: Path) -> dict:
+    text = path.read_text(encoding="utf-8")
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        if path.suffix.lower() not in {".yaml", ".yml"}:
+            raise
+        try:
+            import yaml  # type: ignore
+        except ImportError as exc:
+            raise ValueError("YAML import requires PyYAML") from exc
+        data = yaml.safe_load(text)
+    if not isinstance(data, dict):
+        raise ValueError("config bundle must be a mapping")
+    if data.get("type") != "myapp.config.bundle":
+        raise ValueError("not a myapp config bundle")
+    return data
+
+
+def _import_config_bundle_data(bundle: dict) -> None:
+    if isinstance(bundle.get("config"), dict):
+        _save_json(CONFIG_PATH, bundle["config"], mode=0o644)
+    services = bundle.get("services")
+    if isinstance(services, dict):
+        service_rows = services.get("services") if isinstance(services.get("services"), dict) else None
+        if service_rows:
+            _save_json(SERVICES_PATH, services, mode=0o644)
+        elif not SERVICES_PATH.exists():
+            print(
+                f"skip config bundle services restore: {SERVICES_PATH} is missing and bundle has no services",
+                file=sys.stderr,
+            )
+    secret_dir = _secret_dir()
+    secret_dir.mkdir(parents=True, exist_ok=True)
+    os.chmod(secret_dir, 0o700)
+    for group, data in (bundle.get("secrets") or {}).items():
+        if not isinstance(data, dict):
+            continue
+        if any(str(value).startswith("<redacted") for value in data.values()):
+            print(f"skip redacted secret group: {group}", file=sys.stderr)
+            continue
+        _write_env(_secret_path(str(group)), {str(key): str(value) for key, value in data.items()})
+    for item in bundle.get("secret_files") or []:
+        rel = str(item.get("path") or "")
+        if not rel or rel.startswith("/") or ".." in Path(rel).parts:
+            continue
+        content = str(item.get("content_b64") or "")
+        if content.startswith("<redacted"):
+            print(f"skip redacted secret file: {rel}", file=sys.stderr)
+            continue
+        try:
+            raw = base64.b64decode(content.encode("ascii"))
+        except Exception as exc:
+            print(f"skip invalid secret file {rel}: {exc}", file=sys.stderr)
+            continue
+        target = secret_dir / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        tmp = target.with_suffix(target.suffix + ".tmp")
+        tmp.write_bytes(raw)
+        mode_text = str(item.get("mode") or "0o600")
+        try:
+            mode = int(mode_text, 8)
+        except ValueError:
+            mode = 0o600
+        os.chmod(tmp, mode)
+        tmp.replace(target)
+        os.chmod(target, mode)
+
+
+
+
+def _safe_write_default_config_snapshot() -> None:
+    # Configuration now lives under /etc/myapp. Keep explicit
+    # `myapp-ctl config export` for operator-controlled backups, but do not
+    # auto-create a second config layer under the data root.
+    return None
+
+
+
+
+
+
+
+
+
+
+
+
+def _default_ipv4() -> str:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            value = sock.getsockname()[0]
+            if value:
+                return value
+    except OSError:
+        pass
+    try:
+        return socket.gethostbyname(socket.gethostname())
+    except OSError:
+        return "127.0.0.1"
+
+
+def _edge_template_dir() -> Path:
+    cfg_root = Path(_cfg().get("paths", {}).get("root", "/opt/myapp"))
+    installed = cfg_root / "deploy/production/edge-nginx/templates"
+    if installed.exists():
+        return installed
+    return _source_dir() / "deploy/production/edge-nginx/templates"
+
+
+def _edge_template(name: str) -> str:
+    return (_edge_template_dir() / name).read_text(encoding="utf-8")
+
+
+def _hostname_from_url_or_host(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    parsed = urlparse(text if "://" in text else f"//{text}")
+    return parsed.hostname or text.split("/", 1)[0].split(":", 1)[0]
+
+
+def _netloc_from_url_or_host(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    parsed = urlparse(text if "://" in text else f"//{text}")
+    return parsed.netloc or text.split("://")[-1].split("/", 1)[0]
+
+
+def _edge_url(host: str, *, tls: bool) -> str:
+    return f"{'https' if tls else 'http'}://{host}"
+
+
+def _edge_ws_url(host: str, *, tls: bool) -> str:
+    return f"{'wss' if tls else 'ws'}://{host}/ws"
+
+
+def _edge_paths() -> dict[str, Path]:
+    data_root = _data_root_from_cfg()
+    root = data_root / "edge-nginx"
+    return {
+        "root": root,
+        "conf": root / "conf.d",
+        "certs": root / "certs",
+        "logs": root / "logs",
+        "nginx_conf": root / "nginx.conf",
+        "site_conf": root / "conf.d/myapp.conf",
+        "cert": root / "certs/fullchain.pem",
+        "key": root / "certs/privkey.pem",
+    }
+
+
+def _edge_route_host_defaults(default_host: str) -> dict[str, str]:
+    cfg = _cfg()
+    ingress = cfg.get("ingress", {}) if isinstance(cfg.get("ingress"), dict) else {}
+    ingress_domains = ingress.get("domains", {}) if isinstance(ingress.get("domains"), dict) else {}
+    domains = cfg.get("domains", {}) if isinstance(cfg.get("domains"), dict) else {}
+    out: dict[str, str] = {}
+    for spec in EDGE_ROUTE_SPECS:
+        key = str(spec["key"])
+        out[key] = (
+            _hostname_from_url_or_host(str(ingress_domains.get(key) or ""))
+            or _hostname_from_url_or_host(str(domains.get(key) or ""))
+            or default_host
+        )
+    return out
+
+
+def _edge_effective_config() -> dict:
+    cfg = _cfg()
+    ingress = cfg.get("ingress", {}) if isinstance(cfg.get("ingress"), dict) else {}
+    edge_env = _parse_env(_secret_path("edge"))
+    default_host = str(ingress.get("default_host") or _public_host(None) or _default_ipv4()).strip()
+    default_host = _hostname_from_url_or_host(default_host) or _default_ipv4()
+    hosts = _edge_route_host_defaults(default_host)
+    if "tls_enabled" in ingress:
+        tls_enabled = bool(ingress.get("tls_enabled"))
+    else:
+        tls_enabled = _truthy_env(edge_env.get("EDGE_NGINX_ENABLE_TLS", "false"))
+    return {
+        "enabled": bool(ingress.get("enabled", True)),
+        "default_host": default_host,
+        "hosts": hosts,
+        "tls_enabled": tls_enabled,
+        "cert_source": str(ingress.get("cert_source") or ""),
+        "key_source": str(ingress.get("key_source") or ""),
+        "http_port": str(ingress.get("http_port") or edge_env.get("EDGE_NGINX_HTTP_PORT") or "80"),
+        "https_port": str(ingress.get("https_port") or edge_env.get("EDGE_NGINX_HTTPS_PORT") or "443"),
+        "client_max_body_size": str(ingress.get("client_max_body_size") or edge_env.get("EDGE_NGINX_CLIENT_MAX_BODY_SIZE") or "2g"),
+        "proxy_read_timeout": str(ingress.get("proxy_read_timeout") or edge_env.get("EDGE_NGINX_PROXY_READ_TIMEOUT") or "3600s"),
+        "proxy_send_timeout": str(ingress.get("proxy_send_timeout") or edge_env.get("EDGE_NGINX_PROXY_SEND_TIMEOUT") or "3600s"),
+        "proxy_connect_timeout": str(ingress.get("proxy_connect_timeout") or edge_env.get("EDGE_NGINX_PROXY_CONNECT_TIMEOUT") or "60s"),
+    }
+
+
+def _warn_duplicate_edge_hosts(hosts: dict[str, str]) -> None:
+    seen: dict[str, list[str]] = {}
+    for key, host in hosts.items():
+        seen.setdefault(host, []).append(key)
+    duplicates = {host: keys for host, keys in seen.items() if host and len(keys) > 1}
+    for host, keys in duplicates.items():
+        print(
+            f"warning: edge-nginx hostname {host!r} is used by multiple services: {', '.join(keys)}; "
+            "host-based routing needs unique domains for production.",
+            file=sys.stderr,
+        )
+
+
+def _copy_edge_certificates(config: dict, *, dry_run: bool) -> bool:
+    if not config.get("tls_enabled"):
+        return True
+    paths = _edge_paths()
+    cert_source = Path(str(config.get("cert_source") or "")).expanduser()
+    key_source = Path(str(config.get("key_source") or "")).expanduser()
+    if not cert_source.is_file() or not key_source.is_file():
+        print("edge-nginx TLS is enabled but certificate/key file is missing", file=sys.stderr)
+        print(f"  cert: {cert_source}", file=sys.stderr)
+        print(f"  key:  {key_source}", file=sys.stderr)
+        return False
+    for source, target, mode in ((cert_source, paths["cert"], 0o644), (key_source, paths["key"], 0o600)):
+        print(f"+ install -m {oct(mode)[2:]} {source} {target}")
+        if dry_run:
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+        os.chmod(target, mode)
+    return True
+
+
+def _edge_proxy_location(upstream: str, *, strip_prefix: str = "") -> str:
+    parsed = urlparse(upstream)
+    scheme = parsed.scheme or "http"
+    netloc = parsed.netloc or parsed.path.split("/", 1)[0]
+    path = parsed.path if parsed.netloc else ""
+    path = "" if path in {"", "/"} else path.rstrip("/")
+    if scheme not in {"http", "https"} or not netloc:
+        raise ValueError(f"unsupported edge upstream: {upstream!r}")
+    rewrite = ""
+    if strip_prefix:
+        rewrite = f"    rewrite ^/{strip_prefix}/?(.*)$ /$1 break;\n"
+    return f"""
+  location /{strip_prefix} {{
+    set $myapp_upstream {netloc};
+{rewrite}    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+    proxy_buffering off;
+    proxy_request_buffering off;
+    proxy_pass {scheme}://$myapp_upstream{path};
+  }}"""
+
+
+def _edge_route_body(spec: dict) -> str:
+    kind = spec.get("kind")
+    if kind == "static":
+        root = spec.get("root")
+        return f"""
+  location / {{
+    root {root};
+    try_files $uri $uri/ /index.html;
+  }}"""
+    if kind == "openim":
+        return (
+            _edge_proxy_location(str(spec["ws_upstream"]), strip_prefix="ws")
+            + "\n"
+            + _edge_proxy_location(str(spec["api_upstream"]))
+        )
+    return _edge_proxy_location(str(spec["upstream"]))
+
+
+def _edge_server_block(host: str, body: str, *, tls: bool, redirect_http: bool = True) -> str:
+    health = """
+  location = /edge-healthz {
+    add_header Content-Type text/plain;
+    return 200 'ok\\n';
+  }"""
+    http_body = f"""
+  listen 80;
+  server_name {host};
+{health}
+"""
+    if tls and redirect_http:
+        http_body += """
+  location / {
+    return 301 https://$host$request_uri;
+  }
+"""
+    else:
+        http_body += body + "\n"
+    block = "server {\n" + http_body + "}\n"
+    if tls:
+        block += f"""
+server {{
+  listen 443 ssl;
+  http2 on;
+  server_name {host};
+  ssl_certificate /etc/nginx/certs/fullchain.pem;
+  ssl_certificate_key /etc/nginx/certs/privkey.pem;
+  ssl_session_cache shared:SSL:10m;
+  ssl_session_timeout 1d;
+{health}
+{body}
+}}
+"""
+    return block
+
+
+def _edge_default_server_block(*, tls: bool) -> str:
+    block = """
+server {
+  listen 80 default_server;
+  server_name _;
+  location = /edge-healthz {
+    add_header Content-Type text/plain;
+    return 200 'ok\\n';
+  }
+  location / {
+    return 404;
+  }
+}
+"""
+    if tls:
+        block += """
+server {
+  listen 443 ssl default_server;
+  http2 on;
+  server_name _;
+  ssl_certificate /etc/nginx/certs/fullchain.pem;
+  ssl_certificate_key /etc/nginx/certs/privkey.pem;
+  location = /edge-healthz {
+    add_header Content-Type text/plain;
+    return 200 'ok\\n';
+  }
+  location / {
+    return 404;
+  }
+}
+"""
+    return block
+
+
+def _render_edge_server_blocks(config: dict) -> str:
+    hosts = config["hosts"]
+    tls = bool(config.get("tls_enabled"))
+    used: set[str] = set()
+    blocks = [_edge_default_server_block(tls=tls)]
+    for spec in EDGE_ROUTE_SPECS:
+        key = str(spec["key"])
+        host = str(hosts.get(key) or "").strip()
+        if not host or host in used:
+            continue
+        used.add(host)
+        blocks.append(_edge_server_block(host, _edge_route_body(spec), tls=tls))
+    return "\n".join(blocks)
+
+
+def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
+    tls = bool(config.get("tls_enabled"))
+    hosts: dict[str, str] = config["hosts"]
+    urls = {key: _edge_url(host, tls=tls) for key, host in hosts.items()}
+    cfg = _cfg()
+    domains = cfg.setdefault("domains", {})
+    domains.update(urls)
+    if not dry_run:
+        _save_json(CONFIG_PATH, cfg, mode=0o644)
+    backend_values = {
+        "PUBLIC_HOST": hosts.get("backend", config["default_host"]),
+        "BACKEND_PUBLIC_URL": urls["backend"],
+        "SUPABASE_URL": urls["auth"],
+        "OPENIM_API_URL": urls["openim"],
+        "OPENIM_WS_URL": _edge_ws_url(hosts["openim"], tls=tls),
+        "APP_MINIO_PUBLIC_URL": urls["oss"],
+        "APP_MINIO_CONSOLE_PUBLIC_URL": urls["oss_console"],
+        "REGISTRY_PUBLIC_URL": urls["registry"],
+        "FAAS_PUBLIC_BASE_URL": urls["backend"],
+    }
+    supabase_values = {
+        "API_EXTERNAL_URL": urls["auth"],
+        "SUPABASE_PUBLIC_URL": urls["auth"],
+        "SITE_URL": urls["webapp"],
+        "ADDITIONAL_REDIRECT_URLS": ",".join(sorted({urls["website"], urls["webapp"]})),
+    }
+    user_center_values = {"USER_CENTER_COOKIE_SECURE": "true" if tls else "false"}
+    openim_values = {"HOST_IP": hosts.get("openim", config["default_host"])}
+    faas_values = {
+        "FAAS_PUBLIC_BASE_URL": urls["backend"],
+        "FAAS_RUNTIME_BUNDLE_BASE_URL": urls["backend"],
+    }
+    edge_values = {
+        "MYAPP_DATA_ROOT": str(_data_root_from_cfg()),
+        "EDGE_NGINX_HTTP_PORT": str(config["http_port"]),
+        "EDGE_NGINX_HTTPS_PORT": str(config["https_port"]),
+        "EDGE_NGINX_ENABLE_TLS": "true" if tls else "false",
+        "EDGE_NGINX_CLIENT_MAX_BODY_SIZE": str(config["client_max_body_size"]),
+        "EDGE_NGINX_PROXY_READ_TIMEOUT": str(config["proxy_read_timeout"]),
+        "EDGE_NGINX_PROXY_SEND_TIMEOUT": str(config["proxy_send_timeout"]),
+        "EDGE_NGINX_PROXY_CONNECT_TIMEOUT": str(config["proxy_connect_timeout"]),
+    }
+    if dry_run:
+        for group, values in (
+            ("backend", backend_values),
+            ("supabase", supabase_values),
+            ("openim", openim_values),
+            ("user-center", user_center_values),
+            ("faas", faas_values),
+            ("edge", edge_values),
+        ):
+            print(f"# would update {group}: " + ", ".join(sorted(values)))
+        return
+    _merge_env_group("backend", backend_values, force=True)
+    _merge_env_group("supabase", supabase_values, force=True)
+    _merge_env_group("openim", openim_values, force=True)
+    _merge_env_group("user-center", user_center_values, force=True)
+    _merge_env_group("faas", faas_values, force=True)
+    _merge_env_group("edge", edge_values, force=True)
+
+
+def _render_edge_nginx_config(*, dry_run: bool = False) -> int:
+    config = _edge_effective_config()
+    if not config.get("enabled", True):
+        print("edge-nginx ingress is disabled")
+        return 0
+    _warn_duplicate_edge_hosts(config["hosts"])
+    if not _copy_edge_certificates(config, dry_run=dry_run):
+        return 1
+    paths = _edge_paths()
+    nginx_conf = _edge_template("nginx.conf.tpl")
+    nginx_conf = (
+        nginx_conf.replace("{{CLIENT_MAX_BODY_SIZE}}", str(config["client_max_body_size"]))
+        .replace("{{PROXY_READ_TIMEOUT}}", str(config["proxy_read_timeout"]))
+        .replace("{{PROXY_SEND_TIMEOUT}}", str(config["proxy_send_timeout"]))
+        .replace("{{PROXY_CONNECT_TIMEOUT}}", str(config["proxy_connect_timeout"]))
+    )
+    server_blocks = _render_edge_server_blocks(config)
+    site_conf = _edge_template("myapp.conf.tpl").replace("{{SERVER_BLOCKS}}", server_blocks)
+    for path, body in ((paths["nginx_conf"], nginx_conf), (paths["site_conf"], site_conf)):
+        print(f"+ write {path}")
+        if dry_run:
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(body, encoding="utf-8")
+        os.chmod(path, 0o644)
+    _apply_edge_public_urls(config, dry_run=dry_run)
+    if not dry_run:
+        _safe_write_default_config_snapshot()
+    return 0
+
+
+def _save_ingress_config(config: dict) -> None:
+    cfg = _cfg()
+    cfg["ingress"] = config
+    _save_json(CONFIG_PATH, cfg, mode=0o644)
+
+
+def _setup_ingress_from_args(args, *, interactive: bool) -> int:
+    rc = _init_stack_secrets(host=getattr(args, "host", None), quiet=True)
+    if rc != 0:
+        return rc
+    existing = _cfg().get("ingress", {}) if isinstance(_cfg().get("ingress"), dict) else {}
+    default_host = _hostname_from_url_or_host(getattr(args, "host", None) or existing.get("default_host") or _default_ipv4())
+    enabled = True
+    if interactive:
+        print(_tx("Managed edge-nginx ingress setup.", zh="托管 edge-nginx 入口配置。", de="Managed edge-nginx Ingress einrichten.", es="Configurar ingress edge-nginx gestionado."))
+        enabled = _prompt_bool(_tx("enable managed edge-nginx ingress?", zh="启用托管 edge-nginx 入口？", de="Managed edge-nginx Ingress aktivieren?", es="activar ingress edge-nginx gestionado?"), default=bool(existing.get("enabled", True)))
+        if not enabled:
+            _save_ingress_config({"enabled": False})
+            print("edge-nginx ingress disabled")
+            return 0
+        default_host = _prompt_line(_tx("default public IPv4/domain", zh="默认公网 IPv4/域名", de="Standard oeffentliche IPv4/Domain", es="IPv4/dominio publico por defecto"), default=default_host, required=True)
+    domains_existing = existing.get("domains", {}) if isinstance(existing.get("domains"), dict) else {}
+    domains: dict[str, str] = {}
+    for spec in EDGE_ROUTE_SPECS:
+        key = str(spec["key"])
+        default = _hostname_from_url_or_host(str(domains_existing.get(key) or "")) or default_host
+        if interactive:
+            value = _prompt_line(f"{spec['label']} domain", default=default, required=True)
+        else:
+            value = _hostname_from_url_or_host(str(getattr(args, key, "") or "")) or default
+        domains[key] = _hostname_from_url_or_host(value) or default_host
+    http_port = getattr(args, "http_port", None) or existing.get("http_port") or "80"
+    https_port = getattr(args, "https_port", None) or existing.get("https_port") or "443"
+    if interactive:
+        http_port = _prompt_port("HTTP port mapping host port", default=str(http_port))
+        https_port = _prompt_port("HTTPS port mapping host port", default=str(https_port))
+    cert_source = str(getattr(args, "crt", None) or existing.get("cert_source") or "")
+    key_source = str(getattr(args, "key", None) or existing.get("key_source") or "")
+    tls_enabled = bool(cert_source and key_source) and not getattr(args, "http_only", False)
+    if interactive:
+        tls_enabled = _prompt_bool("enable HTTPS with existing certificate files?", default=bool(cert_source and key_source))
+        if tls_enabled:
+            cert_source = _prompt_line("SSL certificate crt/fullchain path", default=cert_source, required=True)
+            key_source = _prompt_line("SSL certificate key path", default=key_source, required=True)
+        else:
+            cert_source = ""
+            key_source = ""
+    config = {
+        "enabled": True,
+        "default_host": _hostname_from_url_or_host(default_host),
+        "domains": domains,
+        "http_port": str(http_port),
+        "https_port": str(https_port),
+        "tls_enabled": bool(tls_enabled),
+        "cert_source": cert_source,
+        "key_source": key_source,
+        "client_max_body_size": str(getattr(args, "client_max_body_size", None) or existing.get("client_max_body_size") or "2g"),
+        "proxy_read_timeout": str(existing.get("proxy_read_timeout") or "3600s"),
+        "proxy_send_timeout": str(existing.get("proxy_send_timeout") or "3600s"),
+        "proxy_connect_timeout": str(existing.get("proxy_connect_timeout") or "60s"),
+    }
+    _save_ingress_config(config)
+    rc = _render_edge_nginx_config(dry_run=False)
+    if rc == 0:
+        print("edge-nginx ingress config rendered")
+    return rc
+
+
+
+
+def _strip_trailing_slash(value: str) -> str:
+    return value.rstrip("/")
+
+
+def _host_port_url(scheme: str, host: str, port: str | int) -> str:
+    return f"{scheme}://{host}:{port}"
+
+
+def _client_env_payload(*, host: str | None = None, name: str | None = None) -> dict:
+    cfg = _cfg()
+    domains = cfg.get("domains", {}) or {}
+    backend_env = _parse_env(_secret_path("backend"))
+    supabase_env = _parse_env(_secret_path("supabase"))
+    openim_env = _parse_env(_secret_path("openim"))
+    public_host = _public_host(host)
+    host_was_explicit = bool(host)
+
+    def from_domain_or_port(domain_key: str, port_key: str, default_port: str, *, scheme: str = "http") -> str:
+        if not host_was_explicit:
+            domain_value = str(domains.get(domain_key) or "").strip()
+            if domain_value:
+                return _strip_trailing_slash(domain_value)
+        return _host_port_url(scheme, public_host, backend_env.get(port_key) or default_port)
+
+    backend_url = from_domain_or_port("backend", "BACKEND_PORT", "5566")
+    registry_url = from_domain_or_port("registry", "REGISTRY_PORT", "3254")
+    minio_url = from_domain_or_port("oss", "APP_MINIO_PORT", "9000")
+    config_center_url = from_domain_or_port("config_center", "CONFIG_CENTER_PORT", "5000")
+
+    if host_was_explicit:
+        supabase_url = _host_port_url("http", public_host, supabase_env.get("KONG_HTTP_PORT") or "18000")
+        im_api_url = _host_port_url("http", public_host, openim_env.get("OPENIM_API_PORT") or "10002")
+        im_ws_url = _host_port_url("ws", public_host, openim_env.get("OPENIM_WS_PORT") or "10001")
+    else:
+        auth_domain = _strip_trailing_slash(str(domains.get("auth") or "").strip())
+        openim_domain = _strip_trailing_slash(str(domains.get("openim") or "").strip())
+        supabase_url = auth_domain or backend_env.get("SUPABASE_URL") or _host_port_url("http", public_host, supabase_env.get("KONG_HTTP_PORT") or "18000")
+        im_api_url = openim_domain or backend_env.get("OPENIM_API_URL") or _host_port_url("http", public_host, openim_env.get("OPENIM_API_PORT") or "10002")
+        if openim_domain:
+            im_ws_url = ("wss://" if openim_domain.startswith("https://") else "ws://") + _netloc_from_url_or_host(openim_domain) + "/ws"
+        else:
+            im_ws_url = backend_env.get("OPENIM_WS_URL") or _host_port_url("ws", public_host, openim_env.get("OPENIM_WS_PORT") or "10001")
+
+    env_name = name or f"MyApp {public_host}"
+    return {
+        "type": "myapp.environment",
+        "version": 1,
+        "name": env_name,
+        "backendUrl": _strip_trailing_slash(backend_url),
+        "supabaseUrl": _strip_trailing_slash(supabase_url),
+        "minioUrl": _strip_trailing_slash(minio_url),
+        "registryUrl": _strip_trailing_slash(registry_url),
+        "imApiUrl": _strip_trailing_slash(im_api_url),
+        "imWsUrl": _strip_trailing_slash(im_ws_url),
+        "configCenterUrl": _strip_trailing_slash(config_center_url),
+    }
+
+
+def _default_client_env_path() -> Path:
+    return Path(_cfg().get("paths", {}).get("state", "/var/lib/myapp")) / "client-environment.json"
+
+
+def _write_qr_png(data: str, path: Path) -> tuple[bool, str]:
+    qrencode = shutil.which("qrencode")
+    if not qrencode:
+        return False, "qrencode not found; install qrencode or rerun with --no-qr"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    proc = subprocess.run([qrencode, "-o", str(path)], input=data, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if proc.returncode != 0:
+        return False, proc.stderr.strip() or f"qrencode exited {proc.returncode}"
+    return True, str(path)
+
+
+def _print_terminal_qr(data: str) -> int:
+    qrencode = shutil.which("qrencode")
+    if not qrencode:
+        print("qrencode not found; cannot print terminal QR", file=sys.stderr)
+        return 1
+    return subprocess.run([qrencode, "-t", "ANSIUTF8"], input=data, text=True).returncode
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _run_log_summary(path: Path) -> dict:
+    row = {
+        "run_id": path.stem,
+        "session_id": "-",
+        "agent_id": "-",
+        "provider_id": "-",
+        "status": "unknown",
+        "returncode": "-",
+        "duration": "-",
+        "lines": 0,
+    }
+    started = None
+    stopped = None
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        row["lines"] += 1
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if event.get("type") == "start":
+            started = event.get("ts")
+            row["run_id"] = event.get("run_id") or row["run_id"]
+            row["session_id"] = event.get("session_id") or "-"
+            row["agent_id"] = event.get("agent_id") or "-"
+            row["provider_id"] = event.get("provider_id") or "-"
+            row["status"] = "started"
+        elif event.get("type") == "stop":
+            stopped = event.get("ts")
+            row["status"] = event.get("status") or "stopped"
+            row["returncode"] = event.get("returncode", "-")
+    if started and stopped:
+        row["duration"] = f"{max(0, int((stopped - started) / 1000))}s"
+    return row
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _local_agent_node_is_private() -> bool:
+    value = (_parse_env(_secret_path("agent")).get("AGENT_NODE_AUTH_MODE", "") or "").strip().lower()
+    return value in {"private", "user-private"}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _remove_agent_register_timer() -> None:
+    if shutil.which("systemctl"):
+        _run(["systemctl", "disable", "--now", "myapp-agent-register.timer"], capture=True)
+    for path in (
+        Path("/etc/myapp/agent-node-register.sh"),
+        Path("/etc/systemd/system/myapp-agent-register.service"),
+        Path("/etc/systemd/system/myapp-agent-register.timer"),
+    ):
+        path.unlink(missing_ok=True)
+    if shutil.which("systemctl"):
+        _run(["systemctl", "daemon-reload"], capture=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def _print_main_help() -> None:
+    print(_t("main_help").rstrip())
+
+__all__ = [
+    '_CtlHelpFormatter',
+    '_CtlArgumentParser',
+    '_new_parser',
+    '_add_subcommands',
+    '_load_json',
+    '_save_json',
+    '_default_cfg',
+    '_cfg',
+    '_data_root_from_cfg',
+    '_apply_data_root_to_cfg',
+    '_default_config_bundle_path',
+    '_ensure_data_root_config',
+    '_ensure_data_root_layout',
+    '_t',
+    '_tx',
+    '_argparse_gettext',
+    '_install_argparse_i18n',
+    '_preinitialize_language',
+    '_normalize_lang',
+    '_set_runtime_language',
+    '_read_language_preference_file',
+    '_write_language_preference',
+    '_choose_language_interactive',
+    '_is_config_lang_command',
+    '_is_help_command',
+    '_initialize_language',
+    '_run_with_heartbeat',
+    '_run',
+    '_run_capture_text',
+    '_docker_inspect',
+    '_image_exists',
+    '_source_dir',
+    '_build_commit_for_source',
+    '_configured_image',
+    '_configured_base_image',
+    '_run_or_print',
+    '_print_table',
+    '_normalize_image_mirror',
+    '_pull_image',
+    '_deploy_images',
+    '_remove_path',
+    '_remove_installed_config_path',
+    '_docker_network_exists',
+    '_secret_dir',
+    '_runtime_secret_dir',
+    '_secret_path',
+    '_runtime_secret_path',
+    '_copy_file_secure',
+    '_sync_runtime_secrets_from_host_config',
+    '_decode_env_value',
+    '_quote_env_value',
+    '_parse_env',
+    '_write_env',
+    '_setup_secret_host_root',
+    '_setup_secret_container_path',
+    '_write_secret_file',
+    '_truthy_env',
+    '_prompt_line',
+    '_prompt_bool',
+    '_prompt_multiline',
+    '_normalize_provider_id',
+    '_provider_prefix',
+    '_split_csv',
+    '_provider_registry',
+    '_builtin_provider',
+    '_ai_provider_ids_from_env',
+    '_provider_has_anthropic_adapter',
+    '_provider_has_codex_responses_adapter',
+    '_provider_has_opencode_adapter',
+    '_provider_codex_adapter_kind',
+    '_provider_allows_agent',
+    '_builtin_supported_agents',
+    '_ai_provider_capabilities_from_env',
+    '_ai_providers_configured',
+    '_default_agent_from_provider_env',
+    '_base_provider_env',
+    '_prompt_deepseek_provider',
+    '_prompt_minimax_provider',
+    '_prompt_volcengine_provider',
+    '_native_codex_default_user_spec',
+    '_prompt_native_codex_provider',
+    '_prompt_custom_provider',
+    '_setup_ai_providers',
+    '_setup_apns_push',
+    '_setup_fcm_push',
+    '_setup_getui_push',
+    '_setup_push_providers',
+    '_setup_asr_provider',
+    '_smtp_already_configured',
+    '_prompt_port',
+    '_setup_email_provider',
+    '_run_setup_wizard',
+    '_prompt_secret',
+    '_rand_hex',
+    '_rand_token',
+    '_b64url',
+    '_mint_supabase_jwt',
+    '_public_host',
+    '_is_replaceable_default_url',
+    '_persist_public_host_if_explicit',
+    '_should_replace_env_value',
+    '_merge_env_group',
+    '_init_stack_secrets',
+    '_redact',
+    '_bundle_secret_files',
+    '_config_bundle',
+    '_serialize_config_bundle',
+    '_write_config_bundle',
+    '_write_default_config_snapshot',
+    '_load_config_bundle',
+    '_import_config_bundle_data',
+    '_safe_write_default_config_snapshot',
+    '_default_ipv4',
+    '_edge_template_dir',
+    '_edge_template',
+    '_hostname_from_url_or_host',
+    '_netloc_from_url_or_host',
+    '_edge_url',
+    '_edge_ws_url',
+    '_edge_paths',
+    '_edge_route_host_defaults',
+    '_edge_effective_config',
+    '_warn_duplicate_edge_hosts',
+    '_copy_edge_certificates',
+    '_edge_proxy_location',
+    '_edge_route_body',
+    '_edge_server_block',
+    '_edge_default_server_block',
+    '_render_edge_server_blocks',
+    '_apply_edge_public_urls',
+    '_render_edge_nginx_config',
+    '_save_ingress_config',
+    '_setup_ingress_from_args',
+    '_strip_trailing_slash',
+    '_host_port_url',
+    '_client_env_payload',
+    '_default_client_env_path',
+    '_write_qr_png',
+    '_print_terminal_qr',
+    '_run_log_summary',
+    '_local_agent_node_is_private',
+    '_remove_agent_register_timer',
+    '_print_main_help',
+    'CONFIG_PATH',
+    'SERVICES_PATH',
+    'LANGUAGE_PATH',
+    'DEFAULT_DATA_ROOT',
+    'SUPABASE_POSTGRES_IMAGE',
+    'DATA_ROOT_DIRS',
+    'DEPLOY_ORDER',
+    'IMAGE_TARGETS',
+    'IMAGE_BASE_TARGETS',
+    'BACKEND_IMAGE_SERVICES',
+    'FAAS_IMAGE_SERVICES',
+    'DEFAULT_NETWORKS',
+    'COMPOSE_ENV_FILE_NAMES',
+    '_SETUP_SECRET_FILE_CONTAINER_ROOT',
+    '_SETUP_SECRET_FILE_HOST_DIR',
+    'EDGE_ROUTE_SPECS',
+    '_LANG',
+    '_LANGUAGES',
+    '_MESSAGES',
+    '_ARGPARSE_I18N',
+    '_AGENT_NODE_INSTANCE_OPTIONAL_PREFIXES',
+    '_PROVIDER_REGISTRY',
+    '_PROVIDER_REGISTRY_ATTEMPTED',
+    '_IMAGE_ENV_KEYS',
+    '_LEGACY_OFFICIAL_IMAGE_PREFIX',
+]

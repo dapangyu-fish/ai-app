@@ -62,7 +62,7 @@ DEMO_PROVIDER = "demo"
 
 # Demo 专用对象存储桶：所有 demo 的 app.json 预先固定上传到这里（public-read），
 # 回放时直接返回固定公共 URL，不再每次临时上传/预签名 → 更快、链接稳定不过期。
-# 桶的创建/上传由 myapp-ctl 部署后步骤负责（集群初始化的一部分），见 scripts/myapp_ctl.py。
+# 桶的创建/上传由 myapp-ctl 部署后步骤负责（集群初始化的一部分），见 scripts/myapp_ctl/。
 DEMO_BUCKET = os.environ.get("AI_DEMO_BUCKET", "demo")
 
 
