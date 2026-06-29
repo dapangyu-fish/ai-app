@@ -11,7 +11,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # environment: <name>   # ← 若 secrets/vars 是 Environment 级，取消注释并填名字
+    environment: DOCKERHUB   # 凭据挂在名为 DOCKERHUB 的 Environment（secret DOCKERHUB_TOKEN + variable DOCKERHUB_USERNAME）
     strategy:
       fail-fast: false
       matrix:
