@@ -1,6 +1,6 @@
 # RFC: 版本号管理（Version Management）
 
-- **状态**: ✅ **P1 已实现 + 77 闭环验证通过**（见 §8，commit `aea665e`，不可变镜像 `1.2.0-aea665e`）；P2-P4 待排期。仅 GHA 首跑 gated 于 Environment 名确认。
+- **状态**: ✅ **P1 全部完成**（实现 + 77 闭环 + **GHA 首跑成功** + 完整管线 GHA→Hub→77；见 §8）；77 跑 CI 镜像 `1.2.0-5146e38`。P2-P4 待排期。
 - **范围**: 跨域（`deploy/production/`、`scripts/myapp_ctl/`、`backend/`、`pubspec.yaml`、`JSON-DSL.md`、`backend/migrations/`）
 - **作者**: Claude（基于 2026-06-29 对全仓 **63 个版本/依赖耦合面**的审计 + 对抗式核实 + 四类锁定最佳实践调研）
 - **起始版本**: **`1.2.0`**（承接 `pubspec.yaml` 现有线，不另起 1.0.0）
@@ -210,9 +210,10 @@ DSL 是「stored documents 必须持续可渲染」的 schema 问题,但为**全
 
 ---
 
-## 8. P1 落地状态（✅ 已实现 + 77 闭环验证通过 · 2026-06-29）
+## 8. P1 落地状态（✅ 全部完成：实现 + 77 闭环 + GHA 首跑 + 完整管线 · 2026-06-29）
 
-> 实现 commit `aea665e`（分支 `feat/version-management`）。不可变镜像 = **`1.2.0-aea665e`**（backend digest `sha256:487af6d…`）。
+> 实现 commit `aea665e` + GHA env `5146e38`（分支 `feat/version-management`，`v1.2.0` tag）。
+> **77 现跑 CI 构建的 `dapangyu/myapp-backend:1.2.0-5146e38`**（早期手工 `1.2.0-aea665e` 仍在 Hub）。
 
 **已验证（77 live）**：
 - `myapp-ctl --version` → `myapp-ctl 1.2.0`。
@@ -225,23 +226,23 @@ DSL 是「stored documents 必须持续可渲染」的 schema 问题,但为**全
 | # | 项 | 状态 | 落点 / 证据 |
 |---|----|------|------------|
 | 1 | `VERSION`=1.2.0 + `CHANGELOG.md` | ✅ | 仓库根 |
-| 2 | GHA `images-app.yml`（4 app，`v*` tag + dispatch）+ `images-base.yml`（4 base，仅 dispatch）；出 `:{ver}-{sha}`+`:{ver}`+`:edge` | ✅ 写好+YAML 校验通过；**首跑待触发**（见 8.3） | `.github/workflows/` |
+| 2 | GHA `images-app.yml`（4 app，`v*` tag + dispatch）+ `images-base.yml`（4 base，仅 dispatch）；出 `:{ver}-{sha}`+`:{ver}`+`:edge` | ✅ **首跑成功**：`v1.2.0`→CI（`environment: DOCKERHUB`）~2min 构建 4 app 镜像并 push `:1.2.0-5146e38`/`:1.2.0`/`:edge` | `.github/workflows/` |
 | 3 | 后端 `GET /version` + 启动日志；`Dockerfile.backend` 加 `MYAPP_VERSION` | ✅ live 返回 `version:1.2.0` | `backend/app.py` |
 | 4 | `myapp-ctl deploy --image-version <tag>`（钉 ctl.json + force 写 backend/faas env + pull） | ✅ live 升级/回滚均验证 | `deploy.py:_pin_image_version` |
 | 5 | 默认 `:agent-control-plane`→`:edge` | ✅ | ctl.json/compose/core.py/4×Dockerfile/services.json/config.py（留 `core.py:2288` 迁移比较） |
 | 6 | `CHANGELOG.md` + `myapp-ctl --version` | ✅ → `myapp-ctl 1.2.0` | `cli.py` |
 | 7 | cutover 77 到不可变 tag | ✅ backend 家族 + agent-node 跑 `:1.2.0-aea665e`，restarts=0 | 见 8 顶部验证 |
-| 8 | 打 `v1.2.0` git tag | ⏳ 待 8.3（触发 GHA 首跑） | — |
+| 8 | 打 `v1.2.0` git tag | ✅ `v1.2.0`@`5146e38` 已推 → 触发 CI 首跑 | git tag |
 
 ### 8.2 镜像发布流程（本机无 docker/gh；已验证可行）
 backend **真构建**于 `claude.dapangyu.work`（`git worktree --detach origin/<branch>`，不碰其 WIP；`--build-arg BASE_IMAGE=...-base:agent-control-plane` 兜底 + `MYAPP_VERSION`/`MYAPP_BUILD_*`）→ push `:1.2.0-<sha>`/`:1.2.0`/`:edge`。**未改的镜像**（3 app + 4 base）用 `docker buildx imagetools create -t NEW1 -t NEW2 SRC` 在 Hub 服务端**重打 tag**（无需拉层）。77 = `git checkout feat/version-management` + `install_ctl.sh` + `myapp-ctl deploy --image-version <tag> ...`（镜像站对全新 tag 回源）。
 
-### 8.3 下一步（待用户 go）——把 GHA 首跑接通
-**Environment 已确认**：名为 **`DOCKERHUB`**，含 Environment secret `DOCKERHUB_TOKEN` + Environment variable `DOCKERHUB_USERNAME`（值 `dapangyu`）。
-1. 给 `images-app.yml` + `images-base.yml` 的 `build` job 加一行 **`environment: DOCKERHUB`**（当前是占位注释）。提交。
-2. 推 **`v1.2.0`** git tag（或手动 `workflow_dispatch`）触发 `images-app.yml` 首跑。
-3. 验证 CI 成功 = Docker Hub 上 `:1.2.0`/`:1.2.0-<新sha>`/`:edge` 被 CI 重新 push（可 `docker manifest inspect` 对比 digest，无需 gh）。
-> base 镜像（`images-base.yml`）仅在其 Dockerfile 变更或要锁工具链（P2）时手动 dispatch。
+### 8.3 GHA 首跑 + 完整管线（✅ 已打通并验证）
+**Environment** = **`DOCKERHUB`**（Environment secret `DOCKERHUB_TOKEN` + Environment variable `DOCKERHUB_USERNAME`=`dapangyu`）；两条 workflow 的 job 已加 `environment: DOCKERHUB`（commit `5146e38`）。
+- 推 `v1.2.0`@`5146e38` → `images-app.yml` 跑 4-job matrix（`environment: DOCKERHUB` 成功读到凭据）→ **~2min 内**把 `dapangyu/myapp-{backend,agent-node,agent-runtime,faas-runtime}:1.2.0-5146e38` + `:1.2.0` + `:edge` 全部 push 到 Docker Hub（backend `:1.2.0-5146e38`=`:1.2.0`=`:edge` 同 manifest `d0f4212…`）。
+- **77 切到 CI 镜像**：`deploy --image-version 1.2.0-5146e38` → 运行 `dapangyu/myapp-backend:1.2.0-5146e38`，`/version` → `build_commit:5146e383…(完整sha)、build_version:1.2.0-5146e38、version:1.2.0`，backend/registry healthy。
+- **完整管线闭环**：`git tag v1.2.0 → GHA(env=DOCKERHUB) 构建 4 镜像 → push Docker Hub → 77 --image-version 拉 CI 镜像运行 → /version 确认`。
+> base 镜像（`images-base.yml`）仅手动 dispatch（其 Dockerfile 变更或 P2 锁工具链时）。`:agent-control-plane` 已停推（保留作历史回滚目标）。
 
 ### 8.4 既定范围与默认（备查）
 **范围**：第一轮只 P1；P2（uv lock + base digest + Flutter FVM 3.41.8）、P3（FaaS 运行时 digest + schema 迁移表，改 77 现网）、P4（DSL 载入闸）各自单独一轮。
