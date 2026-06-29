@@ -402,7 +402,7 @@ licensed by their authors unless they explicitly say otherwise.
 - [ ] Audio support for JSON-APPs (recording, playback, upload, and reusable audio UI/actions)
 - [x] FaaS support: AI conversations create Python/Flask backend functions, served by the self-managed Docker FaaS runtime (one container per service, control-plane-owned deploy/route/cold-wake/scale-to-zero) with strict bundle validation, GitHub source-of-truth (`myapp-faas-services`), an isolated git push worker, per-user quota + create-vs-append, and a route-enforced invoke proxy
 - [ ] FaaS scale-out: multi-node Docker FaaS + backend secondary routing (horizontal scale) and user-private faas nodes (reusing the agent-node registry pattern)
-- [ ] Mario JSON demo parity: finish Koopa spawn/movement/rendering parity against the original `flutter_game` reference before treating that demo as fully complete
+- [ ] **Per-JSON-APP push isolation + deep-link + opt-in authorization**: app-scoped message envelope (`app_id` + target `route` + `params`) so a notification can route into a specific JSON-APP screen; recipients must opt in per app/sender/service (default off, anti-abuse); tap-routing opens the app to the target screen if installed, else a framework "install A" invite fallback. Design: [docs/planning/push-jsonapp-isolation.md](docs/planning/push-jsonapp-isolation.md)
 - [ ] DSL v4 (stabilize breaking-change window)
 - [ ] More tests around the interpreter
 - [ ] Performance: defer interpret of off-screen subtrees
