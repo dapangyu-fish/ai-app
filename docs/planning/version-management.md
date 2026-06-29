@@ -302,3 +302,14 @@ backend **真构建**于 `claude.dapangyu.work`（`git worktree --detach origin/
 - **结论：无需修复 → 无 v1.2.2。** 发布-部署闭环（保留数据配置）验证通过。
 
 > 已知未经此环测试的项（需 `images-base.yml` 手动 dispatch，无 gh 触发不了）：P2 base 镜像重建（lock/CLI/digest 当前 dormant，app 镜像 FROM 旧 `:edge` base）。见 §9 剩余待办。
+
+### Round 2 — v1.2.2（commit `ff1cd41`，2026-06-30）✅ 无问题
+新增 `_run_platform_migrations`（deploy 后自动跑 `migrate.py`）后再跑一轮：
+- `git tag v1.2.2 → CI(env=DOCKERHUB) 4 镜像 1.2.2-ff1cd41(~1min) → 77 git pull + install_ctl(新 ctl 含 wiring) + deploy --image-version`。
+- **7 app 服务全 1.2.2-ff1cd41**、healthy、restarts=0；`/version`=1.2.2；`myapp-ctl --version`=1.2.2。
+- **部署后自动迁移 wiring 触发**：`+ docker exec myapp-backend python migrate.py`（0 pending→无操作、非阻断、无告警）。
+- 数据保留：`schema_migrations=7 / tables=17 / userdata schemas=6` 不变；backend 近 2min 0 error。
+- **迁移 apply 路径定论测试**：临时塞 `008_vtest_selftest.sql` → `migrate.py` apply（建表+记录、count=8）→ 再跑幂等（0 pending 不重复）→ 清理还原到 7。**schema_migrations runner 端到端可用。**
+
+### 结论
+两轮发布-部署闭环（`git tag → GHA(env=DOCKERHUB) → Docker Hub → myapp-ctl deploy --image-version → 77`）**全自动跑通、数据/配置全保留、零 error、可重复**；新功能（DSL gate / schema 迁移 runner + 自动迁移）均验证可用。**未发现需修复的问题**，77 现跑 `1.2.2-ff1cd41`。唯一未经此环测的是 P2 base 镜像重建（需 `images-base.yml` 手动 dispatch，本环境无 `gh` 触发不了；base 改动当前 dormant，见 §9）。
