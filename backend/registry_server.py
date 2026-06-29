@@ -216,17 +216,36 @@ def _install_ip_hash():
     return hashlib.sha256(f"{salt}:{raw_ip}".encode("utf-8")).hexdigest()
 
 
+# Registry 全局索引（_index.json）的 schema 版本。改索引结构时 bump（见
+# docs/planning/version-management.md §3.6）；加载时 MAJOR 不符则告警，便于发现
+# "新代码读旧索引 / 旧代码读新索引" 的不兼容。
+INDEX_SCHEMA_VERSION = "1.0"
+
+
+def _check_index_version(idx: dict) -> None:
+    got = str((idx or {}).get("version") or "").strip()
+    if not got:
+        return
+    if got.split(".")[0] != INDEX_SCHEMA_VERSION.split(".")[0]:
+        print(
+            f"[Registry] ⚠️ 索引 schema 版本不兼容：读到 {got!r}，本代码期望 "
+            f"{INDEX_SCHEMA_VERSION!r}（MAJOR 不符）。请确认 registry 镜像与索引版本匹配。"
+        )
+
+
 def _load_index():
     """从 MinIO 加载全局索引文件"""
     try:
         response = minio_client.get_object(BUCKET_COMPONENT, INDEX_FILE)
         data = response.read()
-        return json.loads(data.decode('utf-8'))
+        idx = json.loads(data.decode('utf-8'))
+        _check_index_version(idx)
+        return idx
     except Exception as e:
         # 索引文件不存在，返回空结构
         print(f"[Registry] 索引文件不存在或加载失败: {e}")
         return {
-            "version": "1.0",
+            "version": INDEX_SCHEMA_VERSION,
             "updated_at": datetime.utcnow().isoformat() + "Z",
             "packages": {},
             "namespaces": {}

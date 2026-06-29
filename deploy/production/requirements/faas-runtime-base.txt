@@ -1,0 +1,8 @@
+# FaaS 运行时 base 镜像的依赖（helper myapp_db/auth/data 的运行时栈）。
+# 改后重生成 lock：uv pip compile deploy/production/requirements/faas-runtime-base.txt \
+#   -o deploy/production/requirements/faas-runtime-base.lock --generate-hashes --python-version 3.11
+flask==3.0.3
+requests>=2.32.0
+pydantic>=2.7.0
+python-dateutil>=2.9.0
+psycopg2-binary>=2.9.9

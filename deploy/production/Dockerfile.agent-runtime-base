@@ -52,7 +52,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         fonts-liberation \
         fonts-noto-cjk \
         fonts-noto-color-emoji \
-    && npm install -g @anthropic-ai/claude-code @openai/codex@0.136.0 opencode-ai \
+    && npm install -g @anthropic-ai/claude-code@2.1.195 @openai/codex@0.136.0 opencode-ai@1.17.11 \
     && ln -sf "$(command -v claude)" /usr/local/bin/claude \
     && ln -sf "$(command -v codex)" /usr/local/bin/codex \
     && ln -sf "$(command -v opencode)" /usr/local/bin/opencode \
