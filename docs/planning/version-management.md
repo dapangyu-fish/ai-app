@@ -1,6 +1,6 @@
 # RFC: 版本号管理（Version Management）
 
-- **状态**: 决策全定 + P1 就绪，**待用户 GO 信号**（见 §8）；分支 `feat/version-management`
+- **状态**: ✅ **P1 已实现 + 77 闭环验证通过**（见 §8，commit `aea665e`，不可变镜像 `1.2.0-aea665e`）；P2-P4 待排期。仅 GHA 首跑 gated 于 Environment 名确认。
 - **范围**: 跨域（`deploy/production/`、`scripts/myapp_ctl/`、`backend/`、`pubspec.yaml`、`JSON-DSL.md`、`backend/migrations/`）
 - **作者**: Claude（基于 2026-06-29 对全仓 **63 个版本/依赖耦合面**的审计 + 对抗式核实 + 四类锁定最佳实践调研）
 - **起始版本**: **`1.2.0`**（承接 `pubspec.yaml` 现有线，不另起 1.0.0）
@@ -209,7 +209,20 @@ DSL 是「stored documents 必须持续可渲染」的 schema 问题,但为**全
 
 ---
 
-## 8. 执行就绪状态（P1，待 GO 信号 · 2026-06-29）
+## 8. P1 落地状态（✅ 已实现 + 77 闭环验证通过 · 2026-06-29）
+
+> 实现 commit `aea665e`（分支 `feat/version-management`）。不可变镜像 = **`1.2.0-aea665e`**（backend digest `sha256:487af6d…`）。
+
+**已验证（77 live）**：
+- `myapp-ctl --version` → `myapp-ctl 1.2.0`。
+- `myapp-ctl deploy --image-version 1.2.0-aea665e` → 钉 ctl.json + force 写 backend/faas env → 经镜像站拉到**全新 tag**（回源成功，治好缓存坑）→ 4 服务 healthy、运行镜像 = `1.2.0-aea665e`。
+- 后端 `GET /version` → `{version:1.2.0, build_version:1.2.0-aea665e, build_commit:aea665e…, dsl_supported:3.3}`。
+- **回滚闭环**：`--image-version agent-control-plane` → `/version` HTTP 404（旧镜像无端点，证明镜像真切切换）→ 前滚 `1.2.0-aea665e` → `/version` 200。
+- 8 镜像（4 app + 4 base）已在 Docker Hub：backend 真构建，其余 imagetools 重打 tag（`:1.2.0-aea665e`/`:1.2.0`/`:edge`）。
+
+**唯一用户侧 gated（未做）**：推 `v1.2.0` git tag 触发 **GHA 首跑**——因 secrets 是 "Environment" 级、Environment 名未确认，为避免触发必失败的 run 而**暂不推 tag**。确认 Environment 名（或 repo 级）后，给 `images-app.yml`/`images-base.yml` 的 job 加 `environment:`（如需）并推 `v1.2.0` 即可。workflow 已写好 + YAML 校验通过 + 等价构建已在 claude 手工验证（证明 Dockerfile/args/base:edge 可解）。
+
+### 历史：执行就绪状态（P1，GO 前 · 已完成）
 
 **范围**：第一轮只做 **P1**（P2 含 Flutter 工具链、P3 改 77 现网 FaaS+DB，各自单独一轮）。
 **分支**：`feat/version-management`（基于 main 07c0774，pgbouncer 已合 main）。
