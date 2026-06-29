@@ -215,6 +215,8 @@ Agent 一个中立关卡节奏骨架：安全开场、首次接敌、掩体交�
 **变量路径支持嵌套**：`global.user.name` 可读写深层属性。
 **支持 List 下标**：路径里的数字段当 List 索引，例如 `global.board.5` 读 `board[5]`，`@set var="global.board.{{ idx }}"` 写 `board[idx]`。读越界 / 不能解析为 int 返回 `null`；写越界静默 no-op（List 不像 Map 会自动扩展）。Map 优先匹配——如果某层是 Map 且有名为 `"5"` 的 key，仍走 Map 分支，不会误判成 List。
 
+**只读平台命名空间 `app.*`**：除 `global.*` / `loop.*` / `params.*`（及事件回调里的 `event.*`）外，框架还注入一个**只读**命名空间 `app.*`，可在任意 `{{ }}` 与 `{ "var": ... }` 中读取当前环境的平台地址（随客户端环境切换自动更新，不可 `@set`）：`app.backendUrl` / `app.supabaseUrl` / `app.registryUrl` / `app.minioUrl` / `app.imApiUrl`。
+
 ### 3.3 值类型规则（核心约定）
 
 在 `args` 中，值的写法决定了解释器如何处理它：
@@ -225,13 +227,18 @@ Agent 一个中立关卡节奏骨架：安全开场、首次接敌、掩体交�
 | `123` / `true` / `[]` | 原始值 | 直接使用 | `"value": []` |
 | `"{{ path }}"` | 模板引用 | 解析为变量的**原始类型**（List/Map/String 等） | `"value": "{{ global.list }}"` → 实际 List |
 | `"前缀 {{ path }} 后缀"` | 模板插值 | 解析为**字符串**（变量 toString 后拼接） | `"value": "共 {{ global.count }} 条"` → `"共 5 条"` |
-| `{ "if": [...] }` / `{ "+": [...] }` 等单 key + key 在 op 集合 | JsonLogic 表达式 | 通过 jsonlogic 引擎**求值** | `"value": { "merge": [...] }` |
+| `{ "if": [...] }` / `{ "+": [...] }` 等单 key + key 在 op 集合 | JsonLogic 表达式 | **仅当该 arg 会被接收函数求值时**（如 `@set` 的 `value`）→ jsonlogic 求值；否则按数据 Map 原样传递 | `"value": { "merge": [...] }` |
 | `{ "key": ..., "key2": ... }` 数据 Map | 普通数据对象 | **原样传递**，递归展开内部 `{{ }}` 模板，不走 jsonlogic | `"item": { "id": "{{ loop.index }}", "name": "..." }` |
 
 **关键区分**：
 - `"{{ global.items }}"` → 返回 items 变量本身（可能是 List、Map、数字等，保留原始类型）
-- `{ "var": "global.items" }` → 通过 jsonlogic 引擎求值，效果相同但更明确
+- `{ "var": "global.items" }` → 在**会求值的 arg** 里通过 jsonlogic 引擎求值（效果相同但更明确）；在不求值的 arg 里则原样传递
 - `"总数: {{ global.count }}"` → 返回字符串 `"总数: 5"`（混合文本，强制 String）
+
+> **关键纠正：jsonlogic 求值是「逐 arg、由各内置函数决定」的，不是 args 层的统一规则。**
+> args 解析（`_resolveArgs` → `_resolveValue`）**只展开 `{{ }}` 模板，从不主动跑 jsonlogic**——单 key op-Map 在这一层只是被当数据 Map 原样保留。真正触发 jsonlogic 的，是**特定函数对特定 arg** 显式求值：最常见的有 `@set` 的 `value`、`@if`/`@while` 的条件、`@http_post`/`@http_put` 的 `body`、`@list_add` 的元素等。
+> 反例：`@print` 不对 `value` 求值，所以 `@print value={"+":[1,2]}` 会**原样打印该 Map** 而非 `3`。
+> 因此：上表「单 key op-Map → 求值」与下文「撞 key」警告，**只在该 arg 会被函数求值时成立**；其余位置一律按数据 Map 处理（仅内部 `{{ }}` 展开）。
 
 **作用域不在时模板原文保留**：
 当模板引用的是 `loop.*` / `event.*`，而当前没有对应作用域（`_loopContextStack` / `_eventContextStack` 为空），引擎会**保留模板原文**而不是返回 null。典型场景：把 widget JSON 通过函数参数传给 helper（如 `@common-ui.showSheet({content: {type: "list", item_template: {... {{ loop.item.x }} ...}}})`），`item_template` 里的 `{{ loop.item.x }}` 在 `_resolveArgs` 阶段还没 loop 上下文，原文留到 `list` 控件给每项建好上下文时再求值，结果正确。`global.*` / `params.*` 仍然在 args 解析时立刻求值（按调用方当时的作用域）。
@@ -243,9 +250,9 @@ Agent 一个中立关卡节奏骨架：安全开场、首次接敌、掩体交�
 - ✅ 数据 Map：`{"id": 1, "name": "x"}`（多 key）、`{"display": "🐹"}`（单 key 但 `display` 不是 op）
 - ⚠️ 数据 Map 但单 key 撞上 op 名：`{"in": "users"}` 会被当 `in` 表达式跑去崩。要么换键名，要么塞进多 key（`{"_kind": "data", "in": "users"}`）。
 
-**op 集合**（写新 key 名前请确认不撞）：
-`var / missing / missing_some / if / ?: / and / or / ! / !! / == / != / === / !== / < / <= / > / >= / + / - / * / / / % / min / max / cat / substr / in / map / filter / reduce / all / some / none / merge / log` ＋ 框架自定义：
-`str_len / str_upper / str_lower / str_trim / str_contains / str_replace / str_split / str_join / length / at / slice / sort / reverse / to_string / to_int / to_double / abs`
+**op 集合**（写新 key 名前请确认不撞；以 `interpreter.dart` 的 `_knownJsonLogicOps` 为权威依据）：
+`var / missing / missing_some / if / ?: / and / or / ! / !! / == / != / === / !== / < / <= / > / >= / + / - / * / / / % / min / max / cat / substr / in / map / filter / reduce / all / some / none / merge / method / log` ＋ 框架自定义（28 个，经 `jl.add()` 注册）：
+`str_len / str_upper / str_lower / str_trim / str_contains / str_replace / str_replace_first / str_split / str_join / length / at / slice / sort / reverse / to_string / to_int / to_double / abs / sin / cos / tan / atan2 / sqrt / pow / clamp / lerp / seed / pi`
 
 > 历史背景：3.3 之前所有 Map 都被无脑送进 jsonlogic，导致 `@list_add args.item={"id":..., "display":...}` 这种正常数据对象也会抛 `JsonlogicException: operator id not defined`。修复后数据 Map 安全可用，详见 `templates/bacsase/anti_patterns_and_pitfalls.md` §6。
 
@@ -319,10 +326,13 @@ Agent 一个中立关卡节奏骨架：安全开场、首次接敌、掩体交�
 
 #### Fallback 链
 
-`{{ t('key.path') }}` 查找顺序：
-1. 精确匹配 `global.i18n[当前 locale][key.path]`
-2. 找不到 → 返回 `'key.path'` 字符串本身（**不会崩**）
-3. JSON-APP 完全没写 `global.i18n` 块 → 所有 `{{ t('xxx') }}` 都返回 `'xxx'`
+`{{ t('key.path') }}` 查找顺序（当前 locale 取自 `global.locale`，默认 `zh`）：
+1. **精确 locale 字典**：`global.i18n[当前 locale]`（如 locale=`zh-CN` 先查 `i18n["zh-CN"]`）。
+2. **locale 档级回退**（精确 locale 字典缺失或不是 Map 时）：语言码（`zh-CN` → `zh`）→ `en` → `zh` → `i18n` 里**任意一个**可用字典。
+3. 在选中的字典里查 `key.path`；**key 缺失** → 返回 `'key.path'` 字符串本身（**不会崩**）。
+4. JSON-APP 完全没写 `global.i18n` 块 → 所有 `{{ t('xxx') }}` 都返回 `'xxx'`。
+
+> 即：locale 整档缺失会**降级到真实语言**（部分翻译的字典不会把原始 key 直接塞给用户看），只有具体 key 缺失才回退成 key 本身——与 `displayName` 的回退一致。
 
 #### 组件库（ref）的 i18n 约定
 
@@ -501,9 +511,10 @@ Agent 一个中立关卡节奏骨架：安全开场、首次接敌、掩体交�
 | `@request_permission` | `{ "type": "camera" }` | 请求权限。`type`：`camera` / `microphone` / `photos` / `location` / `locationWhenInUse` / `locationAlways` / `contacts` / `calendar` / `notification` / `storage` / `bluetooth` / `speech`。返回 status: `granted` / `denied` / `restricted` / `permanentlyDenied` / `limited`。<br>⚠️ **选图/选视频不需要申请 `photos`**：`image_picker` 控件 / `@pick_image` 走系统 Photo Picker（Android 13+）/ PHPicker（iOS），系统级代选，零权限。`photos` 仅用于"app 内自绘相册网格读取全部媒体"这种场景，Android 上当前已移除该权限声明（请求会返回 `denied`），iOS 仍有效。 |
 | `@permission_status` | `{ "type": "..." }` | 同 `@request_permission`，但只查不请求 |
 | `@open_app_settings` | `{}` | 跳系统设置页（用于 permanentlyDenied 后引导用户手动开启） |
+| `@set_system_ui_overlay` | `{ "style": "light" }` | 设置系统状态栏 / 导航栏图标亮度：`light`（浅色图标，配深色背景）/ 其他值（含 `dark`，默认）→ 深色图标 |
 | `@biometric_auth` | `{ "reason": "请验证身份解锁" }` | 触发指纹 / Face ID / 设备 PIN 验证。返回 bool |
 | `@flame_game_reset` | `{}` | 重置当前屏幕挂着的所有 flame_game。给 JSON-APP 层（结算 dialog 的"再来一局"按钮）从外面重置游戏用，避免依赖 canvas 的 tap-to-reset |
-| `@flame_game_input` | `{ "type": "button", "id": "jump", "pressed": true }` 或 `{ "type": "joystick", "x": 0.5, "y": -0.2, "strength": 0.54 }` | 从普通 JSON widget 向当前屏幕的 flame_game 注入外部输入。`virtual_gamepad` 组件库就是基于这个桥接实现 |
+| `@flame_game_input` | `{ "input": "jump", "data": { "pressed": true } }`（`name` 可代替 `input`） | 从普通 JSON widget 向当前屏幕的 flame_game 注入**命名输入**。框架只读 `input`/`name`（输入名）与 `data`（透传给游戏的 Map），由游戏 JSON 的 `input.<name>` 逻辑决定如何响应。⚠️ **不读** `type`/`id`/`pressed`/`x`/`y`/`strength` 等顶层字段——要传的值一律塞进 `data`；`name` 为空直接 no-op。`game-controls` 组件库的虚拟手柄即基于此桥接（注意 `virtual_gamepad` 是该组件库的 **ref 宏，不是框架内置 widget type**） |
 
 ### 4.9.1 媒体 / 相机（底层 API，**建议走 lib**）
 
@@ -561,7 +572,7 @@ Agent 一个中立关卡节奏骨架：安全开场、首次接敌、掩体交�
 | `@set_locale` | `{ "value": "en" }` | 切 **JSON-APP 自己**的 `global.locale`（不动框架 UI）。等价于 `@set var="global.locale" value="en"`，但顺带触发 `t()` 重查 |
 | `@get_locale` | `{}` | 返回 JSON-APP 当前 locale |
 | `@set_framework_locale` | `{ "value": "en" }` / `"system"` | 同步切框架 + JSON-APP locale（launcher 等"全局切语言"场景）。会调 `LocaleController.setLocale` 触发框架 UI 重建，同时 `setVariable('global.locale', ...)` |
-| `@get_framework_locale` | `{}` | 返回框架当前 locale 简码（`zh` / `en` / `de` / `es`）或 `'system'`（跟随系统时） |
+| `@get_framework_locale` | `{}` | 返回框架当前 locale 简码（`zh`/`en`/`de`/`es`/`fr`/`pt`/`ca`/`hi`/`ko`/`ja`/`it` 共 11 种）或 `'system'`（跟随系统时）。以 `framework_strings.dart` 的 `supportedLocales` 为准 |
 
 i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组件库 ref 的 i18n 约定 —— 见 §3.5。
 
@@ -607,8 +618,8 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 | `@startup_default_clear` | — | `bool` | 清掉默认启动 APP |
 | `@cache_clear` | — | `bool` | 清 dsl_cache 目录（市场/库本地缓存） |
 | `@auth_logout` | — | `bool` | 登出（IM + token） |
-| `@get_framework_locale` | — | `'zh'\|'en'\|'de'\|'es'\|'system'` | 见 §4.11（也归在这里方便 launcher 场景查） |
-| `@set_framework_locale` | `{ value: 'zh'\|'en'\|'de'\|'es'\|'system' }` | `bool` | 见 §4.11 |
+| `@get_framework_locale` | — | 11 语言简码之一 `\| 'system'` | 见 §4.11（也归在这里方便 launcher 场景查） |
+| `@set_framework_locale` | `{ value: <11 语言简码之一> \| 'system' }`（`zh/en/de/es/fr/pt/ca/hi/ko/ja/it`，以 `supportedLocales` 为准） | `bool` | 见 §4.11 |
 
 读取当前用户信息直接用现有的 `@get_user_info`（native）或 lib_user 的
 `getUserAvatar` / `getUserName` / `getUserEmail`——launcher 这里不重复
@@ -680,6 +691,21 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 
 每个 lib 各自把状态挂在固定路径（`global._lma.*` / `global._lm.*` / `global._ls.*`）下，避免冲突。同一页面同一个 lib 不能开两份（路径冲突），launcher 这种典型场景用不到。
 
+### 4.13 滚动与焦点控制
+
+命令式控制可滚动控件与输入焦点。滚动类需先在目标控件（`list` / `custom_scroll_view` 等）上配 `controller` id。
+
+| 函数 | 参数 | 说明 |
+|------|------|------|
+| `@scroll_to_top` | `{ "controller": "<id>", "durationMs": 1000, "curve": "..." }` | 滚到顶部。控制器不存在/未挂载 → 返回 `false` |
+| `@scroll_to_bottom` | `{ "controller": "<id>", "durationMs": 300, "curve": "..." }` | 滚到底部 |
+| `@scroll_to_offset` | `{ "controller": "<id>", "offset": 120, "durationMs": 0, "curve": "..." }` | 滚到指定 offset（自动 clamp 到可滚范围）。`durationMs<=0` 直接 jump，否则 animate |
+| `@scroll_to_index` | `{ "controller": "<id>", "index": 3, "durationMs": 500, "curve": "...", "alignment": 0.0 }` | 滚到列表第 `index` 项（需该项在屏内注册过 target key）。`alignment`：0=顶 / 1=底 |
+| `@focus_input` | `{ "id": "<input id>" }` | 让指定 id 的输入框获焦点（弹键盘）。返回 `bool` |
+| `@unfocus` | `{}` | 收起键盘 / 释放当前焦点 |
+
+`curve` 取值见 `_parseScrollCurve`（`linear` / `easeIn` / `easeOut` / `easeInOut` 等）。
+
 ---
 
 ## 5. JsonLogic 表达式引擎
@@ -707,7 +733,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 
 ### 5.3 比较运算
 
-`==`, `!=`, `>`, `<`, `>=`, `<=`
+`==`, `!=`, `===`, `!==`, `>`, `<`, `>=`, `<=`（`===` / `!==` 为严格相等 / 不等，不做类型转换）
 
 ```json
 { ">": [{ "var": "global.age" }, 18] }
@@ -719,7 +745,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 |------|------|
 | `and` | `{ "and": [true, { ">": [1, 0] }] }` |
 | `or` | `{ "or": [false, true] }` |
-| `!` / `not` | `{ "!": [false] }` → `true` |
+| `!` | `{ "!": [false] }` → `true`（**只有 `!`，没有 `not` 别名**） |
 | `if` / `?:` | `{ "if": [condition, thenVal, elseVal] }` |
 | `!!` | `{ "!!": ["non-empty"] }` → `true` |
 
@@ -734,7 +760,8 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 | `str_lower` | `{ "str_lower": ["HELLO"] }` | `"hello"` |
 | `str_trim` | `{ "str_trim": [" hi "] }` | `"hi"` |
 | `str_contains` | `{ "str_contains": ["hello", "ell"] }` | `true` |
-| `str_replace` | `{ "str_replace": ["hello", "l", "r"] }` | `"herro"` |
+| `str_replace` | `{ "str_replace": ["hello", "l", "r"] }` | `"herro"`（替换**全部**） |
+| `str_replace_first` | `{ "str_replace_first": ["hello", "l", "r"] }` | `"herlo"`（只替换**第一处**） |
 | `str_split` | `{ "str_split": ["a,b,c", ","] }` | `["a","b","c"]` |
 | `str_join` | `{ "str_join": [["a","b"], ","] }` | `"a,b"` |
 
@@ -762,7 +789,20 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 
 ### 5.8 数学
 
-`min`, `max`, `abs`
+`min` / `max` 是标准 jsonlogic 算子；其余为框架自定义（`jl.add` 注册），游戏逐帧 logic 常用：
+
+| 操作 | 示例 | 说明 |
+|------|------|------|
+| `min` / `max` | `{ "min": [3, 1, 2] }` → `1` | 标准算子 |
+| `abs` | `{ "abs": [-5] }` → `5` | 绝对值 |
+| `sin` / `cos` / `tan` | `{ "sin": [1.57] }` | 三角函数，**入参为弧度** |
+| `atan2` | `{ "atan2": [y, x] }` | 返回 `atan2(y, x)` 弧度 |
+| `sqrt` | `{ "sqrt": [9] }` → `3.0` | 平方根（负数按 0 处理） |
+| `pow` | `{ "pow": [2, 10] }` → `1024.0` | `base^exp` |
+| `clamp` | `{ "clamp": [v, lo, hi] }` | 把 v 夹到 `[lo, hi]` |
+| `lerp` | `{ "lerp": [a, b, t] }` | 线性插值 `a + (b-a)*t` |
+| `seed` | `{ "seed": [n] }` → `[0,1)` | 由 n 确定性生成的伪随机数（同一 n 恒定） |
+| `pi` | `{ "pi": [] }` → `3.14159…` | 圆周率常量 |
 
 ---
 
@@ -838,7 +878,9 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 {"type": "container", "visible": {">": [{"var": "global.unread"}, 0]}, "color": "#FF3B30", "borderRadius": 10, ...}
 ```
 
-### 6.3 Widget 类型完整映射表
+### 6.3 Widget 类型映射表
+
+> 以 `lib/json_ui/widget_builder.dart` 的 `_builders` 为权威依据（当前共 **91** 个注册 type）。下表是高频主类型；其余已注册类型见 **§6.3.1 补录**。
 
 | type | Flutter Widget | 必填字段 | 可选字段 |
 |------|----------------|----------|----------|
@@ -848,7 +890,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 | `list` | `ListView.builder` | `source`, `item_template` | `emptyText`, `onRefresh`, `onLoadMore`, `key`(滚动位置保留), `separator`(默认 `"divider"` 画 1px 分隔线；`"none"` 关掉，聊天气泡 / 自定义卡片用), `scrollToEnd`(true 时初次渲染 + items 增多时自动滚到底，聊天页用) |
 | `reorderable_list` | `ReorderableListView.builder` | `source`, `item_template`, `bind` | `onReorder`, `emptyText`, `padding`, `itemKey`(默认 `id`)。拖完自动写回 `bind` 变量；onReorder 回调可拿到 `params.from` / `params.to` / `params.list` |
 | `skeleton` | 自实现 shimmer | — | `width`, `height`, `borderRadius`, `loading`(布尔, 与 `child` 联用), `child`(loading=true 时用 child 撑形状再覆盖 shimmer，false 时透传) |
-| `container` | `Container` | `children` | `layout`(column/row/stack), `color`, `padding`, `margin`, `borderRadius`, `border`, `elevation`, `width`, `height` |
+| `container` | `Container` | `children` | `layout`(column/**row 默认**/stack ⚠️ 不传时默认 `row`，与 `card` 默认 `column` 相反), `color`, `padding`, `margin`, `borderRadius`, `border`, `elevation`, `width`, `height` |
 | `divider` | `Divider` | — | `height`, `thickness`, `color`, `indent` |
 | `image` | `Image.network` / `Image.memory` / 本地文件 | `url` / `src` | `fit`, `width`, `height`, `borderRadius` |
 | `spacer` | `SizedBox` / `Spacer` | — | `height`, `width`, `flex`（不写任何字段时默认 `Spacer()`，仅在 Flex 父级生效） |
@@ -860,7 +902,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 | `checkbox` | `Checkbox` | `bind` | `label`, `action`, `disabled`, `color` |
 | `expanded` | `Expanded` | `child` | `flex` |
 | `loading` | `CircularProgressIndicator` / `LinearProgressIndicator` | — | `kind`(circular/linear), `size`, `color`, `value`, `strokeWidth`, `label` |
-| `dropdown` | `DropdownButtonFormField` | `bind`, `options` | `placeholder`, `label`, `disabled`, `prefixIcon`, `color`, `action` |
+| `dropdown` | `InputDecorator` + `DropdownButton<T>`（非 `DropdownButtonFormField`——后者不响应 `bind` 外部改写） | `bind`, `options` | `placeholder`, `label`, `disabled`, `prefixIcon`, `color`, `action` |
 | `radio` | `Radio` 组 | `bind`, `options` | `layout`(column/row), `disabled`, `color`, `action` |
 | `wrap` | `Wrap` | `children` | `spacing`, `runSpacing`, `direction`, `alignment`, `runAlignment`, `crossAlignment` |
 | `grid` | `GridView.builder` | `source`, `item_template` | `crossAxisCount`, `spacing`, `crossAxisSpacing`, `mainAxisSpacing`, `childAspectRatio`, `padding`, `shrinkWrap`, `emptyText`, `key`(滚动位置保留) |
@@ -876,7 +918,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 | `chip` | `Chip` / `ChoiceChip` / `FilterChip` | `label` | `variant`(chip/choice/filter), `bind`, `value`, `icon`, `action`, `color`, `deletable` |
 | `badge` | `Badge` | `child` | `count`, `label`, `color`, `textColor`, `isLabelVisible` |
 | `avatar` | `CircleAvatar` | — | `url`, `text`(无图时取首字母), `size`, `color`, `textColor` |
-| `rich_text` | `Text.rich` | `spans` | `style`(默认), `textAlign` |
+| `rich_text` | `Text.rich` | `spans` | `style`(默认), `textAlign`, `selectable`；`spans` 项支持：字符串 / `{text,style}` / `{type:"image",...}` 内联图 / `{type:"widget",...}` 内嵌控件 / 带 `onTap` 的可点文本 |
 | `progress` | `LinearProgressIndicator` | — | `value`, `color`, `backgroundColor`, `height`, `width`, `borderRadius` |
 | `inkwell` | `InkWell` (含 Material 包裹) | `child` | `onTap`, `onLongPress`, `onDoubleTap`, `borderRadius`, `splashColor` |
 | `gesture_detector` | `GestureDetector` | `child` | `onTap`, `onDoubleTap`, `onLongPress`, `onSwipeLeft/Right/Up/Down` |
@@ -884,15 +926,42 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 | `draggable` | `Draggable` | `child` | `feedback`, `data`, `axis`, `onDragStarted/Completed/Canceled` |
 | `refresh` | `RefreshIndicator` | `child`, `onRefresh` | `color`, `backgroundColor` |
 | `tab_view` | `TabBar` + `TabBarView` | `tabs` | `initialIndex`, `isScrollable`, `color`, `backgroundColor`, `height`, `onTabChange` |
-| `app_bar` | `AppBar` | — | `title`, `centerTitle`, `backgroundColor`, `color`, `elevation`, `leading`, `actions` |
+| `app_bar` | `AppBar` | — | `title`, `centerTitle`, `backgroundColor`, `backgroundImage`, `height`, `color`, `elevation`, `leading`, `actions`(项可为 `{icon,action}` 或带 `{label}`/`{color}` 的文字按钮) |
 | `webview` | `WebViewWidget` (webview_flutter) | `url` | `height`, `javascriptEnabled` |
 | `qr_code` | `QrImageView` (qr_flutter) | `data` | `size`, `backgroundColor`, `color`, `errorCorrectionLevel`(L/M/Q/H) |
 | `chart` | `LineChart` / `BarChart` / `PieChart` (fl_chart) | `data` | `kind`(line/bar/pie), `height`, `width`, `color` |
-| `map` | `FlutterMap` (OSM, 无需 API key) | — | `latitude`, `longitude`, `zoom`, `markers`, `height`, `borderRadius` |
+| `map` | `FlutterMap` (OSM, 无需 API key) | — | `latitude`, `longitude`, `zoom`, `markers`(每项只读 `latitude`/`longitude`，渲染固定红色定位图标——`label` 等字段当前**不渲染**), `width`, `height`, `borderRadius` |
 | `camera` | `CameraPreview` (camera 包) | — | `lensDirection`(back/front), `resolution`(low/medium/high/veryHigh), `height` |
 | `ref` | 引用依赖模板 | `from`, `widget` | `props` |
 | `flame_game` | Flame `GameWidget` 嵌入 ECS 游戏 | `world` | `vars`, `entities`, `input`, `frame`, `tick`, `on_*`, `overlay`, `height`（详见 6.42） |
-| `virtual_gamepad` | 通用虚拟手柄 | — | `mode`(`dpad`/`joystick`), `directions`, `actions`, `actionLayout`(`wrap`/`ps`), `joystick`, `height`。适合平台跳跃 / 动作游戏；可通过组件库 `game-controls` 复用 |
+
+> ⚠️ **`virtual_gamepad` 不是框架内置 type**——它是 `game-controls` 组件库的 ref 宏，直接写 `type:"virtual_gamepad"` 会渲染成红色"未知类型"框。游戏输入的内置原子是 `analog_stick`（见下表）。
+
+#### 6.3.1 其余已注册类型（补全 `_builders` 全量）
+
+上表外 `_builders` 还注册了以下类型；属性以各 `*_widget.dart` 为准。
+
+| type | 用途 |
+|------|------|
+| `analog_stick` | 游戏摇杆输入原子（flame_game 的真实输入控件） |
+| `gradient_progress` | 渐变填充进度条（`backgroundGradient` / `fillGradients` / `border` / `animation`） |
+| `transform_gesture` | 缩放 / 平移 / 旋转手势容器 |
+| `page_view` | 横向翻页 / 轮播 |
+| `custom_scroll_view` | slivers 自定义滚动 |
+| `cupertino_refresh_list` | iOS 风格下拉刷新列表 |
+| `scroll_drag_handoff` | 滚动与拖拽手势接力 |
+| `cross_axis_sizing_list` | 交叉轴自适应尺寸列表 |
+| `transform` / `positioned` | 矩阵变换 / Stack 内绝对定位 |
+| `opacity` / `aspect_ratio` / `overflow_box` | 透明度 / 宽高比 / 溢出盒 |
+| `radial_layout` / `spiral_flow` / `measured_box` | 放射布局 / 螺旋流式 / 测量尺寸盒 |
+| `floating_layer` / `floating_action_button` / `anchored_popover` / `overlay_spawner` | 悬浮层 / FAB / 锚定弹出 / overlay 生成器 |
+| `interval_action` | 定时器：每 `intervalMs` 触发一次 `action`（`runImmediately` / `visible`） |
+| `rive_animation` | Rive 矢量动画 |
+| `animated_container` / `animated_visibility` / `animated_switcher` / `animated_positioned` / `animated_text` | 隐式动画系列 |
+| `animated_canvas` / `particle_stream_canvas` / `projected_scene` | 自绘动画画布 / 粒子流 / 投影场景 |
+| `backdrop_blur` / `image_filter` / `circular_reveal` / `clip_path` / `image_shader_path` | 背景模糊 / 图像滤镜 / 圆形揭示 / 路径裁剪 / 着色器路径 |
+| `gesture_password` / `slide_verify` / `code_input` | 手势密码 / 滑动验证 / 验证码输入框 |
+| `keyboard_detector` / `text_scale_scope` / `gesture_settings_scope` | 键盘弹出检测 / 文字缩放作用域 / 手势设置作用域 |
 
 ### 6.4 button 详细属性
 
@@ -1439,7 +1508,7 @@ i18n 字典结构、`{{ t('xxx') }}` 用法、locale 来源、fallback 链、组
 ```
 
 - `key` **必填**且需唯一，否则 Flutter 会抱怨重复 key
-- `confirmAction` 调用的函数返回 `true` 或非空字符串（如 `"delete"`）才会真正执行 onDismissed
+- `confirmAction` 调用的函数返回 `true`，或返回**非空且不等于 `"cancel"`** 的字符串（如 `"delete"`），才会真正执行 onDismissed；返回 `false` / 空串 / 字符串 `"cancel"` 都视为取消（`"cancel"` 是保留的"不执行"返回值）
 - `direction`：`leftToRight` / `rightToLeft` / `up` / `down` / `vertical` / `horizontal`(默认)
 - `background` / `secondaryBackground`：滑动时露出的背景，可以是 widget 配置（默认红色 + 删除图标）
 
@@ -2055,12 +2124,14 @@ lib/
         ├── screen_layout.dart     # Screen 布局处理
         └── icon_registry.dart     # Material 图标名称映射
 
-tools/
-└── video_server.py                # 本地视频流媒体服务器（支持 Range 请求 + /api/list）
-
 templates/                         # JSON DSL 示例配置
-├── test_collector.json            # 文本收藏夹 app
 ├── demo_5pages.json               # 5 页记事本 app
 ├── demo_media.json                # 图片+视频 demo
 └── demo_video_browser.json        # 视频浏览器 app（HTTP API + 列表 + 播放）
 ```
+
+> ⚠️ 上面是核心子树的**示意，非全量**。以仓库实际目录为准，当前还包含：
+> - **内置函数已从 `interpreter.dart` 拆到 `lib/json_ui/builtins/`**；新增 `lib/json_ui/security/`、`drift_database.dart`、`asset_cache.dart` / `asset_manager.dart` / `cache_manager.dart` / `app_fs*.dart` 等子系统。
+> - `lib/json_ui/widgets/` 共约 73 个控件文件（上面只列了主要的，其余见 §6.3 / §6.3.1）。
+> - `lib/` 顶层还有 `auth/` `designer/` `im/` `games/` `navigation/` `onboarding/` `platform/` `theme/` `i18n/` `config/` 等框架目录。
+> - `tools/video_server.py`、`templates/test_collector.json` 已删除。

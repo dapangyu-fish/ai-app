@@ -74,7 +74,7 @@ JSON args 中的值
 - **`json_ui/interpreter.dart`** — Core async engine. Manages:
   - Variables: `global.xxx` / `loop.item` / `params.xxx` (nested paths supported: `global.user.name`)
   - Template: `{{ global.xxx }}` → original type; `"text {{ x }}"` → String
-  - Expression: jsonlogic standard package + 15 custom operators via `jl.add()`
+  - Expression: jsonlogic standard package + 28 custom operators via `jl.add()` (string/array/type/math; see `_knownJsonLogicOps`)
   - 30+ built-in functions: HTTP, JSON, string, array, control flow, UI feedback
   - `@parallel` for concurrent execution
   - **`@set` value 规则**: 原始值是 Map → jsonlogic 求值; 其他 → 直接赋值
