@@ -257,7 +257,7 @@ flowchart TB
 | User Center | `user_center/` | Admin UI for user roles, bans, reset flows, and account operations |
 | Templates / Libraries | `templates/` | Published example apps and reusable JSON libraries: IM, launcher, OpenAI chat, games, controls, profile, utilities |
 | Website | `website/` | TS/Vite marketing and demo site, including the embedded web client preview |
-| Control Plane | `deploy/production/`, `scripts/myapp_ctl.py` | `myapp-ctl` status/log/secret/domain/image/deploy management for test and production hosts |
+| Control Plane | `deploy/production/`, `scripts/myapp_ctl/` | `myapp-ctl` status/log/secret/domain/image/deploy management for test and production hosts |
 
 Core flows:
 

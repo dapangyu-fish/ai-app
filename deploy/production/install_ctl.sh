@@ -25,7 +25,12 @@ fi
 install -d -m 755 /opt/myapp/bin /etc/myapp /mnt/myapp /mnt/myapp/state /mnt/myapp/logs /mnt/myapp/agent-node/logs /mnt/myapp/faas/code /mnt/myapp/faas/logs /mnt/myapp/faas/tmp
 install -d -m 700 /mnt/myapp/secrets.d /mnt/myapp/secrets.d/files /mnt/myapp/secrets.d/files/apns /mnt/myapp/secrets.d/files/fcm
 install -d -m 700 /etc/myapp/secrets.d /etc/myapp/secrets.d/files /etc/myapp/secrets.d/files/apns /etc/myapp/secrets.d/files/fcm
-install -m 755 "$ROOT_DIR/scripts/myapp_ctl.py" /opt/myapp/bin/myapp-ctl
+# myapp-ctl is a Python package (scripts/myapp_ctl/) launched by scripts/myapp-ctl.
+# Install the launcher next to the package so the launcher's realpath dir resolves it.
+install -m 755 "$ROOT_DIR/scripts/myapp-ctl" /opt/myapp/bin/myapp-ctl
+rm -rf /opt/myapp/bin/myapp_ctl
+cp -a "$ROOT_DIR/scripts/myapp_ctl" /opt/myapp/bin/myapp_ctl
+find /opt/myapp/bin/myapp_ctl -name '__pycache__' -type d -prune -exec rm -rf {} + 2>/dev/null || true
 ln -sf /opt/myapp/bin/myapp-ctl /usr/local/bin/myapp-ctl
 
 python3 - "$ROOT_DIR/deploy/production/ctl.json" "$ROOT_DIR/deploy/production/services.json" "$EXISTING_LANGUAGE" "$ROOT_DIR" <<'PY'

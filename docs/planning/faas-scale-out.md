@@ -20,7 +20,7 @@
 
 - **scale-to-zero reaper 只看本机**。`faas_docker_reaper.reap_once()`（`backend/faas_docker_reaper.py:45-67`）按 label `myapp.faas=1` 列**本机**运行容器后停空闲容器；dashboard/CLI 的 INST 真相 `running_replica_counts()`（`backend/faas_store.py:2179-2198`）也是一次**本机** Docker label 查询。
 - **运行时容器的 DB 可达性是本机假设**。运行时容器经 `RUNTIME_HOST=172.18.0.1`（本机 docker 网桥网关）连 Postgres（`backend/faas_userdb.py:34`），远端节点的容器靠这个 IP 连不到中心库。
-- **`faas node` CLI 是空头支票**。帮助文本宣传 `faas ls|node|disable|mode`（`scripts/myapp_ctl.py:734`），但 `cmd_faas()`（`scripts/myapp_ctl.py:5507`）只有 `health/ls/disable/rm/smoke/ai-action-smoke/e2e/mode/git/config` 分支，**没有 `node` 分支**，传入即落到默认 `return 2`。
+- **`faas node` CLI 是空头支票**。帮助文本宣传 `faas ls|node|disable|mode`（`scripts/myapp_ctl/`），但 `cmd_faas()`（`scripts/myapp_ctl/`）只有 `health/ls/disable/rm/smoke/ai-action-smoke/e2e/mode/git/config` 分支，**没有 `node` 分支**，传入即落到默认 `return 2`。
 
 值得强调的是：**agent-node 集群早已把「注册表 + 心跳租约 + 通过 acquire 自注册 + 容量门控 + 私有节点 join」整套做成熟了**（见 §5），FaaS 横向扩容应当**照搬这套蓝本**，而不是另起炉灶。
 
@@ -193,12 +193,12 @@
 
 **已实现可复用**
 
-- `cmd_faas()`（`scripts/myapp_ctl.py:5507`）现有 `health/ls/disable/rm/...` 分支与 `_http_request_json` / 操作员 token 注入（`scripts/myapp_ctl.py:5527-5533`）可直接复用。
-- 私有节点 join 落地与注册 timer：私有 agent-node 的 `_join_private_agent_node`、本机注册命令 `_local_agent_node_register_command()`（`scripts/myapp_ctl.py:6654-6708`）+ systemd timer `_ensure_local_agent_node_registration_timer()`（`scripts/myapp_ctl.py:6724`）。
+- `cmd_faas()`（`scripts/myapp_ctl/`）现有 `health/ls/disable/rm/...` 分支与 `_http_request_json` / 操作员 token 注入（`scripts/myapp_ctl/`）可直接复用。
+- 私有节点 join 落地与注册 timer：私有 agent-node 的 `_join_private_agent_node`、本机注册命令 `_local_agent_node_register_command()`（`scripts/myapp_ctl/`）+ systemd timer `_ensure_local_agent_node_registration_timer()`（`scripts/myapp_ctl/`）。
 
 **待新增**
 
-- `cmd_faas` 增 `node` 分支：`faas node ls` / `register` / `join` / `status` / `rm`，直接调 §5.1/§5.5 新端点；`join` 复刻私有 agent-node 的 systemd/容器落地。帮助文本宣传的 `faas node`（`scripts/myapp_ctl.py:734`）至此兑现。
+- `cmd_faas` 增 `node` 分支：`faas node ls` / `register` / `join` / `status` / `rm`，直接调 §5.1/§5.5 新端点；`join` 复刻私有 agent-node 的 systemd/容器落地。帮助文本宣传的 `faas node`（`scripts/myapp_ctl/`）至此兑现。
 
 ## 6. 数据模型 / 接口汇总
 
@@ -213,7 +213,7 @@
 | `POST /__faas_internal/invoke/<service_id>` | 远端节点 FaaS-agent | **新增**，节点 token 鉴权 |
 | `runtime_bundle` 端点 + 容器自拉 | `faas.py:666` / `faas_runtime_server.py:139` | **已实现**，远端起容器时启用 |
 | invoke 二级路由分叉 | `faas.py:806` | **改造**（现状直连本机 Docker） |
-| `faas node` CLI 子命令 | `myapp_ctl.py:5507` | **新增**（现帮助文本已宣传，`:734`） |
+| `faas node` CLI 子命令 | `myapp_ctl/faas.py` | **新增**（现帮助文本已宣传，`cli.py`） |
 
 ## 7. 安全与防滥用
 

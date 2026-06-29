@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 术语 | 含义 | 代码范围 |
 |------|------|----------|
 | **客户端需求** | 原生 Flutter 客户端，即 JSON-DSL 框架本身的需求（登录、悬浮球、UI 框架等） | `lib/main.dart`, `lib/auth/`, `lib/designer/`, `lib/json_ui/` |
-| **后端需求** | Python Flask 服务、AI 队列、agent-node、Registry、部署控制面等需求 | `backend/`, `deploy/production/`, `scripts/myapp_ctl.py` |
+| **后端需求** | Python Flask 服务、AI 队列、agent-node、Registry、部署控制面等需求 | `backend/`, `deploy/production/`, `scripts/myapp_ctl/` |
 | **JSON-APP 需求** | 基于 JSON-DSL 框架开发的、通过 JSON 配置下发的应用 | `templates/*.json`, `JSON-DSL.md` |
 
 ## Project Overview

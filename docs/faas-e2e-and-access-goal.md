@@ -36,8 +36,8 @@ Status: 待实施（本文是 `/goal`，实施前的**目标 + 验收契约**）
 | # | 事实 | 位置 | 影响 |
 |---|------|------|------|
 | S1 | faasd gateway 发布在 host `*:8080`，faasd-provider 在 host `*:8081`，**均公网可达，无防火墙** | 77 `/var/lib/faasd/docker-compose.yaml` gateway `ports: "8080:8080"`；`ss` 显示 `*:8080`/`*:8081` | 需收口 |
-| S2 | nginx 生成器**已内置** `openfaas` 路由，但 upstream 指向 **`http://backend:5566`**（不是 faasd） | `scripts/myapp_ctl.py:163` | faas 域名当前只是 backend 的别名，**不是**直连 faasd |
-| S3 | `FAAS_PUBLIC_BASE_URL` 被设为 `urls["openfaas"]`（= faas 域名） | `scripts/myapp_ctl.py:~4736/4747`、`backend/config.py:129` | 函数容器拉 bundle 走 faas 域名 → backend；若把 faas 域名改指 faasd，会断 |
+| S2 | nginx 生成器**已内置** `openfaas` 路由，但 upstream 指向 **`http://backend:5566`**（不是 faasd） | `scripts/myapp_ctl/` | faas 域名当前只是 backend 的别名，**不是**直连 faasd |
+| S3 | `FAAS_PUBLIC_BASE_URL` 被设为 `urls["openfaas"]`（= faas 域名） | `scripts/myapp_ctl/`、`backend/config.py:129` | 函数容器拉 bundle 走 faas 域名 → backend；若把 faas 域名改指 faasd，会断 |
 | S4 | 实时 77 backend：`FAAS_DEPLOY_MODE=openfaas`，`FAAS_OPENFAAS_GATEWAY=http://77.237.233.229:8080`（裸 IP + 明文） | `/etc/myapp/secrets.d/*.env` | 需改为内网地址；封 8080 后此地址会断 |
 | S5 | gateway 解析是**单一调用点**：`openfaas_gateway_for_service(service)` 先读 `meta_json.deploy.openfaas_gateway`，否则回退全局 `FAAS_OPENFAAS_GATEWAY` | `backend/faas_store.py:358-366`；`backend/faas.py:296-310` | 已部署服务**各自钉死**了旧 gateway → 重指需迁移；多节点扩展点也在这里 |
 | S6 | `faas_services` 无独立 node 字段，gateway 存在 `meta_json.deploy.openfaas_gateway` | `backend/faas_store.py:202-217, 328-366` | 多节点用 `meta_json.deploy.node_id` + 节点注册表即可，无需建表 |
@@ -118,13 +118,13 @@ Status: 待实施（本文是 `/goal`，实施前的**目标 + 验收契约**）
 - 验证：外网 `nc -vz 77 8080/8081/8731` 失败；backend 容器内 `curl 172.18.0.1:8731/healthz` 成功。
 
 ### M3 — nginx：faas 域名直连 faasd（D-B，改生成器）
-- `scripts/myapp_ctl.py:163` 把 `openfaas` 路由 upstream 由 `http://backend:5566` 改为 `http://host.docker.internal:8731`（faasd 在宿主机，不在 compose 网络）。
+- `scripts/myapp_ctl/` 把 `openfaas` 路由 upstream 由 `http://backend:5566` 改为 `http://host.docker.internal:8731`（faasd 在宿主机，不在 compose 网络）。
 - 给该路由用**受限 body**：仅 `location /function/ {…}`、`location = /healthz {…}` 反代，`location /system/ { return 403; }`（拒绝管理 API）。可能需扩展 `_edge_route_body`/`_edge_server_block` 支持「带 deny 的 openfaas 专用 body」。
 - `deploy/production/docker-compose.edge.yml` 给 `edge-nginx` 加 `extra_hosts: ["host.docker.internal:host-gateway"]`，重建容器。
 - host 配置加 `hosts["openfaas"] = myapp-pre-de-openfaas.dapangyu.work`（`myapp-ctl setup`/host 配置），证书复用通配 `*.dapangyu.work`，无需另签。
 
 ### M4 — bundle URL 与 faas 域名解耦（G4，改 setup）
-- `scripts/myapp_ctl.py:~4736/4747` 把 `FAAS_PUBLIC_BASE_URL` 由 `urls["openfaas"]` 改为 `urls["backend"]`（runtime bundle 永远由 backend 提供，S8）。
+- `scripts/myapp_ctl/` 把 `FAAS_PUBLIC_BASE_URL` 由 `urls["openfaas"]` 改为 `urls["backend"]`（runtime bundle 永远由 backend 提供，S8）。
 - 重新 `myapp-ctl deploy` 写入 backend env；函数容器以 backend 域名拉 bundle。
 
 ### M5 — 后端 gateway 重指 + 多节点钩子（D-C，G3/G5）
