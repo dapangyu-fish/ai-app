@@ -22,7 +22,7 @@ import psycopg2
 import requests
 
 from config import (
-    DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD,
+    DB_DIRECT_HOST, DB_DIRECT_PORT, DB_NAME, DB_USER, DB_PASSWORD,
 )
 import registry_catalog
 
@@ -104,9 +104,12 @@ def start_worker(load_package_json, poll_interval: int = 30, batch: int = 5) -> 
         while True:
             try:
                 if lock_conn is None or lock_conn.closed:
+                    # Session-scoped pg_try_advisory_lock leader election: must
+                    # bypass any PgBouncer (transaction pooling would break the
+                    # advisory lock), so connect DIRECTLY to Postgres.
                     lock_conn = psycopg2.connect(
-                        host=DB_HOST, port=DB_PORT, dbname=DB_NAME,
-                        user=DB_USER, password=DB_PASSWORD,
+                        host=DB_DIRECT_HOST, port=DB_DIRECT_PORT, dbname=DB_NAME,
+                        user=DB_USER, password=DB_PASSWORD, connect_timeout=5,
                     )
                     is_leader = False
                 if not is_leader:

@@ -94,6 +94,11 @@ install -m 644 "$ROOT_DIR/deploy/production/docker-compose.edge.yml" "$INSTALL_R
 rm -rf "$INSTALL_ROOT/deploy/production/edge-nginx"
 mkdir -p "$INSTALL_ROOT/deploy/production/edge-nginx"
 cp -a "$ROOT_DIR/deploy/production/edge-nginx/." "$INSTALL_ROOT/deploy/production/edge-nginx/"
+# PgBouncer configs (faas.ini / platform.ini / userlist.txt.example). The real
+# userlist comes from secrets (pgbouncer-userlist.txt), never from the repo.
+rm -rf "$INSTALL_ROOT/deploy/production/pgbouncer"
+mkdir -p "$INSTALL_ROOT/deploy/production/pgbouncer"
+cp -a "$ROOT_DIR/deploy/production/pgbouncer/." "$INSTALL_ROOT/deploy/production/pgbouncer/"
 install -m 644 "$ROOT_DIR/backend/schema.sql" "$INSTALL_ROOT/deploy/production/schema.sql"
 rm -rf "$INSTALL_ROOT/backend/providers"
 install -d -m 755 "$INSTALL_ROOT/backend"

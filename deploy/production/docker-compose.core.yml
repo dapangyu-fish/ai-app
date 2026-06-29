@@ -5,6 +5,9 @@ services:
     image: postgres:15.8
     container_name: myapp-jsonapp-postgres
     restart: unless-stopped
+    # max_connections 提到 150：覆盖两池 max_db_connections 之和(faas 50 + platform 40)
+    # + 直连旁路 + reserve + 多副本余量。PgBouncer 复用使真实连接保持低位，无需更大。
+    command: ["postgres", "-c", "max_connections=150"]
     environment:
       POSTGRES_USER: "${JSONAPP_DB_USER:-jsonapp}"
       POSTGRES_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
@@ -23,6 +26,42 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # 租户面连接池：FaaS 运行时 u_* → userdata（transaction 池 + auth_query）。
+  # 发布到网桥网关，供独立网络里的函数容器访问。无 jsonapp 路由 → 结构性隔离平台库。
+  pgbouncer-faas:
+    # edoburu/pgbouncer 1.25.2（>=1.15 才有 SCRAM pass-through）；钉 :latest 的 digest
+    # 保证可复现——77 镜像站仅缓存 latest，按 tag 拉 v1.x 会 403。
+    image: edoburu/pgbouncer@sha256:4c1ca296ef525f108f5d3552cc337c0c09587cf8dae7f0067fd93349e47dc1cd
+    container_name: myapp-pgbouncer-faas
+    restart: unless-stopped
+    depends_on:
+      jsonapp-postgres:
+        condition: service_healthy
+    volumes:
+      - ./pgbouncer/faas.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/pgbouncer-userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    ports:
+      - "${JSONAPP_PG_BIND_ADDR:-172.18.0.1}:6432:6432"
+    # 不设 healthcheck：edoburu 镜像未必含 pg_isready；就绪性由部署时实连验证，
+    # 依赖方靠 restart:unless-stopped 收敛（见 RFC 验证清单）。
+
+  # 平台面连接池：后端常规 CRUD → jsonapp（session 池 + auth_query）。
+  # 不发布端口，仅 myapp_default 内可达——超级用户池不出内网。
+  pgbouncer-platform:
+    # edoburu/pgbouncer 1.25.2（>=1.15 才有 SCRAM pass-through）；钉 :latest 的 digest
+    # 保证可复现——77 镜像站仅缓存 latest，按 tag 拉 v1.x 会 403。
+    image: edoburu/pgbouncer@sha256:4c1ca296ef525f108f5d3552cc337c0c09587cf8dae7f0067fd93349e47dc1cd
+    container_name: myapp-pgbouncer-platform
+    restart: unless-stopped
+    depends_on:
+      jsonapp-postgres:
+        condition: service_healthy
+    volumes:
+      - ./pgbouncer/platform.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/pgbouncer-userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    # 不设 healthcheck：edoburu 镜像未必含 pg_isready；就绪性由部署时实连验证，
+    # 依赖方靠 restart:unless-stopped 收敛（见 RFC 验证清单）。
 
   ai-session-redis:
     image: redis:7.4-alpine
@@ -80,11 +119,18 @@ services:
       - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/faas.env
         required: false
     environment:
-      DB_HOST: jsonapp-postgres
-      DB_PORT: "5432"
+      # 常规 CRUD 走 pgbouncer-platform（session 池）；DDL/provision/advisory-lock
+      # 经 DB_DIRECT_* 直连 jsonapp-postgres；FaaS 运行时 DSN 经 pgbouncer-faas。
+      # 详见 docs/planning/pgbouncer-jsonapp-postgres.md
+      DB_HOST: pgbouncer-platform
+      DB_PORT: "6432"
       DB_NAME: "${JSONAPP_DB_NAME:-jsonapp}"
       DB_USER: "${JSONAPP_DB_USER:-jsonapp}"
       DB_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
+      DB_DIRECT_HOST: "${JSONAPP_DB_DIRECT_HOST:-jsonapp-postgres}"
+      DB_DIRECT_PORT: "${JSONAPP_DB_DIRECT_PORT:-5432}"
+      FAAS_USER_DB_RUNTIME_HOST: "${FAAS_USER_DB_RUNTIME_HOST:-172.18.0.1}"
+      FAAS_USER_DB_RUNTIME_PORT: "${FAAS_USER_DB_RUNTIME_PORT:-6432}"
       AI_SESSION_REDIS_HOST: ai-session-redis
       AI_SESSION_REDIS_PORT: "6379"
       AI_SESSION_REDIS_PASSWORD: "${BACKEND_REDIS_PASSWORD:-redis-dev-password}"
@@ -167,11 +213,18 @@ services:
       - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/faas.env
         required: false
     environment:
-      DB_HOST: jsonapp-postgres
-      DB_PORT: "5432"
+      # 常规 CRUD 走 pgbouncer-platform（session 池）；DDL/provision/advisory-lock
+      # 经 DB_DIRECT_* 直连 jsonapp-postgres；FaaS 运行时 DSN 经 pgbouncer-faas。
+      # 详见 docs/planning/pgbouncer-jsonapp-postgres.md
+      DB_HOST: pgbouncer-platform
+      DB_PORT: "6432"
       DB_NAME: "${JSONAPP_DB_NAME:-jsonapp}"
       DB_USER: "${JSONAPP_DB_USER:-jsonapp}"
       DB_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
+      DB_DIRECT_HOST: "${JSONAPP_DB_DIRECT_HOST:-jsonapp-postgres}"
+      DB_DIRECT_PORT: "${JSONAPP_DB_DIRECT_PORT:-5432}"
+      FAAS_USER_DB_RUNTIME_HOST: "${FAAS_USER_DB_RUNTIME_HOST:-172.18.0.1}"
+      FAAS_USER_DB_RUNTIME_PORT: "${FAAS_USER_DB_RUNTIME_PORT:-6432}"
       AI_SESSION_REDIS_HOST: ai-session-redis
       AI_SESSION_REDIS_PORT: "6379"
       AI_SESSION_REDIS_PASSWORD: "${BACKEND_REDIS_PASSWORD:-redis-dev-password}"
@@ -229,11 +282,18 @@ services:
       - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/faas.env
         required: false
     environment:
-      DB_HOST: jsonapp-postgres
-      DB_PORT: "5432"
+      # 常规 CRUD 走 pgbouncer-platform（session 池）；DDL/provision/advisory-lock
+      # 经 DB_DIRECT_* 直连 jsonapp-postgres；FaaS 运行时 DSN 经 pgbouncer-faas。
+      # 详见 docs/planning/pgbouncer-jsonapp-postgres.md
+      DB_HOST: pgbouncer-platform
+      DB_PORT: "6432"
       DB_NAME: "${JSONAPP_DB_NAME:-jsonapp}"
       DB_USER: "${JSONAPP_DB_USER:-jsonapp}"
       DB_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
+      DB_DIRECT_HOST: "${JSONAPP_DB_DIRECT_HOST:-jsonapp-postgres}"
+      DB_DIRECT_PORT: "${JSONAPP_DB_DIRECT_PORT:-5432}"
+      FAAS_USER_DB_RUNTIME_HOST: "${FAAS_USER_DB_RUNTIME_HOST:-172.18.0.1}"
+      FAAS_USER_DB_RUNTIME_PORT: "${FAAS_USER_DB_RUNTIME_PORT:-6432}"
       FAAS_CODE_ROOT: "${FAAS_CODE_ROOT:-/mnt/myapp/faas/code}"
     volumes:
       - ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/files:/etc/myapp/secret-files:ro
@@ -254,11 +314,18 @@ services:
       - path: ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/backend.env
         required: false
     environment:
-      DB_HOST: jsonapp-postgres
-      DB_PORT: "5432"
+      # 常规 CRUD 走 pgbouncer-platform（session 池）；DDL/provision/advisory-lock
+      # 经 DB_DIRECT_* 直连 jsonapp-postgres；FaaS 运行时 DSN 经 pgbouncer-faas。
+      # 详见 docs/planning/pgbouncer-jsonapp-postgres.md
+      DB_HOST: pgbouncer-platform
+      DB_PORT: "6432"
       DB_NAME: "${JSONAPP_DB_NAME:-jsonapp}"
       DB_USER: "${JSONAPP_DB_USER:-jsonapp}"
       DB_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"
+      DB_DIRECT_HOST: "${JSONAPP_DB_DIRECT_HOST:-jsonapp-postgres}"
+      DB_DIRECT_PORT: "${JSONAPP_DB_DIRECT_PORT:-5432}"
+      FAAS_USER_DB_RUNTIME_HOST: "${FAAS_USER_DB_RUNTIME_HOST:-172.18.0.1}"
+      FAAS_USER_DB_RUNTIME_PORT: "${FAAS_USER_DB_RUNTIME_PORT:-6432}"
       MINIO_PUBLIC_URL: "${APP_MINIO_PUBLIC_URL:-http://127.0.0.1:9000}"
       MINIO_ENDPOINT: "app-minio:9000"
       MINIO_SECURE: "false"

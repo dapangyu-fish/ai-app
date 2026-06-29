@@ -1,0 +1,10 @@
+;; PgBouncer userlist — 唯一一行：auth 角色 pgbouncer_auth 的明文口令。
+;; 其余业务角色（u_* / jsonapp）经 auth_query 动态查询，不在此列。
+;;
+;; 部署时：
+;;   1) 在 Postgres 建 pgbouncer_auth 角色（见 docs/planning/pgbouncer-jsonapp-postgres.md Step 1）
+;;   2) 把本文件复制为真实 userlist，填入同一口令，放到 secrets：
+;;        ${MYAPP_RUNTIME_SECRETS_DIR:-/mnt/myapp/secrets.d}/pgbouncer-userlist.txt
+;;      （chmod 644：仅含最小权限 auth 角色凭据；容器以非 root 用户读取）
+;;   3) 切勿把真实 userlist.txt 提交进 git
+"pgbouncer_auth" "REPLACE_WITH_PGB_AUTH_PASSWORD"

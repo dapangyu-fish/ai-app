@@ -49,3 +49,6 @@ videos/
 
 # backend secrets — manage manually via scp
 backend/.env
+
+# PgBouncer 真实 userlist（含明文 auth 口令）——只允许 .example 进 git
+deploy/production/pgbouncer/userlist.txt
