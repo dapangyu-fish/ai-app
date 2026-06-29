@@ -285,3 +285,20 @@ backend **真构建**于 `claude.dapangyu.work`（`git worktree --detach origin/
 4. **`google-chrome-stable` 钉**：apt 只供最新 stable，难钉具体版（已知缺口）；`node setup_22.x` 可钉具体 minor。
 5. **P3 FaaS 运行时 digest 钉到 service**（残留小、改现网）：实测**冷唤醒=`container.start()` 不 rebase**；`runtime_image` 已记录（tag 非 digest）；P1 `--image-version` 已钉 `FAAS_LOCAL_DOCKER_IMAGE`。残留=部署时记**解析后 digest**、recreate 用记录 digest。**改 77 现网 FaaS，单独一轮。** 重量版（`MYAPP_FAAS_RUNTIME_API`+兼容闸）按 §3.5 标 B 暂不做。
 6. **P4 客户端闸运行期实测**：`dart analyze` 已过；真拒一个 dsl 4.x App 的运行期行为需 web 端实测。
+
+---
+
+## 10. 自主发布-部署测试记录
+
+### Round 1 — v1.2.1（commit `1bf5e4a`，2026-06-30）✅ 无问题
+全自动跑通 `git tag v1.2.1 → GHA(env=DOCKERHUB)构建4 app镜像 → push Hub(1.2.1-1bf5e4a，~1min) → myapp-ctl deploy --image-version 1.2.1-1bf5e4a → 77`：
+- **7 个 app 服务**（backend/ai-worker/faas-push-worker/registry/agent-node/config-center/user-center）全切 `1.2.1-1bf5e4a`，running、restarts=0，backend/registry healthy。
+- **`/version`** → `{version:1.2.1, build_version:1.2.1-1bf5e4a, build_commit:1bf5e4a9…}`；`myapp-ctl --version`→1.2.1。
+- **数据/配置全保留**：deploy 前后对比 `schema_migrations=7 / public tables=17 / userdata s_* schemas=6` 一致；secrets 内容保留（DB/Redis/MinIO 连接全 healthy 即证密钥未变；`--image-version` 仅改 backend.env 的 `MYAPP_*_IMAGE` pin 行，故 mtime 变但内容只更新镜像 pin）；postgres/minio/openim 等 volume 未动。
+- **新代码已在镜像**：`migrate.py`/`SUPPORTED_DSL_VERSIONS` 烤进镜像；`migrate.py --status`→7 applied/0 pending。
+- **真实功能正常**：registry /health ok；FaaS e2e（provision 直连旁路 + faas 池 `u_*@userdata:6432`）通过。
+- **5 服务近 3min 日志 0 error**；无服务掉队（无残留 agent-control-plane/1.2.0 的运行容器）。
+- 唯一非问题项：4 个 scale-to-zero 的旧 FaaS 函数容器仍在 `faas-runtime:agent-control-plane`——**正确**（冷唤醒=`container.start` 不 rebase，老函数留在原运行时；新部署才用 1.2.1 运行时）。
+- **结论：无需修复 → 无 v1.2.2。** 发布-部署闭环（保留数据配置）验证通过。
+
+> 已知未经此环测试的项（需 `images-base.yml` 手动 dispatch，无 gh 触发不了）：P2 base 镜像重建（lock/CLI/digest 当前 dormant，app 镜像 FROM 旧 `:edge` base）。见 §9 剩余待办。
