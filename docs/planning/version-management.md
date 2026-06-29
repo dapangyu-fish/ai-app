@@ -269,8 +269,11 @@ backend **真构建**于 `claude.dapangyu.work`（`git worktree --detach origin/
 - P4 后端 gate（`json_app_builder`）= backend 镜像代码，**py_compile 通过**，但 77 现网要等下次 CI 构建/`--image-version` 切到新镜像才生效（本轮未再重建 backend）。
 - 客户端 DSL 闸：编译验证见本轮 claude `flutter analyze`；**运行期行为**（真拒一个 dsl 4.x App）需客户端实测，未做。
 
+### ✅ 已做（续，commit `58c2a3e`）
+- **P2 Python uv.lock（主 backend 依赖）**：`backend/requirements.txt`（收编 flask-caching）→ `uv pip compile --generate-hashes --python-version 3.11` → **`backend/requirements.lock`**（1727 行 + hash）。`Dockerfile.backend-base`/`agent-runtime-base` 改 `pip install --require-hashes -r requirements.lock`（镜像安装不需 uv，仅锁生成用 uv）。**已在 python:3.11-slim + 同款 apt 依赖端到端验证：70+ 包带 hash 全装上（pyaudio 编译/flask-caching/psycopg2 等），无 hash mismatch。** 改依赖流程：编 requirements.txt → `uv pip compile … --generate-hashes` → 提交 lock。
+
 ### ⏳ 待办（带精确计划，供统一处理）
-1. **P2 Python uv.lock**（根因复现，最高杠杆但最重）：claude/构建机无 `uv`，需先装（`curl -LsSf https://astral.sh/uv/install.sh | sh`）；`uv init`/从现有 `backend/requirements.txt` 生成 `pyproject.toml`+`uv.lock`（`--generate-hashes`）；4 个 `Dockerfile.*-base` 的 `pip install -r requirements.txt` → `uv sync --locked`（或 `uv pip sync`）；**重建全部 base 镜像验证**。风险：lock 解析可能与现有 `>=` 解出的版本不同 → 需逐镜像 rebuild 冒烟。
+1. **P2 uv.lock 收尾**：(a) `Dockerfile.agent-node-base:21`（`flask gunicorn requests PyJWT[crypto]`，无界）+ `faas-runtime-base:13`（独立小集）两个 base **各给一份 lock**（同 `uv pip compile` 套路，是独立 dep 上下文）；(b) **整 base 镜像重建验证**走 `images-base.yml` 手动 dispatch（本轮只验了 pip 安装步、未重建整 base——base 还含 Node/CLI 等无关层）。注：lock 解出的版本与原 `>=` 可能不同（如 gunicorn 25.3.0），重建后冒烟一遍。
 2. **P2 base CLI 钉**：`Dockerfile.{backend,agent-runtime}-base` 的 `npm i -g @anthropic-ai/claude-code opencode-ai`（=@latest）改钉具体版本——本轮 `npm view` 非交互未解析出版本，需取当前 latest 钉死；`google-chrome-stable`（apt 只供最新 stable，难钉具体版，记录为已知缺口）。`node setup_22.x` 可钉具体 minor。
 3. **P3 `_index.json` 版本闸**：`registry_server._load_index` 读 `version` 字段、不匹配则升级/拒（现仅 init 写、从不校验，`registry_server.py:229`）。小改、backend 代码，下次构建生效。
 4. **P3 平台 `schema_migrations` 表 + tracked runner**：新增迁移表（id/applied_at/checksum）+ 确定性 runner 按序跑 `backend/migrations/00N_*.sql`（现有 001-007 + `migrate_namespaces.py`）；复用 `deploy.py:_run_supabase_auth_migrations` 模式扩到平台库。**⚠️ 需对 77 现网 jsonapp 库 DDL（建表 + 回填已应用记录），单独一轮、先备份。**
