@@ -601,6 +601,23 @@ def _run_supabase_auth_migrations(*, dry_run: bool) -> int:
     return _run(cmd, capture=False).returncode
 
 
+def _run_platform_migrations(*, dry_run: bool) -> None:
+    """部署后自动应用平台 jsonapp 库的 schema 迁移（backend/migrate.py 应用未应用的
+    backend/migrations/00N_*.sql）。非阻断：失败只告警——迁移由开发者审过，且老镜像
+    可能没有 migrate.py。见 docs/planning/version-management.md §3.6。"""
+    cmd = ["docker", "exec", "-w", "/app/backend", "myapp-backend", "python", "migrate.py"]
+    print("+ " + " ".join(cmd))
+    if dry_run:
+        return
+    info = _docker_inspect("myapp-backend")
+    if not info or info.get("State", {}).get("Status") != "running":
+        print("myapp-backend 未运行；跳过平台 schema 迁移", file=sys.stderr)
+        return
+    rc = _run(cmd, capture=False).returncode
+    if rc != 0:
+        print(f"⚠️ 平台 schema 迁移返回非 0（rc={rc}）；请检查上面的 migrate 输出", file=sys.stderr)
+
+
 def _deploy_should_ensure_demo_assets(names: list[str]) -> bool:
     return "backend" in names
 
@@ -837,6 +854,8 @@ def cmd_deploy(args) -> int:
         rc = _run_supabase_auth_migrations(dry_run=args.dry_run)
         if rc != 0:
             return rc
+    if "backend" in names:
+        _run_platform_migrations(dry_run=args.dry_run)
     if _deploy_should_ensure_demo_assets(names):
         # 非阻断：确保 demo 对象存储桶就绪并固定上传 demo app.json（集群初始化的一部分）
         _ensure_demo_bucket_assets(dry_run=args.dry_run)

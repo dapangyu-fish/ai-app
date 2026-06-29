@@ -6,6 +6,11 @@
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-06-30
+### Added
+- `myapp-ctl deploy` 部署后自动应用平台 schema 迁移（`backend/migrate.py`，非阻断）——
+  新迁移随部署生效（`_run_platform_migrations`）。
+
 ## [1.2.1] - 2026-06-30
 ### Added
 - **P2 复现性**：Python 依赖全 uv-lock（`backend/requirements.lock` + faas-runtime/agent-node base 各一份，`pip --require-hashes`）；CLI 钉 `claude-code@2.1.195`/`opencode-ai@1.17.11`；base 镜像 FROM digest 钉；Flutter `.fvmrc`=3.41.8。
