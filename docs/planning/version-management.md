@@ -1,6 +1,6 @@
 # RFC: 版本号管理（Version Management）
 
-- **状态**: ✅ **P1 全部完成**（实现 + 77 闭环 + **GHA 首跑成功** + 完整管线 GHA→Hub→77；见 §8）；77 跑 CI 镜像 `1.2.0-5146e38`。P2-P4 待排期。
+- **状态**: ✅ **P1 完成 + 上线**（GHA→Hub→77 全管线，77 跑 CI 镜像 `1.2.0-5146e38`，见 §8）；✅ **P2 复现性全覆盖**（Python 依赖全 uv-lock + CLI 钉 + base digest 钉 + Flutter FVM）；🟢 **P4 大部分**（客户端 DSL 闸 + 后端发布 gate + JSON-DSL 纪律）；🟡 **P3 部分**（_index 闸 + schema_migrations runner 已 live 基线；FaaS digest/wiring 待）。剩余见 §9。
 - **范围**: 跨域（`deploy/production/`、`scripts/myapp_ctl/`、`backend/`、`pubspec.yaml`、`JSON-DSL.md`、`backend/migrations/`）
 - **作者**: Claude（基于 2026-06-29 对全仓 **63 个版本/依赖耦合面**的审计 + 对抗式核实 + 四类锁定最佳实践调研）
 - **起始版本**: **`1.2.0`**（承接 `pubspec.yaml` 现有线，不另起 1.0.0）
@@ -269,13 +269,19 @@ backend **真构建**于 `claude.dapangyu.work`（`git worktree --detach origin/
 - P4 后端 gate（`json_app_builder`）= backend 镜像代码，**py_compile 通过**，但 77 现网要等下次 CI 构建/`--image-version` 切到新镜像才生效（本轮未再重建 backend）。
 - 客户端 DSL 闸：编译验证见本轮 claude `flutter analyze`；**运行期行为**（真拒一个 dsl 4.x App）需客户端实测，未做。
 
-### ✅ 已做（续，commit `58c2a3e`）
-- **P2 Python uv.lock（主 backend 依赖）**：`backend/requirements.txt`（收编 flask-caching）→ `uv pip compile --generate-hashes --python-version 3.11` → **`backend/requirements.lock`**（1727 行 + hash）。`Dockerfile.backend-base`/`agent-runtime-base` 改 `pip install --require-hashes -r requirements.lock`（镜像安装不需 uv，仅锁生成用 uv）。**已在 python:3.11-slim + 同款 apt 依赖端到端验证：70+ 包带 hash 全装上（pyaudio 编译/flask-caching/psycopg2 等），无 hash mismatch。** 改依赖流程：编 requirements.txt → `uv pip compile … --generate-hashes` → 提交 lock。
+### ✅ 已做（续，commit `58c2a3e`+`e06ac89`+`4a236f7`）
+- **P2 Python uv.lock（全 4 base 上下文完成）**：主 `backend/requirements.txt`（收编 flask-caching）→ **`backend/requirements.lock`**（1727 行+hash，喂 backend/agent-runtime base）；`deploy/production/requirements/faas-runtime-base.{txt,lock}`（484 行）+ `agent-node-base.{txt,lock}`（417 行）。4 个 `Dockerfile.*-base` 全改 `pip install --require-hashes -r …lock`（装不需 uv）。**三份 lock 均在 python:3.11-slim 端到端安装验证（带 hash 全装上、无 mismatch）。**
+- **P2 CLI 钉**：`claude-code@2.1.195` + `opencode-ai@1.17.11`（backend/agent-runtime base，取代 `@latest`）。
+- **P4 后端发布期 gate**：`json_app_builder.assert_required_fields` 用 `SUPPORTED_DSL_VERSIONS` + `validate_json_app` 加 dsl 窗口校验（py_compile 通过）。
+- **P3 `_index.json` 版本闸**：`registry_server` 加 `INDEX_SCHEMA_VERSION` + `_load_index` 加载期 MAJOR 不符告警。
+- **P3 `schema_migrations` runner**：`backend/migrate.py`（自举 tracking 表，按序应用 `00N_*.sql`，`--mark`/`--status`，走 DB_DIRECT 绕池）。**已在 77 跑 `--mark` 建基线并验证：`schema_migrations` 表建好、001-007 全标记已应用、pending 清空（只建表+7 行、未动现有数据）。**
 
-### ⏳ 待办（带精确计划，供统一处理）
-1. **P2 uv.lock 收尾**：(a) `Dockerfile.agent-node-base:21`（`flask gunicorn requests PyJWT[crypto]`，无界）+ `faas-runtime-base:13`（独立小集）两个 base **各给一份 lock**（同 `uv pip compile` 套路，是独立 dep 上下文）；(b) **整 base 镜像重建验证**走 `images-base.yml` 手动 dispatch（本轮只验了 pip 安装步、未重建整 base——base 还含 Node/CLI 等无关层）。注：lock 解出的版本与原 `>=` 可能不同（如 gunicorn 25.3.0），重建后冒烟一遍。
-2. **P2 base CLI 钉**：`Dockerfile.{backend,agent-runtime}-base` 的 `npm i -g @anthropic-ai/claude-code opencode-ai`（=@latest）改钉具体版本——本轮 `npm view` 非交互未解析出版本，需取当前 latest 钉死；`google-chrome-stable`（apt 只供最新 stable，难钉具体版，记录为已知缺口）。`node setup_22.x` 可钉具体 minor。
-3. **P3 `_index.json` 版本闸**：`registry_server._load_index` 读 `version` 字段、不匹配则升级/拒（现仅 init 写、从不校验，`registry_server.py:229`）。小改、backend 代码，下次构建生效。
-4. **P3 平台 `schema_migrations` 表 + tracked runner**：新增迁移表（id/applied_at/checksum）+ 确定性 runner 按序跑 `backend/migrations/00N_*.sql`（现有 001-007 + `migrate_namespaces.py`）；复用 `deploy.py:_run_supabase_auth_migrations` 模式扩到平台库。**⚠️ 需对 77 现网 jsonapp 库 DDL（建表 + 回填已应用记录），单独一轮、先备份。**
-5. **P3 FaaS 运行时 digest 钉到 service**（已修正认知，残留小）：实测**冷唤醒 = `container.start()`（env 保留、不 recreate）→ 不 rebase**；`runtime_image` 已记录（`faas_store.py:602`，但是 tag 非 digest）；P1 的 `--image-version` 已把 `FAAS_LOCAL_DOCKER_IMAGE` 钉成不可变 tag。残留：部署时把**解析后的 digest**（非 tag）记到 service、recreate 时用记录的 digest（而非当时的 `FAAS_LOCAL_DOCKER_IMAGE`）。**改 77 现网 FaaS，单独一轮。** 重量版（`MYAPP_FAAS_RUNTIME_API` + 兼容闸）仍按 §3.5 标 B 暂不做。
-6. **P4 客户端闸运行期实测 + Registry 发布 API 也 gate**：`validate_json_app.py:437` 现仅校验 dsl 存在，可叠加窗口校验；客户端拒 4.x 行为需 web 端实测。
+> P2 复现性至此**全覆盖**（Python 依赖全锁 + CLI 钉 + base digest 钉 + Flutter FVM）。
+
+### ⏳ 剩余待办（带精确计划，供统一处理）
+1. **整 base 镜像重建验证**：以上 base 改动（lock/CLI/digest）走 `images-base.yml` 手动 dispatch 重建一遍冒烟（本轮只验了 pip 安装步，base 还含 Node/CLI/Chrome 等无关重层）。注 lock 解出的版本与原 `>=` 可能不同（如 gunicorn 25.3.0）。
+2. **backend 代码 gate 上线**：本轮后端改动（`json_app_builder`/`validate_json_app`/`registry _index`/`migrate.py`）= 镜像代码，**py_compile 通过但 77 现网要等下次 backend 镜像构建**（推 `v1.2.x` tag 触发 CI，或 `--image-version` 切新镜像）才生效；migrate.py 本轮是 `docker cp` 进容器跑的基线。
+3. **migrate.py wiring 进 deploy**：让 `myapp-ctl deploy` 末尾自动 `docker exec myapp-backend python /app/backend/migrate.py`（仿 `deploy.py:_run_supabase_auth_migrations`），新迁移随部署自动应用。
+4. **`google-chrome-stable` 钉**：apt 只供最新 stable，难钉具体版（已知缺口）；`node setup_22.x` 可钉具体 minor。
+5. **P3 FaaS 运行时 digest 钉到 service**（残留小、改现网）：实测**冷唤醒=`container.start()` 不 rebase**；`runtime_image` 已记录（tag 非 digest）；P1 `--image-version` 已钉 `FAAS_LOCAL_DOCKER_IMAGE`。残留=部署时记**解析后 digest**、recreate 用记录 digest。**改 77 现网 FaaS，单独一轮。** 重量版（`MYAPP_FAAS_RUNTIME_API`+兼容闸）按 §3.5 标 B 暂不做。
+6. **P4 客户端闸运行期实测**：`dart analyze` 已过；真拒一个 dsl 4.x App 的运行期行为需 web 端实测。
