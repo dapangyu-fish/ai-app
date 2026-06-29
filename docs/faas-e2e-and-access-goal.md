@@ -6,8 +6,8 @@ Date: 2026-06-16
 Branch: `feat/agent-control-plane`
 Status: 待实施（本文是 `/goal`，实施前的**目标 + 验收契约**）
 
-关联：本目标建立在 `docs/faas-backend-generation-goal.md`（运行时 / 严格 git 源真相）、
-`docs/faas-backend-generation.md`、`docs/faas-backend-generation-handoff.md` 之上，
+关联：本目标建立在 `docs/faas-backend-generation.md`（生成/校验/存储契约）与
+`docs/faas-docker-runtime.md`（当前运行时）之上，
 **新增两块**作为 FaaS 下一阶段验收标准：
 1. **访问架构**（faasd 端口收口 / 独立域名 / 双访问 / 多节点就绪）。
 2. **端到端真实测试**（模拟 客户端 → 后端 API → 真实 AI 生成 → 部署 → 调用，全链路在 77 跑通）。

@@ -26,7 +26,7 @@
 2. **加载测试文件**
    
    在应用中尝试加载以下已迁移的 templates：
-   - `demo_camera.json` - 依赖 common-ui
+   - `camera-demo.json` - 依赖 common-ui
    - `demo_with_deps.json` - 依赖 common-ui
    - `demo_user_profile.json` - 依赖 user
 
@@ -39,7 +39,7 @@
 
 4. **验证功能**
    
-   - `demo_camera.json`: 点击"拍照"和"从相册选择"按钮，测试 common-ui 库的函数调用
+   - `camera-demo.json`: 点击"拍照"和"从相册选择"按钮，测试 common-ui 库的函数调用
    - `demo_with_deps.json`: 输入名字，点击"打招呼"按钮，测试依赖函数调用
    - `demo_user_profile.json`: 查看用户信息加载，测试 user 库的函数调用
 
@@ -99,7 +99,7 @@ curl "https://myapp-registry.dapangyu.work/package/common-ui"
 - [ ] 用户包依赖解析成功（mycompany/ui-kit, mycompany/frontend/form-kit）
 
 ### Flutter 客户端测试
-- [ ] demo_camera.json 加载成功
+- [ ] camera-demo.json 加载成功
 - [ ] demo_with_deps.json 加载成功
 - [ ] demo_user_profile.json 加载成功
 - [ ] 依赖函数调用正常（@common-ui.showSuccess 等）

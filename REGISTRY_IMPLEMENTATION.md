@@ -180,14 +180,6 @@ curl "https://myapp-registry.dapangyu.work/resolve?name=common-ui&version=^1.0.0
 3. **命名空间**: 首次发布用户包前必须创建命名空间
 4. **版本不可变**: 已发布的同名同版本不能覆盖；发布新内容必须递增版本号
 
-## 下一步
-
-1. ✅ 代码实现完成
-2. ⏳ 部署到服务器测试
-3. ⏳ 客户端集成测试
-4. ⏳ 迁移现有 JSON 文件
-5. ⏳ 合并到 main 分支
-
 ## 相关文档
 
 - `backend/REGISTRY_README.md` - Registry 服务详细文档

@@ -34,8 +34,7 @@ backend/
 
 ```
 lib/designer/
-├── bytedance_asr_service.dart      # 豆包ASR服务（新增）
-└── bytedance_asr_test_page.dart    # 测试页面示例（新增）
+└── bytedance_asr_service.dart      # 豆包ASR服务
 ```
 
 ## 后端启动
@@ -93,7 +92,7 @@ asrService.disconnect();
 
 ### 2. 完整示例
 
-参考 `lib/designer/bytedance_asr_test_page.dart`
+参考 `lib/designer/bytedance_asr_service.dart` 的接口（`start` / `stop` / 文本回调）用法。
 
 ## API 说明
 
@@ -178,13 +177,7 @@ python -m py_compile app.py bytedance_asr_service.py bytedance_asr_routes.py
 ### 客户端测试
 
 ```bash
-flutter analyze lib/designer/bytedance_asr_service.dart lib/designer/bytedance_asr_test_page.dart
-```
-
-### 运行测试页面
-
-```bash
-flutter run -d <device-id> -t lib/designer/bytedance_asr_test_page.dart
+flutter analyze lib/designer/bytedance_asr_service.dart
 ```
 
 ## 注意事项
