@@ -14,6 +14,8 @@ minio>=7.2.0
 aiohttp>=3.8.0
 docker>=7.1.0
 pyaudio>=0.2.11
+# flask 响应缓存（原先内联在 Dockerfile.backend-base，收进来统一锁定）
+flask-caching>=2.1.0
 # 生产 WSGI server：ai-app 用 -k eventlet -w 1（SocketIO + SSE），registry 用 -k gthread -w 4 --threads 8.
 # Gunicorn 26 removed the bundled eventlet worker alias/module, so keep the 23.x line until backend exits eventlet.
 gunicorn>=21.2.0,<26.0.0

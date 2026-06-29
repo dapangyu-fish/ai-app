@@ -35,6 +35,8 @@ ENV CLAUDE_BIN=/usr/local/bin/claude \
     CODEX_HOME=/var/lib/ai-app/codex-home \
     OPENCODE_HOME=/var/lib/ai-app/opencode-home
 
-COPY backend/requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt && \
-    pip install --no-cache-dir "pyjwt>=2.8.0" "httpx>=0.27.0" "flask-caching>=2.1.0"
+# 锁定安装：uv 编出的 requirements.lock（全量传递依赖 + hash），pip --require-hashes 强校验。
+# 改依赖：编辑 backend/requirements.txt 后 `uv pip compile backend/requirements.txt
+#   -o backend/requirements.lock --generate-hashes --python-version 3.11` 重新生成。
+COPY backend/requirements.lock /tmp/requirements.lock
+RUN pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock

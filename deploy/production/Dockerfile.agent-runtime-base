@@ -92,5 +92,6 @@ ENV PATH=/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/
 
 WORKDIR /app
 
-COPY backend/requirements.txt /tmp/requirements.txt
-RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
+# 锁定安装：见 Dockerfile.backend-base 的 requirements.lock 说明。
+COPY backend/requirements.lock /tmp/requirements.lock
+RUN /opt/venv/bin/pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock
