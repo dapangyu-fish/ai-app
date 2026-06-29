@@ -8,6 +8,21 @@
 
 ---
 
+## 0. 已决策（2026-06-29 快问快答）
+
+| # | 决策 | 落点 |
+|---|------|------|
+| 起始版本 | **`VERSION=1.2.0`**（承接 pubspec，不另起 1.0.0） | §3.1 |
+| 镜像不可变引用 | **`:{版本}-{sha}` 双 tag**：每次构建出不可变 `:1.2.0-<sha>`（**部署钉它**、回滚=重指上一个）+ release 打 `:{版本}`；**部署绝不钉移动 tag** | §3.2 |
+| 镜像 redesign | **8 个 repo 不变、不新建 Docker Hub 镜像**；移动频道 `:agent-control-plane` → **`:edge`**（dev 便利、部署不用）；`myapp-backend` 一镜像多入口（backend/ai-worker/faas-push-worker/registry/config-center/user-center）保留；cutover 期 `:agent-control-plane` 短期并存兜底 77，稳定后弃用 | §3.2 |
+| Python 锁 | **uv**（`uv.lock` universal + `uv sync --locked` CI 漂移闸） | §3.3 |
+| DSL 版本 | **纯 semver**（MAJOR=已发布 App 可能渲染坏 / MINOR=向后兼容新增 / PATCH=修复）+ additive/reserve 纪律；**不用 SchemaVer** | §3.7 |
+| CI | **GitHub Actions**：`v*` tag + 手动 `workflow_dispatch` 触发；base/app 拆两条（base 仅其 Dockerfile 改时建）；4 镜像 | §3.9 |
+
+> 仍开放（见 §6）：FaaS helper ABI 锁法、部署钉点流程（ctl.json 编辑 vs deploy flag）、`:agent-control-plane` 弃用时机。
+
+---
+
 ## 1. 现状：半边成熟、半边裸奔
 
 | | 包侧（Registry / JSON-App / 组件） | 制品 + 平台 + 运行时 + 数据 |
@@ -44,17 +59,18 @@
 - bump：**MAJOR**=破坏性（API/DSL major/数据迁移）；**MINOR**=向后兼容新特性；**PATCH**=修复。
 - `pubspec.yaml`、后端 `/version`、CLI `--version`、镜像 tag 都从它派生；release 打 git tag `vX.Y.Z`。
 
-### 3.2 容器镜像：不可变 tag + digest（本项目两处都要钉）
-- 构建时给自建镜像打**双 tag** 并都 push：不可变 `:{VERSION}-{git-sha}`（sha 已在 `core.py:666` 算好、只是没当 tag 用）+ 可变频道 `:agent-control-plane`（降级为纯 dev 便利指针，**生产/测试部署禁止直接钉它**）。
+### 3.2 容器镜像：不可变 tag + digest（本项目两处都要钉）【已决策】
+- **tag 方案**（取代 `:agent-control-plane`）：每次构建打不可变 **`:{VERSION}-{git-sha}`**（如 `1.2.0-a1b2c3d`，sha 已在 `core.py:666` 算好、只是没当 tag 用）+ release 打 **`:{VERSION}`**（如 `1.2.0`）；移动频道改为 **`:edge`**（dev 便利指针，**生产/测试部署禁止直接钉它**）。
+- **8 个 repo 不变、不新建 Docker Hub 镜像**（tag 在现有 repo 里加）；`myapp-backend` 一镜像多入口（backend/ai-worker/faas-push-worker/registry/config-center/user-center 同镜像不同启动命令）保留。cutover 期 `:agent-control-plane` 短期并存兜底 77 现网，`ctl.json` 重指 `:{VERSION}-{sha}` 稳定后弃用。
 - **两个浮动源都要钉**：`ctl.json` 的 `images.*` map（`myapp-ctl deploy --build` 的 `--build-arg BASE_IMAGE` 实际取这里，`core.py:805`）**和** `Dockerfile.*:1` 的 `ARG BASE_IMAGE` 默认（手动/CI 兜底）——只钉一处会被另一处覆盖。
 - **base 镜像 digest 钉 + 锁工具链**：`FROM python:3.11-slim@sha256:…` / `ubuntu:24.04@sha256:…`;`Dockerfile.*-base` 里 `claude-code`/`opencode-ai`/`google-chrome-stable` 改成**显式版本**（现仅 `codex@0.136.0`、`codex-relay==0.3.3` 钉了）;`node setup_22.x` 钉到具体 minor。
 - 部署钉不可变 tag/digest → `deploy --pull` 任意时刻拉到同一镜像;**回滚 = `images` map / `MYAPP_*_IMAGE` env 重指上一个 `:{VERSION}-{sha}`**。
 - 第三方：`postgres:15.8`/`redis:7.4-alpine`/`nginx:1.27-alpine` 是浮动 minor，建议升级为 digest 钉（中等优先）;`minio RELEASE.*`、supabase 精确 tag 已 OK。
 - > 最佳实践（cited）：tag 可变、digest 是内容哈希「每次拉到完全相同镜像」;多架构钉 **manifest-list digest** 而非平台 digest;digest 钉锁的是**输入**而非 bit 级输出（如需 bit 级再加 `SOURCE_DATE_EPOCH` + BuildKit `rewrite-timestamp`）;digest 不自动收安全补丁→配 Renovate/Dependabot 主动升。[Docker digests](https://docs.docker.com/dhi/core-concepts/digests/) · [why pin by SHA](https://candrews.integralblue.com/2023/09/always-use-docker-image-digests/) · [reproducible builds GH Actions](https://docs.docker.com/build/ci/github-actions/reproducible-builds/)
 
-### 3.3 Python 依赖：引入 lockfile（喂 3+ 镜像的根因修复）
-- 采用 **lockfile**：`uv lock`（`uv.lock` 跨 OS/arch/py 单文件，CI `uv sync --locked` 漂移即失败）或 `pip-tools`（`requirements.in` → `requirements.lock`）。
-- **hash 钉**：`--generate-hashes` + `pip install --require-hashes`（全有或全无强制，含传递依赖）。
+### 3.3 Python 依赖：引入 lockfile（喂 3+ 镜像的根因修复）【已决策：uv】
+- 采用 **uv**：`uv lock` 产出 **`uv.lock`**（跨 OS/arch/py 单文件 universal lock），镜像构建 `uv sync --locked`（**漂移即失败**），CI 同样用 `--locked` 做闸。uv 极快，对 base 重镜像的 CI 构建提速明显。
+- **hash 钉**：uv 的 lock 自带 hash 校验；安装走锁定解析、不再即时 re-resolve（含传递依赖，全有或全无）。
 - `requirements.txt` 留作人编输入,镜像从 lock 构建并**提交 lock**;`Dockerfile.agent-node-base` 的无界 `flask/gunicorn/requests` 先补边界、最终进 lock;`faas-runtime-base` 把 `psycopg2-binary/requests` 等 helper 实际 import 的依赖钉死（现 `flask==3.0.3` 已钉，其余 `>=`）。
 - > 这是**最高杠杆**：一个 lock 喂 backend/registry/worker + agent-runtime + faas-runtime 多个镜像;没有它，任何 `MYAPP_BUILD_COMMIT` 都无法对应"实际装了哪些版本"。[pip hash-checking](https://pip.pypa.io/en/stable/topics/secure-installs/) · [uv lockfile](https://pydevtools.com/handbook/how-to/how-to-use-a-uv-lockfile-for-reproducible-python-environments/)
 
@@ -77,26 +93,28 @@
 - **`_index.json` 的 `version` 字段真正启用**：`_load_index` 读它、不匹配则升级/拒（现在只在空 init 写、从不校验,而它是最 load-bearing 的存储文档）。
 - **对象存储键格式**（`{app_id}/{name}-{version}.json`、asset-pack `{slug}/{version}/manifest.json` + `metadataVersion`）视为冻结契约,改格式即版本化迁移、别孤立旧对象。
 
-### 3.7 DSL 契约：semver **不够**,叠加 schema 兼容纪律
-DSL 是「stored documents 必须持续可渲染」的 schema 问题,不是普通库 API。两层：
-- **A. 引擎版本走 semver**：MAJOR=破坏 DSL 契约（旧 App 渲染坏）;MINOR=向后兼容新增（新控件/内置）;PATCH=修复。`JSON-DSL.md` 即 SemVer 要求的"公开 API"。
-- **B. DSL schema 用 schema 兼容方案 + 文档内版本字段**：
-  - **客户端加 `kSupportedDsl='3.3'`（+ min/max 窗口）常量**,`loadConfig` 顶部加**载入闸**：解析 `config['dsl']`,MAJOR 不匹配硬拒（"需升级客户端"）、MINOR-ahead 仅 warn——复用现成的 `lib/json_ui/semver.dart`。删掉 `json_app_builder.py` 那处孤儿 `dsl != '3.3'`。
-  - **发布期强制**：Registry 校验/盖 `dsl` 在支持窗口内（之后不可变,给每个 stored 版本冻结契约目标）。
-  - **additive + reserve 纪律**（借 protobuf/GraphQL）：新键可选、旧键永不复用语义、删掉的 widget 类型名 reserve 不重用、不改字段类型 → 旧 JSON 在新引擎仍渲染、新 JSON 在旧引擎优雅降级（引擎已忽略未知键）。
-  - **链式迁移** `v1→v2→v3`(而非 N 个"任意旧→最新"),作升级/回滚网。
-  - 可考虑 **SchemaVer `MODEL-REVISION-ADDITION`**（专为"历史文档须仍有效"设计:MODEL=对所有历史文档破坏;REVISION=对部分破坏;ADDITION=全兼容）——比 semver 更贴切,每次改都逼问"已发布的 JSON-App 还渲染吗"。
-  - 修订 `JSON-DSL.md`（v3.4 vs 3.3 脱节）。
-  - > [SchemaVer](https://docs.snowplow.io/docs/api-reference/iglu/common-architecture/schemaver/) · [protobuf dos-donts](https://protobuf.dev/programming-guides/dos-donts/) · [semver.org](https://semver.org/)
+### 3.7 DSL 契约：纯 semver + additive/reserve 纪律【已决策：semver，不用 SchemaVer】
+DSL 是「stored documents 必须持续可渲染」的 schema 问题,但为**全项目一套心智**（registry 包 + 平台 VERSION + 依赖都 semver、`dsl` 现就是 `3.x`、`semver.dart` 直接可用）决定用 **纯 semver**，把 SchemaVer 的"已发布 App 还渲染吗"作为 **MAJOR 判定规则吸收进来**。
+- **版本规则**：**MAJOR**=破坏 DSL 契约（**任何已发布 App 可能渲染坏**/改语义/删控件）;**MINOR**=向后兼容新增（新控件/内置/新可选字段，旧 App 不受影响）;**PATCH**=引擎修复不动契约。`JSON-DSL.md` 即 SemVer 要求的"公开 API"。
+- **客户端载入闸**：加 `kSupportedDsl='3.3'`（+ min/max 窗口）常量,`loadConfig` 顶部解析 `config['dsl']`：MAJOR 不匹配硬拒（"需升级客户端"）、MINOR-ahead 仅 warn——复用现成 `lib/json_ui/semver.dart`。删掉 `json_app_builder.py` 那处孤儿 `dsl != '3.3'`。
+- **发布期强制**：Registry 校验/盖 `dsl` 在支持窗口内（之后不可变,给每个 stored 版本冻结契约目标）。
+- **additive + reserve 纪律**（借 protobuf/GraphQL）：新键可选、旧键永不复用语义、删掉的 widget 类型名 reserve 不重用、不改字段类型 → 旧 JSON 在新引擎仍渲染、新 JSON 在旧引擎优雅降级（引擎已忽略未知键）。
+- **链式迁移** `v1→v2→v3`(而非 N 个"任意旧→最新"),作升级/回滚网。修订 `JSON-DSL.md`（v3.4 vs 3.3 脱节）。
+- > [semver.org](https://semver.org/) · [protobuf dos-donts](https://protobuf.dev/programming-guides/dos-donts/)（reserve 纪律） · [GraphQL additive evolution](https://oneuptime.com/blog/post/2026-01-24-graphql-api-versioning/view)
 
 ### 3.8 构建溯源 + CLI
 - 后端加 **`GET /version`** 返回 `{version, build_commit, build_version, image_ref, dsl_supported}`（值已在 env,`agent_node_service.py:68` 已自报,只是 backend `app.py` 无端点）;启动日志打一行。
 - `myapp-ctl --version` / `version` 打 `VERSION` + 构建 sha（`cli.py` trivial）。
 
-### 3.9 git tag / release / CHANGELOG
-- release checklist：bump `VERSION`(+`pubspec`) → 更新 `CHANGELOG.md` → `git tag vX.Y.Z` → 构建并 push **不可变 tag** 镜像（含 base + Python lock + 工具链）→ `ctl.json` images 钉到该 tag → `deploy`。
-- 新增 `CHANGELOG.md`(Keep-a-Changelog)。
-- 可选引入 GitHub Actions（当前无 `.github/workflows`）做自动 sha-tag/构建/lock 校验。
+### 3.9 CI（GitHub Actions）+ release / CHANGELOG【已决策：用 GHA】
+- **触发**：`v*` tag（发版自动构建不可变镜像）+ `workflow_dispatch`（手动）；**不挂 push-to-main**（base 重，不每次 commit 烧 CI）。
+- **拆两条 workflow**：`images-base.yml`（仅 `deploy/production/Dockerfile.*-base` 变更时构建 4 个 base + push）+ `images-app.yml`（4 个 app 镜像，从已发布 base 构建）。
+- 用官方三件套 `docker/login-action` + `docker/metadata-action` + `docker/build-push-action`；checkout 给全仓→build context 天然正确（不用 worktree/rsync）；产出 `:{VERSION}-{sha}` + `:{VERSION}` + `:edge`。
+- **需先配 GitHub secrets**（用户操作）：`DOCKERHUB_USERNAME=dapangyu` + `DOCKERHUB_TOKEN=<access token>`。
+- 部署仍分离：CI 只 build+push，77 走 `myapp-ctl deploy --pull`（`ctl.json` 钉不可变 tag）；**不让 GHA 直接 SSH 部署 77**。
+- **顺手治好 77 镜像站缓存坑**：拉从没见过的 `:{VERSION}-{sha}`/digest，镜像站必须回源，不会给旧的。
+- release checklist：bump `VERSION`(+`pubspec`) → 更新 `CHANGELOG.md` → `git tag vX.Y.Z`（触发 CI 出不可变镜像）→ `ctl.json` images 钉到该 tag → `deploy --pull`。新增 `CHANGELOG.md`(Keep-a-Changelog)。
+- > [build-push-action](https://github.com/docker/build-push-action) · [reproducible builds GH Actions](https://docs.docker.com/build/ci/github-actions/reproducible-builds/)
 
 ---
 
@@ -175,17 +193,16 @@ DSL 是「stored documents 必须持续可渲染」的 schema 问题,不是普�
 
 | 期 | 内容 | 价值/成本 |
 |---|---|---|
-| **P1（先做）** | `VERSION=1.2.0` + 自建镜像**双 tag（不可变 `:{ver}-{sha}`）** + ctl.json/Dockerfile 两处 base 钉 + 后端 `/version` + git tag。直接消除"可变共享镜像、不可回滚"。 | 高/低 |
-| **P2** | **Python lockfile（uv/pip-tools + hash）** 喂所有镜像 + base 镜像 digest 钉 + base 内 CLI/@latest 钉死 + Flutter 工具链 FVM 钉。复现性根因。 | 高/中 |
+| **P1（先做）** | `VERSION=1.2.0` + 自建镜像**双 tag（不可变 `:{ver}-{sha}` + `:{ver}`，`:edge` 移动）** + ctl.json/Dockerfile 两处 base 钉 + 后端 `/version` + git tag + **GHA images-app/base 两条 workflow**。直接消除"可变共享镜像、不可回滚"。 | 高/低 |
+| **P2** | **Python uv.lock（`uv sync --locked`）** 喂所有镜像 + base 镜像 digest 钉 + base 内 CLI/@latest 钉死 + Flutter 工具链 FVM 钉。复现性根因。 | 高/中 |
 | **P3** | **FaaS helper ABI 版本 + 运行时镜像 digest 钉到 service + 冷唤醒兼容闸**;平台 `schema_migrations` 表 + tracked runner;`_index.json` 版本启用。 | 高/中 |
-| **P4** | **DSL 载入期兼容闸**（客户端 `kSupportedDsl` + semver.dart 复用）+ 发布期强制 + additive/reserve 纪律入 `JSON-DSL.md` + 删孤儿判等;CLI `--version`;`CHANGELOG.md`;CI 自动化。 | 中/中 |
+| **P4** | **DSL 载入期兼容闸**（客户端 `kSupportedDsl` + semver.dart 复用）+ 发布期强制 + additive/reserve 纪律入 `JSON-DSL.md` + 删孤儿判等;CLI `--version`;`CHANGELOG.md`。 | 中/中 |
 
-## 6. 开放问题
-- 镜像不可变钉点：release 用 `:{VERSION}`、CI/dev 用 `:{VERSION}-{sha}`、生产叠 `@digest` —— 三层都要还是择一？
-- `:agent-control-plane` 历史频道名是否改 `:edge`/`:main`（避免"分支名当频道名"误解）。
-- Python 选 `uv`（更快、universal lock）还是 `pip-tools`（产出原生 requirements.txt，改动最小）？
-- DSL 版本方案：纯 semver vs **SchemaVer**（MODEL-REVISION-ADDITION，更贴 stored-doc 兼容）？
-- 是否引入 GitHub Actions 落地 P1-P4 的自动化（当前无 CI）。
+## 6. 开放问题（剩余）
+> 已决策项见 §0。剩余：
+- **FaaS helper ABI 锁法**：仅"运行时镜像 digest 钉到 service + 冷唤醒按记录 digest 跑（永不 rebase）"（轻、消除漂移），还是再叠"`MYAPP_FAAS_RUNTIME_API` 版本 + 兼容闸"（重、可控制强制升级）？
+- **部署钉点流程**：`ctl.json` images 手动编辑到新 `:{ver}-{sha}` 然后 `deploy --pull`，还是给 `myapp-ctl deploy` 加 `--image-version` flag（钉 + 记录）？
+- **`:agent-control-plane` 弃用时机**：cutover 后立即停推，还是保留 N 个 release 过渡。
 
 ## 7. 一句话总结
 项目包侧 semver 已成熟,但**制品/工具链/运行时 ABI/持久化格式 63 个面几乎全无锁定**——`VERSION=1.2.0` 作真相源,把同样纪律延伸开：镜像不可变 tag/digest（可秒级回滚）、Python hash-lock、Flutter 工具链钉、**FaaS helper ABI 版本化 + 运行时镜像 digest 钉到 service**、schema 迁移版本表、DSL 载入期兼容闸 + additive/reserve 纪律。每个 bump 都是可 review 的 diff = 复现保证 + 回滚单元。分四期，P1 即解当前可变镜像 tag 风险。
