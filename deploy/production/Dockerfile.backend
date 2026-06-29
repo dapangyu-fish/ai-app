@@ -13,6 +13,10 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
+# psycogreen 让 psycopg2 在 eventlet 下协作（见 backend/app.py / RFC pgbouncer §7 P0-1）。
+# 在 app 层单独装，避免为一个纯 Python 小依赖重建 backend-base 镜像。
+RUN pip install --no-cache-dir "psycogreen>=1.0.1"
+
 WORKDIR /app
 
 COPY backend/ /app/backend/

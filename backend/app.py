@@ -12,6 +12,12 @@ JSON DSL Backend - Flask App
 # 只在 gunicorn eventlet worker 下生效；本地直跑 socketio.run 时也兼容（patch 是幂等的）。
 import eventlet
 eventlet.monkey_patch()
+# psycopg2 是 C 扩展，默认不与 eventlet 协作：在 eventlet worker 下一条阻塞查询会冻结
+# 整个 hub（该 worker 的所有 greenlet，含 SocketIO/SSE/FaaS data-gateway）。psycogreen
+# 给 libpq 装 wait-callback，让查询在等待网络时让出 hub，使 -w N 真正并发 DB I/O。
+# 必须在 monkey_patch 之后、任何 psycopg2 连接之前执行（见 RFC pgbouncer §7 P0-1）。
+from psycogreen.eventlet import patch_psycopg as _patch_psycopg
+_patch_psycopg()
 
 import logging
 import secrets

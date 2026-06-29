@@ -5,6 +5,9 @@ services:
     image: postgres:15.8
     container_name: myapp-jsonapp-postgres
     restart: unless-stopped
+    # max_connections 提到 150：覆盖两池 max_db_connections 之和(faas 50 + platform 40)
+    # + 直连旁路 + reserve + 多副本余量。PgBouncer 复用使真实连接保持低位，无需更大。
+    command: ["postgres", "-c", "max_connections=150"]
     environment:
       POSTGRES_USER: "${JSONAPP_DB_USER:-jsonapp}"
       POSTGRES_PASSWORD: "${JSONAPP_DB_PASSWORD:-jsonapp-dev-password}"

@@ -18,6 +18,8 @@ pyaudio>=0.2.11
 # Gunicorn 26 removed the bundled eventlet worker alias/module, so keep the 23.x line until backend exits eventlet.
 gunicorn>=21.2.0,<26.0.0
 eventlet>=0.36.0
+# 让 psycopg2 在 eventlet 下协作（libpq wait-callback），否则每条阻塞查询冻结整个 hub。
+psycogreen>=1.0.1
 # AI session 状态存储（Phase 1: ai-background-push）
 # redis-py 5.x 在 eventlet monkey_patch 下走 socket 协程化，不需要单独的 aioredis
 redis>=5.0.0

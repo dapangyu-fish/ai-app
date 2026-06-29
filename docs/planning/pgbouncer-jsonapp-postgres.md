@@ -369,4 +369,11 @@ myapp-ctl deploy     # 起两个 pgbouncer + 用新 env 重建 4 个后端服务
 - **platform 池**：后端 healthy + live query 穿池到达 postgres（auth_query + SCRAM passthrough）。
 - enrich/advisory 在 77 因 `BACKEND_INTERNAL_URL` 未配置而 skip，`DB_DIRECT` 旁路代码未被触发但无害。
 
-**遗留**：(1) 77 的 `/root/ai-app` 现为 rsync 后的 **dirty 工作树**——后续合 main + `myapp-ctl update`(git pull --ff-only) 前需先 `git checkout -- <files>` 复位。(2) 仓库改动仍**未提交**（本地分支 `feat/pgbouncer-jsonapp-postgres`）。(3) userlist 明文在 `/mnt/myapp/secrets.d/pgbouncer-userlist.txt`。(4) Section 7 优化项（psycogreen 等）未实施，属后续。
+**遗留**：(1) 77 的 `/root/ai-app` 现为 rsync 后的 **dirty 工作树**——后续合 main + `myapp-ctl update`(git pull --ff-only) 前需先 `git checkout -- <files>` 复位。(2) userlist 明文在 `/mnt/myapp/secrets.d/pgbouncer-userlist.txt`。
+
+### Phase C — 1 万 DAU 容量调优（psycogreen + 池/max_connections）
+评估：1 万 DAU 对本架构是轻量级（峰值真正打 jsonapp 库 ~2-10 并发连接），DB 负载不是瓶颈；**真实连接由两池 `max_db_connections` 之和封顶（加副本也不增长）**，故 `max_connections` 无需 300，150 足够。改动：
+- **psycogreen（最高杠杆）**：`backend/app.py` 在 `monkey_patch()` 后 `patch_psycopg()`，让 eventlet worker 的阻塞查询让出 hub（解决 §7 P0-1，PgBouncer 救不了的并发天花板）。`requirements.txt` + `Dockerfile.backend` 加 `RUN pip install psycogreen`（Dockerfile.backend 不跑 pip，故 app 层单独装，免重建 base）。
+- `pgbouncer/platform.ini`：`default_pool_size 25→30`。
+- `docker-compose.core.yml`：jsonapp-postgres `command: postgres -c max_connections=150`（一次性重启 postgres）。
+- 镜像在 `claude.dapangyu.work`（Docker Hub 登录态 dapangyu）构建 `dapangyu/myapp-backend:agent-control-plane` 并 push，77 拉取部署。
