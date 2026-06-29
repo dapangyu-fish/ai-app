@@ -18,8 +18,11 @@
 | Python 锁 | **uv**（`uv.lock` universal + `uv sync --locked` CI 漂移闸） | §3.3 |
 | DSL 版本 | **纯 semver**（MAJOR=已发布 App 可能渲染坏 / MINOR=向后兼容新增 / PATCH=修复）+ additive/reserve 纪律；**不用 SchemaVer** | §3.7 |
 | CI | **GitHub Actions**：`v*` tag + 手动 `workflow_dispatch` 触发；base/app 拆两条（base 仅其 Dockerfile 改时建）；4 镜像 | §3.9 |
+| FaaS helper ABI | **A 轻量**：部署时把运行时 `image@sha256` 记到 service；冷唤醒按**记录的 digest** 跑、**永不 rebase** → 漂移彻底消失。（不做 API-version + 兼容闸，需要"不 redeploy 推整队补丁"时再叠 B） | §3.5 |
+| 部署钉点 | **B：`myapp-ctl deploy --image-version <tag>` flag**（钉 + 写进 ctl.json）；升级/回滚都一条命令 | §3.9 |
+| `:agent-control-plane` 弃用 | **切完立即停推**：P1 落地 + 77 验证在不可变 tag 后即停（只有 77、未上生产，风险低） | §3.2 |
 
-> 仍开放（见 §6）：FaaS helper ABI 锁法、部署钉点流程（ctl.json 编辑 vs deploy flag）、`:agent-control-plane` 弃用时机。
+> **全部已决策**（见 §6）。
 
 ---
 
@@ -80,11 +83,10 @@
 - CI 跑 `flutter pub get --enforce-lockfile`（resolution 偏离即失败）;`intl: any` 收成有界。
 - > [dart.dev: 提交 app 的 lock、不提交库的 lock](https://dart.dev/tools/pub/private-files)
 
-### 3.5 FaaS 运行时 helper ABI（新发现，high）
-存量函数依赖 `myapp_db/myapp_auth/myapp_data` 的 API,但它们随 `faas-runtime:agent-control-plane` 浮动,**冷唤醒静默 rebase**。
-- 引入 **`MYAPP_FAAS_RUNTIME_API`**（如 `1`）烤进运行时镜像 **并在部署时记到 service 元数据**（`faas_deployments`）。
-- **运行时镜像按 digest 钉、并记到每个 service**（`image@sha256` 与 `active_commit` 并列）→ 存量函数代码与它构建时的 helper ABI 可复现配对。
-- 冷唤醒/recreate 的 staleness 判断**改为 API-version-aware**：新镜像 helper API 与 service 部署时记录的版本不兼容 → 不 rebase、标记"需重新部署",而非静默替换。
+### 3.5 FaaS 运行时 helper ABI（新发现，high）【已决策：A 轻量】
+存量函数依赖 `myapp_db/myapp_auth/myapp_data` 的 API,但它们随 `faas-runtime:edge` 浮动,**冷唤醒静默 rebase 到当前镜像 → helper 签名一改、老函数下次唤醒即坏**。
+- **A（采纳）：运行时镜像 `image@sha256` 记到每个 service**（与 `active_commit` 并列存 `faas_deployments`）;**冷唤醒/recreate 跑这个记录的 digest，不是 `:edge` → 每个函数永远跑在它构建时的 helper 镜像上、漂移彻底消失**。本质=把"钉不可变 digest、别跑移动 tag"精确到每个 service。代价:老函数不 redeploy 收不到运行时补丁、主机攒多版本镜像(占盘)。
+- **B（暂不做，可后续叠加）**：再烤 `MYAPP_FAAS_RUNTIME_API` 版本 + 记到 service + 冷唤醒兼容闸（兼容→可升、不兼容→标记需重部署）。仅当需要"不逐个 redeploy 就给整队推运行时补丁"时才加。
 - helper 公开签名任何变更 = MAJOR;`c_`+HMAC 假名、`base64(json).hmac[:32]` token、`owner` 列等**冻结的 on-disk 契约**：要改就**前缀版本号**（`c1_/c2_`）+ 数据迁移,绝不原地改。
 
 ### 3.6 数据 / Schema / 对象存储
@@ -111,7 +113,7 @@ DSL 是「stored documents 必须持续可渲染」的 schema 问题,但为**全
 - **拆两条 workflow**：`images-base.yml`（仅 `deploy/production/Dockerfile.*-base` 变更时构建 4 个 base + push）+ `images-app.yml`（4 个 app 镜像，从已发布 base 构建）。
 - 用官方三件套 `docker/login-action` + `docker/metadata-action` + `docker/build-push-action`；checkout 给全仓→build context 天然正确（不用 worktree/rsync）；产出 `:{VERSION}-{sha}` + `:{VERSION}` + `:edge`。
 - **需先配 GitHub secrets**（用户操作）：`DOCKERHUB_USERNAME=dapangyu` + `DOCKERHUB_TOKEN=<access token>`。
-- 部署仍分离：CI 只 build+push，77 走 `myapp-ctl deploy --pull`（`ctl.json` 钉不可变 tag）；**不让 GHA 直接 SSH 部署 77**。
+- 部署仍分离：CI 只 build+push，77 走 **`myapp-ctl deploy --image-version <tag>`**（新增 flag：钉到该不可变 tag + 写进 `ctl.json` images）；升级/回滚都一条命令（回滚=`--image-version <上一个>`）；**不让 GHA 直接 SSH 部署 77**。
 - **顺手治好 77 镜像站缓存坑**：拉从没见过的 `:{VERSION}-{sha}`/digest，镜像站必须回源，不会给旧的。
 - release checklist：bump `VERSION`(+`pubspec`) → 更新 `CHANGELOG.md` → `git tag vX.Y.Z`（触发 CI 出不可变镜像）→ `ctl.json` images 钉到该 tag → `deploy --pull`。新增 `CHANGELOG.md`(Keep-a-Changelog)。
 - > [build-push-action](https://github.com/docker/build-push-action) · [reproducible builds GH Actions](https://docs.docker.com/build/ci/github-actions/reproducible-builds/)
@@ -195,14 +197,11 @@ DSL 是「stored documents 必须持续可渲染」的 schema 问题,但为**全
 |---|---|---|
 | **P1（先做）** | `VERSION=1.2.0` + 自建镜像**双 tag（不可变 `:{ver}-{sha}` + `:{ver}`，`:edge` 移动）** + ctl.json/Dockerfile 两处 base 钉 + 后端 `/version` + git tag + **GHA images-app/base 两条 workflow**。直接消除"可变共享镜像、不可回滚"。 | 高/低 |
 | **P2** | **Python uv.lock（`uv sync --locked`）** 喂所有镜像 + base 镜像 digest 钉 + base 内 CLI/@latest 钉死 + Flutter 工具链 FVM 钉。复现性根因。 | 高/中 |
-| **P3** | **FaaS helper ABI 版本 + 运行时镜像 digest 钉到 service + 冷唤醒兼容闸**;平台 `schema_migrations` 表 + tracked runner;`_index.json` 版本启用。 | 高/中 |
+| **P3** | **FaaS 运行时镜像 digest 钉到 service + 按记录 digest 冷唤醒（A 轻量，永不 rebase）**;平台 `schema_migrations` 表 + tracked runner;`_index.json` 版本启用。 | 高/中 |
 | **P4** | **DSL 载入期兼容闸**（客户端 `kSupportedDsl` + semver.dart 复用）+ 发布期强制 + additive/reserve 纪律入 `JSON-DSL.md` + 删孤儿判等;CLI `--version`;`CHANGELOG.md`。 | 中/中 |
 
-## 6. 开放问题（剩余）
-> 已决策项见 §0。剩余：
-- **FaaS helper ABI 锁法**：仅"运行时镜像 digest 钉到 service + 冷唤醒按记录 digest 跑（永不 rebase）"（轻、消除漂移），还是再叠"`MYAPP_FAAS_RUNTIME_API` 版本 + 兼容闸"（重、可控制强制升级）？
-- **部署钉点流程**：`ctl.json` images 手动编辑到新 `:{ver}-{sha}` 然后 `deploy --pull`，还是给 `myapp-ctl deploy` 加 `--image-version` flag（钉 + 记录）？
-- **`:agent-control-plane` 弃用时机**：cutover 后立即停推，还是保留 N 个 release 过渡。
+## 6. 开放问题
+> **全部已决策**（见 §0 决策表）。FaaS ABI 取 A 轻量、部署钉点取 B（`--image-version` flag）、`:agent-control-plane` 切完立即停推。后续若需"不逐个 redeploy 推整队运行时补丁"，再叠 FaaS ABI 的 B（API 版本 + 兼容闸）。
 
 ## 7. 一句话总结
 项目包侧 semver 已成熟,但**制品/工具链/运行时 ABI/持久化格式 63 个面几乎全无锁定**——`VERSION=1.2.0` 作真相源,把同样纪律延伸开：镜像不可变 tag/digest（可秒级回滚）、Python hash-lock、Flutter 工具链钉、**FaaS helper ABI 版本化 + 运行时镜像 digest 钉到 service**、schema 迁移版本表、DSL 载入期兼容闸 + additive/reserve 纪律。每个 bump 都是可 review 的 diff = 复现保证 + 回滚单元。分四期，P1 即解当前可变镜像 tag 风险。
