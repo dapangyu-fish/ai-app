@@ -22,9 +22,12 @@ from typing import Any, Optional
 ENABLED = os.environ.get("FAAS_USER_DB_ENABLED", "1").strip().lower() in {"1", "true", "yes", "on"}
 USER_DB_NAME = os.environ.get("FAAS_USER_DB_NAME", "userdata").strip() or "userdata"
 # Admin (superuser) connection — reuse the platform DB credentials (role jsonapp
-# is a superuser in this cluster, so it can provision).
-ADMIN_HOST = os.environ.get("DB_HOST", "127.0.0.1")
-ADMIN_PORT = int(os.environ.get("DB_PORT", "5432"))
+# is a superuser in this cluster, so it can provision). Provisioning runs DDL +
+# SET ROLE, which must NOT traverse a transaction-pooling PgBouncer, so it uses
+# the DIRECT host:port (DB_DIRECT_*, falling back to DB_HOST/DB_PORT — unchanged
+# when DB_DIRECT_* is unset).
+ADMIN_HOST = os.environ.get("DB_DIRECT_HOST") or os.environ.get("DB_HOST", "127.0.0.1")
+ADMIN_PORT = int(os.environ.get("DB_DIRECT_PORT") or os.environ.get("DB_PORT", "5432"))
 ADMIN_USER = os.environ.get("DB_USER", "jsonapp")
 ADMIN_PASSWORD = os.environ.get("DB_PASSWORD", "")
 PLATFORM_DB_NAME = os.environ.get("DB_NAME", "jsonapp")

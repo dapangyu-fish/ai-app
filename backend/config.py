@@ -215,6 +215,13 @@ DB_PORT = int(os.environ.get("DB_PORT", "5433"))
 DB_NAME = os.environ.get("DB_NAME", "jsonapp")
 DB_USER = os.environ.get("DB_USER", "jsonapp")
 DB_PASSWORD = os.environ.get("DB_PASSWORD", "")
+# Direct (non-pooler) host:port for connections that MUST bypass PgBouncer:
+# DDL/provisioning (SET ROLE + CREATE DATABASE) and the registry_enrich
+# advisory-lock leader election (session-scoped pg_try_advisory_lock). Defaults
+# to DB_HOST/DB_PORT so behaviour is unchanged when unset; point these at the
+# real Postgres (e.g. jsonapp-postgres:5432) when DB_HOST targets a pooler.
+DB_DIRECT_HOST = os.environ.get("DB_DIRECT_HOST", DB_HOST)
+DB_DIRECT_PORT = int(os.environ.get("DB_DIRECT_PORT", str(DB_PORT)))
 
 # 服务器配置
 PORT = int(os.environ.get("PORT", "5566"))

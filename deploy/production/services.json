@@ -122,6 +122,22 @@
       "compose_service": "jsonapp-postgres",
       "container": "myapp-jsonapp-postgres"
     },
+    "pgbouncer-faas": {
+      "group": "infra",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "pgbouncer-faas",
+      "container": "myapp-pgbouncer-faas"
+    },
+    "pgbouncer-platform": {
+      "group": "infra",
+      "kind": "compose",
+      "project_dir": "/opt/myapp/deploy/production",
+      "compose_files": ["docker-compose.core.yml"],
+      "compose_service": "pgbouncer-platform",
+      "container": "myapp-pgbouncer-platform"
+    },
     "supabase-studio": {
       "group": "supabase",
       "kind": "compose",
