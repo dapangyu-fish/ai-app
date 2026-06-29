@@ -113,7 +113,8 @@ DSL 是「stored documents 必须持续可渲染」的 schema 问题,但为**全
 - **触发**：`v*` tag（发版自动构建不可变镜像）+ `workflow_dispatch`（手动）；**不挂 push-to-main**（base 重，不每次 commit 烧 CI）。
 - **拆两条 workflow**：`images-base.yml`（仅 `deploy/production/Dockerfile.*-base` 变更时构建 4 个 base + push）+ `images-app.yml`（4 个 app 镜像，从已发布 base 构建）。
 - 用官方三件套 `docker/login-action` + `docker/metadata-action` + `docker/build-push-action`；checkout 给全仓→build context 天然正确（不用 worktree/rsync）；产出 `:{VERSION}-{sha}` + `:{VERSION}` + `:edge`。
-- **GitHub 凭据（已配，2026-06-29）**：`DOCKERHUB_USERNAME` 加成 **variable**（值 `dapangyu`）→ workflow 引用 `${{ vars.DOCKERHUB_USERNAME }}`；`DOCKERHUB_TOKEN` 加成 **secret** → `${{ secrets.DOCKERHUB_TOKEN }}`。⚠️ 若挂在命名 **Environment** 下（用户用词是 "Environment variables/secrets"），job 需声明 `environment: <名字>` 才能读到——**执行时先确认 Environment 名（或确认是 repo 级）**。
+- **GitHub 凭据（已确认，2026-06-29）**：挂在名为 **`DOCKERHUB`** 的 **Environment** 下——Environment **secret** `DOCKERHUB_TOKEN` + Environment **variable** `DOCKERHUB_USERNAME`（值 `dapangyu`）。因此两条 workflow 的 job **必须声明 `environment: DOCKERHUB`**，再用 `${{ vars.DOCKERHUB_USERNAME }}` + `${{ secrets.DOCKERHUB_TOKEN }}` 引用。
+  - ⏳ **待办（下一步）**：给 `images-app.yml`/`images-base.yml` 的 `build` job 取消注释/加上 `environment: DOCKERHUB`（当前 YAML 里是占位注释 `# environment: <name>`）。
 - 部署仍分离：CI 只 build+push，77 走 **`myapp-ctl deploy --image-version <tag>`**（新增 flag：钉到该不可变 tag + 写进 `ctl.json` images）；升级/回滚都一条命令（回滚=`--image-version <上一个>`）；**不让 GHA 直接 SSH 部署 77**。
 - **顺手治好 77 镜像站缓存坑**：拉从没见过的 `:{VERSION}-{sha}`/digest，镜像站必须回源，不会给旧的。
 - release checklist：bump `VERSION`(+`pubspec`) → 更新 `CHANGELOG.md` → `git tag vX.Y.Z`（触发 CI 出不可变镜像）→ `ctl.json` images 钉到该 tag → `deploy --pull`。新增 `CHANGELOG.md`(Keep-a-Changelog)。
@@ -220,22 +221,30 @@ DSL 是「stored documents 必须持续可渲染」的 schema 问题,但为**全
 - **回滚闭环**：`--image-version agent-control-plane` → `/version` HTTP 404（旧镜像无端点，证明镜像真切切换）→ 前滚 `1.2.0-aea665e` → `/version` 200。
 - 8 镜像（4 app + 4 base）已在 Docker Hub：backend 真构建，其余 imagetools 重打 tag（`:1.2.0-aea665e`/`:1.2.0`/`:edge`）。
 
-**唯一用户侧 gated（未做）**：推 `v1.2.0` git tag 触发 **GHA 首跑**——因 secrets 是 "Environment" 级、Environment 名未确认，为避免触发必失败的 run 而**暂不推 tag**。确认 Environment 名（或 repo 级）后，给 `images-app.yml`/`images-base.yml` 的 job 加 `environment:`（如需）并推 `v1.2.0` 即可。workflow 已写好 + YAML 校验通过 + 等价构建已在 claude 手工验证（证明 Dockerfile/args/base:edge 可解）。
+### 8.1 P1 已完成清单（逐项核对）
+| # | 项 | 状态 | 落点 / 证据 |
+|---|----|------|------------|
+| 1 | `VERSION`=1.2.0 + `CHANGELOG.md` | ✅ | 仓库根 |
+| 2 | GHA `images-app.yml`（4 app，`v*` tag + dispatch）+ `images-base.yml`（4 base，仅 dispatch）；出 `:{ver}-{sha}`+`:{ver}`+`:edge` | ✅ 写好+YAML 校验通过；**首跑待触发**（见 8.3） | `.github/workflows/` |
+| 3 | 后端 `GET /version` + 启动日志；`Dockerfile.backend` 加 `MYAPP_VERSION` | ✅ live 返回 `version:1.2.0` | `backend/app.py` |
+| 4 | `myapp-ctl deploy --image-version <tag>`（钉 ctl.json + force 写 backend/faas env + pull） | ✅ live 升级/回滚均验证 | `deploy.py:_pin_image_version` |
+| 5 | 默认 `:agent-control-plane`→`:edge` | ✅ | ctl.json/compose/core.py/4×Dockerfile/services.json/config.py（留 `core.py:2288` 迁移比较） |
+| 6 | `CHANGELOG.md` + `myapp-ctl --version` | ✅ → `myapp-ctl 1.2.0` | `cli.py` |
+| 7 | cutover 77 到不可变 tag | ✅ backend 家族 + agent-node 跑 `:1.2.0-aea665e`，restarts=0 | 见 8 顶部验证 |
+| 8 | 打 `v1.2.0` git tag | ⏳ 待 8.3（触发 GHA 首跑） | — |
 
-### 历史：执行就绪状态（P1，GO 前 · 已完成）
+### 8.2 镜像发布流程（本机无 docker/gh；已验证可行）
+backend **真构建**于 `claude.dapangyu.work`（`git worktree --detach origin/<branch>`，不碰其 WIP；`--build-arg BASE_IMAGE=...-base:agent-control-plane` 兜底 + `MYAPP_VERSION`/`MYAPP_BUILD_*`）→ push `:1.2.0-<sha>`/`:1.2.0`/`:edge`。**未改的镜像**（3 app + 4 base）用 `docker buildx imagetools create -t NEW1 -t NEW2 SRC` 在 Hub 服务端**重打 tag**（无需拉层）。77 = `git checkout feat/version-management` + `install_ctl.sh` + `myapp-ctl deploy --image-version <tag> ...`（镜像站对全新 tag 回源）。
 
-**范围**：第一轮只做 **P1**（P2 含 Flutter 工具链、P3 改 77 现网 FaaS+DB，各自单独一轮）。
-**分支**：`feat/version-management`（基于 main 07c0774，pgbouncer 已合 main）。
-**前置**：GitHub 凭据已配（`DOCKERHUB_USERNAME` var + `DOCKERHUB_TOKEN` secret）；**执行时待确认**：Environment 名（或 repo 级）。
-**已锁默认**：amd64-only；base 镜像 GHA 仅手动 dispatch；`/version` 公开无鉴权；committed `ctl.json` 默认改 `:edge`（真实部署用 `--image-version` 钉不可变 tag）；`--image-version` 钉 4 个 app 镜像；`pubspec` 维持 `1.2.0+1`。
-**客户端验证**：`ssh fish@claude.dapangyu.work`（flutter 3.41.8）编 web 验证。
+### 8.3 下一步（待用户 go）——把 GHA 首跑接通
+**Environment 已确认**：名为 **`DOCKERHUB`**，含 Environment secret `DOCKERHUB_TOKEN` + Environment variable `DOCKERHUB_USERNAME`（值 `dapangyu`）。
+1. 给 `images-app.yml` + `images-base.yml` 的 `build` job 加一行 **`environment: DOCKERHUB`**（当前是占位注释）。提交。
+2. 推 **`v1.2.0`** git tag（或手动 `workflow_dispatch`）触发 `images-app.yml` 首跑。
+3. 验证 CI 成功 = Docker Hub 上 `:1.2.0`/`:1.2.0-<新sha>`/`:edge` 被 CI 重新 push（可 `docker manifest inspect` 对比 digest，无需 gh）。
+> base 镜像（`images-base.yml`）仅在其 Dockerfile 变更或要锁工具链（P2）时手动 dispatch。
 
-### P1 执行清单（GO 后按序）
-1. 仓库根 `VERSION` = `1.2.0`。
-2. `.github/workflows/images-app.yml`（4 app 镜像，matrix）+ `images-base.yml`（4 base，仅 dispatch）：login（`vars.DOCKERHUB_USERNAME`+`secrets.DOCKERHUB_TOKEN`，必要时 `environment:`）→ `metadata-action` 出 `:{ver}-{sha}`+`:{ver}`+`:edge` → `build-push-action`（build-args 钉 BASE_IMAGE + MYAPP_BUILD_COMMIT/VERSION）。触发 `v*` tag + dispatch。
-3. 后端 `GET /version`（`app.py`，返回 version/commit/dsl_supported）+ 启动日志一行。
-4. `myapp-ctl deploy --image-version <tag>` flag（`cli.py`+`deploy.py`）：钉 4 app 镜像写进 ctl.json + 部署；回滚=`--image-version <上一个>`。
-5. committed `deploy/production/ctl.json` 8 image + `core.py`/compose/Dockerfile ARG 默认：`:agent-control-plane` → `:edge`。
-6. `CHANGELOG.md` 起头 + `myapp-ctl --version`。
-7. **cutover 77**：构建 `:1.2.0-<sha>`（GHA 或 claude 兜底）→ 77 上 `deploy --image-version 1.2.0-<sha>` → 验证 → 停推 `:agent-control-plane`。
-8. 打 git tag `v1.2.0`。
+### 8.4 既定范围与默认（备查）
+**范围**：第一轮只 P1；P2（uv lock + base digest + Flutter FVM 3.41.8）、P3（FaaS 运行时 digest + schema 迁移表，改 77 现网）、P4（DSL 载入闸）各自单独一轮。
+**分支**：`feat/version-management`（基于 main 07c0774；**未合 main**，待 review）。
+**已锁默认**：amd64-only；base GHA 仅手动 dispatch；`/version` 公开无鉴权；committed `ctl.json` 默认 `:edge`（真实部署用 `--image-version` 钉）；`--image-version` 钉 4 app 镜像；`pubspec` 维持 `1.2.0+1`。
+**客户端验证**：`ssh fish@claude.dapangyu.work`（flutter 3.41.8）编 web。
