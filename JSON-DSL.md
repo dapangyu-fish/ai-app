@@ -8,6 +8,25 @@
 
 > 说明：文档版本是 v3.4；当前 JSON 包里的 `"dsl"` 字段仍使用 `"3.3"`，表示运行时兼容线，不需要改成文档版本号。
 
+## 版本与兼容（`dsl` 契约）
+
+`"dsl"` 是 stored JSON-App 与预编译客户端之间的**兼容契约**，走 **semver**（见 `docs/planning/version-management.md` §3.7）：
+
+- **MAJOR**：破坏性变更——**任何已发布 App 可能渲染坏**（改语义 / 删控件 / 改字段类型）。
+- **MINOR**：向后兼容新增——新控件、新内置函数、新可选字段；**旧 App 不受影响**。
+- **PATCH**：引擎修复，不动契约。
+
+**Additive + reserve 纪律**（保证历史 App 永不失效）：
+1. 新键/字段一律**可选**，引擎对未知键**忽略**（新 App 在旧端优雅降级）。
+2. **旧键语义永不复用**；删除的 widget 类型名**保留不重用**。
+3. **不改已有字段的类型/含义**——要变就上新键或 bump MAJOR。
+4. 破坏性演进配**链式迁移** `v_n → v_{n+1}`。
+
+**端到端强制**：
+- 客户端 `JsonInterpreter.loadConfig` 有**载入闸**（`kSupportedDsl='3.3'`）：App 的 dsl MAJOR 高于支持 → 硬拒（提示升级客户端）；MINOR 超前 → 告警尝试渲染。
+- 后端 `json_app_builder.assert_required_fields` 校验 dsl ∈ `SUPPORTED_DSL_VERSIONS`（发布期 gate）。
+- 框架新增能力 → 加新 MINOR 进窗口 + 同步本文档；破坏性 → bump MAJOR 收窗口。
+
 ---
 
 ## 1. 设计原则

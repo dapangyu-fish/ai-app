@@ -249,3 +249,30 @@ backend **真构建**于 `claude.dapangyu.work`（`git worktree --detach origin/
 **分支**：`feat/version-management`（基于 main 07c0774；**未合 main**，待 review）。
 **已锁默认**：amd64-only；base GHA 仅手动 dispatch；`/version` 公开无鉴权；committed `ctl.json` 默认 `:edge`（真实部署用 `--image-version` 钉）；`--image-version` 钉 4 app 镜像；`pubspec` 维持 `1.2.0+1`。
 **客户端验证**：`ssh fish@claude.dapangyu.work`（flutter 3.41.8）编 web。
+
+---
+
+## 9. P2-P4 推进进度（2026-06-29，分批同步推进）
+
+> 用户指示「能推进到什么程度推进到什么程度，做不到的记录下来统一处理」。下面分 ✅已做 / ✍️已写待生效 / ⏳待办（带精确计划）。
+
+### ✅ 已做（本轮提交）
+| 期 | 项 | 落点 |
+|---|----|------|
+| P2 | Flutter 工具链钉：`.fvmrc` = `{"flutter":"3.41.8"}` | 仓库根 |
+| P2 | base 镜像 FROM **digest 钉**：`python:3.11-slim@sha256:506f2951…`（backend/agent-node/faas-runtime-base）+ `ubuntu:24.04@sha256:023f8a75…`（agent-runtime-base） | 4×`Dockerfile.*-base` |
+| P4 | 客户端 **DSL 载入闸**：`loadConfig` 加 `kSupportedDsl='3.3'`，App dsl MAJOR > 支持 → 硬拒、MINOR 超前 → 告警；头部注释 v3.2→v3.3 | `lib/json_ui/interpreter.dart` |
+| P4 | 后端 **发布期 dsl gate**：`assert_required_fields` 改用 `SUPPORTED_DSL_VERSIONS={"3.3"}`（取代硬编码 `!="3.3"`） | `backend/json_app_builder.py` |
+| P4 | `JSON-DSL.md` 加「版本与兼容」纪律（semver bump 规则 + additive/reserve + 端到端强制） | `JSON-DSL.md` |
+
+### ✍️ 已写、待下次 backend 镜像构建才生效
+- P4 后端 gate（`json_app_builder`）= backend 镜像代码，**py_compile 通过**，但 77 现网要等下次 CI 构建/`--image-version` 切到新镜像才生效（本轮未再重建 backend）。
+- 客户端 DSL 闸：编译验证见本轮 claude `flutter analyze`；**运行期行为**（真拒一个 dsl 4.x App）需客户端实测，未做。
+
+### ⏳ 待办（带精确计划，供统一处理）
+1. **P2 Python uv.lock**（根因复现，最高杠杆但最重）：claude/构建机无 `uv`，需先装（`curl -LsSf https://astral.sh/uv/install.sh | sh`）；`uv init`/从现有 `backend/requirements.txt` 生成 `pyproject.toml`+`uv.lock`（`--generate-hashes`）；4 个 `Dockerfile.*-base` 的 `pip install -r requirements.txt` → `uv sync --locked`（或 `uv pip sync`）；**重建全部 base 镜像验证**。风险：lock 解析可能与现有 `>=` 解出的版本不同 → 需逐镜像 rebuild 冒烟。
+2. **P2 base CLI 钉**：`Dockerfile.{backend,agent-runtime}-base` 的 `npm i -g @anthropic-ai/claude-code opencode-ai`（=@latest）改钉具体版本——本轮 `npm view` 非交互未解析出版本，需取当前 latest 钉死；`google-chrome-stable`（apt 只供最新 stable，难钉具体版，记录为已知缺口）。`node setup_22.x` 可钉具体 minor。
+3. **P3 `_index.json` 版本闸**：`registry_server._load_index` 读 `version` 字段、不匹配则升级/拒（现仅 init 写、从不校验，`registry_server.py:229`）。小改、backend 代码，下次构建生效。
+4. **P3 平台 `schema_migrations` 表 + tracked runner**：新增迁移表（id/applied_at/checksum）+ 确定性 runner 按序跑 `backend/migrations/00N_*.sql`（现有 001-007 + `migrate_namespaces.py`）；复用 `deploy.py:_run_supabase_auth_migrations` 模式扩到平台库。**⚠️ 需对 77 现网 jsonapp 库 DDL（建表 + 回填已应用记录），单独一轮、先备份。**
+5. **P3 FaaS 运行时 digest 钉到 service**（已修正认知，残留小）：实测**冷唤醒 = `container.start()`（env 保留、不 recreate）→ 不 rebase**；`runtime_image` 已记录（`faas_store.py:602`，但是 tag 非 digest）；P1 的 `--image-version` 已把 `FAAS_LOCAL_DOCKER_IMAGE` 钉成不可变 tag。残留：部署时把**解析后的 digest**（非 tag）记到 service、recreate 时用记录的 digest（而非当时的 `FAAS_LOCAL_DOCKER_IMAGE`）。**改 77 现网 FaaS，单独一轮。** 重量版（`MYAPP_FAAS_RUNTIME_API` + 兼容闸）仍按 §3.5 标 B 暂不做。
+6. **P4 客户端闸运行期实测 + Registry 发布 API 也 gate**：`validate_json_app.py:437` 现仅校验 dsl 存在，可叠加窗口校验；客户端拒 4.x 行为需 web 端实测。
