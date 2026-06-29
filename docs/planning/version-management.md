@@ -1,6 +1,6 @@
 # RFC: 版本号管理（Version Management）
 
-- **状态**: 草案 / 待评审
+- **状态**: 决策全定 + P1 就绪，**待用户 GO 信号**（见 §8）；分支 `feat/version-management`
 - **范围**: 跨域（`deploy/production/`、`scripts/myapp_ctl/`、`backend/`、`pubspec.yaml`、`JSON-DSL.md`、`backend/migrations/`）
 - **作者**: Claude（基于 2026-06-29 对全仓 **63 个版本/依赖耦合面**的审计 + 对抗式核实 + 四类锁定最佳实践调研）
 - **起始版本**: **`1.2.0`**（承接 `pubspec.yaml` 现有线，不另起 1.0.0）
@@ -79,8 +79,9 @@
 
 ### 3.4 Flutter / Dart：保持 lock + 锁工具链
 - **`pubspec.lock` 已提交——保持，永不进 `.gitignore`**（app 包的正确做法;若将来抽出可发布的组件库，库包反而不提交 lock）。caret 范围对 app 无害（lock 是真相源）。
-- 缺口：**Flutter/Dart 工具链未锁**（无 FVM/`.tool-versions`/CI 钉）——lock 钉的是包不是编译器,不同 channel 会产出不同二进制/生成码。引入 **FVM + 提交 `.fvmrc`**（或 `.tool-versions`）。
+- 缺口：**Flutter/Dart 工具链未锁**（无 FVM/`.tool-versions`/CI 钉）——lock 钉的是包不是编译器,不同 channel 会产出不同二进制/生成码。引入 **FVM + 提交 `.fvmrc`**，**钉 `{"flutter":"3.41.8"}`**（= `claude.dapangyu.work` 构建机版本，也是 web 验证环境；用户本地 3.41.9，3.41.8 可接受）。
 - CI 跑 `flutter pub get --enforce-lockfile`（resolution 偏离即失败）;`intl: any` 收成有界。
+- **客户端改动验证路径**：本机无 flutter，但可 `ssh fish@claude.dapangyu.work`（flutter 3.41.8）**编译 web 端验证**（web 过即可，其它平台问题不大）——故 P4 客户端 DSL 闸等 Flutter 侧改动**可构建可验证**，不是纯盲写。
 - > [dart.dev: 提交 app 的 lock、不提交库的 lock](https://dart.dev/tools/pub/private-files)
 
 ### 3.5 FaaS 运行时 helper ABI（新发现，high）【已决策：A 轻量】
@@ -112,7 +113,7 @@ DSL 是「stored documents 必须持续可渲染」的 schema 问题,但为**全
 - **触发**：`v*` tag（发版自动构建不可变镜像）+ `workflow_dispatch`（手动）；**不挂 push-to-main**（base 重，不每次 commit 烧 CI）。
 - **拆两条 workflow**：`images-base.yml`（仅 `deploy/production/Dockerfile.*-base` 变更时构建 4 个 base + push）+ `images-app.yml`（4 个 app 镜像，从已发布 base 构建）。
 - 用官方三件套 `docker/login-action` + `docker/metadata-action` + `docker/build-push-action`；checkout 给全仓→build context 天然正确（不用 worktree/rsync）；产出 `:{VERSION}-{sha}` + `:{VERSION}` + `:edge`。
-- **需先配 GitHub secrets**（用户操作）：`DOCKERHUB_USERNAME=dapangyu` + `DOCKERHUB_TOKEN=<access token>`。
+- **GitHub 凭据（已配，2026-06-29）**：`DOCKERHUB_USERNAME` 加成 **variable**（值 `dapangyu`）→ workflow 引用 `${{ vars.DOCKERHUB_USERNAME }}`；`DOCKERHUB_TOKEN` 加成 **secret** → `${{ secrets.DOCKERHUB_TOKEN }}`。⚠️ 若挂在命名 **Environment** 下（用户用词是 "Environment variables/secrets"），job 需声明 `environment: <名字>` 才能读到——**执行时先确认 Environment 名（或确认是 repo 级）**。
 - 部署仍分离：CI 只 build+push，77 走 **`myapp-ctl deploy --image-version <tag>`**（新增 flag：钉到该不可变 tag + 写进 `ctl.json` images）；升级/回滚都一条命令（回滚=`--image-version <上一个>`）；**不让 GHA 直接 SSH 部署 77**。
 - **顺手治好 77 镜像站缓存坑**：拉从没见过的 `:{VERSION}-{sha}`/digest，镜像站必须回源，不会给旧的。
 - release checklist：bump `VERSION`(+`pubspec`) → 更新 `CHANGELOG.md` → `git tag vX.Y.Z`（触发 CI 出不可变镜像）→ `ctl.json` images 钉到该 tag → `deploy --pull`。新增 `CHANGELOG.md`(Keep-a-Changelog)。
@@ -205,3 +206,23 @@ DSL 是「stored documents 必须持续可渲染」的 schema 问题,但为**全
 
 ## 7. 一句话总结
 项目包侧 semver 已成熟,但**制品/工具链/运行时 ABI/持久化格式 63 个面几乎全无锁定**——`VERSION=1.2.0` 作真相源,把同样纪律延伸开：镜像不可变 tag/digest（可秒级回滚）、Python hash-lock、Flutter 工具链钉、**FaaS helper ABI 版本化 + 运行时镜像 digest 钉到 service**、schema 迁移版本表、DSL 载入期兼容闸 + additive/reserve 纪律。每个 bump 都是可 review 的 diff = 复现保证 + 回滚单元。分四期，P1 即解当前可变镜像 tag 风险。
+
+---
+
+## 8. 执行就绪状态（P1，待 GO 信号 · 2026-06-29）
+
+**范围**：第一轮只做 **P1**（P2 含 Flutter 工具链、P3 改 77 现网 FaaS+DB，各自单独一轮）。
+**分支**：`feat/version-management`（基于 main 07c0774，pgbouncer 已合 main）。
+**前置**：GitHub 凭据已配（`DOCKERHUB_USERNAME` var + `DOCKERHUB_TOKEN` secret）；**执行时待确认**：Environment 名（或 repo 级）。
+**已锁默认**：amd64-only；base 镜像 GHA 仅手动 dispatch；`/version` 公开无鉴权；committed `ctl.json` 默认改 `:edge`（真实部署用 `--image-version` 钉不可变 tag）；`--image-version` 钉 4 个 app 镜像；`pubspec` 维持 `1.2.0+1`。
+**客户端验证**：`ssh fish@claude.dapangyu.work`（flutter 3.41.8）编 web 验证。
+
+### P1 执行清单（GO 后按序）
+1. 仓库根 `VERSION` = `1.2.0`。
+2. `.github/workflows/images-app.yml`（4 app 镜像，matrix）+ `images-base.yml`（4 base，仅 dispatch）：login（`vars.DOCKERHUB_USERNAME`+`secrets.DOCKERHUB_TOKEN`，必要时 `environment:`）→ `metadata-action` 出 `:{ver}-{sha}`+`:{ver}`+`:edge` → `build-push-action`（build-args 钉 BASE_IMAGE + MYAPP_BUILD_COMMIT/VERSION）。触发 `v*` tag + dispatch。
+3. 后端 `GET /version`（`app.py`，返回 version/commit/dsl_supported）+ 启动日志一行。
+4. `myapp-ctl deploy --image-version <tag>` flag（`cli.py`+`deploy.py`）：钉 4 app 镜像写进 ctl.json + 部署；回滚=`--image-version <上一个>`。
+5. committed `deploy/production/ctl.json` 8 image + `core.py`/compose/Dockerfile ARG 默认：`:agent-control-plane` → `:edge`。
+6. `CHANGELOG.md` 起头 + `myapp-ctl --version`。
+7. **cutover 77**：构建 `:1.2.0-<sha>`（GHA 或 claude 兜底）→ 77 上 `deploy --image-version 1.2.0-<sha>` → 验证 → 停推 `:agent-control-plane`。
+8. 打 git tag `v1.2.0`。
