@@ -23,14 +23,14 @@
     }
   },
   "images": {
-    "backend": "dapangyu/myapp-backend:agent-control-plane",
-    "faas_runtime": "dapangyu/myapp-faas-runtime:agent-control-plane",
-    "agent_node": "dapangyu/myapp-agent-node:agent-control-plane",
-    "agent_runtime": "dapangyu/myapp-agent-runtime:agent-control-plane",
-    "backend_base": "dapangyu/myapp-backend-base:agent-control-plane",
-    "faas_runtime_base": "dapangyu/myapp-faas-runtime-base:agent-control-plane",
-    "agent_node_base": "dapangyu/myapp-agent-node-base:agent-control-plane",
-    "agent_runtime_base": "dapangyu/myapp-agent-runtime-base:agent-control-plane"
+    "backend": "dapangyu/myapp-backend:edge",
+    "faas_runtime": "dapangyu/myapp-faas-runtime:edge",
+    "agent_node": "dapangyu/myapp-agent-node:edge",
+    "agent_runtime": "dapangyu/myapp-agent-runtime:edge",
+    "backend_base": "dapangyu/myapp-backend-base:edge",
+    "faas_runtime_base": "dapangyu/myapp-faas-runtime-base:edge",
+    "agent_node_base": "dapangyu/myapp-agent-node-base:edge",
+    "agent_runtime_base": "dapangyu/myapp-agent-runtime-base:edge"
   },
   "domains": {
     "backend": "http://127.0.0.1:5566",

@@ -687,14 +687,14 @@ def _build_commit_for_source(source_dir: Path) -> str:
 def _configured_image(target: str) -> str:
     cfg_images = _cfg().get("images", {})
     key, _ = IMAGE_TARGETS[target]
-    default = f"dapangyu/myapp-{target}:agent-control-plane"
+    default = f"dapangyu/myapp-{target}:edge"
     return str(cfg_images.get(key) or default)
 
 
 def _configured_base_image(target: str) -> str:
     cfg_images = _cfg().get("images", {})
     key, _ = IMAGE_BASE_TARGETS[target]
-    default = f"dapangyu/myapp-{target}-base:agent-control-plane"
+    default = f"dapangyu/myapp-{target}-base:edge"
     return str(cfg_images.get(key) or default)
 
 

@@ -30,6 +30,31 @@ from .agent import *  # noqa: F401,F403
 from .faas import *  # noqa: F401,F403
 from .commands import *  # noqa: F401,F403
 
+
+def _cli_version() -> str:
+    """Platform version from the VERSION file (single source of truth)."""
+    import json as _json
+    import os as _os
+    candidates: list[str] = []
+    try:
+        cfg = _json.loads(open(_os.environ.get("MYAPP_CTL_CONFIG", "/etc/myapp/ctl.json")).read())
+        src = (cfg.get("paths") or {}).get("source")
+        if src:
+            candidates.append(_os.path.join(src, "VERSION"))
+    except Exception:
+        pass
+    # source-checkout fallback: scripts/myapp_ctl/cli.py -> repo root
+    candidates.append(_os.path.join(_os.path.dirname(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))), "VERSION"))
+    for cand in candidates:
+        try:
+            ver = open(cand).read().strip()
+            if ver:
+                return f"myapp-ctl {ver}"
+        except Exception:
+            pass
+    return "myapp-ctl (version unknown)"
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = _new_parser(
         prog="myapp-ctl",
@@ -56,6 +81,12 @@ def build_parser() -> argparse.ArgumentParser:
             de="CLI-Sprache fuer diesen Befehl setzen: zh, en, de, es, fr, pt, ca, hi, ko, ja, it",
             es="cambiar el idioma de este comando: zh, en, de, es, fr, pt, ca, hi, ko, ja, it",
         ),
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=_cli_version(),
+        help=_tx("print version and exit", zh="打印版本并退出", de="Version ausgeben und beenden", es="imprimir version y salir"),
     )
     sub = _add_subcommands(parser, "cmd", required=False)
     status = sub.add_parser(
@@ -151,6 +182,7 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     deploy.add_argument("--mirror", help=_tx("Docker image mirror prefix used with --pull, for example mirror.houlang.cloud/dh", zh="配合 --pull 使用的 Docker 镜像站前缀，例如 mirror.houlang.cloud/dh", de="Docker-Image-Mirror-Prefix fuer --pull, z.B. mirror.houlang.cloud/dh", es="prefijo mirror de imagenes Docker para --pull, por ejemplo mirror.houlang.cloud/dh"))
+    deploy.add_argument("--image-version", dest="image_version", metavar="TAG", help=_tx("pin app images to an immutable tag (e.g. 1.2.0-<sha>): write ctl.json + backend.env and pull-deploy that exact image; rollback = re-run with the previous tag", zh="把 app 镜像钉到不可变 tag（如 1.2.0-<sha>）：写入 ctl.json + backend.env 并 pull 部署该精确镜像；回滚=用上一个 tag 再跑一次", de="App-Images auf einen unveraenderlichen Tag pinnen (z.B. 1.2.0-<sha>)", es="fijar imagenes de app a un tag inmutable (p.ej. 1.2.0-<sha>)"))
     deploy.add_argument("--plan", action="store_true", help=_tx("print deployment plan only", zh="仅打印部署计划", de="nur den Deployment-Plan ausgeben", es="solo imprimir el plan de despliegue"))
     deploy.add_argument("--dry-run", action="store_true", help=_tx("print actions without executing them", zh="只打印将执行的操作，不实际执行", de="Aktionen nur anzeigen, nicht ausfuehren", es="mostrar acciones sin ejecutarlas"))
     deploy.add_argument("--force", action="store_true", help=_tx("deploy even when active AI runs may be interrupted", zh="即使可能打断活跃 AI 任务也继续部署", de="auch deployen, wenn aktive KI-Laeufe unterbrochen werden koennen", es="desplegar aunque pueda interrumpir tareas activas de IA"))

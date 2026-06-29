@@ -73,7 +73,7 @@
     "faas-runtime": {
       "group": "faas",
       "kind": "image",
-      "image": "dapangyu/myapp-faas-runtime:agent-control-plane"
+      "image": "dapangyu/myapp-faas-runtime:edge"
     },
     "agent-node": {
       "group": "agent",
@@ -87,7 +87,7 @@
     "agent-runtime": {
       "group": "agent",
       "kind": "image",
-      "image": "dapangyu/myapp-agent-runtime:agent-control-plane"
+      "image": "dapangyu/myapp-agent-runtime:edge"
     },
     "edge-nginx": {
       "group": "edge",

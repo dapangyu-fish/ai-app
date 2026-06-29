@@ -172,7 +172,7 @@ FAAS_NODE_PUBLIC_URL = os.environ.get("FAAS_NODE_PUBLIC_URL", "").rstrip("/")
 FAAS_FUNCTION_PREFIX = os.environ.get("FAAS_FUNCTION_PREFIX", "myapp").strip().lower() or "myapp"
 FAAS_LOCAL_DOCKER_IMAGE = os.environ.get(
     "FAAS_LOCAL_DOCKER_IMAGE",
-    os.environ.get("MYAPP_FAAS_RUNTIME_IMAGE", "dapangyu/myapp-faas-runtime:agent-control-plane"),
+    os.environ.get("MYAPP_FAAS_RUNTIME_IMAGE", "dapangyu/myapp-faas-runtime:edge"),
 ).strip()
 FAAS_LOCAL_DOCKER_NETWORK = os.environ.get("FAAS_LOCAL_DOCKER_NETWORK", "myapp_default").strip() or "myapp_default"
 FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT = os.environ.get("FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT", "/mnt/myapp/faas/code").rstrip("/")

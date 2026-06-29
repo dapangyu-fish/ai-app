@@ -22,7 +22,7 @@ _patch_psycopg()
 import logging
 import secrets
 import os
-from flask import Flask, request
+from flask import Flask, request, jsonify
 from flask_socketio import SocketIO
 from config import PORT, FLASK_SECRET_KEY
 import auth
@@ -93,6 +93,26 @@ def create_app():
             )
             resp.headers["Access-Control-Max-Age"] = "86400"
         return resp
+
+    # ── 版本/构建溯源端点（公开，无鉴权）─────────────────────────
+    # 见 docs/planning/version-management.md §3.8：运行实例自报平台版本/构建。
+    _build_commit = (os.environ.get("MYAPP_BUILD_COMMIT") or "unknown").strip()[:128] or "unknown"
+    _build_version = (os.environ.get("MYAPP_BUILD_VERSION") or _build_commit).strip()[:128] or _build_commit
+    _app_version = (os.environ.get("MYAPP_VERSION") or "unknown").strip()[:64] or "unknown"
+    logging.getLogger(__name__).info(
+        "myapp backend version=%s build_commit=%s", _app_version, _build_commit
+    )
+
+    def _version_handler():
+        return jsonify({
+            "service": "myapp-backend",
+            "version": _app_version,
+            "build_commit": _build_commit,
+            "build_version": _build_version,
+            "dsl_supported": "3.3",
+        })
+
+    app.add_url_rule("/version", methods=["GET"], view_func=_version_handler)
 
     # 注册 Auth 路由
     app.add_url_rule("/api/auth/register", methods=["POST"], view_func=auth.register)

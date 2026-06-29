@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=dapangyu/myapp-agent-runtime-base:agent-control-plane
+ARG BASE_IMAGE=dapangyu/myapp-agent-runtime-base:edge
 FROM ${BASE_IMAGE}
 
 ARG MYAPP_BUILD_COMMIT=unknown

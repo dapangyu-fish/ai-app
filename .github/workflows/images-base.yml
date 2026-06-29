@@ -1,0 +1,52 @@
+name: images-base
+
+# 构建并推送 4 个 base 镜像（OS + Node/Chrome/Python 工具链 + 依赖）到 Docker Hub。
+# base 极少变 → 仅手动 dispatch（不挂 push/tag，避免每次发版都重建重镜像）。
+# app 镜像 FROM 这些 base，见 images-app.yml。
+# 凭据同 images-app.yml（若 Environment 级，给 job 加 `environment: <name>`）。
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # environment: <name>   # ← 若 secrets/vars 是 Environment 级，取消注释并填名字
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: backend-base
+            dockerfile: deploy/production/Dockerfile.backend-base
+          - image: agent-node-base
+            dockerfile: deploy/production/Dockerfile.agent-node-base
+          - image: agent-runtime-base
+            dockerfile: deploy/production/Dockerfile.agent-runtime-base
+          - image: faas-runtime-base
+            dockerfile: deploy/production/Dockerfile.faas-runtime-base
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version + sha
+        id: meta
+        run: |
+          VER="$(cat VERSION)"
+          SHA="${GITHUB_SHA::7}"
+          echo "immutable=${VER}-${SHA}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & push ${{ matrix.image }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            dapangyu/myapp-${{ matrix.image }}:${{ steps.meta.outputs.immutable }}
+            dapangyu/myapp-${{ matrix.image }}:edge

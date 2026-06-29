@@ -717,6 +717,24 @@ def cmd_uninstall(args) -> int:
     return 0
 
 
+def _pin_image_version(tag: str) -> None:
+    """Pin the 4 app images to an immutable tag: write ctl.json images map +
+    force-write backend/faas env image vars so docker compose uses that exact
+    image. See docs/planning/version-management.md §3.9 (--image-version)."""
+    cfg = _cfg()
+    images = cfg.setdefault("images", {})
+    backend_env: dict[str, str] = {}
+    for target in ("backend", "faas-runtime", "agent-node", "agent-runtime"):
+        key, _ = IMAGE_TARGETS[target]
+        ref = f"dapangyu/myapp-{target}:{tag}"
+        images[key] = ref
+        backend_env["MYAPP_" + target.upper().replace("-", "_") + "_IMAGE"] = ref
+    _save_json(CONFIG_PATH, cfg, mode=0o644)
+    _merge_env_group("backend", backend_env, force=True)
+    _merge_env_group("faas", {"FAAS_LOCAL_DOCKER_IMAGE": f"dapangyu/myapp-faas-runtime:{tag}"}, force=True)
+    print(f"pinned app images to tag '{tag}' (ctl.json + backend/faas env)")
+
+
 def cmd_deploy(args) -> int:
     if args.build and args.pull:
         print("--build and --pull cannot be used together", file=sys.stderr)
@@ -727,6 +745,16 @@ def cmd_deploy(args) -> int:
     if getattr(args, "mirror", None) and not args.pull:
         print("--mirror requires --pull", file=sys.stderr)
         return 2
+    image_version = (getattr(args, "image_version", None) or "").strip()
+    if image_version:
+        if args.build:
+            print("--image-version cannot be combined with --build", file=sys.stderr)
+            return 2
+        if not args.dry_run:
+            _pin_image_version(image_version)
+        else:
+            print(f"[dry-run] would pin app images to '{image_version}'")
+        args.pull = True  # pull the pinned immutable tag
     try:
         names = _service_names_for_targets(args.targets, args.group)
     except KeyError as exc:
