@@ -12,3 +12,5 @@
 | [app-share-link-qr.md](app-share-link-qr.md) | App 分享链接 + 二维码，深链打开 AI 生成的 JSON-APP（含未装兜底） | 提案（待实现） |
 | [audio-support.md](audio-support.md) | JSON-APP 音频支持：播放 / 录音 / 上传 / 可复用音频 UI（flame 播放引擎下沉复用） | 提案（待实现） |
 | [faas-scale-out.md](faas-scale-out.md) | FaaS 横向扩容：多节点 Docker FaaS + 后端二级路由 + 用户私有 faas 节点 | 提案（待实现） |
+| [pgbouncer-jsonapp-postgres.md](pgbouncer-jsonapp-postgres.md) | jsonapp-postgres 接 PgBouncer 双实例（faas/platform）+ auth_query + DB_DIRECT 旁路 + 1万DAU调优 | 已落地（77 验证） |
+| [version-management.md](version-management.md) | 版本号管理：VERSION 真相源 + 镜像不可变 tag/digest + /version 自报 + DSL/CLI/release 流程 | 提案（待评审） |

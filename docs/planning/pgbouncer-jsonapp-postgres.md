@@ -377,3 +377,4 @@ myapp-ctl deploy     # 起两个 pgbouncer + 用新 env 重建 4 个后端服务
 - `pgbouncer/platform.ini`：`default_pool_size 25→30`。
 - `docker-compose.core.yml`：jsonapp-postgres `command: postgres -c max_connections=150`（一次性重启 postgres）。
 - 镜像在 `claude.dapangyu.work`（Docker Hub 登录态 dapangyu）构建 `dapangyu/myapp-backend:agent-control-plane` 并 push，77 拉取部署。
+> ⚠️ 该镜像 push 到了**共享可变 tag** `:agent-control-plane`（覆盖式、不可回滚）。这是项目级版本管理缺失的症状——根治方案见 [version-management.md](version-management.md)（镜像不可变 tag/digest + VERSION 真相源）。本次已临时用 `@sha256:f6d6419…` digest 钉法部署。
