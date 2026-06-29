@@ -75,9 +75,13 @@ JSON args 中的值
   - Variables: `global.xxx` / `loop.item` / `params.xxx` (nested paths supported: `global.user.name`)
   - Template: `{{ global.xxx }}` → original type; `"text {{ x }}"` → String
   - Expression: jsonlogic standard package + 28 custom operators via `jl.add()` (string/array/type/math; see `_knownJsonLogicOps`)
-  - 30+ built-in functions: HTTP, JSON, string, array, control flow, UI feedback
+  - 100+ built-in functions (`@`-prefixed): HTTP, DB, IM, file, clipboard, game, JSON, string, array, control flow, UI feedback
   - `@parallel` for concurrent execution
   - **`@set` value 规则**: 原始值是 Map → jsonlogic 求值; 其他 → 直接赋值
+
+- **`json_ui/builtins/launcher_bridges.dart`** — Launcher 内置函数桥接（`@my_apps_list` / `@launch_app` / `@market_list` / `@set_framework_locale` 等）。interpreter 的 `_handleCall` 默认分支 fall-through 到这里。
+
+- **`json_ui/security/token_authorizer.dart`** — 框架层敏感能力授权器：`@get_auth_token` / `@get_user_info` 等按 appId 弹窗授权、fail-closed。
 
 - **`json_ui/widget_builder.dart`** — Widget dispatcher. Registered types include core UI (`text`, `button`, `input`, `list`, `container`, `image`, `video`), forms/layout (`checkbox`, `dropdown`, `radio`, `grid`, `stack`, `tab_view`), platform/media (`webview`, `qr_code`, `chart`, `map`, `camera`), game/animation (`flame_game`, `analog_stick`, Rive/animated primitives), and launcher/overlay primitives.
 
@@ -136,13 +140,17 @@ python3 <<'PY'
 from minio import Minio
 import os
 
+# backend.env 提供 APP_MINIO_ACCESS_KEY / APP_MINIO_SECRET_KEY / APP_MINIO_PUBLIC_URL / APP_MINIO_PORT
+# （没有 ENDPOINT/SECURE 变量）。从部署主机的容器网络内访问 MinIO 用 app-minio:9000（明文）。
 client = Minio(
-    os.environ.get("APP_MINIO_ENDPOINT", "app-minio:9000"),
+    "app-minio:9000",
     access_key=os.environ["APP_MINIO_ACCESS_KEY"],
     secret_key=os.environ["APP_MINIO_SECRET_KEY"],
-    secure=os.environ.get("APP_MINIO_SECURE", "0") == "1",
+    secure=False,
 )
 
+# backend 自动创建/使用的桶：json-app / json-component / ai-chat-temp / im-media / app / demo。
+# models / APK / asset-pack 等桶属部署主机侧手动上传，backend 不自动创建。
 client.fput_object("models", "path/in/bucket/file.onnx", "/local/path/file.onnx")
 PY
 ```
@@ -190,16 +198,20 @@ PY
 #### 1. 官方包发布（admin 专用）
 
 官方包无命名空间（如 `common-ui`, `data-utils`），只有 admin 角色可以发布。
-推荐使用内置的 Python 发布工具，支持批量发布和测试环境绕过：
+推荐使用内置的 Python 发布工具，支持批量发布。**需先提供 admin token**：设环境变量
+`REGISTRY_ADMIN_TOKEN`（建议放 `backend/.env`），或用 `--token` 覆盖；不提供会直接报错退出
+（脚本已不再内置任何测试 token）：
 
 ```bash
-# 发布指定文件（默认使用测试环境 token）
+export REGISTRY_ADMIN_TOKEN=<admin_token>
+
+# 发布指定文件
 python3 backend/publish_script.py lib_user.json demo_user_profile.json
 
 # 批量发布 templates 目录下的所有组件
 python3 backend/publish_script.py
 
-# 使用真实的 admin token 发布
+# 或显式指定 token（覆盖环境变量）
 python3 backend/publish_script.py lib_user.json --token <admin_token>
 ```
 
@@ -285,7 +297,7 @@ python3 backend/migrate_templates.py
 **注意事项**：
 1. 包名必须符合规范：小写字母、数字、`-` 和 `_`，不能包含中文或特殊字符
 2. 每个 JSON 文件必须包含 `meta` 字段，包含 `name`、`version`、`type` 等信息
-3. 脚本使用测试 token（`test-token`），具有 admin 权限
+3. 脚本从环境变量 `REGISTRY_ADMIN_TOKEN`（建议放 `backend/.env`）读取 admin token，未设置会直接报错退出（已不再内置 test-token）
 4. 已存在的版本会被跳过，不会覆盖
 
 **脚本输出示例**：
@@ -302,37 +314,3 @@ python3 backend/migrate_templates.py
   类型: library
   ⚠️  版本已存在: ['1.0.0']
 ```
-
-## Antigravity AI 上下文同步
-
-AI 编程助手 Antigravity 的上下文数据存储在 `~/.gemini/antigravity/`，通过私有 Git 仓库在多台开发机之间同步。
-
-**仓库地址**: `git@github.com:dapangyu-fish/antigravity.git`
-
-### 推送上下文（当前电脑 → 远端）
-
-在结束工作时**手动**执行：
-
-```bash
-cd ~/.gemini/antigravity
-git add .
-git commit -m "sync: $(date '+%Y-%m-%d %H:%M') from $(hostname)"
-git push
-```
-
-### 拉取上下文（远端 → 当前电脑）
-
-在另一台电脑开始工作前**手动**执行：
-
-```bash
-cd ~/.gemini/antigravity
-git pull
-```
-
-### 首次在新电脑上设置
-
-```bash
-git clone git@github.com:dapangyu-fish/antigravity.git ~/.gemini/antigravity
-```
-
-> **注意**: `installation_id` 已被 `.gitignore` 忽略，每台机器会自动生成自己的 ID，无需同步。
