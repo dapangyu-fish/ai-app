@@ -18,7 +18,7 @@
 | Python 锁 | **uv**（`uv.lock` universal + `uv sync --locked` CI 漂移闸） | §3.3 |
 | DSL 版本 | **纯 semver**（MAJOR=已发布 App 可能渲染坏 / MINOR=向后兼容新增 / PATCH=修复）+ additive/reserve 纪律；**不用 SchemaVer** | §3.7 |
 | CI | **GitHub Actions**：`v*` tag + 手动 `workflow_dispatch` 触发；base/app 拆两条（base 仅其 Dockerfile 改时建）；4 镜像 | §3.9 |
-| FaaS helper ABI | **A 轻量**：部署时把运行时 `image@sha256` 记到 service；冷唤醒按**记录的 digest** 跑、**永不 rebase** → 漂移彻底消失。（不做 API-version + 兼容闸，需要"不 redeploy 推整队补丁"时再叠 B） | §3.5 |
+| FaaS helper ABI | ~~A 轻量：钉记录 digest、永不 rebase~~ → **改判（2026-06-30）：X-G3 用最新运行时镜像**（冷唤醒 rebase 到当前 `FAAS_LOCAL_DOCKER_IMAGE`，安全补丁自动覆盖存量函数；digest 仅记录作溯源）。helper 破坏性改动靠前缀版本号纪律兜底 | §3.5 |
 | 部署钉点 | **B：`myapp-ctl deploy --image-version <tag>` flag**（钉 + 写进 ctl.json）；升级/回滚都一条命令 | §3.9 |
 | `:agent-control-plane` 弃用 | **切完立即停推**：P1 落地 + 77 验证在不可变 tag 后即停（只有 77、未上生产，风险低） | §3.2 |
 
@@ -85,10 +85,15 @@
 - **客户端改动验证路径**：本机无 flutter，但可 `ssh fish@claude.dapangyu.work`（flutter 3.41.8）**编译 web 端验证**（web 过即可，其它平台问题不大）——故 P4 客户端 DSL 闸等 Flutter 侧改动**可构建可验证**，不是纯盲写。
 - > [dart.dev: 提交 app 的 lock、不提交库的 lock](https://dart.dev/tools/pub/private-files)
 
-### 3.5 FaaS 运行时 helper ABI（新发现，high）【已决策：A 轻量】
-存量函数依赖 `myapp_db/myapp_auth/myapp_data` 的 API,但它们随 `faas-runtime:edge` 浮动,**冷唤醒静默 rebase 到当前镜像 → helper 签名一改、老函数下次唤醒即坏**。
-- **A（采纳）：运行时镜像 `image@sha256` 记到每个 service**（与 `active_commit` 并列存 `faas_deployments`）;**冷唤醒/recreate 跑这个记录的 digest，不是 `:edge` → 每个函数永远跑在它构建时的 helper 镜像上、漂移彻底消失**。本质=把"钉不可变 digest、别跑移动 tag"精确到每个 service。代价:老函数不 redeploy 收不到运行时补丁、主机攒多版本镜像(占盘)。
-- **B（暂不做，可后续叠加）**：再烤 `MYAPP_FAAS_RUNTIME_API` 版本 + 记到 service + 冷唤醒兼容闸（兼容→可升、不兼容→标记需重部署）。仅当需要"不逐个 redeploy 就给整队推运行时补丁"时才加。
+### 3.5 FaaS 运行时 helper ABI（新发现，high）【已决策：X-G3 用最新镜像（2026-06-30 改判）】
+存量函数依赖 `myapp_db/myapp_auth/myapp_data` 的 API,它们随 `faas-runtime` 镜像走。冷唤醒时镜像该用哪个?
+
+> **决策（2026-06-30 用户拍板）：用最新的运行时镜像（= 现有 X-G3 实现），不钉历史 digest。** 即函数冷唤醒时若当前 `FAAS_LOCAL_DOCKER_IMAGE` 解析出的镜像比容器新 → recreate 到**当前/最新**镜像（`faas_store._image_is_stale` → `_wake_replica_zero`）。**好处：helper 的安全/数据网关补丁自动覆盖所有存量函数，无需逐个 redeploy。代价：helper 公开签名做破坏性改动会让按旧签名调用的存量老函数下次唤醒报错——故 helper ABI 必须遵守下面的冻结契约纪律（破坏性改动=前缀版本号 + 数据迁移，绝不原地改）。**
+>
+> 这**推翻了本文档早期（§0）的 §3.5-A『按记录 digest 跑、永不 rebase』**。`faas_deployments.runtime_image_digest`（部署时 `_resolve_runtime_digest()` 解析记录）**保留但仅作溯源/审计**（"该函数上次部署对的是哪个运行时 digest"），**不再用于钉冷唤醒镜像**。
+>
+> ~~A（已弃，仅留作记录）：把 `image@sha256` 记到 service、冷唤醒按记录 digest 跑、永不 rebase——稳定但安全补丁覆盖不到老函数。~~
+- helper 公开签名任何变更 = MAJOR;`c_`+HMAC 假名、`base64(json).hmac[:32]` token、`owner` 列等**冻结的 on-disk 契约**：要改就**前缀版本号**（`c1_/c2_`）+ 数据迁移,绝不原地改。**（在 X-G3 下这条尤其关键：因为新镜像会自动覆盖存量函数。）**
 - helper 公开签名任何变更 = MAJOR;`c_`+HMAC 假名、`base64(json).hmac[:32]` token、`owner` 列等**冻结的 on-disk 契约**：要改就**前缀版本号**（`c1_/c2_`）+ 数据迁移,绝不原地改。
 
 ### 3.6 数据 / Schema / 对象存储
@@ -385,6 +390,6 @@ backend **真构建**于 `claude.dapangyu.work`（`git worktree --detach origin/
 
 ### 11.8 剩余（需重活/产品决策/CI，未在本轮做）
 1. **【高】P2 base 镜像重建**（§11.1-#1）：手动在构建机 build 4 个 base + push，再把 `images-app.yml` 的 `BASE_IMAGE` 从 `:edge` 改钉 base 不可变 `:{ver}-{sha}`，让 lock/CLI/digest 真正进 app 镜像（当前 dormant）。
-2. **【产品决策】FaaS 冷唤醒策略**：§3.5-A（钉 digest 永不 rebase）vs X-G3（rebase 传播安全）二选一;若选 A，改 `_image_is_stale`/recreate 读 `runtime_image_digest`。
+2. ~~【产品决策】FaaS 冷唤醒策略~~ **已决（2026-06-30）：X-G3 用最新运行时镜像**（保持现有实现，无需改码；digest 仅作溯源）。见 §3.5。
 3. **后端类修复上线**：批次1/FaaS digest 是镜像代码，需推 `v1.2.3` 触发 CI 构建 + `--image-version` 切到新镜像才在 77 生效。
 4. **【低】** semver.dart 真复用（客户端重构，需 dart 验证）;`website/`+`web_openim_bridge` 的 `npm ci` + `pubspec --enforce-lockfile` 接进 CI;`/resolve` 响应带包 `dsl` 供下载前比对;多架构边界（amd64-only、平台 digest 非 manifest-list、chrome 源写死 amd64）文档化;`:edge` 部署机器闸（检测到钉移动 tag 则 warn/要 `--allow-edge`）。
