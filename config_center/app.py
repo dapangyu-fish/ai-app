@@ -609,10 +609,27 @@ def _copy_apk_to_temp(file_storage) -> tuple[str, int, str]:
 
 
 @app.template_filter("ts_local")
-def ts_local(ts: int | None) -> str:
+def ts_local(ts) -> str:
+    # 容错：updated_at 正常是 int epoch，但外部/历史写入（如 genlab 直写 DB）可能塞进
+    # ISO 字符串或数字串。时间戳过滤器绝不能因数据格式让整个 /admin 500（框架稳定性原则）。
     if not ts:
         return ""
-    return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts))
+    if isinstance(ts, (int, float)):
+        epoch: float = ts
+    elif isinstance(ts, str):
+        s = ts.strip()
+        if not s:
+            return ""
+        try:
+            epoch = float(s)  # 纯数字串 → epoch
+        except ValueError:
+            return s[:19].replace("T", " ")  # ISO 8601 等：原样截断到秒显示，不抛异常
+    else:
+        return str(ts)
+    try:
+        return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(epoch))
+    except (ValueError, OSError, OverflowError):
+        return str(ts)
 
 
 @app.errorhandler(401)
