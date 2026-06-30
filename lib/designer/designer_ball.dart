@@ -432,9 +432,54 @@ class _DesignerBallState extends State<DesignerBall>
   // 打字机归属的会话：与流同理，active 切走后不能再把这条流的文字写进别的会话桶。
   String _typeOwnerSid = '';
 
+  // 动态吐字速率（自适应「正文到达速度」）。目标：显示速度 ≈ 服务端正文到达速度并略慢
+  // 一档，始终留一小段缓冲 → 连续吐字，消除「冲一段→追平→卡住→下一段」的突兵感。
+  // 思考时间不计入速率估计（见 _setTypewriterTarget 的 _typeIsThinking 跳过 + 段切换重置）。
+  double _typeCharsPerMs = 0.0; // EWMA 估计（字/ms）；0=还没样本，用默认
+  int _typeRateWinMs = 0;       // 当前测速窗口起点 ms（0=未起窗，下个正文到达重新起）
+  int _typeRateWinLen = 0;      // 窗口起点时的目标文本长度（基线）
+  double _typeStepCarry = 0.0;  // 不足 1 字的步进余量累加器（支持 <60 字/秒的慢速连续吐字）
+
+  static const int _typeTickMs = 16;
+  static const int _typeRateWindowMs = 250;          // 测速窗口≥此值才取样 → 免疫 SSE 成批投递
+  static const double _typeDefaultCharsPerMs = 0.04; // 没估计前 ~40 字/秒（偏慢，首块不突兵）
+  static const double _typeMinCharsPerMs = 0.025;    // 速度下限 ~23 字/秒（再慢也不至于慢动作）
+  static const double _typeMaxCharsPerMs = 1.0;      // 速率估计上限 ~1000 字/秒
+  static const int _typeArrivalGapCapMs = 1500;      // 到达间隔超过此值不取样（思考/停顿/网络突发）
+  static const double _typeRevealFactor = 0.92;      // 略慢于到达速率，留缓冲、不追平 → 不卡顿
+  static const int _typeTargetLatencyMs = 320;       // 期望缓冲时长（显示落后服务端约这么久）
+  static const double _typeTargetMinChars = 24.0;    // 缓冲字数下限：慢速小块不触发追赶式排空
+  static const int _typeCatchupMs = 1200;            // 超出缓冲的积压在此窗口内匀速排掉
+  static const int _typeMaxStep = 20;                // 速度上限 ~1250 字/秒，杜绝机枪式刷屏
+
   // 设置打字机目标（目标只增不减，_typeShown 持续往后吐）
   void _setTypewriterTarget(String full) {
     _typeOwnerSid = _chatService.sessionId; // 调用点已过 isCurrentStream，等于流归属 sid
+    // 动态速率估计：只统计「正文」到达（思考段 _typeIsThinking=true 时跳过 → 思考时间
+    // 不进入阈值计算）。用 ≥_typeRateWindowMs 的滑动窗口测「字/ms」，免疫 SSE 成批投递
+    // 把同一段拆成几帧瞬时到达而把速率算虚高。
+    if (!_typeIsThinking) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      if (_typeRateWinMs == 0) {
+        _typeRateWinMs = now;
+        _typeRateWinLen = full.length; // 以「本次到达的累计长度」为窗口基线：
+        // 测的是开窗后新增的正文，不能把开窗这帧已到的字算进下个窗口（否则速率虚高一倍）。
+      } else {
+        final dt = now - _typeRateWinMs;
+        if (dt >= _typeRateWindowMs) {
+          final dc = full.length - _typeRateWinLen;
+          if (dc > 0 && dt <= _typeArrivalGapCapMs) {
+            final double inst = (dc / dt)
+                .clamp(_typeMinCharsPerMs, _typeMaxCharsPerMs)
+                .toDouble();
+            _typeCharsPerMs =
+                _typeCharsPerMs == 0 ? inst : _typeCharsPerMs * 0.7 + inst * 0.3;
+          }
+          _typeRateWinMs = now; // 起新窗口
+          _typeRateWinLen = full.length;
+        }
+      }
+    }
     _typeFull = full;
     if (_typeShown > _typeFull.length) _typeShown = _typeFull.length;
     if (_typeShown < _typeFull.length) _ensureTypeTimer();
@@ -463,15 +508,33 @@ class _DesignerBallState extends State<DesignerBall>
       return;
     }
     final remaining = _typeFull.length - _typeShown;
-    // 自适应速率：落后越多吐越快（保证不拖尾），每帧 1~40 字
+    // 动态速率：吐字速度 ≈ 正文到达速度并略慢一档（留缓冲、不追平 → 不卡顿）；积压超出
+    // 目标缓冲时由延迟控制器在 ~_typeCatchupMs 内匀速排掉。步进可 <1 字，用 carry 累加，
+    // 支持 <60 字/秒 的慢速连续吐字；上限 _typeMaxStep 杜绝突发刷屏。
     int step;
-    if (remaining <= 3) {
+    if (remaining <= 2) {
       step = remaining;
     } else {
-      step = remaining ~/ 6;
-      if (step < 1) step = 1;
-      if (step > 40) step = 40;
+      final double rate =
+          (_typeCharsPerMs > 0 ? _typeCharsPerMs : _typeDefaultCharsPerMs)
+              .clamp(_typeMinCharsPerMs, _typeMaxCharsPerMs)
+              .toDouble();
+      double stepF = rate * _typeTickMs * _typeRevealFactor;
+      // 目标缓冲：rate×期望时长，但有字数下限 → 慢速时小块不会被误判成「积压」而追赶式排空。
+      final double tgt = rate * _typeTargetLatencyMs;
+      final double excess =
+          remaining - (tgt > _typeTargetMinChars ? tgt : _typeTargetMinChars);
+      if (excess > 0) stepF += excess * _typeTickMs / _typeCatchupMs;
+      _typeStepCarry += stepF;
+      step = _typeStepCarry.floor();
+      _typeStepCarry -= step;
+      if (step > _typeMaxStep) {
+        step = _typeMaxStep;
+        _typeStepCarry = 0.0;
+      }
+      if (step > remaining) step = remaining;
     }
+    if (step <= 0) return; // 本帧不足 1 字，等 carry 攒够（慢速时常态，开销极小）
     _typeShown += step;
     if (_typeShown > _typeFull.length) _typeShown = _typeFull.length;
     // 不要把 emoji（UTF-16 代理对）切一半，否则会闪一帧 �
@@ -495,6 +558,7 @@ class _DesignerBallState extends State<DesignerBall>
   void _flushTypewriter() {
     _typeTimer?.cancel();
     _typeTimer = null;
+    _typeStepCarry = 0.0;
     if (_typeFull.isNotEmpty &&
         _typeShown < _typeFull.length &&
         _messages.isNotEmpty &&
@@ -511,6 +575,10 @@ class _DesignerBallState extends State<DesignerBall>
     _typeFull = '';
     _typeShown = 0;
     _typeIsThinking = false;
+    _typeCharsPerMs = 0.0;
+    _typeRateWinMs = 0;
+    _typeRateWinLen = 0;
+    _typeStepCarry = 0.0;
   }
 
   // 思考→正文：补全思考气泡，再开一个空正文气泡，打字机从 0 指向正文。
@@ -526,6 +594,8 @@ class _DesignerBallState extends State<DesignerBall>
     _typeOwnerSid = _chatService.sessionId;
     _typeFull = content;
     _typeShown = 0;
+    _typeRateWinMs = 0; // 新正文段：测速窗口重置 → 思考耗时不计入正文速率
+    _typeStepCarry = 0.0;
     _ensureTypeTimer();
   }
 
