@@ -6,6 +6,13 @@
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-06-30
+### Fixed
+- **P2 CLI 钉真正生效**：发现 base 镜像常规 rebuild 命中 Docker 层缓存，导致钉死的
+  `claude-code@2.1.195`/`opencode-ai@1.17.11` 被装回旧版（2.1.175/1.17.4）。改用
+  `--no-cache` 重建 backend-base + agent-runtime-base（确认装上 2.1.195/1.17.11），
+  `images-base.yml` 加 `no-cache: true` 防复发；app 镜像 FROM 修正后的 base 重建。
+
 ## [1.2.3] - 2026-06-30
 ### Changed
 - **§11 综合评估修复**：DSL 版本收敛到 `backend/dsl_contract.py` 单一真相源（消除多处 `'3.3'` 硬编码）；
