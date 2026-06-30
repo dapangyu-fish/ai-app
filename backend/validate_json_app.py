@@ -440,9 +440,12 @@ class Validator:
 
         # DSL 版本窗口校验（见 docs/planning/version-management.md §3.7）：
         # 发布期把 App 的 dsl 钉在支持窗口内，给每个 stored 版本冻结契约目标。
+        # 版本窗口来自 dsl_contract 单一真相源（§11.3），不再内联硬编码。
+        from dsl_contract import SUPPORTED_DSL_VERSIONS
         dsl = self.root.get("dsl")
-        if dsl and dsl not in ("3.3",):
-            self.error("$.dsl", f"unsupported dsl version {dsl!r}; supported: 3.3")
+        if dsl and dsl not in SUPPORTED_DSL_VERSIONS:
+            _supported = ", ".join(sorted(SUPPORTED_DSL_VERSIONS))
+            self.error("$.dsl", f"unsupported dsl version {dsl!r}; supported: {_supported}")
 
         meta = self.root.get("meta")
         app_type = None

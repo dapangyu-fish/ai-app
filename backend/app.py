@@ -103,13 +103,15 @@ def create_app():
         "myapp backend version=%s build_commit=%s", _app_version, _build_commit
     )
 
+    from dsl_contract import PRIMARY_DSL_VERSION
+
     def _version_handler():
         return jsonify({
             "service": "myapp-backend",
             "version": _app_version,
             "build_commit": _build_commit,
             "build_version": _build_version,
-            "dsl_supported": "3.3",
+            "dsl_supported": PRIMARY_DSL_VERSION,
         })
 
     app.add_url_rule("/version", methods=["GET"], view_func=_version_handler)

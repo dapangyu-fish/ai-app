@@ -601,21 +601,38 @@ def _run_supabase_auth_migrations(*, dry_run: bool) -> int:
     return _run(cmd, capture=False).returncode
 
 
-def _run_platform_migrations(*, dry_run: bool) -> None:
+def _run_platform_migrations(*, dry_run: bool) -> int:
     """部署后自动应用平台 jsonapp 库的 schema 迁移（backend/migrate.py 应用未应用的
-    backend/migrations/00N_*.sql）。非阻断：失败只告警——迁移由开发者审过，且老镜像
-    可能没有 migrate.py。见 docs/planning/version-management.md §3.6。"""
-    cmd = ["docker", "exec", "-w", "/app/backend", "myapp-backend", "python", "migrate.py"]
-    print("+ " + " ".join(cmd))
+    backend/migrations/00N_*.sql）。见 docs/planning/version-management.md §3.6 / §11.2。
+
+    阻断策略（§11.2-#6）：区分两种"非 0"——
+      · migrate.py **不在镜像内**（老镜像）或 backend 未运行 → 跳过、返回 0（不阻断部署）；
+      · migrate.py 在镜像内但**执行失败** → 返回其 rc，让 deploy 中止（迁移是部署最高风险环，
+        失败必须显式暴露，不能静默放行新代码跑在半迁移的库上）。
+    migrate.py 对存量主机会自动打基线、对 checksum 漂移仅告警（非致命），故正常路径仍稳定。"""
     if dry_run:
-        return
+        print("+ docker exec -w /app/backend myapp-backend python migrate.py")
+        return 0
     info = _docker_inspect("myapp-backend")
     if not info or info.get("State", {}).get("Status") != "running":
         print("myapp-backend 未运行；跳过平台 schema 迁移", file=sys.stderr)
-        return
+        return 0
+    # 老镜像可能没有 migrate.py——先探测，缺失则优雅跳过（不阻断）。
+    probe = _run(
+        ["docker", "exec", "myapp-backend", "test", "-f", "/app/backend/migrate.py"],
+        capture=True,
+    )
+    if probe.returncode != 0:
+        print("当前 backend 镜像无 /app/backend/migrate.py（老镜像）；跳过平台 schema 迁移",
+              file=sys.stderr)
+        return 0
+    cmd = ["docker", "exec", "-w", "/app/backend", "myapp-backend", "python", "migrate.py"]
+    print("+ " + " ".join(cmd))
     rc = _run(cmd, capture=False).returncode
     if rc != 0:
-        print(f"⚠️ 平台 schema 迁移返回非 0（rc={rc}）；请检查上面的 migrate 输出", file=sys.stderr)
+        print(f"❌ 平台 schema 迁移失败（rc={rc}）；中止部署——请检查上面的 migrate 输出后重试",
+              file=sys.stderr)
+    return rc
 
 
 def _deploy_should_ensure_demo_assets(names: list[str]) -> bool:
@@ -855,7 +872,9 @@ def cmd_deploy(args) -> int:
         if rc != 0:
             return rc
     if "backend" in names:
-        _run_platform_migrations(dry_run=args.dry_run)
+        rc = _run_platform_migrations(dry_run=args.dry_run)
+        if rc != 0:
+            return rc
     if _deploy_should_ensure_demo_assets(names):
         # 非阻断：确保 demo 对象存储桶就绪并固定上传 demo app.json（集群初始化的一部分）
         _ensure_demo_bucket_assets(dry_run=args.dry_run)

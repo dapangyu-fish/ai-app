@@ -489,11 +489,17 @@ def _select_best_version(versions, constraint):
 
 @app.route('/health', methods=['GET'])
 def health():
-    """健康检查"""
+    """健康检查。
+
+    `version` 是 Registry API 契约版本（与 _index schema 对齐，独立于平台版本）；
+    `platform_version`/`build_commit` 暴露运行实例的平台构建，便于监控溯源（见 §11.3）。
+    """
     return jsonify({
         "status": "ok",
         "service": "json-dsl-registry",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "platform_version": (os.environ.get("MYAPP_VERSION") or "unknown").strip()[:64] or "unknown",
+        "build_commit": (os.environ.get("MYAPP_BUILD_COMMIT") or "unknown").strip()[:128] or "unknown",
     })
 
 

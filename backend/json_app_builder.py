@@ -978,9 +978,8 @@ def collect_asset_urls(node: Any) -> set[str]:
     return urls
 
 
-# 客户端支持的 DSL 版本窗口（见 docs/planning/version-management.md §3.7）。
-# 框架新增向后兼容能力 → 加新 MINOR 进窗口；破坏性变更 → bump MAJOR 并收窗口。
-SUPPORTED_DSL_VERSIONS = {"3.3"}
+# DSL 版本窗口的单一真相源在 dsl_contract（见 §11.3 收敛多处硬编码）；此处 re-export 保持兼容。
+from dsl_contract import SUPPORTED_DSL_VERSIONS  # noqa: E402,F401
 
 
 def assert_required_fields(app: dict[str, Any]) -> None:
