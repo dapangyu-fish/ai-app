@@ -2,15 +2,41 @@
 
 [中文](README.zh.md) · [English](README.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md) · [Português](README.pt.md) · [Català](README.ca.md) · [हिन्दी](README.hi.md) · **한국어** · [日本語](README.ja.md) · [Italiano](README.it.md)
 
-> **AI로 설명 → 풀스택 앱(UI + 백엔드 + 데이터베이스) → 사용자의 휴대폰에서 즉시 실행. 빌드 단계 없음, 앱스토어 심사 없음.**
+<div align="center">
+
+### Vibe *coding*은 그만. Vibe *app*을 출시하세요.
+
+**설명만 하세요 → 풀스택 앱(UI + 실제 백엔드 + 데이터베이스)이 모든 화면에서 바로 실행됩니다.**
+
+**코드베이스 없음. 빌드 없음. 배포 없음. 앱스토어 없음.**
+
+</div>
+
+> 업계 전체가 아직도 AI로 *코드를 작성하는* 방법을 두고 논쟁하고 있습니다. 우리는 코드를 건너뛰었습니다.
 >
-> JSON-DSL을 네이티브 UI + 비즈니스 로직으로 해석하는 Flutter 런타임입니다. 사용자가 AI에게 원하는 것을 말하면, AI가 JSON 프런트엔드를 생성하고 **앱에 필요할 경우 자체 격리된 Postgres 데이터베이스를 갖춘 실제 Python/Flask 백엔드까지** 생성한 뒤, 사전 컴파일된 기능 집합 안에서 즉시 렌더링하고 실행합니다. 다른 AI 앱 빌더들은 직접 연결하고 배포해야 하는 프런트엔드 코드를 건네주지만, MyApp은 이미 실행 중인 전체 스택을 제공합니다.
+> Vibe coding은 — 최고의 AI 앱 빌더(Lovable, Bolt, v0, Replit)조차도 — 여전히 직접 연결하고, 호스팅하고, 출시해야 하는 **코드베이스**를 건네줍니다. MyApp은 **실행 중인 앱**을 건네줍니다: 원하는 것을 설명하면, AI가 JSON-DSL 프런트엔드를, **그리고** 앱에 필요할 경우 자체 격리된 Postgres 데이터베이스를 갖춘 실제 Python/Flask 백엔드를 만들어낸 뒤, 사전 컴파일된 크로스플랫폼 런타임 안에서 전체를 즉시 렌더링하고 실행합니다. *똑같은* 한 문장이 **플레이 가능한 게임**을, 또는 **로그인·게시글·스레드형 답글을 갖춘 실제 백엔드 기반 포럼**을 띄울 수 있습니다 — **하나의 설명만으로 iOS, Android, Web, 데스크톱에서** 바로 실행됩니다. 열어야 할 프로젝트도, 컴파일할 것도, 배포할 것도 없습니다.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()
+[![DSL](https://img.shields.io/badge/JSON--DSL-v3.4-7c5cff)](JSON-DSL.md)
 
 > **플랫폼 상태**: ✅ 프로덕션 (iOS/Android/Web) • ⚠️ 실험적 (macOS, 핵심 기능만) • 🚧 미검증 (Linux/Windows)
+
+---
+
+## Vibe *coding* vs. vibe *app*
+
+|  | Vibe coding / AI 앱 빌더 | **MyApp — vibe app** |
+|---|---|---|
+| 무엇을 얻는가 | **코드베이스** (React/Next + 백엔드) | **실행 중인 앱** |
+| 결과물 | 직접 호스팅하고, 유지보수하고, 돌봐야 하는 코드 | JSON 설정 — **유지보수할 코드 없음** |
+| 출시 단계 | 빌드 → 배포 → (앱스토어 심사) | **없음.** 이미 실행 중입니다. |
+| 어디서 실행되는가 | 보통 웹 앱 | **iOS · Android · Web · macOS · Linux · Windows** — 하나의 설명으로 |
+| 백엔드 | "Supabase는 직접 연결하세요" | **AI 생성 Python/Flask + 격리된 Postgres**, 대신 배포해 드립니다 |
+| 범위 | 폼, 대시보드, CRUD | …**그리고 실시간 채팅, 플레이 가능한 게임**(Tetris, 2048, 플랫포머)까지 *동일한* 런타임에서 |
+
+이것은 뒷받침할 수 없는 구호가 아닙니다. 계속 읽어보세요 — 엔진 수치가 아래에 있습니다.
 
 ---
 
@@ -18,13 +44,13 @@
 
 하나의 저장소에 담긴 세 가지:
 
-1. **Flutter Server-Driven UI 엔진** (`lib/`) — 모든 JSON-DSL 설정을 런타임에 실제 크로스플랫폼 앱으로 렌더링합니다
-2. **풀스택 AI 생성기** (`backend/`, `user_center/`, `config_center/`) — 인증(Supabase), IM(OpenIM), 푸시(APNs + FCM), AI 채팅 프록시, 패키지 레지스트리, 사용자 관리 위에서, AI가 JSON 프런트엔드를 생성하고 **앱에 필요할 경우 그에 맞는 FaaS 백엔드 + 격리된 Postgres 데이터베이스까지** 생성합니다
-3. **패키지 생태계** (`templates/`) — 런타임 위에 설치할 수 있는 예제 JSON-APP들(IM, 게임, 사용자 프로필, 계산기 등)
+1. **Flutter Server-Driven UI 엔진** (`lib/`) — JSON-DSL 설정을 런타임에 실제 네이티브 크로스플랫폼 앱으로 해석합니다. **91종의 위젯 타입, 100개 이상의 내장 함수, 28개 연산자 표현식 엔진, 그리고 완전한 2D 게임 엔진** — 모두 클라이언트에 사전 컴파일되어 있습니다.
+2. **풀스택 AI 생성기** (`backend/`, `user_center/`, `config_center/`) — 인증(Supabase), IM(OpenIM), 푸시(APNs + FCM), AI 채팅 프록시, 패키지 레지스트리, 사용자 관리 위에서, AI가 JSON 프런트엔드를, **그리고 앱에 필요할 경우 그에 맞는 FaaS 백엔드 + 격리된 Postgres 데이터베이스까지** 생성합니다.
+3. **패키지 생태계** (`templates/`) — 런타임 위에 설치할 수 있는 70개 이상의 예제 JSON-App과 재사용 가능한 라이브러리(IM, 게임, 사용자 프로필, 계산기, 대시보드 등).
 
 **MyApp**이라는 이름은 의도적입니다: 각 사용자는 공유 런타임 위에서 "나의 앱(my app)"을 만들고, 설치하고, 운영할 수 있습니다.
 
-대표적인 사용 사례: **사용자가 앱을 연다 → AI와 대화한다(생성에는 보통 10~20분 소요) → AI가 JSON-DSL을 반환한다 → 클라이언트에 이미 컴파일된 기능 안에서 앱이 그것을 즉시 로드하고 실행한다.**
+대표적인 사용 사례: **사용자가 앱을 연다 → AI와 대화한다 → AI가 JSON-DSL을(필요하면 백엔드까지) 반환한다 → 클라이언트에 이미 컴파일된 기능 안에서 앱이 그것을 즉시 로드하고 실행한다.** 빌드도, 심사도, 앱스토어 대기도 없습니다.
 
 ---
 
@@ -69,11 +95,12 @@ MyApp은 Flutter로 빌드되었으며, 기능 완성도는 다양하지만 여�
 ## 왜 흥미로운가?
 
 - **단번에 풀스택 — 차별화 요소.** 대부분의 AI 앱 빌더(v0, Lovable, Bolt 등)는 여전히 직접 백엔드에 연결하고 배포해야 하는 *프런트엔드* 코드를 생성합니다. MyApp은 프런트엔드 **그리고** 실제 Python/Flask FaaS 백엔드를 생성합니다 — 각각 자체 격리된 Postgres 데이터베이스, 앱별 권한 모델, 호출자별 데이터 격리를 갖추고 있으며, 전체를 즉시 실행합니다. 별도의 백엔드 프로젝트, 배포 단계, 스토어 제출이 필요 없습니다.
+- **코드 산출물 없음.** 결과물은 코드베이스가 아니라 사전 컴파일된 클라이언트에서 실행되는 JSON 설정입니다. 호스팅할 것도, 유지보수할 것도, 다음 의존성 업데이트에서 깨질 것도 없습니다. 변경 사항을 설명하기만 하면 앱이 업데이트되고, 다음에 로드될 때 모든 곳에서 즉시 반영됩니다.
+- **진정한 크로스플랫폼.** *동일한* JSON-DSL이 iOS, Android, Web(프로덕션 검증됨), macOS(실험적), Linux, Windows에서 렌더링됩니다. 대부분의 "AI 앱" 도구는 웹 앱을 제공하지만, 이것은 하나의 설명만으로 어디서나 네이티브로 제공합니다.
 - **서버 주도** — 고정된 사전 컴파일 런타임 경계를 통해 UI와 동작을 데이터로 전달합니다. [App Store 준수 참고 사항](docs/APP_STORE_COMPLIANCE.md)을 참조하세요.
-- **AI 네이티브** — DSL은 LLM 친화적으로 설계되었습니다. 포함된 AI 채팅은 세 가지 플러그형 에이전트 런타임(Claude Code, Codex, OpenCode)을 통해 여러 제공자(DeepSeek, MiniMax, GLM / Kimi를 포함한 Volcengine 애그리게이터)를 실행하며, 실제로 렌더링되는 앱을 생성합니다 — 생성 플레이북과 출력물이 실행 가능하도록 유지하는 실행 중 시각적 자체 검토 단계를 갖추고 있습니다.
+- **AI 네이티브** — DSL은 LLM 친화적으로 설계되었습니다. 포함된 AI 채팅은 세 가지 플러그형 에이전트 런타임(Claude Code, Codex, OpenCode)을 통해 여러 제공자(DeepSeek, MiniMax, GLM / Kimi를 갖춘 Volcengine 애그리게이터)를 실행하며, 출력물이 실행 가능하도록 유지하기 위한 생성 플레이북과 실행 중 시각적 자체 검토 단계를 갖추고 있습니다.
 - **배터리 포함** — 푸시 기능이 있는 IM, AI 프록시, 패키지 레지스트리, 네임스페이스, 미러링, 사용자 센터, 환경 전환 — 모두 함께 연결되어 있습니다. "인증을 외면하는 또 하나의 로우코드 프레임워크"가 아닙니다.
 - **셀프 호스팅 가능** — `myapp-ctl deploy`가 단일 호스트 레벨 CLI에서 백엔드 스택, 에이전트 런타임, 레지스트리, 설정 센터, 서비스 시크릿을 관리합니다.
-- **크로스플랫폼** — 동일한 JSON-DSL이 iOS, Android, Web(프로덕션 검증됨), macOS(실험적으로 검증됨), Linux, Windows에서 렌더링됩니다. 핵심 기능은 모든 플랫폼에서 동작하며, 플랫폼별 기능(IM, 푸시)은 미지원 플랫폼에서 우아하게 비활성화됩니다.
 
 ---
 
@@ -306,14 +333,14 @@ flowchart TB
 ## 기능
 
 ### 엔진
-- 30개 이상의 위젯 (text / button / input / list / image / video / chart / map / webview / camera / qr / 채팅 말풍선 / …)
-- 15개의 커스텀 연산자를 갖춘 JsonLogic 표현식 엔진
-- 30개 이상의 내장 함수 (HTTP, JSON, 문자열, 배열, 제어 흐름, UI 피드백)
+- **91종의 위젯 타입** — text / button / input / list / container / image / video / chart / map / webview / camera / qr / tab_view / **완전한 Flame 2D 게임 스택**(게임 캔버스, 아날로그 스틱, 파티클/투영 장면 캔버스) / 애니메이션(animated_*, Rive) / 고급 제스처(제스처 비밀번호, 슬라이드 검증) / sliver급 레이아웃
+- **28개의 커스텀 연산자를 갖춘 JsonLogic 표현식 엔진**(문자열 / 배열 / 타입 / 수학)
+- **100개 이상의 내장 `@`-함수** — HTTP(모든 메서드 + SSE), 실제 DB 레이어(query/insert/update/delete + 키-값 + create_table), IM(친구 / 대화 / 기록 / 받은 편지함), 파일 I/O, 생체 인증, 클립보드, 햅틱, 권한, 이미지 선택, 테마, i18n, 내비게이션, 다이얼로그, 게임 제어
 - 동시 단계를 위한 `@parallel`
 - 템플릿 `{{ path }}`는 (문자열화하지 않고) 원래 타입으로 resolve됨
 - 네트워크 / 디스크 / 레지스트리에서 설정 핫스왑
-- Flame 2D 게임 엔진 (스프라이트, 물리, Tiled 맵)
 - 민감한 기능(인증 토큰, 프로필)에 대한 앱별 권한 게이트
+- **클라이언트 UI가 11개 언어로 현지화됨**(zh / en / de / es / fr / pt / ca / hi / ko / ja / it)
 
 ### 백엔드
 - **AI 생성 FaaS 풀스택** — AI가 "서비스 그룹"마다 검증된 Python/Flask 백엔드(함수 서비스 1개 + 선택적 Postgres DB)를 생성하여, 자체 관리 Docker FaaS 런타임(서비스당 컨테이너 하나, scale-to-zero + 콜드 웨이크)에 배포합니다. 앱별 스키마 격리, 위조 불가능한 그룹 내 가명 신원, 백엔드 중개 호출자별 데이터 접근(함수 코드는 DB 연결을 절대 보유하지 않음), 컨테이너 하드닝, 그리고 철회 가능한 3단계 접근 정책.
@@ -339,11 +366,11 @@ flowchart TB
 
 | 영역 | 상태 |
 |---|---|
-| 엔진 (Dart) | 프로덕션. 65k LOC. 실제 앱을 구동 중. 클라이언트 UI는 11개 언어로 현지화됨. |
+| 엔진 (Dart) | 프로덕션. 64k LOC, 위젯 91종, 내장 함수 100개 이상. 실제 앱을 구동 중. 클라이언트 UI는 11개 언어로 현지화됨. |
 | 백엔드 (Python) | 프로덕션. 32k LOC. 실제 사용자 운영 중. |
 | 테스트 | 위젯 스모크 테스트 및 JSON 회귀 스위트(`templates/regression-test.json`). 커버리지를 추가하는 PR을 매우 환영합니다. |
 | 문서 | 중간 수준 (`JSON-DSL.md`, `deploy/production/README.md`, 백엔드 아키텍처 노트). 개선 중. |
-| API 안정성 | DSL v3.3 — v4까지는 사소한 호환성 깨짐 가능. 백엔드 HTTP API는 안정적. |
+| API 안정성 | DSL v3.4 — v4까지는 사소한 호환성 깨짐 가능. 백엔드 HTTP API는 안정적. |
 | 공개 호스팅? | 예 (공정 사용 대상, 이용약관 참조) |
 
 ---
@@ -391,7 +418,7 @@ Apache License 2.0 — [LICENSE](LICENSE) 및 [NOTICE](NOTICE)를 참조하세�
 
 ## 로드맵 (우선순위 순)
 
-- [ ] 60초짜리 바이럴 데모 영상 공개 (AI → ~10-20분 내 JSON 설정 → 앱 즉시 실행)
+- [ ] 60초짜리 바이럴 데모 영상 공개 (AI → JSON 설정 → 앱 즉시 실행, 빌드/배포 없음)
 - [ ] 공개 호스팅 무료 티어
 - [ ] QR이 포함된 앱 공유 링크 (딥 링크로 AI 생성 앱 열기)
 - [ ] CI 추가 (GitHub Actions: pub get, analyze, build APK)
