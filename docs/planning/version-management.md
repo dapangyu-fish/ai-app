@@ -1,6 +1,6 @@
 # RFC: 版本号管理（Version Management）
 
-- **状态**: ✅ **P1 完成 + 上线**（GHA→Hub→77 全管线，77 跑 CI 镜像 `1.2.0-5146e38`，见 §8）；✅ **P2 复现性全覆盖**（Python 依赖全 uv-lock + CLI 钉 + base digest 钉 + Flutter FVM）；🟢 **P4 大部分**（客户端 DSL 闸 + 后端发布 gate + JSON-DSL 纪律）；🟡 **P3 部分**（_index 闸 + schema_migrations runner 已 live 基线；FaaS digest/wiring 待）。剩余见 §9。
+- **状态**: ✅ **P1 完成 + 上线**（GHA→Hub→77 全管线，77 现跑 CI 镜像 `1.2.2-ff1cd41`，见 §8/§10）；🟢 **P2 代码完成**（Python uv-lock + CLI 钉 + base digest 钉 + FVM）——但 **base 镜像未重建、当前 dormant**（app 仍 FROM 旧 `:edge` base，见 §11.1-#1）；🟢 **P4 大部分**（客户端 DSL 闸 + 后端发布 gate + JSON-DSL 纪律）；🟡 **P3 部分**（_index 闸 + schema_migrations runner 已 live 基线 + 自动迁移护栏；FaaS digest 仅记录、冷唤醒策略待决）。**综合评估见 §11，本轮按 §11 落地的修复见 §11.7。剩余见 §9。**
 - **范围**: 跨域（`deploy/production/`、`scripts/myapp_ctl/`、`backend/`、`pubspec.yaml`、`JSON-DSL.md`、`backend/migrations/`）
 - **作者**: Claude（基于 2026-06-29 对全仓 **63 个版本/依赖耦合面**的审计 + 对抗式核实 + 四类锁定最佳实践调研）
 - **起始版本**: **`1.2.0`**（承接 `pubspec.yaml` 现有线，不另起 1.0.0）
@@ -60,7 +60,8 @@
 ### 3.1 平台版本：单一真相源
 - 仓库根新增 **`VERSION` = `1.2.0`**，平台 semver 唯一真相源。
 - bump：**MAJOR**=破坏性（API/DSL major/数据迁移）；**MINOR**=向后兼容新特性；**PATCH**=修复。
-- `pubspec.yaml`、后端 `/version`、CLI `--version`、镜像 tag 都从它派生；release 打 git tag `vX.Y.Z`。
+- 后端 `/version`、CLI `--version`、镜像 tag 都从它派生；release 打 git tag `vX.Y.Z`。
+- **`pubspec.yaml` 例外**：客户端版本独立演进（现 `1.2.0+1`），**有意不与平台 `VERSION` 同步**（§8.4 决策；客户端发版节奏≠后端制品）——故"单一真相源"指**后端/制品**一侧，`pubspec` 解耦，不声称从 `VERSION` 派生（修正早期措辞，见 §11.3-#7）。
 
 ### 3.2 容器镜像：不可变 tag + digest（本项目两处都要钉）【已决策】
 - **tag 方案**（取代 `:agent-control-plane`）：每次构建打不可变 **`:{VERSION}-{git-sha}`**（如 `1.2.0-a1b2c3d`，sha 已在 `core.py:666` 算好、只是没当 tag 用）+ release 打 **`:{VERSION}`**（如 `1.2.0`）；移动频道改为 **`:edge`**（dev 便利指针，**生产/测试部署禁止直接钉它**）。
@@ -99,7 +100,7 @@
 ### 3.7 DSL 契约：纯 semver + additive/reserve 纪律【已决策：semver，不用 SchemaVer】
 DSL 是「stored documents 必须持续可渲染」的 schema 问题,但为**全项目一套心智**（registry 包 + 平台 VERSION + 依赖都 semver、`dsl` 现就是 `3.x`、`semver.dart` 直接可用）决定用 **纯 semver**，把 SchemaVer 的"已发布 App 还渲染吗"作为 **MAJOR 判定规则吸收进来**。
 - **版本规则**：**MAJOR**=破坏 DSL 契约（**任何已发布 App 可能渲染坏**/改语义/删控件）;**MINOR**=向后兼容新增（新控件/内置/新可选字段，旧 App 不受影响）;**PATCH**=引擎修复不动契约。`JSON-DSL.md` 即 SemVer 要求的"公开 API"。
-- **客户端载入闸**：加 `kSupportedDsl='3.3'`（+ min/max 窗口）常量,`loadConfig` 顶部解析 `config['dsl']`：MAJOR 不匹配硬拒（"需升级客户端"）、MINOR-ahead 仅 warn——复用现成 `lib/json_ui/semver.dart`。删掉 `json_app_builder.py` 那处孤儿 `dsl != '3.3'`。
+- **客户端载入闸**：加 `kSupportedDsl='3.3'`（+ min/max 窗口）常量,`loadConfig` 顶部解析 `config['dsl']`：MAJOR 不匹配硬拒（"需升级客户端"）、MINOR-ahead 仅 warn。删掉 `json_app_builder.py` 那处孤儿 `dsl != '3.3'`。〔落地修正（§11.3）：解析实为 `interpreter.dart` 内联 `split('.')+int.tryParse`，**未**复用 `lib/json_ui/semver.dart`；MAJOR 比对够用，如要与包侧统一心智可后续重构。〕
 - **发布期强制**：Registry 校验/盖 `dsl` 在支持窗口内（之后不可变,给每个 stored 版本冻结契约目标）。
 - **additive + reserve 纪律**（借 protobuf/GraphQL）：新键可选、旧键永不复用语义、删掉的 widget 类型名 reserve 不重用、不改字段类型 → 旧 JSON 在新引擎仍渲染、新 JSON 在旧引擎优雅降级（引擎已忽略未知键）。
 - **链式迁移** `v1→v2→v3`(而非 N 个"任意旧→最新"),作升级/回滚网。修订 `JSON-DSL.md`（v3.4 vs 3.3 脱节）。
@@ -200,7 +201,7 @@ DSL 是「stored documents 必须持续可渲染」的 schema 问题,但为**全
 | **P1（先做）** | `VERSION=1.2.0` + 自建镜像**双 tag（不可变 `:{ver}-{sha}` + `:{ver}`，`:edge` 移动）** + ctl.json/Dockerfile 两处 base 钉 + 后端 `/version` + git tag + **GHA images-app/base 两条 workflow**。直接消除"可变共享镜像、不可回滚"。 | 高/低 |
 | **P2** | **Python uv.lock（`uv sync --locked`）** 喂所有镜像 + base 镜像 digest 钉 + base 内 CLI/@latest 钉死 + Flutter 工具链 FVM 钉。复现性根因。 | 高/中 |
 | **P3** | **FaaS 运行时镜像 digest 钉到 service + 按记录 digest 冷唤醒（A 轻量，永不 rebase）**;平台 `schema_migrations` 表 + tracked runner;`_index.json` 版本启用。 | 高/中 |
-| **P4** | **DSL 载入期兼容闸**（客户端 `kSupportedDsl` + semver.dart 复用）+ 发布期强制 + additive/reserve 纪律入 `JSON-DSL.md` + 删孤儿判等;CLI `--version`;`CHANGELOG.md`。 | 中/中 |
+| **P4** | **DSL 载入期兼容闸**（客户端 `kSupportedDsl`，实为内联解析、非 semver.dart——见 §11.3）+ 发布期强制 + additive/reserve 纪律入 `JSON-DSL.md` + 删孤儿判等;CLI `--version`;`CHANGELOG.md`。 | 中/中 |
 
 ## 6. 开放问题
 > **全部已决策**（见 §0 决策表）。FaaS ABI 取 A 轻量、部署钉点取 B（`--image-version` flag）、`:agent-control-plane` 切完立即停推。后续若需"不逐个 redeploy 推整队运行时补丁"，再叠 FaaS ABI 的 B（API 版本 + 兼容闸）。
@@ -363,3 +364,27 @@ backend **真构建**于 `claude.dapangyu.work`（`git worktree --detach origin/
 - **P4**：双端 gate 真实接入、孤儿判等已清，**功能 done**;瑕疵是**多处 `3.3` 硬编码 + "复用 semver.dart" overclaim**。
 - **跨切**：单一真相源未达成、文档多处陈旧/自相矛盾、非-77 主机迁移与镜像 pin 两个真实雷。
 - **优先级**：先补 11.1 的 4 条（dormant base 重建 + FaaS digest 真实现 + 迁移首跑基线守卫 + install_ctl legacy 迁移）→ 再 11.2 迁移护栏 → 11.3 真相源收敛/文档修正。本评估**不阻断 P1 合 main**，但上述项应在"声称 P2-P4 完成/上生产"前补齐。
+
+### 11.7 本轮按 §11 落地的修复（2026-06-30，分支 feat/version-management）
+
+> 按 §11 发现开始补，已落地以下（全部 `py_compile`/`bash -n`/import 自检通过；后端类改动随**下次 backend 镜像构建**在 77 生效）：
+
+**批次1（后端安全 + 单一真相源，commit `bbe2661`）**
+- §11.3 **DSL 真相源收敛**：新增 `backend/dsl_contract.py`（`SUPPORTED_DSL_VERSIONS`/`PRIMARY_DSL_VERSION`），`app.py:/version`、`json_app_builder`、`validate_json_app` 全引用它，消除多处 `'3.3'` 硬编码（客户端 `kSupportedDsl` 跨进程无法共享，仍需手动同步）。`registry /health` 增 `platform_version`+`build_commit`（原死值 `1.0.0` 监控不可溯源）。
+- §11.1-#3 **`migrate.py` 自动基线**：tracking 表本次新建 + 平台库已有 schema 时**自动 `--mark`**（不重放）→ 修复存量主机首次 `deploy` 裸跑 `migrate.py` 撞已删列而崩。
+- §11.2-#5 **checksum 漂移校验**：已应用迁移被改写时告警（`--status` 非零退出）。
+- §11.2-#6 **自动迁移改阻断**：`migrate.py` 在镜像内但执行失败 → 中止部署（老镜像缺 `migrate.py` 仍优雅跳过）。
+
+**批次2（构建溯源 + 存量主机迁移，commit `4dbf554`）**
+- §11.4 本地 `deploy --build` 注入 `MYAPP_VERSION`（`core.py` 读 `source/VERSION`）+ `build_production_images.sh` 默认 TAG `agent-control-plane→edge` 且传 `MYAPP_VERSION`——本地构建镜像 `/version` 不再 `unknown`。
+- §11.1-#4 `install_ctl.sh` 一次性 legacy 迁移：存量 `ctl.json` images 的 `:agent-control-plane` 平移到 `:edge`，避免 CI 停推后拉不到镜像。
+
+**FaaS digest（commit `aa3d8af`）**
+- §11.1-#2 部署时 `_resolve_runtime_digest()` 把 `FAAS_LOCAL_DOCKER_IMAGE` 解析到 `image@sha256` 记进 `runtime_image_digest`（溯源，additive）。
+- **重要修正**：核查代码发现实现的 **X-G3 冷唤醒**（`_image_is_stale`→镜像变了就 recreate **以传播运行时安全改动**）与 §0/§3.5-A 决策**"按记录 digest 跑、永不 rebase"正好相反**。这不是"忘了实现 digest"，而是**两种对立策略**：A=稳定（钉 digest、老函数不收运行时补丁）vs X-G3=安全传播（rebase、但 helper ABI 改了会破老函数）。**需产品决策二选一**——本轮只补 digest 记录，不擅自翻转线上冷唤醒语义。
+
+### 11.8 剩余（需重活/产品决策/CI，未在本轮做）
+1. **【高】P2 base 镜像重建**（§11.1-#1）：手动在构建机 build 4 个 base + push，再把 `images-app.yml` 的 `BASE_IMAGE` 从 `:edge` 改钉 base 不可变 `:{ver}-{sha}`，让 lock/CLI/digest 真正进 app 镜像（当前 dormant）。
+2. **【产品决策】FaaS 冷唤醒策略**：§3.5-A（钉 digest 永不 rebase）vs X-G3（rebase 传播安全）二选一;若选 A，改 `_image_is_stale`/recreate 读 `runtime_image_digest`。
+3. **后端类修复上线**：批次1/FaaS digest 是镜像代码，需推 `v1.2.3` 触发 CI 构建 + `--image-version` 切到新镜像才在 77 生效。
+4. **【低】** semver.dart 真复用（客户端重构，需 dart 验证）;`website/`+`web_openim_bridge` 的 `npm ci` + `pubspec --enforce-lockfile` 接进 CI;`/resolve` 响应带包 `dsl` 供下载前比对;多架构边界（amd64-only、平台 digest 非 manifest-list、chrome 源写死 amd64）文档化;`:edge` 部署机器闸（检测到钉移动 tag 则 warn/要 `--allow-edge`）。
