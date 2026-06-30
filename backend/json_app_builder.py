@@ -978,9 +978,16 @@ def collect_asset_urls(node: Any) -> set[str]:
     return urls
 
 
+# DSL 版本窗口的单一真相源在 dsl_contract（见 §11.3 收敛多处硬编码）；此处 re-export 保持兼容。
+from dsl_contract import SUPPORTED_DSL_VERSIONS  # noqa: E402,F401
+
+
 def assert_required_fields(app: dict[str, Any]) -> None:
-    if app.get("dsl") != "3.3":
-        raise BuilderError("dsl must be '3.3'")
+    dsl = app.get("dsl")
+    if dsl not in SUPPORTED_DSL_VERSIONS:
+        raise BuilderError(
+            f"dsl {dsl!r} 不在支持窗口 {sorted(SUPPORTED_DSL_VERSIONS)} 内"
+        )
     meta = app.get("meta")
     if not isinstance(meta, dict):
         raise BuilderError("meta must be an object")

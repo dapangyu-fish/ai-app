@@ -1,0 +1,7 @@
+# agent-node base 镜像的依赖（最小 Flask 服务）。
+# 改后重生成 lock：uv pip compile deploy/production/requirements/agent-node-base.txt \
+#   -o deploy/production/requirements/agent-node-base.lock --generate-hashes --python-version 3.11
+flask>=3.0.0
+gunicorn>=21.2.0,<26.0.0
+requests>=2.32.0
+PyJWT[crypto]>=2.8.0

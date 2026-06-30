@@ -593,6 +593,25 @@ def _json_object(value: Any) -> dict[str, Any]:
     return {}
 
 
+def _resolve_runtime_digest() -> str:
+    """把 FAAS_LOCAL_DOCKER_IMAGE（一个可能移动的 tag，如 :edge）解析到内容寻址 digest，
+    记进 deploy meta 作不可变溯源（见 docs/planning/version-management.md §3.5 / §11.1-#2）。
+    优先 RepoDigests（repo@sha256，registry 内容地址），回落本地 image id（config digest）；
+    解析失败回空串——仅缺这条溯源，不影响部署。
+
+    注：这里只把 digest **记下来**作溯源/审计；冷唤醒当前仍按 X-G3 策略（`_image_is_stale`
+    对比当前 FAAS_LOCAL_DOCKER_IMAGE、变了就 recreate 以传播运行时安全改动），与 §3.5-A
+    『按记录 digest 跑、永不 rebase』是**相互冲突的两种策略**，需产品决策后再二选一（见 §11.1-#2）。"""
+    try:
+        img = _docker_client().images.get(FAAS_LOCAL_DOCKER_IMAGE)
+        repo_digests = (getattr(img, "attrs", {}) or {}).get("RepoDigests") or []
+        if repo_digests:
+            return str(repo_digests[0])
+        return str(getattr(img, "id", "") or "")
+    except Exception:
+        return ""
+
+
 def _current_deploy_meta() -> dict[str, Any]:
     mode = str(FAAS_DEPLOY_MODE or "").strip()
     meta: dict[str, Any] = {"mode": mode}
@@ -600,6 +619,7 @@ def _current_deploy_meta() -> dict[str, Any]:
         meta.update(
             {
                 "runtime_image": FAAS_LOCAL_DOCKER_IMAGE,
+                "runtime_image_digest": _resolve_runtime_digest(),
                 "network": FAAS_LOCAL_DOCKER_NETWORK,
                 "start_on_deploy": FAAS_LOCAL_DOCKER_START_ON_DEPLOY,
             }

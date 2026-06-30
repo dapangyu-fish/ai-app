@@ -1,11 +1,13 @@
-ARG BASE_IMAGE=dapangyu/myapp-backend-base:agent-control-plane
+ARG BASE_IMAGE=dapangyu/myapp-backend-base:edge
 FROM ${BASE_IMAGE}
 
 ARG MYAPP_BUILD_COMMIT=unknown
 ARG MYAPP_BUILD_VERSION=unknown
+ARG MYAPP_VERSION=unknown
 
 ENV MYAPP_BUILD_COMMIT=${MYAPP_BUILD_COMMIT} \
-    MYAPP_BUILD_VERSION=${MYAPP_BUILD_VERSION}
+    MYAPP_BUILD_VERSION=${MYAPP_BUILD_VERSION} \
+    MYAPP_VERSION=${MYAPP_VERSION}
 
 # The isolated FaaS git push worker pushes generated code over SSH; the base
 # image ships git but not an ssh client.

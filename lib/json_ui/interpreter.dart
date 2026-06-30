@@ -1,4 +1,4 @@
-// JSON DSL v3.2 解释器 — jsonlogic 标准版
+// JSON DSL v3.3 解释器 — jsonlogic 标准版
 // ───────────────────────────────────────────────
 // 表达式引擎替换为 pub.dev/packages/jsonlogic (2.0.2)
 // 自定义扩展操作符通过 jl.add() 注册
@@ -566,6 +566,31 @@ class JsonInterpreter extends ChangeNotifier {
 
   void loadConfig(Map<String, dynamic> config) {
     _config = config;
+
+    // DSL 版本兼容闸（见 docs/planning/version-management.md §3.7）：
+    // 客户端支持 DSL kSupportedDsl；App 声明的 dsl MAJOR 高于支持 → 需更新客户端，硬拒；
+    // MAJOR 相同、MINOR 超前 → 仅告警（新增控件/内置在旧端按未知键忽略、优雅降级）。
+    const kSupportedDsl = '3.3';
+    final declaredDsl = config['dsl']?.toString().trim() ?? '';
+    if (declaredDsl.isNotEmpty) {
+      final appParts = declaredDsl.split('.');
+      final supParts = kSupportedDsl.split('.');
+      final appMajor = int.tryParse(appParts.first) ?? -1;
+      final supMajor = int.tryParse(supParts.first) ?? 0;
+      if (appMajor > supMajor) {
+        throw StateError(
+          '此 App 需要更新版本的客户端（dsl $declaredDsl > 支持 $kSupportedDsl）。请升级客户端后重试。',
+        );
+      }
+      if (appMajor == supMajor) {
+        final appMinor = int.tryParse(appParts.length > 1 ? appParts[1] : '0') ?? 0;
+        final supMinor = int.tryParse(supParts.length > 1 ? supParts[1] : '0') ?? 0;
+        if (appMinor > supMinor) {
+          // ignore: avoid_print
+          print('[dsl] App dsl $declaredDsl 的 MINOR 高于客户端支持 $kSupportedDsl；尝试渲染（未知键将被忽略）');
+        }
+      }
+    }
 
     // 提取 appid，用于 Drift 数据库隔离
     _appId =

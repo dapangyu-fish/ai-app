@@ -131,9 +131,12 @@ class AppConfig {
   /// 应用名称
   static const String appName = 'AI App';
 
-  /// 应用版本（要跟 pubspec.yaml 的 version 字段保持一致 —— 包括 +N build
-  /// number。改 pubspec 时记得改这里。主页那个 v 标签读的就是这个常量。）
-  static const String appVersion = '1.1.0+18';
+  /// 应用版本。单一真相源是 pubspec.yaml 的 `version:` 字段：走 scripts/flutter.sh
+  /// 构建时会以 `--dart-define=APP_VERSION=<pubspec version>` 注入；此处常量仅作裸
+  /// `flutter build` / IDE 构建的兜底默认（请与 pubspec 保持一致）。主页底部那个 v
+  /// 标签读的就是它。（与平台 VERSION=1.2.x 是两条独立线，互不影响。）
+  static const String appVersion =
+      String.fromEnvironment('APP_VERSION', defaultValue: '1.2.0+1');
 
   /// 构建时注入的 Git commit。默认空字符串，避免把具体 commit 写死进代码。
   static const String gitCommit = String.fromEnvironment('APP_GIT_COMMIT');

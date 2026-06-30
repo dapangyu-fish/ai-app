@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11-slim@sha256:506f2951c04925a2a98fc0604e0e0a3ffd2788cc4aed0eb77c3517c98ac651c0
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
@@ -10,9 +10,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir \
-        "flask==3.0.3" \
-        "requests>=2.32.0" \
-        "pydantic>=2.7.0" \
-        "python-dateutil>=2.9.0" \
-        "psycopg2-binary>=2.9.9"
+# 锁定安装（uv 生成 + hash 强校验）；改依赖见 requirements/faas-runtime-base.txt 注释。
+COPY deploy/production/requirements/faas-runtime-base.lock /tmp/req.lock
+RUN pip install --no-cache-dir --require-hashes -r /tmp/req.lock

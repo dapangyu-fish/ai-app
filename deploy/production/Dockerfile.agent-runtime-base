@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM ubuntu:24.04@sha256:023f8a753c22258c9fe2d0005a7d28258038da7d620e9f93e9ad78aa266f9f11
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
@@ -52,7 +52,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         fonts-liberation \
         fonts-noto-cjk \
         fonts-noto-color-emoji \
-    && npm install -g @anthropic-ai/claude-code @openai/codex@0.136.0 opencode-ai \
+    && npm install -g @anthropic-ai/claude-code@2.1.195 @openai/codex@0.136.0 opencode-ai@1.17.11 \
     && ln -sf "$(command -v claude)" /usr/local/bin/claude \
     && ln -sf "$(command -v codex)" /usr/local/bin/codex \
     && ln -sf "$(command -v opencode)" /usr/local/bin/opencode \
@@ -92,5 +92,6 @@ ENV PATH=/opt/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/
 
 WORKDIR /app
 
-COPY backend/requirements.txt /tmp/requirements.txt
-RUN /opt/venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
+# 锁定安装：见 Dockerfile.backend-base 的 requirements.lock 说明。
+COPY backend/requirements.lock /tmp/requirements.lock
+RUN /opt/venv/bin/pip install --no-cache-dir --require-hashes -r /tmp/requirements.lock

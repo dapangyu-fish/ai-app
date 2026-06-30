@@ -1,0 +1,62 @@
+name: images-app
+
+# 构建并推送 4 个 app 镜像到 Docker Hub。
+# 触发：打 v* tag（发版）或手动 dispatch。base 镜像见 images-base.yml（仅手动）。
+# 凭据：DOCKERHUB_USERNAME（variable）+ DOCKERHUB_TOKEN（secret）。
+#   ⚠️ 若这两个挂在某个命名 Environment 下（而非 repo 级），给下面的 job 加一行
+#      `environment: <你的环境名>`，否则读不到。详见 docs/planning/version-management.md §3.9。
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: DOCKERHUB   # 凭据挂在名为 DOCKERHUB 的 Environment（secret DOCKERHUB_TOKEN + variable DOCKERHUB_USERNAME）
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: backend
+            dockerfile: deploy/production/Dockerfile.backend
+          - image: agent-node
+            dockerfile: deploy/production/Dockerfile.agent-node
+          - image: agent-runtime
+            dockerfile: deploy/production/Dockerfile.agent-runtime
+          - image: faas-runtime
+            dockerfile: deploy/production/Dockerfile.faas-runtime
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version + sha
+        id: meta
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then VER="${GITHUB_REF_NAME#v}"; else VER="$(cat VERSION)"; fi
+          SHA="${GITHUB_SHA::7}"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+          echo "immutable=${VER}-${SHA}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & push ${{ matrix.image }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          build-args: |
+            BASE_IMAGE=dapangyu/myapp-${{ matrix.image }}-base:edge
+            MYAPP_BUILD_COMMIT=${{ github.sha }}
+            MYAPP_BUILD_VERSION=${{ steps.meta.outputs.immutable }}
+            MYAPP_VERSION=${{ steps.meta.outputs.version }}
+          tags: |
+            dapangyu/myapp-${{ matrix.image }}:${{ steps.meta.outputs.immutable }}
+            dapangyu/myapp-${{ matrix.image }}:${{ steps.meta.outputs.version }}
+            dapangyu/myapp-${{ matrix.image }}:edge
