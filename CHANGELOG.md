@@ -6,6 +6,24 @@
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-06-30
+### Fixed
+- **FaaS 自测死循环**：agent 生成后端后用 `faas_invoke.sh` 自测，但它 auth-free、`invoke_service`
+  只认 `Authorization:Bearer`，函数里 `myapp_auth.current_user()` 恒为匿名 → 凡「写需登录」的
+  后端（论坛 `POST /zones` 等）匿名调用 401，而 playbook 要求验证写操作 → agent 拿到解不开的 401
+  死循环。修：`invoke_service` 无 Bearer 时用 agent-node 已转发的 run token（HMAC 不可伪造）的
+  owner 当调用者 → 写路由可自证（real client 走 JWT、Bearer 优先，不受影响）；`X-MyApp-Faas-Anon`
+  可显式走匿名自证拒绝；`faas_invoke.sh` 加 `FAAS_INVOKE_ANON`；playbook 讲清自测身份。
+- **FaaS run token 过期**：默认 TTL 1h 且不续签，长 run（常破 1h）中途 deploy/invoke 失效。改 6h。
+- **config-center `/admin` 500**：一行 `ai_generation_pipeline` 配置的 `updated_at` 被外部工具
+  写成 ISO 字符串（违反 INTEGER schema），`ts_local` 调 `time.localtime(str)` 崩。`ts_local` 改为
+  容错任意时间戳（int/数字串/ISO/None/越界都不抛）。线上坏数据已就地归一化，本版本部署防复发。
+
+### Changed（客户端，需重新构建客户端生效，不随后端部署）
+- 客户端落地页「版本号+commit」标签全端生效（iOS/Android/桌面，不只 Web）；版本号单一真相源
+  收敛到 `pubspec.yaml`，修正陈旧常量 `1.1.0+18`→`1.2.0+1`。
+- 悬浮球字幕打字机改为「自适应正文到达速度」，消除「冲一段→停一阵」突兵感；速度有界（~23–1250 字/秒）。
+
 ## [1.2.4] - 2026-06-30
 ### Fixed
 - **P2 CLI 钉真正生效**：发现 base 镜像常规 rebuild 命中 Docker 层缓存，导致钉死的
