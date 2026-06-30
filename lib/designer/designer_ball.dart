@@ -1813,12 +1813,16 @@ class _DesignerBallState extends State<DesignerBall>
           return;
         }
         if (event.statusMessage != null) {
+          final translated = _translateStatusKey(event.statusMessage!);
+          // 去重：与当前状态完全一致（反复的 ai_engine_started / 多次重连提示等）就不再
+          // setState 重建，省资源、避免无意义刷新。
+          if (_isGeneratingJson && translated == _generatingStatusMessage) {
+            return;
+          }
           setState(() {
             // 有工具动作时直接在浮层里显示，避免看起来像卡住
             _isGeneratingJson = true;
-            _generatingStatusMessage = _translateStatusKey(
-              event.statusMessage!,
-            );
+            _generatingStatusMessage = translated;
           });
           _scrollToBottom();
           return;
@@ -2851,6 +2855,9 @@ class _DesignerBallState extends State<DesignerBall>
     switch (statusKey) {
       case 'status.ai_engine_started':
         return T.current.toolStatusAiEngineStarted;
+      case 'status.reconnecting':
+        // 断线重连间隙的转圈文案，复用既有 i18n（11 语都有）
+        return T.current.chatStatusResumingLast;
       case 'tool.reading':
         return T.current.toolStatusReading;
       case 'tool.reading_file':

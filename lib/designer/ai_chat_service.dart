@@ -1125,6 +1125,11 @@ class AiChatService {
         return;
       }
 
+      // 流断了 → 立刻让 UI 转圈（"正在恢复上次对话…"），覆盖探活 + 退避 + 重连这段
+      // 静默间隙，避免界面长时间无任何动静、让人以为挂了。后续真死/续读完成/新内容
+      // 会自然覆盖这个状态。（statusMessage 走 _translateStatusKey → chatStatusResumingLast）
+      yield ChatEvent(statusMessage: 'status.reconnecting');
+
       // 流断了 → 在重连之前先探活
       // 关键反模式防御：/status 调用本身失败时绝不当成"worker 死了"，
       // 否则坏网络会被误判 → 弹重试按钮 → 用户点重试 → 又失败 → UX 崩
@@ -1751,11 +1756,24 @@ class AiChatService {
           return;
         }
 
-        // 真正业务事件
+        // 真正业务事件：日志去重 —— 连续相同的 SSE（重连时反复重发的
+        // status.ai_engine_started 等）不再逐条刷屏，只在内容变化时打一行，
+        // 把中间重复折叠成计数，省 console I/O 与噪音。
         if (!dataStr.contains('"content"') && !dataStr.contains('"thinking"')) {
-          debugPrint(
-            '[AI_CHAT] <<< SSE: ${dataStr.length > 200 ? "${dataStr.substring(0, 200)}..." : dataStr}',
-          );
+          if (dataStr == state.lastLoggedSse) {
+            state.suppressedSseLogs++;
+          } else {
+            if (state.suppressedSseLogs > 0) {
+              debugPrint(
+                '[AI_CHAT] <<< SSE: (上一条 ×${state.suppressedSseLogs + 1} 重复已折叠)',
+              );
+              state.suppressedSseLogs = 0;
+            }
+            debugPrint(
+              '[AI_CHAT] <<< SSE: ${dataStr.length > 200 ? "${dataStr.substring(0, 200)}..." : dataStr}',
+            );
+            state.lastLoggedSse = dataStr;
+          }
         }
 
         try {
@@ -2301,6 +2319,10 @@ class _StreamState {
   String accumulated = '';
   String accumulatedThinking = '';
   _StreamOutcome outcome = _StreamOutcome.retry;
+  // SSE 日志去重：连续相同的事件（重连时后端反复重发的 status.ai_engine_started 等）
+  // 不逐条刷屏，折叠成计数。跨重连保持（state 在 _streamWithReconnect 内只建一次）。
+  String? lastLoggedSse;
+  int suppressedSseLogs = 0;
 }
 
 class _StartResult {
