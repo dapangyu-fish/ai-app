@@ -1445,6 +1445,12 @@ class _DesignerBallState extends State<DesignerBall>
       'title': 'Flappy Bird',
       'prompt': '做一个 Flappy Bird 点击飞行小游戏。',
     },
+    {
+      'uuid': '00000000-0000-0000-0000-000000000023',
+      'title': '广场社区 · 全栈论坛（板块 / 楼中楼 / 好友私信）',
+      'prompt':
+          '做一个类似贴吧的全栈论坛 App：板块分区、发主题帖、楼中楼盖楼回帖、用户昵称主页、加好友、好友间私信，要有真实后端能保存数据。',
+    },
   ];
 
   void _showDemoPromptList() {
