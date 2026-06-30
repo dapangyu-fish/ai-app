@@ -6,6 +6,14 @@
 
 ## [Unreleased]
 
+## [1.2.6] - 2026-06-30
+### Added
+- **「广场社区」全栈论坛 demo**（免登录回放 UUID `…0023` → base `community_forum_0023`）：把一次
+  真实成功的论坛 FaaS 生成（session e9535d98，验证了 invoke 鉴权修复）做成录制回放 + 单独部署
+  公开 FaaS 服务组 `demo-forum`（demo 账号持有、`access_policy=public`、15 路由 + Postgres）。
+  未登录用户回放后可真创建板块/发帖/楼中楼/加好友私信；app.json `global.svc` 收口到 `demo-forum`。
+  `forum_0001` 占位保留不动。
+
 ## [1.2.5] - 2026-06-30
 ### Fixed
 - **FaaS 自测死循环**：agent 生成后端后用 `faas_invoke.sh` 自测，但它 auth-free、`invoke_service`
