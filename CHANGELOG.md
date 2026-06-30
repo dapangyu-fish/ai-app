@@ -6,6 +6,15 @@
 
 ## [Unreleased]
 
+## [1.2.10] - 2026-06-30
+### Changed
+- **论坛 demo 录制改用 agent-node 完整 log 重建**：`community_forum_0023` 此前从 Redis 业务事件流
+  做素材（被后端粗粒度化/丢弃后只剩 30 事件，漏掉大量步骤）；改为从 agent-node 原始 log
+  （`/mnt/myapp/agent-node/logs/dc98212….jsonl`）重建 → **128 事件**（42 思考 + 25 叙述 +
+  56 工具动作），完整还原真实生成全过程（读 playbook → 建 FaaS 后端 schema/app.py → 部署
+  demo-forum → 自测 owner/public/越权/楼中楼/anon → 建前端 → 修 Python 语法/多余 `},` →
+  校验 → 视觉复检 → 上传）。48× 429 限流是透明 HTTP 重试（仅在 `proxy_response`，已剔除）。
+
 ## [1.2.9] - 2026-06-30
 ### Fixed
 - **更换头像 404「Bucket not found」**：`upload_avatar` 写 Supabase Storage 的 `avatars` 桶，
