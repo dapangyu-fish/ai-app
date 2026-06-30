@@ -6,6 +6,14 @@
 
 ## [Unreleased]
 
+## [1.2.8] - 2026-06-30
+### Changed
+- **demo 选择列表改为服务端下发**：把客户端写死的 demo 目录搬到后端做单一真相源
+  （`demo_replay.DEMO_PROMPTS` + `GET /api/ai/demo/list`），客户端 `_demoPrompts` 改为
+  `AiChatService.fetchDemoList()` 拉取 + 缓存 + 极小兜底（FutureBuilder 渲染）。以后加一个 demo
+  只改后端（`DEMO_PROMPTS` + `DEMO_SESSIONS` + 录制文件），**不用客户端发版**。客户端从硬编码改
+  拉取是一次性改动，需重建客户端一次。
+
 ## [1.2.7] - 2026-06-30
 ### Changed
 - **论坛 demo 录制改为全量合并**：`community_forum_0023`（…0023）录制从 15 事件精简子集改为
