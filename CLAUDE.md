@@ -46,6 +46,22 @@ myapp-ctl setup --host <public-host> --data-root /mnt/myapp
 myapp-ctl deploy --build
 ```
 
+构建客户端时若想让 App 落地页底部正确显示「版本号 + 编译 commit」（所有端通用，不只
+Web），走 `scripts/flutter.sh` 包装器代替裸 `flutter`——它给任意 `build`/`run` 注入
+`--dart-define=APP_VERSION=<pubspec version>` + `--dart-define=APP_GIT_COMMIT=<短sha>`
+（Web 还会预备 OpenIM 资源）：
+
+```bash
+./scripts/flutter.sh build apk --release      # Android（带版本号+commit）
+./scripts/flutter.sh build ios --release      # iOS
+./scripts/flutter.sh build web --release      # Web（外加 OpenIM 资源）
+```
+
+显示代码本就是同一份 `lib/main.dart`（版本号常驻、commit 仅在 `APP_GIT_COMMIT` 非空时
+显示）；版本号单一真相源是 `pubspec.yaml` 的 `version:`，`AppConfig.appVersion` 常量
+仅作兜底（请与 pubspec 一致）。裸 `flutter build` / IDE（Xcode/Android Studio）不经
+包装器，需自行加这两个 `--dart-define`，否则只显示兜底版本号、commit 行留空。
+
 ## Architecture
 
 ### Data Flow
