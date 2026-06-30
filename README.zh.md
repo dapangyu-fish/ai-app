@@ -1,6 +1,6 @@
 # MyApp
 
-**中文** · [English](README.md) · [Deutsch](README.de.md) · [Español](README.es.md)
+**中文** · [English](README.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md) · [Português](README.pt.md) · [Català](README.ca.md) · [हिन्दी](README.hi.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [Italiano](README.it.md)
 
 > **AI 描述 → 全栈应用（UI + 后端 + 数据库）→ 即刻运行在用户手机上。无需构建步骤，无需应用商店审核。**
 >

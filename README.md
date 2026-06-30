@@ -1,6 +1,6 @@
 # MyApp
 
-[中文](README.zh.md) · **English** · [Deutsch](README.de.md) · [Español](README.es.md)
+[中文](README.zh.md) · **English** · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md) · [Português](README.pt.md) · [Català](README.ca.md) · [हिन्दी](README.hi.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [Italiano](README.it.md)
 
 > **AI describe → full-stack app (UI + backend + database) → instantly running on user's phone. No build step, no app-store review.**
 >

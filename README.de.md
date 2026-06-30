@@ -1,6 +1,6 @@
 # MyApp
 
-[中文](README.zh.md) · [English](README.md) · **Deutsch** · [Español](README.es.md)
+[中文](README.zh.md) · [English](README.md) · **Deutsch** · [Español](README.es.md) · [Français](README.fr.md) · [Português](README.pt.md) · [Català](README.ca.md) · [हिन्दी](README.hi.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [Italiano](README.it.md)
 
 > **KI beschreibt → Full-Stack-App (UI + Backend + Datenbank) → läuft sofort auf dem Handy des Nutzers. Kein Build-Schritt, keine App-Store-Prüfung.**
 >

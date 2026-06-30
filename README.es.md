@@ -1,6 +1,6 @@
 # MyApp
 
-[中文](README.zh.md) · [English](README.md) · [Deutsch](README.de.md) · **Español**
+[中文](README.zh.md) · [English](README.md) · [Deutsch](README.de.md) · **Español** · [Français](README.fr.md) · [Português](README.pt.md) · [Català](README.ca.md) · [हिन्दी](README.hi.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [Italiano](README.it.md)
 
 > **La IA describe → app full-stack (UI + backend + base de datos) → ejecutándose al instante en el teléfono del usuario. Sin paso de compilación, sin revisión de tienda de aplicaciones.**
 >
