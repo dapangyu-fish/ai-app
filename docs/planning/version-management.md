@@ -313,3 +313,53 @@ backend **真构建**于 `claude.dapangyu.work`（`git worktree --detach origin/
 
 ### 结论
 两轮发布-部署闭环（`git tag → GHA(env=DOCKERHUB) → Docker Hub → myapp-ctl deploy --image-version → 77`）**全自动跑通、数据/配置全保留、零 error、可重复**；新功能（DSL gate / schema 迁移 runner + 自动迁移）均验证可用。**未发现需修复的问题**，77 现跑 `1.2.2-ff1cd41`。唯一未经此环测的是 P2 base 镜像重建（需 `images-base.yml` 手动 dispatch，本环境无 `gh` 触发不了；base 改动当前 dormant，见 §9）。
+
+---
+
+## 11. 综合评估（feat/version-management 改造 · 2026-06-30）
+
+> 对本分支改造做了一次对照真实代码 + 文档 + 77 现网状态的多维度评估（完成度 / 风险 / 全局影响 / 漏评），逐条对抗式核实（24 条确认），并对标业界 rollout 最佳实践。**总评：P1 真实落地且闭环验证（可信）；P2/P3/P4 代码就位但有几处"代码完成≠生效/≠达成设计目标"的落差，以及对"非-77 主机"的真实雷。** 下面按"先看这几条"排序。
+
+### 11.1 最该先处理的（高杠杆，已核实）
+
+1. **【漏评·中】P2 base 改动全程 dormant → 复现性"假绿"。** 4 个 `Dockerfile.*-base` 钉了 `FROM python:3.11-slim@sha256…` + `--require-hashes` + CLI 版本，但 **app 镜像 build 时 `BASE_IMAGE=…-base:edge`（移动 tag），而 `:edge` base 从未经 `images-base.yml` 重建**（仅 workflow_dispatch、无 gh 触发不了）。即：lock/digest/CLI 钉死的是一个**app 构建永不拉取**的镜像。**P2"复现性全覆盖"目前是 code-only、未经 build 验证**——文档措辞要从"全覆盖"收敛为"代码完成、base 未重建（dormant）"。**修复**：手动在构建机 `docker build` 4 个 base + push `:edge`，再触发 `images-app.yml`；并把 `images-app.yml` 的 `BASE_IMAGE` 从 `:edge` 改钉 base 的不可变 `:{ver}-{sha}`（否则即便重建，app 仍 FROM 移动 tag）。
+
+2. **【overclaim·中】FaaS 运行时 digest 钉（§3.5-A 核心"永不 rebase"）根本没实现。** 实现只把 `FAAS_LOCAL_DOCKER_IMAGE`（一个 tag 字符串，默认还是移动 `:edge`）原样写进 `faas_deployments.runtime_image`，**从未 `docker inspect` 解析 `RepoDigests` 得到 `image@sha256`**，recreate/冷启路径也不读 `runtime_image` 去强制按 digest pull。§9 说"残留小"是**低估**：当前"不 rebase"只是 `container.start` 的副作用，**一旦 recreate 即破**。文档 §9 待办 5 应从"残留小"改为"A 核心未实现"。
+
+3. **【全局影响·中】deploy 后自动跑 `migrate.py`（裸跑、无 `--mark`）会在"已有 schema 但无 `schema_migrations` 表"的非-77 主机上崩。** 77 安全只因 §10 手动跑过 `--mark` 建基线（pending=0）。其它存量主机：`device_tokens` 早被旧手动 psql 流程迁过（`platform` 列已删），但从没建过 tracking 表 → 首次 backend 部署 `_run_platform_migrations` 裸跑 → `002` 回填语句引用不存在的列 → **崩**。**修复**：`_run_platform_migrations` 首次遇"无 tracking 表但平台表已存在"应先自动 `--mark` 建基线；至少把 `002` 回填改成 `to_regclass`/`information_schema` 守卫使重跑幂等。
+
+4. **【全局影响·中】`install_ctl.sh` 的 `deep_merge`（existing 覆盖 default）使存量主机保留 `:agent-control-plane` 镜像 pin；CI 停推该 tag 后这些主机 `deploy --pull` 拉不到镜像。** `ctl.json.images.*` 与 `services.json` 的 faas-runtime/agent-runtime 仍是旧 tag（existing 胜出、不更新）。**修复**：`install_ctl.sh` 对 images map 做一次性 legacy 迁移（仿 `core.py:_should_replace_env_value` 对 backend.env 已做的），把废弃 `:agent-control-plane` 覆盖为 `:edge`；停推前发迁移说明。
+
+### 11.2 迁移安全（中，对标业界 DB-migration rollout）
+
+5. **`migrate.py` 记 `checksum` 列却从不校验** → 已应用迁移文件被改写会静默漂移、永不报警（checksum 是 write-only 死数据）。**应**：加载期回读 checksum 比对，不一致则告警/非零退出。
+6. **`_run_platform_migrations` 非阻断（失败只告警）**会**静默放过坏迁移**，且不区分"0 pending 无操作"（正常）与"迁移执行失败"（致命）。业界共识：迁移是部署最高风险环，应**阻断式**（迁移成功才放新实例），且**迁移须对在跑的旧代码向后兼容**（expand/contract）、**迁移前备份 + 演练过回滚**。当前无 down/无备份/无白名单、以 jsonapp **库 owner**（注:非集群超级用户，爆破半径限本库）跑任意 `migrations/[0-9]*.sql` DDL。**建议**：失败升级为阻断;迁移目录加连续编号白名单;文档化"平台迁移 additive-only"。
+
+### 11.3 单一真相源未达成 + 文档不自洽（低，但影响可信度）
+
+7. **【overclaim·低】"VERSION 单一真相源"未达成**：`VERSION=1.2.2` 与 `pubspec 1.2.0+1` / `registry /health 1.0.0`（死值）/ `_index 1.0` / `dsl '3.3'`（**5+ 处硬编码**：app.py:112、json_app_builder.py:983、validate_json_app.py:444、interpreter.dart:573…）彼此漂移。且 §3.1"pubspec 从 VERSION 派生" vs §8.4"pubspec 维持 1.2.0+1" **自相矛盾**。**建议**：release 脚本校验 pubspec 主版本==VERSION（或文档化解耦理由、停止声称派生）;`registry /health.version` 改读 `MYAPP_VERSION`;后端三处 `3.3` 收敛到 `SUPPORTED_DSL_VERSIONS` 单一常量。
+8. **【overclaim·低】P4 客户端闸"复用 semver.dart"不实**：实际是 `interpreter.dart:576-587` 内联 `split('.')+int.tryParse` 手写解析，与 `semver.dart` 零关联。要么真改用 `semver.dart`，要么删文档措辞。
+9. **文档陈旧版本号散布多处**（§line3 `1.2.0-5146e38`、§8 顶部、§8.3、§9 Round1 `1.2.1-1bf5e4a`）落后于现网 `1.2.2-ff1cd41`，需统一。
+
+### 11.4 其余已核实项（低 / 已知边界）
+
+- **本地 `deploy --build` 不传 `MYAPP_VERSION` → 本地构建镜像 `/version` 永远 `unknown`**（仅 GHA 路径有溯源）;`build_production_images.sh` 默认 `TAG=agent-control-plane` 未改。**建议** `core.py:_deploy_images` 的 build cmd 加 `--build-arg MYAPP_VERSION=$(cat VERSION)`。
+- **多架构未评估**：产物全 amd64;base FROM 钉的是**平台 digest 非 manifest-list**（§3.2 自己 cite 的最佳实践没采纳）;`agent-runtime-base` 的 chrome apt 源写死 `arch=amd64`（arm64 直接构建失败）。文档应显式记为已知边界。
+- **lock 纪律漏 Node 上下文**：`website/`(Vite)、`web_openim_bridge/`(npm) 的 `package-lock.json` 未进任何 CI `npm ci` 闸;`pubspec` 的 `--enforce-lockfile`（§3.4 计划）实际**未接进 CI**——Dart"正例"也只是 lock 存在、未强制。
+- **DSL 闸不在 Registry `/resolve` 运行期**：存量 App 与客户端兼容只在"下载整个 JSON 后进 loadConfig"才暴露;`/resolve` 响应不带包的 `dsl`。客户端对 `dsl` 为空**完全静默放行**（无 warn）。
+- **`:edge` 仍被 CI 每次 push 覆盖**（移动 tag）;`services.json` 对 faas-runtime/agent-runtime 硬编码 `:edge`（被 IMAGE_TARGETS 成员资格遮蔽，潜在陷阱）。生产靠纪律不钉 `:edge`，建议变成机器闸（检测到部署仍指 `:edge` 则 warn/要 `--allow-edge`）。
+
+### 11.5 业界最佳实践对照（cited，印证上面）
+
+- **按 digest 部署、非 tag**：tag（含 semver、`:edge`）默认可变，存在 TOCTOU（扫描通过→实际拉取之间 tag 被重推）。我们 `--image-version` 钉 `:{ver}-{sha}` 不可变 tag 已大幅缓解;更强可叠加 `@sha256` digest 钉 + Docker Hub 逐仓库 immutable-tag(`v*`) 配置。([Sysdig TOCTOU](https://www.sysdig.com/blog/toctou-tag-mutability) · [Docker immutable tags](https://docs.docker.com/docker-hub/repos/manage/hub-images/immutable-tags/))
+- **hash-lock 与 base 必须原子同步**：base 的 Python 小版本/平台一变，lock 的 wheel hash 即失配、`pip install` 整批 fail（全有或全无）。印证 11.1-#1 的 dormant 风险 + base digest 钉的必要。([uv platform drift](https://github.com/astral-sh/uv/issues/8746))
+- **自动 DB 迁移**：业界共识是**迁移先于新实例（阻断 Job/init-container 排序）+ 向后兼容 expand/contract + 迁移前备份 + 演练回滚**;应用启动时自动迁移的硬伤是多副本并发迁移 + 应用需高权限 DB 凭据。印证 11.2。([andrewlock K8s migrations](https://andrewlock.net/deploying-asp-net-core-applications-to-kubernetes-part-7-running-database-migrations/))
+
+### 11.6 总评
+
+- **P1**：实打实落地、两轮发布-部署闭环验证（含回滚 + 数据保留）——**可信、可上生产路径**。
+- **P2**：代码完整且 lock 已 python:3.11-slim 装验，但 **base 未重建 → 当前未生效（dormant）**，需一次 base 重建才"真绿"。
+- **P3**：`_index` 闸 + `schema_migrations` runner 真实可用（77 已基线 + apply 路径验证过），但**自动迁移的安全护栏不足**（非阻断/无 checksum 校验/非-77 主机首跑会崩）+ **FaaS digest 核心未实现**。
+- **P4**：双端 gate 真实接入、孤儿判等已清，**功能 done**;瑕疵是**多处 `3.3` 硬编码 + "复用 semver.dart" overclaim**。
+- **跨切**：单一真相源未达成、文档多处陈旧/自相矛盾、非-77 主机迁移与镜像 pin 两个真实雷。
+- **优先级**：先补 11.1 的 4 条（dormant base 重建 + FaaS digest 真实现 + 迁移首跑基线守卫 + install_ctl legacy 迁移）→ 再 11.2 迁移护栏 → 11.3 真相源收敛/文档修正。本评估**不阻断 P1 合 main**，但上述项应在"声称 P2-P4 完成/上生产"前补齐。
