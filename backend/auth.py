@@ -33,6 +33,30 @@ def _service_headers():
     }
 
 
+def ensure_avatar_bucket():
+    """确保 Supabase Storage 的 `avatars` 桶存在（public-read，头像走公共 URL）。幂等。
+
+    头像上传写 `storage/v1/object/avatars/...`、读 `.../object/public/avatars/...`，
+    但这个桶此前没有任何地方创建 → 首次上传报 404「Bucket not found」。本函数在
+    **部署期**（myapp-ctl deploy）与**上传遇 404 时**都会调用，二者均幂等。返回 True=已就绪。"""
+    try:
+        resp = requests.post(
+            f"{SUPABASE_URL}/storage/v1/bucket",
+            headers=_service_headers(),
+            json={"id": "avatars", "name": "avatars", "public": True},
+            timeout=10,
+        )
+    except Exception as e:  # noqa: BLE001 — 网络异常不应让调用方崩
+        print(f"[avatar] ensure bucket 异常: {e}")
+        return False
+    body = (resp.text or "").lower()
+    # 200/201=新建；已存在时 Supabase 返回含 "already exists"/"Duplicate"（status 多为 400/409）
+    if resp.status_code in (200, 201) or "exist" in body or "duplicate" in body:
+        return True
+    print(f"[avatar] ensure bucket 失败 {resp.status_code}: {resp.text[:200]}")
+    return False
+
+
 def _get_user_role(user):
     """从 app_metadata 获取角色，默认 user"""
     return user.get("app_metadata", {}).get("role", "user")
@@ -418,13 +442,21 @@ def upload_avatar():
 
     user_id = request.supabase_user.get("id", "unknown")
     file_name = f"{user_id}.png"
-    upload_resp = requests.post(
-        f"{SUPABASE_URL}/storage/v1/object/avatars/{file_name}",
-        headers={"apikey": SUPABASE_SERVICE_KEY,
-                 "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
-                 "Content-Type": "image/png", "x-upsert": "true"},
-        data=image_bytes, timeout=15,
-    )
+
+    def _do_upload():
+        return requests.post(
+            f"{SUPABASE_URL}/storage/v1/object/avatars/{file_name}",
+            headers={"apikey": SUPABASE_SERVICE_KEY,
+                     "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                     "Content-Type": "image/png", "x-upsert": "true"},
+            data=image_bytes, timeout=15,
+        )
+
+    upload_resp = _do_upload()
+    if upload_resp.status_code == 404:
+        # avatars 桶不存在（部署期未建或被删）→ 现场建桶并重试，自愈
+        ensure_avatar_bucket()
+        upload_resp = _do_upload()
     if upload_resp.status_code >= 400:
         return jsonify({"error": f"存储上传失败: {upload_resp.text}"}), 502
 

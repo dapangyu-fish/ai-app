@@ -662,6 +662,30 @@ def _ensure_demo_bucket_assets(*, dry_run: bool) -> int:
     return 0  # 永不阻断部署
 
 
+def _ensure_avatar_bucket(*, dry_run: bool) -> int:
+    """集群初始化的一部分：部署后确保 Supabase Storage 的 `avatars` 桶就绪。
+
+    头像上传写 `storage/v1/object/avatars/...`，但该桶此前无任何地方创建 → 首次上传报
+    404「Bucket not found」。在 myapp-backend 容器内执行 auth.ensure_avatar_bucket()
+    （复用其 Supabase service-key）。失败不阻断部署（上传路径也会在 404 时自愈建桶）。"""
+    cmd = [
+        "docker", "exec", "-w", "/app/backend", "myapp-backend",
+        "python3", "-c",
+        "import auth; print('avatar bucket:', auth.ensure_avatar_bucket())",
+    ]
+    print("+ " + " ".join(cmd))
+    if dry_run:
+        return 0
+    info = _docker_inspect("myapp-backend")
+    if not info or info.get("State", {}).get("Status") != "running":
+        print("myapp-backend 未运行；跳过 avatar 桶初始化（下次部署会补）", file=sys.stderr)
+        return 0  # 非阻断
+    result = _run(cmd, capture=False)
+    if result.returncode != 0:
+        print("avatar 桶初始化失败（非阻断，上传时会自愈重试）", file=sys.stderr)
+    return 0  # 永不阻断部署
+
+
 def _compose_specs_for_names(names: list[str]) -> list[dict]:
     services = _services()
     seen: set[tuple[str, tuple[str, ...]]] = set()
@@ -878,6 +902,8 @@ def cmd_deploy(args) -> int:
     if _deploy_should_ensure_demo_assets(names):
         # 非阻断：确保 demo 对象存储桶就绪并固定上传 demo app.json（集群初始化的一部分）
         _ensure_demo_bucket_assets(dry_run=args.dry_run)
+        # 非阻断：确保 Supabase Storage avatars 桶就绪（头像上传依赖，否则 404 Bucket not found）
+        _ensure_avatar_bucket(dry_run=args.dry_run)
     if not args.dry_run and not args.no_test_user and _deploy_can_seed_test_user(names):
         rc = _maybe_seed_test_user(args)
         if rc != 0:
@@ -1477,6 +1503,7 @@ __all__ = [
     '_run_supabase_auth_migrations',
     '_deploy_should_ensure_demo_assets',
     '_ensure_demo_bucket_assets',
+    '_ensure_avatar_bucket',
     '_compose_specs_for_names',
     '_docker_container_names',
     'cmd_uninstall',
