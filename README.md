@@ -1,5 +1,7 @@
 # MyApp
 
+[中文](README.zh.md) · **English** · [Deutsch](README.de.md) · [Español](README.es.md)
+
 > **AI describe → full-stack app (UI + backend + database) → instantly running on user's phone. No build step, no app-store review.**
 >
 > A Flutter runtime that interprets JSON-DSL into native UI + business logic. Users tell AI what they want; AI emits the JSON front-end **and, when the app needs one, a real Python/Flask backend with its own isolated Postgres database** — then it renders and runs instantly inside a precompiled capability set. Other AI app builders hand you front-end code to wire up and deploy yourself; MyApp ships the whole stack, already running.
