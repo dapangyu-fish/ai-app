@@ -47,6 +47,10 @@ jobs:
           context: .
           file: ${{ matrix.dockerfile }}
           push: true
+          # base 不常建：强制 no-cache，保证钉死的 CLI 版本（claude-code/opencode）与
+          # apt/lock 层真正重装、不被陈旧层缓存掩盖（见 §11.7：手动 rebuild 曾因层缓存
+          # 命中而装回旧 CLI 版本）。
+          no-cache: true
           tags: |
             dapangyu/myapp-${{ matrix.image }}:${{ steps.meta.outputs.immutable }}
             dapangyu/myapp-${{ matrix.image }}:edge
