@@ -799,6 +799,14 @@ def _deploy_images(
                     return rc
                 base_done.add(target)
             _, dockerfile = IMAGE_TARGETS[target]
+            # 本地 deploy --build 也注入平台版本（§11.4）：否则本地构建镜像 /version 永远 unknown。
+            app_version = (os.environ.get("MYAPP_VERSION") or "").strip()
+            if not app_version:
+                try:
+                    app_version = (source_dir / "VERSION").read_text(encoding="utf-8").strip()
+                except OSError:
+                    app_version = "unknown"
+            app_version = app_version[:64] or "unknown"
             cmd = [
                 "docker",
                 "build",
@@ -808,6 +816,8 @@ def _deploy_images(
                 f"MYAPP_BUILD_COMMIT={build_commit}",
                 "--build-arg",
                 f"MYAPP_BUILD_VERSION={build_version}",
+                "--build-arg",
+                f"MYAPP_VERSION={app_version}",
                 "-f",
                 str(source_dir / dockerfile),
                 "-t",

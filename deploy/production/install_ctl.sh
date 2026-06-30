@@ -65,6 +65,15 @@ def deep_merge(default, existing):
 default_ctl = load_json(default_ctl_path, {})
 existing_ctl = load_json(ctl_path, {})
 merged_ctl = deep_merge(default_ctl, existing_ctl)
+# 一次性 legacy 镜像 tag 迁移（见 docs/planning/version-management.md §11.1-#4）：
+# deep_merge 让存量主机的 images.* 保留旧 :agent-control-plane（existing 胜出）；CI 停推
+# 该 tag 后这些主机 `deploy --pull` 会拉不到镜像。把废弃 tag 平移到 :edge 默认频道。
+_legacy_suffix = ":agent-control-plane"
+_merged_images = merged_ctl.get("images")
+if isinstance(_merged_images, dict):
+    for _img_key, _img_val in list(_merged_images.items()):
+        if isinstance(_img_val, str) and _img_val.endswith(_legacy_suffix):
+            _merged_images[_img_key] = _img_val[: -len(_legacy_suffix)] + ":edge"
 if existing_language in {"zh", "en", "de", "es"}:
     merged_ctl["language"] = existing_language
 paths = merged_ctl.setdefault("paths", {})
