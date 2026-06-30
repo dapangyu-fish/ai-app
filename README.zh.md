@@ -2,15 +2,41 @@
 
 **中文** · [English](README.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md) · [Português](README.pt.md) · [Català](README.ca.md) · [हिन्दी](README.hi.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [Italiano](README.it.md)
 
-> **AI 描述 → 全栈应用（UI + 后端 + 数据库）→ 即刻运行在用户手机上。无需构建步骤，无需应用商店审核。**
+<div align="center">
+
+### 别再 vibe-*coding*。直接交付 vibe-*app*。
+
+**一句话描述 → 一个全栈应用（UI + 真实后端 + 数据库）即刻运行在每一块屏幕上。**
+
+**无代码库。无构建。无部署。无应用商店。**
+
+</div>
+
+> 整个行业还在争论怎么用 AI *写代码*。我们直接跳过了代码。
 >
-> 一个将 JSON-DSL 解释为原生 UI + 业务逻辑的 Flutter 运行时。用户告诉 AI 他们想要什么；AI 生成 JSON 前端，**并在应用需要时，生成带有独立 Postgres 数据库的真实 Python/Flask 后端**——然后即刻在预编译的能力集内渲染并运行。其他 AI 应用构建工具交给你的是需要自己接线并部署的前端代码；MyApp 交付的是整套技术栈，且已经在运行。
+> Vibe coding——哪怕是最好的 AI 应用构建工具（Lovable、Bolt、v0、Replit）——交给你的仍然是一个需要自己接线、托管、发布的**代码库**。MyApp 交给你的是**正在运行的应用**：你描述想要什么，AI 产出一份 JSON-DSL 前端，**并在应用需要时**，产出一个带有独立 Postgres 数据库的真实 Python/Flask 后端——然后在预编译的跨平台运行时里即刻渲染并运行整套系统。*同一句话*既能生成一个**可玩的游戏**，也能生成一个**带有真实后端、支持登录、发帖和楼层回复的论坛**——*一句描述*就在 **iOS、Android、Web 和桌面**上运行起来。没有项目要打开，没有东西要编译，没有东西要部署。
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()
+[![DSL](https://img.shields.io/badge/JSON--DSL-v3.4-7c5cff)](JSON-DSL.md)
 
 > **平台状态**：✅ 生产可用（iOS/Android/Web） • ⚠️ 实验性（macOS，仅核心功能） • 🚧 未测试（Linux/Windows）
+
+---
+
+## Vibe *coding* vs. vibe *app*
+
+|  | Vibe coding / AI 应用构建工具 | **MyApp —— 一个 vibe app** |
+|---|---|---|
+| 你得到什么 | 一个**代码库**（React/Next + 一个后端） | 一个**正在运行的应用** |
+| 交付物 | 需要你托管、维护、照看的代码 | 一份 JSON 配置——**没有代码要维护** |
+| 发布步骤 | 构建 → 部署 →（应用商店审核） | **无。** 它已经在运行了。 |
+| 在哪运行 | 通常是一个 Web 应用 | **iOS · Android · Web · macOS · Linux · Windows**——一句描述 |
+| 后端 | "自己去接 Supabase" | **AI 生成的 Python/Flask + 独立 Postgres**，已为你部署 |
+| 覆盖范围 | 表单、仪表盘、CRUD | ……**还有实时聊天，还有可玩的游戏**（俄罗斯方块、2048、一个平台跳跃游戏），全部来自*同一个*运行时 |
+
+这不是一句我们兑现不了的口号。继续往下读——引擎的数字就在下面。
 
 ---
 
@@ -18,13 +44,13 @@
 
 一个仓库里包含三样东西：
 
-1. **一个 Flutter 服务端驱动 UI 引擎**（`lib/`）——在运行时将任意 JSON-DSL 配置渲染为真实的跨平台应用
-2. **一个全栈 AI 生成器**（`backend/`、`user_center/`、`config_center/`）——AI 生成 JSON 前端，**并在应用需要时生成匹配的 FaaS 后端 + 独立 Postgres 数据库**，构建于认证（Supabase）、IM（OpenIM）、推送（APNs + FCM）、AI 聊天代理、包注册表和用户管理之上
-3. **一个包生态系统**（`templates/`）——可以安装在运行时之上的示例 JSON-APP（IM、游戏、用户资料、计算器……）
+1. **一个 Flutter 服务端驱动 UI 引擎**（`lib/`）——在运行时将 JSON-DSL 配置解释为真实的、原生的、跨平台的应用。**91 种控件类型、100+ 内置函数、一个 28 运算符的表达式引擎，以及一整套 2D 游戏引擎**——全部预编译进客户端。
+2. **一个全栈 AI 生成器**（`backend/`、`user_center/`、`config_center/`）——AI 生成 JSON 前端，**并在应用需要时生成匹配的 FaaS 后端 + 独立 Postgres 数据库**，构建于认证（Supabase）、IM（OpenIM）、推送（APNs + FCM）、AI 聊天代理、包注册表和用户管理之上。
+3. **一个包生态系统**（`templates/`）——70+ 个示例 JSON-App 和可复用库（IM、游戏、用户资料、计算器、仪表盘……），你可以安装在运行时之上。
 
 **MyApp** 这个名字是有意为之的：每个用户都可以在共享运行时之上创建、安装和运营"我的应用"。
 
-旗舰用例：**用户打开应用 → 与 AI 对话（生成通常需要 10-20 分钟）→ AI 返回一份 JSON-DSL → 应用即刻加载并运行它**，在客户端已经编译好的能力范围内。
+旗舰用例：**用户打开应用 → 与 AI 对话 → AI 返回一份 JSON-DSL（如有需要，还有一个后端）→ 应用即刻加载并运行它**，运行在客户端已经编译好的能力范围内。无需构建，无需审核，无需等待应用商店。
 
 ---
 
@@ -68,12 +94,13 @@ MyApp 使用 Flutter 构建，支持多个平台，功能完整度各有不同�
 
 ## 为什么有意思？
 
-- **一步到位的全栈——这是差异化所在。** 大多数 AI 应用构建工具（v0、Lovable、Bolt 等）生成的是*前端*代码，你仍然需要自己将其接线到后端并部署。MyApp 生成前端**以及**一个真实的 Python/Flask FaaS 后端——每个都拥有独立的 Postgres 数据库、按应用划分的权限模型和按调用方划分的数据隔离——然后即刻运行整套系统。没有独立的后端项目，没有部署步骤，没有商店提交。
+- **一步到位的全栈——这正是差异化所在。** 大多数 AI 应用构建工具（v0、Lovable、Bolt 等）生成的是*前端*代码，你仍然需要自己将其接线到后端并部署。MyApp 生成前端**以及**一个真实的 Python/Flask FaaS 后端——每个都拥有独立的 Postgres 数据库、按应用划分的权限模型和按调用方划分的数据隔离——然后即刻运行整套系统。没有独立的后端项目，没有部署步骤，没有商店提交。
+- **没有代码产物。** 交付物是一份运行在预编译客户端里的 JSON 配置，而不是一个代码库。没有东西要托管，没有东西要维护，也不会在下一次依赖升级时崩掉。描述一下改动就能更新应用；它下次加载时就已经在所有地方生效了。
+- **真正的跨平台。** *同一份* JSON-DSL 可在 iOS、Android、Web（已生产验证）、macOS（实验性）、Linux 和 Windows 上渲染。大多数"AI 应用"工具给你的是一个 Web 应用；这个给你的是原生的、无处不在的应用，只需一句描述。
 - **服务端驱动** —— 通过固定的、预编译的运行时边界下发 UI 和行为数据。参见 [App Store 合规说明](docs/APP_STORE_COMPLIANCE.md)。
-- **AI 原生** —— DSL 设计得对 LLM 友好。内置的 AI 聊天通过三种可插拔的 agent 运行时（Claude Code、Codex、OpenCode）运行多个提供方（DeepSeek、MiniMax、带 GLM / Kimi 的 Volcengine 聚合器），并生成真正能渲染的应用——配有生成 playbook 和运行中的可视化自审环节，以保证产出可运行。
+- **AI 原生** —— DSL 设计得对 LLM 友好。内置的 AI 聊天通过三种可插拔的 agent 运行时（Claude Code、Codex、OpenCode）运行多个提供方（DeepSeek、MiniMax、带 GLM / Kimi 的 Volcengine 聚合器），并配有生成 playbook 和运行中的可视化自审环节，以保证产出可运行。
 - **开箱即用** —— 带推送的 IM、AI 代理、包注册表、命名空间、镜像、用户中心、环境切换——全部已接线在一起。不是"又一个把认证扔给你自己解决的低代码框架"。
 - **可自托管** —— `myapp-ctl deploy` 从一个主机级 CLI 管理后端技术栈、agent 运行时、注册表、配置中心和服务密钥。
-- **跨平台** —— 同一份 JSON-DSL 可在 iOS、Android、Web（生产验证）、macOS（实验性验证）、Linux、Windows 上渲染。核心功能跨所有平台可用；平台特定功能（IM、推送）在不支持的平台上优雅降级。
 
 ---
 
@@ -304,14 +331,14 @@ flowchart TB
 ## 功能特性
 
 ### 引擎
-- 30+ 控件（text / button / input / list / image / video / chart / map / webview / camera / qr / 聊天气泡 / …）
-- 带 15 个自定义运算符的 JsonLogic 表达式引擎
-- 30+ 内置函数（HTTP、JSON、字符串、数组、控制流、UI 反馈）
+- **91 种控件类型** —— text / button / input / list / container / image / video / chart / map / webview / camera / qr / tab_view / **一整套 Flame 2D 游戏栈**（游戏画布、摇杆、粒子/投影场景画布）/ 动画（animated_*、Rive）/ 高级手势（手势密码、滑动验证）/ sliver 级布局
+- **带 28 个自定义运算符的 JsonLogic 表达式引擎**（字符串 / 数组 / 类型 / 数学）
+- **100+ 内置 `@` 函数** —— HTTP（所有动词 + SSE）、一个真实的 DB 层（query/insert/update/delete + 键值 + create_table）、IM（好友 / 会话 / 历史 / 收件箱）、文件 I/O、生物识别认证、剪贴板、触感反馈、权限、图片选取、主题、i18n、导航、对话框、游戏控制
 - `@parallel` 用于并发步骤
 - 模板 `{{ path }}` 解析为原始类型（而非字符串化）
 - 从网络 / 磁盘 / 注册表热替换配置
-- Flame 2D 游戏引擎（精灵、物理、Tiled 地图）
 - 针对敏感能力（认证 token、资料）的按应用授权门控
+- **客户端 UI 已本地化为 11 种语言**（zh / en / de / es / fr / pt / ca / hi / ko / ja / it）
 
 ### 后端
 - **AI 生成的 FaaS 全栈** —— AI 为每个"服务组"（1 个函数服务 + 可选 Postgres DB）生成一个经过校验的 Python/Flask 后端，部署到自管理的 Docker FaaS 运行时（每个服务一个容器，缩容至零 + 冷唤醒）。按应用的 schema 隔离、不可伪造的组内假名身份、后端中介的按调用方数据访问（函数代码永远不持有数据库连接）、容器加固，以及一个可撤销的 3 档访问策略。
@@ -337,11 +364,11 @@ flowchart TB
 
 | 领域 | 状态 |
 |---|---|
-| 引擎（Dart） | 生产。6.5 万行代码。驱动着一个真实应用。客户端 UI 已本地化为 11 种语言。 |
+| 引擎（Dart） | 生产。6.4 万行代码，91 种控件，100+ 内置函数。驱动着一个真实应用。客户端 UI 已本地化为 11 种语言。 |
 | 后端（Python） | 生产。3.2 万行代码。运行着真实用户。 |
 | 测试 | 控件冒烟测试外加 JSON 回归套件（`templates/regression-test.json`）。非常欢迎增加覆盖的 PR。 |
 | 文档 | 中等（`JSON-DSL.md`、`deploy/production/README.md`、后端架构说明）。持续改进中。 |
-| API 稳定性 | DSL v3.3 —— 在 v4 之前可能有小的破坏性变更。后端 HTTP API 稳定。 |
+| API 稳定性 | DSL v3.4 —— 在 v4 之前可能有小的破坏性变更。后端 HTTP API 稳定。 |
 | 是否公开托管？ | 是（受合理使用约束，见服务条款） |
 
 ---
@@ -388,7 +415,7 @@ Apache License 2.0 —— 见 [LICENSE](LICENSE) 和 [NOTICE](NOTICE)。
 
 ## 路线图（按优先级排序）
 
-- [ ] 发布一个 60 秒的病毒式演示视频（AI → JSON 配置约 10-20 分钟 → 应用即刻运行）
+- [ ] 发布一个 60 秒的病毒式演示视频（AI → JSON 配置 → 应用即刻运行，无需构建/部署）
 - [ ] 公开托管的免费层
 - [ ] 带二维码的应用分享链接（通过深链接打开 AI 生成的应用）
 - [ ] 添加 CI（GitHub Actions：pub get、analyze、build APK）

@@ -239,7 +239,11 @@ select {
 
 .hero h1 span {
   display: block;
-  color: #ffffff;
+  background: linear-gradient(135deg, #f7c948, #46d7c8 54%, #61a8ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 
 .lead {
