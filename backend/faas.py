@@ -785,6 +785,19 @@ def invoke_service(service_id: str, route_path: str = ""):
     # per call). _uid is the verified caller (reused below for the pseudonym).
     _auth = request.headers.get("Authorization", "")
     _uid = _verify_caller_uid(_auth[7:]) if _auth.startswith("Bearer ") else None
+    # Agent in-run self-test: faas_invoke.sh is auth-free, but the agent-node forwards a
+    # backend-signed run token (X-MyApp-Faas-Run-Token, unforgeable — node lacks the
+    # secret) on the proxy path. Honor it as the OWNER's identity so the function's
+    # myapp_auth.current_user() resolves and the agent can self-verify auth-gated WRITE
+    # routes; otherwise every owner-scoped write → 401 and the run loops forever trying
+    # to "fix" a deploy that is actually fine. Only affects agent self-test invokes —
+    # real client invokes carry a consumer JWT (Bearer), never a run token — and a real
+    # Bearer always wins (checked first). Honor it only when the caller would otherwise
+    # be anonymous: an explicit anon self-test (X-MyApp-Faas-Anon) skips it on purpose.
+    if not _uid and request.headers.get("X-MyApp-Faas-Anon", "").strip().lower() not in ("1", "true", "yes"):
+        _rt = _verify_run_token(request.headers.get("X-MyApp-Faas-Run-Token", ""))
+        if _rt:
+            _uid = str(_rt.get("o") or "").strip() or None
     _deny = _access_denied_reason(service, _uid)
     if _deny:
         return _json_error(_deny, 403, code="FAAS_ACCESS_DENIED")

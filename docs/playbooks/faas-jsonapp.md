@@ -231,6 +231,11 @@ Postgres 库**，按 schema 隔离——只能读写自己的数据，碰不到�
 2. **失败** → 按 `error` 最小化修 bundle/目录 → 重跑第 1 步（≤5 次）。**绝不能编造 service_id。**
 3. **成功 → 自测**：`bash backend/faas_invoke.sh <真实service_id> <route> [METHOD] [json体]`
    逐条验证关键接口 200 且结构符合预期（至少一次 GET、一次写操作）。
+   - **自测身份（重要）**：默认**以 owner 身份**鉴权调用（agent-node 自动注入 run token，后端据此
+     注入 `myapp_auth.current_user()`），所以鉴权写路由（如建板块/发帖）返回 **200**，和登录用户一致。
+     **写路由自测拿到 401，是真有鉴权 bug**——别靠改代码绕过、别当部署失败死循环。
+   - 要验「未登录被正确拒绝」：`FAAS_INVOKE_ANON=1 bash backend/faas_invoke.sh <svc> <route> POST '{...}'`
+     → 期望 401/403。鉴权后端应**两个方向都自测过**（owner→200 / 匿名→401）。
 
 ---
 

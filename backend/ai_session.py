@@ -2936,7 +2936,13 @@ def _build_agent_node_payload(
             from faas import mint_run_token as _mint_run_token
         except ModuleNotFoundError:
             from backend.faas import mint_run_token as _mint_run_token
-        faas_run_token = _mint_run_token(user_id or "user", run_id)
+        # Long generations routinely run well over an hour (and a struggling run can
+        # loop for a few). Mint with a generous TTL so in-run FaaS deploy + the
+        # authenticated self-test don't silently break mid-run when the default 1h
+        # would have expired (→ run token invalid → invoke falls back to anonymous →
+        # write routes 401). Run-scoped + unforgeable + only the agent-node holds it,
+        # so a longer life is low-risk.
+        faas_run_token = _mint_run_token(user_id or "user", run_id, ttl=6 * 3600)
     except Exception:
         faas_run_token = ""
     return {
