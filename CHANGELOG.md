@@ -6,6 +6,15 @@
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-06-30
+### Changed
+- **§11 综合评估修复**：DSL 版本收敛到 `backend/dsl_contract.py` 单一真相源（消除多处 `'3.3'` 硬编码）；
+  registry `/health` 增 `platform_version`/`build_commit` 溯源；`migrate.py` 加自动基线（存量主机首跑安全）
+  + checksum 漂移校验；deploy 自动迁移改阻断（失败中止）；本地 `--build` 注入 `MYAPP_VERSION`；
+  `install_ctl.sh` 把存量 `:agent-control-plane` 镜像 pin 平移到 `:edge`。
+- **P2 base 镜像重建**：4 个 base 用 uv-lock/`--require-hashes`/CLI 钉/digest 钉重建并推送，P2 复现性由 dormant 转为生效。
+- **FaaS**：部署记录运行时 `image@sha256`（溯源）；冷唤醒策略定为 X-G3（用最新运行时镜像）。
+
 ## [1.2.2] - 2026-06-30
 ### Added
 - `myapp-ctl deploy` 部署后自动应用平台 schema 迁移（`backend/migrate.py`，非阻断）——
