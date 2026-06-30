@@ -6,6 +6,15 @@
 
 ## [Unreleased]
 
+## [1.2.9] - 2026-06-30
+### Fixed
+- **更换头像 404「Bucket not found」**：`upload_avatar` 写 Supabase Storage 的 `avatars` 桶，
+  但该桶此前无任何地方创建（其余 MinIO 桶都在后端代码里 `bucket_exists→make_bucket` 自建，
+  唯独这个 Supabase Storage 桶遗漏）。修：`auth.ensure_avatar_bucket()` 幂等建 public 桶；
+  `upload_avatar` 遇 404 现场建桶 + 重试（自愈）；`myapp-ctl deploy` 增 `_ensure_avatar_bucket`
+  后置步骤（部署期就建好，紧随 demo 桶初始化）。审计结论：其余对象存储桶（json-app /
+  json-component / app / im-media / ai-chat-temp / demo）均在后端代码按需自建，`avatars` 是唯一缺口。
+
 ## [1.2.8] - 2026-06-30
 ### Changed
 - **demo 选择列表改为服务端下发**：把客户端写死的 demo 目录搬到后端做单一真相源
