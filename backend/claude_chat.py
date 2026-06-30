@@ -289,6 +289,14 @@ import time as _time
 import ai_session
 import demo_replay
 
+
+def demo_list():
+    """GET /api/ai/demo/list — 服务端下发的 demo 选择目录（uuid/title/prompt）。
+    客户端拉取它渲染免登录 demo 选择列表，所以加一个 demo 只改后端、不用客户端发版。
+    公开端点，无需鉴权（只是 demo 目录，不含任何敏感信息）。"""
+    return jsonify({"demos": demo_replay.demo_prompt_list()})
+
+
 _CHAT_START_LOCK_TTL_SECONDS = int(os.environ.get("AI_CHAT_START_LOCK_TTL_SECONDS", "45"))
 _CHAT_START_LOCK_WAIT_SECONDS = float(os.environ.get("AI_CHAT_START_LOCK_WAIT_SECONDS", "3"))
 _CHAT_ABORT_INTENTS = {"manual_stop", "delete_session", "clear_session"}

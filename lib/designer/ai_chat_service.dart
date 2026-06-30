@@ -519,6 +519,30 @@ class AiChatService {
     return _agents;
   }
 
+  /// 拉取服务端下发的 demo 选择目录（uuid/title/prompt）。服务端是单一真相源，
+  /// 加一个 demo 只改后端、不用客户端发版。失败抛异常，调用方自行回落本地兜底。
+  static Future<List<Map<String, String>>> fetchDemoList() async {
+    final resp = await http
+        .get(Uri.parse('$_baseUrl/api/ai/demo/list'))
+        .timeout(const Duration(seconds: 10));
+    if (resp.statusCode != 200) {
+      throw Exception('demo list HTTP ${resp.statusCode}');
+    }
+    final data = json.decode(resp.body) as Map<String, dynamic>;
+    final demos = (data['demos'] as List<dynamic>?) ?? const <dynamic>[];
+    return demos
+        .map<Map<String, String>>((e) {
+          final m = e as Map<String, dynamic>;
+          return {
+            'uuid': (m['uuid'] ?? '').toString(),
+            'title': (m['title'] ?? '').toString(),
+            'prompt': (m['prompt'] ?? '').toString(),
+          };
+        })
+        .where((m) => (m['uuid'] ?? '').isNotEmpty)
+        .toList();
+  }
+
   // ── 多会话状态 ──
   // 列表里只包含 committed=true 的 session（持久化时过滤）+ 当前未提交的 active 占位（内存）
   final List<SessionMeta> _sessions = [];

@@ -1333,128 +1333,41 @@ class _DesignerBallState extends State<DesignerBall>
 
   // Demo 示例需求：每条对应一个特殊 UUID，服务端识别后走预录回放。
   // UUID 必须与后端 demo_replay.DEMO_SESSIONS 一致。
-  static const List<Map<String, String>> _demoPrompts = [
+  // demo 选择列表已改为服务端下发(GET /api/ai/demo/list)做单一真相源 —— 新增 demo 只改后端、
+  // 不用客户端发版。这里只保留极小兜底，避免后端目录拉取失败时列表为空。
+  static const List<Map<String, String>> _demoPromptsFallback = [
     {
       'uuid': '00000000-0000-0000-0000-000000000001',
       'title': '论坛 / 贴吧类 App（全栈）',
-      'prompt':
-          '创建一个论坛类型的 App：要有用户个人页面（显示真实头像）、可以创建讨论区（类似贴吧的「吧」）、可以发帖、评论、点赞。',
+      'prompt': '创建一个论坛类型的 App：用户个人页、创建讨论区、发帖、评论、点赞。',
     },
     {
       'uuid': '00000000-0000-0000-0000-000000000002',
       'title': '番茄钟（纯前端）',
       'prompt': '做一个番茄钟：25 分钟倒计时，开始 / 暂停 / 重置，结束提醒。',
     },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000003',
-      'title': '计算器',
-      'prompt': '做一个计算器，支持加减乘除、百分比和清除。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000004',
-      'title': '多页面 App 示例',
-      'prompt': '做一个有 5 个页面、底部导航切换的多页面 App。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000005',
-      'title': '媒体播放',
-      'prompt': '做一个媒体展示 App，能播放视频、展示图片。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000006',
-      'title': '视频浏览',
-      'prompt': '做一个视频浏览 App：列表 + 点进去播放。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000007',
-      'title': '拍照巡检',
-      'prompt': '做一个拍照巡检 App：拍照记录设备状态，生成巡检单。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000008',
-      'title': '课程播放器',
-      'prompt': '做一个在线课程播放器：章节列表 + 视频播放 + 学习进度。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000009',
-      'title': '运维数据看板',
-      'prompt': '做一个运维数据仪表盘：服务状态、指标图表、告警列表。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000010',
-      'title': '智能家居',
-      'prompt': '做一个智能家居控制面板：灯光、空调、场景一键控制。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000011',
-      'title': '旅行通行证',
-      'prompt': '做一个旅行通行证 App：行程卡片、二维码、登机信息。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000012',
-      'title': '像素三消游戏',
-      'prompt': '做一个像素风格的三消小游戏。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000013',
-      'title': '记账预算',
-      'prompt': '做一个记账 App：收支记录、分类统计、月度预算。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000014',
-      'title': '客户管理 CRM',
-      'prompt': '做一个轻量 CRM：客户列表、跟进记录、状态标签。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000015',
-      'title': '习惯打卡',
-      'prompt': '做一个习惯打卡 App：每日打卡、连续天数、热力图。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000016',
-      'title': '笔记',
-      'prompt': '做一个笔记 App：新建、编辑、列表、搜索。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000017',
-      'title': '健身训练',
-      'prompt': '做一个健身训练 App：训练计划、动作计时、记录。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000018',
-      'title': '超级 App 首页',
-      'prompt': '做一个超级 App 首页：多功能入口聚合、轮播、九宫格。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000019',
-      'title': '文本收集器',
-      'prompt': '做一个文本收集器：快速记录、列表管理、复制。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000020',
-      'title': '2048 数字游戏',
-      'prompt': '做一个 2048 数字合并游戏。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000021',
-      'title': '贪吃蛇',
-      'prompt': '做一个贪吃蛇小游戏：吃食物变长、撞墙结束。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000022',
-      'title': 'Flappy Bird',
-      'prompt': '做一个 Flappy Bird 点击飞行小游戏。',
-    },
-    {
-      'uuid': '00000000-0000-0000-0000-000000000023',
-      'title': '广场社区 · 全栈论坛（板块 / 楼中楼 / 好友私信）',
-      'prompt':
-          '做一个类似贴吧的全栈论坛 App：板块分区、发主题帖、楼中楼盖楼回帖、用户昵称主页、加好友、好友间私信，要有真实后端能保存数据。',
-    },
   ];
+
+  // 服务端下发的 demo 目录缓存（首次拉取后复用，省重复请求）。
+  static List<Map<String, String>>? _cachedDemoPrompts;
+
+  // 拉取服务端下发的 demo 目录；失败回落到极小兜底。
+  Future<List<Map<String, String>>> _loadDemoPrompts() async {
+    final cached = _cachedDemoPrompts;
+    if (cached != null) return cached;
+    try {
+      final list = await AiChatService.fetchDemoList();
+      if (list.isNotEmpty) {
+        _cachedDemoPrompts = list;
+        return list;
+      }
+    } catch (_) {}
+    return _demoPromptsFallback;
+  }
 
   void _showDemoPromptList() {
     final navContext = JsonDslApp.navigatorKey.currentContext ?? context;
+    final demoFuture = _loadDemoPrompts(); // 服务端下发的 demo 目录（一次拉取）
     showModalBottomSheet<void>(
       context: navContext,
       showDragHandle: true,
@@ -1480,25 +1393,40 @@ class _DesignerBallState extends State<DesignerBall>
                   ),
                 ),
                 Flexible(
-                  child: ListView(
-                    shrinkWrap: true,
-                    padding: EdgeInsets.zero,
-                    children: [
-                      for (final p in _demoPrompts)
-                        ListTile(
-                          leading: Icon(Icons.auto_awesome, color: cs.primary),
-                          title: Text(p['title']!),
-                          subtitle: Text(
-                            p['prompt']!,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          onTap: () {
-                            Navigator.of(ctx).pop();
-                            unawaited(_fireDemoTask(p['uuid']!, p['prompt']!));
-                          },
-                        ),
-                    ],
+                  child: FutureBuilder<List<Map<String, String>>>(
+                    future: demoFuture,
+                    builder: (c, snap) {
+                      if (snap.connectionState != ConnectionState.done) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 32),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      final prompts = snap.data ?? _demoPromptsFallback;
+                      return ListView(
+                        shrinkWrap: true,
+                        padding: EdgeInsets.zero,
+                        children: [
+                          for (final p in prompts)
+                            ListTile(
+                              leading:
+                                  Icon(Icons.auto_awesome, color: cs.primary),
+                              title: Text(p['title']!),
+                              subtitle: Text(
+                                p['prompt']!,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              onTap: () {
+                                Navigator.of(ctx).pop();
+                                unawaited(
+                                  _fireDemoTask(p['uuid']!, p['prompt']!),
+                                );
+                              },
+                            ),
+                        ],
+                      );
+                    },
                   ),
                 ),
                 const SizedBox(height: 8),
