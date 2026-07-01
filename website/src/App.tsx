@@ -947,6 +947,7 @@ const copy = {
 };
 
 const docsI18n: Record<string, Partial<Record<Lang, string>>> = {
+  'The demo is an accelerated replay of a real, recorded generation run; multilingual support was added later.': { de: 'Die Demo ist eine beschleunigte Wiedergabe eines echten, aufgezeichneten Generierungslaufs; die Mehrsprachigkeit kam später dazu.', es: 'La demo es una reproducción acelerada de una ejecución de generación real grabada; el soporte multilingüe se añadió después.', fr: "La démo est une relecture accélérée d'une génération réelle enregistrée ; le multilingue a été ajouté par la suite.", pt: 'A demo é uma reprodução acelerada de uma execução de geração real gravada; o suporte multilíngue foi adicionado depois.', ca: "La demo és una reproducció accelerada d'una execució de generació real enregistrada; el suport multilingüe es va afegir després.", hi: 'यह डेमो वास्तविक, रिकॉर्ड किए गए जेनरेशन रन का त्वरित रीप्ले है; बहुभाषी समर्थन बाद में जोड़ा गया।', ko: '이 데모는 실제로 기록된 생성 실행의 가속 재생이며, 다국어 지원은 나중에 추가되었습니다.', ja: 'このデモは実際に記録した生成フローの加速再生で、多言語対応は後から追加しました。', it: 'La demo è una riproduzione accelerata di una esecuzione di generazione reale registrata; il supporto multilingue è stato aggiunto in seguito.' },
   'Entry': { de: 'Einstieg', es: 'Entrada', fr: 'Entrée', pt: 'Entrada', ca: 'Entrada', hi: 'प्रवेश बिंदु', ko: '진입점', ja: '入口', it: 'Ingresso' },
   'Web client': { de: 'Web-Client', es: 'Cliente Web', fr: 'Client Web', pt: 'Cliente Web', ca: 'Client web', hi: 'Web क्लाइंट', ko: 'Web 클라이언트', ja: 'Web クライアント', it: 'Client Web' },
   'iOS / Android': { de: 'iOS / Android', es: 'iOS / Android', fr: 'iOS / Android', pt: 'iOS / Android', ca: 'iOS / Android', hi: 'iOS / Android', ko: 'iOS / Android', ja: 'iOS / Android', it: 'iOS / Android' },
@@ -1131,7 +1132,7 @@ function tl(lang: Lang, zh: string, en: string): string {
   return docsI18n[en]?.[lang] ?? en;
 }
 
-function PhonePreview({ compact = false }: { compact?: boolean }) {
+function PhonePreview({ compact = false, lang }: { compact?: boolean; lang: Lang }) {
   return (
     <div className={`phoneStage ${compact ? 'compact' : ''}`} aria-label="MyApp live web preview">
       <div className="phoneGlow" />
@@ -1152,7 +1153,7 @@ function PhonePreview({ compact = false }: { compact?: boolean }) {
           <div className="phoneViewport">
             <iframe
               title="MyApp live Web client"
-              src={WEB_APP_URL}
+              src={`${WEB_APP_URL}?lang=${lang}`}
               loading="eager"
               referrerPolicy="no-referrer"
               allow="clipboard-read; clipboard-write; camera; microphone"
@@ -2001,17 +2002,27 @@ function App() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
+  // 切语言时把 lang 写进 URL（?lang=xx），刷新后仍保持；同时下方内嵌 iframe 的 src 也会带上它。
+  function changeLang(next: Lang) {
+    setLang(next);
+    const u = new URL(window.location.href);
+    u.searchParams.set('lang', next);
+    window.history.replaceState(null, '', u.pathname + u.search + u.hash);
+  }
+
   function goHome(event: ReactMouseEvent<HTMLAnchorElement>, hash = '#top') {
     event.preventDefault();
     setPage('home');
-    window.history.pushState(null, '', hash === '#top' ? '/' : `/${hash}`);
+    const h = hash === '#top' ? '' : hash;
+    window.history.pushState(null, '', `/?lang=${lang}${h}`);
     requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' }));
   }
 
   function goDocs(event: ReactMouseEvent<HTMLAnchorElement>, hash = '#docs') {
     event.preventDefault();
     setPage('docs');
-    window.history.pushState(null, '', hash === '#docs' ? '/docs' : `/docs${hash}`);
+    const h = hash === '#docs' ? '' : hash;
+    window.history.pushState(null, '', `/docs?lang=${lang}${h}`);
     requestAnimationFrame(() => {
       if (hash === '#docs') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2067,7 +2078,7 @@ function App() {
             <label className="languageSelect" aria-label="Language">
               <Globe2 size={16} />
               <span>{activeLanguage.flag}</span>
-              <select value={lang} onChange={(event) => setLang(event.target.value as Lang)}>
+              <select value={lang} onChange={(event) => changeLang(event.target.value as Lang)}>
                 {languageOptions.map((item) => (
                   <option key={item.key} value={item.key}>
                     {item.label}
@@ -2162,8 +2173,9 @@ function App() {
             </div>
           </div>
           <div className="heroAside">
-            <PhonePreview />
+            <PhonePreview lang={lang} />
             <p className="phoneCaption">{t.phoneCaption}</p>
+            <p className="phoneReplayNote">{tl(lang, '演示为真实生成链路的录制、加速回放；多语言为后期补充。', 'The demo is an accelerated replay of a real, recorded generation run; multilingual support was added later.')}</p>
           </div>
         </div>
         <div className="shell heroTrustGrid">

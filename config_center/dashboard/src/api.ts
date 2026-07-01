@@ -63,6 +63,7 @@ export const api = {
   confirmEmail: (id: string) => postJSON(`${DASH}/users/${id}/confirm_email`, {}),
   sendRecovery: (id: string) => postJSON(`${DASH}/users/${id}/recovery`, {}),
   setQuota: (id: string, quota: string | null) => postJSON(`${DASH}/users/${id}/quota`, { quota }),
+  deleteUser: (id: string) => postJSON<{ ok: boolean }>(`${DASH}/users/${id}/delete`, {}),
 
   faas: () => getJSON<FaasResponse>(`${DASH}/faas`),
   faasDisable: (id: string) => postJSON<{ ok: boolean }>(`${DASH}/faas/${encodeURIComponent(id)}/disable`, {}),

@@ -347,7 +347,7 @@ Drop this through the AI generation flow, or `flutter run` and pick the JSON fil
 - **AI-generated FaaS full-stack** — AI emits a validated Python/Flask backend per "service group" (1 function service + optional Postgres DB), deployed to a self-managed Docker FaaS runtime (one container per service, scale-to-zero + cold-wake). Per-app schema isolation, unforgeable in-group pseudonymous identity, backend-mediated per-caller data access (function code never holds a DB connection), container hardening, and a revocable 3-tier access policy.
 - Supabase auth integration
 - AI chat with provider-scoped queues and isolated agent execution — providers (DeepSeek, MiniMax, Volcengine aggregator: GLM / Kimi) × three agent runtimes (Claude Code, Codex, OpenCode), plus generation playbooks and an in-run visual self-review pass
-- **Zero-login demo mode** — unauthenticated users tap the floating ball → Demo, fire a real-looking AI generation that SSE-replays a recorded session, and get an actually-runnable app (no agent-node, no FaaS creation) — instant taste of the full flow
+- **Zero-login demo mode** — unauthenticated users tap the floating ball → Demo, fire a real-looking AI generation that SSE-replays a recorded session, and get an actually-runnable app (no agent-node, no FaaS creation) — instant taste of the full flow — the demo is an **accelerated replay of a real, recorded generation run**, with its multilingual copy **added in a later localization pass**
 - Channel-agnostic push (APNs + FCM, easy to add more)
 - Package registry with namespaces + semver + dependency resolution
 - **Cross-instance mirror** — self-hosted instance can mirror packages from upstream (lazy file proxy + 10-minute index sync)

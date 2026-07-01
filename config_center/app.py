@@ -718,7 +718,9 @@ def logout():
 # ── Admin ──
 @app.route("/", methods=["GET"])
 def root():
-    return redirect(url_for("admin") if get_current_user() else url_for("login_get"))
+    # 主路由直接进新版 dashboard SPA（配置下发 + 用户 + FaaS + agents 都在里面）；
+    # 旧的 /admin 模板保留但不再作为默认入口。
+    return redirect(url_for("admin_dashboard_spa") if get_current_user() else url_for("login_get"))
 
 
 @app.route("/admin", methods=["GET"])
@@ -1233,6 +1235,23 @@ def dash_users_quota(user_id: str):
     except (requests.RequestException, ValueError) as e:
         return _dash_err(f"配额设置失败: {e}")
     return jsonify({"ok": True, "user": _dash.shape_user(r.json())})
+
+
+@app.route("/api/admin/dashboard/users/<user_id>/delete", methods=["POST"])
+def dash_users_delete(user_id: str):
+    require_user()
+    if not _sb_ready():
+        return _dash_err("用户管理未配置", 503)
+    try:
+        u = _sb_get_user(user_id)
+        if not u:
+            return _dash_err("用户不存在", 404)
+        r = requests.delete(f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+                            headers=_sb_headers(), timeout=DASH_HTTP_TIMEOUT)
+        r.raise_for_status()
+    except requests.RequestException as e:
+        return _dash_err(f"删除用户失败: {e}")
+    return jsonify({"ok": True, "deleted": user_id})
 
 
 # ── Tab: FaaS 服务（代理 backend，派生 启动时间/实例数/容量范围/当前容量）──
