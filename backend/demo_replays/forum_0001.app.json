@@ -6,6 +6,15 @@
     "displayName": {
       "zh": "论坛",
       "en": "Forum",
+      "de": "Forum",
+      "es": "Foro",
+      "fr": "Forum",
+      "pt": "Fórum",
+      "ca": "Fòrum",
+      "hi": "फ़ोरम",
+      "ko": "포럼",
+      "ja": "フォーラム",
+      "it": "Forum",
       "default": "Forum"
     },
     "version": "1.0.0",
@@ -43,7 +52,7 @@
       "newThreadBody": "",
       "replyText": "",
       "replyParentId": null,
-      "replyHint": "主楼",
+      "replyHint": "{{ t('reply.toMain') }}",
       "currentUser": null,
       "currentUserThreads": [],
       "currentUserRel": {},
@@ -55,6 +64,1196 @@
       "dmText": "",
       "myStats": {},
       "myThreads": []
+    },
+    "i18n": {
+      "zh": {
+        "common": {
+          "back": "← 返回",
+          "search": "搜索",
+          "send": "发送",
+          "refresh": "🔄 刷新",
+          "saySomethingHint": "说点什么…"
+        },
+        "app": {
+          "title": "论坛"
+        },
+        "nav": {
+          "boards": "吧",
+          "friends": "好友",
+          "mine": "我的"
+        },
+        "search": {
+          "boardNameHint": "搜索吧名…"
+        },
+        "board": {
+          "createNewBtn": "＋ 创建新吧",
+          "createThreadBtn": "＋ 发主题",
+          "titleSuffix": "{{ global.currentBoard.name }}吧",
+          "ownerLabel": "吧主：{{ global.currentBoard.owner_name }}"
+        },
+        "boards": {
+          "boardNameSuffix": "{{ loop.item.name }}吧",
+          "ownerThreadCount": "吧主：{{ loop.item.owner_name }}  ·  {{ loop.item.thread_count }} 主题"
+        },
+        "friends": {
+          "refreshBtn": "🔄 刷新好友 / 请求",
+          "newRequests": "新的好友请求 · {{ global.friendReqCount }}",
+          "accept": "通过",
+          "reject": "拒绝",
+          "myFriends": "我的好友",
+          "dmBtn": "发私信"
+        },
+        "empty": {
+          "boards": "还没有吧，点上面「创建新吧」开第一个吧～",
+          "friendRequests": "没有待处理的请求",
+          "friends": "还没有好友。去帖子里点某人的头像/名字，进主页加好友吧～",
+          "myThreads": "你还没发过主题。去吧里发一帖吧～",
+          "boardThreads": "本吧还没有主题，来发第一帖～",
+          "posts": "还没有回帖，来抢沙发～",
+          "userThreads": "该用户还没有发过主题。",
+          "chat": "还没有聊天记录，发第一条消息吧～"
+        },
+        "profile": {
+          "statsMine": "开了 {{ global.myStats.board_count }} 个吧 · 发了 {{ global.myStats.thread_count }} 主题 · {{ global.myStats.post_count }} 回帖",
+          "refreshBtn": "🔄 刷新我的资料",
+          "myThreads": "我发的主题",
+          "userHomeTitle": "{{ global.currentUser.display_name }} 的主页",
+          "statsUser": "开了 {{ global.currentUser.board_count }} 个吧 · 发了 {{ global.currentUser.thread_count }} 主题 · {{ global.currentUser.post_count }} 回帖",
+          "selfHint": "这是我的主页",
+          "alreadyFriend": "已是好友",
+          "acceptFriendBtn": "同意好友请求",
+          "addFriendBtn": "＋ 加好友",
+          "recentThreads": "最近主题"
+        },
+        "thread": {
+          "opLabel": "楼主：{{ global.currentThread.author_name }}",
+          "likeToggle": "{{ global.currentThread.liked_by_me }} ? '❤️ 已赞' : '🤍 点赞'",
+          "replyCountEmoji": "💬 {{ loop.item.reply_count }} 回复",
+          "boardReplyLike": "{{ loop.item.board_name }}吧  ·  {{ loop.item.reply_count }} 回复 · {{ loop.item.like_count }} 赞"
+        },
+        "reply": {
+          "toMain": "主楼",
+          "replyingTo": "回复：{{ global.replyHint }}",
+          "toMainBtn": "回主楼",
+          "inputHint": "写回复…"
+        },
+        "post": {
+          "reply": "回复",
+          "likeToggle": "{{ loop.item.liked_by_me }} ? '已赞' : '点赞'",
+          "expand": "▾ 展开 {{ loop.item.remaining }} 条回复",
+          "collapse": "▴ 收起"
+        },
+        "createBoard": {
+          "title": "创建新吧",
+          "nameLabel": "吧名",
+          "namePlaceholder": "给你的吧起个名字（全局唯一）",
+          "introLabel": "简介",
+          "introPlaceholder": "简单介绍一下这个吧",
+          "submit": "创建"
+        },
+        "createThread": {
+          "title": "发新主题",
+          "heading": "在 {{ global.currentBoard.name }}吧 发帖",
+          "titleLabel": "标题",
+          "titlePlaceholder": "给帖子起个标题",
+          "bodyLabel": "正文",
+          "submit": "发布"
+        },
+        "chat": {
+          "refreshBtn": "🔄 刷新消息"
+        },
+        "toast": {
+          "replyEmpty": "回帖内容不能为空",
+          "replied": "已回复",
+          "boardNameRequired": "请输入吧名",
+          "boardCreated": "创建成功！",
+          "titleRequired": "请输入标题",
+          "published": "已发布",
+          "friendRequestSent": "已发送好友请求",
+          "nowFriends": "已成为好友",
+          "saySomething": "说点什么吧"
+        }
+      },
+      "en": {
+        "common": {
+          "back": "← Back",
+          "search": "Search",
+          "send": "Send",
+          "refresh": "🔄 Refresh",
+          "saySomethingHint": "Say something…"
+        },
+        "app": {
+          "title": "Forum"
+        },
+        "nav": {
+          "boards": "Bars",
+          "friends": "Friends",
+          "mine": "Me"
+        },
+        "search": {
+          "boardNameHint": "Search bar name…"
+        },
+        "board": {
+          "createNewBtn": "＋ Create new bar",
+          "createThreadBtn": "＋ New thread",
+          "titleSuffix": "{{ global.currentBoard.name }} Bar",
+          "ownerLabel": "Owner: {{ global.currentBoard.owner_name }}"
+        },
+        "boards": {
+          "boardNameSuffix": "{{ loop.item.name }} Bar",
+          "ownerThreadCount": "Owner: {{ loop.item.owner_name }}  ·  {{ loop.item.thread_count }} threads"
+        },
+        "friends": {
+          "refreshBtn": "🔄 Refresh friends / requests",
+          "newRequests": "New friend requests · {{ global.friendReqCount }}",
+          "accept": "Accept",
+          "reject": "Decline",
+          "myFriends": "My friends",
+          "dmBtn": "Message"
+        },
+        "empty": {
+          "boards": "No bars yet — tap “Create new bar” above to start the first one!",
+          "friendRequests": "No pending requests",
+          "friends": "No friends yet. Tap someone's avatar/name in a post to open their profile and add them!",
+          "myThreads": "You haven't posted any threads yet. Post one in a bar!",
+          "boardThreads": "No threads in this bar yet — post the first one!",
+          "posts": "No replies yet — be the first!",
+          "userThreads": "This user hasn't posted any threads yet.",
+          "chat": "No messages yet — send the first one!"
+        },
+        "profile": {
+          "statsMine": "{{ global.myStats.board_count }} bars · {{ global.myStats.thread_count }} threads · {{ global.myStats.post_count }} replies",
+          "refreshBtn": "🔄 Refresh my profile",
+          "myThreads": "Threads I posted",
+          "userHomeTitle": "{{ global.currentUser.display_name }}'s profile",
+          "statsUser": "{{ global.currentUser.board_count }} bars · {{ global.currentUser.thread_count }} threads · {{ global.currentUser.post_count }} replies",
+          "selfHint": "This is your own profile",
+          "alreadyFriend": "Already friends",
+          "acceptFriendBtn": "Accept friend request",
+          "addFriendBtn": "＋ Add friend",
+          "recentThreads": "Recent threads"
+        },
+        "thread": {
+          "opLabel": "Original poster: {{ global.currentThread.author_name }}",
+          "likeToggle": "{{ global.currentThread.liked_by_me }} ? '❤️ Liked' : '🤍 Like'",
+          "replyCountEmoji": "💬 {{ loop.item.reply_count }} replies",
+          "boardReplyLike": "{{ loop.item.board_name }} Bar  ·  {{ loop.item.reply_count }} replies · {{ loop.item.like_count }} likes"
+        },
+        "reply": {
+          "toMain": "main post",
+          "replyingTo": "Replying to: {{ global.replyHint }}",
+          "toMainBtn": "To main post",
+          "inputHint": "Write a reply…"
+        },
+        "post": {
+          "reply": "Reply",
+          "likeToggle": "{{ loop.item.liked_by_me }} ? 'Liked' : 'Like'",
+          "expand": "▾ Show {{ loop.item.remaining }} more replies",
+          "collapse": "▴ Collapse"
+        },
+        "createBoard": {
+          "title": "Create new bar",
+          "nameLabel": "Bar name",
+          "namePlaceholder": "Name your bar (globally unique)",
+          "introLabel": "Intro",
+          "introPlaceholder": "Briefly introduce this bar",
+          "submit": "Create"
+        },
+        "createThread": {
+          "title": "New thread",
+          "heading": "Post in {{ global.currentBoard.name }} Bar",
+          "titleLabel": "Title",
+          "titlePlaceholder": "Give your post a title",
+          "bodyLabel": "Body",
+          "submit": "Publish"
+        },
+        "chat": {
+          "refreshBtn": "🔄 Refresh messages"
+        },
+        "toast": {
+          "replyEmpty": "Reply can't be empty",
+          "replied": "Replied",
+          "boardNameRequired": "Please enter a bar name",
+          "boardCreated": "Bar created!",
+          "titleRequired": "Please enter a title",
+          "published": "Published",
+          "friendRequestSent": "Friend request sent",
+          "nowFriends": "You're now friends",
+          "saySomething": "Say something"
+        }
+      },
+      "de": {
+        "common": {
+          "back": "← Zurück",
+          "search": "Suchen",
+          "send": "Senden",
+          "refresh": "🔄 Aktualisieren",
+          "saySomethingHint": "Sag etwas …"
+        },
+        "app": {
+          "title": "Forum"
+        },
+        "nav": {
+          "boards": "Foren",
+          "friends": "Freunde",
+          "mine": "Ich"
+        },
+        "search": {
+          "boardNameHint": "Forumname suchen …"
+        },
+        "board": {
+          "createNewBtn": "＋ Neues Forum erstellen",
+          "createThreadBtn": "＋ Thema posten",
+          "titleSuffix": "Forum {{ global.currentBoard.name }}",
+          "ownerLabel": "Inhaber: {{ global.currentBoard.owner_name }}"
+        },
+        "boards": {
+          "boardNameSuffix": "Forum {{ loop.item.name }}",
+          "ownerThreadCount": "Inhaber: {{ loop.item.owner_name }}  ·  {{ loop.item.thread_count }} Themen"
+        },
+        "friends": {
+          "refreshBtn": "🔄 Freunde / Anfragen aktualisieren",
+          "newRequests": "Neue Freundschaftsanfragen · {{ global.friendReqCount }}",
+          "accept": "Annehmen",
+          "reject": "Ablehnen",
+          "myFriends": "Meine Freunde",
+          "dmBtn": "Nachricht"
+        },
+        "empty": {
+          "boards": "Noch keine Foren – tippe oben auf „Neues Forum erstellen“, um das erste zu starten!",
+          "friendRequests": "Keine offenen Anfragen",
+          "friends": "Noch keine Freunde. Tippe in einem Beitrag auf das Profilbild/den Namen, öffne das Profil und füge die Person hinzu!",
+          "myThreads": "Du hast noch keine Themen gepostet. Poste eins in einem Forum!",
+          "boardThreads": "Noch keine Themen in diesem Forum – poste das erste!",
+          "posts": "Noch keine Antworten – sei der Erste!",
+          "userThreads": "Diese Person hat noch keine Themen gepostet.",
+          "chat": "Noch keine Nachrichten – sende die erste!"
+        },
+        "profile": {
+          "statsMine": "{{ global.myStats.board_count }} Foren · {{ global.myStats.thread_count }} Themen · {{ global.myStats.post_count }} Antworten",
+          "refreshBtn": "🔄 Mein Profil aktualisieren",
+          "myThreads": "Meine Themen",
+          "userHomeTitle": "Profil von {{ global.currentUser.display_name }}",
+          "statsUser": "{{ global.currentUser.board_count }} Foren · {{ global.currentUser.thread_count }} Themen · {{ global.currentUser.post_count }} Antworten",
+          "selfHint": "Das ist dein eigenes Profil",
+          "alreadyFriend": "Bereits Freunde",
+          "acceptFriendBtn": "Freundschaftsanfrage annehmen",
+          "addFriendBtn": "＋ Freund hinzufügen",
+          "recentThreads": "Neueste Themen"
+        },
+        "thread": {
+          "opLabel": "Themenersteller: {{ global.currentThread.author_name }}",
+          "likeToggle": "{{ global.currentThread.liked_by_me }} ? '❤️ Gefällt mir' : '🤍 Gefällt mir'",
+          "replyCountEmoji": "💬 {{ loop.item.reply_count }} Antworten",
+          "boardReplyLike": "Forum {{ loop.item.board_name }}  ·  {{ loop.item.reply_count }} Antworten · {{ loop.item.like_count }} Likes"
+        },
+        "reply": {
+          "toMain": "Hauptbeitrag",
+          "replyingTo": "Antwort an: {{ global.replyHint }}",
+          "toMainBtn": "Zum Hauptbeitrag",
+          "inputHint": "Antwort schreiben …"
+        },
+        "post": {
+          "reply": "Antworten",
+          "likeToggle": "{{ loop.item.liked_by_me }} ? 'Gefällt mir' : 'Gefällt mir'",
+          "expand": "▾ {{ loop.item.remaining }} weitere Antworten anzeigen",
+          "collapse": "▴ Einklappen"
+        },
+        "createBoard": {
+          "title": "Neues Forum erstellen",
+          "nameLabel": "Forumname",
+          "namePlaceholder": "Benenne dein Forum (global eindeutig)",
+          "introLabel": "Beschreibung",
+          "introPlaceholder": "Beschreibe dieses Forum kurz",
+          "submit": "Erstellen"
+        },
+        "createThread": {
+          "title": "Neues Thema",
+          "heading": "Im Forum {{ global.currentBoard.name }} posten",
+          "titleLabel": "Titel",
+          "titlePlaceholder": "Gib deinem Beitrag einen Titel",
+          "bodyLabel": "Inhalt",
+          "submit": "Veröffentlichen"
+        },
+        "chat": {
+          "refreshBtn": "🔄 Nachrichten aktualisieren"
+        },
+        "toast": {
+          "replyEmpty": "Antwort darf nicht leer sein",
+          "replied": "Geantwortet",
+          "boardNameRequired": "Bitte gib einen Forumnamen ein",
+          "boardCreated": "Erfolgreich erstellt!",
+          "titleRequired": "Bitte gib einen Titel ein",
+          "published": "Veröffentlicht",
+          "friendRequestSent": "Freundschaftsanfrage gesendet",
+          "nowFriends": "Ihr seid jetzt Freunde",
+          "saySomething": "Sag doch etwas"
+        }
+      },
+      "es": {
+        "common": {
+          "back": "← Atrás",
+          "search": "Buscar",
+          "send": "Enviar",
+          "refresh": "🔄 Actualizar",
+          "saySomethingHint": "Di algo…"
+        },
+        "app": {
+          "title": "Foro"
+        },
+        "nav": {
+          "boards": "Foros",
+          "friends": "Amigos",
+          "mine": "Yo"
+        },
+        "search": {
+          "boardNameHint": "Buscar nombre de foro…"
+        },
+        "board": {
+          "createNewBtn": "＋ Crear nuevo foro",
+          "createThreadBtn": "＋ Nuevo tema",
+          "titleSuffix": "Foro {{ global.currentBoard.name }}",
+          "ownerLabel": "Propietario: {{ global.currentBoard.owner_name }}"
+        },
+        "boards": {
+          "boardNameSuffix": "Foro {{ loop.item.name }}",
+          "ownerThreadCount": "Propietario: {{ loop.item.owner_name }}  ·  {{ loop.item.thread_count }} temas"
+        },
+        "friends": {
+          "refreshBtn": "🔄 Actualizar amigos / solicitudes",
+          "newRequests": "Nuevas solicitudes de amistad · {{ global.friendReqCount }}",
+          "accept": "Aceptar",
+          "reject": "Rechazar",
+          "myFriends": "Mis amigos",
+          "dmBtn": "Mensaje"
+        },
+        "empty": {
+          "boards": "Aún no hay foros: toca «Crear nuevo foro» arriba para empezar el primero.",
+          "friendRequests": "No hay solicitudes pendientes",
+          "friends": "Aún no tienes amigos. Toca el avatar/nombre de alguien en una publicación para abrir su perfil y añadirlo.",
+          "myThreads": "Todavía no has publicado ningún tema. ¡Publica uno en un foro!",
+          "boardThreads": "Aún no hay temas en este foro: ¡publica el primero!",
+          "posts": "Aún no hay respuestas: ¡sé el primero!",
+          "userThreads": "Este usuario aún no ha publicado temas.",
+          "chat": "Aún no hay mensajes: ¡envía el primero!"
+        },
+        "profile": {
+          "statsMine": "{{ global.myStats.board_count }} foros · {{ global.myStats.thread_count }} temas · {{ global.myStats.post_count }} respuestas",
+          "refreshBtn": "🔄 Actualizar mi perfil",
+          "myThreads": "Temas que publiqué",
+          "userHomeTitle": "Perfil de {{ global.currentUser.display_name }}",
+          "statsUser": "{{ global.currentUser.board_count }} foros · {{ global.currentUser.thread_count }} temas · {{ global.currentUser.post_count }} respuestas",
+          "selfHint": "Este es tu propio perfil",
+          "alreadyFriend": "Ya sois amigos",
+          "acceptFriendBtn": "Aceptar solicitud de amistad",
+          "addFriendBtn": "＋ Añadir amigo",
+          "recentThreads": "Temas recientes"
+        },
+        "thread": {
+          "opLabel": "Autor original: {{ global.currentThread.author_name }}",
+          "likeToggle": "{{ global.currentThread.liked_by_me }} ? '❤️ Te gusta' : '🤍 Me gusta'",
+          "replyCountEmoji": "💬 {{ loop.item.reply_count }} respuestas",
+          "boardReplyLike": "Foro {{ loop.item.board_name }}  ·  {{ loop.item.reply_count }} respuestas · {{ loop.item.like_count }} me gusta"
+        },
+        "reply": {
+          "toMain": "publicación principal",
+          "replyingTo": "Respondiendo a: {{ global.replyHint }}",
+          "toMainBtn": "A la principal",
+          "inputHint": "Escribe una respuesta…"
+        },
+        "post": {
+          "reply": "Responder",
+          "likeToggle": "{{ loop.item.liked_by_me }} ? 'Te gusta' : 'Me gusta'",
+          "expand": "▾ Mostrar {{ loop.item.remaining }} respuestas más",
+          "collapse": "▴ Contraer"
+        },
+        "createBoard": {
+          "title": "Crear nuevo foro",
+          "nameLabel": "Nombre del foro",
+          "namePlaceholder": "Nombra tu foro (único en todo el sitio)",
+          "introLabel": "Descripción",
+          "introPlaceholder": "Describe brevemente este foro",
+          "submit": "Crear"
+        },
+        "createThread": {
+          "title": "Nuevo tema",
+          "heading": "Publicar en el foro {{ global.currentBoard.name }}",
+          "titleLabel": "Título",
+          "titlePlaceholder": "Pon un título a tu publicación",
+          "bodyLabel": "Contenido",
+          "submit": "Publicar"
+        },
+        "chat": {
+          "refreshBtn": "🔄 Actualizar mensajes"
+        },
+        "toast": {
+          "replyEmpty": "La respuesta no puede estar vacía",
+          "replied": "Respondido",
+          "boardNameRequired": "Introduce un nombre de foro",
+          "boardCreated": "¡Creado!",
+          "titleRequired": "Introduce un título",
+          "published": "Publicado",
+          "friendRequestSent": "Solicitud de amistad enviada",
+          "nowFriends": "Ahora sois amigos",
+          "saySomething": "Di algo"
+        }
+      },
+      "fr": {
+        "common": {
+          "back": "← Retour",
+          "search": "Rechercher",
+          "send": "Envoyer",
+          "refresh": "🔄 Actualiser",
+          "saySomethingHint": "Dites quelque chose…"
+        },
+        "app": {
+          "title": "Forum"
+        },
+        "nav": {
+          "boards": "Forums",
+          "friends": "Amis",
+          "mine": "Moi"
+        },
+        "search": {
+          "boardNameHint": "Rechercher un nom de forum…"
+        },
+        "board": {
+          "createNewBtn": "＋ Créer un nouveau forum",
+          "createThreadBtn": "＋ Nouveau sujet",
+          "titleSuffix": "Forum {{ global.currentBoard.name }}",
+          "ownerLabel": "Propriétaire : {{ global.currentBoard.owner_name }}"
+        },
+        "boards": {
+          "boardNameSuffix": "Forum {{ loop.item.name }}",
+          "ownerThreadCount": "Propriétaire : {{ loop.item.owner_name }}  ·  {{ loop.item.thread_count }} sujets"
+        },
+        "friends": {
+          "refreshBtn": "🔄 Actualiser amis / demandes",
+          "newRequests": "Nouvelles demandes d'ami · {{ global.friendReqCount }}",
+          "accept": "Accepter",
+          "reject": "Refuser",
+          "myFriends": "Mes amis",
+          "dmBtn": "Message"
+        },
+        "empty": {
+          "boards": "Aucun forum pour l'instant — touchez « Créer un nouveau forum » ci-dessus pour créer le premier !",
+          "friendRequests": "Aucune demande en attente",
+          "friends": "Aucun ami pour l'instant. Touchez l'avatar/le nom de quelqu'un dans une publication pour ouvrir son profil et l'ajouter !",
+          "myThreads": "Vous n'avez pas encore publié de sujet. Publiez-en un dans un forum !",
+          "boardThreads": "Aucun sujet dans ce forum pour l'instant — publiez le premier !",
+          "posts": "Aucune réponse pour l'instant — soyez le premier !",
+          "userThreads": "Cet utilisateur n'a pas encore publié de sujet.",
+          "chat": "Aucun message pour l'instant — envoyez le premier !"
+        },
+        "profile": {
+          "statsMine": "{{ global.myStats.board_count }} forums · {{ global.myStats.thread_count }} sujets · {{ global.myStats.post_count }} réponses",
+          "refreshBtn": "🔄 Actualiser mon profil",
+          "myThreads": "Mes sujets publiés",
+          "userHomeTitle": "Profil de {{ global.currentUser.display_name }}",
+          "statsUser": "{{ global.currentUser.board_count }} forums · {{ global.currentUser.thread_count }} sujets · {{ global.currentUser.post_count }} réponses",
+          "selfHint": "Ceci est votre propre profil",
+          "alreadyFriend": "Déjà amis",
+          "acceptFriendBtn": "Accepter la demande d'ami",
+          "addFriendBtn": "＋ Ajouter en ami",
+          "recentThreads": "Sujets récents"
+        },
+        "thread": {
+          "opLabel": "Auteur du sujet : {{ global.currentThread.author_name }}",
+          "likeToggle": "{{ global.currentThread.liked_by_me }} ? '❤️ Aimé' : '🤍 J'aime'",
+          "replyCountEmoji": "💬 {{ loop.item.reply_count }} réponses",
+          "boardReplyLike": "Forum {{ loop.item.board_name }}  ·  {{ loop.item.reply_count }} réponses · {{ loop.item.like_count }} j'aime"
+        },
+        "reply": {
+          "toMain": "message principal",
+          "replyingTo": "En réponse à : {{ global.replyHint }}",
+          "toMainBtn": "Au message principal",
+          "inputHint": "Écrire une réponse…"
+        },
+        "post": {
+          "reply": "Répondre",
+          "likeToggle": "{{ loop.item.liked_by_me }} ? 'Aimé' : 'J'aime'",
+          "expand": "▾ Afficher {{ loop.item.remaining }} réponses de plus",
+          "collapse": "▴ Réduire"
+        },
+        "createBoard": {
+          "title": "Créer un nouveau forum",
+          "nameLabel": "Nom du forum",
+          "namePlaceholder": "Nommez votre forum (unique sur tout le site)",
+          "introLabel": "Présentation",
+          "introPlaceholder": "Présentez brièvement ce forum",
+          "submit": "Créer"
+        },
+        "createThread": {
+          "title": "Nouveau sujet",
+          "heading": "Publier dans le forum {{ global.currentBoard.name }}",
+          "titleLabel": "Titre",
+          "titlePlaceholder": "Donnez un titre à votre publication",
+          "bodyLabel": "Contenu",
+          "submit": "Publier"
+        },
+        "chat": {
+          "refreshBtn": "🔄 Actualiser les messages"
+        },
+        "toast": {
+          "replyEmpty": "La réponse ne peut pas être vide",
+          "replied": "Réponse envoyée",
+          "boardNameRequired": "Veuillez saisir un nom de forum",
+          "boardCreated": "Créé !",
+          "titleRequired": "Veuillez saisir un titre",
+          "published": "Publié",
+          "friendRequestSent": "Demande d'ami envoyée",
+          "nowFriends": "Vous êtes maintenant amis",
+          "saySomething": "Dites quelque chose"
+        }
+      },
+      "pt": {
+        "common": {
+          "back": "← Voltar",
+          "search": "Pesquisar",
+          "send": "Enviar",
+          "refresh": "🔄 Atualizar",
+          "saySomethingHint": "Diga algo…"
+        },
+        "app": {
+          "title": "Fórum"
+        },
+        "nav": {
+          "boards": "Fóruns",
+          "friends": "Amigos",
+          "mine": "Eu"
+        },
+        "search": {
+          "boardNameHint": "Pesquisar nome do fórum…"
+        },
+        "board": {
+          "createNewBtn": "＋ Criar novo fórum",
+          "createThreadBtn": "＋ Novo tópico",
+          "titleSuffix": "Fórum {{ global.currentBoard.name }}",
+          "ownerLabel": "Dono: {{ global.currentBoard.owner_name }}"
+        },
+        "boards": {
+          "boardNameSuffix": "Fórum {{ loop.item.name }}",
+          "ownerThreadCount": "Dono: {{ loop.item.owner_name }}  ·  {{ loop.item.thread_count }} tópicos"
+        },
+        "friends": {
+          "refreshBtn": "🔄 Atualizar amigos / pedidos",
+          "newRequests": "Novos pedidos de amizade · {{ global.friendReqCount }}",
+          "accept": "Aceitar",
+          "reject": "Recusar",
+          "myFriends": "Meus amigos",
+          "dmBtn": "Mensagem"
+        },
+        "empty": {
+          "boards": "Ainda não há fóruns — toque em “Criar novo fórum” acima para começar o primeiro!",
+          "friendRequests": "Nenhum pedido pendente",
+          "friends": "Ainda sem amigos. Toque no avatar/nome de alguém numa publicação para abrir o perfil e adicionar!",
+          "myThreads": "Você ainda não publicou nenhum tópico. Publique um num fórum!",
+          "boardThreads": "Ainda não há tópicos neste fórum — publique o primeiro!",
+          "posts": "Ainda sem respostas — seja o primeiro!",
+          "userThreads": "Este usuário ainda não publicou tópicos.",
+          "chat": "Ainda sem mensagens — envie a primeira!"
+        },
+        "profile": {
+          "statsMine": "{{ global.myStats.board_count }} fóruns · {{ global.myStats.thread_count }} tópicos · {{ global.myStats.post_count }} respostas",
+          "refreshBtn": "🔄 Atualizar meu perfil",
+          "myThreads": "Tópicos que publiquei",
+          "userHomeTitle": "Perfil de {{ global.currentUser.display_name }}",
+          "statsUser": "{{ global.currentUser.board_count }} fóruns · {{ global.currentUser.thread_count }} tópicos · {{ global.currentUser.post_count }} respostas",
+          "selfHint": "Este é o seu próprio perfil",
+          "alreadyFriend": "Já são amigos",
+          "acceptFriendBtn": "Aceitar pedido de amizade",
+          "addFriendBtn": "＋ Adicionar amigo",
+          "recentThreads": "Tópicos recentes"
+        },
+        "thread": {
+          "opLabel": "Autor do tópico: {{ global.currentThread.author_name }}",
+          "likeToggle": "{{ global.currentThread.liked_by_me }} ? '❤️ Curtido' : '🤍 Curtir'",
+          "replyCountEmoji": "💬 {{ loop.item.reply_count }} respostas",
+          "boardReplyLike": "Fórum {{ loop.item.board_name }}  ·  {{ loop.item.reply_count }} respostas · {{ loop.item.like_count }} curtidas"
+        },
+        "reply": {
+          "toMain": "publicação principal",
+          "replyingTo": "Respondendo a: {{ global.replyHint }}",
+          "toMainBtn": "Para a principal",
+          "inputHint": "Escreva uma resposta…"
+        },
+        "post": {
+          "reply": "Responder",
+          "likeToggle": "{{ loop.item.liked_by_me }} ? 'Curtido' : 'Curtir'",
+          "expand": "▾ Mostrar mais {{ loop.item.remaining }} respostas",
+          "collapse": "▴ Recolher"
+        },
+        "createBoard": {
+          "title": "Criar novo fórum",
+          "nameLabel": "Nome do fórum",
+          "namePlaceholder": "Dê um nome ao seu fórum (único no site)",
+          "introLabel": "Descrição",
+          "introPlaceholder": "Descreva brevemente este fórum",
+          "submit": "Criar"
+        },
+        "createThread": {
+          "title": "Novo tópico",
+          "heading": "Publicar no fórum {{ global.currentBoard.name }}",
+          "titleLabel": "Título",
+          "titlePlaceholder": "Dê um título à sua publicação",
+          "bodyLabel": "Conteúdo",
+          "submit": "Publicar"
+        },
+        "chat": {
+          "refreshBtn": "🔄 Atualizar mensagens"
+        },
+        "toast": {
+          "replyEmpty": "A resposta não pode estar vazia",
+          "replied": "Respondido",
+          "boardNameRequired": "Digite um nome de fórum",
+          "boardCreated": "Criado!",
+          "titleRequired": "Digite um título",
+          "published": "Publicado",
+          "friendRequestSent": "Pedido de amizade enviado",
+          "nowFriends": "Agora vocês são amigos",
+          "saySomething": "Diga algo"
+        }
+      },
+      "ca": {
+        "common": {
+          "back": "← Enrere",
+          "search": "Cercar",
+          "send": "Enviar",
+          "refresh": "🔄 Actualitzar",
+          "saySomethingHint": "Digues alguna cosa…"
+        },
+        "app": {
+          "title": "Fòrum"
+        },
+        "nav": {
+          "boards": "Fòrums",
+          "friends": "Amics",
+          "mine": "Jo"
+        },
+        "search": {
+          "boardNameHint": "Cercar nom del fòrum…"
+        },
+        "board": {
+          "createNewBtn": "＋ Crear un fòrum nou",
+          "createThreadBtn": "＋ Nou tema",
+          "titleSuffix": "Fòrum {{ global.currentBoard.name }}",
+          "ownerLabel": "Propietari: {{ global.currentBoard.owner_name }}"
+        },
+        "boards": {
+          "boardNameSuffix": "Fòrum {{ loop.item.name }}",
+          "ownerThreadCount": "Propietari: {{ loop.item.owner_name }}  ·  {{ loop.item.thread_count }} temes"
+        },
+        "friends": {
+          "refreshBtn": "🔄 Actualitzar amics / sol·licituds",
+          "newRequests": "Noves sol·licituds d'amistat · {{ global.friendReqCount }}",
+          "accept": "Acceptar",
+          "reject": "Rebutjar",
+          "myFriends": "Els meus amics",
+          "dmBtn": "Missatge"
+        },
+        "empty": {
+          "boards": "Encara no hi ha fòrums: toca «Crear un fòrum nou» a dalt per començar el primer!",
+          "friendRequests": "No hi ha sol·licituds pendents",
+          "friends": "Encara no tens amics. Toca l'avatar/nom d'algú en una publicació per obrir el seu perfil i afegir-lo!",
+          "myThreads": "Encara no has publicat cap tema. Publica'n un en un fòrum!",
+          "boardThreads": "Encara no hi ha temes en aquest fòrum: publica el primer!",
+          "posts": "Encara no hi ha respostes: sigues el primer!",
+          "userThreads": "Aquest usuari encara no ha publicat cap tema.",
+          "chat": "Encara no hi ha missatges: envia el primer!"
+        },
+        "profile": {
+          "statsMine": "{{ global.myStats.board_count }} fòrums · {{ global.myStats.thread_count }} temes · {{ global.myStats.post_count }} respostes",
+          "refreshBtn": "🔄 Actualitzar el meu perfil",
+          "myThreads": "Temes que he publicat",
+          "userHomeTitle": "Perfil de {{ global.currentUser.display_name }}",
+          "statsUser": "{{ global.currentUser.board_count }} fòrums · {{ global.currentUser.thread_count }} temes · {{ global.currentUser.post_count }} respostes",
+          "selfHint": "Aquest és el teu propi perfil",
+          "alreadyFriend": "Ja sou amics",
+          "acceptFriendBtn": "Acceptar la sol·licitud d'amistat",
+          "addFriendBtn": "＋ Afegir amic",
+          "recentThreads": "Temes recents"
+        },
+        "thread": {
+          "opLabel": "Autor original: {{ global.currentThread.author_name }}",
+          "likeToggle": "{{ global.currentThread.liked_by_me }} ? '❤️ T'agrada' : '🤍 M'agrada'",
+          "replyCountEmoji": "💬 {{ loop.item.reply_count }} respostes",
+          "boardReplyLike": "Fòrum {{ loop.item.board_name }}  ·  {{ loop.item.reply_count }} respostes · {{ loop.item.like_count }} m'agrada"
+        },
+        "reply": {
+          "toMain": "publicació principal",
+          "replyingTo": "Responent a: {{ global.replyHint }}",
+          "toMainBtn": "A la principal",
+          "inputHint": "Escriu una resposta…"
+        },
+        "post": {
+          "reply": "Respondre",
+          "likeToggle": "{{ loop.item.liked_by_me }} ? 'T'agrada' : 'M'agrada'",
+          "expand": "▾ Mostrar {{ loop.item.remaining }} respostes més",
+          "collapse": "▴ Replegar"
+        },
+        "createBoard": {
+          "title": "Crear un fòrum nou",
+          "nameLabel": "Nom del fòrum",
+          "namePlaceholder": "Posa un nom al teu fòrum (únic a tot el lloc)",
+          "introLabel": "Descripció",
+          "introPlaceholder": "Descriu breument aquest fòrum",
+          "submit": "Crear"
+        },
+        "createThread": {
+          "title": "Nou tema",
+          "heading": "Publicar al fòrum {{ global.currentBoard.name }}",
+          "titleLabel": "Títol",
+          "titlePlaceholder": "Posa un títol a la teva publicació",
+          "bodyLabel": "Contingut",
+          "submit": "Publicar"
+        },
+        "chat": {
+          "refreshBtn": "🔄 Actualitzar missatges"
+        },
+        "toast": {
+          "replyEmpty": "La resposta no pot estar buida",
+          "replied": "Resposta enviada",
+          "boardNameRequired": "Introdueix un nom de fòrum",
+          "boardCreated": "Creat!",
+          "titleRequired": "Introdueix un títol",
+          "published": "Publicat",
+          "friendRequestSent": "Sol·licitud d'amistat enviada",
+          "nowFriends": "Ara sou amics",
+          "saySomething": "Digues alguna cosa"
+        }
+      },
+      "hi": {
+        "common": {
+          "back": "← वापस",
+          "search": "खोजें",
+          "send": "भेजें",
+          "refresh": "🔄 ताज़ा करें",
+          "saySomethingHint": "कुछ कहें…"
+        },
+        "app": {
+          "title": "फ़ोरम"
+        },
+        "nav": {
+          "boards": "फ़ोरम",
+          "friends": "दोस्त",
+          "mine": "मेरा"
+        },
+        "search": {
+          "boardNameHint": "फ़ोरम का नाम खोजें…"
+        },
+        "board": {
+          "createNewBtn": "＋ नया फ़ोरम बनाएँ",
+          "createThreadBtn": "＋ नया विषय",
+          "titleSuffix": "{{ global.currentBoard.name }} फ़ोरम",
+          "ownerLabel": "स्वामी: {{ global.currentBoard.owner_name }}"
+        },
+        "boards": {
+          "boardNameSuffix": "{{ loop.item.name }} फ़ोरम",
+          "ownerThreadCount": "स्वामी: {{ loop.item.owner_name }}  ·  {{ loop.item.thread_count }} विषय"
+        },
+        "friends": {
+          "refreshBtn": "🔄 दोस्त / अनुरोध ताज़ा करें",
+          "newRequests": "नए मित्र अनुरोध · {{ global.friendReqCount }}",
+          "accept": "स्वीकारें",
+          "reject": "अस्वीकारें",
+          "myFriends": "मेरे दोस्त",
+          "dmBtn": "संदेश"
+        },
+        "empty": {
+          "boards": "अभी तक कोई फ़ोरम नहीं — पहला शुरू करने के लिए ऊपर «नया फ़ोरम बनाएँ» पर टैप करें!",
+          "friendRequests": "कोई लंबित अनुरोध नहीं",
+          "friends": "अभी तक कोई दोस्त नहीं। किसी पोस्ट में किसी के अवतार/नाम पर टैप करके उनकी प्रोफ़ाइल खोलें और जोड़ें!",
+          "myThreads": "आपने अभी तक कोई विषय पोस्ट नहीं किया। किसी फ़ोरम में एक पोस्ट करें!",
+          "boardThreads": "इस फ़ोरम में अभी कोई विषय नहीं — पहला पोस्ट करें!",
+          "posts": "अभी कोई जवाब नहीं — पहले बनें!",
+          "userThreads": "इस उपयोगकर्ता ने अभी तक कोई विषय पोस्ट नहीं किया है।",
+          "chat": "अभी कोई संदेश नहीं — पहला भेजें!"
+        },
+        "profile": {
+          "statsMine": "{{ global.myStats.board_count }} फ़ोरम · {{ global.myStats.thread_count }} विषय · {{ global.myStats.post_count }} जवाब",
+          "refreshBtn": "🔄 मेरी प्रोफ़ाइल ताज़ा करें",
+          "myThreads": "मेरे द्वारा पोस्ट किए विषय",
+          "userHomeTitle": "{{ global.currentUser.display_name }} की प्रोफ़ाइल",
+          "statsUser": "{{ global.currentUser.board_count }} फ़ोरम · {{ global.currentUser.thread_count }} विषय · {{ global.currentUser.post_count }} जवाब",
+          "selfHint": "यह आपकी अपनी प्रोफ़ाइल है",
+          "alreadyFriend": "पहले से दोस्त",
+          "acceptFriendBtn": "मित्र अनुरोध स्वीकारें",
+          "addFriendBtn": "＋ दोस्त जोड़ें",
+          "recentThreads": "हाल के विषय"
+        },
+        "thread": {
+          "opLabel": "मूल पोस्टकर्ता: {{ global.currentThread.author_name }}",
+          "likeToggle": "{{ global.currentThread.liked_by_me }} ? '❤️ पसंद किया' : '🤍 पसंद'",
+          "replyCountEmoji": "💬 {{ loop.item.reply_count }} जवाब",
+          "boardReplyLike": "{{ loop.item.board_name }} फ़ोरम  ·  {{ loop.item.reply_count }} जवाब · {{ loop.item.like_count }} पसंद"
+        },
+        "reply": {
+          "toMain": "मुख्य पोस्ट",
+          "replyingTo": "जवाब दे रहे हैं: {{ global.replyHint }}",
+          "toMainBtn": "मुख्य पोस्ट पर",
+          "inputHint": "जवाब लिखें…"
+        },
+        "post": {
+          "reply": "जवाब दें",
+          "likeToggle": "{{ loop.item.liked_by_me }} ? 'पसंद किया' : 'पसंद'",
+          "expand": "▾ {{ loop.item.remaining }} और जवाब दिखाएँ",
+          "collapse": "▴ समेटें"
+        },
+        "createBoard": {
+          "title": "नया फ़ोरम बनाएँ",
+          "nameLabel": "फ़ोरम का नाम",
+          "namePlaceholder": "अपने फ़ोरम को नाम दें (पूरे साइट पर अनोखा)",
+          "introLabel": "परिचय",
+          "introPlaceholder": "इस फ़ोरम का संक्षिप्त परिचय दें",
+          "submit": "बनाएँ"
+        },
+        "createThread": {
+          "title": "नया विषय",
+          "heading": "{{ global.currentBoard.name }} फ़ोरम में पोस्ट करें",
+          "titleLabel": "शीर्षक",
+          "titlePlaceholder": "अपनी पोस्ट को शीर्षक दें",
+          "bodyLabel": "मुख्य विषय",
+          "submit": "प्रकाशित करें"
+        },
+        "chat": {
+          "refreshBtn": "🔄 संदेश ताज़ा करें"
+        },
+        "toast": {
+          "replyEmpty": "जवाब खाली नहीं हो सकता",
+          "replied": "जवाब दिया गया",
+          "boardNameRequired": "कृपया फ़ोरम का नाम दर्ज करें",
+          "boardCreated": "बन गया!",
+          "titleRequired": "कृपया शीर्षक दर्ज करें",
+          "published": "प्रकाशित हो गया",
+          "friendRequestSent": "मित्र अनुरोध भेजा गया",
+          "nowFriends": "अब आप दोस्त हैं",
+          "saySomething": "कुछ तो कहें"
+        }
+      },
+      "ko": {
+        "common": {
+          "back": "← 뒤로",
+          "search": "검색",
+          "send": "보내기",
+          "refresh": "🔄 새로고침",
+          "saySomethingHint": "내용을 입력하세요…"
+        },
+        "app": {
+          "title": "포럼"
+        },
+        "nav": {
+          "boards": "게시판",
+          "friends": "친구",
+          "mine": "내 정보"
+        },
+        "search": {
+          "boardNameHint": "게시판 이름 검색…"
+        },
+        "board": {
+          "createNewBtn": "＋ 새 게시판 만들기",
+          "createThreadBtn": "＋ 새 글 쓰기",
+          "titleSuffix": "{{ global.currentBoard.name }} 게시판",
+          "ownerLabel": "방장: {{ global.currentBoard.owner_name }}"
+        },
+        "boards": {
+          "boardNameSuffix": "{{ loop.item.name }} 게시판",
+          "ownerThreadCount": "방장: {{ loop.item.owner_name }}  ·  글 {{ loop.item.thread_count }}개"
+        },
+        "friends": {
+          "refreshBtn": "🔄 친구 / 요청 새로고침",
+          "newRequests": "새 친구 요청 · {{ global.friendReqCount }}",
+          "accept": "수락",
+          "reject": "거절",
+          "myFriends": "내 친구",
+          "dmBtn": "쪽지"
+        },
+        "empty": {
+          "boards": "아직 게시판이 없어요 — 위의 ‘새 게시판 만들기’를 눌러 첫 게시판을 만들어보세요!",
+          "friendRequests": "대기 중인 요청이 없습니다",
+          "friends": "아직 친구가 없어요. 글에서 누군가의 프로필 사진/이름을 눌러 프로필을 열고 친구로 추가하세요!",
+          "myThreads": "아직 올린 글이 없어요. 게시판에 글을 올려보세요!",
+          "boardThreads": "이 게시판에는 아직 글이 없어요 — 첫 글을 올려보세요!",
+          "posts": "아직 댓글이 없어요 — 첫 댓글을 남겨보세요!",
+          "userThreads": "이 사용자는 아직 글을 올리지 않았습니다.",
+          "chat": "아직 메시지가 없어요 — 첫 메시지를 보내보세요!"
+        },
+        "profile": {
+          "statsMine": "게시판 {{ global.myStats.board_count }}개 · 글 {{ global.myStats.thread_count }}개 · 댓글 {{ global.myStats.post_count }}개",
+          "refreshBtn": "🔄 내 프로필 새로고침",
+          "myThreads": "내가 올린 글",
+          "userHomeTitle": "{{ global.currentUser.display_name }} 님의 프로필",
+          "statsUser": "게시판 {{ global.currentUser.board_count }}개 · 글 {{ global.currentUser.thread_count }}개 · 댓글 {{ global.currentUser.post_count }}개",
+          "selfHint": "내 프로필입니다",
+          "alreadyFriend": "이미 친구입니다",
+          "acceptFriendBtn": "친구 요청 수락",
+          "addFriendBtn": "＋ 친구 추가",
+          "recentThreads": "최근 글"
+        },
+        "thread": {
+          "opLabel": "글쓴이: {{ global.currentThread.author_name }}",
+          "likeToggle": "{{ global.currentThread.liked_by_me }} ? '❤️ 좋아요 취소' : '🤍 좋아요'",
+          "replyCountEmoji": "💬 댓글 {{ loop.item.reply_count }}개",
+          "boardReplyLike": "{{ loop.item.board_name }} 게시판  ·  댓글 {{ loop.item.reply_count }}개 · 좋아요 {{ loop.item.like_count }}개"
+        },
+        "reply": {
+          "toMain": "원글",
+          "replyingTo": "답글 대상: {{ global.replyHint }}",
+          "toMainBtn": "원글로",
+          "inputHint": "답글을 입력하세요…"
+        },
+        "post": {
+          "reply": "답글",
+          "likeToggle": "{{ loop.item.liked_by_me }} ? '좋아요 취소' : '좋아요'",
+          "expand": "▾ 답글 {{ loop.item.remaining }}개 더 보기",
+          "collapse": "▴ 접기"
+        },
+        "createBoard": {
+          "title": "새 게시판 만들기",
+          "nameLabel": "게시판 이름",
+          "namePlaceholder": "게시판 이름을 지어주세요 (전체에서 고유)",
+          "introLabel": "소개",
+          "introPlaceholder": "이 게시판을 간단히 소개하세요",
+          "submit": "만들기"
+        },
+        "createThread": {
+          "title": "새 글 쓰기",
+          "heading": "{{ global.currentBoard.name }} 게시판에 글 올리기",
+          "titleLabel": "제목",
+          "titlePlaceholder": "글 제목을 입력하세요",
+          "bodyLabel": "본문",
+          "submit": "게시"
+        },
+        "chat": {
+          "refreshBtn": "🔄 메시지 새로고침"
+        },
+        "toast": {
+          "replyEmpty": "답글 내용을 입력하세요",
+          "replied": "답글을 남겼습니다",
+          "boardNameRequired": "게시판 이름을 입력하세요",
+          "boardCreated": "생성되었습니다!",
+          "titleRequired": "제목을 입력하세요",
+          "published": "게시되었습니다",
+          "friendRequestSent": "친구 요청을 보냈습니다",
+          "nowFriends": "이제 친구가 되었습니다",
+          "saySomething": "내용을 입력하세요"
+        }
+      },
+      "ja": {
+        "common": {
+          "back": "← 戻る",
+          "search": "検索",
+          "send": "送信",
+          "refresh": "🔄 更新",
+          "saySomethingHint": "何か書いてみよう…"
+        },
+        "app": {
+          "title": "フォーラム"
+        },
+        "nav": {
+          "boards": "掲示板",
+          "friends": "友だち",
+          "mine": "マイページ"
+        },
+        "search": {
+          "boardNameHint": "掲示板名を検索…"
+        },
+        "board": {
+          "createNewBtn": "＋ 新しい掲示板を作成",
+          "createThreadBtn": "＋ スレッドを投稿",
+          "titleSuffix": "{{ global.currentBoard.name }} 掲示板",
+          "ownerLabel": "オーナー：{{ global.currentBoard.owner_name }}"
+        },
+        "boards": {
+          "boardNameSuffix": "{{ loop.item.name }} 掲示板",
+          "ownerThreadCount": "オーナー：{{ loop.item.owner_name }}  ·  {{ loop.item.thread_count }} スレッド"
+        },
+        "friends": {
+          "refreshBtn": "🔄 友だち / リクエストを更新",
+          "newRequests": "新しい友だちリクエスト · {{ global.friendReqCount }}",
+          "accept": "承認",
+          "reject": "拒否",
+          "myFriends": "友だち",
+          "dmBtn": "DM"
+        },
+        "empty": {
+          "boards": "まだ掲示板がありません。上の「新しい掲示板を作成」をタップして最初の掲示板を作ろう！",
+          "friendRequests": "保留中のリクエストはありません",
+          "friends": "まだ友だちがいません。投稿でだれかのアイコン/名前をタップしてプロフィールを開き、友だちに追加しよう！",
+          "myThreads": "まだスレッドを投稿していません。掲示板に投稿しよう！",
+          "boardThreads": "この掲示板にはまだスレッドがありません。最初の投稿をしよう！",
+          "posts": "まだ返信がありません。最初の返信をしよう！",
+          "userThreads": "このユーザーはまだスレッドを投稿していません。",
+          "chat": "まだメッセージがありません。最初のメッセージを送ろう！"
+        },
+        "profile": {
+          "statsMine": "{{ global.myStats.board_count }} 掲示板 · {{ global.myStats.thread_count }} スレッド · {{ global.myStats.post_count }} 返信",
+          "refreshBtn": "🔄 マイプロフィールを更新",
+          "myThreads": "自分が投稿したスレッド",
+          "userHomeTitle": "{{ global.currentUser.display_name }} のプロフィール",
+          "statsUser": "{{ global.currentUser.board_count }} 掲示板 · {{ global.currentUser.thread_count }} スレッド · {{ global.currentUser.post_count }} 返信",
+          "selfHint": "これはあなた自身のプロフィールです",
+          "alreadyFriend": "すでに友だちです",
+          "acceptFriendBtn": "友だちリクエストを承認",
+          "addFriendBtn": "＋ 友だち追加",
+          "recentThreads": "最近のスレッド"
+        },
+        "thread": {
+          "opLabel": "スレ主：{{ global.currentThread.author_name }}",
+          "likeToggle": "{{ global.currentThread.liked_by_me }} ? '❤️ いいね済み' : '🤍 いいね'",
+          "replyCountEmoji": "💬 {{ loop.item.reply_count }} 返信",
+          "boardReplyLike": "{{ loop.item.board_name }} 掲示板  ·  {{ loop.item.reply_count }} 返信 · {{ loop.item.like_count }} いいね"
+        },
+        "reply": {
+          "toMain": "メイン投稿",
+          "replyingTo": "返信先：{{ global.replyHint }}",
+          "toMainBtn": "メインへ",
+          "inputHint": "返信を書く…"
+        },
+        "post": {
+          "reply": "返信",
+          "likeToggle": "{{ loop.item.liked_by_me }} ? 'いいね済み' : 'いいね'",
+          "expand": "▾ 残り {{ loop.item.remaining }} 件の返信を表示",
+          "collapse": "▴ 折りたたむ"
+        },
+        "createBoard": {
+          "title": "新しい掲示板を作成",
+          "nameLabel": "掲示板名",
+          "namePlaceholder": "掲示板に名前を付けよう（全体で一意）",
+          "introLabel": "紹介",
+          "introPlaceholder": "この掲示板を簡単に紹介",
+          "submit": "作成"
+        },
+        "createThread": {
+          "title": "スレッド作成",
+          "heading": "{{ global.currentBoard.name }} 掲示板に投稿",
+          "titleLabel": "タイトル",
+          "titlePlaceholder": "投稿のタイトルを入力",
+          "bodyLabel": "本文",
+          "submit": "投稿"
+        },
+        "chat": {
+          "refreshBtn": "🔄 メッセージを更新"
+        },
+        "toast": {
+          "replyEmpty": "返信内容を入力してください",
+          "replied": "返信しました",
+          "boardNameRequired": "掲示板名を入力してください",
+          "boardCreated": "作成しました！",
+          "titleRequired": "タイトルを入力してください",
+          "published": "投稿しました",
+          "friendRequestSent": "友だちリクエストを送信しました",
+          "nowFriends": "友だちになりました",
+          "saySomething": "何か書いてね"
+        }
+      },
+      "it": {
+        "common": {
+          "back": "← Indietro",
+          "search": "Cerca",
+          "send": "Invia",
+          "refresh": "🔄 Aggiorna",
+          "saySomethingHint": "Scrivi qualcosa…"
+        },
+        "app": {
+          "title": "Forum"
+        },
+        "nav": {
+          "boards": "Forum",
+          "friends": "Amici",
+          "mine": "Io"
+        },
+        "search": {
+          "boardNameHint": "Cerca nome del forum…"
+        },
+        "board": {
+          "createNewBtn": "＋ Crea nuovo forum",
+          "createThreadBtn": "＋ Nuovo argomento",
+          "titleSuffix": "Forum {{ global.currentBoard.name }}",
+          "ownerLabel": "Proprietario: {{ global.currentBoard.owner_name }}"
+        },
+        "boards": {
+          "boardNameSuffix": "Forum {{ loop.item.name }}",
+          "ownerThreadCount": "Proprietario: {{ loop.item.owner_name }}  ·  {{ loop.item.thread_count }} argomenti"
+        },
+        "friends": {
+          "refreshBtn": "🔄 Aggiorna amici / richieste",
+          "newRequests": "Nuove richieste di amicizia · {{ global.friendReqCount }}",
+          "accept": "Accetta",
+          "reject": "Rifiuta",
+          "myFriends": "I miei amici",
+          "dmBtn": "Messaggio"
+        },
+        "empty": {
+          "boards": "Ancora nessun forum — tocca «Crea nuovo forum» in alto per crearne il primo!",
+          "friendRequests": "Nessuna richiesta in sospeso",
+          "friends": "Ancora nessun amico. Tocca l'avatar/il nome di qualcuno in un post per aprire il profilo e aggiungerlo!",
+          "myThreads": "Non hai ancora pubblicato argomenti. Pubblicane uno in un forum!",
+          "boardThreads": "Ancora nessun argomento in questo forum — pubblica il primo!",
+          "posts": "Ancora nessuna risposta — sii il primo!",
+          "userThreads": "Questo utente non ha ancora pubblicato argomenti.",
+          "chat": "Ancora nessun messaggio — invia il primo!"
+        },
+        "profile": {
+          "statsMine": "{{ global.myStats.board_count }} forum · {{ global.myStats.thread_count }} argomenti · {{ global.myStats.post_count }} risposte",
+          "refreshBtn": "🔄 Aggiorna il mio profilo",
+          "myThreads": "Argomenti che ho pubblicato",
+          "userHomeTitle": "Profilo di {{ global.currentUser.display_name }}",
+          "statsUser": "{{ global.currentUser.board_count }} forum · {{ global.currentUser.thread_count }} argomenti · {{ global.currentUser.post_count }} risposte",
+          "selfHint": "Questo è il tuo profilo",
+          "alreadyFriend": "Già amici",
+          "acceptFriendBtn": "Accetta la richiesta di amicizia",
+          "addFriendBtn": "＋ Aggiungi amico",
+          "recentThreads": "Argomenti recenti"
+        },
+        "thread": {
+          "opLabel": "Autore originale: {{ global.currentThread.author_name }}",
+          "likeToggle": "{{ global.currentThread.liked_by_me }} ? '❤️ Ti piace' : '🤍 Mi piace'",
+          "replyCountEmoji": "💬 {{ loop.item.reply_count }} risposte",
+          "boardReplyLike": "Forum {{ loop.item.board_name }}  ·  {{ loop.item.reply_count }} risposte · {{ loop.item.like_count }} mi piace"
+        },
+        "reply": {
+          "toMain": "post principale",
+          "replyingTo": "Risposta a: {{ global.replyHint }}",
+          "toMainBtn": "Al post principale",
+          "inputHint": "Scrivi una risposta…"
+        },
+        "post": {
+          "reply": "Rispondi",
+          "likeToggle": "{{ loop.item.liked_by_me }} ? 'Ti piace' : 'Mi piace'",
+          "expand": "▾ Mostra altre {{ loop.item.remaining }} risposte",
+          "collapse": "▴ Comprimi"
+        },
+        "createBoard": {
+          "title": "Crea nuovo forum",
+          "nameLabel": "Nome forum",
+          "namePlaceholder": "Dai un nome al tuo forum (univoco nel sito)",
+          "introLabel": "Descrizione",
+          "introPlaceholder": "Descrivi brevemente questo forum",
+          "submit": "Crea"
+        },
+        "createThread": {
+          "title": "Nuovo argomento",
+          "heading": "Pubblica nel forum {{ global.currentBoard.name }}",
+          "titleLabel": "Titolo",
+          "titlePlaceholder": "Dai un titolo al tuo post",
+          "bodyLabel": "Testo",
+          "submit": "Pubblica"
+        },
+        "chat": {
+          "refreshBtn": "🔄 Aggiorna messaggi"
+        },
+        "toast": {
+          "replyEmpty": "La risposta non può essere vuota",
+          "replied": "Risposta inviata",
+          "boardNameRequired": "Inserisci un nome per il forum",
+          "boardCreated": "Creato!",
+          "titleRequired": "Inserisci un titolo",
+          "published": "Pubblicato",
+          "friendRequestSent": "Richiesta di amicizia inviata",
+          "nowFriends": "Ora siete amici",
+          "saySomething": "Scrivi qualcosa"
+        }
+      }
     },
     "functions": {
       "syncMyName": {
@@ -266,7 +1465,7 @@
             "call": "@set",
             "args": {
               "var": "global.replyHint",
-              "value": "主楼"
+              "value": "{{ t('reply.toMain') }}"
             }
           },
           {
@@ -416,7 +1615,7 @@
             "call": "@set",
             "args": {
               "var": "global.replyHint",
-              "value": "主楼"
+              "value": "{{ t('reply.toMain') }}"
             }
           }
         ]
@@ -440,7 +1639,7 @@
                 {
                   "call": "@show_toast",
                   "args": {
-                    "message": "回帖内容不能为空"
+                    "message": "{{ t('toast.replyEmpty') }}"
                   }
                 }
               ],
@@ -497,7 +1696,7 @@
                       {
                         "call": "@show_toast",
                         "args": {
-                          "message": "已回复"
+                          "message": "{{ t('toast.replied') }}"
                         }
                       }
                     ],
@@ -535,7 +1734,7 @@
                 {
                   "call": "@show_toast",
                   "args": {
-                    "message": "请输入吧名"
+                    "message": "{{ t('toast.boardNameRequired') }}"
                   }
                 }
               ],
@@ -594,7 +1793,7 @@
                       {
                         "call": "@show_toast",
                         "args": {
-                          "message": "创建成功！"
+                          "message": "{{ t('toast.boardCreated') }}"
                         }
                       },
                       {
@@ -638,7 +1837,7 @@
                 {
                   "call": "@show_toast",
                   "args": {
-                    "message": "请输入标题"
+                    "message": "{{ t('toast.titleRequired') }}"
                   }
                 }
               ],
@@ -698,7 +1897,7 @@
                       {
                         "call": "@show_toast",
                         "args": {
-                          "message": "已发布"
+                          "message": "{{ t('toast.published') }}"
                         }
                       },
                       {
@@ -978,7 +2177,7 @@
                 {
                   "call": "@show_toast",
                   "args": {
-                    "message": "已发送好友请求"
+                    "message": "{{ t('toast.friendRequestSent') }}"
                   }
                 },
                 {
@@ -1055,7 +2254,7 @@
         "params": [
           "ownerId"
         ],
-        "description": "同意好友请求",
+        "description": "{{ t('profile.acceptFriendBtn') }}",
         "logic": [
           {
             "call": "@faas.post",
@@ -1074,7 +2273,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已成为好友"
+              "message": "{{ t('toast.nowFriends') }}"
             }
           },
           {
@@ -1177,7 +2376,7 @@
       },
       "sendDm": {
         "params": [],
-        "description": "发私信",
+        "description": "{{ t('friends.dmBtn') }}",
         "logic": [
           {
             "call": "@if",
@@ -1194,7 +2393,7 @@
                 {
                   "call": "@show_toast",
                   "args": {
-                    "message": "说点什么吧"
+                    "message": "{{ t('toast.saySomething') }}"
                   }
                 }
               ],
@@ -1306,12 +2505,12 @@
     "screens": [
       {
         "id": "home",
-        "title": "论坛",
+        "title": "{{ t('app.title') }}",
         "tabs": [
           {
-            "label": "吧",
+            "label": "{{ t('nav.boards') }}",
             "icon": "menu_book",
-            "title": "论坛",
+            "title": "{{ t('app.title') }}",
             "padding": 16,
             "children": [
               {
@@ -1321,7 +2520,7 @@
                 "children": [
                   {
                     "type": "input",
-                    "placeholder": "搜索吧名…",
+                    "placeholder": "{{ t('search.boardNameHint') }}",
                     "bind": "global.q",
                     "prefixIcon": "search",
                     "position": {
@@ -1335,7 +2534,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "搜索",
+                    "label": "{{ t('common.search') }}",
                     "variant": "filled",
                     "action": {
                       "call": "@global.loadBoards",
@@ -1350,7 +2549,7 @@
               },
               {
                 "type": "button",
-                "label": "＋ 创建新吧",
+                "label": "{{ t('board.createNewBtn') }}",
                 "variant": "outlined",
                 "action": {
                   "type": "navigate",
@@ -1365,7 +2564,7 @@
                 "source": "{{ global.boards }}",
                 "shrinkWrap": true,
                 "separator": "none",
-                "emptyText": "还没有吧，点上面「创建新吧」开第一个吧～",
+                "emptyText": "{{ t('empty.boards') }}",
                 "item_template": {
                   "type": "card",
                   "layout": "column",
@@ -1394,7 +2593,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "{{ loop.item.name }}吧",
+                              "value": "{{ t('boards.boardNameSuffix') }}",
                               "style": {
                                 "fontSize": 16,
                                 "fontWeight": "bold",
@@ -1411,7 +2610,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "吧主：{{ loop.item.owner_name }}  ·  {{ loop.item.thread_count }} 主题",
+                              "value": "{{ t('boards.ownerThreadCount') }}",
                               "style": {
                                 "fontSize": 11,
                                 "color": "#999999"
@@ -1437,14 +2636,14 @@
             ]
           },
           {
-            "label": "好友",
+            "label": "{{ t('nav.friends') }}",
             "icon": "people",
-            "title": "好友",
+            "title": "{{ t('nav.friends') }}",
             "padding": 16,
             "children": [
               {
                 "type": "button",
-                "label": "🔄 刷新好友 / 请求",
+                "label": "{{ t('friends.refreshBtn') }}",
                 "variant": "outlined",
                 "action": {
                   "call": "@global.loadFriends",
@@ -1457,7 +2656,7 @@
               },
               {
                 "type": "text",
-                "value": "新的好友请求 · {{ global.friendReqCount }}",
+                "value": "{{ t('friends.newRequests') }}",
                 "style": {
                   "fontSize": 15,
                   "fontWeight": "bold"
@@ -1468,7 +2667,7 @@
                 "source": "{{ global.friendRequests }}",
                 "shrinkWrap": true,
                 "separator": "none",
-                "emptyText": "没有待处理的请求",
+                "emptyText": "{{ t('empty.friendRequests') }}",
                 "item_template": {
                   "type": "container",
                   "layout": "row",
@@ -1498,7 +2697,7 @@
                     },
                     {
                       "type": "button",
-                      "label": "通过",
+                      "label": "{{ t('friends.accept') }}",
                       "variant": "filled",
                       "action": {
                         "call": "@global.acceptRequest",
@@ -1513,7 +2712,7 @@
                     },
                     {
                       "type": "button",
-                      "label": "拒绝",
+                      "label": "{{ t('friends.reject') }}",
                       "variant": "text",
                       "action": {
                         "call": "@global.rejectRequest",
@@ -1535,7 +2734,7 @@
               },
               {
                 "type": "text",
-                "value": "我的好友",
+                "value": "{{ t('friends.myFriends') }}",
                 "style": {
                   "fontSize": 15,
                   "fontWeight": "bold"
@@ -1546,7 +2745,7 @@
                 "source": "{{ global.friends }}",
                 "shrinkWrap": true,
                 "separator": "none",
-                "emptyText": "还没有好友。去帖子里点某人的头像/名字，进主页加好友吧～",
+                "emptyText": "{{ t('empty.friends') }}",
                 "item_template": {
                   "type": "container",
                   "layout": "row",
@@ -1576,7 +2775,7 @@
                     },
                     {
                       "type": "button",
-                      "label": "发私信",
+                      "label": "{{ t('friends.dmBtn') }}",
                       "variant": "text",
                       "action": {
                         "call": "@global.openChat",
@@ -1595,9 +2794,9 @@
             ]
           },
           {
-            "label": "我的",
+            "label": "{{ t('nav.mine') }}",
             "icon": "person",
-            "title": "我的",
+            "title": "{{ t('nav.mine') }}",
             "padding": 16,
             "children": [
               {
@@ -1636,7 +2835,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "开了 {{ global.myStats.board_count }} 个吧 · 发了 {{ global.myStats.thread_count }} 主题 · {{ global.myStats.post_count }} 回帖",
+                            "value": "{{ t('profile.statsMine') }}",
                             "style": {
                               "fontSize": 12,
                               "color": "#999999"
@@ -1658,7 +2857,7 @@
               },
               {
                 "type": "button",
-                "label": "🔄 刷新我的资料",
+                "label": "{{ t('profile.refreshBtn') }}",
                 "variant": "outlined",
                 "action": {
                   "call": "@global.loadMyProfile",
@@ -1670,7 +2869,7 @@
               },
               {
                 "type": "text",
-                "value": "我发的主题",
+                "value": "{{ t('profile.myThreads') }}",
                 "style": {
                   "fontSize": 15,
                   "fontWeight": "bold"
@@ -1681,7 +2880,7 @@
                 "source": "{{ global.myThreads }}",
                 "shrinkWrap": true,
                 "separator": "none",
-                "emptyText": "你还没发过主题。去吧里发一帖吧～",
+                "emptyText": "{{ t('empty.myThreads') }}",
                 "item_template": {
                   "type": "card",
                   "layout": "column",
@@ -1697,7 +2896,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "{{ loop.item.board_name }}吧  ·  {{ loop.item.reply_count }} 回复 · {{ loop.item.like_count }} 赞",
+                      "value": "{{ t('thread.boardReplyLike') }}",
                       "style": {
                         "fontSize": 11,
                         "color": "#999999"
@@ -1718,14 +2917,14 @@
       },
       {
         "id": "board",
-        "title": "{{ global.currentBoard.name }}吧",
+        "title": "{{ t('board.titleSuffix') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
             "type": "button",
-            "label": "← 返回",
+            "label": "{{ t('common.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -1733,7 +2932,7 @@
           },
           {
             "type": "text",
-            "value": "{{ global.currentBoard.name }}吧",
+            "value": "{{ t('board.titleSuffix') }}",
             "style": {
               "fontSize": 20,
               "fontWeight": "bold"
@@ -1749,7 +2948,7 @@
           },
           {
             "type": "text",
-            "value": "吧主：{{ global.currentBoard.owner_name }}",
+            "value": "{{ t('board.ownerLabel') }}",
             "style": {
               "fontSize": 12,
               "color": "#999999"
@@ -1761,7 +2960,7 @@
           },
           {
             "type": "button",
-            "label": "＋ 发主题",
+            "label": "{{ t('board.createThreadBtn') }}",
             "variant": "filled",
             "action": {
               "type": "navigate",
@@ -1776,7 +2975,7 @@
             "source": "{{ global.threads }}",
             "shrinkWrap": true,
             "separator": "none",
-            "emptyText": "本吧还没有主题，来发第一帖～",
+            "emptyText": "{{ t('empty.boardThreads') }}",
             "item_template": {
               "type": "card",
               "layout": "column",
@@ -1851,7 +3050,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "💬 {{ loop.item.reply_count }} 回复",
+                              "value": "{{ t('thread.replyCountEmoji') }}",
                               "style": {
                                 "fontSize": 11,
                                 "color": "#999999"
@@ -1887,7 +3086,7 @@
         "children": [
           {
             "type": "button",
-            "label": "← 返回",
+            "label": "{{ t('common.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -1923,7 +3122,7 @@
               },
               {
                 "type": "button",
-                "label": "楼主：{{ global.currentThread.author_name }}",
+                "label": "{{ t('thread.opLabel') }}",
                 "variant": "text",
                 "action": {
                   "call": "@global.openUser",
@@ -1958,7 +3157,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "{{ global.currentThread.liked_by_me }} ? '❤️ 已赞' : '🤍 点赞'",
+                    "label": "{{ t('thread.likeToggle') }}",
                     "variant": "text",
                     "action": {
                       "call": "@global.toggleLikeThread",
@@ -1994,7 +3193,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "回复：{{ global.replyHint }}",
+                "value": "{{ t('reply.replyingTo') }}",
                 "style": {
                   "fontSize": 12,
                   "color": "#888888"
@@ -2009,7 +3208,7 @@
               },
               {
                 "type": "button",
-                "label": "回主楼",
+                "label": "{{ t('reply.toMainBtn') }}",
                 "variant": "text",
                 "action": {
                   "call": "@global.replyToFloor",
@@ -2025,7 +3224,7 @@
             "children": [
               {
                 "type": "input",
-                "placeholder": "写回复…",
+                "placeholder": "{{ t('reply.inputHint') }}",
                 "bind": "global.replyText",
                 "position": {
                   "type": "flex",
@@ -2038,7 +3237,7 @@
               },
               {
                 "type": "button",
-                "label": "发送",
+                "label": "{{ t('common.send') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.submitReply",
@@ -2055,7 +3254,7 @@
             "source": "{{ global.posts }}",
             "shrinkWrap": true,
             "separator": "none",
-            "emptyText": "还没有回帖，来抢沙发～",
+            "emptyText": "{{ t('empty.posts') }}",
             "item_template": {
               "type": "container",
               "layout": "column",
@@ -2132,7 +3331,7 @@
                       "children": [
                         {
                           "type": "button",
-                          "label": "回复",
+                          "label": "{{ t('post.reply') }}",
                           "variant": "text",
                           "action": {
                             "call": "@global.replyTo",
@@ -2160,7 +3359,7 @@
                         },
                         {
                           "type": "button",
-                          "label": "{{ loop.item.liked_by_me }} ? '已赞' : '点赞'",
+                          "label": "{{ t('post.likeToggle') }}",
                           "variant": "text",
                           "action": {
                             "call": "@global.toggleLikePost",
@@ -2176,7 +3375,7 @@
                 },
                 {
                   "type": "button",
-                  "label": "▾ 展开 {{ loop.item.remaining }} 条回复",
+                  "label": "{{ t('post.expand') }}",
                   "variant": "text",
                   "visible": {
                     "==": [
@@ -2195,7 +3394,7 @@
                 },
                 {
                   "type": "button",
-                  "label": "▴ 收起",
+                  "label": "{{ t('post.collapse') }}",
                   "variant": "text",
                   "visible": {
                     "==": [
@@ -2219,14 +3418,14 @@
       },
       {
         "id": "create_board",
-        "title": "创建新吧",
+        "title": "{{ t('createBoard.title') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
             "type": "button",
-            "label": "← 返回",
+            "label": "{{ t('common.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -2234,7 +3433,7 @@
           },
           {
             "type": "text",
-            "value": "创建新吧",
+            "value": "{{ t('createBoard.title') }}",
             "style": {
               "fontSize": 20,
               "fontWeight": "bold"
@@ -2246,7 +3445,7 @@
           },
           {
             "type": "text",
-            "value": "吧名",
+            "value": "{{ t('createBoard.nameLabel') }}",
             "style": {
               "fontSize": 14,
               "fontWeight": "bold"
@@ -2258,7 +3457,7 @@
           },
           {
             "type": "input",
-            "placeholder": "给你的吧起个名字（全局唯一）",
+            "placeholder": "{{ t('createBoard.namePlaceholder') }}",
             "bind": "global.newBoardName"
           },
           {
@@ -2267,7 +3466,7 @@
           },
           {
             "type": "text",
-            "value": "简介",
+            "value": "{{ t('createBoard.introLabel') }}",
             "style": {
               "fontSize": 14,
               "fontWeight": "bold"
@@ -2279,7 +3478,7 @@
           },
           {
             "type": "input",
-            "placeholder": "简单介绍一下这个吧",
+            "placeholder": "{{ t('createBoard.introPlaceholder') }}",
             "bind": "global.newBoardIntro",
             "maxLines": 3
           },
@@ -2289,7 +3488,7 @@
           },
           {
             "type": "button",
-            "label": "创建",
+            "label": "{{ t('createBoard.submit') }}",
             "variant": "filled",
             "action": {
               "call": "@global.submitBoard",
@@ -2300,14 +3499,14 @@
       },
       {
         "id": "create_thread",
-        "title": "发新主题",
+        "title": "{{ t('createThread.title') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
             "type": "button",
-            "label": "← 返回",
+            "label": "{{ t('common.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -2315,7 +3514,7 @@
           },
           {
             "type": "text",
-            "value": "在 {{ global.currentBoard.name }}吧 发帖",
+            "value": "{{ t('createThread.heading') }}",
             "style": {
               "fontSize": 18,
               "fontWeight": "bold"
@@ -2327,7 +3526,7 @@
           },
           {
             "type": "text",
-            "value": "标题",
+            "value": "{{ t('createThread.titleLabel') }}",
             "style": {
               "fontSize": 14,
               "fontWeight": "bold"
@@ -2339,7 +3538,7 @@
           },
           {
             "type": "input",
-            "placeholder": "给帖子起个标题",
+            "placeholder": "{{ t('createThread.titlePlaceholder') }}",
             "bind": "global.newThreadTitle"
           },
           {
@@ -2348,7 +3547,7 @@
           },
           {
             "type": "text",
-            "value": "正文",
+            "value": "{{ t('createThread.bodyLabel') }}",
             "style": {
               "fontSize": 14,
               "fontWeight": "bold"
@@ -2360,7 +3559,7 @@
           },
           {
             "type": "input",
-            "placeholder": "说点什么…",
+            "placeholder": "{{ t('common.saySomethingHint') }}",
             "bind": "global.newThreadBody",
             "maxLines": 6
           },
@@ -2370,7 +3569,7 @@
           },
           {
             "type": "button",
-            "label": "发布",
+            "label": "{{ t('createThread.submit') }}",
             "variant": "filled",
             "action": {
               "call": "@global.submitThread",
@@ -2381,14 +3580,14 @@
       },
       {
         "id": "user_profile",
-        "title": "{{ global.currentUser.display_name }} 的主页",
+        "title": "{{ t('profile.userHomeTitle') }}",
         "layout": "column",
         "padding": 16,
         "scrollable": true,
         "children": [
           {
             "type": "button",
-            "label": "← 返回",
+            "label": "{{ t('common.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -2430,7 +3629,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "开了 {{ global.currentUser.board_count }} 个吧 · 发了 {{ global.currentUser.thread_count }} 主题 · {{ global.currentUser.post_count }} 回帖",
+                        "value": "{{ t('profile.statsUser') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#999999"
@@ -2459,7 +3658,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "这是我的主页",
+                "label": "{{ t('profile.selfHint') }}",
                 "variant": "text",
                 "action": {}
               },
@@ -2472,7 +3671,7 @@
               },
               {
                 "type": "button",
-                "label": "🔄 刷新",
+                "label": "{{ t('common.refresh') }}",
                 "variant": "outlined",
                 "action": {
                   "call": "@global.reloadUser",
@@ -2499,7 +3698,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "已是好友",
+                "label": "{{ t('profile.alreadyFriend') }}",
                 "variant": "text",
                 "action": {}
               },
@@ -2512,7 +3711,7 @@
               },
               {
                 "type": "button",
-                "label": "发私信",
+                "label": "{{ t('friends.dmBtn') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.openChat",
@@ -2534,7 +3733,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "已发送好友请求",
+                "label": "{{ t('toast.friendRequestSent') }}",
                 "variant": "text",
                 "action": {}
               }
@@ -2549,7 +3748,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "同意好友请求",
+                "label": "{{ t('profile.acceptFriendBtn') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.acceptRequest",
@@ -2564,7 +3763,7 @@
               },
               {
                 "type": "button",
-                "label": "拒绝",
+                "label": "{{ t('friends.reject') }}",
                 "variant": "text",
                 "action": {
                   "call": "@global.rejectRequest",
@@ -2605,7 +3804,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "＋ 加好友",
+                "label": "{{ t('profile.addFriendBtn') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.addFriend",
@@ -2621,7 +3820,7 @@
           },
           {
             "type": "text",
-            "value": "最近主题",
+            "value": "{{ t('profile.recentThreads') }}",
             "style": {
               "fontSize": 15,
               "fontWeight": "bold"
@@ -2632,7 +3831,7 @@
             "source": "{{ global.currentUserThreads }}",
             "shrinkWrap": true,
             "separator": "none",
-            "emptyText": "该用户还没有发过主题。",
+            "emptyText": "{{ t('empty.userThreads') }}",
             "item_template": {
               "type": "card",
               "layout": "column",
@@ -2648,7 +3847,7 @@
                 },
                 {
                   "type": "text",
-                  "value": "{{ loop.item.board_name }}吧  ·  {{ loop.item.reply_count }} 回复 · {{ loop.item.like_count }} 赞",
+                  "value": "{{ t('thread.boardReplyLike') }}",
                   "style": {
                     "fontSize": 11,
                     "color": "#999999"
@@ -2674,7 +3873,7 @@
         "children": [
           {
             "type": "button",
-            "label": "← 返回",
+            "label": "{{ t('common.back') }}",
             "variant": "text",
             "action": {
               "type": "back"
@@ -2712,7 +3911,7 @@
           },
           {
             "type": "button",
-            "label": "🔄 刷新消息",
+            "label": "{{ t('chat.refreshBtn') }}",
             "variant": "outlined",
             "action": {
               "call": "@global.reloadChat",
@@ -2727,7 +3926,7 @@
             "source": "{{ global.chatMessages }}",
             "shrinkWrap": true,
             "separator": "none",
-            "emptyText": "还没有聊天记录，发第一条消息吧～",
+            "emptyText": "{{ t('empty.chat') }}",
             "item_template": {
               "type": "container",
               "layout": "row",
@@ -2809,7 +4008,7 @@
             "children": [
               {
                 "type": "input",
-                "placeholder": "说点什么…",
+                "placeholder": "{{ t('common.saySomethingHint') }}",
                 "bind": "global.dmText",
                 "position": {
                   "type": "flex",
@@ -2822,7 +4021,7 @@
               },
               {
                 "type": "button",
-                "label": "发送",
+                "label": "{{ t('common.send') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.sendDm",

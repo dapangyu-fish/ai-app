@@ -6,7 +6,20 @@
     "type": "app",
     "description": "超级 App 首页：多功能入口聚合、轮播、九宫格",
     "author": "fish",
-    "displayName": "超级 App"
+    "displayName": {
+      "default": "超级 App",
+      "zh": "超级 App",
+      "en": "Super App",
+      "de": "Super-App",
+      "es": "Súper App",
+      "fr": "Super App",
+      "pt": "Super App",
+      "ca": "Súper App",
+      "hi": "सुपर ऐप",
+      "ko": "슈퍼 앱",
+      "ja": "スーパーアプリ",
+      "it": "Super App"
+    }
   },
   "dependencies": {},
   "global": {
@@ -94,7 +107,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "{{ '即将打开：' + item.label }}"
+              "message": "{{ t('toast.opening') }}"
             }
           }
         ]
@@ -105,10 +118,353 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "页面已刷新"
+              "message": "{{ t('toast.refreshed') }}"
             }
           }
         ]
+      }
+    },
+    "i18n": {
+      "zh": {
+        "app": {
+          "name": "超级 App"
+        },
+        "banner": {
+          "welcome_title": "欢迎来到超级 App",
+          "welcome_sub": "一站式生活服务平台 · 尽享便捷",
+          "sale_title": "限时特惠",
+          "sale_sub": "精选好物低至 5 折 · 抢购中",
+          "checkin_title": "每日签到有礼",
+          "checkin_sub": "连续签到赢积分兑好礼"
+        },
+        "stats": {
+          "visitors": "今日访客",
+          "orders": "订单数",
+          "unread": "未读消息",
+          "pending": "待处理"
+        },
+        "services": {
+          "title": "功能服务",
+          "subtitle": "全部服务 · 点击进入"
+        },
+        "recent": {
+          "title": "最近动态",
+          "viewAll": "全部"
+        },
+        "toast": {
+          "refreshed": "页面已刷新",
+          "opening": "即将打开：{{ item.label }}"
+        }
+      },
+      "en": {
+        "app": {
+          "name": "Super App"
+        },
+        "banner": {
+          "welcome_title": "Welcome to Super App",
+          "welcome_sub": "One-stop lifestyle service platform · Enjoy convenience",
+          "sale_title": "Limited-Time Offer",
+          "sale_sub": "Selected items up to 50% off · Shop now",
+          "checkin_title": "Daily Check-in Rewards",
+          "checkin_sub": "Check in daily to earn points and redeem gifts"
+        },
+        "stats": {
+          "visitors": "Today's Visitors",
+          "orders": "Orders",
+          "unread": "Unread Messages",
+          "pending": "Pending"
+        },
+        "services": {
+          "title": "Services",
+          "subtitle": "All services · Tap to open"
+        },
+        "recent": {
+          "title": "Recent Activity",
+          "viewAll": "View All"
+        },
+        "toast": {
+          "refreshed": "Page refreshed",
+          "opening": "Opening: {{ item.label }}"
+        }
+      },
+      "de": {
+        "app": {
+          "name": "Super-App"
+        },
+        "banner": {
+          "welcome_title": "Willkommen bei der Super-App",
+          "welcome_sub": "All-in-One-Plattform für Alltagsservices · Maximaler Komfort",
+          "sale_title": "Befristetes Angebot",
+          "sale_sub": "Ausgewählte Artikel bis zu 50 % günstiger · Jetzt zugreifen",
+          "checkin_title": "Tägliche Check-in-Prämien",
+          "checkin_sub": "Täglich einchecken, Punkte sammeln und Geschenke einlösen"
+        },
+        "stats": {
+          "visitors": "Heutige Besucher",
+          "orders": "Bestellungen",
+          "unread": "Ungelesene Nachrichten",
+          "pending": "Ausstehend"
+        },
+        "services": {
+          "title": "Dienste",
+          "subtitle": "Alle Dienste · Zum Öffnen tippen"
+        },
+        "recent": {
+          "title": "Letzte Aktivitäten",
+          "viewAll": "Alle"
+        },
+        "toast": {
+          "refreshed": "Seite aktualisiert",
+          "opening": "Wird geöffnet: {{ item.label }}"
+        }
+      },
+      "es": {
+        "app": {
+          "name": "Súper App"
+        },
+        "banner": {
+          "welcome_title": "Bienvenido a Súper App",
+          "welcome_sub": "Plataforma integral de servicios para el día a día · Disfruta la comodidad",
+          "sale_title": "Oferta por tiempo limitado",
+          "sale_sub": "Productos seleccionados hasta 50 % de descuento · Compra ya",
+          "checkin_title": "Recompensas por registro diario",
+          "checkin_sub": "Regístrate cada día para ganar puntos y canjear regalos"
+        },
+        "stats": {
+          "visitors": "Visitantes de hoy",
+          "orders": "Pedidos",
+          "unread": "Mensajes sin leer",
+          "pending": "Pendientes"
+        },
+        "services": {
+          "title": "Servicios",
+          "subtitle": "Todos los servicios · Toca para abrir"
+        },
+        "recent": {
+          "title": "Actividad reciente",
+          "viewAll": "Ver todo"
+        },
+        "toast": {
+          "refreshed": "Página actualizada",
+          "opening": "Abriendo: {{ item.label }}"
+        }
+      },
+      "fr": {
+        "app": {
+          "name": "Super App"
+        },
+        "banner": {
+          "welcome_title": "Bienvenue sur Super App",
+          "welcome_sub": "Plateforme de services tout-en-un · Profitez du confort",
+          "sale_title": "Offre à durée limitée",
+          "sale_sub": "Sélection jusqu'à -50 % · Achetez vite",
+          "checkin_title": "Récompenses de connexion quotidienne",
+          "checkin_sub": "Connectez-vous chaque jour pour gagner des points et obtenir des cadeaux"
+        },
+        "stats": {
+          "visitors": "Visiteurs du jour",
+          "orders": "Commandes",
+          "unread": "Messages non lus",
+          "pending": "En attente"
+        },
+        "services": {
+          "title": "Services",
+          "subtitle": "Tous les services · Touchez pour ouvrir"
+        },
+        "recent": {
+          "title": "Activité récente",
+          "viewAll": "Tout voir"
+        },
+        "toast": {
+          "refreshed": "Page actualisée",
+          "opening": "Ouverture : {{ item.label }}"
+        }
+      },
+      "pt": {
+        "app": {
+          "name": "Super App"
+        },
+        "banner": {
+          "welcome_title": "Bem-vindo ao Super App",
+          "welcome_sub": "Plataforma completa de serviços do dia a dia · Aproveite a praticidade",
+          "sale_title": "Oferta por tempo limitado",
+          "sale_sub": "Itens selecionados com até 50% de desconto · Compre já",
+          "checkin_title": "Recompensas por check-in diário",
+          "checkin_sub": "Faça check-in todos os dias para ganhar pontos e resgatar prêmios"
+        },
+        "stats": {
+          "visitors": "Visitantes de hoje",
+          "orders": "Pedidos",
+          "unread": "Mensagens não lidas",
+          "pending": "Pendentes"
+        },
+        "services": {
+          "title": "Serviços",
+          "subtitle": "Todos os serviços · Toque para abrir"
+        },
+        "recent": {
+          "title": "Atividade recente",
+          "viewAll": "Ver tudo"
+        },
+        "toast": {
+          "refreshed": "Página atualizada",
+          "opening": "Abrindo: {{ item.label }}"
+        }
+      },
+      "ca": {
+        "app": {
+          "name": "Súper App"
+        },
+        "banner": {
+          "welcome_title": "Benvingut a Súper App",
+          "welcome_sub": "Plataforma integral de serveis quotidians · Gaudeix de la comoditat",
+          "sale_title": "Oferta per temps limitat",
+          "sale_sub": "Productes seleccionats fins al 50 % de descompte · Compra ja",
+          "checkin_title": "Recompenses per registre diari",
+          "checkin_sub": "Registra't cada dia per guanyar punts i bescanviar regals"
+        },
+        "stats": {
+          "visitors": "Visitants d'avui",
+          "orders": "Comandes",
+          "unread": "Missatges sense llegir",
+          "pending": "Pendents"
+        },
+        "services": {
+          "title": "Serveis",
+          "subtitle": "Tots els serveis · Toca per obrir"
+        },
+        "recent": {
+          "title": "Activitat recent",
+          "viewAll": "Veure-ho tot"
+        },
+        "toast": {
+          "refreshed": "Pàgina actualitzada",
+          "opening": "Obrint: {{ item.label }}"
+        }
+      },
+      "hi": {
+        "app": {
+          "name": "सुपर ऐप"
+        },
+        "banner": {
+          "welcome_title": "सुपर ऐप में आपका स्वागत है",
+          "welcome_sub": "वन-स्टॉप जीवनशैली सेवा मंच · सुविधा का आनंद लें",
+          "sale_title": "सीमित समय का ऑफ़र",
+          "sale_sub": "चुनिंदा वस्तुएँ 50% तक की छूट पर · अभी खरीदें",
+          "checkin_title": "दैनिक चेक-इन इनाम",
+          "checkin_sub": "रोज़ चेक-इन करें, अंक कमाएँ और उपहार पाएँ"
+        },
+        "stats": {
+          "visitors": "आज के आगंतुक",
+          "orders": "ऑर्डर",
+          "unread": "अपठित संदेश",
+          "pending": "लंबित"
+        },
+        "services": {
+          "title": "सेवाएँ",
+          "subtitle": "सभी सेवाएँ · खोलने के लिए टैप करें"
+        },
+        "recent": {
+          "title": "हाल की गतिविधि",
+          "viewAll": "सभी देखें"
+        },
+        "toast": {
+          "refreshed": "पेज ताज़ा किया गया",
+          "opening": "खोल रहे हैं: {{ item.label }}"
+        }
+      },
+      "ko": {
+        "app": {
+          "name": "슈퍼 앱"
+        },
+        "banner": {
+          "welcome_title": "슈퍼 앱에 오신 것을 환영합니다",
+          "welcome_sub": "원스톱 생활 서비스 플랫폼 · 편리함을 누리세요",
+          "sale_title": "한정 특가",
+          "sale_sub": "엄선 상품 최대 50% 할인 · 지금 구매하세요",
+          "checkin_title": "매일 출석 체크 선물",
+          "checkin_sub": "매일 출석하고 포인트를 모아 선물로 교환하세요"
+        },
+        "stats": {
+          "visitors": "오늘 방문자",
+          "orders": "주문 수",
+          "unread": "읽지 않은 메시지",
+          "pending": "처리 대기"
+        },
+        "services": {
+          "title": "서비스",
+          "subtitle": "모든 서비스 · 탭하여 열기"
+        },
+        "recent": {
+          "title": "최근 활동",
+          "viewAll": "전체 보기"
+        },
+        "toast": {
+          "refreshed": "페이지가 새로고침되었습니다",
+          "opening": "여는 중: {{ item.label }}"
+        }
+      },
+      "ja": {
+        "app": {
+          "name": "スーパーアプリ"
+        },
+        "banner": {
+          "welcome_title": "スーパーアプリへようこそ",
+          "welcome_sub": "ワンストップ生活サービスプラットフォーム · 便利さを満喫",
+          "sale_title": "期間限定セール",
+          "sale_sub": "厳選アイテムが最大50%オフ · お買い得実施中",
+          "checkin_title": "毎日チェックインで特典",
+          "checkin_sub": "毎日チェックインしてポイントを貯め、特典と交換"
+        },
+        "stats": {
+          "visitors": "本日の訪問者",
+          "orders": "注文数",
+          "unread": "未読メッセージ",
+          "pending": "未処理"
+        },
+        "services": {
+          "title": "サービス",
+          "subtitle": "すべてのサービス · タップして開く"
+        },
+        "recent": {
+          "title": "最近の動き",
+          "viewAll": "すべて"
+        },
+        "toast": {
+          "refreshed": "ページを更新しました",
+          "opening": "開いています：{{ item.label }}"
+        }
+      },
+      "it": {
+        "app": {
+          "name": "Super App"
+        },
+        "banner": {
+          "welcome_title": "Benvenuto su Super App",
+          "welcome_sub": "Piattaforma di servizi all-in-one per la vita quotidiana · Goditi la comodità",
+          "sale_title": "Offerta a tempo limitato",
+          "sale_sub": "Articoli selezionati fino al 50% di sconto · Acquista ora",
+          "checkin_title": "Premi giornalieri con il check-in",
+          "checkin_sub": "Fai il check-in ogni giorno per accumulare punti e riscattare premi"
+        },
+        "stats": {
+          "visitors": "Visitatori di oggi",
+          "orders": "Ordini",
+          "unread": "Messaggi non letti",
+          "pending": "In sospeso"
+        },
+        "services": {
+          "title": "Servizi",
+          "subtitle": "Tutti i servizi · Tocca per aprire"
+        },
+        "recent": {
+          "title": "Attività recente",
+          "viewAll": "Vedi tutto"
+        },
+        "toast": {
+          "refreshed": "Pagina aggiornata",
+          "opening": "Apertura: {{ item.label }}"
+        }
       }
     }
   },
@@ -117,11 +473,11 @@
     "screens": [
       {
         "id": "home",
-        "title": "超级 App",
+        "title": "{{ t('app.name') }}",
         "layout": "column",
         "backgroundColor": "#F3F4F6",
         "appBar": {
-          "title": "超级 App",
+          "title": "{{ t('app.name') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -198,7 +554,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "欢迎来到超级 App",
+                            "value": "{{ t('banner.welcome_title') }}",
                             "style": {
                               "fontSize": 22,
                               "fontWeight": "bold",
@@ -211,7 +567,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "一站式生活服务平台 · 尽享便捷",
+                            "value": "{{ t('banner.welcome_sub') }}",
                             "style": {
                               "fontSize": 14,
                               "color": "#FFFFFFD9"
@@ -255,7 +611,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "限时特惠",
+                            "value": "{{ t('banner.sale_title') }}",
                             "style": {
                               "fontSize": 22,
                               "fontWeight": "bold",
@@ -268,7 +624,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "精选好物低至 5 折 · 抢购中",
+                            "value": "{{ t('banner.sale_sub') }}",
                             "style": {
                               "fontSize": 14,
                               "color": "#FFFFFFD9"
@@ -312,7 +668,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "每日签到有礼",
+                            "value": "{{ t('banner.checkin_title') }}",
                             "style": {
                               "fontSize": 22,
                               "fontWeight": "bold",
@@ -325,7 +681,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "连续签到赢积分兑好礼",
+                            "value": "{{ t('banner.checkin_sub') }}",
                             "style": {
                               "fontSize": 14,
                               "color": "#FFFFFFD9"
@@ -406,7 +762,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "今日访客",
+                              "value": "{{ t('stats.visitors') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -463,7 +819,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "订单数",
+                              "value": "{{ t('stats.orders') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -526,7 +882,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "未读消息",
+                              "value": "{{ t('stats.unread') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -583,7 +939,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "待处理",
+                              "value": "{{ t('stats.pending') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -620,7 +976,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "功能服务",
+                "value": "{{ t('services.title') }}",
                 "style": {
                   "fontSize": 17,
                   "fontWeight": "bold",
@@ -633,7 +989,7 @@
               },
               {
                 "type": "text",
-                "value": "全部服务 · 点击进入",
+                "value": "{{ t('services.subtitle') }}",
                 "style": {
                   "fontSize": 12,
                   "color": "#9CA3AF"
@@ -715,7 +1071,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "最近动态",
+                    "value": "{{ t('recent.title') }}",
                     "style": {
                       "fontSize": 17,
                       "fontWeight": "bold",
@@ -727,7 +1083,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "全部",
+                    "label": "{{ t('recent.viewAll') }}",
                     "variant": "text",
                     "action": {
                       "call": "@global.refresh",

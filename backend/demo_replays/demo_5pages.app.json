@@ -6,7 +6,20 @@
     "type": "app",
     "description": "一个包含五个页面和底部导航的多页面应用",
     "author": "fish",
-    "displayName": "五页导航"
+    "displayName": {
+      "default": "五页导航",
+      "zh": "五页导航",
+      "en": "Five-Page Nav",
+      "de": "Fünf-Seiten-Navigation",
+      "es": "Navegación de cinco páginas",
+      "fr": "Navigation cinq pages",
+      "pt": "Navegação de cinco páginas",
+      "ca": "Navegació de cinc pàgines",
+      "hi": "पाँच-पृष्ठ नेविगेशन",
+      "ko": "다섯 페이지 내비게이션",
+      "ja": "5ページナビ",
+      "it": "Navigazione a cinque pagine"
+    }
   },
   "dependencies": {},
   "global": {
@@ -60,7 +73,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "笔记已添加"
+              "message": "{{ t('toast.noteAdded') }}"
             }
           }
         ]
@@ -80,7 +93,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "笔记已删除"
+              "message": "{{ t('toast.noteDeleted') }}"
             }
           }
         ]
@@ -162,7 +175,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "任务已添加"
+              "message": "{{ t('toast.taskAdded') }}"
             }
           }
         ]
@@ -200,7 +213,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "任务已删除"
+              "message": "{{ t('toast.taskDeleted') }}"
             }
           }
         ]
@@ -253,7 +266,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "个人资料已保存"
+              "message": "{{ t('toast.profileSaved') }}"
             }
           }
         ]
@@ -277,6 +290,899 @@
           }
         ]
       }
+    },
+    "i18n": {
+      "zh": {
+        "common": {
+          "all": "全部",
+          "add": "添加"
+        },
+        "status": {
+          "done": "已完成"
+        },
+        "toast": {
+          "noteAdded": "笔记已添加",
+          "noteDeleted": "笔记已删除",
+          "taskAdded": "任务已添加",
+          "taskDeleted": "任务已删除",
+          "profileSaved": "个人资料已保存"
+        },
+        "app": {
+          "title": "五页导航"
+        },
+        "nav": {
+          "home": "首页",
+          "notes": "笔记",
+          "tasks": "任务",
+          "stats": "统计",
+          "profile": "我的"
+        },
+        "pageTitle": {
+          "notes": "我的笔记",
+          "tasks": "待办任务",
+          "stats": "数据统计",
+          "profile": "个人中心"
+        },
+        "home": {
+          "greet": "你好, {{ global.userName }} 👋",
+          "prompt": "今天想做什么？",
+          "noteCount": "笔记数",
+          "taskCount": "任务数",
+          "quickEntry": "快捷入口",
+          "writeNote": "写笔记",
+          "writeNoteDesc": "记录想法",
+          "newTask": "新任务",
+          "newTaskDesc": "添加待办",
+          "viewStats": "查看统计",
+          "viewStatsDesc": "数据概览",
+          "profileCenterDesc": "管理资料",
+          "recentNotes": "最近笔记",
+          "emptyNotes": "还没有笔记，去写一条吧"
+        },
+        "notesPage": {
+          "inputHint": "写点什么...",
+          "filterRecent": "最近",
+          "empty": "还没有笔记，在上方输入框写一条吧"
+        },
+        "tasksPage": {
+          "inputHint": "添加新任务...",
+          "filterUndone": "未完成",
+          "empty": "暂无任务，在上方添加一个吧"
+        },
+        "stats": {
+          "weekly": "本周",
+          "monthly": "本月",
+          "totalNotes": "总笔记",
+          "totalTasks": "总任务",
+          "tasksDone": "任务完成",
+          "pending": "待完成",
+          "completionRate": "任务完成率",
+          "keepGoing": "继续加油！",
+          "usageOverview": "使用概览"
+        },
+        "profile": {
+          "bioHint": "写一句个性签名...",
+          "save": "保存资料",
+          "settings": "设置",
+          "notifications": "消息通知",
+          "darkMode": "深色模式",
+          "about": "关于应用"
+        },
+        "about": {
+          "version": "版本 1.0.0",
+          "tagline": "一个五页底部导航示例应用"
+        }
+      },
+      "en": {
+        "common": {
+          "all": "All",
+          "add": "Add"
+        },
+        "status": {
+          "done": "Done"
+        },
+        "toast": {
+          "noteAdded": "Note added",
+          "noteDeleted": "Note deleted",
+          "taskAdded": "Task added",
+          "taskDeleted": "Task deleted",
+          "profileSaved": "Profile saved"
+        },
+        "app": {
+          "title": "Five-Page Nav"
+        },
+        "nav": {
+          "home": "Home",
+          "notes": "Notes",
+          "tasks": "Tasks",
+          "stats": "Stats",
+          "profile": "Me"
+        },
+        "pageTitle": {
+          "notes": "My Notes",
+          "tasks": "To-do Tasks",
+          "stats": "Statistics",
+          "profile": "Profile"
+        },
+        "home": {
+          "greet": "Hi, {{ global.userName }} 👋",
+          "prompt": "What would you like to do today?",
+          "noteCount": "Notes",
+          "taskCount": "Tasks",
+          "quickEntry": "Quick Access",
+          "writeNote": "Write Note",
+          "writeNoteDesc": "Jot ideas",
+          "newTask": "New Task",
+          "newTaskDesc": "Add to-do",
+          "viewStats": "View Stats",
+          "viewStatsDesc": "Data overview",
+          "profileCenterDesc": "Manage profile",
+          "recentNotes": "Recent Notes",
+          "emptyNotes": "No notes yet — go write one"
+        },
+        "notesPage": {
+          "inputHint": "Write something...",
+          "filterRecent": "Recent",
+          "empty": "No notes yet — write one in the box above"
+        },
+        "tasksPage": {
+          "inputHint": "Add a new task...",
+          "filterUndone": "Active",
+          "empty": "No tasks yet — add one above"
+        },
+        "stats": {
+          "weekly": "This Week",
+          "monthly": "This Month",
+          "totalNotes": "Total Notes",
+          "totalTasks": "Total Tasks",
+          "tasksDone": "Completed",
+          "pending": "Pending",
+          "completionRate": "Completion Rate",
+          "keepGoing": "Keep it up!",
+          "usageOverview": "Usage Overview"
+        },
+        "profile": {
+          "bioHint": "Write a bio...",
+          "save": "Save Profile",
+          "settings": "Settings",
+          "notifications": "Notifications",
+          "darkMode": "Dark Mode",
+          "about": "About"
+        },
+        "about": {
+          "version": "Version 1.0.0",
+          "tagline": "A five-page bottom-navigation demo app"
+        }
+      },
+      "de": {
+        "common": {
+          "all": "Alle",
+          "add": "Hinzufügen"
+        },
+        "status": {
+          "done": "Erledigt"
+        },
+        "toast": {
+          "noteAdded": "Notiz hinzugefügt",
+          "noteDeleted": "Notiz gelöscht",
+          "taskAdded": "Aufgabe hinzugefügt",
+          "taskDeleted": "Aufgabe gelöscht",
+          "profileSaved": "Profil gespeichert"
+        },
+        "app": {
+          "title": "Fünf-Seiten-Navigation"
+        },
+        "nav": {
+          "home": "Start",
+          "notes": "Notizen",
+          "tasks": "Aufgaben",
+          "stats": "Statistik",
+          "profile": "Ich"
+        },
+        "pageTitle": {
+          "notes": "Meine Notizen",
+          "tasks": "Aufgabenliste",
+          "stats": "Statistiken",
+          "profile": "Profil"
+        },
+        "home": {
+          "greet": "Hallo, {{ global.userName }} 👋",
+          "prompt": "Was möchtest du heute tun?",
+          "noteCount": "Notizen",
+          "taskCount": "Aufgaben",
+          "quickEntry": "Schnellzugriff",
+          "writeNote": "Notiz schreiben",
+          "writeNoteDesc": "Ideen festhalten",
+          "newTask": "Neue Aufgabe",
+          "newTaskDesc": "To-do hinzufügen",
+          "viewStats": "Statistik ansehen",
+          "viewStatsDesc": "Datenübersicht",
+          "profileCenterDesc": "Profil verwalten",
+          "recentNotes": "Letzte Notizen",
+          "emptyNotes": "Noch keine Notizen, schreib eine"
+        },
+        "notesPage": {
+          "inputHint": "Schreib etwas...",
+          "filterRecent": "Aktuell",
+          "empty": "Noch keine Notizen, schreib oben eine"
+        },
+        "tasksPage": {
+          "inputHint": "Neue Aufgabe hinzufügen...",
+          "filterUndone": "Offen",
+          "empty": "Noch keine Aufgaben, füge oben eine hinzu"
+        },
+        "stats": {
+          "weekly": "Diese Woche",
+          "monthly": "Dieser Monat",
+          "totalNotes": "Notizen gesamt",
+          "totalTasks": "Aufgaben gesamt",
+          "tasksDone": "Erledigt",
+          "pending": "Ausstehend",
+          "completionRate": "Abschlussquote",
+          "keepGoing": "Weiter so!",
+          "usageOverview": "Nutzungsübersicht"
+        },
+        "profile": {
+          "bioHint": "Schreib eine Bio...",
+          "save": "Profil speichern",
+          "settings": "Einstellungen",
+          "notifications": "Benachrichtigungen",
+          "darkMode": "Dunkelmodus",
+          "about": "Über die App"
+        },
+        "about": {
+          "version": "Version 1.0.0",
+          "tagline": "Eine Demo-App mit fünf Seiten und unterer Navigation"
+        }
+      },
+      "es": {
+        "common": {
+          "all": "Todos",
+          "add": "Añadir"
+        },
+        "status": {
+          "done": "Completadas"
+        },
+        "toast": {
+          "noteAdded": "Nota añadida",
+          "noteDeleted": "Nota eliminada",
+          "taskAdded": "Tarea añadida",
+          "taskDeleted": "Tarea eliminada",
+          "profileSaved": "Perfil guardado"
+        },
+        "app": {
+          "title": "Navegación de cinco páginas"
+        },
+        "nav": {
+          "home": "Inicio",
+          "notes": "Notas",
+          "tasks": "Tareas",
+          "stats": "Estadísticas",
+          "profile": "Yo"
+        },
+        "pageTitle": {
+          "notes": "Mis notas",
+          "tasks": "Tareas pendientes",
+          "stats": "Estadísticas",
+          "profile": "Perfil"
+        },
+        "home": {
+          "greet": "Hola, {{ global.userName }} 👋",
+          "prompt": "¿Qué quieres hacer hoy?",
+          "noteCount": "Notas",
+          "taskCount": "Tareas",
+          "quickEntry": "Acceso rápido",
+          "writeNote": "Escribir nota",
+          "writeNoteDesc": "Anota ideas",
+          "newTask": "Nueva tarea",
+          "newTaskDesc": "Añadir pendiente",
+          "viewStats": "Ver estadísticas",
+          "viewStatsDesc": "Resumen de datos",
+          "profileCenterDesc": "Gestionar perfil",
+          "recentNotes": "Notas recientes",
+          "emptyNotes": "Aún no hay notas, escribe una"
+        },
+        "notesPage": {
+          "inputHint": "Escribe algo...",
+          "filterRecent": "Recientes",
+          "empty": "Aún no hay notas, escribe una en el cuadro de arriba"
+        },
+        "tasksPage": {
+          "inputHint": "Añadir una tarea nueva...",
+          "filterUndone": "Pendientes",
+          "empty": "Aún no hay tareas, añade una arriba"
+        },
+        "stats": {
+          "weekly": "Esta semana",
+          "monthly": "Este mes",
+          "totalNotes": "Notas totales",
+          "totalTasks": "Tareas totales",
+          "tasksDone": "Completadas",
+          "pending": "Pendientes",
+          "completionRate": "Tasa de finalización",
+          "keepGoing": "¡Sigue así!",
+          "usageOverview": "Resumen de uso"
+        },
+        "profile": {
+          "bioHint": "Escribe una biografía...",
+          "save": "Guardar perfil",
+          "settings": "Ajustes",
+          "notifications": "Notificaciones",
+          "darkMode": "Modo oscuro",
+          "about": "Acerca de"
+        },
+        "about": {
+          "version": "Versión 1.0.0",
+          "tagline": "Una app de demostración con cinco páginas y navegación inferior"
+        }
+      },
+      "fr": {
+        "common": {
+          "all": "Tous",
+          "add": "Ajouter"
+        },
+        "status": {
+          "done": "Terminées"
+        },
+        "toast": {
+          "noteAdded": "Note ajoutée",
+          "noteDeleted": "Note supprimée",
+          "taskAdded": "Tâche ajoutée",
+          "taskDeleted": "Tâche supprimée",
+          "profileSaved": "Profil enregistré"
+        },
+        "app": {
+          "title": "Navigation cinq pages"
+        },
+        "nav": {
+          "home": "Accueil",
+          "notes": "Notes",
+          "tasks": "Tâches",
+          "stats": "Stats",
+          "profile": "Moi"
+        },
+        "pageTitle": {
+          "notes": "Mes notes",
+          "tasks": "Tâches à faire",
+          "stats": "Statistiques",
+          "profile": "Profil"
+        },
+        "home": {
+          "greet": "Bonjour, {{ global.userName }} 👋",
+          "prompt": "Que veux-tu faire aujourd'hui ?",
+          "noteCount": "Notes",
+          "taskCount": "Tâches",
+          "quickEntry": "Accès rapide",
+          "writeNote": "Écrire une note",
+          "writeNoteDesc": "Noter des idées",
+          "newTask": "Nouvelle tâche",
+          "newTaskDesc": "Ajouter une tâche",
+          "viewStats": "Voir les stats",
+          "viewStatsDesc": "Aperçu des données",
+          "profileCenterDesc": "Gérer le profil",
+          "recentNotes": "Notes récentes",
+          "emptyNotes": "Pas encore de notes, écris-en une"
+        },
+        "notesPage": {
+          "inputHint": "Écris quelque chose...",
+          "filterRecent": "Récentes",
+          "empty": "Pas encore de notes, écris-en une dans le champ ci-dessus"
+        },
+        "tasksPage": {
+          "inputHint": "Ajouter une nouvelle tâche...",
+          "filterUndone": "À faire",
+          "empty": "Pas encore de tâches, ajoute-en une ci-dessus"
+        },
+        "stats": {
+          "weekly": "Cette semaine",
+          "monthly": "Ce mois",
+          "totalNotes": "Total des notes",
+          "totalTasks": "Total des tâches",
+          "tasksDone": "Terminées",
+          "pending": "En attente",
+          "completionRate": "Taux d'achèvement",
+          "keepGoing": "Continue comme ça !",
+          "usageOverview": "Aperçu d'utilisation"
+        },
+        "profile": {
+          "bioHint": "Écris une bio...",
+          "save": "Enregistrer le profil",
+          "settings": "Paramètres",
+          "notifications": "Notifications",
+          "darkMode": "Mode sombre",
+          "about": "À propos"
+        },
+        "about": {
+          "version": "Version 1.0.0",
+          "tagline": "Une appli de démo à cinq pages avec navigation en bas"
+        }
+      },
+      "pt": {
+        "common": {
+          "all": "Todos",
+          "add": "Adicionar"
+        },
+        "status": {
+          "done": "Concluídas"
+        },
+        "toast": {
+          "noteAdded": "Nota adicionada",
+          "noteDeleted": "Nota excluída",
+          "taskAdded": "Tarefa adicionada",
+          "taskDeleted": "Tarefa excluída",
+          "profileSaved": "Perfil salvo"
+        },
+        "app": {
+          "title": "Navegação de cinco páginas"
+        },
+        "nav": {
+          "home": "Início",
+          "notes": "Notas",
+          "tasks": "Tarefas",
+          "stats": "Estatísticas",
+          "profile": "Eu"
+        },
+        "pageTitle": {
+          "notes": "Minhas notas",
+          "tasks": "Tarefas a fazer",
+          "stats": "Estatísticas",
+          "profile": "Perfil"
+        },
+        "home": {
+          "greet": "Olá, {{ global.userName }} 👋",
+          "prompt": "O que você quer fazer hoje?",
+          "noteCount": "Notas",
+          "taskCount": "Tarefas",
+          "quickEntry": "Acesso rápido",
+          "writeNote": "Escrever nota",
+          "writeNoteDesc": "Anote ideias",
+          "newTask": "Nova tarefa",
+          "newTaskDesc": "Adicionar pendência",
+          "viewStats": "Ver estatísticas",
+          "viewStatsDesc": "Visão geral dos dados",
+          "profileCenterDesc": "Gerenciar perfil",
+          "recentNotes": "Notas recentes",
+          "emptyNotes": "Ainda não há notas, escreva uma"
+        },
+        "notesPage": {
+          "inputHint": "Escreva algo...",
+          "filterRecent": "Recentes",
+          "empty": "Ainda não há notas, escreva uma na caixa acima"
+        },
+        "tasksPage": {
+          "inputHint": "Adicionar nova tarefa...",
+          "filterUndone": "Pendentes",
+          "empty": "Ainda não há tarefas, adicione uma acima"
+        },
+        "stats": {
+          "weekly": "Esta semana",
+          "monthly": "Este mês",
+          "totalNotes": "Total de notas",
+          "totalTasks": "Total de tarefas",
+          "tasksDone": "Concluídas",
+          "pending": "Pendentes",
+          "completionRate": "Taxa de conclusão",
+          "keepGoing": "Continue assim!",
+          "usageOverview": "Visão geral de uso"
+        },
+        "profile": {
+          "bioHint": "Escreva uma bio...",
+          "save": "Salvar perfil",
+          "settings": "Configurações",
+          "notifications": "Notificações",
+          "darkMode": "Modo escuro",
+          "about": "Sobre"
+        },
+        "about": {
+          "version": "Versão 1.0.0",
+          "tagline": "Um app de demonstração de cinco páginas com navegação inferior"
+        }
+      },
+      "ca": {
+        "common": {
+          "all": "Tots",
+          "add": "Afegeix"
+        },
+        "status": {
+          "done": "Completades"
+        },
+        "toast": {
+          "noteAdded": "Nota afegida",
+          "noteDeleted": "Nota eliminada",
+          "taskAdded": "Tasca afegida",
+          "taskDeleted": "Tasca eliminada",
+          "profileSaved": "Perfil desat"
+        },
+        "app": {
+          "title": "Navegació de cinc pàgines"
+        },
+        "nav": {
+          "home": "Inici",
+          "notes": "Notes",
+          "tasks": "Tasques",
+          "stats": "Estadístiques",
+          "profile": "Jo"
+        },
+        "pageTitle": {
+          "notes": "Les meves notes",
+          "tasks": "Tasques pendents",
+          "stats": "Estadístiques",
+          "profile": "Perfil"
+        },
+        "home": {
+          "greet": "Hola, {{ global.userName }} 👋",
+          "prompt": "Què vols fer avui?",
+          "noteCount": "Notes",
+          "taskCount": "Tasques",
+          "quickEntry": "Accés ràpid",
+          "writeNote": "Escriure nota",
+          "writeNoteDesc": "Anota idees",
+          "newTask": "Nova tasca",
+          "newTaskDesc": "Afegeix pendent",
+          "viewStats": "Veure estadístiques",
+          "viewStatsDesc": "Resum de dades",
+          "profileCenterDesc": "Gestiona el perfil",
+          "recentNotes": "Notes recents",
+          "emptyNotes": "Encara no hi ha notes, escriu-ne una"
+        },
+        "notesPage": {
+          "inputHint": "Escriu alguna cosa...",
+          "filterRecent": "Recents",
+          "empty": "Encara no hi ha notes, escriu-ne una al quadre de dalt"
+        },
+        "tasksPage": {
+          "inputHint": "Afegeix una tasca nova...",
+          "filterUndone": "Pendents",
+          "empty": "Encara no hi ha tasques, afegeix-ne una a dalt"
+        },
+        "stats": {
+          "weekly": "Aquesta setmana",
+          "monthly": "Aquest mes",
+          "totalNotes": "Notes totals",
+          "totalTasks": "Tasques totals",
+          "tasksDone": "Completades",
+          "pending": "Pendents",
+          "completionRate": "Taxa de finalització",
+          "keepGoing": "Continua així!",
+          "usageOverview": "Resum d'ús"
+        },
+        "profile": {
+          "bioHint": "Escriu una bio...",
+          "save": "Desa el perfil",
+          "settings": "Configuració",
+          "notifications": "Notificacions",
+          "darkMode": "Mode fosc",
+          "about": "Quant a"
+        },
+        "about": {
+          "version": "Versió 1.0.0",
+          "tagline": "Una app de demostració de cinc pàgines amb navegació inferior"
+        }
+      },
+      "hi": {
+        "common": {
+          "all": "सभी",
+          "add": "जोड़ें"
+        },
+        "status": {
+          "done": "पूर्ण"
+        },
+        "toast": {
+          "noteAdded": "नोट जोड़ा गया",
+          "noteDeleted": "नोट हटाया गया",
+          "taskAdded": "कार्य जोड़ा गया",
+          "taskDeleted": "कार्य हटाया गया",
+          "profileSaved": "प्रोफ़ाइल सहेजी गई"
+        },
+        "app": {
+          "title": "पाँच-पृष्ठ नेविगेशन"
+        },
+        "nav": {
+          "home": "होम",
+          "notes": "नोट्स",
+          "tasks": "कार्य",
+          "stats": "आँकड़े",
+          "profile": "मेरा"
+        },
+        "pageTitle": {
+          "notes": "मेरे नोट्स",
+          "tasks": "करने योग्य कार्य",
+          "stats": "सांख्यिकी",
+          "profile": "प्रोफ़ाइल"
+        },
+        "home": {
+          "greet": "नमस्ते, {{ global.userName }} 👋",
+          "prompt": "आज आप क्या करना चाहते हैं?",
+          "noteCount": "नोट्स",
+          "taskCount": "कार्य",
+          "quickEntry": "त्वरित पहुँच",
+          "writeNote": "नोट लिखें",
+          "writeNoteDesc": "विचार लिखें",
+          "newTask": "नया कार्य",
+          "newTaskDesc": "कार्य जोड़ें",
+          "viewStats": "आँकड़े देखें",
+          "viewStatsDesc": "डेटा अवलोकन",
+          "profileCenterDesc": "प्रोफ़ाइल प्रबंधित करें",
+          "recentNotes": "हाल के नोट्स",
+          "emptyNotes": "अभी कोई नोट नहीं, एक लिखें"
+        },
+        "notesPage": {
+          "inputHint": "कुछ लिखें...",
+          "filterRecent": "हाल के",
+          "empty": "अभी कोई नोट नहीं, ऊपर बॉक्स में एक लिखें"
+        },
+        "tasksPage": {
+          "inputHint": "नया कार्य जोड़ें...",
+          "filterUndone": "अधूरे",
+          "empty": "अभी कोई कार्य नहीं, ऊपर एक जोड़ें"
+        },
+        "stats": {
+          "weekly": "इस सप्ताह",
+          "monthly": "इस महीने",
+          "totalNotes": "कुल नोट्स",
+          "totalTasks": "कुल कार्य",
+          "tasksDone": "पूर्ण कार्य",
+          "pending": "बाकी",
+          "completionRate": "पूर्णता दर",
+          "keepGoing": "लगे रहो!",
+          "usageOverview": "उपयोग अवलोकन"
+        },
+        "profile": {
+          "bioHint": "एक परिचय लिखें...",
+          "save": "प्रोफ़ाइल सहेजें",
+          "settings": "सेटिंग्स",
+          "notifications": "सूचनाएँ",
+          "darkMode": "डार्क मोड",
+          "about": "ऐप के बारे में"
+        },
+        "about": {
+          "version": "संस्करण 1.0.0",
+          "tagline": "निचले नेविगेशन वाला पाँच-पृष्ठ डेमो ऐप"
+        }
+      },
+      "ko": {
+        "common": {
+          "all": "전체",
+          "add": "추가"
+        },
+        "status": {
+          "done": "완료"
+        },
+        "toast": {
+          "noteAdded": "메모가 추가되었습니다",
+          "noteDeleted": "메모가 삭제되었습니다",
+          "taskAdded": "작업이 추가되었습니다",
+          "taskDeleted": "작업이 삭제되었습니다",
+          "profileSaved": "프로필이 저장되었습니다"
+        },
+        "app": {
+          "title": "다섯 페이지 내비게이션"
+        },
+        "nav": {
+          "home": "홈",
+          "notes": "메모",
+          "tasks": "작업",
+          "stats": "통계",
+          "profile": "마이"
+        },
+        "pageTitle": {
+          "notes": "내 메모",
+          "tasks": "할 일",
+          "stats": "데이터 통계",
+          "profile": "프로필"
+        },
+        "home": {
+          "greet": "안녕하세요, {{ global.userName }} 님 👋",
+          "prompt": "오늘 무엇을 하고 싶으세요?",
+          "noteCount": "메모 수",
+          "taskCount": "작업 수",
+          "quickEntry": "빠른 실행",
+          "writeNote": "메모 작성",
+          "writeNoteDesc": "아이디어 기록",
+          "newTask": "새 작업",
+          "newTaskDesc": "할 일 추가",
+          "viewStats": "통계 보기",
+          "viewStatsDesc": "데이터 개요",
+          "profileCenterDesc": "프로필 관리",
+          "recentNotes": "최근 메모",
+          "emptyNotes": "아직 메모가 없어요. 하나 작성해 보세요"
+        },
+        "notesPage": {
+          "inputHint": "무언가 적어 보세요...",
+          "filterRecent": "최근",
+          "empty": "아직 메모가 없어요. 위 입력란에 작성해 보세요"
+        },
+        "tasksPage": {
+          "inputHint": "새 작업 추가...",
+          "filterUndone": "미완료",
+          "empty": "아직 작업이 없어요. 위에서 하나 추가해 보세요"
+        },
+        "stats": {
+          "weekly": "이번 주",
+          "monthly": "이번 달",
+          "totalNotes": "전체 메모",
+          "totalTasks": "전체 작업",
+          "tasksDone": "완료된 작업",
+          "pending": "미완료",
+          "completionRate": "완료율",
+          "keepGoing": "계속 화이팅!",
+          "usageOverview": "사용 개요"
+        },
+        "profile": {
+          "bioHint": "자기소개를 작성하세요...",
+          "save": "프로필 저장",
+          "settings": "설정",
+          "notifications": "알림",
+          "darkMode": "다크 모드",
+          "about": "앱 정보"
+        },
+        "about": {
+          "version": "버전 1.0.0",
+          "tagline": "하단 내비게이션이 있는 다섯 페이지 데모 앱"
+        }
+      },
+      "ja": {
+        "common": {
+          "all": "すべて",
+          "add": "追加"
+        },
+        "status": {
+          "done": "完了"
+        },
+        "toast": {
+          "noteAdded": "メモを追加しました",
+          "noteDeleted": "メモを削除しました",
+          "taskAdded": "タスクを追加しました",
+          "taskDeleted": "タスクを削除しました",
+          "profileSaved": "プロフィールを保存しました"
+        },
+        "app": {
+          "title": "5ページナビ"
+        },
+        "nav": {
+          "home": "ホーム",
+          "notes": "メモ",
+          "tasks": "タスク",
+          "stats": "統計",
+          "profile": "マイ"
+        },
+        "pageTitle": {
+          "notes": "マイメモ",
+          "tasks": "やることリスト",
+          "stats": "データ統計",
+          "profile": "プロフィール"
+        },
+        "home": {
+          "greet": "こんにちは、{{ global.userName }} さん 👋",
+          "prompt": "今日は何をしますか？",
+          "noteCount": "メモ数",
+          "taskCount": "タスク数",
+          "quickEntry": "クイックアクセス",
+          "writeNote": "メモを書く",
+          "writeNoteDesc": "アイデアを記録",
+          "newTask": "新しいタスク",
+          "newTaskDesc": "ToDoを追加",
+          "viewStats": "統計を見る",
+          "viewStatsDesc": "データ概要",
+          "profileCenterDesc": "プロフィール管理",
+          "recentNotes": "最近のメモ",
+          "emptyNotes": "まだメモがありません。書いてみましょう"
+        },
+        "notesPage": {
+          "inputHint": "何か書く...",
+          "filterRecent": "最近",
+          "empty": "まだメモがありません。上の入力欄に書いてみましょう"
+        },
+        "tasksPage": {
+          "inputHint": "新しいタスクを追加...",
+          "filterUndone": "未完了",
+          "empty": "まだタスクがありません。上から追加しましょう"
+        },
+        "stats": {
+          "weekly": "今週",
+          "monthly": "今月",
+          "totalNotes": "合計メモ",
+          "totalTasks": "合計タスク",
+          "tasksDone": "完了タスク",
+          "pending": "未完了",
+          "completionRate": "達成率",
+          "keepGoing": "その調子！",
+          "usageOverview": "利用概要"
+        },
+        "profile": {
+          "bioHint": "ひとことプロフィールを書く...",
+          "save": "プロフィールを保存",
+          "settings": "設定",
+          "notifications": "通知",
+          "darkMode": "ダークモード",
+          "about": "アプリについて"
+        },
+        "about": {
+          "version": "バージョン 1.0.0",
+          "tagline": "下部ナビ付きの5ページのデモアプリ"
+        }
+      },
+      "it": {
+        "common": {
+          "all": "Tutti",
+          "add": "Aggiungi"
+        },
+        "status": {
+          "done": "Completate"
+        },
+        "toast": {
+          "noteAdded": "Nota aggiunta",
+          "noteDeleted": "Nota eliminata",
+          "taskAdded": "Attività aggiunta",
+          "taskDeleted": "Attività eliminata",
+          "profileSaved": "Profilo salvato"
+        },
+        "app": {
+          "title": "Navigazione a cinque pagine"
+        },
+        "nav": {
+          "home": "Home",
+          "notes": "Note",
+          "tasks": "Attività",
+          "stats": "Statistiche",
+          "profile": "Io"
+        },
+        "pageTitle": {
+          "notes": "Le mie note",
+          "tasks": "Attività da fare",
+          "stats": "Statistiche",
+          "profile": "Profilo"
+        },
+        "home": {
+          "greet": "Ciao, {{ global.userName }} 👋",
+          "prompt": "Cosa vuoi fare oggi?",
+          "noteCount": "Note",
+          "taskCount": "Attività",
+          "quickEntry": "Accesso rapido",
+          "writeNote": "Scrivi nota",
+          "writeNoteDesc": "Annota idee",
+          "newTask": "Nuova attività",
+          "newTaskDesc": "Aggiungi promemoria",
+          "viewStats": "Vedi statistiche",
+          "viewStatsDesc": "Panoramica dati",
+          "profileCenterDesc": "Gestisci profilo",
+          "recentNotes": "Note recenti",
+          "emptyNotes": "Ancora nessuna nota, scrivine una"
+        },
+        "notesPage": {
+          "inputHint": "Scrivi qualcosa...",
+          "filterRecent": "Recenti",
+          "empty": "Ancora nessuna nota, scrivine una nel campo sopra"
+        },
+        "tasksPage": {
+          "inputHint": "Aggiungi una nuova attività...",
+          "filterUndone": "Da fare",
+          "empty": "Ancora nessuna attività, aggiungine una sopra"
+        },
+        "stats": {
+          "weekly": "Questa settimana",
+          "monthly": "Questo mese",
+          "totalNotes": "Note totali",
+          "totalTasks": "Attività totali",
+          "tasksDone": "Completate",
+          "pending": "In sospeso",
+          "completionRate": "Tasso di completamento",
+          "keepGoing": "Continua così!",
+          "usageOverview": "Panoramica d'uso"
+        },
+        "profile": {
+          "bioHint": "Scrivi una bio...",
+          "save": "Salva profilo",
+          "settings": "Impostazioni",
+          "notifications": "Notifiche",
+          "darkMode": "Modalità scura",
+          "about": "Informazioni"
+        },
+        "about": {
+          "version": "Versione 1.0.0",
+          "tagline": "Un'app demo a cinque pagine con navigazione inferiore"
+        }
+      }
     }
   },
   "steps": [
@@ -295,13 +1201,13 @@
     "screens": [
       {
         "id": "main",
-        "title": "五页导航",
+        "title": "{{ t('app.title') }}",
         "backgroundColor": "#F4F6F8",
         "tabs": [
           {
-            "label": "首页",
+            "label": "{{ t('nav.home') }}",
             "icon": "home",
-            "title": "首页",
+            "title": "{{ t('nav.home') }}",
             "backgroundColor": "#F4F6F8",
             "padding": 16,
             "children": [
@@ -311,7 +1217,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "你好, {{ global.userName }} 👋",
+                    "value": "{{ t('home.greet') }}",
                     "style": {
                       "fontSize": 22,
                       "fontWeight": "bold",
@@ -324,7 +1230,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "今天想做什么？",
+                    "value": "{{ t('home.prompt') }}",
                     "style": {
                       "fontSize": 14,
                       "color": "#6B7280"
@@ -368,7 +1274,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "笔记数",
+                              "value": "{{ t('home.noteCount') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -425,7 +1331,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "任务数",
+                              "value": "{{ t('home.taskCount') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -464,7 +1370,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "快捷入口",
+                    "value": "{{ t('home.quickEntry') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "600",
@@ -502,7 +1408,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "写笔记",
+                            "value": "{{ t('home.writeNote') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -515,7 +1421,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "记录想法",
+                            "value": "{{ t('home.writeNoteDesc') }}",
                             "style": {
                               "fontSize": 12,
                               "color": "#9CA3AF"
@@ -550,7 +1456,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "新任务",
+                            "value": "{{ t('home.newTask') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -563,7 +1469,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "添加待办",
+                            "value": "{{ t('home.newTaskDesc') }}",
                             "style": {
                               "fontSize": 12,
                               "color": "#9CA3AF"
@@ -598,7 +1504,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "查看统计",
+                            "value": "{{ t('home.viewStats') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -611,7 +1517,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "数据概览",
+                            "value": "{{ t('home.viewStatsDesc') }}",
                             "style": {
                               "fontSize": 12,
                               "color": "#9CA3AF"
@@ -646,7 +1552,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "个人中心",
+                            "value": "{{ t('pageTitle.profile') }}",
                             "style": {
                               "fontSize": 14,
                               "fontWeight": "600",
@@ -659,7 +1565,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "管理资料",
+                            "value": "{{ t('home.profileCenterDesc') }}",
                             "style": {
                               "fontSize": 12,
                               "color": "#9CA3AF"
@@ -688,7 +1594,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "最近笔记",
+                    "value": "{{ t('home.recentNotes') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "600",
@@ -703,7 +1609,7 @@
                     "type": "list",
                     "source": "{{ global.notes[:3] }}",
                     "shrinkWrap": true,
-                    "emptyText": "还没有笔记，去写一条吧",
+                    "emptyText": "{{ t('home.emptyNotes') }}",
                     "item_template": {
                       "type": "container",
                       "layout": "row",
@@ -745,9 +1651,9 @@
             ]
           },
           {
-            "label": "笔记",
+            "label": "{{ t('nav.notes') }}",
             "icon": "edit",
-            "title": "我的笔记",
+            "title": "{{ t('pageTitle.notes') }}",
             "backgroundColor": "#F4F6F8",
             "padding": 16,
             "children": [
@@ -766,7 +1672,7 @@
                     "children": [
                       {
                         "type": "input",
-                        "placeholder": "写点什么...",
+                        "placeholder": "{{ t('notesPage.inputHint') }}",
                         "bind": "global.noteInput",
                         "position": {
                           "type": "flex",
@@ -783,7 +1689,7 @@
                       },
                       {
                         "type": "button",
-                        "label": "添加",
+                        "label": "{{ t('common.add') }}",
                         "variant": "filled",
                         "action": {
                           "call": "@global.addNote",
@@ -815,7 +1721,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "全部",
+                    "label": "{{ t('common.all') }}",
                     "variant": "choice",
                     "bind": "global.noteFilter",
                     "value": "all",
@@ -829,7 +1735,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "最近",
+                    "label": "{{ t('notesPage.filterRecent') }}",
                     "variant": "choice",
                     "bind": "global.noteFilter",
                     "value": "recent",
@@ -850,7 +1756,7 @@
               {
                 "type": "list",
                 "source": "{{ global.notes | reverse }}",
-                "emptyText": "还没有笔记，在上方输入框写一条吧",
+                "emptyText": "{{ t('notesPage.empty') }}",
                 "item_template": {
                   "type": "container",
                   "layout": "row",
@@ -910,9 +1816,9 @@
             ]
           },
           {
-            "label": "任务",
+            "label": "{{ t('nav.tasks') }}",
             "icon": "check_circle",
-            "title": "待办任务",
+            "title": "{{ t('pageTitle.tasks') }}",
             "backgroundColor": "#F4F6F8",
             "padding": 16,
             "children": [
@@ -931,7 +1837,7 @@
                     "children": [
                       {
                         "type": "input",
-                        "placeholder": "添加新任务...",
+                        "placeholder": "{{ t('tasksPage.inputHint') }}",
                         "bind": "global.taskInput",
                         "position": {
                           "type": "flex",
@@ -948,7 +1854,7 @@
                       },
                       {
                         "type": "button",
-                        "label": "添加",
+                        "label": "{{ t('common.add') }}",
                         "variant": "filled",
                         "action": {
                           "call": "@global.addTask",
@@ -980,7 +1886,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "全部",
+                    "label": "{{ t('common.all') }}",
                     "variant": "choice",
                     "bind": "global.taskFilter",
                     "value": "all",
@@ -994,7 +1900,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "未完成",
+                    "label": "{{ t('tasksPage.filterUndone') }}",
                     "variant": "choice",
                     "bind": "global.taskFilter",
                     "value": "schedule",
@@ -1008,7 +1914,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "已完成",
+                    "label": "{{ t('status.done') }}",
                     "variant": "choice",
                     "bind": "global.taskFilter",
                     "value": "done",
@@ -1029,7 +1935,7 @@
               {
                 "type": "list",
                 "source": "{{ global.tasks | reverse }}",
-                "emptyText": "暂无任务，在上方添加一个吧",
+                "emptyText": "{{ t('tasksPage.empty') }}",
                 "item_template": {
                   "type": "container",
                   "layout": "row",
@@ -1095,9 +2001,9 @@
             ]
           },
           {
-            "label": "统计",
+            "label": "{{ t('nav.stats') }}",
             "icon": "analytics",
-            "title": "数据统计",
+            "title": "{{ t('pageTitle.stats') }}",
             "backgroundColor": "#F4F6F8",
             "padding": 16,
             "children": [
@@ -1112,7 +2018,7 @@
                     "children": [
                       {
                         "type": "chip",
-                        "label": "本周",
+                        "label": "{{ t('stats.weekly') }}",
                         "variant": "choice",
                         "bind": "global.statsMode",
                         "value": "weekly",
@@ -1126,7 +2032,7 @@
                       },
                       {
                         "type": "chip",
-                        "label": "本月",
+                        "label": "{{ t('stats.monthly') }}",
                         "variant": "choice",
                         "bind": "global.statsMode",
                         "value": "monthly",
@@ -1140,7 +2046,7 @@
                       },
                       {
                         "type": "chip",
-                        "label": "全部",
+                        "label": "{{ t('common.all') }}",
                         "variant": "choice",
                         "bind": "global.statsMode",
                         "value": "all",
@@ -1192,7 +2098,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "总笔记",
+                              "value": "{{ t('stats.totalNotes') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -1249,7 +2155,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "总任务",
+                              "value": "{{ t('stats.totalTasks') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -1313,7 +2219,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "任务完成",
+                              "value": "{{ t('stats.tasksDone') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -1370,7 +2276,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "待完成",
+                              "value": "{{ t('stats.pending') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -1414,7 +2320,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "任务完成率",
+                    "value": "{{ t('stats.completionRate') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "600",
@@ -1444,7 +2350,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "继续加油！",
+                        "value": "{{ t('stats.keepGoing') }}",
                         "style": {
                           "fontSize": 13,
                           "color": "#6B7280"
@@ -1472,7 +2378,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "使用概览",
+                    "value": "{{ t('stats.usageOverview') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "600",
@@ -1512,7 +2418,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "笔记",
+                            "value": "{{ t('nav.notes') }}",
                             "style": {
                               "fontSize": 12,
                               "color": "#6B7280"
@@ -1547,7 +2453,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "任务",
+                            "value": "{{ t('nav.tasks') }}",
                             "style": {
                               "fontSize": 12,
                               "color": "#6B7280"
@@ -1582,7 +2488,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "已完成",
+                            "value": "{{ t('status.done') }}",
                             "style": {
                               "fontSize": 12,
                               "color": "#6B7280"
@@ -1600,9 +2506,9 @@
             ]
           },
           {
-            "label": "我的",
+            "label": "{{ t('nav.profile') }}",
             "icon": "person",
-            "title": "个人中心",
+            "title": "{{ t('pageTitle.profile') }}",
             "backgroundColor": "#F4F6F8",
             "padding": 16,
             "children": [
@@ -1660,7 +2566,7 @@
                           {
                             "type": "input",
                             "bind": "global.userBio",
-                            "placeholder": "写一句个性签名...",
+                            "placeholder": "{{ t('profile.bioHint') }}",
                             "style": {
                               "fontSize": 13,
                               "color": "#6B7280"
@@ -1677,7 +2583,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "保存资料",
+                    "label": "{{ t('profile.save') }}",
                     "variant": "filled",
                     "action": {
                       "call": "@global.saveProfile",
@@ -1710,7 +2616,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "设置",
+                    "value": "{{ t('profile.settings') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "600",
@@ -1740,7 +2646,7 @@
                         "flex": 1,
                         "child": {
                           "type": "text",
-                          "value": "消息通知",
+                          "value": "{{ t('profile.notifications') }}",
                           "style": {
                             "fontSize": 15,
                             "color": "#374151"
@@ -1784,7 +2690,7 @@
                         "flex": 1,
                         "child": {
                           "type": "text",
-                          "value": "深色模式",
+                          "value": "{{ t('profile.darkMode') }}",
                           "style": {
                             "fontSize": 15,
                             "color": "#374151"
@@ -1828,7 +2734,7 @@
                         "flex": 1,
                         "child": {
                           "type": "text",
-                          "value": "关于应用",
+                          "value": "{{ t('profile.about') }}",
                           "style": {
                             "fontSize": 15,
                             "color": "#374151"
@@ -1879,7 +2785,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "版本 1.0.0",
+                        "value": "{{ t('about.version') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#9CA3AF"
@@ -1891,7 +2797,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "一个五页底部导航示例应用",
+                        "value": "{{ t('about.tagline') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#9CA3AF"

@@ -5,7 +5,21 @@
     "version": "1.0.0",
     "type": "app",
     "description": "媒体展示 Demo: 视频播放 + 图片网格全屏查看 + 多 Tab 导航",
-    "author": "fish"
+    "author": "fish",
+    "displayName": {
+      "default": "媒体展厅",
+      "zh": "媒体展厅",
+      "en": "Media Gallery",
+      "de": "Mediengalerie",
+      "es": "Galería multimedia",
+      "fr": "Galerie multimédia",
+      "pt": "Galeria de mídia",
+      "ca": "Galeria multimèdia",
+      "hi": "मीडिया गैलरी",
+      "ko": "미디어 갤러리",
+      "ja": "メディアギャラリー",
+      "it": "Galleria multimediale"
+    }
   },
   "dependencies": {},
   "global": {
@@ -244,6 +258,778 @@
           }
         ]
       }
+    },
+    "i18n": {
+      "zh": {
+        "home": {
+          "title": "媒体展厅"
+        },
+        "tab": {
+          "video": "视频库",
+          "photo": "图片墙",
+          "about": "关于"
+        },
+        "stats": {
+          "total": "总数",
+          "category": "分类",
+          "status": "状态"
+        },
+        "video": {
+          "header": {
+            "subtitle": "点击任意视频开始播放，集成 Chewie 全屏控件"
+          },
+          "stats": {
+            "count": "8 部",
+            "categoryValue": "动画 / 短片",
+            "statusValue": "已就绪"
+          },
+          "sectionTitle": "热门推荐",
+          "playButton": "立即播放",
+          "empty": "暂无视频"
+        },
+        "photo": {
+          "header": {
+            "subtitle": "点击图片进入全屏查看器"
+          },
+          "stats": {
+            "imagesLabel": "图片",
+            "imagesValue": "12 张",
+            "categoryValue": "自然 / 城市 / 生活",
+            "sourceLabel": "来源",
+            "sourceValue": "picsum.photos"
+          },
+          "empty": "暂无图片",
+          "hint": "提示：点击图片进入全屏查看"
+        },
+        "about": {
+          "title": "关于「媒体展厅」",
+          "intro": "这是一个示例媒体展示 App，演示如何用 JSON-DSL 同时集成视频播放、图片网格、点击全屏与多 Tab 导航。",
+          "feature": {
+            "video": {
+              "title": "视频播放",
+              "desc": "使用 video_player + chewie，支持网络 mp4 / 进度条 / 全屏切换。"
+            },
+            "photo": {
+              "title": "图片网格 + 全屏",
+              "desc": "grid 控件 + gesture_detector，点击进入全屏查看器。"
+            },
+            "tab": {
+              "title": "多 Tab 导航",
+              "desc": "tab_view 集成视频库 / 图片墙 / 关于，三个独立面板。"
+            }
+          },
+          "footer": "© 2026 媒体展厅 Demo · Powered by JSON-DSL"
+        },
+        "player": {
+          "tipTitle": "操作提示",
+          "tip1": "• 视频自动播放，可用控制条暂停/拖动/全屏。",
+          "tip2": "• 加载慢可等待 2-5 秒；失败可点重试。",
+          "back": "返回视频库"
+        },
+        "viewer": {
+          "categoryLabel": "分类: {{ global.currentPhotoCategory }}"
+        }
+      },
+      "en": {
+        "home": {
+          "title": "Media Gallery"
+        },
+        "tab": {
+          "video": "Videos",
+          "photo": "Photos",
+          "about": "About"
+        },
+        "stats": {
+          "total": "Total",
+          "category": "Category",
+          "status": "Status"
+        },
+        "video": {
+          "header": {
+            "subtitle": "Tap any video to start playback, with Chewie fullscreen controls"
+          },
+          "stats": {
+            "count": "8 videos",
+            "categoryValue": "Animation / Shorts",
+            "statusValue": "Ready"
+          },
+          "sectionTitle": "Featured",
+          "playButton": "Play now",
+          "empty": "No videos yet"
+        },
+        "photo": {
+          "header": {
+            "subtitle": "Tap an image to open the fullscreen viewer"
+          },
+          "stats": {
+            "imagesLabel": "Images",
+            "imagesValue": "12 images",
+            "categoryValue": "Nature / City / Life",
+            "sourceLabel": "Source",
+            "sourceValue": "picsum.photos"
+          },
+          "empty": "No images yet",
+          "hint": "Tip: tap an image to view it fullscreen"
+        },
+        "about": {
+          "title": "About Media Gallery",
+          "intro": "This is a sample media showcase app demonstrating how to integrate video playback, an image grid, tap-to-fullscreen, and multi-tab navigation with JSON-DSL.",
+          "feature": {
+            "video": {
+              "title": "Video playback",
+              "desc": "Uses video_player + chewie, with support for network mp4, a progress bar, and fullscreen toggle."
+            },
+            "photo": {
+              "title": "Image grid + fullscreen",
+              "desc": "grid widget + gesture_detector, tap to open the fullscreen viewer."
+            },
+            "tab": {
+              "title": "Multi-tab navigation",
+              "desc": "tab_view combines Videos / Photos / About into three independent panels."
+            }
+          },
+          "footer": "© 2026 Media Gallery Demo · Powered by JSON-DSL"
+        },
+        "player": {
+          "tipTitle": "Tips",
+          "tip1": "• The video plays automatically; use the control bar to pause, seek, or go fullscreen.",
+          "tip2": "• If loading is slow, wait 2–5 seconds; tap retry if it fails.",
+          "back": "Back to videos"
+        },
+        "viewer": {
+          "categoryLabel": "Category: {{ global.currentPhotoCategory }}"
+        }
+      },
+      "de": {
+        "home": {
+          "title": "Mediengalerie"
+        },
+        "tab": {
+          "video": "Videos",
+          "photo": "Fotos",
+          "about": "Über"
+        },
+        "stats": {
+          "total": "Gesamt",
+          "category": "Kategorie",
+          "status": "Status"
+        },
+        "video": {
+          "header": {
+            "subtitle": "Tippe auf ein beliebiges Video, um die Wiedergabe zu starten – mit Chewie-Vollbildsteuerung"
+          },
+          "stats": {
+            "count": "8 Videos",
+            "categoryValue": "Animation / Kurzfilme",
+            "statusValue": "Bereit"
+          },
+          "sectionTitle": "Empfohlen",
+          "playButton": "Jetzt abspielen",
+          "empty": "Noch keine Videos"
+        },
+        "photo": {
+          "header": {
+            "subtitle": "Tippe auf ein Bild, um den Vollbildbetrachter zu öffnen"
+          },
+          "stats": {
+            "imagesLabel": "Bilder",
+            "imagesValue": "12 Bilder",
+            "categoryValue": "Natur / Stadt / Leben",
+            "sourceLabel": "Quelle",
+            "sourceValue": "picsum.photos"
+          },
+          "empty": "Noch keine Bilder",
+          "hint": "Tipp: Tippe auf ein Bild, um es im Vollbild anzusehen"
+        },
+        "about": {
+          "title": "Über die Mediengalerie",
+          "intro": "Dies ist eine Beispiel-App zur Medienpräsentation, die zeigt, wie man Videowiedergabe, ein Bildraster, Tippen-für-Vollbild und Navigation mit mehreren Tabs mit JSON-DSL kombiniert.",
+          "feature": {
+            "video": {
+              "title": "Videowiedergabe",
+              "desc": "Verwendet video_player + chewie, mit Unterstützung für Netzwerk-mp4, Fortschrittsbalken und Vollbildumschaltung."
+            },
+            "photo": {
+              "title": "Bildraster + Vollbild",
+              "desc": "grid-Widget + gesture_detector, tippe, um den Vollbildbetrachter zu öffnen."
+            },
+            "tab": {
+              "title": "Navigation mit mehreren Tabs",
+              "desc": "tab_view vereint Videos / Fotos / Über in drei eigenständigen Bereichen."
+            }
+          },
+          "footer": "© 2026 Mediengalerie Demo · Powered by JSON-DSL"
+        },
+        "player": {
+          "tipTitle": "Hinweise",
+          "tip1": "• Das Video wird automatisch abgespielt; über die Steuerleiste kannst du pausieren, spulen oder ins Vollbild wechseln.",
+          "tip2": "• Bei langsamem Laden 2–5 Sekunden warten; bei Fehler auf Wiederholen tippen.",
+          "back": "Zurück zu den Videos"
+        },
+        "viewer": {
+          "categoryLabel": "Kategorie: {{ global.currentPhotoCategory }}"
+        }
+      },
+      "es": {
+        "home": {
+          "title": "Galería multimedia"
+        },
+        "tab": {
+          "video": "Vídeos",
+          "photo": "Fotos",
+          "about": "Acerca de"
+        },
+        "stats": {
+          "total": "Total",
+          "category": "Categoría",
+          "status": "Estado"
+        },
+        "video": {
+          "header": {
+            "subtitle": "Toca cualquier vídeo para empezar la reproducción, con controles de pantalla completa de Chewie"
+          },
+          "stats": {
+            "count": "8 vídeos",
+            "categoryValue": "Animación / Cortos",
+            "statusValue": "Listo"
+          },
+          "sectionTitle": "Destacados",
+          "playButton": "Reproducir ahora",
+          "empty": "Aún no hay vídeos"
+        },
+        "photo": {
+          "header": {
+            "subtitle": "Toca una imagen para abrir el visor a pantalla completa"
+          },
+          "stats": {
+            "imagesLabel": "Imágenes",
+            "imagesValue": "12 imágenes",
+            "categoryValue": "Naturaleza / Ciudad / Vida",
+            "sourceLabel": "Fuente",
+            "sourceValue": "picsum.photos"
+          },
+          "empty": "Aún no hay imágenes",
+          "hint": "Consejo: toca una imagen para verla a pantalla completa"
+        },
+        "about": {
+          "title": "Acerca de Galería multimedia",
+          "intro": "Esta es una app de muestra de presentación multimedia que demuestra cómo integrar la reproducción de vídeo, una cuadrícula de imágenes, el modo de pantalla completa al tocar y la navegación con varias pestañas con JSON-DSL.",
+          "feature": {
+            "video": {
+              "title": "Reproducción de vídeo",
+              "desc": "Usa video_player + chewie, con compatibilidad con mp4 en red, barra de progreso y cambio a pantalla completa."
+            },
+            "photo": {
+              "title": "Cuadrícula de imágenes + pantalla completa",
+              "desc": "widget grid + gesture_detector, toca para abrir el visor a pantalla completa."
+            },
+            "tab": {
+              "title": "Navegación con varias pestañas",
+              "desc": "tab_view combina Vídeos / Fotos / Acerca de en tres paneles independientes."
+            }
+          },
+          "footer": "© 2026 Galería multimedia Demo · Powered by JSON-DSL"
+        },
+        "player": {
+          "tipTitle": "Consejos",
+          "tip1": "• El vídeo se reproduce automáticamente; usa la barra de control para pausar, avanzar o ir a pantalla completa.",
+          "tip2": "• Si la carga es lenta, espera de 2 a 5 segundos; toca reintentar si falla.",
+          "back": "Volver a los vídeos"
+        },
+        "viewer": {
+          "categoryLabel": "Categoría: {{ global.currentPhotoCategory }}"
+        }
+      },
+      "fr": {
+        "home": {
+          "title": "Galerie multimédia"
+        },
+        "tab": {
+          "video": "Vidéos",
+          "photo": "Photos",
+          "about": "À propos"
+        },
+        "stats": {
+          "total": "Total",
+          "category": "Catégorie",
+          "status": "Statut"
+        },
+        "video": {
+          "header": {
+            "subtitle": "Touchez n'importe quelle vidéo pour lancer la lecture, avec les commandes plein écran de Chewie"
+          },
+          "stats": {
+            "count": "8 vidéos",
+            "categoryValue": "Animation / Courts métrages",
+            "statusValue": "Prêt"
+          },
+          "sectionTitle": "À la une",
+          "playButton": "Lire maintenant",
+          "empty": "Aucune vidéo pour le moment"
+        },
+        "photo": {
+          "header": {
+            "subtitle": "Touchez une image pour ouvrir la visionneuse en plein écran"
+          },
+          "stats": {
+            "imagesLabel": "Images",
+            "imagesValue": "12 images",
+            "categoryValue": "Nature / Ville / Vie",
+            "sourceLabel": "Source",
+            "sourceValue": "picsum.photos"
+          },
+          "empty": "Aucune image pour le moment",
+          "hint": "Astuce : touchez une image pour la voir en plein écran"
+        },
+        "about": {
+          "title": "À propos de Galerie multimédia",
+          "intro": "Ceci est un exemple d'application de présentation multimédia montrant comment intégrer la lecture vidéo, une grille d'images, le passage en plein écran par appui et la navigation à plusieurs onglets avec JSON-DSL.",
+          "feature": {
+            "video": {
+              "title": "Lecture vidéo",
+              "desc": "Utilise video_player + chewie, avec prise en charge du mp4 en réseau, d'une barre de progression et du basculement en plein écran."
+            },
+            "photo": {
+              "title": "Grille d'images + plein écran",
+              "desc": "widget grid + gesture_detector, touchez pour ouvrir la visionneuse en plein écran."
+            },
+            "tab": {
+              "title": "Navigation à plusieurs onglets",
+              "desc": "tab_view réunit Vidéos / Photos / À propos en trois panneaux indépendants."
+            }
+          },
+          "footer": "© 2026 Galerie multimédia Demo · Powered by JSON-DSL"
+        },
+        "player": {
+          "tipTitle": "Conseils",
+          "tip1": "• La vidéo se lit automatiquement ; utilisez la barre de commande pour mettre en pause, avancer ou passer en plein écran.",
+          "tip2": "• Si le chargement est lent, patientez 2 à 5 secondes ; touchez réessayer en cas d'échec.",
+          "back": "Retour aux vidéos"
+        },
+        "viewer": {
+          "categoryLabel": "Catégorie : {{ global.currentPhotoCategory }}"
+        }
+      },
+      "pt": {
+        "home": {
+          "title": "Galeria de mídia"
+        },
+        "tab": {
+          "video": "Vídeos",
+          "photo": "Fotos",
+          "about": "Sobre"
+        },
+        "stats": {
+          "total": "Total",
+          "category": "Categoria",
+          "status": "Status"
+        },
+        "video": {
+          "header": {
+            "subtitle": "Toque em qualquer vídeo para iniciar a reprodução, com controles de tela cheia do Chewie"
+          },
+          "stats": {
+            "count": "8 vídeos",
+            "categoryValue": "Animação / Curtas",
+            "statusValue": "Pronto"
+          },
+          "sectionTitle": "Em destaque",
+          "playButton": "Reproduzir agora",
+          "empty": "Ainda não há vídeos"
+        },
+        "photo": {
+          "header": {
+            "subtitle": "Toque em uma imagem para abrir o visualizador em tela cheia"
+          },
+          "stats": {
+            "imagesLabel": "Imagens",
+            "imagesValue": "12 imagens",
+            "categoryValue": "Natureza / Cidade / Vida",
+            "sourceLabel": "Fonte",
+            "sourceValue": "picsum.photos"
+          },
+          "empty": "Ainda não há imagens",
+          "hint": "Dica: toque em uma imagem para vê-la em tela cheia"
+        },
+        "about": {
+          "title": "Sobre a Galeria de mídia",
+          "intro": "Este é um app de exemplo de exibição de mídia que demonstra como integrar reprodução de vídeo, uma grade de imagens, tela cheia ao toque e navegação com várias abas usando JSON-DSL.",
+          "feature": {
+            "video": {
+              "title": "Reprodução de vídeo",
+              "desc": "Usa video_player + chewie, com suporte a mp4 em rede, barra de progresso e alternância para tela cheia."
+            },
+            "photo": {
+              "title": "Grade de imagens + tela cheia",
+              "desc": "widget grid + gesture_detector, toque para abrir o visualizador em tela cheia."
+            },
+            "tab": {
+              "title": "Navegação com várias abas",
+              "desc": "tab_view combina Vídeos / Fotos / Sobre em três painéis independentes."
+            }
+          },
+          "footer": "© 2026 Galeria de mídia Demo · Powered by JSON-DSL"
+        },
+        "player": {
+          "tipTitle": "Dicas",
+          "tip1": "• O vídeo é reproduzido automaticamente; use a barra de controle para pausar, avançar ou ir para tela cheia.",
+          "tip2": "• Se o carregamento estiver lento, aguarde de 2 a 5 segundos; toque em tentar novamente se falhar.",
+          "back": "Voltar aos vídeos"
+        },
+        "viewer": {
+          "categoryLabel": "Categoria: {{ global.currentPhotoCategory }}"
+        }
+      },
+      "ca": {
+        "home": {
+          "title": "Galeria multimèdia"
+        },
+        "tab": {
+          "video": "Vídeos",
+          "photo": "Fotos",
+          "about": "Quant a"
+        },
+        "stats": {
+          "total": "Total",
+          "category": "Categoria",
+          "status": "Estat"
+        },
+        "video": {
+          "header": {
+            "subtitle": "Toca qualsevol vídeo per començar la reproducció, amb controls de pantalla completa de Chewie"
+          },
+          "stats": {
+            "count": "8 vídeos",
+            "categoryValue": "Animació / Curts",
+            "statusValue": "A punt"
+          },
+          "sectionTitle": "Destacats",
+          "playButton": "Reprodueix ara",
+          "empty": "Encara no hi ha vídeos"
+        },
+        "photo": {
+          "header": {
+            "subtitle": "Toca una imatge per obrir el visualitzador a pantalla completa"
+          },
+          "stats": {
+            "imagesLabel": "Imatges",
+            "imagesValue": "12 imatges",
+            "categoryValue": "Natura / Ciutat / Vida",
+            "sourceLabel": "Font",
+            "sourceValue": "picsum.photos"
+          },
+          "empty": "Encara no hi ha imatges",
+          "hint": "Consell: toca una imatge per veure-la a pantalla completa"
+        },
+        "about": {
+          "title": "Quant a Galeria multimèdia",
+          "intro": "Aquesta és una aplicació d'exemple de presentació multimèdia que mostra com integrar la reproducció de vídeo, una graella d'imatges, la pantalla completa en tocar i la navegació amb diverses pestanyes amb JSON-DSL.",
+          "feature": {
+            "video": {
+              "title": "Reproducció de vídeo",
+              "desc": "Utilitza video_player + chewie, amb compatibilitat amb mp4 en xarxa, barra de progrés i canvi a pantalla completa."
+            },
+            "photo": {
+              "title": "Graella d'imatges + pantalla completa",
+              "desc": "widget grid + gesture_detector, toca per obrir el visualitzador a pantalla completa."
+            },
+            "tab": {
+              "title": "Navegació amb diverses pestanyes",
+              "desc": "tab_view combina Vídeos / Fotos / Quant a en tres plafons independents."
+            }
+          },
+          "footer": "© 2026 Galeria multimèdia Demo · Powered by JSON-DSL"
+        },
+        "player": {
+          "tipTitle": "Consells",
+          "tip1": "• El vídeo es reprodueix automàticament; fes servir la barra de control per pausar, avançar o passar a pantalla completa.",
+          "tip2": "• Si la càrrega és lenta, espera de 2 a 5 segons; toca reintenta si falla.",
+          "back": "Torna als vídeos"
+        },
+        "viewer": {
+          "categoryLabel": "Categoria: {{ global.currentPhotoCategory }}"
+        }
+      },
+      "hi": {
+        "home": {
+          "title": "मीडिया गैलरी"
+        },
+        "tab": {
+          "video": "वीडियो",
+          "photo": "तस्वीरें",
+          "about": "परिचय"
+        },
+        "stats": {
+          "total": "कुल",
+          "category": "श्रेणी",
+          "status": "स्थिति"
+        },
+        "video": {
+          "header": {
+            "subtitle": "प्लेबैक शुरू करने के लिए किसी भी वीडियो पर टैप करें, Chewie फ़ुलस्क्रीन नियंत्रण के साथ"
+          },
+          "stats": {
+            "count": "8 वीडियो",
+            "categoryValue": "एनिमेशन / शॉर्ट्स",
+            "statusValue": "तैयार"
+          },
+          "sectionTitle": "लोकप्रिय",
+          "playButton": "अभी चलाएं",
+          "empty": "अभी तक कोई वीडियो नहीं"
+        },
+        "photo": {
+          "header": {
+            "subtitle": "फ़ुलस्क्रीन व्यूअर खोलने के लिए किसी तस्वीर पर टैप करें"
+          },
+          "stats": {
+            "imagesLabel": "तस्वीरें",
+            "imagesValue": "12 तस्वीरें",
+            "categoryValue": "प्रकृति / शहर / जीवन",
+            "sourceLabel": "स्रोत",
+            "sourceValue": "picsum.photos"
+          },
+          "empty": "अभी तक कोई तस्वीर नहीं",
+          "hint": "सुझाव: तस्वीर को फ़ुलस्क्रीन देखने के लिए उस पर टैप करें"
+        },
+        "about": {
+          "title": "मीडिया गैलरी के बारे में",
+          "intro": "यह एक नमूना मीडिया शोकेस ऐप है जो दिखाता है कि JSON-DSL के साथ वीडियो प्लेबैक, इमेज ग्रिड, टैप-टू-फ़ुलस्क्रीन और मल्टी-टैब नेविगेशन को कैसे एकीकृत किया जाए।",
+          "feature": {
+            "video": {
+              "title": "वीडियो प्लेबैक",
+              "desc": "video_player + chewie का उपयोग करता है, नेटवर्क mp4, प्रोग्रेस बार और फ़ुलस्क्रीन टॉगल के समर्थन के साथ।"
+            },
+            "photo": {
+              "title": "इमेज ग्रिड + फ़ुलस्क्रीन",
+              "desc": "grid विजेट + gesture_detector, फ़ुलस्क्रीन व्यूअर खोलने के लिए टैप करें।"
+            },
+            "tab": {
+              "title": "मल्टी-टैब नेविगेशन",
+              "desc": "tab_view वीडियो / तस्वीरें / परिचय को तीन स्वतंत्र पैनलों में जोड़ता है।"
+            }
+          },
+          "footer": "© 2026 मीडिया गैलरी Demo · Powered by JSON-DSL"
+        },
+        "player": {
+          "tipTitle": "सुझाव",
+          "tip1": "• वीडियो अपने आप चलता है; रोकने, सीक करने या फ़ुलस्क्रीन के लिए कंट्रोल बार का उपयोग करें।",
+          "tip2": "• लोड होने में देरी हो तो 2–5 सेकंड प्रतीक्षा करें; विफल होने पर पुनः प्रयास पर टैप करें।",
+          "back": "वीडियो पर वापस जाएं"
+        },
+        "viewer": {
+          "categoryLabel": "श्रेणी: {{ global.currentPhotoCategory }}"
+        }
+      },
+      "ko": {
+        "home": {
+          "title": "미디어 갤러리"
+        },
+        "tab": {
+          "video": "동영상",
+          "photo": "사진",
+          "about": "정보"
+        },
+        "stats": {
+          "total": "전체",
+          "category": "분류",
+          "status": "상태"
+        },
+        "video": {
+          "header": {
+            "subtitle": "아무 동영상이나 탭하면 재생이 시작되며, Chewie 전체 화면 컨트롤을 사용할 수 있습니다"
+          },
+          "stats": {
+            "count": "동영상 8개",
+            "categoryValue": "애니메이션 / 단편",
+            "statusValue": "준비됨"
+          },
+          "sectionTitle": "추천",
+          "playButton": "지금 재생",
+          "empty": "아직 동영상이 없습니다"
+        },
+        "photo": {
+          "header": {
+            "subtitle": "이미지를 탭하면 전체 화면 뷰어가 열립니다"
+          },
+          "stats": {
+            "imagesLabel": "이미지",
+            "imagesValue": "이미지 12개",
+            "categoryValue": "자연 / 도시 / 일상",
+            "sourceLabel": "출처",
+            "sourceValue": "picsum.photos"
+          },
+          "empty": "아직 이미지가 없습니다",
+          "hint": "팁: 이미지를 탭하면 전체 화면으로 볼 수 있습니다"
+        },
+        "about": {
+          "title": "미디어 갤러리 정보",
+          "intro": "이 앱은 JSON-DSL로 동영상 재생, 이미지 그리드, 탭하여 전체 화면, 다중 탭 내비게이션을 통합하는 방법을 보여주는 샘플 미디어 쇼케이스 앱입니다.",
+          "feature": {
+            "video": {
+              "title": "동영상 재생",
+              "desc": "video_player + chewie를 사용하며 네트워크 mp4, 진행 표시줄, 전체 화면 전환을 지원합니다."
+            },
+            "photo": {
+              "title": "이미지 그리드 + 전체 화면",
+              "desc": "grid 위젯 + gesture_detector, 탭하면 전체 화면 뷰어가 열립니다."
+            },
+            "tab": {
+              "title": "다중 탭 내비게이션",
+              "desc": "tab_view가 동영상 / 사진 / 정보를 세 개의 독립된 패널로 통합합니다."
+            }
+          },
+          "footer": "© 2026 미디어 갤러리 Demo · Powered by JSON-DSL"
+        },
+        "player": {
+          "tipTitle": "안내",
+          "tip1": "• 동영상이 자동으로 재생됩니다. 컨트롤 바로 일시정지, 탐색, 전체 화면으로 전환할 수 있습니다.",
+          "tip2": "• 로딩이 느리면 2~5초 기다리세요. 실패하면 다시 시도를 탭하세요.",
+          "back": "동영상으로 돌아가기"
+        },
+        "viewer": {
+          "categoryLabel": "분류: {{ global.currentPhotoCategory }}"
+        }
+      },
+      "ja": {
+        "home": {
+          "title": "メディアギャラリー"
+        },
+        "tab": {
+          "video": "動画",
+          "photo": "写真",
+          "about": "概要"
+        },
+        "stats": {
+          "total": "合計",
+          "category": "カテゴリ",
+          "status": "ステータス"
+        },
+        "video": {
+          "header": {
+            "subtitle": "任意の動画をタップすると再生が始まり、Chewie の全画面コントロールを使えます"
+          },
+          "stats": {
+            "count": "動画 8 本",
+            "categoryValue": "アニメーション / ショート",
+            "statusValue": "準備完了"
+          },
+          "sectionTitle": "おすすめ",
+          "playButton": "今すぐ再生",
+          "empty": "動画がまだありません"
+        },
+        "photo": {
+          "header": {
+            "subtitle": "画像をタップすると全画面ビューアーが開きます"
+          },
+          "stats": {
+            "imagesLabel": "画像",
+            "imagesValue": "画像 12 枚",
+            "categoryValue": "自然 / 都市 / 暮らし",
+            "sourceLabel": "提供元",
+            "sourceValue": "picsum.photos"
+          },
+          "empty": "画像がまだありません",
+          "hint": "ヒント: 画像をタップすると全画面で表示できます"
+        },
+        "about": {
+          "title": "メディアギャラリーについて",
+          "intro": "これは JSON-DSL で動画再生、画像グリッド、タップで全画面、複数タブのナビゲーションを統合する方法を示すサンプルのメディア展示アプリです。",
+          "feature": {
+            "video": {
+              "title": "動画再生",
+              "desc": "video_player + chewie を使用し、ネットワーク mp4、シークバー、全画面の切り替えに対応します。"
+            },
+            "photo": {
+              "title": "画像グリッド + 全画面",
+              "desc": "grid ウィジェット + gesture_detector、タップで全画面ビューアーを開きます。"
+            },
+            "tab": {
+              "title": "複数タブのナビゲーション",
+              "desc": "tab_view が動画 / 写真 / 概要の 3 つの独立したパネルをまとめます。"
+            }
+          },
+          "footer": "© 2026 メディアギャラリー Demo · Powered by JSON-DSL"
+        },
+        "player": {
+          "tipTitle": "操作のヒント",
+          "tip1": "• 動画は自動再生されます。コントロールバーで一時停止 / シーク / 全画面ができます。",
+          "tip2": "• 読み込みが遅い場合は 2〜5 秒お待ちください。失敗したら再試行をタップしてください。",
+          "back": "動画一覧に戻る"
+        },
+        "viewer": {
+          "categoryLabel": "カテゴリ: {{ global.currentPhotoCategory }}"
+        }
+      },
+      "it": {
+        "home": {
+          "title": "Galleria multimediale"
+        },
+        "tab": {
+          "video": "Video",
+          "photo": "Foto",
+          "about": "Informazioni"
+        },
+        "stats": {
+          "total": "Totale",
+          "category": "Categoria",
+          "status": "Stato"
+        },
+        "video": {
+          "header": {
+            "subtitle": "Tocca un video qualsiasi per avviare la riproduzione, con i controlli a schermo intero di Chewie"
+          },
+          "stats": {
+            "count": "8 video",
+            "categoryValue": "Animazione / Cortometraggi",
+            "statusValue": "Pronto"
+          },
+          "sectionTitle": "In evidenza",
+          "playButton": "Riproduci ora",
+          "empty": "Ancora nessun video"
+        },
+        "photo": {
+          "header": {
+            "subtitle": "Tocca un'immagine per aprire il visualizzatore a schermo intero"
+          },
+          "stats": {
+            "imagesLabel": "Immagini",
+            "imagesValue": "12 immagini",
+            "categoryValue": "Natura / Città / Vita",
+            "sourceLabel": "Fonte",
+            "sourceValue": "picsum.photos"
+          },
+          "empty": "Ancora nessuna immagine",
+          "hint": "Suggerimento: tocca un'immagine per vederla a schermo intero"
+        },
+        "about": {
+          "title": "Informazioni su Galleria multimediale",
+          "intro": "Questa è un'app dimostrativa di presentazione multimediale che mostra come integrare la riproduzione video, una griglia di immagini, lo schermo intero al tocco e la navigazione a più schede con JSON-DSL.",
+          "feature": {
+            "video": {
+              "title": "Riproduzione video",
+              "desc": "Usa video_player + chewie, con supporto per mp4 di rete, barra di avanzamento e passaggio a schermo intero."
+            },
+            "photo": {
+              "title": "Griglia di immagini + schermo intero",
+              "desc": "widget grid + gesture_detector, tocca per aprire il visualizzatore a schermo intero."
+            },
+            "tab": {
+              "title": "Navigazione a più schede",
+              "desc": "tab_view combina Video / Foto / Informazioni in tre pannelli indipendenti."
+            }
+          },
+          "footer": "© 2026 Galleria multimediale Demo · Powered by JSON-DSL"
+        },
+        "player": {
+          "tipTitle": "Suggerimenti",
+          "tip1": "• Il video viene riprodotto automaticamente; usa la barra dei controlli per mettere in pausa, scorrere o passare a schermo intero.",
+          "tip2": "• Se il caricamento è lento, attendi 2–5 secondi; tocca riprova se fallisce.",
+          "back": "Torna ai video"
+        },
+        "viewer": {
+          "categoryLabel": "Categoria: {{ global.currentPhotoCategory }}"
+        }
+      }
     }
   },
   "steps": [
@@ -258,7 +1044,7 @@
     "screens": [
       {
         "id": "home",
-        "title": "媒体展厅",
+        "title": "{{ t('home.title') }}",
         "layout": "column",
         "children": [
           {
@@ -270,7 +1056,7 @@
             "height": 780,
             "tabs": [
               {
-                "label": "视频库",
+                "label": "{{ t('tab.video') }}",
                 "icon": "video",
                 "content": {
                   "type": "container",
@@ -305,7 +1091,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "视频库",
+                              "value": "{{ t('tab.video') }}",
                               "style": {
                                 "fontSize": 18,
                                 "fontWeight": "bold",
@@ -314,7 +1100,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "点击任意视频开始播放，集成 Chewie 全屏控件",
+                              "value": "{{ t('video.header.subtitle') }}",
                               "style": {
                                 "fontSize": 12,
                                 "color": "#64748B"
@@ -344,7 +1130,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "总数",
+                              "value": "{{ t('stats.total') }}",
                               "style": {
                                 "fontSize": 11,
                                 "color": "#94A3B8"
@@ -352,7 +1138,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "8 部",
+                              "value": "{{ t('video.stats.count') }}",
                               "style": {
                                 "fontSize": 16,
                                 "fontWeight": "bold",
@@ -374,7 +1160,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "分类",
+                              "value": "{{ t('stats.category') }}",
                               "style": {
                                 "fontSize": 11,
                                 "color": "#94A3B8"
@@ -382,7 +1168,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "动画 / 短片",
+                              "value": "{{ t('video.stats.categoryValue') }}",
                               "style": {
                                 "fontSize": 16,
                                 "fontWeight": "bold",
@@ -404,7 +1190,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "状态",
+                              "value": "{{ t('stats.status') }}",
                               "style": {
                                 "fontSize": 11,
                                 "color": "#94A3B8"
@@ -412,7 +1198,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "已就绪",
+                              "value": "{{ t('video.stats.statusValue') }}",
                               "style": {
                                 "fontSize": 16,
                                 "fontWeight": "bold",
@@ -435,7 +1221,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "热门推荐",
+                      "value": "{{ t('video.sectionTitle') }}",
                       "style": {
                         "fontSize": 16,
                         "fontWeight": "bold",
@@ -521,7 +1307,7 @@
                               },
                               {
                                 "type": "button",
-                                "label": "立即播放",
+                                "label": "{{ t('video.playButton') }}",
                                 "variant": "filled",
                                 "action": {
                                   "call": "@global.playVideo",
@@ -550,13 +1336,13 @@
                           }
                         ]
                       },
-                      "emptyText": "暂无视频"
+                      "emptyText": "{{ t('video.empty') }}"
                     }
                   ]
                 }
               },
               {
-                "label": "图片墙",
+                "label": "{{ t('tab.photo') }}",
                 "icon": "image",
                 "content": {
                   "type": "container",
@@ -591,7 +1377,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "图片墙",
+                              "value": "{{ t('tab.photo') }}",
                               "style": {
                                 "fontSize": 18,
                                 "fontWeight": "bold",
@@ -600,7 +1386,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "点击图片进入全屏查看器",
+                              "value": "{{ t('photo.header.subtitle') }}",
                               "style": {
                                 "fontSize": 12,
                                 "color": "#64748B"
@@ -630,7 +1416,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "图片",
+                              "value": "{{ t('photo.stats.imagesLabel') }}",
                               "style": {
                                 "fontSize": 11,
                                 "color": "#94A3B8"
@@ -638,7 +1424,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "12 张",
+                              "value": "{{ t('photo.stats.imagesValue') }}",
                               "style": {
                                 "fontSize": 16,
                                 "fontWeight": "bold",
@@ -660,7 +1446,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "分类",
+                              "value": "{{ t('stats.category') }}",
                               "style": {
                                 "fontSize": 11,
                                 "color": "#94A3B8"
@@ -668,7 +1454,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "自然 / 城市 / 生活",
+                              "value": "{{ t('photo.stats.categoryValue') }}",
                               "style": {
                                 "fontSize": 16,
                                 "fontWeight": "bold",
@@ -690,7 +1476,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "来源",
+                              "value": "{{ t('photo.stats.sourceLabel') }}",
                               "style": {
                                 "fontSize": 11,
                                 "color": "#94A3B8"
@@ -698,7 +1484,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "picsum.photos",
+                              "value": "{{ t('photo.stats.sourceValue') }}",
                               "style": {
                                 "fontSize": 16,
                                 "fontWeight": "bold",
@@ -728,7 +1514,7 @@
                       "childAspectRatio": 1.0,
                       "padding": 8,
                       "shrinkWrap": true,
-                      "emptyText": "暂无图片",
+                      "emptyText": "{{ t('photo.empty') }}",
                       "item_template": {
                         "type": "gesture_detector",
                         "child": {
@@ -767,7 +1553,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "提示：点击图片进入全屏查看",
+                      "value": "{{ t('photo.hint') }}",
                       "style": {
                         "fontSize": 12,
                         "color": "#94A3B8",
@@ -779,7 +1565,7 @@
                 }
               },
               {
-                "label": "关于",
+                "label": "{{ t('tab.about') }}",
                 "icon": "info",
                 "content": {
                   "type": "container",
@@ -787,7 +1573,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "value": "关于「媒体展厅」",
+                      "value": "{{ t('about.title') }}",
                       "style": {
                         "fontSize": 22,
                         "fontWeight": "bold",
@@ -797,7 +1583,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "这是一个示例媒体展示 App，演示如何用 JSON-DSL 同时集成视频播放、图片网格、点击全屏与多 Tab 导航。",
+                      "value": "{{ t('about.intro') }}",
                       "style": {
                         "fontSize": 14,
                         "color": "#475569"
@@ -829,7 +1615,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "视频播放",
+                              "value": "{{ t('about.feature.video.title') }}",
                               "style": {
                                 "fontSize": 15,
                                 "fontWeight": "bold",
@@ -857,7 +1643,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "使用 video_player + chewie，支持网络 mp4 / 进度条 / 全屏切换。",
+                          "value": "{{ t('about.feature.video.desc') }}",
                           "style": {
                             "fontSize": 12,
                             "color": "#64748B"
@@ -886,7 +1672,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "图片网格 + 全屏",
+                              "value": "{{ t('about.feature.photo.title') }}",
                               "style": {
                                 "fontSize": 15,
                                 "fontWeight": "bold",
@@ -914,7 +1700,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "grid 控件 + gesture_detector，点击进入全屏查看器。",
+                          "value": "{{ t('about.feature.photo.desc') }}",
                           "style": {
                             "fontSize": 12,
                             "color": "#64748B"
@@ -943,7 +1729,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "多 Tab 导航",
+                              "value": "{{ t('about.feature.tab.title') }}",
                               "style": {
                                 "fontSize": 15,
                                 "fontWeight": "bold",
@@ -971,7 +1757,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "tab_view 集成视频库 / 图片墙 / 关于，三个独立面板。",
+                          "value": "{{ t('about.feature.tab.desc') }}",
                           "style": {
                             "fontSize": 12,
                             "color": "#64748B"
@@ -985,7 +1771,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "© 2026 媒体展厅 Demo · Powered by JSON-DSL",
+                      "value": "{{ t('about.footer') }}",
                       "style": {
                         "fontSize": 11,
                         "color": "#94A3B8"
@@ -1070,7 +1856,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "操作提示",
+                    "value": "{{ t('player.tipTitle') }}",
                     "style": {
                       "fontSize": 14,
                       "fontWeight": "bold",
@@ -1092,7 +1878,7 @@
               },
               {
                 "type": "text",
-                "value": "• 视频自动播放，可用控制条暂停/拖动/全屏。",
+                "value": "{{ t('player.tip1') }}",
                 "style": {
                   "fontSize": 12,
                   "color": "#475569"
@@ -1104,7 +1890,7 @@
               },
               {
                 "type": "text",
-                "value": "• 加载慢可等待 2-5 秒；失败可点重试。",
+                "value": "{{ t('player.tip2') }}",
                 "style": {
                   "fontSize": 12,
                   "color": "#475569"
@@ -1122,7 +1908,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "返回视频库",
+                "label": "{{ t('player.back') }}",
                 "variant": "filled",
                 "action": {
                   "type": "navigate",
@@ -1237,7 +2023,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "分类: {{ global.currentPhotoCategory }}",
+                    "value": "{{ t('viewer.categoryLabel') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#CBD5E1"

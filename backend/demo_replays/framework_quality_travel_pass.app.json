@@ -6,7 +6,20 @@
     "type": "app",
     "description": "行程卡片、二维码、登机信息一站式管理",
     "author": "ai",
-    "displayName": "旅行通行证"
+    "displayName": {
+      "default": "旅行通行证",
+      "zh": "旅行通行证",
+      "en": "Travel Pass",
+      "de": "Reisepass",
+      "es": "Pase de viaje",
+      "fr": "Carte de voyage",
+      "pt": "Passe de viagem",
+      "ca": "Passi de viatge",
+      "hi": "यात्रा पास",
+      "ko": "여행 패스",
+      "ja": "旅行パス",
+      "it": "Pass di viaggio"
+    }
   },
   "dependencies": {},
   "global": {
@@ -111,6 +124,195 @@
       ],
       "currentTripIndex": 0
     },
+    "i18n": {
+      "zh": {
+        "app": { "title": "旅行通行证" },
+        "timeline": { "title": "行程时间线" },
+        "boarding": {
+          "title": "登机信息",
+          "gate": "登机口",
+          "terminal": "航站楼",
+          "terminalValue": "T{{ global.trips[global.currentTripIndex].terminal }} 号航站楼",
+          "baggage": "行李转盘",
+          "weather": "目的地天气"
+        },
+        "trips": { "otherTitle": "其他行程" },
+        "toast": {
+          "shareReady": "行程卡已准备分享",
+          "addPassSoon": "添加登机牌功能即将上线"
+        }
+      },
+      "en": {
+        "app": { "title": "Travel Pass" },
+        "timeline": { "title": "Trip Timeline" },
+        "boarding": {
+          "title": "Boarding Info",
+          "gate": "Gate",
+          "terminal": "Terminal",
+          "terminalValue": "Terminal {{ global.trips[global.currentTripIndex].terminal }}",
+          "baggage": "Baggage Carousel",
+          "weather": "Destination Weather"
+        },
+        "trips": { "otherTitle": "Other Trips" },
+        "toast": {
+          "shareReady": "Trip card is ready to share",
+          "addPassSoon": "Add boarding pass feature is coming soon"
+        }
+      },
+      "de": {
+        "app": { "title": "Reisepass" },
+        "timeline": { "title": "Reise-Zeitleiste" },
+        "boarding": {
+          "title": "Boarding-Infos",
+          "gate": "Gate",
+          "terminal": "Terminal",
+          "terminalValue": "Terminal {{ global.trips[global.currentTripIndex].terminal }}",
+          "baggage": "Gepäckband",
+          "weather": "Wetter am Zielort"
+        },
+        "trips": { "otherTitle": "Weitere Reisen" },
+        "toast": {
+          "shareReady": "Reisekarte ist bereit zum Teilen",
+          "addPassSoon": "Die Funktion zum Hinzufügen von Bordkarten kommt bald"
+        }
+      },
+      "es": {
+        "app": { "title": "Pase de viaje" },
+        "timeline": { "title": "Cronología del viaje" },
+        "boarding": {
+          "title": "Información de embarque",
+          "gate": "Puerta",
+          "terminal": "Terminal",
+          "terminalValue": "Terminal {{ global.trips[global.currentTripIndex].terminal }}",
+          "baggage": "Cinta de equipaje",
+          "weather": "Clima del destino"
+        },
+        "trips": { "otherTitle": "Otros viajes" },
+        "toast": {
+          "shareReady": "La tarjeta de viaje está lista para compartir",
+          "addPassSoon": "La función para añadir tarjetas de embarque llegará pronto"
+        }
+      },
+      "fr": {
+        "app": { "title": "Carte de voyage" },
+        "timeline": { "title": "Chronologie du voyage" },
+        "boarding": {
+          "title": "Informations d'embarquement",
+          "gate": "Porte",
+          "terminal": "Terminal",
+          "terminalValue": "Terminal {{ global.trips[global.currentTripIndex].terminal }}",
+          "baggage": "Tapis à bagages",
+          "weather": "Météo à destination"
+        },
+        "trips": { "otherTitle": "Autres voyages" },
+        "toast": {
+          "shareReady": "La carte de voyage est prête à partager",
+          "addPassSoon": "La fonction d'ajout de carte d'embarquement arrive bientôt"
+        }
+      },
+      "pt": {
+        "app": { "title": "Passe de viagem" },
+        "timeline": { "title": "Linha do tempo da viagem" },
+        "boarding": {
+          "title": "Informações de embarque",
+          "gate": "Portão",
+          "terminal": "Terminal",
+          "terminalValue": "Terminal {{ global.trips[global.currentTripIndex].terminal }}",
+          "baggage": "Esteira de bagagem",
+          "weather": "Clima no destino"
+        },
+        "trips": { "otherTitle": "Outras viagens" },
+        "toast": {
+          "shareReady": "O cartão de viagem está pronto para compartilhar",
+          "addPassSoon": "O recurso para adicionar cartão de embarque chega em breve"
+        }
+      },
+      "ca": {
+        "app": { "title": "Passi de viatge" },
+        "timeline": { "title": "Cronologia del viatge" },
+        "boarding": {
+          "title": "Informació d'embarcament",
+          "gate": "Porta",
+          "terminal": "Terminal",
+          "terminalValue": "Terminal {{ global.trips[global.currentTripIndex].terminal }}",
+          "baggage": "Cinta d'equipatge",
+          "weather": "Temps a la destinació"
+        },
+        "trips": { "otherTitle": "Altres viatges" },
+        "toast": {
+          "shareReady": "La targeta de viatge està a punt per compartir",
+          "addPassSoon": "La funció per afegir targetes d'embarcament arribarà aviat"
+        }
+      },
+      "hi": {
+        "app": { "title": "यात्रा पास" },
+        "timeline": { "title": "यात्रा समयरेखा" },
+        "boarding": {
+          "title": "बोर्डिंग जानकारी",
+          "gate": "गेट",
+          "terminal": "टर्मिनल",
+          "terminalValue": "टर्मिनल {{ global.trips[global.currentTripIndex].terminal }}",
+          "baggage": "सामान बेल्ट",
+          "weather": "गंतव्य का मौसम"
+        },
+        "trips": { "otherTitle": "अन्य यात्राएँ" },
+        "toast": {
+          "shareReady": "यात्रा कार्ड साझा करने के लिए तैयार है",
+          "addPassSoon": "बोर्डिंग पास जोड़ने की सुविधा जल्द आ रही है"
+        }
+      },
+      "ko": {
+        "app": { "title": "여행 패스" },
+        "timeline": { "title": "여행 타임라인" },
+        "boarding": {
+          "title": "탑승 정보",
+          "gate": "게이트",
+          "terminal": "터미널",
+          "terminalValue": "터미널 {{ global.trips[global.currentTripIndex].terminal }}",
+          "baggage": "수하물 수취대",
+          "weather": "도착지 날씨"
+        },
+        "trips": { "otherTitle": "다른 여행" },
+        "toast": {
+          "shareReady": "여행 카드를 공유할 준비가 되었습니다",
+          "addPassSoon": "탑승권 추가 기능이 곧 출시됩니다"
+        }
+      },
+      "ja": {
+        "app": { "title": "旅行パス" },
+        "timeline": { "title": "旅程タイムライン" },
+        "boarding": {
+          "title": "搭乗情報",
+          "gate": "ゲート",
+          "terminal": "ターミナル",
+          "terminalValue": "ターミナル {{ global.trips[global.currentTripIndex].terminal }}",
+          "baggage": "手荷物受取所",
+          "weather": "目的地の天気"
+        },
+        "trips": { "otherTitle": "その他の旅程" },
+        "toast": {
+          "shareReady": "旅程カードを共有する準備ができました",
+          "addPassSoon": "搭乗券の追加機能は近日公開予定です"
+        }
+      },
+      "it": {
+        "app": { "title": "Pass di viaggio" },
+        "timeline": { "title": "Cronologia del viaggio" },
+        "boarding": {
+          "title": "Informazioni d'imbarco",
+          "gate": "Gate",
+          "terminal": "Terminal",
+          "terminalValue": "Terminal {{ global.trips[global.currentTripIndex].terminal }}",
+          "baggage": "Nastro bagagli",
+          "weather": "Meteo a destinazione"
+        },
+        "trips": { "otherTitle": "Altri viaggi" },
+        "toast": {
+          "shareReady": "La carta di viaggio è pronta per essere condivisa",
+          "addPassSoon": "La funzione per aggiungere la carta d'imbarco arriverà presto"
+        }
+      }
+    },
     "functions": {
       "selectTrip": {
         "params": [
@@ -130,7 +332,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "行程卡已准备分享"
+              "message": "{{ t('toast.shareReady') }}"
             }
           }
         ]
@@ -141,7 +343,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "添加登机牌功能即将上线"
+              "message": "{{ t('toast.addPassSoon') }}"
             }
           }
         ]
@@ -153,7 +355,7 @@
     "screens": [
       {
         "id": "home",
-        "title": "旅行通行证",
+        "title": "{{ t('app.title') }}",
         "layout": "column",
         "children": [
           {
@@ -447,7 +649,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "行程时间线",
+                    "value": "{{ t('timeline.title') }}",
                     "fontSize": 17,
                     "fontWeight": "bold",
                     "color": "#111827"
@@ -554,7 +756,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "登机信息",
+                    "value": "{{ t('boarding.title') }}",
                     "fontSize": 17,
                     "fontWeight": "bold",
                     "color": "#111827"
@@ -589,7 +791,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "登机口",
+                          "value": "{{ t('boarding.gate') }}",
                           "fontSize": 11,
                           "color": "#9CA3AF"
                         },
@@ -633,7 +835,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "航站楼",
+                          "value": "{{ t('boarding.terminal') }}",
                           "fontSize": 11,
                           "color": "#9CA3AF"
                         },
@@ -643,7 +845,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "T{{ global.trips[global.currentTripIndex].terminal }} 号航站楼",
+                          "value": "{{ t('boarding.terminalValue') }}",
                           "fontSize": 14,
                           "fontWeight": "600",
                           "color": "#111827"
@@ -683,7 +885,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "行李转盘",
+                          "value": "{{ t('boarding.baggage') }}",
                           "fontSize": 11,
                           "color": "#9CA3AF"
                         },
@@ -727,7 +929,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "目的地天气",
+                          "value": "{{ t('boarding.weather') }}",
                           "fontSize": 11,
                           "color": "#9CA3AF"
                         },
@@ -777,7 +979,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "其他行程",
+                    "value": "{{ t('trips.otherTitle') }}",
                     "fontSize": 17,
                     "fontWeight": "bold",
                     "color": "#111827"
@@ -878,7 +1080,7 @@
         ],
         "backgroundColor": "#F2F4F7",
         "appBar": {
-          "title": "旅行通行证",
+          "title": "{{ t('app.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",

@@ -6,7 +6,20 @@
     "type": "app",
     "description": "智能家居控制面板：灯光、空调、场景一键控制",
     "author": "fish",
-    "displayName": "智能家居"
+    "displayName": {
+      "default": "智能家居",
+      "zh": "智能家居",
+      "en": "Smart Home",
+      "de": "Smart Home",
+      "es": "Hogar inteligente",
+      "fr": "Maison connectée",
+      "pt": "Casa inteligente",
+      "ca": "Llar intel·ligent",
+      "hi": "स्मार्ट होम",
+      "ko": "스마트 홈",
+      "ja": "スマートホーム",
+      "it": "Casa intelligente"
+    }
   },
   "dependencies": {},
   "global": {
@@ -81,7 +94,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已同步 12 台设备，全部在线"
+              "message": "{{ t('toast.synced') }}"
             }
           }
         ]
@@ -183,7 +196,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已切换到回家模式"
+              "message": "{{ t('toast.sceneHome') }}"
             }
           }
         ]
@@ -257,7 +270,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已切换到离家模式，所有设备已关闭"
+              "message": "{{ t('toast.sceneAway') }}"
             }
           }
         ]
@@ -359,7 +372,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已切换到睡眠模式，晚安"
+              "message": "{{ t('toast.sceneSleep') }}"
             }
           }
         ]
@@ -461,7 +474,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已切换到观影模式"
+              "message": "{{ t('toast.sceneMovie') }}"
             }
           }
         ]
@@ -521,7 +534,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已切换到清洁模式"
+              "message": "{{ t('toast.sceneClean') }}"
             }
           }
         ]
@@ -705,10 +718,672 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "{{ global.ecoMode ? '已开启节能模式' : '已关闭节能模式' }}"
+              "message": "{{ t('toast.ecoToggle') }}"
             }
           }
         ]
+      }
+    },
+    "i18n": {
+      "zh": {
+        "app": {
+          "title": "智能家居"
+        },
+        "home": {
+          "heroTitle": "{{ global.awayMode ? '已离家' : '欢迎回家' }}",
+          "sceneSummary": "当前场景：{{ global.currentSceneLabel }} · {{ global.devicesOnline }} 台设备在线",
+          "statDevices": "在线设备",
+          "statTemp": "室内温度",
+          "statAir": "空气质量"
+        },
+        "scene": {
+          "title": "场景控制",
+          "awayBtn": "一键离家",
+          "home": "回家",
+          "movie": "观影",
+          "sleep": "睡眠",
+          "clean": "清洁",
+          "awaySwitch": "离家模式",
+          "ecoSwitch": "节能模式"
+        },
+        "light": {
+          "title": "灯光控制",
+          "living": "客厅主灯",
+          "bedroom": "卧室灯光",
+          "dining": "餐厅灯光",
+          "study": "书房灯光",
+          "kitchen": "厨房灯光",
+          "bathroom": "卫生间灯",
+          "brightness": "全局亮度 {{ global.brightness }}%"
+        },
+        "ac": {
+          "title": "空调控制",
+          "power": "空调开关",
+          "mode": "运行模式",
+          "cool": "制冷",
+          "heat": "制热",
+          "fan": "送风",
+          "dry": "除湿",
+          "targetTemp": "目标温度 {{ global.temperature }}°C",
+          "fanSpeed": "风速",
+          "speedAuto": "自动",
+          "speedLow": "低风",
+          "speedMedium": "中风",
+          "speedHigh": "高风",
+          "statusLine": "当前：{{ global.acModeLabel }} · 风速 {{ global.fanSpeedLabel }} · {{ global.acPower ? '运行中' : '已关闭' }}"
+        },
+        "room": {
+          "title": "房间状态"
+        },
+        "toast": {
+          "synced": "已同步 12 台设备，全部在线",
+          "sceneHome": "已切换到回家模式",
+          "sceneAway": "已切换到离家模式，所有设备已关闭",
+          "sceneSleep": "已切换到睡眠模式，晚安",
+          "sceneMovie": "已切换到观影模式",
+          "sceneClean": "已切换到清洁模式",
+          "ecoToggle": "{{ global.ecoMode ? '已开启节能模式' : '已关闭节能模式' }}"
+        }
+      },
+      "en": {
+        "app": {
+          "title": "Smart Home"
+        },
+        "home": {
+          "heroTitle": "{{ global.awayMode ? 'Away' : 'Welcome home' }}",
+          "sceneSummary": "Current scene: {{ global.currentSceneLabel }} · {{ global.devicesOnline }} devices online",
+          "statDevices": "Online devices",
+          "statTemp": "Indoor temp",
+          "statAir": "Air quality"
+        },
+        "scene": {
+          "title": "Scene control",
+          "awayBtn": "Leave home",
+          "home": "Home",
+          "movie": "Movie",
+          "sleep": "Sleep",
+          "clean": "Clean",
+          "awaySwitch": "Away mode",
+          "ecoSwitch": "Eco mode"
+        },
+        "light": {
+          "title": "Light control",
+          "living": "Living room light",
+          "bedroom": "Bedroom light",
+          "dining": "Dining room light",
+          "study": "Study light",
+          "kitchen": "Kitchen light",
+          "bathroom": "Bathroom light",
+          "brightness": "Global brightness {{ global.brightness }}%"
+        },
+        "ac": {
+          "title": "AC control",
+          "power": "AC power",
+          "mode": "Mode",
+          "cool": "Cool",
+          "heat": "Heat",
+          "fan": "Fan",
+          "dry": "Dry",
+          "targetTemp": "Target temp {{ global.temperature }}°C",
+          "fanSpeed": "Fan speed",
+          "speedAuto": "Auto",
+          "speedLow": "Low",
+          "speedMedium": "Medium",
+          "speedHigh": "High",
+          "statusLine": "Now: {{ global.acModeLabel }} · Fan {{ global.fanSpeedLabel }} · {{ global.acPower ? 'Running' : 'Off' }}"
+        },
+        "room": {
+          "title": "Room status"
+        },
+        "toast": {
+          "synced": "Synced 12 devices, all online",
+          "sceneHome": "Switched to Home mode",
+          "sceneAway": "Switched to Away mode, all devices off",
+          "sceneSleep": "Switched to Sleep mode, good night",
+          "sceneMovie": "Switched to Movie mode",
+          "sceneClean": "Switched to Clean mode",
+          "ecoToggle": "{{ global.ecoMode ? 'Eco mode on' : 'Eco mode off' }}"
+        }
+      },
+      "de": {
+        "app": {
+          "title": "Smart Home"
+        },
+        "home": {
+          "heroTitle": "{{ global.awayMode ? 'Abwesend' : 'Willkommen zu Hause' }}",
+          "sceneSummary": "Aktuelle Szene: {{ global.currentSceneLabel }} · {{ global.devicesOnline }} Geräte online",
+          "statDevices": "Geräte online",
+          "statTemp": "Innentemperatur",
+          "statAir": "Luftqualität"
+        },
+        "scene": {
+          "title": "Szenensteuerung",
+          "awayBtn": "Verlassen",
+          "home": "Zuhause",
+          "movie": "Kino",
+          "sleep": "Schlafen",
+          "clean": "Reinigung",
+          "awaySwitch": "Abwesenheitsmodus",
+          "ecoSwitch": "Eco-Modus"
+        },
+        "light": {
+          "title": "Lichtsteuerung",
+          "living": "Wohnzimmerlicht",
+          "bedroom": "Schlafzimmerlicht",
+          "dining": "Esszimmerlicht",
+          "study": "Arbeitszimmerlicht",
+          "kitchen": "Küchenlicht",
+          "bathroom": "Badezimmerlicht",
+          "brightness": "Globale Helligkeit {{ global.brightness }}%"
+        },
+        "ac": {
+          "title": "Klimasteuerung",
+          "power": "Klimaanlage",
+          "mode": "Betriebsmodus",
+          "cool": "Kühlen",
+          "heat": "Heizen",
+          "fan": "Lüften",
+          "dry": "Entfeuchten",
+          "targetTemp": "Zieltemperatur {{ global.temperature }}°C",
+          "fanSpeed": "Lüftergeschwindigkeit",
+          "speedAuto": "Auto",
+          "speedLow": "Niedrig",
+          "speedMedium": "Mittel",
+          "speedHigh": "Hoch",
+          "statusLine": "Jetzt: {{ global.acModeLabel }} · Lüfter {{ global.fanSpeedLabel }} · {{ global.acPower ? 'Läuft' : 'Aus' }}"
+        },
+        "room": {
+          "title": "Raumstatus"
+        },
+        "toast": {
+          "synced": "12 Geräte synchronisiert, alle online",
+          "sceneHome": "Auf Zuhause-Modus umgeschaltet",
+          "sceneAway": "Auf Abwesenheitsmodus umgeschaltet, alle Geräte aus",
+          "sceneSleep": "Auf Schlafmodus umgeschaltet, gute Nacht",
+          "sceneMovie": "Auf Kinomodus umgeschaltet",
+          "sceneClean": "Auf Reinigungsmodus umgeschaltet",
+          "ecoToggle": "{{ global.ecoMode ? 'Eco-Modus an' : 'Eco-Modus aus' }}"
+        }
+      },
+      "es": {
+        "app": {
+          "title": "Hogar inteligente"
+        },
+        "home": {
+          "heroTitle": "{{ global.awayMode ? 'Fuera' : 'Bienvenido a casa' }}",
+          "sceneSummary": "Escena actual: {{ global.currentSceneLabel }} · {{ global.devicesOnline }} dispositivos en línea",
+          "statDevices": "Dispositivos en línea",
+          "statTemp": "Temp. interior",
+          "statAir": "Calidad del aire"
+        },
+        "scene": {
+          "title": "Control de escenas",
+          "awayBtn": "Salir de casa",
+          "home": "En casa",
+          "movie": "Cine",
+          "sleep": "Dormir",
+          "clean": "Limpieza",
+          "awaySwitch": "Modo ausente",
+          "ecoSwitch": "Modo eco"
+        },
+        "light": {
+          "title": "Control de luces",
+          "living": "Luz del salón",
+          "bedroom": "Luz del dormitorio",
+          "dining": "Luz del comedor",
+          "study": "Luz del estudio",
+          "kitchen": "Luz de la cocina",
+          "bathroom": "Luz del baño",
+          "brightness": "Brillo global {{ global.brightness }}%"
+        },
+        "ac": {
+          "title": "Control del aire",
+          "power": "Aire acondicionado",
+          "mode": "Modo de operación",
+          "cool": "Frío",
+          "heat": "Calor",
+          "fan": "Ventilar",
+          "dry": "Deshumidificar",
+          "targetTemp": "Temp. objetivo {{ global.temperature }}°C",
+          "fanSpeed": "Velocidad del ventilador",
+          "speedAuto": "Auto",
+          "speedLow": "Baja",
+          "speedMedium": "Media",
+          "speedHigh": "Alta",
+          "statusLine": "Ahora: {{ global.acModeLabel }} · Ventilador {{ global.fanSpeedLabel }} · {{ global.acPower ? 'En marcha' : 'Apagado' }}"
+        },
+        "room": {
+          "title": "Estado de las habitaciones"
+        },
+        "toast": {
+          "synced": "12 dispositivos sincronizados, todos en línea",
+          "sceneHome": "Cambiado al modo En casa",
+          "sceneAway": "Cambiado al modo Ausente, todos los dispositivos apagados",
+          "sceneSleep": "Cambiado al modo Dormir, buenas noches",
+          "sceneMovie": "Cambiado al modo Cine",
+          "sceneClean": "Cambiado al modo Limpieza",
+          "ecoToggle": "{{ global.ecoMode ? 'Modo eco activado' : 'Modo eco desactivado' }}"
+        }
+      },
+      "fr": {
+        "app": {
+          "title": "Maison connectée"
+        },
+        "home": {
+          "heroTitle": "{{ global.awayMode ? 'Absent' : 'Bienvenue à la maison' }}",
+          "sceneSummary": "Scène actuelle : {{ global.currentSceneLabel }} · {{ global.devicesOnline }} appareils en ligne",
+          "statDevices": "Appareils en ligne",
+          "statTemp": "Temp. intérieure",
+          "statAir": "Qualité de l'air"
+        },
+        "scene": {
+          "title": "Contrôle des scènes",
+          "awayBtn": "Quitter la maison",
+          "home": "Maison",
+          "movie": "Cinéma",
+          "sleep": "Sommeil",
+          "clean": "Ménage",
+          "awaySwitch": "Mode absent",
+          "ecoSwitch": "Mode éco"
+        },
+        "light": {
+          "title": "Contrôle de l'éclairage",
+          "living": "Lumière du salon",
+          "bedroom": "Lumière de la chambre",
+          "dining": "Lumière de la salle à manger",
+          "study": "Lumière du bureau",
+          "kitchen": "Lumière de la cuisine",
+          "bathroom": "Lumière de la salle de bain",
+          "brightness": "Luminosité globale {{ global.brightness }}%"
+        },
+        "ac": {
+          "title": "Contrôle de la climatisation",
+          "power": "Climatisation",
+          "mode": "Mode de fonctionnement",
+          "cool": "Froid",
+          "heat": "Chaud",
+          "fan": "Ventilation",
+          "dry": "Déshumidifier",
+          "targetTemp": "Temp. cible {{ global.temperature }}°C",
+          "fanSpeed": "Vitesse du ventilateur",
+          "speedAuto": "Auto",
+          "speedLow": "Faible",
+          "speedMedium": "Moyenne",
+          "speedHigh": "Élevée",
+          "statusLine": "Actuel : {{ global.acModeLabel }} · Ventilateur {{ global.fanSpeedLabel }} · {{ global.acPower ? 'En marche' : 'Éteint' }}"
+        },
+        "room": {
+          "title": "État des pièces"
+        },
+        "toast": {
+          "synced": "12 appareils synchronisés, tous en ligne",
+          "sceneHome": "Passé en mode Maison",
+          "sceneAway": "Passé en mode Absent, tous les appareils éteints",
+          "sceneSleep": "Passé en mode Sommeil, bonne nuit",
+          "sceneMovie": "Passé en mode Cinéma",
+          "sceneClean": "Passé en mode Ménage",
+          "ecoToggle": "{{ global.ecoMode ? 'Mode éco activé' : 'Mode éco désactivé' }}"
+        }
+      },
+      "pt": {
+        "app": {
+          "title": "Casa inteligente"
+        },
+        "home": {
+          "heroTitle": "{{ global.awayMode ? 'Fora' : 'Bem-vindo a casa' }}",
+          "sceneSummary": "Cena atual: {{ global.currentSceneLabel }} · {{ global.devicesOnline }} dispositivos online",
+          "statDevices": "Dispositivos online",
+          "statTemp": "Temp. interna",
+          "statAir": "Qualidade do ar"
+        },
+        "scene": {
+          "title": "Controle de cenas",
+          "awayBtn": "Sair de casa",
+          "home": "Em casa",
+          "movie": "Cinema",
+          "sleep": "Dormir",
+          "clean": "Limpeza",
+          "awaySwitch": "Modo ausente",
+          "ecoSwitch": "Modo eco"
+        },
+        "light": {
+          "title": "Controle de luzes",
+          "living": "Luz da sala",
+          "bedroom": "Luz do quarto",
+          "dining": "Luz da sala de jantar",
+          "study": "Luz do escritório",
+          "kitchen": "Luz da cozinha",
+          "bathroom": "Luz do banheiro",
+          "brightness": "Brilho global {{ global.brightness }}%"
+        },
+        "ac": {
+          "title": "Controle do ar-condicionado",
+          "power": "Ar-condicionado",
+          "mode": "Modo de operação",
+          "cool": "Refrigerar",
+          "heat": "Aquecer",
+          "fan": "Ventilar",
+          "dry": "Desumidificar",
+          "targetTemp": "Temp. alvo {{ global.temperature }}°C",
+          "fanSpeed": "Velocidade do ventilador",
+          "speedAuto": "Auto",
+          "speedLow": "Baixa",
+          "speedMedium": "Média",
+          "speedHigh": "Alta",
+          "statusLine": "Agora: {{ global.acModeLabel }} · Ventilador {{ global.fanSpeedLabel }} · {{ global.acPower ? 'Ligado' : 'Desligado' }}"
+        },
+        "room": {
+          "title": "Status dos cômodos"
+        },
+        "toast": {
+          "synced": "12 dispositivos sincronizados, todos online",
+          "sceneHome": "Alterado para o modo Em casa",
+          "sceneAway": "Alterado para o modo Ausente, todos os dispositivos desligados",
+          "sceneSleep": "Alterado para o modo Dormir, boa noite",
+          "sceneMovie": "Alterado para o modo Cinema",
+          "sceneClean": "Alterado para o modo Limpeza",
+          "ecoToggle": "{{ global.ecoMode ? 'Modo eco ativado' : 'Modo eco desativado' }}"
+        }
+      },
+      "ca": {
+        "app": {
+          "title": "Llar intel·ligent"
+        },
+        "home": {
+          "heroTitle": "{{ global.awayMode ? 'Fora' : 'Benvingut a casa' }}",
+          "sceneSummary": "Escena actual: {{ global.currentSceneLabel }} · {{ global.devicesOnline }} dispositius en línia",
+          "statDevices": "Dispositius en línia",
+          "statTemp": "Temp. interior",
+          "statAir": "Qualitat de l'aire"
+        },
+        "scene": {
+          "title": "Control d'escenes",
+          "awayBtn": "Sortir de casa",
+          "home": "A casa",
+          "movie": "Cinema",
+          "sleep": "Dormir",
+          "clean": "Neteja",
+          "awaySwitch": "Mode absent",
+          "ecoSwitch": "Mode eco"
+        },
+        "light": {
+          "title": "Control de llums",
+          "living": "Llum del saló",
+          "bedroom": "Llum del dormitori",
+          "dining": "Llum del menjador",
+          "study": "Llum de l'estudi",
+          "kitchen": "Llum de la cuina",
+          "bathroom": "Llum del bany",
+          "brightness": "Brillantor global {{ global.brightness }}%"
+        },
+        "ac": {
+          "title": "Control de l'aire",
+          "power": "Aire condicionat",
+          "mode": "Mode de funcionament",
+          "cool": "Fred",
+          "heat": "Calor",
+          "fan": "Ventilació",
+          "dry": "Deshumidificar",
+          "targetTemp": "Temp. objectiu {{ global.temperature }}°C",
+          "fanSpeed": "Velocitat del ventilador",
+          "speedAuto": "Auto",
+          "speedLow": "Baixa",
+          "speedMedium": "Mitjana",
+          "speedHigh": "Alta",
+          "statusLine": "Ara: {{ global.acModeLabel }} · Ventilador {{ global.fanSpeedLabel }} · {{ global.acPower ? 'En marxa' : 'Aturat' }}"
+        },
+        "room": {
+          "title": "Estat de les estances"
+        },
+        "toast": {
+          "synced": "12 dispositius sincronitzats, tots en línia",
+          "sceneHome": "Canviat al mode A casa",
+          "sceneAway": "Canviat al mode Absent, tots els dispositius apagats",
+          "sceneSleep": "Canviat al mode Dormir, bona nit",
+          "sceneMovie": "Canviat al mode Cinema",
+          "sceneClean": "Canviat al mode Neteja",
+          "ecoToggle": "{{ global.ecoMode ? 'Mode eco activat' : 'Mode eco desactivat' }}"
+        }
+      },
+      "hi": {
+        "app": {
+          "title": "स्मार्ट होम"
+        },
+        "home": {
+          "heroTitle": "{{ global.awayMode ? 'घर से बाहर' : 'घर में स्वागत है' }}",
+          "sceneSummary": "वर्तमान दृश्य: {{ global.currentSceneLabel }} · {{ global.devicesOnline }} डिवाइस ऑनलाइन",
+          "statDevices": "ऑनलाइन डिवाइस",
+          "statTemp": "अंदर का तापमान",
+          "statAir": "वायु गुणवत्ता"
+        },
+        "scene": {
+          "title": "दृश्य नियंत्रण",
+          "awayBtn": "घर से निकलें",
+          "home": "घर",
+          "movie": "मूवी",
+          "sleep": "नींद",
+          "clean": "सफ़ाई",
+          "awaySwitch": "बाहर मोड",
+          "ecoSwitch": "ईको मोड"
+        },
+        "light": {
+          "title": "रोशनी नियंत्रण",
+          "living": "लिविंग रूम लाइट",
+          "bedroom": "बेडरूम लाइट",
+          "dining": "डाइनिंग रूम लाइट",
+          "study": "स्टडी रूम लाइट",
+          "kitchen": "किचन लाइट",
+          "bathroom": "बाथरूम लाइट",
+          "brightness": "वैश्विक चमक {{ global.brightness }}%"
+        },
+        "ac": {
+          "title": "एसी नियंत्रण",
+          "power": "एसी पावर",
+          "mode": "ऑपरेटिंग मोड",
+          "cool": "कूल",
+          "heat": "हीट",
+          "fan": "फैन",
+          "dry": "ड्राई",
+          "targetTemp": "लक्ष्य तापमान {{ global.temperature }}°C",
+          "fanSpeed": "पंखे की गति",
+          "speedAuto": "ऑटो",
+          "speedLow": "धीमा",
+          "speedMedium": "मध्यम",
+          "speedHigh": "तेज़",
+          "statusLine": "अभी: {{ global.acModeLabel }} · पंखा {{ global.fanSpeedLabel }} · {{ global.acPower ? 'चालू' : 'बंद' }}"
+        },
+        "room": {
+          "title": "कमरे की स्थिति"
+        },
+        "toast": {
+          "synced": "12 डिवाइस सिंक हो गए, सभी ऑनलाइन",
+          "sceneHome": "घर मोड पर स्विच किया गया",
+          "sceneAway": "बाहर मोड पर स्विच किया गया, सभी डिवाइस बंद",
+          "sceneSleep": "नींद मोड पर स्विच किया गया, शुभ रात्रि",
+          "sceneMovie": "मूवी मोड पर स्विच किया गया",
+          "sceneClean": "सफ़ाई मोड पर स्विच किया गया",
+          "ecoToggle": "{{ global.ecoMode ? 'ईको मोड चालू' : 'ईको मोड बंद' }}"
+        }
+      },
+      "ko": {
+        "app": {
+          "title": "스마트 홈"
+        },
+        "home": {
+          "heroTitle": "{{ global.awayMode ? '외출 중' : '집에 오신 것을 환영합니다' }}",
+          "sceneSummary": "현재 장면: {{ global.currentSceneLabel }} · {{ global.devicesOnline }}개 기기 온라인",
+          "statDevices": "온라인 기기",
+          "statTemp": "실내 온도",
+          "statAir": "공기 질"
+        },
+        "scene": {
+          "title": "장면 제어",
+          "awayBtn": "외출하기",
+          "home": "귀가",
+          "movie": "영화",
+          "sleep": "수면",
+          "clean": "청소",
+          "awaySwitch": "외출 모드",
+          "ecoSwitch": "절전 모드"
+        },
+        "light": {
+          "title": "조명 제어",
+          "living": "거실 조명",
+          "bedroom": "침실 조명",
+          "dining": "다이닝룸 조명",
+          "study": "서재 조명",
+          "kitchen": "주방 조명",
+          "bathroom": "욕실 조명",
+          "brightness": "전체 밝기 {{ global.brightness }}%"
+        },
+        "ac": {
+          "title": "에어컨 제어",
+          "power": "에어컨 전원",
+          "mode": "운전 모드",
+          "cool": "냉방",
+          "heat": "난방",
+          "fan": "송풍",
+          "dry": "제습",
+          "targetTemp": "목표 온도 {{ global.temperature }}°C",
+          "fanSpeed": "풍속",
+          "speedAuto": "자동",
+          "speedLow": "약풍",
+          "speedMedium": "중풍",
+          "speedHigh": "강풍",
+          "statusLine": "현재: {{ global.acModeLabel }} · 풍속 {{ global.fanSpeedLabel }} · {{ global.acPower ? '작동 중' : '꺼짐' }}"
+        },
+        "room": {
+          "title": "방 상태"
+        },
+        "toast": {
+          "synced": "기기 12대 동기화 완료, 모두 온라인",
+          "sceneHome": "귀가 모드로 전환했습니다",
+          "sceneAway": "외출 모드로 전환했습니다. 모든 기기를 껐습니다",
+          "sceneSleep": "수면 모드로 전환했습니다. 안녕히 주무세요",
+          "sceneMovie": "영화 모드로 전환했습니다",
+          "sceneClean": "청소 모드로 전환했습니다",
+          "ecoToggle": "{{ global.ecoMode ? '절전 모드 켜짐' : '절전 모드 꺼짐' }}"
+        }
+      },
+      "ja": {
+        "app": {
+          "title": "スマートホーム"
+        },
+        "home": {
+          "heroTitle": "{{ global.awayMode ? '外出中' : 'おかえりなさい' }}",
+          "sceneSummary": "現在のシーン：{{ global.currentSceneLabel }} · {{ global.devicesOnline }} 台のデバイスがオンライン",
+          "statDevices": "オンライン機器",
+          "statTemp": "室内温度",
+          "statAir": "空気の質"
+        },
+        "scene": {
+          "title": "シーン制御",
+          "awayBtn": "外出する",
+          "home": "帰宅",
+          "movie": "映画",
+          "sleep": "睡眠",
+          "clean": "掃除",
+          "awaySwitch": "外出モード",
+          "ecoSwitch": "エコモード"
+        },
+        "light": {
+          "title": "照明制御",
+          "living": "リビングの照明",
+          "bedroom": "寝室の照明",
+          "dining": "ダイニングの照明",
+          "study": "書斎の照明",
+          "kitchen": "キッチンの照明",
+          "bathroom": "浴室の照明",
+          "brightness": "全体の明るさ {{ global.brightness }}%"
+        },
+        "ac": {
+          "title": "エアコン制御",
+          "power": "エアコン電源",
+          "mode": "運転モード",
+          "cool": "冷房",
+          "heat": "暖房",
+          "fan": "送風",
+          "dry": "除湿",
+          "targetTemp": "目標温度 {{ global.temperature }}°C",
+          "fanSpeed": "風量",
+          "speedAuto": "自動",
+          "speedLow": "弱風",
+          "speedMedium": "中風",
+          "speedHigh": "強風",
+          "statusLine": "現在：{{ global.acModeLabel }} · 風量 {{ global.fanSpeedLabel }} · {{ global.acPower ? '運転中' : '停止' }}"
+        },
+        "room": {
+          "title": "部屋の状態"
+        },
+        "toast": {
+          "synced": "12台のデバイスを同期しました。すべてオンライン",
+          "sceneHome": "帰宅モードに切り替えました",
+          "sceneAway": "外出モードに切り替えました。すべてのデバイスをオフにしました",
+          "sceneSleep": "睡眠モードに切り替えました。おやすみなさい",
+          "sceneMovie": "映画モードに切り替えました",
+          "sceneClean": "掃除モードに切り替えました",
+          "ecoToggle": "{{ global.ecoMode ? 'エコモードをオンにしました' : 'エコモードをオフにしました' }}"
+        }
+      },
+      "it": {
+        "app": {
+          "title": "Casa intelligente"
+        },
+        "home": {
+          "heroTitle": "{{ global.awayMode ? 'Fuori casa' : 'Bentornato a casa' }}",
+          "sceneSummary": "Scena attuale: {{ global.currentSceneLabel }} · {{ global.devicesOnline }} dispositivi online",
+          "statDevices": "Dispositivi online",
+          "statTemp": "Temp. interna",
+          "statAir": "Qualità dell'aria"
+        },
+        "scene": {
+          "title": "Controllo scene",
+          "awayBtn": "Esci di casa",
+          "home": "Casa",
+          "movie": "Film",
+          "sleep": "Sonno",
+          "clean": "Pulizia",
+          "awaySwitch": "Modalità assente",
+          "ecoSwitch": "Modalità eco"
+        },
+        "light": {
+          "title": "Controllo luci",
+          "living": "Luce del soggiorno",
+          "bedroom": "Luce della camera",
+          "dining": "Luce della sala da pranzo",
+          "study": "Luce dello studio",
+          "kitchen": "Luce della cucina",
+          "bathroom": "Luce del bagno",
+          "brightness": "Luminosità globale {{ global.brightness }}%"
+        },
+        "ac": {
+          "title": "Controllo aria condizionata",
+          "power": "Aria condizionata",
+          "mode": "Modalità operativa",
+          "cool": "Raffrescamento",
+          "heat": "Riscaldamento",
+          "fan": "Ventilazione",
+          "dry": "Deumidificazione",
+          "targetTemp": "Temp. obiettivo {{ global.temperature }}°C",
+          "fanSpeed": "Velocità ventola",
+          "speedAuto": "Auto",
+          "speedLow": "Bassa",
+          "speedMedium": "Media",
+          "speedHigh": "Alta",
+          "statusLine": "Ora: {{ global.acModeLabel }} · Ventola {{ global.fanSpeedLabel }} · {{ global.acPower ? 'In funzione' : 'Spento' }}"
+        },
+        "room": {
+          "title": "Stato delle stanze"
+        },
+        "toast": {
+          "synced": "12 dispositivi sincronizzati, tutti online",
+          "sceneHome": "Passato alla modalità Casa",
+          "sceneAway": "Passato alla modalità Assente, tutti i dispositivi spenti",
+          "sceneSleep": "Passato alla modalità Sonno, buonanotte",
+          "sceneMovie": "Passato alla modalità Film",
+          "sceneClean": "Passato alla modalità Pulizia",
+          "ecoToggle": "{{ global.ecoMode ? 'Modalità eco attiva' : 'Modalità eco disattivata' }}"
+        }
       }
     }
   },
@@ -717,7 +1392,7 @@
     "screens": [
       {
         "id": "home",
-        "title": "智能家居",
+        "title": "{{ t('app.title') }}",
         "layout": "column",
         "backgroundColor": "#F5F7FA",
         "children": [
@@ -728,7 +1403,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "{{ global.awayMode ? '已离家' : '欢迎回家' }}",
+                "value": "{{ t('home.heroTitle') }}",
                 "style": {
                   "fontSize": 20,
                   "fontWeight": "bold",
@@ -741,7 +1416,7 @@
               },
               {
                 "type": "text",
-                "value": "当前场景：{{ global.currentSceneLabel }} · {{ global.devicesOnline }} 台设备在线",
+                "value": "{{ t('home.sceneSummary') }}",
                 "style": {
                   "fontSize": 13,
                   "color": "#6B7280"
@@ -791,7 +1466,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "在线设备",
+                      "value": "{{ t('home.statDevices') }}",
                       "style": {
                         "fontSize": 12,
                         "color": "#6B7280"
@@ -841,7 +1516,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "室内温度",
+                      "value": "{{ t('home.statTemp') }}",
                       "style": {
                         "fontSize": 12,
                         "color": "#6B7280"
@@ -891,7 +1566,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "空气质量",
+                      "value": "{{ t('home.statAir') }}",
                       "style": {
                         "fontSize": 12,
                         "color": "#6B7280"
@@ -919,7 +1594,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "场景控制",
+                    "value": "{{ t('scene.title') }}",
                     "style": {
                       "fontSize": 17,
                       "fontWeight": "bold",
@@ -928,7 +1603,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "一键离家",
+                    "label": "{{ t('scene.awayBtn') }}",
                     "variant": "filled",
                     "action": {
                       "call": "@global.sceneAway",
@@ -957,7 +1632,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "回家",
+                    "label": "{{ t('scene.home') }}",
                     "icon": "home",
                     "color": "#DCFCE7",
                     "action": {
@@ -967,7 +1642,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "观影",
+                    "label": "{{ t('scene.movie') }}",
                     "icon": "theaters",
                     "color": "#EDE9FE",
                     "action": {
@@ -977,7 +1652,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "睡眠",
+                    "label": "{{ t('scene.sleep') }}",
                     "icon": "dark_mode",
                     "color": "#DBEAFE",
                     "action": {
@@ -987,7 +1662,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "清洁",
+                    "label": "{{ t('scene.clean') }}",
                     "icon": "auto_awesome",
                     "color": "#E0F2FE",
                     "action": {
@@ -1003,12 +1678,12 @@
               },
               {
                 "type": "switch",
-                "label": "离家模式",
+                "label": "{{ t('scene.awaySwitch') }}",
                 "bind": "global.awayMode"
               },
               {
                 "type": "switch",
-                "label": "节能模式",
+                "label": "{{ t('scene.ecoSwitch') }}",
                 "bind": "global.ecoMode"
               }
             ]
@@ -1030,7 +1705,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "灯光控制",
+                    "value": "{{ t('light.title') }}",
                     "style": {
                       "fontSize": 17,
                       "fontWeight": "bold",
@@ -1045,32 +1720,32 @@
               },
               {
                 "type": "switch",
-                "label": "客厅主灯",
+                "label": "{{ t('light.living') }}",
                 "bind": "global.livingRoomLight"
               },
               {
                 "type": "switch",
-                "label": "卧室灯光",
+                "label": "{{ t('light.bedroom') }}",
                 "bind": "global.bedroomLight"
               },
               {
                 "type": "switch",
-                "label": "餐厅灯光",
+                "label": "{{ t('light.dining') }}",
                 "bind": "global.diningLight"
               },
               {
                 "type": "switch",
-                "label": "书房灯光",
+                "label": "{{ t('light.study') }}",
                 "bind": "global.studyLight"
               },
               {
                 "type": "switch",
-                "label": "厨房灯光",
+                "label": "{{ t('light.kitchen') }}",
                 "bind": "global.kitchenLight"
               },
               {
                 "type": "switch",
-                "label": "卫生间灯",
+                "label": "{{ t('light.bathroom') }}",
                 "bind": "global.bathroomLight"
               },
               {
@@ -1087,7 +1762,7 @@
               },
               {
                 "type": "text",
-                "value": "全局亮度 {{ global.brightness }}%",
+                "value": "{{ t('light.brightness') }}",
                 "style": {
                   "fontSize": 14,
                   "color": "#4B5563"
@@ -1120,7 +1795,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "空调控制",
+                    "value": "{{ t('ac.title') }}",
                     "style": {
                       "fontSize": 17,
                       "fontWeight": "bold",
@@ -1135,7 +1810,7 @@
               },
               {
                 "type": "switch",
-                "label": "空调开关",
+                "label": "{{ t('ac.power') }}",
                 "bind": "global.acPower"
               },
               {
@@ -1144,7 +1819,7 @@
               },
               {
                 "type": "text",
-                "value": "运行模式",
+                "value": "{{ t('ac.mode') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "bold",
@@ -1162,7 +1837,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "制冷",
+                    "label": "{{ t('ac.cool') }}",
                     "icon": "ac_unit",
                     "color": "#DBEAFE",
                     "action": {
@@ -1172,7 +1847,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "制热",
+                    "label": "{{ t('ac.heat') }}",
                     "icon": "wb_sunny",
                     "color": "#FEF3C7",
                     "action": {
@@ -1182,7 +1857,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "送风",
+                    "label": "{{ t('ac.fan') }}",
                     "icon": "air",
                     "color": "#DCFCE7",
                     "action": {
@@ -1192,7 +1867,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "除湿",
+                    "label": "{{ t('ac.dry') }}",
                     "icon": "water_drop",
                     "color": "#E0F2FE",
                     "action": {
@@ -1208,7 +1883,7 @@
               },
               {
                 "type": "text",
-                "value": "目标温度 {{ global.temperature }}°C",
+                "value": "{{ t('ac.targetTemp') }}",
                 "style": {
                   "fontSize": 14,
                   "color": "#4B5563"
@@ -1228,7 +1903,7 @@
               },
               {
                 "type": "text",
-                "value": "风速",
+                "value": "{{ t('ac.fanSpeed') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "bold",
@@ -1246,7 +1921,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "自动",
+                    "label": "{{ t('ac.speedAuto') }}",
                     "icon": "settings",
                     "color": "#E8F7F0",
                     "action": {
@@ -1256,7 +1931,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "低风",
+                    "label": "{{ t('ac.speedLow') }}",
                     "icon": "bolt",
                     "color": "#EEF2FF",
                     "action": {
@@ -1266,7 +1941,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "中风",
+                    "label": "{{ t('ac.speedMedium') }}",
                     "icon": "bolt",
                     "color": "#FEF7E0",
                     "action": {
@@ -1276,7 +1951,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "高风",
+                    "label": "{{ t('ac.speedHigh') }}",
                     "icon": "bolt",
                     "color": "#FEE2E2",
                     "action": {
@@ -1297,7 +1972,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "当前：{{ global.acModeLabel }} · 风速 {{ global.fanSpeedLabel }} · {{ global.acPower ? '运行中' : '已关闭' }}",
+                    "value": "{{ t('ac.statusLine') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#9CA3AF"
@@ -1318,7 +1993,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "房间状态",
+                "value": "{{ t('room.title') }}",
                 "style": {
                   "fontSize": 17,
                   "fontWeight": "bold",
@@ -1383,7 +2058,7 @@
           }
         ],
         "appBar": {
-          "title": "智能家居",
+          "title": "{{ t('app.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",

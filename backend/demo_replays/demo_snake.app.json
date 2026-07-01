@@ -5,13 +5,238 @@
     "version": "1.0.0",
     "type": "app",
     "description": "贪吃蛇小游戏 — 吃食物变长，撞墙结束",
-    "author": "ai"
+    "author": "ai",
+    "displayName": {
+      "default": "贪吃蛇",
+      "zh": "贪吃蛇",
+      "en": "Snake",
+      "de": "Snake",
+      "es": "Snake",
+      "fr": "Snake",
+      "pt": "Snake",
+      "ca": "Snake",
+      "hi": "स्नेक",
+      "ko": "스네이크",
+      "ja": "スネーク",
+      "it": "Snake"
+    }
   },
   "dependencies": {
     "lib_database": "^1.0.0",
     "common-ui": "^1.3.0"
   },
   "global": {
+    "i18n": {
+      "zh": {
+        "app": { "title": "贪吃蛇" },
+        "score": {
+          "current": "得分：{{ global.currentScore }}",
+          "best": "最佳：{{ global.bestScore }}"
+        },
+        "gameOver": {
+          "title": "本局结束",
+          "message": "得分：{{ params.score }}\n最佳：{{ global.bestScore }}",
+          "close": "关闭",
+          "restart": "再来一局"
+        },
+        "history": {
+          "title": "历史记录",
+          "subtitle": "共 {{ global.historyCount }} 局",
+          "empty": "尚无历史记录 — 玩一局试试",
+          "scoreUnit": "{{ loop.item.score }} 分"
+        }
+      },
+      "en": {
+        "app": { "title": "Snake" },
+        "score": {
+          "current": "Score: {{ global.currentScore }}",
+          "best": "Best: {{ global.bestScore }}"
+        },
+        "gameOver": {
+          "title": "Game Over",
+          "message": "Score: {{ params.score }}\nBest: {{ global.bestScore }}",
+          "close": "Close",
+          "restart": "Play Again"
+        },
+        "history": {
+          "title": "History",
+          "subtitle": "{{ global.historyCount }} games total",
+          "empty": "No history yet — play a round to start",
+          "scoreUnit": "{{ loop.item.score }} pts"
+        }
+      },
+      "de": {
+        "app": { "title": "Snake" },
+        "score": {
+          "current": "Punkte: {{ global.currentScore }}",
+          "best": "Bestwert: {{ global.bestScore }}"
+        },
+        "gameOver": {
+          "title": "Spiel vorbei",
+          "message": "Punkte: {{ params.score }}\nBestwert: {{ global.bestScore }}",
+          "close": "Schließen",
+          "restart": "Nochmal spielen"
+        },
+        "history": {
+          "title": "Verlauf",
+          "subtitle": "Insgesamt {{ global.historyCount }} Spiele",
+          "empty": "Noch kein Verlauf — spiele eine Runde",
+          "scoreUnit": "{{ loop.item.score }} Pkt."
+        }
+      },
+      "es": {
+        "app": { "title": "Snake" },
+        "score": {
+          "current": "Puntos: {{ global.currentScore }}",
+          "best": "Mejor: {{ global.bestScore }}"
+        },
+        "gameOver": {
+          "title": "Fin de la partida",
+          "message": "Puntos: {{ params.score }}\nMejor: {{ global.bestScore }}",
+          "close": "Cerrar",
+          "restart": "Jugar de nuevo"
+        },
+        "history": {
+          "title": "Historial",
+          "subtitle": "{{ global.historyCount }} partidas en total",
+          "empty": "Aún no hay historial — juega una partida",
+          "scoreUnit": "{{ loop.item.score }} pts"
+        }
+      },
+      "fr": {
+        "app": { "title": "Snake" },
+        "score": {
+          "current": "Score : {{ global.currentScore }}",
+          "best": "Meilleur : {{ global.bestScore }}"
+        },
+        "gameOver": {
+          "title": "Partie terminée",
+          "message": "Score : {{ params.score }}\nMeilleur : {{ global.bestScore }}",
+          "close": "Fermer",
+          "restart": "Rejouer"
+        },
+        "history": {
+          "title": "Historique",
+          "subtitle": "{{ global.historyCount }} parties au total",
+          "empty": "Aucun historique — jouez une partie",
+          "scoreUnit": "{{ loop.item.score }} pts"
+        }
+      },
+      "pt": {
+        "app": { "title": "Snake" },
+        "score": {
+          "current": "Pontos: {{ global.currentScore }}",
+          "best": "Melhor: {{ global.bestScore }}"
+        },
+        "gameOver": {
+          "title": "Fim de jogo",
+          "message": "Pontos: {{ params.score }}\nMelhor: {{ global.bestScore }}",
+          "close": "Fechar",
+          "restart": "Jogar de novo"
+        },
+        "history": {
+          "title": "Histórico",
+          "subtitle": "{{ global.historyCount }} jogos no total",
+          "empty": "Ainda sem histórico — jogue uma partida",
+          "scoreUnit": "{{ loop.item.score }} pts"
+        }
+      },
+      "ca": {
+        "app": { "title": "Snake" },
+        "score": {
+          "current": "Punts: {{ global.currentScore }}",
+          "best": "Millor: {{ global.bestScore }}"
+        },
+        "gameOver": {
+          "title": "Fi de la partida",
+          "message": "Punts: {{ params.score }}\nMillor: {{ global.bestScore }}",
+          "close": "Tanca",
+          "restart": "Torna a jugar"
+        },
+        "history": {
+          "title": "Historial",
+          "subtitle": "{{ global.historyCount }} partides en total",
+          "empty": "Encara no hi ha historial — juga una partida",
+          "scoreUnit": "{{ loop.item.score }} pts"
+        }
+      },
+      "hi": {
+        "app": { "title": "स्नेक" },
+        "score": {
+          "current": "स्कोर: {{ global.currentScore }}",
+          "best": "सर्वश्रेष्ठ: {{ global.bestScore }}"
+        },
+        "gameOver": {
+          "title": "खेल समाप्त",
+          "message": "स्कोर: {{ params.score }}\nसर्वश्रेष्ठ: {{ global.bestScore }}",
+          "close": "बंद करें",
+          "restart": "फिर से खेलें"
+        },
+        "history": {
+          "title": "इतिहास",
+          "subtitle": "कुल {{ global.historyCount }} खेल",
+          "empty": "अभी तक कोई इतिहास नहीं — एक बार खेलें",
+          "scoreUnit": "{{ loop.item.score }} अंक"
+        }
+      },
+      "ko": {
+        "app": { "title": "스네이크" },
+        "score": {
+          "current": "점수: {{ global.currentScore }}",
+          "best": "최고: {{ global.bestScore }}"
+        },
+        "gameOver": {
+          "title": "게임 종료",
+          "message": "점수: {{ params.score }}\n최고: {{ global.bestScore }}",
+          "close": "닫기",
+          "restart": "다시 하기"
+        },
+        "history": {
+          "title": "기록",
+          "subtitle": "총 {{ global.historyCount }}판",
+          "empty": "아직 기록이 없습니다 — 한 판 해보세요",
+          "scoreUnit": "{{ loop.item.score }}점"
+        }
+      },
+      "ja": {
+        "app": { "title": "スネーク" },
+        "score": {
+          "current": "スコア: {{ global.currentScore }}",
+          "best": "ベスト: {{ global.bestScore }}"
+        },
+        "gameOver": {
+          "title": "ゲームオーバー",
+          "message": "スコア: {{ params.score }}\nベスト: {{ global.bestScore }}",
+          "close": "閉じる",
+          "restart": "もう一度"
+        },
+        "history": {
+          "title": "履歴",
+          "subtitle": "全 {{ global.historyCount }} 回",
+          "empty": "まだ履歴がありません — 一度プレイしてみましょう",
+          "scoreUnit": "{{ loop.item.score }} 点"
+        }
+      },
+      "it": {
+        "app": { "title": "Snake" },
+        "score": {
+          "current": "Punti: {{ global.currentScore }}",
+          "best": "Migliore: {{ global.bestScore }}"
+        },
+        "gameOver": {
+          "title": "Partita finita",
+          "message": "Punti: {{ params.score }}\nMigliore: {{ global.bestScore }}",
+          "close": "Chiudi",
+          "restart": "Gioca di nuovo"
+        },
+        "history": {
+          "title": "Cronologia",
+          "subtitle": "{{ global.historyCount }} partite in totale",
+          "empty": "Ancora nessuna cronologia — gioca una partita",
+          "scoreUnit": "{{ loop.item.score }} pti"
+        }
+      }
+    },
     "variables": {
       "currentScore": 0,
       "bestScore": 0,
@@ -224,16 +449,16 @@
           {
             "call": "@common-ui.choose",
             "args": {
-              "title": "本局结束",
-              "message": "得分：{{ params.score }}\n最佳：{{ global.bestScore }}",
+              "title": "{{ t('gameOver.title') }}",
+              "message": "{{ t('gameOver.message') }}",
               "buttons": [
                 {
-                  "label": "关闭",
+                  "label": "{{ t('gameOver.close') }}",
                   "value": null,
                   "style": "text"
                 },
                 {
-                  "label": "再来一局",
+                  "label": "{{ t('gameOver.restart') }}",
                   "value": "restart"
                 }
               ]
@@ -270,12 +495,12 @@
           {
             "call": "@common-ui.showSheet",
             "args": {
-              "title": "历史记录",
-              "subtitle": "共 {{ global.historyCount }} 局",
+              "title": "{{ t('history.title') }}",
+              "subtitle": "{{ t('history.subtitle') }}",
               "content": {
                 "type": "list",
                 "source": "{{ global.history }}",
-                "emptyText": "尚无历史记录 — 玩一局试试",
+                "emptyText": "{{ t('history.empty') }}",
                 "shrinkWrap": true,
                 "item_template": {
                   "type": "container",
@@ -297,7 +522,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "{{ loop.item.score }} 分",
+                      "value": "{{ t('history.scoreUnit') }}",
                       "style": {
                         "fontSize": 15,
                         "fontWeight": "bold",
@@ -331,9 +556,9 @@
     "screens": [
       {
         "id": "home",
-        "title": "贪吃蛇",
+        "title": "{{ t('app.title') }}",
         "appBar": {
-          "title": "贪吃蛇",
+          "title": "{{ t('app.title') }}",
           "centerTitle": true,
           "backgroundColor": "#1A1A2E",
           "color": "#FFFFFF",
@@ -363,7 +588,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "得分：{{ global.currentScore }}",
+                "value": "{{ t('score.current') }}",
                 "style": {
                   "fontSize": 14,
                   "color": "#FFFFFF",
@@ -376,7 +601,7 @@
               },
               {
                 "type": "text",
-                "value": "最佳：{{ global.bestScore }}",
+                "value": "{{ t('score.best') }}",
                 "style": {
                   "fontSize": 13,
                   "color": "#AAAAAA"

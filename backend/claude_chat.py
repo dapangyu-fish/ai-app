@@ -293,8 +293,8 @@ import demo_replay
 def demo_list():
     """GET /api/ai/demo/list — 服务端下发的 demo 选择目录（uuid/title/prompt）。
     客户端拉取它渲染免登录 demo 选择列表，所以加一个 demo 只改后端、不用客户端发版。
-    公开端点，无需鉴权（只是 demo 目录，不含任何敏感信息）。"""
-    return jsonify({"demos": demo_replay.demo_prompt_list()})
+    公开端点，无需鉴权（只是 demo 目录，不含任何敏感信息）。`?lang=` 决定文案语言。"""
+    return jsonify({"demos": demo_replay.demo_prompt_list(request.args.get("lang"))})
 
 
 _CHAT_START_LOCK_TTL_SECONDS = int(os.environ.get("AI_CHAT_START_LOCK_TTL_SECONDS", "45"))
@@ -364,7 +364,9 @@ def chat_start():
     # session 归属为当前（demo）账号 → stream/result 归属校验天然隔离真实用户。
     _demo_body = request.get_json(silent=True) or {}
     if demo_replay.is_demo_uuid(_demo_body.get("session_id")):
-        return demo_replay.start(_demo_body.get("session_id"), user_id)
+        # 客户端把当前框架语言放在 body.lang；兜底用 Accept-Language。决定回放叙事用哪种语言。
+        _demo_lang = _demo_body.get("lang") or request.headers.get("Accept-Language", "")
+        return demo_replay.start(_demo_body.get("session_id"), user_id, _demo_lang)
 
     used, limit, remaining = get_quota_info(
         user_id, role, ROLE_QUOTAS,

@@ -6,7 +6,20 @@
     "type": "app",
     "description": "笔记应用：新建、编辑、列表、搜索",
     "author": "fish",
-    "displayName": "我的笔记"
+    "displayName": {
+      "default": "我的笔记",
+      "zh": "我的笔记",
+      "en": "My Notes",
+      "de": "Meine Notizen",
+      "es": "Mis notas",
+      "fr": "Mes notes",
+      "pt": "Minhas notas",
+      "ca": "Les meves notes",
+      "hi": "मेरे नोट्स",
+      "ko": "내 노트",
+      "ja": "マイメモ",
+      "it": "Le mie note"
+    }
   },
   "dependencies": {},
   "global": {
@@ -107,6 +120,360 @@
       "_nextSeq": 5,
       "_tmpAccent": "#2563EB",
       "_tmpTint": "#EAF1FF"
+    },
+    "i18n": {
+      "zh": {
+        "home": {
+          "appBarTitle": "笔记",
+          "totalLabel": "全部笔记",
+          "weekLabel": "本周新增",
+          "searchPlaceholder": "搜索标题或内容",
+          "searchButton": "搜索",
+          "empty": "暂无笔记，点击下方按钮创建第一条",
+          "createButton": "新建笔记"
+        },
+        "tag": {
+          "all": "全部",
+          "work": "工作",
+          "life": "生活",
+          "idea": "灵感",
+          "study": "学习"
+        },
+        "form": {
+          "titleCreate": "新建笔记",
+          "titleEdit": "编辑笔记",
+          "titleLabel": "标题",
+          "titlePlaceholder": "输入笔记标题",
+          "tagLabel": "标签",
+          "contentLabel": "内容",
+          "contentPlaceholder": "记录想法、任务或灵感…",
+          "saveButton": "保存笔记"
+        },
+        "toast": {
+          "saved": "笔记已保存",
+          "deleted": "笔记已删除"
+        }
+      },
+      "en": {
+        "home": {
+          "appBarTitle": "Notes",
+          "totalLabel": "All Notes",
+          "weekLabel": "Added This Week",
+          "searchPlaceholder": "Search title or content",
+          "searchButton": "Search",
+          "empty": "No notes yet. Tap the button below to create your first one.",
+          "createButton": "New Note"
+        },
+        "tag": {
+          "all": "All",
+          "work": "Work",
+          "life": "Life",
+          "idea": "Ideas",
+          "study": "Study"
+        },
+        "form": {
+          "titleCreate": "New Note",
+          "titleEdit": "Edit Note",
+          "titleLabel": "Title",
+          "titlePlaceholder": "Enter note title",
+          "tagLabel": "Tag",
+          "contentLabel": "Content",
+          "contentPlaceholder": "Jot down ideas, tasks or inspiration…",
+          "saveButton": "Save Note"
+        },
+        "toast": {
+          "saved": "Note saved",
+          "deleted": "Note deleted"
+        }
+      },
+      "de": {
+        "home": {
+          "appBarTitle": "Notizen",
+          "totalLabel": "Alle Notizen",
+          "weekLabel": "Diese Woche hinzugefügt",
+          "searchPlaceholder": "Titel oder Inhalt suchen",
+          "searchButton": "Suchen",
+          "empty": "Noch keine Notizen. Tippe auf die Schaltfläche unten, um die erste zu erstellen.",
+          "createButton": "Neue Notiz"
+        },
+        "tag": {
+          "all": "Alle",
+          "work": "Arbeit",
+          "life": "Leben",
+          "idea": "Ideen",
+          "study": "Lernen"
+        },
+        "form": {
+          "titleCreate": "Neue Notiz",
+          "titleEdit": "Notiz bearbeiten",
+          "titleLabel": "Titel",
+          "titlePlaceholder": "Notiztitel eingeben",
+          "tagLabel": "Schlagwort",
+          "contentLabel": "Inhalt",
+          "contentPlaceholder": "Notiere Ideen, Aufgaben oder Inspiration …",
+          "saveButton": "Notiz speichern"
+        },
+        "toast": {
+          "saved": "Notiz gespeichert",
+          "deleted": "Notiz gelöscht"
+        }
+      },
+      "es": {
+        "home": {
+          "appBarTitle": "Notas",
+          "totalLabel": "Todas las notas",
+          "weekLabel": "Añadidas esta semana",
+          "searchPlaceholder": "Buscar título o contenido",
+          "searchButton": "Buscar",
+          "empty": "Aún no hay notas. Toca el botón de abajo para crear la primera.",
+          "createButton": "Nueva nota"
+        },
+        "tag": {
+          "all": "Todas",
+          "work": "Trabajo",
+          "life": "Vida",
+          "idea": "Ideas",
+          "study": "Estudio"
+        },
+        "form": {
+          "titleCreate": "Nueva nota",
+          "titleEdit": "Editar nota",
+          "titleLabel": "Título",
+          "titlePlaceholder": "Introduce el título de la nota",
+          "tagLabel": "Etiqueta",
+          "contentLabel": "Contenido",
+          "contentPlaceholder": "Anota ideas, tareas o inspiración…",
+          "saveButton": "Guardar nota"
+        },
+        "toast": {
+          "saved": "Nota guardada",
+          "deleted": "Nota eliminada"
+        }
+      },
+      "fr": {
+        "home": {
+          "appBarTitle": "Notes",
+          "totalLabel": "Toutes les notes",
+          "weekLabel": "Ajoutées cette semaine",
+          "searchPlaceholder": "Rechercher un titre ou un contenu",
+          "searchButton": "Rechercher",
+          "empty": "Aucune note pour l'instant. Appuyez sur le bouton ci-dessous pour créer la première.",
+          "createButton": "Nouvelle note"
+        },
+        "tag": {
+          "all": "Toutes",
+          "work": "Travail",
+          "life": "Vie",
+          "idea": "Idées",
+          "study": "Études"
+        },
+        "form": {
+          "titleCreate": "Nouvelle note",
+          "titleEdit": "Modifier la note",
+          "titleLabel": "Titre",
+          "titlePlaceholder": "Saisir le titre de la note",
+          "tagLabel": "Étiquette",
+          "contentLabel": "Contenu",
+          "contentPlaceholder": "Notez vos idées, tâches ou inspirations…",
+          "saveButton": "Enregistrer la note"
+        },
+        "toast": {
+          "saved": "Note enregistrée",
+          "deleted": "Note supprimée"
+        }
+      },
+      "pt": {
+        "home": {
+          "appBarTitle": "Notas",
+          "totalLabel": "Todas as notas",
+          "weekLabel": "Adicionadas esta semana",
+          "searchPlaceholder": "Pesquisar título ou conteúdo",
+          "searchButton": "Pesquisar",
+          "empty": "Ainda não há notas. Toque no botão abaixo para criar a primeira.",
+          "createButton": "Nova nota"
+        },
+        "tag": {
+          "all": "Todas",
+          "work": "Trabalho",
+          "life": "Vida",
+          "idea": "Ideias",
+          "study": "Estudo"
+        },
+        "form": {
+          "titleCreate": "Nova nota",
+          "titleEdit": "Editar nota",
+          "titleLabel": "Título",
+          "titlePlaceholder": "Insira o título da nota",
+          "tagLabel": "Etiqueta",
+          "contentLabel": "Conteúdo",
+          "contentPlaceholder": "Anote ideias, tarefas ou inspiração…",
+          "saveButton": "Salvar nota"
+        },
+        "toast": {
+          "saved": "Nota salva",
+          "deleted": "Nota excluída"
+        }
+      },
+      "ca": {
+        "home": {
+          "appBarTitle": "Notes",
+          "totalLabel": "Totes les notes",
+          "weekLabel": "Afegides aquesta setmana",
+          "searchPlaceholder": "Cerca títol o contingut",
+          "searchButton": "Cerca",
+          "empty": "Encara no hi ha notes. Toca el botó de sota per crear-ne la primera.",
+          "createButton": "Nova nota"
+        },
+        "tag": {
+          "all": "Totes",
+          "work": "Feina",
+          "life": "Vida",
+          "idea": "Idees",
+          "study": "Estudi"
+        },
+        "form": {
+          "titleCreate": "Nova nota",
+          "titleEdit": "Edita la nota",
+          "titleLabel": "Títol",
+          "titlePlaceholder": "Introdueix el títol de la nota",
+          "tagLabel": "Etiqueta",
+          "contentLabel": "Contingut",
+          "contentPlaceholder": "Anota idees, tasques o inspiració…",
+          "saveButton": "Desa la nota"
+        },
+        "toast": {
+          "saved": "Nota desada",
+          "deleted": "Nota eliminada"
+        }
+      },
+      "hi": {
+        "home": {
+          "appBarTitle": "नोट्स",
+          "totalLabel": "सभी नोट्स",
+          "weekLabel": "इस सप्ताह जोड़ी गईं",
+          "searchPlaceholder": "शीर्षक या सामग्री खोजें",
+          "searchButton": "खोजें",
+          "empty": "अभी तक कोई नोट नहीं। पहला बनाने के लिए नीचे दिए गए बटन पर टैप करें।",
+          "createButton": "नया नोट"
+        },
+        "tag": {
+          "all": "सभी",
+          "work": "काम",
+          "life": "जीवन",
+          "idea": "विचार",
+          "study": "अध्ययन"
+        },
+        "form": {
+          "titleCreate": "नया नोट",
+          "titleEdit": "नोट संपादित करें",
+          "titleLabel": "शीर्षक",
+          "titlePlaceholder": "नोट का शीर्षक दर्ज करें",
+          "tagLabel": "टैग",
+          "contentLabel": "सामग्री",
+          "contentPlaceholder": "विचार, कार्य या प्रेरणा लिखें…",
+          "saveButton": "नोट सहेजें"
+        },
+        "toast": {
+          "saved": "नोट सहेजा गया",
+          "deleted": "नोट हटाया गया"
+        }
+      },
+      "ko": {
+        "home": {
+          "appBarTitle": "노트",
+          "totalLabel": "전체 노트",
+          "weekLabel": "이번 주 추가",
+          "searchPlaceholder": "제목 또는 내용 검색",
+          "searchButton": "검색",
+          "empty": "아직 노트가 없습니다. 아래 버튼을 눌러 첫 번째 노트를 만드세요.",
+          "createButton": "새 노트"
+        },
+        "tag": {
+          "all": "전체",
+          "work": "업무",
+          "life": "일상",
+          "idea": "영감",
+          "study": "학습"
+        },
+        "form": {
+          "titleCreate": "새 노트",
+          "titleEdit": "노트 편집",
+          "titleLabel": "제목",
+          "titlePlaceholder": "노트 제목 입력",
+          "tagLabel": "태그",
+          "contentLabel": "내용",
+          "contentPlaceholder": "아이디어, 할 일, 영감을 적어 보세요…",
+          "saveButton": "노트 저장"
+        },
+        "toast": {
+          "saved": "노트가 저장되었습니다",
+          "deleted": "노트가 삭제되었습니다"
+        }
+      },
+      "ja": {
+        "home": {
+          "appBarTitle": "メモ",
+          "totalLabel": "すべてのメモ",
+          "weekLabel": "今週の追加",
+          "searchPlaceholder": "タイトルまたは内容を検索",
+          "searchButton": "検索",
+          "empty": "メモはまだありません。下のボタンをタップして最初のメモを作成しましょう。",
+          "createButton": "新しいメモ"
+        },
+        "tag": {
+          "all": "すべて",
+          "work": "仕事",
+          "life": "生活",
+          "idea": "アイデア",
+          "study": "学習"
+        },
+        "form": {
+          "titleCreate": "新しいメモ",
+          "titleEdit": "メモを編集",
+          "titleLabel": "タイトル",
+          "titlePlaceholder": "メモのタイトルを入力",
+          "tagLabel": "タグ",
+          "contentLabel": "内容",
+          "contentPlaceholder": "アイデアやタスク、ひらめきを書き留めましょう…",
+          "saveButton": "メモを保存"
+        },
+        "toast": {
+          "saved": "メモを保存しました",
+          "deleted": "メモを削除しました"
+        }
+      },
+      "it": {
+        "home": {
+          "appBarTitle": "Note",
+          "totalLabel": "Tutte le note",
+          "weekLabel": "Aggiunte questa settimana",
+          "searchPlaceholder": "Cerca titolo o contenuto",
+          "searchButton": "Cerca",
+          "empty": "Ancora nessuna nota. Tocca il pulsante qui sotto per crearne la prima.",
+          "createButton": "Nuova nota"
+        },
+        "tag": {
+          "all": "Tutte",
+          "work": "Lavoro",
+          "life": "Vita",
+          "idea": "Idee",
+          "study": "Studio"
+        },
+        "form": {
+          "titleCreate": "Nuova nota",
+          "titleEdit": "Modifica nota",
+          "titleLabel": "Titolo",
+          "titlePlaceholder": "Inserisci il titolo della nota",
+          "tagLabel": "Etichetta",
+          "contentLabel": "Contenuto",
+          "contentPlaceholder": "Annota idee, attività o ispirazioni…",
+          "saveButton": "Salva nota"
+        },
+        "toast": {
+          "saved": "Nota salvata",
+          "deleted": "Nota eliminata"
+        }
+      }
     },
     "functions": {
       "refreshList": {
@@ -241,7 +608,7 @@
             "call": "@set",
             "args": {
               "var": "global.formScreenTitle",
-              "value": "新建笔记"
+              "value": "{{ t('form.titleCreate') }}"
             }
           },
           {
@@ -268,7 +635,7 @@
             "call": "@set",
             "args": {
               "var": "global.formScreenTitle",
-              "value": "编辑笔记"
+              "value": "{{ t('form.titleEdit') }}"
             }
           },
           {
@@ -549,7 +916,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "笔记已保存"
+              "message": "{{ t('toast.saved') }}"
             }
           },
           {
@@ -590,7 +957,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "笔记已删除"
+              "message": "{{ t('toast.deleted') }}"
             }
           },
           {
@@ -613,11 +980,11 @@
     "screens": [
       {
         "id": "home",
-        "title": "笔记",
+        "title": "{{ t('home.appBarTitle') }}",
         "layout": "column",
         "backgroundColor": "#F4F6F8",
         "appBar": {
-          "title": "笔记",
+          "title": "{{ t('home.appBarTitle') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -673,7 +1040,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "全部笔记",
+                          "value": "{{ t('home.totalLabel') }}",
                           "style": {
                             "fontSize": 13,
                             "color": "#6B7280"
@@ -730,7 +1097,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "本周新增",
+                          "value": "{{ t('home.weekLabel') }}",
                           "style": {
                             "fontSize": 13,
                             "color": "#6B7280"
@@ -775,7 +1142,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "搜索标题或内容",
+                "placeholder": "{{ t('home.searchPlaceholder') }}",
                 "bind": "global.searchQuery",
                 "position": {
                   "type": "flex",
@@ -788,7 +1155,7 @@
               },
               {
                 "type": "button",
-                "label": "搜索",
+                "label": "{{ t('home.searchButton') }}",
                 "variant": "text",
                 "action": {
                   "call": "@global.refreshList",
@@ -817,7 +1184,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "全部",
+                    "label": "{{ t('tag.all') }}",
                     "variant": "choice",
                     "bind": "global.selectedTag",
                     "value": "全部",
@@ -825,7 +1192,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "工作",
+                    "label": "{{ t('tag.work') }}",
                     "variant": "choice",
                     "bind": "global.selectedTag",
                     "value": "工作",
@@ -833,7 +1200,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "生活",
+                    "label": "{{ t('tag.life') }}",
                     "variant": "choice",
                     "bind": "global.selectedTag",
                     "value": "生活",
@@ -841,7 +1208,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "灵感",
+                    "label": "{{ t('tag.idea') }}",
                     "variant": "choice",
                     "bind": "global.selectedTag",
                     "value": "灵感",
@@ -849,7 +1216,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "学习",
+                    "label": "{{ t('tag.study') }}",
                     "variant": "choice",
                     "bind": "global.selectedTag",
                     "value": "学习",
@@ -866,7 +1233,7 @@
           {
             "type": "list",
             "source": "{{ global.filteredNotes }}",
-            "emptyText": "暂无笔记，点击下方按钮创建第一条",
+            "emptyText": "{{ t('home.empty') }}",
             "item_template": {
               "type": "card",
               "layout": "column",
@@ -1017,7 +1384,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "新建笔记",
+                "label": "{{ t('home.createButton') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.startCreate",
@@ -1080,7 +1447,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "标题",
+                "value": "{{ t('form.titleLabel') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -1093,7 +1460,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "输入笔记标题",
+                "placeholder": "{{ t('form.titlePlaceholder') }}",
                 "bind": "global.formTitle",
                 "style": {
                   "fontSize": 16
@@ -1105,7 +1472,7 @@
               },
               {
                 "type": "text",
-                "value": "标签",
+                "value": "{{ t('form.tagLabel') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -1127,7 +1494,7 @@
                     "children": [
                       {
                         "type": "chip",
-                        "label": "工作",
+                        "label": "{{ t('tag.work') }}",
                         "variant": "choice",
                         "bind": "global.formTag",
                         "value": "工作",
@@ -1135,7 +1502,7 @@
                       },
                       {
                         "type": "chip",
-                        "label": "生活",
+                        "label": "{{ t('tag.life') }}",
                         "variant": "choice",
                         "bind": "global.formTag",
                         "value": "生活",
@@ -1143,7 +1510,7 @@
                       },
                       {
                         "type": "chip",
-                        "label": "灵感",
+                        "label": "{{ t('tag.idea') }}",
                         "variant": "choice",
                         "bind": "global.formTag",
                         "value": "灵感",
@@ -1151,7 +1518,7 @@
                       },
                       {
                         "type": "chip",
-                        "label": "学习",
+                        "label": "{{ t('tag.study') }}",
                         "variant": "choice",
                         "bind": "global.formTag",
                         "value": "学习",
@@ -1170,7 +1537,7 @@
               },
               {
                 "type": "text",
-                "value": "内容",
+                "value": "{{ t('form.contentLabel') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -1183,7 +1550,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "记录想法、任务或灵感…",
+                "placeholder": "{{ t('form.contentPlaceholder') }}",
                 "bind": "global.formContent",
                 "maxLines": 10,
                 "style": {
@@ -1197,7 +1564,7 @@
               },
               {
                 "type": "button",
-                "label": "保存笔记",
+                "label": "{{ t('form.saveButton') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.saveNote",

@@ -6,7 +6,20 @@
     "type": "app",
     "description": "每日习惯打卡，连续天数统计，热力图可视化",
     "author": "ai",
-    "displayName": "习惯打卡"
+    "displayName": {
+      "zh": "习惯打卡",
+      "en": "Habit Tracker",
+      "de": "Gewohnheits-Tracker",
+      "es": "Seguimiento de hábitos",
+      "fr": "Suivi des habitudes",
+      "pt": "Rastreador de hábitos",
+      "ca": "Seguiment d'hàbits",
+      "hi": "आदत ट्रैकर",
+      "ko": "습관 트래커",
+      "ja": "習慣トラッカー",
+      "it": "Tracker delle abitudini",
+      "default": "习惯打卡"
+    }
   },
   "dependencies": {},
   "global": {
@@ -3963,6 +3976,756 @@
       "formSelectedIcon": "wb_sunny",
       "formSelectedAccent": "#059669"
     },
+    "i18n": {
+      "zh": {
+        "app": {
+          "title": "习惯打卡"
+        },
+        "weekday": {
+          "mon": "一",
+          "tue": "二",
+          "wed": "三",
+          "thu": "四",
+          "fri": "五",
+          "sat": "六",
+          "sun": "日"
+        },
+        "home": {
+          "todayCompleted": "今日完成",
+          "maxStreak": "最长连续",
+          "maxStreakValue": "{{ global.maxStreak }} 天",
+          "heatmapTitle": "打卡热力图（近 91 天）",
+          "heatLess": "少",
+          "heatMore": "多",
+          "empty": "还没有习惯，点击下方按钮创建第一个吧",
+          "habitMeta": "{{ loop.item.statusLabel }} · 连续 {{ loop.item.streak }} 天 · 本周 {{ loop.item.weekDone }}/7",
+          "addHabit": "新增习惯"
+        },
+        "filter": {
+          "all": "全部",
+          "pending": "待打卡",
+          "done": "已打卡"
+        },
+        "detail": {
+          "title": "习惯详情",
+          "streakLabel": "连续天数",
+          "dayUnit": "天",
+          "weekDone": "本周完成",
+          "total": "总打卡",
+          "timesUnit": "次",
+          "recordTitle": "打卡记录",
+          "legendNotChecked": "未打卡",
+          "legendChecked": "已打卡",
+          "checkInToday": "今日打卡 ✓",
+          "delete": "删除此习惯"
+        },
+        "form": {
+          "title": "新建习惯",
+          "nameLabel": "习惯名称",
+          "namePlaceholder": "例如 每天步行 20 分钟",
+          "iconLabel": "选择图标",
+          "icon": {
+            "morning": "晨间",
+            "night": "晚间",
+            "reading": "阅读",
+            "exercise": "运动",
+            "meditation": "冥想",
+            "water": "饮水",
+            "health": "健康",
+            "diet": "饮食",
+            "journal": "日记",
+            "study": "学习",
+            "medication": "用药",
+            "checkin": "打卡"
+          },
+          "save": "保存习惯"
+        },
+        "toast": {
+          "created": "习惯已创建！",
+          "deleted": "习惯已删除"
+        }
+      },
+      "en": {
+        "app": {
+          "title": "Habit Tracker"
+        },
+        "weekday": {
+          "mon": "Mon",
+          "tue": "Tue",
+          "wed": "Wed",
+          "thu": "Thu",
+          "fri": "Fri",
+          "sat": "Sat",
+          "sun": "Sun"
+        },
+        "home": {
+          "todayCompleted": "Completed today",
+          "maxStreak": "Longest streak",
+          "maxStreakValue": "{{ global.maxStreak }} days",
+          "heatmapTitle": "Check-in heatmap (last 91 days)",
+          "heatLess": "Less",
+          "heatMore": "More",
+          "empty": "No habits yet. Tap the button below to create your first one.",
+          "habitMeta": "{{ loop.item.statusLabel }} · {{ loop.item.streak }}-day streak · This week {{ loop.item.weekDone }}/7",
+          "addHabit": "Add habit"
+        },
+        "filter": {
+          "all": "All",
+          "pending": "Pending",
+          "done": "Done"
+        },
+        "detail": {
+          "title": "Habit details",
+          "streakLabel": "Streak",
+          "dayUnit": "days",
+          "weekDone": "This week",
+          "total": "Total",
+          "timesUnit": "times",
+          "recordTitle": "Check-in record",
+          "legendNotChecked": "Not checked in",
+          "legendChecked": "Checked in",
+          "checkInToday": "Check in today ✓",
+          "delete": "Delete this habit"
+        },
+        "form": {
+          "title": "New habit",
+          "nameLabel": "Habit name",
+          "namePlaceholder": "e.g. Walk 20 minutes every day",
+          "iconLabel": "Choose icon",
+          "icon": {
+            "morning": "Morning",
+            "night": "Night",
+            "reading": "Reading",
+            "exercise": "Exercise",
+            "meditation": "Meditation",
+            "water": "Water",
+            "health": "Health",
+            "diet": "Diet",
+            "journal": "Journal",
+            "study": "Study",
+            "medication": "Medication",
+            "checkin": "Check-in"
+          },
+          "save": "Save habit"
+        },
+        "toast": {
+          "created": "Habit created!",
+          "deleted": "Habit deleted"
+        }
+      },
+      "de": {
+        "app": {
+          "title": "Gewohnheits-Tracker"
+        },
+        "weekday": {
+          "mon": "Mo",
+          "tue": "Di",
+          "wed": "Mi",
+          "thu": "Do",
+          "fri": "Fr",
+          "sat": "Sa",
+          "sun": "So"
+        },
+        "home": {
+          "todayCompleted": "Heute erledigt",
+          "maxStreak": "Längste Serie",
+          "maxStreakValue": "{{ global.maxStreak }} Tage",
+          "heatmapTitle": "Check-in-Heatmap (letzte 91 Tage)",
+          "heatLess": "Weniger",
+          "heatMore": "Mehr",
+          "empty": "Noch keine Gewohnheiten. Tippe unten, um deine erste zu erstellen.",
+          "habitMeta": "{{ loop.item.statusLabel }} · {{ loop.item.streak }} Tage Serie · Diese Woche {{ loop.item.weekDone }}/7",
+          "addHabit": "Gewohnheit hinzufügen"
+        },
+        "filter": {
+          "all": "Alle",
+          "pending": "Ausstehend",
+          "done": "Erledigt"
+        },
+        "detail": {
+          "title": "Gewohnheitsdetails",
+          "streakLabel": "Serie",
+          "dayUnit": "Tage",
+          "weekDone": "Diese Woche",
+          "total": "Gesamt",
+          "timesUnit": "Mal",
+          "recordTitle": "Check-in-Verlauf",
+          "legendNotChecked": "Nicht eingecheckt",
+          "legendChecked": "Eingecheckt",
+          "checkInToday": "Heute einchecken ✓",
+          "delete": "Diese Gewohnheit löschen"
+        },
+        "form": {
+          "title": "Neue Gewohnheit",
+          "nameLabel": "Name der Gewohnheit",
+          "namePlaceholder": "z. B. Täglich 20 Minuten gehen",
+          "iconLabel": "Symbol wählen",
+          "icon": {
+            "morning": "Morgen",
+            "night": "Nacht",
+            "reading": "Lesen",
+            "exercise": "Sport",
+            "meditation": "Meditation",
+            "water": "Wasser",
+            "health": "Gesundheit",
+            "diet": "Ernährung",
+            "journal": "Tagebuch",
+            "study": "Lernen",
+            "medication": "Medikamente",
+            "checkin": "Check-in"
+          },
+          "save": "Gewohnheit speichern"
+        },
+        "toast": {
+          "created": "Gewohnheit erstellt!",
+          "deleted": "Gewohnheit gelöscht"
+        }
+      },
+      "es": {
+        "app": {
+          "title": "Seguimiento de hábitos"
+        },
+        "weekday": {
+          "mon": "Lun",
+          "tue": "Mar",
+          "wed": "Mié",
+          "thu": "Jue",
+          "fri": "Vie",
+          "sat": "Sáb",
+          "sun": "Dom"
+        },
+        "home": {
+          "todayCompleted": "Completado hoy",
+          "maxStreak": "Racha más larga",
+          "maxStreakValue": "{{ global.maxStreak }} días",
+          "heatmapTitle": "Mapa de calor de registros (últimos 91 días)",
+          "heatLess": "Menos",
+          "heatMore": "Más",
+          "empty": "Aún no hay hábitos. Toca el botón de abajo para crear el primero.",
+          "habitMeta": "{{ loop.item.statusLabel }} · Racha de {{ loop.item.streak }} días · Esta semana {{ loop.item.weekDone }}/7",
+          "addHabit": "Añadir hábito"
+        },
+        "filter": {
+          "all": "Todos",
+          "pending": "Pendiente",
+          "done": "Hecho"
+        },
+        "detail": {
+          "title": "Detalles del hábito",
+          "streakLabel": "Racha",
+          "dayUnit": "días",
+          "weekDone": "Esta semana",
+          "total": "Total",
+          "timesUnit": "veces",
+          "recordTitle": "Historial de registros",
+          "legendNotChecked": "Sin registrar",
+          "legendChecked": "Registrado",
+          "checkInToday": "Registrar hoy ✓",
+          "delete": "Eliminar este hábito"
+        },
+        "form": {
+          "title": "Nuevo hábito",
+          "nameLabel": "Nombre del hábito",
+          "namePlaceholder": "p. ej. Caminar 20 minutos al día",
+          "iconLabel": "Elegir icono",
+          "icon": {
+            "morning": "Mañana",
+            "night": "Noche",
+            "reading": "Lectura",
+            "exercise": "Ejercicio",
+            "meditation": "Meditación",
+            "water": "Agua",
+            "health": "Salud",
+            "diet": "Dieta",
+            "journal": "Diario",
+            "study": "Estudio",
+            "medication": "Medicación",
+            "checkin": "Registro"
+          },
+          "save": "Guardar hábito"
+        },
+        "toast": {
+          "created": "¡Hábito creado!",
+          "deleted": "Hábito eliminado"
+        }
+      },
+      "fr": {
+        "app": {
+          "title": "Suivi des habitudes"
+        },
+        "weekday": {
+          "mon": "Lun",
+          "tue": "Mar",
+          "wed": "Mer",
+          "thu": "Jeu",
+          "fri": "Ven",
+          "sat": "Sam",
+          "sun": "Dim"
+        },
+        "home": {
+          "todayCompleted": "Fait aujourd'hui",
+          "maxStreak": "Plus longue série",
+          "maxStreakValue": "{{ global.maxStreak }} jours",
+          "heatmapTitle": "Carte de chaleur des pointages (91 derniers jours)",
+          "heatLess": "Moins",
+          "heatMore": "Plus",
+          "empty": "Aucune habitude pour l'instant. Appuyez sur le bouton ci-dessous pour en créer une.",
+          "habitMeta": "{{ loop.item.statusLabel }} · Série de {{ loop.item.streak }} jours · Cette semaine {{ loop.item.weekDone }}/7",
+          "addHabit": "Ajouter une habitude"
+        },
+        "filter": {
+          "all": "Tous",
+          "pending": "À faire",
+          "done": "Fait"
+        },
+        "detail": {
+          "title": "Détails de l'habitude",
+          "streakLabel": "Série",
+          "dayUnit": "jours",
+          "weekDone": "Cette semaine",
+          "total": "Total",
+          "timesUnit": "fois",
+          "recordTitle": "Historique des pointages",
+          "legendNotChecked": "Non pointé",
+          "legendChecked": "Pointé",
+          "checkInToday": "Pointer aujourd'hui ✓",
+          "delete": "Supprimer cette habitude"
+        },
+        "form": {
+          "title": "Nouvelle habitude",
+          "nameLabel": "Nom de l'habitude",
+          "namePlaceholder": "p. ex. Marcher 20 minutes par jour",
+          "iconLabel": "Choisir une icône",
+          "icon": {
+            "morning": "Matin",
+            "night": "Soir",
+            "reading": "Lecture",
+            "exercise": "Sport",
+            "meditation": "Méditation",
+            "water": "Eau",
+            "health": "Santé",
+            "diet": "Alimentation",
+            "journal": "Journal",
+            "study": "Études",
+            "medication": "Médicaments",
+            "checkin": "Pointage"
+          },
+          "save": "Enregistrer l'habitude"
+        },
+        "toast": {
+          "created": "Habitude créée !",
+          "deleted": "Habitude supprimée"
+        }
+      },
+      "pt": {
+        "app": {
+          "title": "Rastreador de hábitos"
+        },
+        "weekday": {
+          "mon": "Seg",
+          "tue": "Ter",
+          "wed": "Qua",
+          "thu": "Qui",
+          "fri": "Sex",
+          "sat": "Sáb",
+          "sun": "Dom"
+        },
+        "home": {
+          "todayCompleted": "Concluído hoje",
+          "maxStreak": "Maior sequência",
+          "maxStreakValue": "{{ global.maxStreak }} dias",
+          "heatmapTitle": "Mapa de calor de registros (últimos 91 dias)",
+          "heatLess": "Menos",
+          "heatMore": "Mais",
+          "empty": "Ainda não há hábitos. Toque no botão abaixo para criar o primeiro.",
+          "habitMeta": "{{ loop.item.statusLabel }} · Sequência de {{ loop.item.streak }} dias · Esta semana {{ loop.item.weekDone }}/7",
+          "addHabit": "Adicionar hábito"
+        },
+        "filter": {
+          "all": "Todos",
+          "pending": "Pendente",
+          "done": "Feito"
+        },
+        "detail": {
+          "title": "Detalhes do hábito",
+          "streakLabel": "Sequência",
+          "dayUnit": "dias",
+          "weekDone": "Esta semana",
+          "total": "Total",
+          "timesUnit": "vezes",
+          "recordTitle": "Histórico de registros",
+          "legendNotChecked": "Sem registro",
+          "legendChecked": "Registrado",
+          "checkInToday": "Registrar hoje ✓",
+          "delete": "Excluir este hábito"
+        },
+        "form": {
+          "title": "Novo hábito",
+          "nameLabel": "Nome do hábito",
+          "namePlaceholder": "ex.: Caminhar 20 minutos por dia",
+          "iconLabel": "Escolher ícone",
+          "icon": {
+            "morning": "Manhã",
+            "night": "Noite",
+            "reading": "Leitura",
+            "exercise": "Exercício",
+            "meditation": "Meditação",
+            "water": "Água",
+            "health": "Saúde",
+            "diet": "Dieta",
+            "journal": "Diário",
+            "study": "Estudo",
+            "medication": "Medicação",
+            "checkin": "Registro"
+          },
+          "save": "Salvar hábito"
+        },
+        "toast": {
+          "created": "Hábito criado!",
+          "deleted": "Hábito excluído"
+        }
+      },
+      "ca": {
+        "app": {
+          "title": "Seguiment d'hàbits"
+        },
+        "weekday": {
+          "mon": "Dl",
+          "tue": "Dt",
+          "wed": "Dc",
+          "thu": "Dj",
+          "fri": "Dv",
+          "sat": "Ds",
+          "sun": "Dg"
+        },
+        "home": {
+          "todayCompleted": "Completat avui",
+          "maxStreak": "Ratxa més llarga",
+          "maxStreakValue": "{{ global.maxStreak }} dies",
+          "heatmapTitle": "Mapa de calor de registres (últims 91 dies)",
+          "heatLess": "Menys",
+          "heatMore": "Més",
+          "empty": "Encara no hi ha hàbits. Toca el botó de sota per crear-ne el primer.",
+          "habitMeta": "{{ loop.item.statusLabel }} · Ratxa de {{ loop.item.streak }} dies · Aquesta setmana {{ loop.item.weekDone }}/7",
+          "addHabit": "Afegeix un hàbit"
+        },
+        "filter": {
+          "all": "Tots",
+          "pending": "Pendent",
+          "done": "Fet"
+        },
+        "detail": {
+          "title": "Detalls de l'hàbit",
+          "streakLabel": "Ratxa",
+          "dayUnit": "dies",
+          "weekDone": "Aquesta setmana",
+          "total": "Total",
+          "timesUnit": "vegades",
+          "recordTitle": "Historial de registres",
+          "legendNotChecked": "Sense registrar",
+          "legendChecked": "Registrat",
+          "checkInToday": "Registra avui ✓",
+          "delete": "Elimina aquest hàbit"
+        },
+        "form": {
+          "title": "Nou hàbit",
+          "nameLabel": "Nom de l'hàbit",
+          "namePlaceholder": "p. ex. Caminar 20 minuts cada dia",
+          "iconLabel": "Tria una icona",
+          "icon": {
+            "morning": "Matí",
+            "night": "Nit",
+            "reading": "Lectura",
+            "exercise": "Exercici",
+            "meditation": "Meditació",
+            "water": "Aigua",
+            "health": "Salut",
+            "diet": "Dieta",
+            "journal": "Diari",
+            "study": "Estudi",
+            "medication": "Medicació",
+            "checkin": "Registre"
+          },
+          "save": "Desa l'hàbit"
+        },
+        "toast": {
+          "created": "Hàbit creat!",
+          "deleted": "Hàbit eliminat"
+        }
+      },
+      "hi": {
+        "app": {
+          "title": "आदत ट्रैकर"
+        },
+        "weekday": {
+          "mon": "सोम",
+          "tue": "मंगल",
+          "wed": "बुध",
+          "thu": "गुरु",
+          "fri": "शुक्र",
+          "sat": "शनि",
+          "sun": "रवि"
+        },
+        "home": {
+          "todayCompleted": "आज पूरा हुआ",
+          "maxStreak": "सबसे लंबी लकीर",
+          "maxStreakValue": "{{ global.maxStreak }} दिन",
+          "heatmapTitle": "चेक-इन हीटमैप (पिछले 91 दिन)",
+          "heatLess": "कम",
+          "heatMore": "अधिक",
+          "empty": "अभी कोई आदत नहीं है। पहली बनाने के लिए नीचे दिए बटन पर टैप करें।",
+          "habitMeta": "{{ loop.item.statusLabel }} · {{ loop.item.streak }} दिन की लकीर · इस सप्ताह {{ loop.item.weekDone }}/7",
+          "addHabit": "आदत जोड़ें"
+        },
+        "filter": {
+          "all": "सभी",
+          "pending": "बाकी",
+          "done": "पूर्ण"
+        },
+        "detail": {
+          "title": "आदत का विवरण",
+          "streakLabel": "लकीर",
+          "dayUnit": "दिन",
+          "weekDone": "इस सप्ताह",
+          "total": "कुल",
+          "timesUnit": "बार",
+          "recordTitle": "चेक-इन रिकॉर्ड",
+          "legendNotChecked": "चेक-इन नहीं",
+          "legendChecked": "चेक-इन",
+          "checkInToday": "आज चेक-इन करें ✓",
+          "delete": "यह आदत हटाएं"
+        },
+        "form": {
+          "title": "नई आदत",
+          "nameLabel": "आदत का नाम",
+          "namePlaceholder": "उदा. हर दिन 20 मिनट चलना",
+          "iconLabel": "आइकन चुनें",
+          "icon": {
+            "morning": "सुबह",
+            "night": "रात",
+            "reading": "पढ़ना",
+            "exercise": "व्यायाम",
+            "meditation": "ध्यान",
+            "water": "पानी",
+            "health": "स्वास्थ्य",
+            "diet": "आहार",
+            "journal": "डायरी",
+            "study": "अध्ययन",
+            "medication": "दवा",
+            "checkin": "चेक-इन"
+          },
+          "save": "आदत सहेजें"
+        },
+        "toast": {
+          "created": "आदत बन गई!",
+          "deleted": "आदत हटाई गई"
+        }
+      },
+      "ko": {
+        "app": {
+          "title": "습관 트래커"
+        },
+        "weekday": {
+          "mon": "월",
+          "tue": "화",
+          "wed": "수",
+          "thu": "목",
+          "fri": "금",
+          "sat": "토",
+          "sun": "일"
+        },
+        "home": {
+          "todayCompleted": "오늘 완료",
+          "maxStreak": "최장 연속",
+          "maxStreakValue": "{{ global.maxStreak }}일",
+          "heatmapTitle": "체크인 히트맵 (최근 91일)",
+          "heatLess": "적음",
+          "heatMore": "많음",
+          "empty": "아직 습관이 없습니다. 아래 버튼을 눌러 첫 번째 습관을 만드세요.",
+          "habitMeta": "{{ loop.item.statusLabel }} · {{ loop.item.streak }}일 연속 · 이번 주 {{ loop.item.weekDone }}/7",
+          "addHabit": "습관 추가"
+        },
+        "filter": {
+          "all": "전체",
+          "pending": "대기 중",
+          "done": "완료"
+        },
+        "detail": {
+          "title": "습관 상세",
+          "streakLabel": "연속 일수",
+          "dayUnit": "일",
+          "weekDone": "이번 주",
+          "total": "전체",
+          "timesUnit": "회",
+          "recordTitle": "체크인 기록",
+          "legendNotChecked": "미체크",
+          "legendChecked": "체크인",
+          "checkInToday": "오늘 체크인 ✓",
+          "delete": "이 습관 삭제"
+        },
+        "form": {
+          "title": "새 습관",
+          "nameLabel": "습관 이름",
+          "namePlaceholder": "예: 매일 20분 걷기",
+          "iconLabel": "아이콘 선택",
+          "icon": {
+            "morning": "아침",
+            "night": "저녁",
+            "reading": "독서",
+            "exercise": "운동",
+            "meditation": "명상",
+            "water": "물",
+            "health": "건강",
+            "diet": "식단",
+            "journal": "일기",
+            "study": "공부",
+            "medication": "복약",
+            "checkin": "체크인"
+          },
+          "save": "습관 저장"
+        },
+        "toast": {
+          "created": "습관이 생성되었습니다!",
+          "deleted": "습관이 삭제되었습니다"
+        }
+      },
+      "ja": {
+        "app": {
+          "title": "習慣トラッカー"
+        },
+        "weekday": {
+          "mon": "月",
+          "tue": "火",
+          "wed": "水",
+          "thu": "木",
+          "fri": "金",
+          "sat": "土",
+          "sun": "日"
+        },
+        "home": {
+          "todayCompleted": "今日の達成",
+          "maxStreak": "最長連続",
+          "maxStreakValue": "{{ global.maxStreak }}日",
+          "heatmapTitle": "チェックインヒートマップ（直近91日）",
+          "heatLess": "少",
+          "heatMore": "多",
+          "empty": "まだ習慣がありません。下のボタンを押して最初の習慣を作成しましょう。",
+          "habitMeta": "{{ loop.item.statusLabel }} · {{ loop.item.streak }}日連続 · 今週 {{ loop.item.weekDone }}/7",
+          "addHabit": "習慣を追加"
+        },
+        "filter": {
+          "all": "すべて",
+          "pending": "未達成",
+          "done": "達成済み"
+        },
+        "detail": {
+          "title": "習慣の詳細",
+          "streakLabel": "連続日数",
+          "dayUnit": "日",
+          "weekDone": "今週",
+          "total": "合計",
+          "timesUnit": "回",
+          "recordTitle": "チェックイン記録",
+          "legendNotChecked": "未チェックイン",
+          "legendChecked": "チェックイン済み",
+          "checkInToday": "今日チェックイン ✓",
+          "delete": "この習慣を削除"
+        },
+        "form": {
+          "title": "新しい習慣",
+          "nameLabel": "習慣の名前",
+          "namePlaceholder": "例：毎日20分歩く",
+          "iconLabel": "アイコンを選択",
+          "icon": {
+            "morning": "朝",
+            "night": "夜",
+            "reading": "読書",
+            "exercise": "運動",
+            "meditation": "瞑想",
+            "water": "水分",
+            "health": "健康",
+            "diet": "食事",
+            "journal": "日記",
+            "study": "学習",
+            "medication": "服薬",
+            "checkin": "チェックイン"
+          },
+          "save": "習慣を保存"
+        },
+        "toast": {
+          "created": "習慣を作成しました！",
+          "deleted": "習慣を削除しました"
+        }
+      },
+      "it": {
+        "app": {
+          "title": "Tracker delle abitudini"
+        },
+        "weekday": {
+          "mon": "Lun",
+          "tue": "Mar",
+          "wed": "Mer",
+          "thu": "Gio",
+          "fri": "Ven",
+          "sat": "Sab",
+          "sun": "Dom"
+        },
+        "home": {
+          "todayCompleted": "Completati oggi",
+          "maxStreak": "Serie più lunga",
+          "maxStreakValue": "{{ global.maxStreak }} giorni",
+          "heatmapTitle": "Mappa di calore dei check-in (ultimi 91 giorni)",
+          "heatLess": "Meno",
+          "heatMore": "Più",
+          "empty": "Ancora nessuna abitudine. Tocca il pulsante qui sotto per crearne una.",
+          "habitMeta": "{{ loop.item.statusLabel }} · Serie di {{ loop.item.streak }} giorni · Questa settimana {{ loop.item.weekDone }}/7",
+          "addHabit": "Aggiungi abitudine"
+        },
+        "filter": {
+          "all": "Tutti",
+          "pending": "In sospeso",
+          "done": "Fatto"
+        },
+        "detail": {
+          "title": "Dettagli abitudine",
+          "streakLabel": "Serie",
+          "dayUnit": "giorni",
+          "weekDone": "Questa settimana",
+          "total": "Totale",
+          "timesUnit": "volte",
+          "recordTitle": "Cronologia dei check-in",
+          "legendNotChecked": "Non registrato",
+          "legendChecked": "Registrato",
+          "checkInToday": "Registra oggi ✓",
+          "delete": "Elimina questa abitudine"
+        },
+        "form": {
+          "title": "Nuova abitudine",
+          "nameLabel": "Nome dell'abitudine",
+          "namePlaceholder": "es. Camminare 20 minuti al giorno",
+          "iconLabel": "Scegli icona",
+          "icon": {
+            "morning": "Mattina",
+            "night": "Sera",
+            "reading": "Lettura",
+            "exercise": "Sport",
+            "meditation": "Meditazione",
+            "water": "Acqua",
+            "health": "Salute",
+            "diet": "Dieta",
+            "journal": "Diario",
+            "study": "Studio",
+            "medication": "Farmaci",
+            "checkin": "Check-in"
+          },
+          "save": "Salva abitudine"
+        },
+        "toast": {
+          "created": "Abitudine creata!",
+          "deleted": "Abitudine eliminata"
+        }
+      }
+    },
     "functions": {
       "startCreate": {
         "params": [],
@@ -4024,7 +4787,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "习惯已创建！"
+              "message": "{{ t('toast.created') }}"
             }
           },
           {
@@ -4224,7 +4987,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "习惯已删除"
+              "message": "{{ t('toast.deleted') }}"
             }
           },
           {
@@ -4253,7 +5016,7 @@
     "screens": [
       {
         "id": "home",
-        "title": "习惯打卡",
+        "title": "{{ t('app.title') }}",
         "layout": "column",
         "children": [
           {
@@ -4287,7 +5050,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "今日完成",
+                          "value": "{{ t('home.todayCompleted') }}",
                           "style": {
                             "fontSize": 13,
                             "color": "#6B7280"
@@ -4344,7 +5107,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "最长连续",
+                          "value": "{{ t('home.maxStreak') }}",
                           "style": {
                             "fontSize": 13,
                             "color": "#6B7280"
@@ -4359,7 +5122,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "{{ global.maxStreak }} 天",
+                      "value": "{{ t('home.maxStreakValue') }}",
                       "style": {
                         "fontSize": 22,
                         "fontWeight": "bold",
@@ -4398,7 +5161,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "打卡热力图（近 91 天）",
+                    "value": "{{ t('home.heatmapTitle') }}",
                     "style": {
                       "fontSize": 14,
                       "fontWeight": "600",
@@ -4422,7 +5185,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "一",
+                        "value": "{{ t('weekday.mon') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -4443,7 +5206,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "二",
+                        "value": "{{ t('weekday.tue') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -4464,7 +5227,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "三",
+                        "value": "{{ t('weekday.wed') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -4485,7 +5248,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "四",
+                        "value": "{{ t('weekday.thu') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -4506,7 +5269,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "五",
+                        "value": "{{ t('weekday.fri') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -4527,7 +5290,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "六",
+                        "value": "{{ t('weekday.sat') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -4548,7 +5311,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "日",
+                        "value": "{{ t('weekday.sun') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -4596,7 +5359,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "少",
+                        "value": "{{ t('home.heatLess') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -4679,7 +5442,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "多",
+                        "value": "{{ t('home.heatMore') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -4703,7 +5466,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "全部",
+                    "label": "{{ t('filter.all') }}",
                     "variant": "choice",
                     "bind": "global.selectedFilter",
                     "value": "全部",
@@ -4711,7 +5474,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "待打卡",
+                    "label": "{{ t('filter.pending') }}",
                     "variant": "choice",
                     "bind": "global.selectedFilter",
                     "value": "待打卡",
@@ -4719,7 +5482,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "已打卡",
+                    "label": "{{ t('filter.done') }}",
                     "variant": "choice",
                     "bind": "global.selectedFilter",
                     "value": "已打卡",
@@ -4736,7 +5499,7 @@
           {
             "type": "list",
             "source": "{{ global.habits }}",
-            "emptyText": "还没有习惯，点击下方按钮创建第一个吧",
+            "emptyText": "{{ t('home.empty') }}",
             "shrinkWrap": true,
             "item_template": {
               "type": "card",
@@ -4799,7 +5562,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "{{ loop.item.statusLabel }} · 连续 {{ loop.item.streak }} 天 · 本周 {{ loop.item.weekDone }}/7",
+                          "value": "{{ t('home.habitMeta') }}",
                           "style": {
                             "fontSize": 12,
                             "color": "#6B7280",
@@ -4857,7 +5620,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "新增习惯",
+                "label": "{{ t('home.addHabit') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.startCreate",
@@ -4879,7 +5642,7 @@
         ],
         "backgroundColor": "#F6F4FB",
         "appBar": {
-          "title": "习惯打卡",
+          "title": "{{ t('app.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -4906,7 +5669,7 @@
       },
       {
         "id": "habit_detail",
-        "title": "习惯详情",
+        "title": "{{ t('detail.title') }}",
         "layout": "column",
         "children": [
           {
@@ -4982,7 +5745,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "value": "连续天数",
+                      "value": "{{ t('detail.streakLabel') }}",
                       "style": {
                         "fontSize": 11,
                         "color": "#6B7280"
@@ -5012,7 +5775,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "天",
+                          "value": "{{ t('detail.dayUnit') }}",
                           "style": {
                             "fontSize": 11,
                             "color": "#9CA3AF"
@@ -5042,7 +5805,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "value": "本周完成",
+                      "value": "{{ t('detail.weekDone') }}",
                       "style": {
                         "fontSize": 11,
                         "color": "#6B7280"
@@ -5102,7 +5865,7 @@
                   "children": [
                     {
                       "type": "text",
-                      "value": "总打卡",
+                      "value": "{{ t('detail.total') }}",
                       "style": {
                         "fontSize": 11,
                         "color": "#6B7280"
@@ -5132,7 +5895,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "次",
+                          "value": "{{ t('detail.timesUnit') }}",
                           "style": {
                             "fontSize": 11,
                             "color": "#9CA3AF"
@@ -5173,7 +5936,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "打卡记录",
+                    "value": "{{ t('detail.recordTitle') }}",
                     "style": {
                       "fontSize": 14,
                       "fontWeight": "600",
@@ -5197,7 +5960,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "一",
+                        "value": "{{ t('weekday.mon') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -5218,7 +5981,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "二",
+                        "value": "{{ t('weekday.tue') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -5239,7 +6002,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "三",
+                        "value": "{{ t('weekday.wed') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -5260,7 +6023,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "四",
+                        "value": "{{ t('weekday.thu') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -5281,7 +6044,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "五",
+                        "value": "{{ t('weekday.fri') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -5302,7 +6065,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "六",
+                        "value": "{{ t('weekday.sat') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -5323,7 +6086,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "日",
+                        "value": "{{ t('weekday.sun') }}",
                         "style": {
                           "fontSize": 9,
                           "color": "#9CA3AF"
@@ -5380,7 +6143,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "未打卡",
+                    "value": "{{ t('detail.legendNotChecked') }}",
                     "style": {
                       "fontSize": 11,
                       "color": "#9CA3AF"
@@ -5405,7 +6168,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "已打卡",
+                    "value": "{{ t('detail.legendChecked') }}",
                     "style": {
                       "fontSize": 11,
                       "color": "#9CA3AF"
@@ -5422,7 +6185,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "今日打卡 ✓",
+                "label": "{{ t('detail.checkInToday') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.checkInToday",
@@ -5446,7 +6209,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "删除此习惯",
+                "label": "{{ t('detail.delete') }}",
                 "variant": "text",
                 "action": {
                   "call": "@global.deleteHabit",
@@ -5466,7 +6229,7 @@
         ],
         "backgroundColor": "#F6F4FB",
         "appBar": {
-          "title": "习惯详情",
+          "title": "{{ t('detail.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -5475,7 +6238,7 @@
       },
       {
         "id": "habit_form",
-        "title": "新建习惯",
+        "title": "{{ t('form.title') }}",
         "layout": "column",
         "children": [
           {
@@ -5489,7 +6252,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "习惯名称",
+                "value": "{{ t('form.nameLabel') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -5502,7 +6265,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "例如 每天步行 20 分钟",
+                "placeholder": "{{ t('form.namePlaceholder') }}",
                 "bind": "global.formTitle",
                 "style": {
                   "fontSize": 15,
@@ -5515,7 +6278,7 @@
               },
               {
                 "type": "text",
-                "value": "选择图标",
+                "value": "{{ t('form.iconLabel') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -5533,7 +6296,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "晨间",
+                    "label": "{{ t('form.icon.morning') }}",
                     "variant": "choice",
                     "bind": "global.formSelectedIcon",
                     "value": "wb_sunny",
@@ -5541,7 +6304,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "晚间",
+                    "label": "{{ t('form.icon.night') }}",
                     "variant": "choice",
                     "bind": "global.formSelectedIcon",
                     "value": "dark_mode",
@@ -5549,7 +6312,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "阅读",
+                    "label": "{{ t('form.icon.reading') }}",
                     "variant": "choice",
                     "bind": "global.formSelectedIcon",
                     "value": "menu_book",
@@ -5557,7 +6320,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "运动",
+                    "label": "{{ t('form.icon.exercise') }}",
                     "variant": "choice",
                     "bind": "global.formSelectedIcon",
                     "value": "bolt",
@@ -5565,7 +6328,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "冥想",
+                    "label": "{{ t('form.icon.meditation') }}",
                     "variant": "choice",
                     "bind": "global.formSelectedIcon",
                     "value": "spa",
@@ -5573,7 +6336,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "饮水",
+                    "label": "{{ t('form.icon.water') }}",
                     "variant": "choice",
                     "bind": "global.formSelectedIcon",
                     "value": "water_drop",
@@ -5581,7 +6344,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "健康",
+                    "label": "{{ t('form.icon.health') }}",
                     "variant": "choice",
                     "bind": "global.formSelectedIcon",
                     "value": "monitor_heart",
@@ -5589,7 +6352,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "饮食",
+                    "label": "{{ t('form.icon.diet') }}",
                     "variant": "choice",
                     "bind": "global.formSelectedIcon",
                     "value": "restaurant",
@@ -5597,7 +6360,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "日记",
+                    "label": "{{ t('form.icon.journal') }}",
                     "variant": "choice",
                     "bind": "global.formSelectedIcon",
                     "value": "notes",
@@ -5605,7 +6368,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "学习",
+                    "label": "{{ t('form.icon.study') }}",
                     "variant": "choice",
                     "bind": "global.formSelectedIcon",
                     "value": "schedule",
@@ -5613,7 +6376,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "用药",
+                    "label": "{{ t('form.icon.medication') }}",
                     "variant": "choice",
                     "bind": "global.formSelectedIcon",
                     "value": "local_pharmacy",
@@ -5621,7 +6384,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "打卡",
+                    "label": "{{ t('form.icon.checkin') }}",
                     "variant": "choice",
                     "bind": "global.formSelectedIcon",
                     "value": "check_circle",
@@ -5635,7 +6398,7 @@
               },
               {
                 "type": "button",
-                "label": "保存习惯",
+                "label": "{{ t('form.save') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.saveHabit",
@@ -5655,7 +6418,7 @@
         ],
         "backgroundColor": "#F6F4FB",
         "appBar": {
-          "title": "新建习惯",
+          "title": "{{ t('form.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",

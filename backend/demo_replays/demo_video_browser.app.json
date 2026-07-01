@@ -3,7 +3,20 @@
   "appid": "3f7c8a92-1a2b-4c5d-9e8f-7a6b5c4d3e2f",
   "meta": {
     "name": "video-browser-app",
-    "displayName": "StreamHub 视频浏览器",
+    "displayName": {
+      "default": "StreamHub Video Browser",
+      "zh": "StreamHub 视频浏览器",
+      "en": "StreamHub Video Browser",
+      "de": "StreamHub Video-Browser",
+      "es": "StreamHub Navegador de vídeos",
+      "fr": "StreamHub Navigateur vidéo",
+      "pt": "StreamHub Navegador de vídeos",
+      "ca": "StreamHub Navegador de vídeos",
+      "hi": "StreamHub वीडियो ब्राउज़र",
+      "ko": "StreamHub 비디오 브라우저",
+      "ja": "StreamHub ビデオブラウザ",
+      "it": "StreamHub Browser video"
+    },
     "version": "1.0.0",
     "type": "app",
     "description": "视频浏览 App：分类、搜索、真实公网 mp4 播放",
@@ -1037,6 +1050,547 @@
         }
       ]
     },
+    "i18n": {
+      "zh": {
+        "home": {
+          "appbar": "StreamHub 视频",
+          "screen_title": "视频浏览器",
+          "search_hint": "搜索视频标题、导演...",
+          "featured": "🔥 今日精选",
+          "all_videos": "📺 全部视频",
+          "count": "共 {{ global.filteredCount }} 部",
+          "empty": "没有匹配的视频"
+        },
+        "category": {
+          "all": "全部",
+          "animation": "动画",
+          "film": "电影",
+          "music": "音乐",
+          "doc": "纪录片",
+          "tech": "科技"
+        },
+        "search": {
+          "screen_title": "搜索",
+          "appbar": "搜索视频",
+          "hint": "输入视频标题、导演、分类...",
+          "hot": "热门搜索",
+          "results": "搜索结果",
+          "empty": "没有匹配 \"{{ global.searchQuery }}\" 的视频，试试其他关键词",
+          "hot_google": "Google 演示"
+        },
+        "player": {
+          "screen_title": "正在播放",
+          "director_role": "导演 / 制作方",
+          "follow": "+ 关注",
+          "synopsis": "简介",
+          "related": "相关推荐",
+          "view_all": "查看全部 ›"
+        },
+        "video": {
+          "views_suffix": "次播放"
+        },
+        "favorites": {
+          "title": "我的收藏",
+          "empty": "还没有收藏任何视频\n点开视频详情后点击 ♥ 收藏"
+        },
+        "toast": {
+          "added": "已加入收藏",
+          "removed": "已从收藏移除",
+          "share": "来看看这部 {{ global.currentVideo.title }}，非常精彩！",
+          "followed": "已关注 {{ global.currentVideo.director }}"
+        }
+      },
+      "en": {
+        "home": {
+          "appbar": "StreamHub Videos",
+          "screen_title": "Video Browser",
+          "search_hint": "Search video title, director...",
+          "featured": "🔥 Today's Picks",
+          "all_videos": "📺 All Videos",
+          "count": "{{ global.filteredCount }} videos",
+          "empty": "No matching videos"
+        },
+        "category": {
+          "all": "All",
+          "animation": "Animation",
+          "film": "Film",
+          "music": "Music",
+          "doc": "Documentary",
+          "tech": "Tech"
+        },
+        "search": {
+          "screen_title": "Search",
+          "appbar": "Search Videos",
+          "hint": "Enter title, director, category...",
+          "hot": "Popular searches",
+          "results": "Search results",
+          "empty": "No videos matching \"{{ global.searchQuery }}\", try other keywords",
+          "hot_google": "Google Demo"
+        },
+        "player": {
+          "screen_title": "Now Playing",
+          "director_role": "Director / Producer",
+          "follow": "+ Follow",
+          "synopsis": "Synopsis",
+          "related": "Related",
+          "view_all": "View all ›"
+        },
+        "video": {
+          "views_suffix": "views"
+        },
+        "favorites": {
+          "title": "My Favorites",
+          "empty": "No favorites yet\nOpen a video and tap ♥ to save"
+        },
+        "toast": {
+          "added": "Added to favorites",
+          "removed": "Removed from favorites",
+          "share": "Check out {{ global.currentVideo.title }}, it's amazing!",
+          "followed": "Now following {{ global.currentVideo.director }}"
+        }
+      },
+      "de": {
+        "home": {
+          "appbar": "StreamHub Videos",
+          "screen_title": "Video-Browser",
+          "search_hint": "Videotitel, Regisseur suchen...",
+          "featured": "🔥 Heutige Auswahl",
+          "all_videos": "📺 Alle Videos",
+          "count": "{{ global.filteredCount }} Videos",
+          "empty": "Keine passenden Videos"
+        },
+        "category": {
+          "all": "Alle",
+          "animation": "Animation",
+          "film": "Film",
+          "music": "Musik",
+          "doc": "Dokumentation",
+          "tech": "Technik"
+        },
+        "search": {
+          "screen_title": "Suche",
+          "appbar": "Videos suchen",
+          "hint": "Titel, Regisseur, Kategorie eingeben...",
+          "hot": "Beliebte Suchen",
+          "results": "Suchergebnisse",
+          "empty": "Keine Videos für „{{ global.searchQuery }}“, versuche andere Stichwörter",
+          "hot_google": "Google-Demo"
+        },
+        "player": {
+          "screen_title": "Wird abgespielt",
+          "director_role": "Regie / Produktion",
+          "follow": "+ Folgen",
+          "synopsis": "Beschreibung",
+          "related": "Ähnliche Videos",
+          "view_all": "Alle ansehen ›"
+        },
+        "video": {
+          "views_suffix": "Aufrufe"
+        },
+        "favorites": {
+          "title": "Meine Favoriten",
+          "empty": "Noch keine Favoriten\nÖffne ein Video und tippe auf ♥"
+        },
+        "toast": {
+          "added": "Zu Favoriten hinzugefügt",
+          "removed": "Aus Favoriten entfernt",
+          "share": "Schau dir {{ global.currentVideo.title }} an, es ist großartig!",
+          "followed": "Du folgst jetzt {{ global.currentVideo.director }}"
+        }
+      },
+      "es": {
+        "home": {
+          "appbar": "StreamHub Vídeos",
+          "screen_title": "Navegador de vídeos",
+          "search_hint": "Buscar título, director...",
+          "featured": "🔥 Selección de hoy",
+          "all_videos": "📺 Todos los vídeos",
+          "count": "{{ global.filteredCount }} vídeos",
+          "empty": "No hay vídeos coincidentes"
+        },
+        "category": {
+          "all": "Todos",
+          "animation": "Animación",
+          "film": "Película",
+          "music": "Música",
+          "doc": "Documental",
+          "tech": "Tecnología"
+        },
+        "search": {
+          "screen_title": "Buscar",
+          "appbar": "Buscar vídeos",
+          "hint": "Escribe título, director, categoría...",
+          "hot": "Búsquedas populares",
+          "results": "Resultados de búsqueda",
+          "empty": "No hay vídeos para «{{ global.searchQuery }}», prueba otras palabras",
+          "hot_google": "Demo de Google"
+        },
+        "player": {
+          "screen_title": "Reproduciendo",
+          "director_role": "Director / Productora",
+          "follow": "+ Seguir",
+          "synopsis": "Sinopsis",
+          "related": "Relacionados",
+          "view_all": "Ver todo ›"
+        },
+        "video": {
+          "views_suffix": "visualizaciones"
+        },
+        "favorites": {
+          "title": "Mis favoritos",
+          "empty": "Aún no hay favoritos\nAbre un vídeo y toca ♥ para guardar"
+        },
+        "toast": {
+          "added": "Añadido a favoritos",
+          "removed": "Eliminado de favoritos",
+          "share": "¡Mira {{ global.currentVideo.title }}, es increíble!",
+          "followed": "Ahora sigues a {{ global.currentVideo.director }}"
+        }
+      },
+      "fr": {
+        "home": {
+          "appbar": "StreamHub Vidéos",
+          "screen_title": "Navigateur vidéo",
+          "search_hint": "Rechercher titre, réalisateur...",
+          "featured": "🔥 Sélection du jour",
+          "all_videos": "📺 Toutes les vidéos",
+          "count": "{{ global.filteredCount }} vidéos",
+          "empty": "Aucune vidéo correspondante"
+        },
+        "category": {
+          "all": "Tout",
+          "animation": "Animation",
+          "film": "Film",
+          "music": "Musique",
+          "doc": "Documentaire",
+          "tech": "Tech"
+        },
+        "search": {
+          "screen_title": "Recherche",
+          "appbar": "Rechercher des vidéos",
+          "hint": "Saisir titre, réalisateur, catégorie...",
+          "hot": "Recherches populaires",
+          "results": "Résultats de recherche",
+          "empty": "Aucune vidéo pour « {{ global.searchQuery }} », essayez d'autres mots-clés",
+          "hot_google": "Démo Google"
+        },
+        "player": {
+          "screen_title": "Lecture en cours",
+          "director_role": "Réalisateur / Production",
+          "follow": "+ Suivre",
+          "synopsis": "Synopsis",
+          "related": "Recommandations",
+          "view_all": "Tout voir ›"
+        },
+        "video": {
+          "views_suffix": "vues"
+        },
+        "favorites": {
+          "title": "Mes favoris",
+          "empty": "Aucun favori pour l'instant\nOuvre une vidéo et appuie sur ♥"
+        },
+        "toast": {
+          "added": "Ajouté aux favoris",
+          "removed": "Retiré des favoris",
+          "share": "Regarde {{ global.currentVideo.title }}, c'est génial !",
+          "followed": "Vous suivez maintenant {{ global.currentVideo.director }}"
+        }
+      },
+      "pt": {
+        "home": {
+          "appbar": "StreamHub Vídeos",
+          "screen_title": "Navegador de vídeos",
+          "search_hint": "Buscar título, diretor...",
+          "featured": "🔥 Seleção de hoje",
+          "all_videos": "📺 Todos os vídeos",
+          "count": "{{ global.filteredCount }} vídeos",
+          "empty": "Nenhum vídeo correspondente"
+        },
+        "category": {
+          "all": "Todos",
+          "animation": "Animação",
+          "film": "Filme",
+          "music": "Música",
+          "doc": "Documentário",
+          "tech": "Tecnologia"
+        },
+        "search": {
+          "screen_title": "Buscar",
+          "appbar": "Buscar vídeos",
+          "hint": "Digite título, diretor, categoria...",
+          "hot": "Buscas populares",
+          "results": "Resultados da busca",
+          "empty": "Nenhum vídeo para \"{{ global.searchQuery }}\", tente outras palavras",
+          "hot_google": "Demo do Google"
+        },
+        "player": {
+          "screen_title": "Reproduzindo",
+          "director_role": "Diretor / Produtora",
+          "follow": "+ Seguir",
+          "synopsis": "Sinopse",
+          "related": "Relacionados",
+          "view_all": "Ver tudo ›"
+        },
+        "video": {
+          "views_suffix": "visualizações"
+        },
+        "favorites": {
+          "title": "Meus favoritos",
+          "empty": "Ainda não há favoritos\nAbra um vídeo e toque em ♥"
+        },
+        "toast": {
+          "added": "Adicionado aos favoritos",
+          "removed": "Removido dos favoritos",
+          "share": "Confira {{ global.currentVideo.title }}, é incrível!",
+          "followed": "Agora você segue {{ global.currentVideo.director }}"
+        }
+      },
+      "ca": {
+        "home": {
+          "appbar": "StreamHub Vídeos",
+          "screen_title": "Navegador de vídeos",
+          "search_hint": "Cercar títol, director...",
+          "featured": "🔥 Selecció d'avui",
+          "all_videos": "📺 Tots els vídeos",
+          "count": "{{ global.filteredCount }} vídeos",
+          "empty": "Cap vídeo coincident"
+        },
+        "category": {
+          "all": "Tots",
+          "animation": "Animació",
+          "film": "Pel·lícula",
+          "music": "Música",
+          "doc": "Documental",
+          "tech": "Tecnologia"
+        },
+        "search": {
+          "screen_title": "Cerca",
+          "appbar": "Cercar vídeos",
+          "hint": "Escriu títol, director, categoria...",
+          "hot": "Cerques populars",
+          "results": "Resultats de la cerca",
+          "empty": "Cap vídeo per a «{{ global.searchQuery }}», prova altres paraules clau",
+          "hot_google": "Demo de Google"
+        },
+        "player": {
+          "screen_title": "S'està reproduint",
+          "director_role": "Director / Productora",
+          "follow": "+ Seguir",
+          "synopsis": "Sinopsi",
+          "related": "Relacionats",
+          "view_all": "Veure-ho tot ›"
+        },
+        "video": {
+          "views_suffix": "visualitzacions"
+        },
+        "favorites": {
+          "title": "Els meus preferits",
+          "empty": "Encara no hi ha preferits\nObre un vídeo i toca ♥"
+        },
+        "toast": {
+          "added": "Afegit als preferits",
+          "removed": "Eliminat dels preferits",
+          "share": "Mira {{ global.currentVideo.title }}, és genial!",
+          "followed": "Ara segueixes {{ global.currentVideo.director }}"
+        }
+      },
+      "hi": {
+        "home": {
+          "appbar": "StreamHub वीडियो",
+          "screen_title": "वीडियो ब्राउज़र",
+          "search_hint": "वीडियो शीर्षक, निर्देशक खोजें...",
+          "featured": "🔥 आज की पसंद",
+          "all_videos": "📺 सभी वीडियो",
+          "count": "कुल {{ global.filteredCount }} वीडियो",
+          "empty": "कोई मेल खाता वीडियो नहीं"
+        },
+        "category": {
+          "all": "सभी",
+          "animation": "एनिमेशन",
+          "film": "फ़िल्म",
+          "music": "संगीत",
+          "doc": "वृत्तचित्र",
+          "tech": "तकनीक"
+        },
+        "search": {
+          "screen_title": "खोज",
+          "appbar": "वीडियो खोजें",
+          "hint": "शीर्षक, निर्देशक, श्रेणी दर्ज करें...",
+          "hot": "लोकप्रिय खोजें",
+          "results": "खोज परिणाम",
+          "empty": "\"{{ global.searchQuery }}\" से मेल खाता कोई वीडियो नहीं, अन्य कीवर्ड आज़माएँ",
+          "hot_google": "Google डेमो"
+        },
+        "player": {
+          "screen_title": "अभी चल रहा है",
+          "director_role": "निर्देशक / निर्माता",
+          "follow": "+ फ़ॉलो",
+          "synopsis": "सारांश",
+          "related": "संबंधित",
+          "view_all": "सभी देखें ›"
+        },
+        "video": {
+          "views_suffix": "बार देखा गया"
+        },
+        "favorites": {
+          "title": "मेरे पसंदीदा",
+          "empty": "अभी तक कोई पसंदीदा नहीं\nवीडियो खोलें और सहेजने के लिए ♥ दबाएँ"
+        },
+        "toast": {
+          "added": "पसंदीदा में जोड़ा गया",
+          "removed": "पसंदीदा से हटाया गया",
+          "share": "{{ global.currentVideo.title }} देखो, यह शानदार है!",
+          "followed": "अब आप {{ global.currentVideo.director }} को फ़ॉलो कर रहे हैं"
+        }
+      },
+      "ko": {
+        "home": {
+          "appbar": "StreamHub 비디오",
+          "screen_title": "비디오 브라우저",
+          "search_hint": "영상 제목, 감독 검색...",
+          "featured": "🔥 오늘의 추천",
+          "all_videos": "📺 전체 영상",
+          "count": "총 {{ global.filteredCount }}편",
+          "empty": "일치하는 영상이 없습니다"
+        },
+        "category": {
+          "all": "전체",
+          "animation": "애니메이션",
+          "film": "영화",
+          "music": "음악",
+          "doc": "다큐멘터리",
+          "tech": "기술"
+        },
+        "search": {
+          "screen_title": "검색",
+          "appbar": "영상 검색",
+          "hint": "제목, 감독, 카테고리 입력...",
+          "hot": "인기 검색어",
+          "results": "검색 결과",
+          "empty": "\"{{ global.searchQuery }}\"와 일치하는 영상이 없습니다. 다른 키워드를 시도하세요",
+          "hot_google": "Google 데모"
+        },
+        "player": {
+          "screen_title": "재생 중",
+          "director_role": "감독 / 제작",
+          "follow": "+ 팔로우",
+          "synopsis": "줄거리",
+          "related": "관련 추천",
+          "view_all": "전체 보기 ›"
+        },
+        "video": {
+          "views_suffix": "회 재생"
+        },
+        "favorites": {
+          "title": "내 즐겨찾기",
+          "empty": "아직 즐겨찾기가 없습니다\n영상을 열고 ♥ 를 눌러 저장하세요"
+        },
+        "toast": {
+          "added": "즐겨찾기에 추가됨",
+          "removed": "즐겨찾기에서 제거됨",
+          "share": "{{ global.currentVideo.title }} 한번 보세요, 정말 멋져요!",
+          "followed": "이제 {{ global.currentVideo.director }}님을 팔로우합니다"
+        }
+      },
+      "ja": {
+        "home": {
+          "appbar": "StreamHub 動画",
+          "screen_title": "ビデオブラウザ",
+          "search_hint": "動画タイトル、監督を検索...",
+          "featured": "🔥 今日のおすすめ",
+          "all_videos": "📺 すべての動画",
+          "count": "全 {{ global.filteredCount }} 本",
+          "empty": "一致する動画がありません"
+        },
+        "category": {
+          "all": "すべて",
+          "animation": "アニメ",
+          "film": "映画",
+          "music": "音楽",
+          "doc": "ドキュメンタリー",
+          "tech": "テクノロジー"
+        },
+        "search": {
+          "screen_title": "検索",
+          "appbar": "動画を検索",
+          "hint": "タイトル、監督、カテゴリを入力...",
+          "hot": "人気の検索",
+          "results": "検索結果",
+          "empty": "「{{ global.searchQuery }}」に一致する動画がありません。別のキーワードをお試しください",
+          "hot_google": "Google デモ"
+        },
+        "player": {
+          "screen_title": "再生中",
+          "director_role": "監督 / 制作",
+          "follow": "+ フォロー",
+          "synopsis": "あらすじ",
+          "related": "関連動画",
+          "view_all": "すべて見る ›"
+        },
+        "video": {
+          "views_suffix": "回再生"
+        },
+        "favorites": {
+          "title": "お気に入り",
+          "empty": "お気に入りはまだありません\n動画を開いて ♥ をタップ"
+        },
+        "toast": {
+          "added": "お気に入りに追加しました",
+          "removed": "お気に入りから削除しました",
+          "share": "{{ global.currentVideo.title }} を見て、とても素晴らしいよ！",
+          "followed": "{{ global.currentVideo.director }} をフォローしました"
+        }
+      },
+      "it": {
+        "home": {
+          "appbar": "StreamHub Video",
+          "screen_title": "Browser video",
+          "search_hint": "Cerca titolo, regista...",
+          "featured": "🔥 Selezione di oggi",
+          "all_videos": "📺 Tutti i video",
+          "count": "{{ global.filteredCount }} video",
+          "empty": "Nessun video corrispondente"
+        },
+        "category": {
+          "all": "Tutti",
+          "animation": "Animazione",
+          "film": "Film",
+          "music": "Musica",
+          "doc": "Documentario",
+          "tech": "Tecnologia"
+        },
+        "search": {
+          "screen_title": "Cerca",
+          "appbar": "Cerca video",
+          "hint": "Inserisci titolo, regista, categoria...",
+          "hot": "Ricerche popolari",
+          "results": "Risultati della ricerca",
+          "empty": "Nessun video per \"{{ global.searchQuery }}\", prova altre parole chiave",
+          "hot_google": "Demo Google"
+        },
+        "player": {
+          "screen_title": "In riproduzione",
+          "director_role": "Regista / Produzione",
+          "follow": "+ Segui",
+          "synopsis": "Sinossi",
+          "related": "Correlati",
+          "view_all": "Vedi tutto ›"
+        },
+        "video": {
+          "views_suffix": "visualizzazioni"
+        },
+        "favorites": {
+          "title": "I miei preferiti",
+          "empty": "Ancora nessun preferito\nApri un video e tocca ♥"
+        },
+        "toast": {
+          "added": "Aggiunto ai preferiti",
+          "removed": "Rimosso dai preferiti",
+          "share": "Guarda {{ global.currentVideo.title }}, è fantastico!",
+          "followed": "Ora segui {{ global.currentVideo.director }}"
+        }
+      }
+    },
     "functions": {
       "openVideo": {
         "params": [
@@ -1349,7 +1903,7 @@
                             {
                               "call": "@show_toast",
                               "args": {
-                                "message": "已加入收藏"
+                                "message": "{{ t('toast.added') }}"
                               }
                             }
                           ]
@@ -1395,7 +1949,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已从收藏移除"
+              "message": "{{ t('toast.removed') }}"
             }
           }
         ]
@@ -1407,7 +1961,7 @@
           {
             "call": "@share",
             "args": {
-              "text": "来看看这部 {{ global.currentVideo.title }}，非常精彩！"
+              "text": "{{ t('toast.share') }}"
             }
           }
         ]
@@ -1419,7 +1973,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已关注 {{ global.currentVideo.director }}"
+              "message": "{{ t('toast.followed') }}"
             }
           }
         ]
@@ -1436,11 +1990,11 @@
     "screens": [
       {
         "id": "home",
-        "title": "视频浏览器",
+        "title": "{{ t('home.screen_title') }}",
         "layout": "column",
         "backgroundColor": "#F8FAFC",
         "appBar": {
-          "title": "StreamHub 视频",
+          "title": "{{ t('home.appbar') }}",
           "centerTitle": false,
           "backgroundColor": "#0F172A",
           "color": "#FFFFFF",
@@ -1488,7 +2042,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "搜索视频标题、导演...",
+                "placeholder": "{{ t('home.search_hint') }}",
                 "bind": "global.searchQuery",
                 "maxLines": 1,
                 "style": {
@@ -1510,7 +2064,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "全部",
+                "label": "{{ t('category.all') }}",
                 "action": {
                   "call": "@global.selectCategory",
                   "args": {
@@ -1531,7 +2085,7 @@
               },
               {
                 "type": "button",
-                "label": "动画",
+                "label": "{{ t('category.animation') }}",
                 "action": {
                   "call": "@global.selectCategory",
                   "args": {
@@ -1552,7 +2106,7 @@
               },
               {
                 "type": "button",
-                "label": "电影",
+                "label": "{{ t('category.film') }}",
                 "action": {
                   "call": "@global.selectCategory",
                   "args": {
@@ -1573,7 +2127,7 @@
               },
               {
                 "type": "button",
-                "label": "音乐",
+                "label": "{{ t('category.music') }}",
                 "action": {
                   "call": "@global.selectCategory",
                   "args": {
@@ -1594,7 +2148,7 @@
               },
               {
                 "type": "button",
-                "label": "纪录片",
+                "label": "{{ t('category.doc') }}",
                 "action": {
                   "call": "@global.selectCategory",
                   "args": {
@@ -1615,7 +2169,7 @@
               },
               {
                 "type": "button",
-                "label": "科技",
+                "label": "{{ t('category.tech') }}",
                 "action": {
                   "call": "@global.selectCategory",
                   "args": {
@@ -1644,7 +2198,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "🔥 今日精选",
+                "value": "{{ t('home.featured') }}",
                 "style": {
                   "fontSize": 15,
                   "fontWeight": "bold",
@@ -1741,7 +2295,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "📺 全部视频",
+                "value": "{{ t('home.all_videos') }}",
                 "style": {
                   "fontSize": 15,
                   "fontWeight": "bold",
@@ -1754,7 +2308,7 @@
               },
               {
                 "type": "text",
-                "value": "共 {{ global.filteredCount }} 部",
+                "value": "{{ t('home.count') }}",
                 "style": {
                   "fontSize": 12,
                   "color": "#6B7280"
@@ -1774,7 +2328,7 @@
             "crossAxisSpacing": 12,
             "padding": 16,
             "shrinkWrap": true,
-            "emptyText": "没有匹配的视频",
+            "emptyText": "{{ t('home.empty') }}",
             "item_template": {
               "type": "container",
               "onTap": {
@@ -1852,11 +2406,11 @@
       },
       {
         "id": "search",
-        "title": "搜索",
+        "title": "{{ t('search.screen_title') }}",
         "layout": "column",
         "backgroundColor": "#F8FAFC",
         "appBar": {
-          "title": "搜索视频",
+          "title": "{{ t('search.appbar') }}",
           "centerTitle": true,
           "backgroundColor": "#0F172A",
           "color": "#FFFFFF",
@@ -1878,7 +2432,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "输入视频标题、导演、分类...",
+                "placeholder": "{{ t('search.hint') }}",
                 "bind": "global.searchQuery",
                 "maxLines": 1,
                 "style": {
@@ -1916,7 +2470,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "热门搜索",
+                "value": "{{ t('search.hot') }}",
                 "style": {
                   "fontSize": 13,
                   "fontWeight": "bold",
@@ -1970,7 +2524,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "Google 演示",
+                    "label": "{{ t('search.hot_google') }}",
                     "variant": "outlined",
                     "action": {
                       "call": "@global.setSearch",
@@ -1988,7 +2542,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "电影",
+                    "label": "{{ t('category.film') }}",
                     "variant": "outlined",
                     "action": {
                       "call": "@global.setSearch",
@@ -2006,7 +2560,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "动画",
+                    "label": "{{ t('category.animation') }}",
                     "variant": "outlined",
                     "action": {
                       "call": "@global.setSearch",
@@ -2024,7 +2578,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "纪录片",
+                    "label": "{{ t('category.doc') }}",
                     "variant": "outlined",
                     "action": {
                       "call": "@global.setSearch",
@@ -2074,7 +2628,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "搜索结果",
+                "value": "{{ t('search.results') }}",
                 "style": {
                   "fontSize": 13,
                   "fontWeight": "bold",
@@ -2090,7 +2644,7 @@
                 "source": "{{ global.searchResults }}",
                 "shrinkWrap": true,
                 "separator": "divider",
-                "emptyText": "没有匹配 \"{{ global.searchQuery }}\" 的视频，试试其他关键词",
+                "emptyText": "{{ t('search.empty') }}",
                 "item_template": {
                   "type": "container",
                   "layout": "row",
@@ -2150,7 +2704,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "{{ loop.item.categoryLabel }} · {{ loop.item.duration }} · {{ loop.item.views }} 次播放",
+                          "value": "{{ loop.item.categoryLabel }} · {{ loop.item.duration }} · {{ loop.item.views }} {{ t('video.views_suffix') }}",
                           "style": {
                             "fontSize": 11,
                             "color": "#9CA3AF",
@@ -2176,7 +2730,7 @@
       },
       {
         "id": "player",
-        "title": "正在播放",
+        "title": "{{ t('player.screen_title') }}",
         "layout": "column",
         "backgroundColor": "#0F172A",
         "appBar": {
@@ -2291,7 +2845,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "{{ global.currentVideo.views }} 次播放",
+                        "value": "{{ global.currentVideo.views }} {{ t('video.views_suffix') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#9CA3AF"
@@ -2450,7 +3004,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "导演 / 制作方",
+                        "value": "{{ t('player.director_role') }}",
                         "style": {
                           "fontSize": 11,
                           "color": "#9CA3AF"
@@ -2465,7 +3019,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "+ 关注",
+                    "label": "{{ t('player.follow') }}",
                     "action": {
                       "call": "@global.followCreator",
                       "args": {}
@@ -2489,7 +3043,7 @@
               },
               {
                 "type": "text",
-                "value": "简介",
+                "value": "{{ t('player.synopsis') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "bold",
@@ -2520,7 +3074,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "相关推荐",
+                    "value": "{{ t('player.related') }}",
                     "style": {
                       "fontSize": 15,
                       "fontWeight": "bold",
@@ -2533,7 +3087,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "查看全部 ›",
+                    "value": "{{ t('player.view_all') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#60A5FA"
@@ -2617,11 +3171,11 @@
       },
       {
         "id": "favorites",
-        "title": "我的收藏",
+        "title": "{{ t('favorites.title') }}",
         "layout": "column",
         "backgroundColor": "#F8FAFC",
         "appBar": {
-          "title": "我的收藏",
+          "title": "{{ t('favorites.title') }}",
           "centerTitle": true,
           "backgroundColor": "#0F172A",
           "color": "#FFFFFF",
@@ -2633,7 +3187,7 @@
             "source": "{{ global.favorites }}",
             "shrinkWrap": true,
             "separator": "divider",
-            "emptyText": "还没有收藏任何视频\n点开视频详情后点击 ♥ 收藏",
+            "emptyText": "{{ t('favorites.empty') }}",
             "item_template": {
               "type": "container",
               "layout": "row",

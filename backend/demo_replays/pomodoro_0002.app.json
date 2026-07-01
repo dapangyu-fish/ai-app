@@ -6,13 +6,26 @@
     "type": "app",
     "description": "25 分钟专注 / 5 分钟休息，可自定义时长，专注与休息切换，今日完成数与历史记录。",
     "author": "fish",
-    "displayName": "番茄钟"
+    "displayName": {
+      "zh": "番茄钟",
+      "en": "Pomodoro",
+      "de": "Pomodoro",
+      "es": "Pomodoro",
+      "fr": "Pomodoro",
+      "pt": "Pomodoro",
+      "ca": "Pomodoro",
+      "hi": "पोमोडोरो",
+      "ko": "뽀모도로",
+      "ja": "ポモドーロ",
+      "it": "Pomodoro",
+      "default": "番茄钟"
+    }
   },
   "dependencies": {},
   "global": {
     "variables": {
       "mode": "focus",
-      "modeLabel": "专注",
+      "modeLabel": "Focus",
       "modeAccent": "#EF4444",
       "modeTint": "#FEF2F2",
       "focusDuration": 1500,
@@ -120,21 +133,750 @@
       "minutesLabel": "25",
       "secondsLabel": "00",
       "remainingLabel": "25:00",
-      "minutesReadout": "剩余 25 分钟 0 秒",
+      "minutesReadout": "25:00",
       "totalSecondsForStat": 1500,
       "totalMinutes": 25,
       "progressFraction": 1.0,
       "progressPercent": "100%",
       "focusMinutesDraft": 25,
       "breakMinutesDraft": 5,
-      "primaryButtonLabel": "开始",
+      "primaryButtonLabel": "Start",
       "primaryButtonIcon": "play_arrow",
       "primaryButtonAction": {
         "call": "@global.start_timer",
         "args": {}
       },
-      "completeTitle": "专注完成！",
-      "completeMessage": "已完成 专注 25 分钟（1500 秒）。继续保持节奏吧！"
+      "completeTitle": "Focus complete!",
+      "completeMessage": "Finished Focus for 25 min (1500 s). Keep up the rhythm!",
+      "i18nScratch": ""
+    },
+    "i18n": {
+      "zh": {
+        "app": {
+          "title": "番茄钟",
+          "settings": "设置",
+          "history": "历史记录"
+        },
+        "mode": {
+          "focus": "专注",
+          "break": "休息"
+        },
+        "action": {
+          "history": "历史",
+          "settings": "设置"
+        },
+        "unit": {
+          "times": "次",
+          "minutes": "分钟"
+        },
+        "btn": {
+          "reset": "重置"
+        },
+        "home": {
+          "modeBadge": "{{ global.modeLabel }}模式",
+          "readout": "剩余 {{ global.minutesLabel }} 分钟 {{ global.secondsLabel }} 秒",
+          "statFocusLabel": "完成专注",
+          "statBreakLabel": "休息",
+          "statTotalLabel": "累计",
+          "tip": "专注 25 分钟，休息 5 分钟。每完成一个番茄钟，今日统计 +1。"
+        },
+        "timer": {
+          "start": "开始",
+          "pause": "暂停",
+          "completeTitle": "{{ global.modeLabel }}完成！",
+          "completeMessage": "已完成 {{ global.modeLabel }} {{ global.totalMinutes }} 分钟（{{ global.totalSecondsForStat }} 秒）。继续保持节奏吧！"
+        },
+        "settings": {
+          "focusDuration": "专注时长",
+          "breakDuration": "休息时长",
+          "focusMinutes": "{{ global.focusMinutesDraft }} 分钟",
+          "breakMinutes": "{{ global.breakMinutesDraft }} 分钟",
+          "hint": "最小 1 分钟，每次调整 ±1 分钟。保存后立即生效，计时器会重置。",
+          "save": "保存设置"
+        },
+        "history": {
+          "statFocus": "已完成专注",
+          "statBreak": "已完成休息",
+          "statTotal": "累计专注",
+          "empty": "还没有完成的番茄钟",
+          "emptyHint": "开始一个专注倒计时吧",
+          "justNow": "刚刚"
+        },
+        "toast": {
+          "newRoundMode": "新一轮{{ global.modeLabel }}已开启",
+          "focusModeOpened": "专注模式已开启",
+          "started": "{{ global.modeLabel }}已开始，专注起来吧",
+          "paused": "已暂停",
+          "reset": "已重置",
+          "switched": "已切换到{{ global.modeLabel }}",
+          "settingsSaved": "设置已保存"
+        },
+        "dialog": {
+          "again": "再来一轮",
+          "switchFocus": "切到专注模式",
+          "ok": "好的"
+        }
+      },
+      "en": {
+        "app": {
+          "title": "Pomodoro",
+          "settings": "Settings",
+          "history": "History"
+        },
+        "mode": {
+          "focus": "Focus",
+          "break": "Break"
+        },
+        "action": {
+          "history": "History",
+          "settings": "Settings"
+        },
+        "unit": {
+          "times": "times",
+          "minutes": "min"
+        },
+        "btn": {
+          "reset": "Reset"
+        },
+        "home": {
+          "modeBadge": "{{ global.modeLabel }} mode",
+          "readout": "{{ global.minutesLabel }} min {{ global.secondsLabel }} sec remaining",
+          "statFocusLabel": "Focus done",
+          "statBreakLabel": "Break",
+          "statTotalLabel": "Total",
+          "tip": "Focus for 25 min, break for 5 min. Each finished Pomodoro adds +1 to today’s stats."
+        },
+        "timer": {
+          "start": "Start",
+          "pause": "Pause",
+          "completeTitle": "{{ global.modeLabel }} complete!",
+          "completeMessage": "Finished {{ global.modeLabel }} for {{ global.totalMinutes }} min ({{ global.totalSecondsForStat }} s). Keep up the rhythm!"
+        },
+        "settings": {
+          "focusDuration": "Focus duration",
+          "breakDuration": "Break duration",
+          "focusMinutes": "{{ global.focusMinutesDraft }} min",
+          "breakMinutes": "{{ global.breakMinutesDraft }} min",
+          "hint": "Minimum 1 min, adjust by ±1 min each time. Takes effect immediately after saving; the timer resets.",
+          "save": "Save settings"
+        },
+        "history": {
+          "statFocus": "Focus done",
+          "statBreak": "Break done",
+          "statTotal": "Total focus",
+          "empty": "No finished Pomodoros yet",
+          "emptyHint": "Start a focus countdown",
+          "justNow": "Just now"
+        },
+        "toast": {
+          "newRoundMode": "New {{ global.modeLabel }} round started",
+          "focusModeOpened": "Focus mode started",
+          "started": "{{ global.modeLabel }} started, time to focus",
+          "paused": "Paused",
+          "reset": "Reset",
+          "switched": "Switched to {{ global.modeLabel }}",
+          "settingsSaved": "Settings saved"
+        },
+        "dialog": {
+          "again": "Another round",
+          "switchFocus": "Switch to Focus",
+          "ok": "OK"
+        }
+      },
+      "de": {
+        "app": {
+          "title": "Pomodoro",
+          "settings": "Einstellungen",
+          "history": "Verlauf"
+        },
+        "mode": {
+          "focus": "Fokus",
+          "break": "Pause"
+        },
+        "action": {
+          "history": "Verlauf",
+          "settings": "Einstellungen"
+        },
+        "unit": {
+          "times": "Mal",
+          "minutes": "Min"
+        },
+        "btn": {
+          "reset": "Zurücksetzen"
+        },
+        "home": {
+          "modeBadge": "{{ global.modeLabel }}-Modus",
+          "readout": "Noch {{ global.minutesLabel }} Min {{ global.secondsLabel }} Sek",
+          "statFocusLabel": "Fokus erledigt",
+          "statBreakLabel": "Pause",
+          "statTotalLabel": "Gesamt",
+          "tip": "25 Min fokussieren, 5 Min Pause. Jeder abgeschlossene Pomodoro zählt +1 zur heutigen Statistik."
+        },
+        "timer": {
+          "start": "Start",
+          "pause": "Pause",
+          "completeTitle": "{{ global.modeLabel }} abgeschlossen!",
+          "completeMessage": "{{ global.modeLabel }} für {{ global.totalMinutes }} Min ({{ global.totalSecondsForStat }} Sek) abgeschlossen. Bleib im Rhythmus!"
+        },
+        "settings": {
+          "focusDuration": "Fokusdauer",
+          "breakDuration": "Pausendauer",
+          "focusMinutes": "{{ global.focusMinutesDraft }} Min",
+          "breakMinutes": "{{ global.breakMinutesDraft }} Min",
+          "hint": "Minimum 1 Min, Anpassung um ±1 Min pro Schritt. Wird nach dem Speichern sofort wirksam; der Timer wird zurückgesetzt.",
+          "save": "Einstellungen speichern"
+        },
+        "history": {
+          "statFocus": "Fokus erledigt",
+          "statBreak": "Pause erledigt",
+          "statTotal": "Fokus gesamt",
+          "empty": "Noch keine abgeschlossenen Pomodoros",
+          "emptyHint": "Starte einen Fokus-Countdown",
+          "justNow": "Gerade eben"
+        },
+        "toast": {
+          "newRoundMode": "Neue {{ global.modeLabel }}-Runde gestartet",
+          "focusModeOpened": "Fokusmodus gestartet",
+          "started": "{{ global.modeLabel }} gestartet, Zeit zum Fokussieren",
+          "paused": "Pausiert",
+          "reset": "Zurückgesetzt",
+          "switched": "Zu {{ global.modeLabel }} gewechselt",
+          "settingsSaved": "Einstellungen gespeichert"
+        },
+        "dialog": {
+          "again": "Noch eine Runde",
+          "switchFocus": "Zu Fokus wechseln",
+          "ok": "OK"
+        }
+      },
+      "es": {
+        "app": {
+          "title": "Pomodoro",
+          "settings": "Ajustes",
+          "history": "Historial"
+        },
+        "mode": {
+          "focus": "Concentración",
+          "break": "Descanso"
+        },
+        "action": {
+          "history": "Historial",
+          "settings": "Ajustes"
+        },
+        "unit": {
+          "times": "veces",
+          "minutes": "min"
+        },
+        "btn": {
+          "reset": "Reiniciar"
+        },
+        "home": {
+          "modeBadge": "Modo {{ global.modeLabel }}",
+          "readout": "Quedan {{ global.minutesLabel }} min {{ global.secondsLabel }} s",
+          "statFocusLabel": "Concentración hecha",
+          "statBreakLabel": "Descanso",
+          "statTotalLabel": "Total",
+          "tip": "Concéntrate 25 min, descansa 5 min. Cada pomodoro completado suma +1 a las estadísticas de hoy."
+        },
+        "timer": {
+          "start": "Iniciar",
+          "pause": "Pausar",
+          "completeTitle": "¡{{ global.modeLabel }} completado!",
+          "completeMessage": "Completaste {{ global.modeLabel }} durante {{ global.totalMinutes }} min ({{ global.totalSecondsForStat }} s). ¡Sigue con el ritmo!"
+        },
+        "settings": {
+          "focusDuration": "Duración de concentración",
+          "breakDuration": "Duración del descanso",
+          "focusMinutes": "{{ global.focusMinutesDraft }} min",
+          "breakMinutes": "{{ global.breakMinutesDraft }} min",
+          "hint": "Mínimo 1 min, ajuste de ±1 min cada vez. Se aplica de inmediato al guardar; el temporizador se reinicia.",
+          "save": "Guardar ajustes"
+        },
+        "history": {
+          "statFocus": "Concentración hecha",
+          "statBreak": "Descanso hecho",
+          "statTotal": "Concentración total",
+          "empty": "Aún no hay pomodoros completados",
+          "emptyHint": "Inicia una cuenta atrás de concentración",
+          "justNow": "Justo ahora"
+        },
+        "toast": {
+          "newRoundMode": "Nueva ronda de {{ global.modeLabel }} iniciada",
+          "focusModeOpened": "Modo concentración iniciado",
+          "started": "{{ global.modeLabel }} iniciado, hora de concentrarse",
+          "paused": "En pausa",
+          "reset": "Reiniciado",
+          "switched": "Cambiado a {{ global.modeLabel }}",
+          "settingsSaved": "Ajustes guardados"
+        },
+        "dialog": {
+          "again": "Otra ronda",
+          "switchFocus": "Cambiar a Concentración",
+          "ok": "Aceptar"
+        }
+      },
+      "fr": {
+        "app": {
+          "title": "Pomodoro",
+          "settings": "Paramètres",
+          "history": "Historique"
+        },
+        "mode": {
+          "focus": "Concentration",
+          "break": "Pause"
+        },
+        "action": {
+          "history": "Historique",
+          "settings": "Paramètres"
+        },
+        "unit": {
+          "times": "fois",
+          "minutes": "min"
+        },
+        "btn": {
+          "reset": "Réinitialiser"
+        },
+        "home": {
+          "modeBadge": "Mode {{ global.modeLabel }}",
+          "readout": "Reste {{ global.minutesLabel }} min {{ global.secondsLabel }} s",
+          "statFocusLabel": "Concentration faite",
+          "statBreakLabel": "Pause",
+          "statTotalLabel": "Total",
+          "tip": "Concentrez-vous 25 min, faites une pause de 5 min. Chaque pomodoro terminé ajoute +1 aux stats du jour."
+        },
+        "timer": {
+          "start": "Démarrer",
+          "pause": "Pause",
+          "completeTitle": "{{ global.modeLabel }} terminée !",
+          "completeMessage": "{{ global.modeLabel }} terminée : {{ global.totalMinutes }} min ({{ global.totalSecondsForStat }} s). Gardez le rythme !"
+        },
+        "settings": {
+          "focusDuration": "Durée de concentration",
+          "breakDuration": "Durée de pause",
+          "focusMinutes": "{{ global.focusMinutesDraft }} min",
+          "breakMinutes": "{{ global.breakMinutesDraft }} min",
+          "hint": "Minimum 1 min, ajustement de ±1 min à chaque fois. Effet immédiat après l’enregistrement ; le minuteur est réinitialisé.",
+          "save": "Enregistrer les paramètres"
+        },
+        "history": {
+          "statFocus": "Concentration faite",
+          "statBreak": "Pause faite",
+          "statTotal": "Concentration totale",
+          "empty": "Aucun pomodoro terminé pour l’instant",
+          "emptyHint": "Lancez un compte à rebours de concentration",
+          "justNow": "À l’instant"
+        },
+        "toast": {
+          "newRoundMode": "Nouvelle session de {{ global.modeLabel }} lancée",
+          "focusModeOpened": "Mode concentration lancé",
+          "started": "{{ global.modeLabel }} lancée, c’est parti pour se concentrer",
+          "paused": "En pause",
+          "reset": "Réinitialisé",
+          "switched": "Basculé en {{ global.modeLabel }}",
+          "settingsSaved": "Paramètres enregistrés"
+        },
+        "dialog": {
+          "again": "Encore un tour",
+          "switchFocus": "Passer en Concentration",
+          "ok": "OK"
+        }
+      },
+      "pt": {
+        "app": {
+          "title": "Pomodoro",
+          "settings": "Configurações",
+          "history": "Histórico"
+        },
+        "mode": {
+          "focus": "Foco",
+          "break": "Pausa"
+        },
+        "action": {
+          "history": "Histórico",
+          "settings": "Configurações"
+        },
+        "unit": {
+          "times": "vezes",
+          "minutes": "min"
+        },
+        "btn": {
+          "reset": "Reiniciar"
+        },
+        "home": {
+          "modeBadge": "Modo {{ global.modeLabel }}",
+          "readout": "Restam {{ global.minutesLabel }} min {{ global.secondsLabel }} s",
+          "statFocusLabel": "Foco concluído",
+          "statBreakLabel": "Pausa",
+          "statTotalLabel": "Total",
+          "tip": "Concentre-se por 25 min, descanse 5 min. Cada pomodoro concluído soma +1 às estatísticas de hoje."
+        },
+        "timer": {
+          "start": "Iniciar",
+          "pause": "Pausar",
+          "completeTitle": "{{ global.modeLabel }} concluído!",
+          "completeMessage": "{{ global.modeLabel }} concluído por {{ global.totalMinutes }} min ({{ global.totalSecondsForStat }} s). Mantenha o ritmo!"
+        },
+        "settings": {
+          "focusDuration": "Duração do foco",
+          "breakDuration": "Duração da pausa",
+          "focusMinutes": "{{ global.focusMinutesDraft }} min",
+          "breakMinutes": "{{ global.breakMinutesDraft }} min",
+          "hint": "Mínimo de 1 min, ajuste de ±1 min por vez. Tem efeito imediato após salvar; o cronômetro é reiniciado.",
+          "save": "Salvar configurações"
+        },
+        "history": {
+          "statFocus": "Foco concluído",
+          "statBreak": "Pausa concluída",
+          "statTotal": "Foco total",
+          "empty": "Ainda não há pomodoros concluídos",
+          "emptyHint": "Inicie uma contagem regressiva de foco",
+          "justNow": "Agora mesmo"
+        },
+        "toast": {
+          "newRoundMode": "Nova rodada de {{ global.modeLabel }} iniciada",
+          "focusModeOpened": "Modo foco iniciado",
+          "started": "{{ global.modeLabel }} iniciado, hora de focar",
+          "paused": "Pausado",
+          "reset": "Reiniciado",
+          "switched": "Alternado para {{ global.modeLabel }}",
+          "settingsSaved": "Configurações salvas"
+        },
+        "dialog": {
+          "again": "Mais uma rodada",
+          "switchFocus": "Mudar para Foco",
+          "ok": "OK"
+        }
+      },
+      "ca": {
+        "app": {
+          "title": "Pomodoro",
+          "settings": "Configuració",
+          "history": "Historial"
+        },
+        "mode": {
+          "focus": "Concentració",
+          "break": "Descans"
+        },
+        "action": {
+          "history": "Historial",
+          "settings": "Configuració"
+        },
+        "unit": {
+          "times": "vegades",
+          "minutes": "min"
+        },
+        "btn": {
+          "reset": "Reinicia"
+        },
+        "home": {
+          "modeBadge": "Mode {{ global.modeLabel }}",
+          "readout": "Queden {{ global.minutesLabel }} min {{ global.secondsLabel }} s",
+          "statFocusLabel": "Concentració feta",
+          "statBreakLabel": "Descans",
+          "statTotalLabel": "Total",
+          "tip": "Concentra’t 25 min, descansa 5 min. Cada pomodoro completat suma +1 a les estadístiques d’avui."
+        },
+        "timer": {
+          "start": "Inicia",
+          "pause": "Pausa",
+          "completeTitle": "{{ global.modeLabel }} completat!",
+          "completeMessage": "Has completat {{ global.modeLabel }} durant {{ global.totalMinutes }} min ({{ global.totalSecondsForStat }} s). Mantén el ritme!"
+        },
+        "settings": {
+          "focusDuration": "Durada de la concentració",
+          "breakDuration": "Durada del descans",
+          "focusMinutes": "{{ global.focusMinutesDraft }} min",
+          "breakMinutes": "{{ global.breakMinutesDraft }} min",
+          "hint": "Mínim 1 min, ajust de ±1 min cada cop. S’aplica immediatament en desar; el temporitzador es reinicia.",
+          "save": "Desa la configuració"
+        },
+        "history": {
+          "statFocus": "Concentració feta",
+          "statBreak": "Descans fet",
+          "statTotal": "Concentració total",
+          "empty": "Encara no hi ha cap pomodoro completat",
+          "emptyHint": "Inicia un compte enrere de concentració",
+          "justNow": "Ara mateix"
+        },
+        "toast": {
+          "newRoundMode": "Nova ronda de {{ global.modeLabel }} iniciada",
+          "focusModeOpened": "Mode concentració iniciat",
+          "started": "{{ global.modeLabel }} iniciat, hora de concentrar-se",
+          "paused": "En pausa",
+          "reset": "Reiniciat",
+          "switched": "Canviat a {{ global.modeLabel }}",
+          "settingsSaved": "Configuració desada"
+        },
+        "dialog": {
+          "again": "Una altra ronda",
+          "switchFocus": "Canvia a Concentració",
+          "ok": "D’acord"
+        }
+      },
+      "hi": {
+        "app": {
+          "title": "पोमोडोरो",
+          "settings": "सेटिंग्स",
+          "history": "इतिहास"
+        },
+        "mode": {
+          "focus": "फ़़ोकस",
+          "break": "ब्रेक"
+        },
+        "action": {
+          "history": "इतिहास",
+          "settings": "सेटिंग्स"
+        },
+        "unit": {
+          "times": "बार",
+          "minutes": "मिनट"
+        },
+        "btn": {
+          "reset": "रीसेट"
+        },
+        "home": {
+          "modeBadge": "{{ global.modeLabel }} मोड",
+          "readout": "{{ global.minutesLabel }} मिनट {{ global.secondsLabel }} सेकंड शेष",
+          "statFocusLabel": "फ़़ोकस पूरा",
+          "statBreakLabel": "ब्रेक",
+          "statTotalLabel": "कुल",
+          "tip": "25 मिनट फ़़ोकस करें, 5 मिनट ब्रेक लें। हर पूरा पोमोडोरो आज के आँकड़ों में +1 जोड़ता है।"
+        },
+        "timer": {
+          "start": "शुरू करें",
+          "pause": "रोकें",
+          "completeTitle": "{{ global.modeLabel }} पूरा हुआ!",
+          "completeMessage": "{{ global.modeLabel }} {{ global.totalMinutes }} मिनट ({{ global.totalSecondsForStat }} सेकंड) के लिए पूरा हुआ। लय बनाए रखें!"
+        },
+        "settings": {
+          "focusDuration": "फ़़ोकस अवधि",
+          "breakDuration": "ब्रेक अवधि",
+          "focusMinutes": "{{ global.focusMinutesDraft }} मिनट",
+          "breakMinutes": "{{ global.breakMinutesDraft }} मिनट",
+          "hint": "न्यूनतम 1 मिनट, हर बार ±1 मिनट समायोजन। सहेजते ही लागू; टाइमर रीसेट हो जाता है।",
+          "save": "सेटिंग्स सहेजें"
+        },
+        "history": {
+          "statFocus": "फ़़ोकस पूरा",
+          "statBreak": "ब्रेक पूरा",
+          "statTotal": "कुल फ़़ोकस",
+          "empty": "अभी तक कोई पोमोडोरो पूरा नहीं हुआ",
+          "emptyHint": "एक फ़़ोकस काउंटडाउन शुरू करें",
+          "justNow": "अभी-अभी"
+        },
+        "toast": {
+          "newRoundMode": "नया {{ global.modeLabel }} राउंड शुरू हुआ",
+          "focusModeOpened": "फ़़ोकस मोड शुरू हुआ",
+          "started": "{{ global.modeLabel }} शुरू हुआ, अब फ़़ोकस करें",
+          "paused": "रोका गया",
+          "reset": "रीसेट किया गया",
+          "switched": "{{ global.modeLabel }} पर स्विच किया गया",
+          "settingsSaved": "सेटिंग्स सहेजी गईं"
+        },
+        "dialog": {
+          "again": "एक और राउंड",
+          "switchFocus": "फ़़ोकस पर जाएँ",
+          "ok": "ठीक है"
+        }
+      },
+      "ko": {
+        "app": {
+          "title": "뽀모도로",
+          "settings": "설정",
+          "history": "기록"
+        },
+        "mode": {
+          "focus": "집중",
+          "break": "휴식"
+        },
+        "action": {
+          "history": "기록",
+          "settings": "설정"
+        },
+        "unit": {
+          "times": "회",
+          "minutes": "분"
+        },
+        "btn": {
+          "reset": "초기화"
+        },
+        "home": {
+          "modeBadge": "{{ global.modeLabel }} 모드",
+          "readout": "{{ global.minutesLabel }}분 {{ global.secondsLabel }}초 남음",
+          "statFocusLabel": "집중 완료",
+          "statBreakLabel": "휴식",
+          "statTotalLabel": "누적",
+          "tip": "25분 집중, 5분 휴식. 뽀모도로를 하나 완료할 때마다 오늘 통계에 +1."
+        },
+        "timer": {
+          "start": "시작",
+          "pause": "일시정지",
+          "completeTitle": "{{ global.modeLabel }} 완료!",
+          "completeMessage": "{{ global.modeLabel }} {{ global.totalMinutes }}분({{ global.totalSecondsForStat }}초)을 완료했어요. 리듬을 유지하세요!"
+        },
+        "settings": {
+          "focusDuration": "집중 시간",
+          "breakDuration": "휴식 시간",
+          "focusMinutes": "{{ global.focusMinutesDraft }}분",
+          "breakMinutes": "{{ global.breakMinutesDraft }}분",
+          "hint": "최소 1분, 매번 ±1분 조정. 저장하면 즉시 적용되며 타이머가 초기화됩니다.",
+          "save": "설정 저장"
+        },
+        "history": {
+          "statFocus": "집중 완료",
+          "statBreak": "휴식 완료",
+          "statTotal": "누적 집중",
+          "empty": "아직 완료한 뽀모도로가 없어요",
+          "emptyHint": "집중 카운트다운을 시작하세요",
+          "justNow": "방금"
+        },
+        "toast": {
+          "newRoundMode": "새 {{ global.modeLabel }} 라운드를 시작했어요",
+          "focusModeOpened": "집중 모드를 시작했어요",
+          "started": "{{ global.modeLabel }} 시작, 집중해 볼까요",
+          "paused": "일시정지됨",
+          "reset": "초기화됨",
+          "switched": "{{ global.modeLabel }}(으)로 전환했어요",
+          "settingsSaved": "설정을 저장했어요"
+        },
+        "dialog": {
+          "again": "한 번 더",
+          "switchFocus": "집중으로 전환",
+          "ok": "확인"
+        }
+      },
+      "ja": {
+        "app": {
+          "title": "ポモドーロ",
+          "settings": "設定",
+          "history": "履歴"
+        },
+        "mode": {
+          "focus": "集中",
+          "break": "休憩"
+        },
+        "action": {
+          "history": "履歴",
+          "settings": "設定"
+        },
+        "unit": {
+          "times": "回",
+          "minutes": "分"
+        },
+        "btn": {
+          "reset": "リセット"
+        },
+        "home": {
+          "modeBadge": "{{ global.modeLabel }}モード",
+          "readout": "残り {{ global.minutesLabel }}分 {{ global.secondsLabel }}秒",
+          "statFocusLabel": "集中完了",
+          "statBreakLabel": "休憩",
+          "statTotalLabel": "累計",
+          "tip": "25分集中、5分休憩。ポモドーロを1つ完了するたびに今日の集計に+1。"
+        },
+        "timer": {
+          "start": "開始",
+          "pause": "一時停止",
+          "completeTitle": "{{ global.modeLabel }}完了！",
+          "completeMessage": "{{ global.modeLabel }}を{{ global.totalMinutes }}分（{{ global.totalSecondsForStat }}秒）完了しました。このペースを保ちましょう！"
+        },
+        "settings": {
+          "focusDuration": "集中時間",
+          "breakDuration": "休憩時間",
+          "focusMinutes": "{{ global.focusMinutesDraft }}分",
+          "breakMinutes": "{{ global.breakMinutesDraft }}分",
+          "hint": "最小1分、毎回±1分で調整。保存後すぐに反映され、タイマーはリセットされます。",
+          "save": "設定を保存"
+        },
+        "history": {
+          "statFocus": "集中完了",
+          "statBreak": "休憩完了",
+          "statTotal": "累計集中",
+          "empty": "完了したポモドーロはまだありません",
+          "emptyHint": "集中のカウントダウンを始めましょう",
+          "justNow": "たった今"
+        },
+        "toast": {
+          "newRoundMode": "新しい{{ global.modeLabel }}ラウンドを開始しました",
+          "focusModeOpened": "集中モードを開始しました",
+          "started": "{{ global.modeLabel }}を開始、集中しましょう",
+          "paused": "一時停止しました",
+          "reset": "リセットしました",
+          "switched": "{{ global.modeLabel }}に切り替えました",
+          "settingsSaved": "設定を保存しました"
+        },
+        "dialog": {
+          "again": "もう一回",
+          "switchFocus": "集中に切り替え",
+          "ok": "OK"
+        }
+      },
+      "it": {
+        "app": {
+          "title": "Pomodoro",
+          "settings": "Impostazioni",
+          "history": "Cronologia"
+        },
+        "mode": {
+          "focus": "Concentrazione",
+          "break": "Pausa"
+        },
+        "action": {
+          "history": "Cronologia",
+          "settings": "Impostazioni"
+        },
+        "unit": {
+          "times": "volte",
+          "minutes": "min"
+        },
+        "btn": {
+          "reset": "Reimposta"
+        },
+        "home": {
+          "modeBadge": "Modalità {{ global.modeLabel }}",
+          "readout": "Restano {{ global.minutesLabel }} min {{ global.secondsLabel }} s",
+          "statFocusLabel": "Concentrazione fatta",
+          "statBreakLabel": "Pausa",
+          "statTotalLabel": "Totale",
+          "tip": "Concèntrati per 25 min, pausa di 5 min. Ogni pomodoro completato aggiunge +1 alle statistiche di oggi."
+        },
+        "timer": {
+          "start": "Avvia",
+          "pause": "Pausa",
+          "completeTitle": "{{ global.modeLabel }} completata!",
+          "completeMessage": "{{ global.modeLabel }} completata per {{ global.totalMinutes }} min ({{ global.totalSecondsForStat }} s). Mantieni il ritmo!"
+        },
+        "settings": {
+          "focusDuration": "Durata concentrazione",
+          "breakDuration": "Durata pausa",
+          "focusMinutes": "{{ global.focusMinutesDraft }} min",
+          "breakMinutes": "{{ global.breakMinutesDraft }} min",
+          "hint": "Minimo 1 min, regolazione di ±1 min ogni volta. Ha effetto subito dopo il salvataggio; il timer si reimposta.",
+          "save": "Salva impostazioni"
+        },
+        "history": {
+          "statFocus": "Concentrazione fatta",
+          "statBreak": "Pausa fatta",
+          "statTotal": "Concentrazione totale",
+          "empty": "Ancora nessun pomodoro completato",
+          "emptyHint": "Avvia un conto alla rovescia di concentrazione",
+          "justNow": "Proprio ora"
+        },
+        "toast": {
+          "newRoundMode": "Nuovo round di {{ global.modeLabel }} avviato",
+          "focusModeOpened": "Modalità concentrazione avviata",
+          "started": "{{ global.modeLabel }} avviata, è ora di concentrarsi",
+          "paused": "In pausa",
+          "reset": "Reimpostato",
+          "switched": "Passato a {{ global.modeLabel }}",
+          "settingsSaved": "Impostazioni salvate"
+        },
+        "dialog": {
+          "again": "Un altro round",
+          "switchFocus": "Passa a Concentrazione",
+          "ok": "OK"
+        }
+      }
     },
     "functions": {
       "compute_labels": {
@@ -211,29 +953,7 @@
               "var": "global.minutesReadout",
               "value": {
                 "cat": [
-                  "剩余 ",
-                  {
-                    "floor": [
-                      {
-                        "/": [
-                          {
-                            "var": "global.remaining"
-                          },
-                          60
-                        ]
-                      }
-                    ]
-                  },
-                  " 分钟 ",
-                  {
-                    "%": [
-                      {
-                        "var": "global.remaining"
-                      },
-                      60
-                    ]
-                  },
-                  " 秒"
+                  "{{ t('home.readout') }}"
                 ]
               }
             }
@@ -358,8 +1078,8 @@
                   {
                     "var": "global.isRunning"
                   },
-                  "暂停",
-                  "开始"
+                  "{{ t('timer.pause') }}",
+                  "{{ t('timer.start') }}"
                 ]
               }
             }
@@ -406,10 +1126,7 @@
               "var": "global.completeTitle",
               "value": {
                 "cat": [
-                  {
-                    "var": "global.modeLabel"
-                  },
-                  "完成！"
+                  "{{ t('timer.completeTitle') }}"
                 ]
               }
             }
@@ -420,19 +1137,7 @@
               "var": "global.completeMessage",
               "value": {
                 "cat": [
-                  "已完成 ",
-                  {
-                    "var": "global.modeLabel"
-                  },
-                  " ",
-                  {
-                    "var": "global.totalMinutes"
-                  },
-                  " 分钟（",
-                  {
-                    "var": "global.totalSecondsForStat"
-                  },
-                  " 秒）。继续保持节奏吧！"
+                  "{{ t('timer.completeMessage') }}"
                 ]
               }
             }
@@ -464,7 +1169,11 @@
                   "call": "@set",
                   "args": {
                     "var": "global.modeLabel",
-                    "value": "休息"
+                    "value": {
+                      "cat": [
+                        "{{ t('mode.break') }}"
+                      ]
+                    }
                   }
                 },
                 {
@@ -494,7 +1203,11 @@
                   "call": "@set",
                   "args": {
                     "var": "global.modeLabel",
-                    "value": "专注"
+                    "value": {
+                      "cat": [
+                        "{{ t('mode.focus') }}"
+                      ]
+                    }
                   }
                 },
                 {
@@ -643,6 +1356,17 @@
         "params": [],
         "logic": [
           {
+            "call": "@set",
+            "args": {
+              "var": "global.i18nScratch",
+              "value": {
+                "cat": [
+                  "{{ t('history.justNow') }}"
+                ]
+              }
+            }
+          },
+          {
             "call": "@list_add",
             "args": {
               "target": "{{ global.history }}",
@@ -651,7 +1375,7 @@
                 "modeLabel": "{{ global.modeLabel }}",
                 "duration": "{{ global.totalSecondsForStat }}",
                 "minutesLabel": "{{ global.totalMinutes }}m",
-                "timestamp": "刚刚",
+                "timestamp": "{{ global.i18nScratch }}",
                 "accent": "{{ global.modeAccent }}",
                 "tint": "{{ global.modeTint }}"
               }
@@ -763,21 +1487,21 @@
               "message": "{{ global.completeMessage }}",
               "actions": [
                 {
-                  "label": "再来一轮",
+                  "label": "{{ t('dialog.again') }}",
                   "action": {
                     "call": "@global.new_round_same_mode_btn",
                     "args": {}
                   }
                 },
                 {
-                  "label": "切到专注模式",
+                  "label": "{{ t('dialog.switchFocus') }}",
                   "action": {
                     "call": "@global.new_round_focus_btn",
                     "args": {}
                   }
                 },
                 {
-                  "label": "好的",
+                  "label": "{{ t('dialog.ok') }}",
                   "action": {
                     "call": "@global.dismiss_only",
                     "args": {}
@@ -807,9 +1531,20 @@
             }
           },
           {
+            "call": "@set",
+            "args": {
+              "var": "global.i18nScratch",
+              "value": {
+                "cat": [
+                  "{{ t('toast.newRoundMode') }}"
+                ]
+              }
+            }
+          },
+          {
             "call": "@show_toast",
             "args": {
-              "message": "新一轮{{ global.modeLabel }}已开启"
+              "message": "{{ global.i18nScratch }}"
             }
           }
         ]
@@ -828,7 +1563,11 @@
             "call": "@set",
             "args": {
               "var": "global.modeLabel",
-              "value": "专注"
+              "value": {
+                "cat": [
+                  "{{ t('mode.focus') }}"
+                ]
+              }
             }
           },
           {
@@ -875,9 +1614,20 @@
             "args": {}
           },
           {
+            "call": "@set",
+            "args": {
+              "var": "global.i18nScratch",
+              "value": {
+                "cat": [
+                  "{{ t('toast.focusModeOpened') }}"
+                ]
+              }
+            }
+          },
+          {
             "call": "@show_toast",
             "args": {
-              "message": "专注模式已开启"
+              "message": "{{ global.i18nScratch }}"
             }
           }
         ]
@@ -911,9 +1661,20 @@
                   "args": {}
                 },
                 {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.i18nScratch",
+                    "value": {
+                      "cat": [
+                        "{{ t('toast.started') }}"
+                      ]
+                    }
+                  }
+                },
+                {
                   "call": "@show_toast",
                   "args": {
-                    "message": "{{ global.modeLabel }}已开始，专注起来吧"
+                    "message": "{{ global.i18nScratch }}"
                   }
                 }
               ],
@@ -937,9 +1698,20 @@
             "args": {}
           },
           {
+            "call": "@set",
+            "args": {
+              "var": "global.i18nScratch",
+              "value": {
+                "cat": [
+                  "{{ t('toast.paused') }}"
+                ]
+              }
+            }
+          },
+          {
             "call": "@show_toast",
             "args": {
-              "message": "已暂停"
+              "message": "{{ global.i18nScratch }}"
             }
           }
         ]
@@ -963,9 +1735,20 @@
             }
           },
           {
+            "call": "@set",
+            "args": {
+              "var": "global.i18nScratch",
+              "value": {
+                "cat": [
+                  "{{ t('toast.reset') }}"
+                ]
+              }
+            }
+          },
+          {
             "call": "@show_toast",
             "args": {
-              "message": "已重置"
+              "message": "{{ global.i18nScratch }}"
             }
           }
         ]
@@ -993,9 +1776,20 @@
             }
           },
           {
+            "call": "@set",
+            "args": {
+              "var": "global.i18nScratch",
+              "value": {
+                "cat": [
+                  "{{ t('toast.switched') }}"
+                ]
+              }
+            }
+          },
+          {
             "call": "@show_toast",
             "args": {
-              "message": "已切换到{{ global.modeLabel }}"
+              "message": "{{ global.i18nScratch }}"
             }
           }
         ]
@@ -1183,9 +1977,20 @@
             }
           },
           {
+            "call": "@set",
+            "args": {
+              "var": "global.i18nScratch",
+              "value": {
+                "cat": [
+                  "{{ t('toast.settingsSaved') }}"
+                ]
+              }
+            }
+          },
+          {
             "call": "@show_toast",
             "args": {
-              "message": "设置已保存"
+              "message": "{{ global.i18nScratch }}"
             }
           },
           {
@@ -1257,17 +2062,42 @@
       }
     }
   },
-  "steps": [],
+  "steps": [
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.modeLabel",
+        "value": {
+          "if": [
+            {
+              "==": [
+                {
+                  "var": "global.mode"
+                },
+                "focus"
+              ]
+            },
+            "{{ t('mode.focus') }}",
+            "{{ t('mode.break') }}"
+          ]
+        }
+      }
+    },
+    {
+      "call": "@global.compute_labels",
+      "args": {}
+    }
+  ],
   "ui": {
     "screens": [
       {
         "id": "home",
-        "title": "番茄钟",
+        "title": "{{ t('app.title') }}",
         "layout": "column",
         "backgroundColor": "#F4F6F8",
         "appBar": {
           "type": "app_bar",
-          "title": "番茄钟",
+          "title": "{{ t('app.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -1278,7 +2108,7 @@
               "label": "",
               "variant": "text",
               "icon": "history",
-              "tooltip": "历史",
+              "tooltip": "{{ t('action.history') }}",
               "action": {
                 "call": "@global.open_history",
                 "args": {}
@@ -1289,7 +2119,7 @@
               "label": "",
               "variant": "text",
               "icon": "settings",
-              "tooltip": "设置",
+              "tooltip": "{{ t('action.settings') }}",
               "action": {
                 "call": "@global.open_settings",
                 "args": {}
@@ -1319,7 +2149,7 @@
             "children": [
               {
                 "type": "chip",
-                "label": "专注",
+                "label": "{{ t('mode.focus') }}",
                 "variant": "choice",
                 "bind": "global.mode",
                 "value": "focus",
@@ -1331,7 +2161,7 @@
               },
               {
                 "type": "chip",
-                "label": "休息",
+                "label": "{{ t('mode.break') }}",
                 "variant": "choice",
                 "bind": "global.mode",
                 "value": "break",
@@ -1374,7 +2204,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "{{ global.modeLabel }}模式",
+                    "value": "{{ t('home.modeBadge') }}",
                     "style": {
                       "fontSize": 14,
                       "fontWeight": "600",
@@ -1492,7 +2322,7 @@
               },
               {
                 "type": "button",
-                "label": "重置",
+                "label": "{{ t('btn.reset') }}",
                 "icon": "restart",
                 "variant": "outlined",
                 "action": {
@@ -1544,7 +2374,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "完成专注",
+                          "value": "{{ t('home.statFocusLabel') }}",
                           "style": {
                             "fontSize": 12,
                             "color": "#6B7280"
@@ -1572,7 +2402,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "次",
+                          "value": "{{ t('unit.times') }}",
                           "style": {
                             "fontSize": 11,
                             "color": "#9CA3AF"
@@ -1615,7 +2445,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "休息",
+                          "value": "{{ t('home.statBreakLabel') }}",
                           "style": {
                             "fontSize": 12,
                             "color": "#6B7280"
@@ -1643,7 +2473,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "次",
+                          "value": "{{ t('unit.times') }}",
                           "style": {
                             "fontSize": 11,
                             "color": "#9CA3AF"
@@ -1686,7 +2516,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "累计",
+                          "value": "{{ t('home.statTotalLabel') }}",
                           "style": {
                             "fontSize": 12,
                             "color": "#6B7280"
@@ -1714,7 +2544,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "分钟",
+                          "value": "{{ t('unit.minutes') }}",
                           "style": {
                             "fontSize": 11,
                             "color": "#9CA3AF"
@@ -1746,7 +2576,7 @@
               },
               {
                 "type": "text",
-                "value": "专注 25 分钟，休息 5 分钟。每完成一个番茄钟，今日统计 +1。",
+                "value": "{{ t('home.tip') }}",
                 "style": {
                   "fontSize": 12,
                   "color": "#6B7280"
@@ -1767,12 +2597,12 @@
       },
       {
         "id": "settings",
-        "title": "设置",
+        "title": "{{ t('app.settings') }}",
         "layout": "column",
         "backgroundColor": "#F4F6F8",
         "appBar": {
           "type": "app_bar",
-          "title": "设置",
+          "title": "{{ t('app.settings') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -1814,7 +2644,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "专注时长",
+                    "value": "{{ t('settings.focusDuration') }}",
                     "style": {
                       "fontSize": 15,
                       "fontWeight": "600",
@@ -1829,7 +2659,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "{{ global.focusMinutesDraft }} 分钟",
+                    "value": "{{ t('settings.focusMinutes') }}",
                     "style": {
                       "fontSize": 13,
                       "color": "#6B7280"
@@ -1871,7 +2701,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "{{ global.focusMinutesDraft }} 分钟",
+                    "value": "{{ t('settings.focusMinutes') }}",
                     "style": {
                       "fontSize": 24,
                       "fontWeight": "bold",
@@ -1931,7 +2761,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "休息时长",
+                    "value": "{{ t('settings.breakDuration') }}",
                     "style": {
                       "fontSize": 15,
                       "fontWeight": "600",
@@ -1946,7 +2776,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "{{ global.breakMinutesDraft }} 分钟",
+                    "value": "{{ t('settings.breakMinutes') }}",
                     "style": {
                       "fontSize": 13,
                       "color": "#6B7280"
@@ -1988,7 +2818,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "{{ global.breakMinutesDraft }} 分钟",
+                    "value": "{{ t('settings.breakMinutes') }}",
                     "style": {
                       "fontSize": 24,
                       "fontWeight": "bold",
@@ -2043,7 +2873,7 @@
               },
               {
                 "type": "text",
-                "value": "最小 1 分钟，每次调整 ±1 分钟。保存后立即生效，计时器会重置。",
+                "value": "{{ t('settings.hint') }}",
                 "style": {
                   "fontSize": 12,
                   "color": "#6B7280"
@@ -2066,7 +2896,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "保存设置",
+                "label": "{{ t('settings.save') }}",
                 "variant": "filled",
                 "icon": "save",
                 "action": {
@@ -2090,12 +2920,12 @@
       },
       {
         "id": "history",
-        "title": "历史记录",
+        "title": "{{ t('app.history') }}",
         "layout": "column",
         "backgroundColor": "#F4F6F8",
         "appBar": {
           "type": "app_bar",
-          "title": "历史记录",
+          "title": "{{ t('app.history') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -2141,7 +2971,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "已完成专注",
+                        "value": "{{ t('history.statFocus') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#6B7280"
@@ -2165,7 +2995,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "次",
+                    "value": "{{ t('unit.times') }}",
                     "style": {
                       "fontSize": 11,
                       "color": "#9CA3AF"
@@ -2202,7 +3032,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "已完成休息",
+                        "value": "{{ t('history.statBreak') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#6B7280"
@@ -2226,7 +3056,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "次",
+                    "value": "{{ t('unit.times') }}",
                     "style": {
                       "fontSize": 11,
                       "color": "#9CA3AF"
@@ -2263,7 +3093,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "累计专注",
+                        "value": "{{ t('history.statTotal') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#6B7280"
@@ -2287,7 +3117,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "分钟",
+                    "value": "{{ t('unit.minutes') }}",
                     "style": {
                       "fontSize": 11,
                       "color": "#9CA3AF"
@@ -2306,7 +3136,7 @@
                 "type": "list",
                 "source": "{{ global.history }}",
                 "shrinkWrap": true,
-                "emptyText": "还没有完成的番茄钟",
+                "emptyText": "{{ t('history.empty') }}",
                 "item_template": {
                   "type": "container",
                   "layout": "column",
@@ -2439,7 +3269,7 @@
               },
               {
                 "type": "text",
-                "value": "还没有完成的番茄钟",
+                "value": "{{ t('history.empty') }}",
                 "style": {
                   "fontSize": 15,
                   "fontWeight": "600",
@@ -2452,7 +3282,7 @@
               },
               {
                 "type": "text",
-                "value": "开始一个专注倒计时吧",
+                "value": "{{ t('history.emptyHint') }}",
                 "style": {
                   "fontSize": 13,
                   "color": "#8E8E93"

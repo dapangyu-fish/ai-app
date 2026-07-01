@@ -6,7 +6,20 @@
     "type": "app",
     "description": "点击屏幕让小鸟飞行，躲避水管，挑战高分！",
     "author": "ai",
-    "displayName": "点击飞行"
+    "displayName": {
+      "default": "点击飞行",
+      "zh": "点击飞行",
+      "en": "Tap to Fly",
+      "de": "Tippen zum Fliegen",
+      "es": "Toca para volar",
+      "fr": "Touchez pour voler",
+      "pt": "Toque para voar",
+      "ca": "Toca per volar",
+      "hi": "उड़ने के लिए टैप करें",
+      "ko": "탭하여 날기",
+      "ja": "タップで飛ぶ",
+      "it": "Tocca per volare"
+    }
   },
   "dependencies": {
     "common-ui": "^1.3.0"
@@ -95,16 +108,16 @@
           {
             "call": "@common-ui.choose",
             "args": {
-              "title": "游戏结束",
-              "message": "得分：{{ params.score }}\n最佳：{{ global.bestScore }}",
+              "title": "{{ t('gameover.title') }}",
+              "message": "{{ t('gameover.message') }}",
               "buttons": [
                 {
-                  "label": "关闭",
+                  "label": "{{ t('gameover.close') }}",
                   "value": null,
                   "style": "text"
                 },
                 {
-                  "label": "再来一局",
+                  "label": "{{ t('gameover.restart') }}",
                   "value": "restart"
                 }
               ]
@@ -132,6 +145,151 @@
           }
         ]
       }
+    },
+    "i18n": {
+      "zh": {
+        "app": { "title": "点击飞行" },
+        "home": {
+          "score": "得分：{{ global.currentScore }}",
+          "best": "最佳：{{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "游戏结束",
+          "message": "得分：{{ params.score }}\n最佳：{{ global.bestScore }}",
+          "close": "关闭",
+          "restart": "再来一局"
+        }
+      },
+      "en": {
+        "app": { "title": "Tap to Fly" },
+        "home": {
+          "score": "Score: {{ global.currentScore }}",
+          "best": "Best: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Game Over",
+          "message": "Score: {{ params.score }}\nBest: {{ global.bestScore }}",
+          "close": "Close",
+          "restart": "Play Again"
+        }
+      },
+      "de": {
+        "app": { "title": "Tippen zum Fliegen" },
+        "home": {
+          "score": "Punkte: {{ global.currentScore }}",
+          "best": "Bestwert: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Spiel vorbei",
+          "message": "Punkte: {{ params.score }}\nBestwert: {{ global.bestScore }}",
+          "close": "Schließen",
+          "restart": "Nochmal spielen"
+        }
+      },
+      "es": {
+        "app": { "title": "Toca para volar" },
+        "home": {
+          "score": "Puntuación: {{ global.currentScore }}",
+          "best": "Mejor: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Fin del juego",
+          "message": "Puntuación: {{ params.score }}\nMejor: {{ global.bestScore }}",
+          "close": "Cerrar",
+          "restart": "Jugar de nuevo"
+        }
+      },
+      "fr": {
+        "app": { "title": "Touchez pour voler" },
+        "home": {
+          "score": "Score : {{ global.currentScore }}",
+          "best": "Meilleur : {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Partie terminée",
+          "message": "Score : {{ params.score }}\nMeilleur : {{ global.bestScore }}",
+          "close": "Fermer",
+          "restart": "Rejouer"
+        }
+      },
+      "pt": {
+        "app": { "title": "Toque para voar" },
+        "home": {
+          "score": "Pontuação: {{ global.currentScore }}",
+          "best": "Melhor: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Fim de jogo",
+          "message": "Pontuação: {{ params.score }}\nMelhor: {{ global.bestScore }}",
+          "close": "Fechar",
+          "restart": "Jogar de novo"
+        }
+      },
+      "ca": {
+        "app": { "title": "Toca per volar" },
+        "home": {
+          "score": "Puntuació: {{ global.currentScore }}",
+          "best": "Millor: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Fi del joc",
+          "message": "Puntuació: {{ params.score }}\nMillor: {{ global.bestScore }}",
+          "close": "Tanca",
+          "restart": "Torna a jugar"
+        }
+      },
+      "hi": {
+        "app": { "title": "उड़ने के लिए टैप करें" },
+        "home": {
+          "score": "स्कोर: {{ global.currentScore }}",
+          "best": "सर्वश्रेष्ठ: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "खेल खत्म",
+          "message": "स्कोर: {{ params.score }}\nसर्वश्रेष्ठ: {{ global.bestScore }}",
+          "close": "बंद करें",
+          "restart": "फिर से खेलें"
+        }
+      },
+      "ko": {
+        "app": { "title": "탭하여 날기" },
+        "home": {
+          "score": "점수: {{ global.currentScore }}",
+          "best": "최고: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "게임 오버",
+          "message": "점수: {{ params.score }}\n최고: {{ global.bestScore }}",
+          "close": "닫기",
+          "restart": "다시 하기"
+        }
+      },
+      "ja": {
+        "app": { "title": "タップで飛ぶ" },
+        "home": {
+          "score": "スコア：{{ global.currentScore }}",
+          "best": "ベスト：{{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "ゲームオーバー",
+          "message": "スコア：{{ params.score }}\nベスト：{{ global.bestScore }}",
+          "close": "閉じる",
+          "restart": "もう一度"
+        }
+      },
+      "it": {
+        "app": { "title": "Tocca per volare" },
+        "home": {
+          "score": "Punteggio: {{ global.currentScore }}",
+          "best": "Record: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Game Over",
+          "message": "Punteggio: {{ params.score }}\nRecord: {{ global.bestScore }}",
+          "close": "Chiudi",
+          "restart": "Gioca ancora"
+        }
+      }
     }
   },
   "steps": [],
@@ -139,9 +297,9 @@
     "screens": [
       {
         "id": "home",
-        "title": "点击飞行",
+        "title": "{{ t('app.title') }}",
         "appBar": {
-          "title": "点击飞行",
+          "title": "{{ t('app.title') }}",
           "centerTitle": true,
           "backgroundColor": "#5C9FB8",
           "color": "#FFFFFF",
@@ -167,7 +325,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "得分：{{ global.currentScore }}",
+                "value": "{{ t('home.score') }}",
                 "style": {
                   "fontSize": 16,
                   "color": "#FFFFFF",
@@ -180,7 +338,7 @@
               },
               {
                 "type": "text",
-                "value": "最佳：{{ global.bestScore }}",
+                "value": "{{ t('home.best') }}",
                 "style": {
                   "fontSize": 14,
                   "color": "#FFF8DC"

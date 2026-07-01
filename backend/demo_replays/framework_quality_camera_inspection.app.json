@@ -6,7 +6,20 @@
     "type": "app",
     "description": "拍照记录设备状态，生成巡检单",
     "author": "fish",
-    "displayName": "拍照巡检"
+    "displayName": {
+      "default": "拍照巡检",
+      "zh": "拍照巡检",
+      "en": "Photo Inspection",
+      "de": "Foto-Inspektion",
+      "es": "Inspección con fotos",
+      "fr": "Inspection photo",
+      "pt": "Inspeção por foto",
+      "ca": "Inspecció amb fotos",
+      "hi": "फ़ोटो निरीक्षण",
+      "ko": "사진 점검",
+      "ja": "写真点検",
+      "it": "Ispezione fotografica"
+    }
   },
   "dependencies": {},
   "global": {
@@ -428,7 +441,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "巡检单已提交"
+              "message": "{{ t('toast.submitted') }}"
             }
           },
           {
@@ -1099,7 +1112,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "巡检记录已删除"
+              "message": "{{ t('toast.deleted') }}"
             }
           },
           {
@@ -1110,6 +1123,415 @@
           }
         ]
       }
+    },
+    "i18n": {
+      "zh": {
+        "app": {
+          "title": "拍照巡检"
+        },
+        "home": {
+          "records": "巡检记录",
+          "totalCount": "巡检总数",
+          "startHint": "点击下方开始",
+          "startBtn": "开始新巡检",
+          "empty": "暂无巡检记录，点击上方按钮开始第一次巡检"
+        },
+        "new": {
+          "title": "新建巡检",
+          "mustPhoto": "必拍",
+          "photoPickerHint": "点击拍摄设备照片",
+          "equipNameHint": "输入设备名称或编号",
+          "checkItems": "检查项",
+          "notesHint": "补充说明或异常记录",
+          "submitBtn": "提交巡检单"
+        },
+        "field": {
+          "equipName": "设备名称",
+          "notes": "备注"
+        },
+        "detail": {
+          "title": "巡检详情",
+          "noPhoto": "无照片",
+          "date": "巡检日期",
+          "score": "评分",
+          "checkResult": "检查结果",
+          "backBtn": "返回列表"
+        },
+        "toast": {
+          "submitted": "巡检单已提交",
+          "deleted": "巡检记录已删除"
+        }
+      },
+      "en": {
+        "app": {
+          "title": "Photo Inspection"
+        },
+        "home": {
+          "records": "Inspection Records",
+          "totalCount": "Total Inspections",
+          "startHint": "Tap below to start",
+          "startBtn": "Start New Inspection",
+          "empty": "No inspection records yet. Tap the button above to start your first inspection."
+        },
+        "new": {
+          "title": "New Inspection",
+          "mustPhoto": "Required",
+          "photoPickerHint": "Tap to photograph the equipment",
+          "equipNameHint": "Enter equipment name or number",
+          "checkItems": "Checklist",
+          "notesHint": "Additional notes or anomalies",
+          "submitBtn": "Submit Inspection"
+        },
+        "field": {
+          "equipName": "Equipment Name",
+          "notes": "Notes"
+        },
+        "detail": {
+          "title": "Inspection Details",
+          "noPhoto": "No photo",
+          "date": "Inspection Date",
+          "score": "Score",
+          "checkResult": "Check Results",
+          "backBtn": "Back to List"
+        },
+        "toast": {
+          "submitted": "Inspection submitted",
+          "deleted": "Inspection record deleted"
+        }
+      },
+      "de": {
+        "app": {
+          "title": "Foto-Inspektion"
+        },
+        "home": {
+          "records": "Inspektionsprotokolle",
+          "totalCount": "Inspektionen gesamt",
+          "startHint": "Unten tippen zum Starten",
+          "startBtn": "Neue Inspektion starten",
+          "empty": "Noch keine Inspektionsprotokolle. Tippen Sie oben auf die Schaltfläche, um Ihre erste Inspektion zu starten."
+        },
+        "new": {
+          "title": "Neue Inspektion",
+          "mustPhoto": "Pflicht",
+          "photoPickerHint": "Tippen, um die Anlage zu fotografieren",
+          "equipNameHint": "Anlagenname oder -nummer eingeben",
+          "checkItems": "Prüfpunkte",
+          "notesHint": "Zusätzliche Hinweise oder Auffälligkeiten",
+          "submitBtn": "Inspektion absenden"
+        },
+        "field": {
+          "equipName": "Anlagenname",
+          "notes": "Notizen"
+        },
+        "detail": {
+          "title": "Inspektionsdetails",
+          "noPhoto": "Kein Foto",
+          "date": "Inspektionsdatum",
+          "score": "Bewertung",
+          "checkResult": "Prüfergebnisse",
+          "backBtn": "Zurück zur Liste"
+        },
+        "toast": {
+          "submitted": "Inspektion gesendet",
+          "deleted": "Inspektionsprotokoll gelöscht"
+        }
+      },
+      "es": {
+        "app": {
+          "title": "Inspección con fotos"
+        },
+        "home": {
+          "records": "Registros de inspección",
+          "totalCount": "Total de inspecciones",
+          "startHint": "Toca abajo para empezar",
+          "startBtn": "Iniciar nueva inspección",
+          "empty": "Aún no hay registros de inspección. Toca el botón de arriba para iniciar tu primera inspección."
+        },
+        "new": {
+          "title": "Nueva inspección",
+          "mustPhoto": "Obligatorio",
+          "photoPickerHint": "Toca para fotografiar el equipo",
+          "equipNameHint": "Introduce el nombre o número del equipo",
+          "checkItems": "Elementos de verificación",
+          "notesHint": "Notas adicionales o anomalías",
+          "submitBtn": "Enviar inspección"
+        },
+        "field": {
+          "equipName": "Nombre del equipo",
+          "notes": "Notas"
+        },
+        "detail": {
+          "title": "Detalles de la inspección",
+          "noPhoto": "Sin foto",
+          "date": "Fecha de inspección",
+          "score": "Puntuación",
+          "checkResult": "Resultados de verificación",
+          "backBtn": "Volver a la lista"
+        },
+        "toast": {
+          "submitted": "Inspección enviada",
+          "deleted": "Registro de inspección eliminado"
+        }
+      },
+      "fr": {
+        "app": {
+          "title": "Inspection photo"
+        },
+        "home": {
+          "records": "Registres d'inspection",
+          "totalCount": "Total des inspections",
+          "startHint": "Touchez ci-dessous pour commencer",
+          "startBtn": "Démarrer une nouvelle inspection",
+          "empty": "Aucun registre d'inspection pour le moment. Touchez le bouton ci-dessus pour démarrer votre première inspection."
+        },
+        "new": {
+          "title": "Nouvelle inspection",
+          "mustPhoto": "Obligatoire",
+          "photoPickerHint": "Touchez pour photographier l'équipement",
+          "equipNameHint": "Saisissez le nom ou le numéro de l'équipement",
+          "checkItems": "Points de contrôle",
+          "notesHint": "Remarques supplémentaires ou anomalies",
+          "submitBtn": "Soumettre l'inspection"
+        },
+        "field": {
+          "equipName": "Nom de l'équipement",
+          "notes": "Notes"
+        },
+        "detail": {
+          "title": "Détails de l'inspection",
+          "noPhoto": "Aucune photo",
+          "date": "Date d'inspection",
+          "score": "Note",
+          "checkResult": "Résultats du contrôle",
+          "backBtn": "Retour à la liste"
+        },
+        "toast": {
+          "submitted": "Inspection soumise",
+          "deleted": "Registre d'inspection supprimé"
+        }
+      },
+      "pt": {
+        "app": {
+          "title": "Inspeção por foto"
+        },
+        "home": {
+          "records": "Registros de inspeção",
+          "totalCount": "Total de inspeções",
+          "startHint": "Toque abaixo para começar",
+          "startBtn": "Iniciar nova inspeção",
+          "empty": "Ainda não há registros de inspeção. Toque no botão acima para iniciar sua primeira inspeção."
+        },
+        "new": {
+          "title": "Nova inspeção",
+          "mustPhoto": "Obrigatório",
+          "photoPickerHint": "Toque para fotografar o equipamento",
+          "equipNameHint": "Insira o nome ou número do equipamento",
+          "checkItems": "Itens de verificação",
+          "notesHint": "Observações adicionais ou anomalias",
+          "submitBtn": "Enviar inspeção"
+        },
+        "field": {
+          "equipName": "Nome do equipamento",
+          "notes": "Notas"
+        },
+        "detail": {
+          "title": "Detalhes da inspeção",
+          "noPhoto": "Sem foto",
+          "date": "Data da inspeção",
+          "score": "Pontuação",
+          "checkResult": "Resultados da verificação",
+          "backBtn": "Voltar à lista"
+        },
+        "toast": {
+          "submitted": "Inspeção enviada",
+          "deleted": "Registro de inspeção excluído"
+        }
+      },
+      "ca": {
+        "app": {
+          "title": "Inspecció amb fotos"
+        },
+        "home": {
+          "records": "Registres d'inspecció",
+          "totalCount": "Total d'inspeccions",
+          "startHint": "Toca a sota per començar",
+          "startBtn": "Inicia una nova inspecció",
+          "empty": "Encara no hi ha registres d'inspecció. Toca el botó de dalt per iniciar la teva primera inspecció."
+        },
+        "new": {
+          "title": "Nova inspecció",
+          "mustPhoto": "Obligatori",
+          "photoPickerHint": "Toca per fotografiar l'equip",
+          "equipNameHint": "Introdueix el nom o número de l'equip",
+          "checkItems": "Punts de comprovació",
+          "notesHint": "Notes addicionals o anomalies",
+          "submitBtn": "Envia la inspecció"
+        },
+        "field": {
+          "equipName": "Nom de l'equip",
+          "notes": "Notes"
+        },
+        "detail": {
+          "title": "Detalls de la inspecció",
+          "noPhoto": "Sense foto",
+          "date": "Data d'inspecció",
+          "score": "Puntuació",
+          "checkResult": "Resultats de la comprovació",
+          "backBtn": "Torna a la llista"
+        },
+        "toast": {
+          "submitted": "Inspecció enviada",
+          "deleted": "Registre d'inspecció eliminat"
+        }
+      },
+      "hi": {
+        "app": {
+          "title": "फ़ोटो निरीक्षण"
+        },
+        "home": {
+          "records": "निरीक्षण रिकॉर्ड",
+          "totalCount": "कुल निरीक्षण",
+          "startHint": "शुरू करने के लिए नीचे टैप करें",
+          "startBtn": "नया निरीक्षण शुरू करें",
+          "empty": "अभी तक कोई निरीक्षण रिकॉर्ड नहीं है। अपना पहला निरीक्षण शुरू करने के लिए ऊपर दिए गए बटन पर टैप करें।"
+        },
+        "new": {
+          "title": "नया निरीक्षण",
+          "mustPhoto": "आवश्यक",
+          "photoPickerHint": "उपकरण की फ़ोटो लेने के लिए टैप करें",
+          "equipNameHint": "उपकरण का नाम या नंबर दर्ज करें",
+          "checkItems": "जाँच सूची",
+          "notesHint": "अतिरिक्त टिप्पणियाँ या असामान्यताएँ",
+          "submitBtn": "निरीक्षण सबमिट करें"
+        },
+        "field": {
+          "equipName": "उपकरण का नाम",
+          "notes": "टिप्पणियाँ"
+        },
+        "detail": {
+          "title": "निरीक्षण विवरण",
+          "noPhoto": "कोई फ़ोटो नहीं",
+          "date": "निरीक्षण तिथि",
+          "score": "स्कोर",
+          "checkResult": "जाँच परिणाम",
+          "backBtn": "सूची पर वापस जाएँ"
+        },
+        "toast": {
+          "submitted": "निरीक्षण सबमिट किया गया",
+          "deleted": "निरीक्षण रिकॉर्ड हटाया गया"
+        }
+      },
+      "ko": {
+        "app": {
+          "title": "사진 점검"
+        },
+        "home": {
+          "records": "점검 기록",
+          "totalCount": "총 점검 수",
+          "startHint": "아래를 눌러 시작하세요",
+          "startBtn": "새 점검 시작",
+          "empty": "아직 점검 기록이 없습니다. 위 버튼을 눌러 첫 점검을 시작하세요."
+        },
+        "new": {
+          "title": "새 점검",
+          "mustPhoto": "필수",
+          "photoPickerHint": "장비를 촬영하려면 탭하세요",
+          "equipNameHint": "장비 이름 또는 번호 입력",
+          "checkItems": "점검 항목",
+          "notesHint": "추가 설명 또는 이상 사항",
+          "submitBtn": "점검 제출"
+        },
+        "field": {
+          "equipName": "장비 이름",
+          "notes": "비고"
+        },
+        "detail": {
+          "title": "점검 상세",
+          "noPhoto": "사진 없음",
+          "date": "점검 날짜",
+          "score": "점수",
+          "checkResult": "점검 결과",
+          "backBtn": "목록으로 돌아가기"
+        },
+        "toast": {
+          "submitted": "점검이 제출되었습니다",
+          "deleted": "점검 기록이 삭제되었습니다"
+        }
+      },
+      "ja": {
+        "app": {
+          "title": "写真点検"
+        },
+        "home": {
+          "records": "点検記録",
+          "totalCount": "点検総数",
+          "startHint": "下をタップして開始",
+          "startBtn": "新しい点検を開始",
+          "empty": "点検記録はまだありません。上のボタンをタップして最初の点検を始めましょう。"
+        },
+        "new": {
+          "title": "新規点検",
+          "mustPhoto": "必須",
+          "photoPickerHint": "設備を撮影するにはタップ",
+          "equipNameHint": "設備名または番号を入力",
+          "checkItems": "点検項目",
+          "notesHint": "補足説明や異常の記録",
+          "submitBtn": "点検票を提出"
+        },
+        "field": {
+          "equipName": "設備名",
+          "notes": "備考"
+        },
+        "detail": {
+          "title": "点検の詳細",
+          "noPhoto": "写真なし",
+          "date": "点検日",
+          "score": "評価",
+          "checkResult": "点検結果",
+          "backBtn": "一覧に戻る"
+        },
+        "toast": {
+          "submitted": "点検票を提出しました",
+          "deleted": "点検記録を削除しました"
+        }
+      },
+      "it": {
+        "app": {
+          "title": "Ispezione fotografica"
+        },
+        "home": {
+          "records": "Registri di ispezione",
+          "totalCount": "Ispezioni totali",
+          "startHint": "Tocca sotto per iniziare",
+          "startBtn": "Avvia nuova ispezione",
+          "empty": "Ancora nessun registro di ispezione. Tocca il pulsante qui sopra per avviare la tua prima ispezione."
+        },
+        "new": {
+          "title": "Nuova ispezione",
+          "mustPhoto": "Obbligatorio",
+          "photoPickerHint": "Tocca per fotografare l'attrezzatura",
+          "equipNameHint": "Inserisci nome o numero dell'attrezzatura",
+          "checkItems": "Voci di controllo",
+          "notesHint": "Note aggiuntive o anomalie",
+          "submitBtn": "Invia ispezione"
+        },
+        "field": {
+          "equipName": "Nome dell'attrezzatura",
+          "notes": "Note"
+        },
+        "detail": {
+          "title": "Dettagli dell'ispezione",
+          "noPhoto": "Nessuna foto",
+          "date": "Data dell'ispezione",
+          "score": "Punteggio",
+          "checkResult": "Risultati del controllo",
+          "backBtn": "Torna all'elenco"
+        },
+        "toast": {
+          "submitted": "Ispezione inviata",
+          "deleted": "Registro di ispezione eliminato"
+        }
+      }
     }
   },
   "steps": [],
@@ -1117,7 +1539,7 @@
     "screens": [
       {
         "id": "home",
-        "title": "巡检记录",
+        "title": "{{ t('home.records') }}",
         "layout": "column",
         "children": [
           {
@@ -1151,7 +1573,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "巡检总数",
+                      "value": "{{ t('home.totalCount') }}",
                       "style": {
                         "fontSize": 12,
                         "color": "#6B7280"
@@ -1191,7 +1613,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "点击下方开始",
+                      "value": "{{ t('home.startHint') }}",
                       "style": {
                         "fontSize": 12,
                         "color": "#6B7280"
@@ -1210,7 +1632,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "开始新巡检",
+                "label": "{{ t('home.startBtn') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.startNewInspection",
@@ -1235,7 +1657,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "巡检记录",
+                "value": "{{ t('home.records') }}",
                 "style": {
                   "fontSize": 17,
                   "fontWeight": "bold",
@@ -1261,7 +1683,7 @@
           {
             "type": "list",
             "source": "{{ global.inspections }}",
-            "emptyText": "暂无巡检记录，点击上方按钮开始第一次巡检",
+            "emptyText": "{{ t('home.empty') }}",
             "item_template": {
               "type": "card",
               "layout": "row",
@@ -1411,7 +1833,7 @@
         ],
         "backgroundColor": "#F3F7F6",
         "appBar": {
-          "title": "拍照巡检",
+          "title": "{{ t('app.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -1420,7 +1842,7 @@
       },
       {
         "id": "new_inspection",
-        "title": "新建巡检",
+        "title": "{{ t('new.title') }}",
         "layout": "column",
         "children": [
           {
@@ -1434,14 +1856,14 @@
             "children": [
               {
                 "type": "badge",
-                "label": "必拍",
+                "label": "{{ t('new.mustPhoto') }}",
                 "color": "#DC2626",
                 "textColor": "#FFFFFF",
                 "child": {
                   "type": "image_picker",
                   "source": "camera",
                   "bind": "global.currentPhotoPath",
-                  "placeholder": "点击拍摄设备照片",
+                  "placeholder": "{{ t('new.photoPickerHint') }}",
                   "height": 220,
                   "borderRadius": 16,
                   "onChange": {
@@ -1475,7 +1897,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "设备名称",
+                "value": "{{ t('field.equipName') }}",
                 "style": {
                   "fontSize": 15,
                   "fontWeight": "600",
@@ -1488,7 +1910,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "输入设备名称或编号",
+                "placeholder": "{{ t('new.equipNameHint') }}",
                 "bind": "global.currentEquipmentName",
                 "style": {
                   "fontSize": 15,
@@ -1509,7 +1931,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "检查项",
+                "value": "{{ t('new.checkItems') }}",
                 "style": {
                   "fontSize": 15,
                   "fontWeight": "600",
@@ -1574,7 +1996,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "备注",
+                "value": "{{ t('field.notes') }}",
                 "style": {
                   "fontSize": 15,
                   "fontWeight": "600",
@@ -1587,7 +2009,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "补充说明或异常记录",
+                "placeholder": "{{ t('new.notesHint') }}",
                 "bind": "global.currentNotes",
                 "maxLines": 3,
                 "style": {
@@ -1604,7 +2026,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "提交巡检单",
+                "label": "{{ t('new.submitBtn') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.submitInspection",
@@ -1626,7 +2048,7 @@
         ],
         "backgroundColor": "#F3F7F6",
         "appBar": {
-          "title": "新建巡检",
+          "title": "{{ t('new.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -1653,7 +2075,7 @@
       },
       {
         "id": "inspection_detail",
-        "title": "巡检详情",
+        "title": "{{ t('detail.title') }}",
         "layout": "column",
         "children": [
           {
@@ -1669,7 +2091,7 @@
                 "type": "image",
                 "source": "{{ global.detailPhotoPath }}",
                 "height": 240,
-                "placeholder": "无照片",
+                "placeholder": "{{ t('detail.noPhoto') }}",
                 "borderRadius": 14
               }
             ]
@@ -1689,7 +2111,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "设备名称",
+                    "value": "{{ t('field.equipName') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#9CA3AF"
@@ -1727,7 +2149,7 @@
                       "children": [
                         {
                           "type": "text",
-                          "value": "巡检日期",
+                          "value": "{{ t('detail.date') }}",
                           "style": {
                             "fontSize": 11,
                             "color": "#9CA3AF"
@@ -1762,7 +2184,7 @@
                       "children": [
                         {
                           "type": "text",
-                          "value": "评分",
+                          "value": "{{ t('detail.score') }}",
                           "style": {
                             "fontSize": 11,
                             "color": "#9CA3AF"
@@ -1800,7 +2222,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "检查结果",
+                "value": "{{ t('detail.checkResult') }}",
                 "style": {
                   "fontSize": 15,
                   "fontWeight": "600",
@@ -2050,7 +2472,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "备注",
+                "value": "{{ t('field.notes') }}",
                 "style": {
                   "fontSize": 15,
                   "fontWeight": "600",
@@ -2078,7 +2500,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "返回列表",
+                "label": "{{ t('detail.backBtn') }}",
                 "variant": "outline",
                 "action": {
                   "call": "@navigate",
@@ -2102,7 +2524,7 @@
         ],
         "backgroundColor": "#F3F7F6",
         "appBar": {
-          "title": "巡检详情",
+          "title": "{{ t('detail.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",

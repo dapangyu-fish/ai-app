@@ -6,7 +6,20 @@
     "type": "app",
     "description": "功能完整的记账预算 App：收支记录、分类饼图/柱图、月度预算进度条。",
     "author": "fish",
-    "displayName": "记账预算"
+    "displayName": {
+      "default": "记账预算",
+      "zh": "记账预算",
+      "en": "Budget Tracker",
+      "de": "Budget-Tracker",
+      "es": "Control de presupuesto",
+      "fr": "Suivi de budget",
+      "pt": "Controle de orçamento",
+      "ca": "Control de pressupost",
+      "hi": "बजट ट्रैकर",
+      "ko": "예산 가계부",
+      "ja": "予算家計簿",
+      "it": "Gestione budget"
+    }
   },
   "dependencies": {},
   "global": {
@@ -763,7 +776,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已记录（示例数据，未持久化）"
+              "message": "{{ t('toast.saved') }}"
             }
           },
           {
@@ -774,6 +787,712 @@
           }
         ]
       }
+    },
+    "i18n": {
+      "zh": {
+        "cat": {
+          "food": "餐饮",
+          "transport": "交通",
+          "shopping": "购物",
+          "home": "居家",
+          "entertainment": "娱乐",
+          "medical": "医疗",
+          "study": "学习",
+          "comm": "通讯",
+          "salary": "工资",
+          "finance": "理财",
+          "other": "其他"
+        },
+        "home": {
+          "appbar": "记账",
+          "balance": "本月结余",
+          "expense": "支出 ¥4,860",
+          "income": "收入 ¥14,036",
+          "budgetProgress": "总预算进度",
+          "quickTitle": "快捷记账",
+          "recentTitle": "最近记录",
+          "recentSubtitle": "共 23 笔 · 覆盖 6 月",
+          "empty": "暂无记录"
+        },
+        "detail": {
+          "title": "交易详情",
+          "date": "日期",
+          "note": "备注",
+          "back": "返回列表"
+        },
+        "charts": {
+          "title": "分类图表",
+          "pieTitle": "支出分类占比",
+          "pieSubtitle": "共 ¥4,860",
+          "barTitle": "分类支出对比",
+          "barSubtitle": "金额 (元)",
+          "lineTitle": "近 7 天支出趋势",
+          "lineSubtitle": "日合计 (元)"
+        },
+        "budgets": {
+          "title": "月度预算",
+          "totalLabel": "本月总预算",
+          "spent": "已支出 ¥4,860",
+          "remaining": "剩余 ¥2,040",
+          "categoryTitle": "分类预算",
+          "categoryHint": "点击右侧按钮管理预算",
+          "usedPct": "已用 {{ loop.item.pct }}%"
+        },
+        "add": {
+          "title": "记一笔",
+          "typeLabel": "类型",
+          "expense": "支出",
+          "income": "收入",
+          "amountLabel": "金额",
+          "categoryLabel": "分类",
+          "noteLabel": "说明",
+          "notePlaceholder": "例如 午餐、地铁、工资",
+          "saveBtn": "保存"
+        },
+        "toast": {
+          "saved": "已记录（示例数据，未持久化）"
+        }
+      },
+      "en": {
+        "cat": {
+          "food": "Dining",
+          "transport": "Transport",
+          "shopping": "Shopping",
+          "home": "Household",
+          "entertainment": "Entertainment",
+          "medical": "Medical",
+          "study": "Education",
+          "comm": "Telecom",
+          "salary": "Salary",
+          "finance": "Investments",
+          "other": "Other"
+        },
+        "home": {
+          "appbar": "Ledger",
+          "balance": "This month's balance",
+          "expense": "Expenses ¥4,860",
+          "income": "Income ¥14,036",
+          "budgetProgress": "Total budget progress",
+          "quickTitle": "Quick add",
+          "recentTitle": "Recent records",
+          "recentSubtitle": "23 entries · June",
+          "empty": "No records yet"
+        },
+        "detail": {
+          "title": "Transaction details",
+          "date": "Date",
+          "note": "Note",
+          "back": "Back to list"
+        },
+        "charts": {
+          "title": "Category charts",
+          "pieTitle": "Expense breakdown by category",
+          "pieSubtitle": "Total ¥4,860",
+          "barTitle": "Spending by category",
+          "barSubtitle": "Amount (¥)",
+          "lineTitle": "Last 7 days spending trend",
+          "lineSubtitle": "Daily total (¥)"
+        },
+        "budgets": {
+          "title": "Monthly budget",
+          "totalLabel": "This month's total budget",
+          "spent": "Spent ¥4,860",
+          "remaining": "Remaining ¥2,040",
+          "categoryTitle": "Category budgets",
+          "categoryHint": "Tap the button on the right to manage budgets",
+          "usedPct": "Used {{ loop.item.pct }}%"
+        },
+        "add": {
+          "title": "Add Entry",
+          "typeLabel": "Type",
+          "expense": "Expense",
+          "income": "Income",
+          "amountLabel": "Amount",
+          "categoryLabel": "Category",
+          "noteLabel": "Description",
+          "notePlaceholder": "e.g. lunch, subway, salary",
+          "saveBtn": "Save"
+        },
+        "toast": {
+          "saved": "Recorded (sample data, not saved)"
+        }
+      },
+      "de": {
+        "cat": {
+          "food": "Essen",
+          "transport": "Transport",
+          "shopping": "Einkaufen",
+          "home": "Wohnen",
+          "entertainment": "Unterhaltung",
+          "medical": "Gesundheit",
+          "study": "Bildung",
+          "comm": "Kommunikation",
+          "salary": "Gehalt",
+          "finance": "Geldanlage",
+          "other": "Sonstiges"
+        },
+        "home": {
+          "appbar": "Kassenbuch",
+          "balance": "Saldo dieses Monats",
+          "expense": "Ausgaben ¥4,860",
+          "income": "Einnahmen ¥14,036",
+          "budgetProgress": "Gesamtbudget-Fortschritt",
+          "quickTitle": "Schnell erfassen",
+          "recentTitle": "Letzte Einträge",
+          "recentSubtitle": "23 Einträge · Juni",
+          "empty": "Noch keine Einträge"
+        },
+        "detail": {
+          "title": "Transaktionsdetails",
+          "date": "Datum",
+          "note": "Notiz",
+          "back": "Zurück zur Liste"
+        },
+        "charts": {
+          "title": "Kategorie-Diagramme",
+          "pieTitle": "Ausgaben nach Kategorie",
+          "pieSubtitle": "Gesamt ¥4,860",
+          "barTitle": "Ausgabenvergleich nach Kategorie",
+          "barSubtitle": "Betrag (¥)",
+          "lineTitle": "Ausgabentrend der letzten 7 Tage",
+          "lineSubtitle": "Tagessumme (¥)"
+        },
+        "budgets": {
+          "title": "Monatsbudget",
+          "totalLabel": "Gesamtbudget dieses Monats",
+          "spent": "Ausgegeben ¥4,860",
+          "remaining": "Verbleibend ¥2,040",
+          "categoryTitle": "Budgets nach Kategorie",
+          "categoryHint": "Tippe auf die Schaltfläche rechts, um Budgets zu verwalten",
+          "usedPct": "{{ loop.item.pct }}% genutzt"
+        },
+        "add": {
+          "title": "Neuer Eintrag",
+          "typeLabel": "Typ",
+          "expense": "Ausgabe",
+          "income": "Einnahme",
+          "amountLabel": "Betrag",
+          "categoryLabel": "Kategorie",
+          "noteLabel": "Beschreibung",
+          "notePlaceholder": "z. B. Mittagessen, U-Bahn, Gehalt",
+          "saveBtn": "Speichern"
+        },
+        "toast": {
+          "saved": "Erfasst (Beispieldaten, nicht gespeichert)"
+        }
+      },
+      "es": {
+        "cat": {
+          "food": "Comida",
+          "transport": "Transporte",
+          "shopping": "Compras",
+          "home": "Hogar",
+          "entertainment": "Ocio",
+          "medical": "Salud",
+          "study": "Educación",
+          "comm": "Comunicaciones",
+          "salary": "Salario",
+          "finance": "Inversiones",
+          "other": "Otros"
+        },
+        "home": {
+          "appbar": "Cuentas",
+          "balance": "Saldo de este mes",
+          "expense": "Gastos ¥4,860",
+          "income": "Ingresos ¥14,036",
+          "budgetProgress": "Progreso del presupuesto total",
+          "quickTitle": "Registro rápido",
+          "recentTitle": "Registros recientes",
+          "recentSubtitle": "23 registros · junio",
+          "empty": "Aún no hay registros"
+        },
+        "detail": {
+          "title": "Detalles de la transacción",
+          "date": "Fecha",
+          "note": "Nota",
+          "back": "Volver a la lista"
+        },
+        "charts": {
+          "title": "Gráficos por categoría",
+          "pieTitle": "Distribución de gastos por categoría",
+          "pieSubtitle": "Total ¥4,860",
+          "barTitle": "Comparación de gastos por categoría",
+          "barSubtitle": "Importe (¥)",
+          "lineTitle": "Tendencia de gastos de los últimos 7 días",
+          "lineSubtitle": "Total diario (¥)"
+        },
+        "budgets": {
+          "title": "Presupuesto mensual",
+          "totalLabel": "Presupuesto total de este mes",
+          "spent": "Gastado ¥4,860",
+          "remaining": "Restante ¥2,040",
+          "categoryTitle": "Presupuestos por categoría",
+          "categoryHint": "Toca el botón de la derecha para gestionar los presupuestos",
+          "usedPct": "{{ loop.item.pct }}% usado"
+        },
+        "add": {
+          "title": "Nuevo registro",
+          "typeLabel": "Tipo",
+          "expense": "Gasto",
+          "income": "Ingreso",
+          "amountLabel": "Importe",
+          "categoryLabel": "Categoría",
+          "noteLabel": "Descripción",
+          "notePlaceholder": "p. ej. almuerzo, metro, salario",
+          "saveBtn": "Guardar"
+        },
+        "toast": {
+          "saved": "Registrado (datos de ejemplo, no guardados)"
+        }
+      },
+      "fr": {
+        "cat": {
+          "food": "Repas",
+          "transport": "Transport",
+          "shopping": "Achats",
+          "home": "Logement",
+          "entertainment": "Loisirs",
+          "medical": "Santé",
+          "study": "Éducation",
+          "comm": "Télécom",
+          "salary": "Salaire",
+          "finance": "Finances",
+          "other": "Autres"
+        },
+        "home": {
+          "appbar": "Comptes",
+          "balance": "Solde du mois",
+          "expense": "Dépenses ¥4,860",
+          "income": "Revenus ¥14,036",
+          "budgetProgress": "Progression du budget total",
+          "quickTitle": "Saisie rapide",
+          "recentTitle": "Entrées récentes",
+          "recentSubtitle": "23 entrées · juin",
+          "empty": "Aucune entrée pour le moment"
+        },
+        "detail": {
+          "title": "Détails de la transaction",
+          "date": "Date",
+          "note": "Note",
+          "back": "Retour à la liste"
+        },
+        "charts": {
+          "title": "Graphiques par catégorie",
+          "pieTitle": "Répartition des dépenses par catégorie",
+          "pieSubtitle": "Total ¥4,860",
+          "barTitle": "Comparaison des dépenses par catégorie",
+          "barSubtitle": "Montant (¥)",
+          "lineTitle": "Tendance des dépenses sur 7 jours",
+          "lineSubtitle": "Total quotidien (¥)"
+        },
+        "budgets": {
+          "title": "Budget mensuel",
+          "totalLabel": "Budget total du mois",
+          "spent": "Dépensé ¥4,860",
+          "remaining": "Restant ¥2,040",
+          "categoryTitle": "Budgets par catégorie",
+          "categoryHint": "Appuyez sur le bouton à droite pour gérer les budgets",
+          "usedPct": "{{ loop.item.pct }}% utilisé"
+        },
+        "add": {
+          "title": "Nouvelle entrée",
+          "typeLabel": "Type",
+          "expense": "Dépense",
+          "income": "Revenu",
+          "amountLabel": "Montant",
+          "categoryLabel": "Catégorie",
+          "noteLabel": "Description",
+          "notePlaceholder": "ex. déjeuner, métro, salaire",
+          "saveBtn": "Enregistrer"
+        },
+        "toast": {
+          "saved": "Enregistré (données d'exemple, non sauvegardées)"
+        }
+      },
+      "pt": {
+        "cat": {
+          "food": "Alimentação",
+          "transport": "Transporte",
+          "shopping": "Compras",
+          "home": "Moradia",
+          "entertainment": "Lazer",
+          "medical": "Saúde",
+          "study": "Educação",
+          "comm": "Telecom",
+          "salary": "Salário",
+          "finance": "Investimentos",
+          "other": "Outros"
+        },
+        "home": {
+          "appbar": "Contas",
+          "balance": "Saldo deste mês",
+          "expense": "Despesas ¥4,860",
+          "income": "Receitas ¥14,036",
+          "budgetProgress": "Progresso do orçamento total",
+          "quickTitle": "Registro rápido",
+          "recentTitle": "Registros recentes",
+          "recentSubtitle": "23 lançamentos · junho",
+          "empty": "Ainda não há registros"
+        },
+        "detail": {
+          "title": "Detalhes da transação",
+          "date": "Data",
+          "note": "Observação",
+          "back": "Voltar à lista"
+        },
+        "charts": {
+          "title": "Gráficos por categoria",
+          "pieTitle": "Distribuição de despesas por categoria",
+          "pieSubtitle": "Total ¥4,860",
+          "barTitle": "Comparação de despesas por categoria",
+          "barSubtitle": "Valor (¥)",
+          "lineTitle": "Tendência de gastos dos últimos 7 dias",
+          "lineSubtitle": "Total diário (¥)"
+        },
+        "budgets": {
+          "title": "Orçamento mensal",
+          "totalLabel": "Orçamento total deste mês",
+          "spent": "Gasto ¥4,860",
+          "remaining": "Restante ¥2,040",
+          "categoryTitle": "Orçamentos por categoria",
+          "categoryHint": "Toque no botão à direita para gerenciar os orçamentos",
+          "usedPct": "{{ loop.item.pct }}% usado"
+        },
+        "add": {
+          "title": "Novo lançamento",
+          "typeLabel": "Tipo",
+          "expense": "Despesa",
+          "income": "Receita",
+          "amountLabel": "Valor",
+          "categoryLabel": "Categoria",
+          "noteLabel": "Descrição",
+          "notePlaceholder": "ex.: almoço, metrô, salário",
+          "saveBtn": "Salvar"
+        },
+        "toast": {
+          "saved": "Registrado (dados de exemplo, não salvos)"
+        }
+      },
+      "ca": {
+        "cat": {
+          "food": "Menjar",
+          "transport": "Transport",
+          "shopping": "Compres",
+          "home": "Llar",
+          "entertainment": "Oci",
+          "medical": "Salut",
+          "study": "Educació",
+          "comm": "Comunicacions",
+          "salary": "Salari",
+          "finance": "Inversions",
+          "other": "Altres"
+        },
+        "home": {
+          "appbar": "Comptes",
+          "balance": "Saldo d'aquest mes",
+          "expense": "Despeses ¥4,860",
+          "income": "Ingressos ¥14,036",
+          "budgetProgress": "Progrés del pressupost total",
+          "quickTitle": "Registre ràpid",
+          "recentTitle": "Registres recents",
+          "recentSubtitle": "23 registres · juny",
+          "empty": "Encara no hi ha registres"
+        },
+        "detail": {
+          "title": "Detalls de la transacció",
+          "date": "Data",
+          "note": "Nota",
+          "back": "Tornar a la llista"
+        },
+        "charts": {
+          "title": "Gràfics per categoria",
+          "pieTitle": "Distribució de despeses per categoria",
+          "pieSubtitle": "Total ¥4,860",
+          "barTitle": "Comparació de despeses per categoria",
+          "barSubtitle": "Import (¥)",
+          "lineTitle": "Tendència de despeses dels últims 7 dies",
+          "lineSubtitle": "Total diari (¥)"
+        },
+        "budgets": {
+          "title": "Pressupost mensual",
+          "totalLabel": "Pressupost total d'aquest mes",
+          "spent": "Gastat ¥4,860",
+          "remaining": "Restant ¥2,040",
+          "categoryTitle": "Pressupostos per categoria",
+          "categoryHint": "Toca el botó de la dreta per gestionar els pressupostos",
+          "usedPct": "{{ loop.item.pct }}% utilitzat"
+        },
+        "add": {
+          "title": "Nou registre",
+          "typeLabel": "Tipus",
+          "expense": "Despesa",
+          "income": "Ingrés",
+          "amountLabel": "Import",
+          "categoryLabel": "Categoria",
+          "noteLabel": "Descripció",
+          "notePlaceholder": "p. ex. dinar, metro, salari",
+          "saveBtn": "Desa"
+        },
+        "toast": {
+          "saved": "Registrat (dades d'exemple, no desades)"
+        }
+      },
+      "hi": {
+        "cat": {
+          "food": "भोजन",
+          "transport": "परिवहन",
+          "shopping": "खरीदारी",
+          "home": "घर",
+          "entertainment": "मनोरंजन",
+          "medical": "चिकित्सा",
+          "study": "शिक्षा",
+          "comm": "संचार",
+          "salary": "वेतन",
+          "finance": "निवेश",
+          "other": "अन्य"
+        },
+        "home": {
+          "appbar": "बहीखाता",
+          "balance": "इस माह का शेष",
+          "expense": "व्यय ¥4,860",
+          "income": "आय ¥14,036",
+          "budgetProgress": "कुल बजट प्रगति",
+          "quickTitle": "त्वरित प्रविष्टि",
+          "recentTitle": "हाल की प्रविष्टियाँ",
+          "recentSubtitle": "23 प्रविष्टियाँ · जून",
+          "empty": "अभी कोई प्रविष्टि नहीं"
+        },
+        "detail": {
+          "title": "लेन-देन विवरण",
+          "date": "तारीख",
+          "note": "टिप्पणी",
+          "back": "सूची पर वापस"
+        },
+        "charts": {
+          "title": "श्रेणी चार्ट",
+          "pieTitle": "श्रेणी के अनुसार व्यय अनुपात",
+          "pieSubtitle": "कुल ¥4,860",
+          "barTitle": "श्रेणी-वार व्यय तुलना",
+          "barSubtitle": "राशि (¥)",
+          "lineTitle": "पिछले 7 दिनों का व्यय रुझान",
+          "lineSubtitle": "दैनिक कुल (¥)"
+        },
+        "budgets": {
+          "title": "मासिक बजट",
+          "totalLabel": "इस माह का कुल बजट",
+          "spent": "खर्च ¥4,860",
+          "remaining": "शेष ¥2,040",
+          "categoryTitle": "श्रेणी बजट",
+          "categoryHint": "बजट प्रबंधित करने के लिए दाईं ओर का बटन दबाएँ",
+          "usedPct": "{{ loop.item.pct }}% उपयोग"
+        },
+        "add": {
+          "title": "नई प्रविष्टि",
+          "typeLabel": "प्रकार",
+          "expense": "व्यय",
+          "income": "आय",
+          "amountLabel": "राशि",
+          "categoryLabel": "श्रेणी",
+          "noteLabel": "विवरण",
+          "notePlaceholder": "जैसे दोपहर का भोजन, मेट्रो, वेतन",
+          "saveBtn": "सहेजें"
+        },
+        "toast": {
+          "saved": "दर्ज किया गया (नमूना डेटा, सहेजा नहीं गया)"
+        }
+      },
+      "ko": {
+        "cat": {
+          "food": "식비",
+          "transport": "교통",
+          "shopping": "쇼핑",
+          "home": "주거",
+          "entertainment": "여가",
+          "medical": "의료",
+          "study": "교육",
+          "comm": "통신",
+          "salary": "급여",
+          "finance": "재테크",
+          "other": "기타"
+        },
+        "home": {
+          "appbar": "가계부",
+          "balance": "이번 달 잔액",
+          "expense": "지출 ¥4,860",
+          "income": "수입 ¥14,036",
+          "budgetProgress": "전체 예산 진행률",
+          "quickTitle": "빠른 입력",
+          "recentTitle": "최근 내역",
+          "recentSubtitle": "23건 · 6월",
+          "empty": "아직 내역이 없습니다"
+        },
+        "detail": {
+          "title": "거래 상세",
+          "date": "날짜",
+          "note": "메모",
+          "back": "목록으로 돌아가기"
+        },
+        "charts": {
+          "title": "분류 차트",
+          "pieTitle": "분류별 지출 비중",
+          "pieSubtitle": "합계 ¥4,860",
+          "barTitle": "분류별 지출 비교",
+          "barSubtitle": "금액 (¥)",
+          "lineTitle": "최근 7일 지출 추이",
+          "lineSubtitle": "일별 합계 (¥)"
+        },
+        "budgets": {
+          "title": "월간 예산",
+          "totalLabel": "이번 달 총예산",
+          "spent": "지출 ¥4,860",
+          "remaining": "남음 ¥2,040",
+          "categoryTitle": "분류별 예산",
+          "categoryHint": "예산을 관리하려면 오른쪽 버튼을 누르세요",
+          "usedPct": "{{ loop.item.pct }}% 사용"
+        },
+        "add": {
+          "title": "내역 추가",
+          "typeLabel": "유형",
+          "expense": "지출",
+          "income": "수입",
+          "amountLabel": "금액",
+          "categoryLabel": "분류",
+          "noteLabel": "설명",
+          "notePlaceholder": "예: 점심, 지하철, 급여",
+          "saveBtn": "저장"
+        },
+        "toast": {
+          "saved": "기록됨 (샘플 데이터, 저장 안 됨)"
+        }
+      },
+      "ja": {
+        "cat": {
+          "food": "食費",
+          "transport": "交通",
+          "shopping": "買い物",
+          "home": "住まい",
+          "entertainment": "娯楽",
+          "medical": "医療",
+          "study": "教育",
+          "comm": "通信",
+          "salary": "給料",
+          "finance": "資産運用",
+          "other": "その他"
+        },
+        "home": {
+          "appbar": "家計簿",
+          "balance": "今月の収支",
+          "expense": "支出 ¥4,860",
+          "income": "収入 ¥14,036",
+          "budgetProgress": "予算全体の進捗",
+          "quickTitle": "クイック入力",
+          "recentTitle": "最近の記録",
+          "recentSubtitle": "全23件 · 6月",
+          "empty": "まだ記録がありません"
+        },
+        "detail": {
+          "title": "取引の詳細",
+          "date": "日付",
+          "note": "メモ",
+          "back": "一覧に戻る"
+        },
+        "charts": {
+          "title": "カテゴリ別グラフ",
+          "pieTitle": "カテゴリ別支出の割合",
+          "pieSubtitle": "合計 ¥4,860",
+          "barTitle": "カテゴリ別支出の比較",
+          "barSubtitle": "金額 (¥)",
+          "lineTitle": "直近7日間の支出推移",
+          "lineSubtitle": "日合計 (¥)"
+        },
+        "budgets": {
+          "title": "月間予算",
+          "totalLabel": "今月の総予算",
+          "spent": "支出済み ¥4,860",
+          "remaining": "残り ¥2,040",
+          "categoryTitle": "カテゴリ別予算",
+          "categoryHint": "予算を管理するには右側のボタンをタップ",
+          "usedPct": "{{ loop.item.pct }}% 使用"
+        },
+        "add": {
+          "title": "新規記録",
+          "typeLabel": "種類",
+          "expense": "支出",
+          "income": "収入",
+          "amountLabel": "金額",
+          "categoryLabel": "カテゴリ",
+          "noteLabel": "説明",
+          "notePlaceholder": "例：ランチ、地下鉄、給料",
+          "saveBtn": "保存"
+        },
+        "toast": {
+          "saved": "記録しました（サンプルデータ、未保存）"
+        }
+      },
+      "it": {
+        "cat": {
+          "food": "Cibo",
+          "transport": "Trasporti",
+          "shopping": "Acquisti",
+          "home": "Casa",
+          "entertainment": "Svago",
+          "medical": "Salute",
+          "study": "Istruzione",
+          "comm": "Comunicazioni",
+          "salary": "Stipendio",
+          "finance": "Investimenti",
+          "other": "Altro"
+        },
+        "home": {
+          "appbar": "Conti",
+          "balance": "Saldo del mese",
+          "expense": "Spese ¥4,860",
+          "income": "Entrate ¥14,036",
+          "budgetProgress": "Avanzamento budget totale",
+          "quickTitle": "Inserimento rapido",
+          "recentTitle": "Voci recenti",
+          "recentSubtitle": "23 voci · giugno",
+          "empty": "Ancora nessuna voce"
+        },
+        "detail": {
+          "title": "Dettagli transazione",
+          "date": "Data",
+          "note": "Nota",
+          "back": "Torna alla lista"
+        },
+        "charts": {
+          "title": "Grafici per categoria",
+          "pieTitle": "Ripartizione delle spese per categoria",
+          "pieSubtitle": "Totale ¥4,860",
+          "barTitle": "Confronto delle spese per categoria",
+          "barSubtitle": "Importo (¥)",
+          "lineTitle": "Andamento delle spese degli ultimi 7 giorni",
+          "lineSubtitle": "Totale giornaliero (¥)"
+        },
+        "budgets": {
+          "title": "Budget mensile",
+          "totalLabel": "Budget totale del mese",
+          "spent": "Speso ¥4,860",
+          "remaining": "Rimanente ¥2,040",
+          "categoryTitle": "Budget per categoria",
+          "categoryHint": "Tocca il pulsante a destra per gestire i budget",
+          "usedPct": "{{ loop.item.pct }}% utilizzato"
+        },
+        "add": {
+          "title": "Nuova voce",
+          "typeLabel": "Tipo",
+          "expense": "Spesa",
+          "income": "Entrata",
+          "amountLabel": "Importo",
+          "categoryLabel": "Categoria",
+          "noteLabel": "Descrizione",
+          "notePlaceholder": "es. pranzo, metro, stipendio",
+          "saveBtn": "Salva"
+        },
+        "toast": {
+          "saved": "Registrato (dati di esempio, non salvati)"
+        }
+      }
     }
   },
   "steps": [],
@@ -781,7 +1500,7 @@
     "screens": [
       {
         "id": "home",
-        "title": "记账",
+        "title": "{{ t('home.appbar') }}",
         "layout": "column",
         "children": [
           {
@@ -795,7 +1514,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "本月结余",
+                "value": "{{ t('home.balance') }}",
                 "style": {
                   "fontSize": 13,
                   "color": "#6B7280"
@@ -841,7 +1560,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "支出 ¥4,860",
+                          "value": "{{ t('home.expense') }}",
                           "style": {
                             "fontSize": 13,
                             "color": "#374151"
@@ -874,7 +1593,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "收入 ¥14,036",
+                          "value": "{{ t('home.income') }}",
                           "style": {
                             "fontSize": 13,
                             "color": "#374151"
@@ -901,7 +1620,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "总预算进度",
+                        "value": "{{ t('home.budgetProgress') }}",
                         "style": {
                           "fontSize": 13,
                           "fontWeight": "600",
@@ -950,7 +1669,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "快捷记账",
+                "value": "{{ t('home.quickTitle') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -994,7 +1713,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "餐饮",
+                        "value": "{{ t('cat.food') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#374151"
@@ -1041,7 +1760,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "交通",
+                        "value": "{{ t('cat.transport') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#374151"
@@ -1088,7 +1807,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "购物",
+                        "value": "{{ t('cat.shopping') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#374151"
@@ -1135,7 +1854,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "居家",
+                        "value": "{{ t('cat.home') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#374151"
@@ -1182,7 +1901,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "娱乐",
+                        "value": "{{ t('cat.entertainment') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#374151"
@@ -1229,7 +1948,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "医疗",
+                        "value": "{{ t('cat.medical') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#374151"
@@ -1276,7 +1995,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "学习",
+                        "value": "{{ t('cat.study') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#374151"
@@ -1323,7 +2042,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "通讯",
+                        "value": "{{ t('cat.comm') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#374151"
@@ -1370,7 +2089,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "工资",
+                        "value": "{{ t('cat.salary') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#374151"
@@ -1417,7 +2136,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "理财",
+                        "value": "{{ t('cat.finance') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#374151"
@@ -1464,7 +2183,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "其他",
+                        "value": "{{ t('cat.other') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#374151"
@@ -1493,7 +2212,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "最近记录",
+                "value": "{{ t('home.recentTitle') }}",
                 "style": {
                   "fontSize": 16,
                   "fontWeight": "bold",
@@ -1506,7 +2225,7 @@
               },
               {
                 "type": "text",
-                "value": "共 23 笔 · 覆盖 6 月",
+                "value": "{{ t('home.recentSubtitle') }}",
                 "style": {
                   "fontSize": 12,
                   "color": "#9CA3AF"
@@ -1519,7 +2238,7 @@
             "type": "list",
             "source": "{{ global.txns }}",
             "shrinkWrap": true,
-            "emptyText": "暂无记录",
+            "emptyText": "{{ t('home.empty') }}",
             "item_template": {
               "type": "card",
               "layout": "column",
@@ -1635,7 +2354,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "记一笔",
+                "label": "{{ t('add.title') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@navigate",
@@ -1657,7 +2376,7 @@
         ],
         "backgroundColor": "#F3F7F6",
         "appBar": {
-          "title": "记账",
+          "title": "{{ t('home.appbar') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -1702,7 +2421,7 @@
       },
       {
         "id": "detail",
-        "title": "交易详情",
+        "title": "{{ t('detail.title') }}",
         "layout": "column",
         "children": [
           {
@@ -1784,7 +2503,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "日期",
+                    "value": "{{ t('detail.date') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#9CA3AF"
@@ -1814,7 +2533,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "备注",
+                    "value": "{{ t('detail.note') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#9CA3AF"
@@ -1841,7 +2560,7 @@
               },
               {
                 "type": "button",
-                "label": "返回列表",
+                "label": "{{ t('detail.back') }}",
                 "variant": "outlined",
                 "action": {
                   "call": "@navigate",
@@ -1860,7 +2579,7 @@
         ],
         "backgroundColor": "#F3F7F6",
         "appBar": {
-          "title": "交易详情",
+          "title": "{{ t('detail.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -1869,7 +2588,7 @@
       },
       {
         "id": "charts",
-        "title": "分类图表",
+        "title": "{{ t('charts.title') }}",
         "layout": "column",
         "children": [
           {
@@ -1887,7 +2606,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "支出分类占比",
+                    "value": "{{ t('charts.pieTitle') }}",
                     "style": {
                       "fontSize": 15,
                       "fontWeight": "bold",
@@ -1896,7 +2615,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "共 ¥4,860",
+                    "value": "{{ t('charts.pieSubtitle') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#6B7280"
@@ -1932,7 +2651,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "分类支出对比",
+                    "value": "{{ t('charts.barTitle') }}",
                     "style": {
                       "fontSize": 15,
                       "fontWeight": "bold",
@@ -1941,7 +2660,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "金额 (元)",
+                    "value": "{{ t('charts.barSubtitle') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#6B7280"
@@ -1977,7 +2696,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "近 7 天支出趋势",
+                    "value": "{{ t('charts.lineTitle') }}",
                     "style": {
                       "fontSize": 15,
                       "fontWeight": "bold",
@@ -1986,7 +2705,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "日合计 (元)",
+                    "value": "{{ t('charts.lineSubtitle') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#6B7280"
@@ -2007,7 +2726,7 @@
         ],
         "backgroundColor": "#F3F7F6",
         "appBar": {
-          "title": "分类图表",
+          "title": "{{ t('charts.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -2035,7 +2754,7 @@
       },
       {
         "id": "budgets",
-        "title": "月度预算",
+        "title": "{{ t('budgets.title') }}",
         "layout": "column",
         "children": [
           {
@@ -2049,7 +2768,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "本月总预算",
+                "value": "{{ t('budgets.totalLabel') }}",
                 "style": {
                   "fontSize": 13,
                   "color": "#6B7280"
@@ -2086,7 +2805,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "已支出 ¥4,860",
+                    "value": "{{ t('budgets.spent') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#374151"
@@ -2098,7 +2817,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "剩余 ¥2,040",
+                    "value": "{{ t('budgets.remaining') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#059669"
@@ -2115,7 +2834,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "分类预算",
+                "value": "{{ t('budgets.categoryTitle') }}",
                 "style": {
                   "fontSize": 16,
                   "fontWeight": "bold",
@@ -2128,7 +2847,7 @@
               },
               {
                 "type": "text",
-                "value": "点击右侧按钮管理预算",
+                "value": "{{ t('budgets.categoryHint') }}",
                 "style": {
                   "fontSize": 12,
                   "color": "#9CA3AF"
@@ -2229,7 +2948,7 @@
                             "children": [
                               {
                                 "type": "text",
-                                "value": "已用 {{ loop.item.pct }}%",
+                                "value": "{{ t('budgets.usedPct') }}",
                                 "style": {
                                   "fontSize": 11,
                                   "color": "{{ loop.item.bar_color }}",
@@ -2263,7 +2982,7 @@
         ],
         "backgroundColor": "#F3F7F6",
         "appBar": {
-          "title": "月度预算",
+          "title": "{{ t('budgets.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -2291,7 +3010,7 @@
       },
       {
         "id": "add",
-        "title": "记一笔",
+        "title": "{{ t('add.title') }}",
         "layout": "column",
         "children": [
           {
@@ -2309,7 +3028,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "类型",
+                    "value": "{{ t('add.typeLabel') }}",
                     "style": {
                       "fontSize": 14,
                       "fontWeight": "600",
@@ -2327,7 +3046,7 @@
                     "children": [
                       {
                         "type": "chip",
-                        "label": "支出",
+                        "label": "{{ t('add.expense') }}",
                         "variant": "choice",
                         "bind": "global.formType",
                         "value": "expense",
@@ -2335,7 +3054,7 @@
                       },
                       {
                         "type": "chip",
-                        "label": "收入",
+                        "label": "{{ t('add.income') }}",
                         "variant": "choice",
                         "bind": "global.formType",
                         "value": "income",
@@ -2351,7 +3070,7 @@
               },
               {
                 "type": "text",
-                "value": "金额",
+                "value": "{{ t('add.amountLabel') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2374,7 +3093,7 @@
               },
               {
                 "type": "text",
-                "value": "分类",
+                "value": "{{ t('add.categoryLabel') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2392,7 +3111,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "餐饮",
+                    "label": "{{ t('cat.food') }}",
                     "variant": "choice",
                     "bind": "global.formCategory",
                     "value": "餐饮",
@@ -2401,7 +3120,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "交通",
+                    "label": "{{ t('cat.transport') }}",
                     "variant": "choice",
                     "bind": "global.formCategory",
                     "value": "交通",
@@ -2410,7 +3129,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "购物",
+                    "label": "{{ t('cat.shopping') }}",
                     "variant": "choice",
                     "bind": "global.formCategory",
                     "value": "购物",
@@ -2419,7 +3138,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "居家",
+                    "label": "{{ t('cat.home') }}",
                     "variant": "choice",
                     "bind": "global.formCategory",
                     "value": "居家",
@@ -2428,7 +3147,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "娱乐",
+                    "label": "{{ t('cat.entertainment') }}",
                     "variant": "choice",
                     "bind": "global.formCategory",
                     "value": "娱乐",
@@ -2437,7 +3156,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "医疗",
+                    "label": "{{ t('cat.medical') }}",
                     "variant": "choice",
                     "bind": "global.formCategory",
                     "value": "医疗",
@@ -2446,7 +3165,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "学习",
+                    "label": "{{ t('cat.study') }}",
                     "variant": "choice",
                     "bind": "global.formCategory",
                     "value": "学习",
@@ -2455,7 +3174,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "通讯",
+                    "label": "{{ t('cat.comm') }}",
                     "variant": "choice",
                     "bind": "global.formCategory",
                     "value": "通讯",
@@ -2464,7 +3183,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "工资",
+                    "label": "{{ t('cat.salary') }}",
                     "variant": "choice",
                     "bind": "global.formCategory",
                     "value": "工资",
@@ -2473,7 +3192,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "理财",
+                    "label": "{{ t('cat.finance') }}",
                     "variant": "choice",
                     "bind": "global.formCategory",
                     "value": "理财",
@@ -2482,7 +3201,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "其他",
+                    "label": "{{ t('cat.other') }}",
                     "variant": "choice",
                     "bind": "global.formCategory",
                     "value": "其他",
@@ -2497,7 +3216,7 @@
               },
               {
                 "type": "text",
-                "value": "说明",
+                "value": "{{ t('add.noteLabel') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2510,7 +3229,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "例如 午餐、地铁、工资",
+                "placeholder": "{{ t('add.notePlaceholder') }}",
                 "bind": "global.formTitle"
               },
               {
@@ -2519,7 +3238,7 @@
               },
               {
                 "type": "button",
-                "label": "保存",
+                "label": "{{ t('add.saveBtn') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.saveTxn",
@@ -2538,7 +3257,7 @@
         ],
         "backgroundColor": "#F3F7F6",
         "appBar": {
-          "title": "记一笔",
+          "title": "{{ t('add.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",

@@ -6,7 +6,20 @@
     "type": "app",
     "description": "运维场景数据看板 · CPU/内存/QPS 折线与柱状 · 服务状态 · 告警列表",
     "author": "fish",
-    "displayName": "运维数据看板"
+    "displayName": {
+      "default": "运维数据看板",
+      "zh": "运维数据看板",
+      "en": "Ops Data Dashboard",
+      "de": "Ops-Daten-Dashboard",
+      "es": "Panel de datos de Ops",
+      "fr": "Tableau de bord Ops",
+      "pt": "Painel de dados de Ops",
+      "ca": "Tauler de dades d'Ops",
+      "hi": "ऑप्स डेटा डैशबोर्ड",
+      "ko": "운영 데이터 대시보드",
+      "ja": "運用データダッシュボード",
+      "it": "Dashboard dati Ops"
+    }
   },
   "dependencies": {},
   "global": {
@@ -210,6 +223,690 @@
       ],
       "lastRefreshedAt": "12:48"
     },
+    "i18n": {
+      "zh": {
+        "common": {
+          "vsYesterday": "较昨日",
+          "last24h": "最近 24 小时",
+          "refresh": "刷新"
+        },
+        "health": {
+          "todayTitle": "今日系统健康度",
+          "scoreDelta": "+1.2 {{ t('common.vsYesterday') }}",
+          "sampling": "过去 24 小时 · 8 个核心服务 · 持续采样",
+          "refreshedAt": "刷新于 12:48"
+        },
+        "stat": {
+          "cpuAvg": "CPU 平均",
+          "memUsage": "内存使用",
+          "qpsPeak": "QPS 峰值"
+        },
+        "qps": {
+          "title": "QPS 实时趋势",
+          "summary": "峰值 7,900 req/s · 谷值 950 req/s · 平均 4,180 req/s"
+        },
+        "cpu": {
+          "title": "CPU 使用率",
+          "peak": "峰值 78% · 15:00"
+        },
+        "mem": {
+          "title": "内存使用率",
+          "peak": "峰值 80% · 15:00"
+        },
+        "traffic": {
+          "title": "流量分布 · 平均 Mbps",
+          "subtitle": "按通道聚合 · 24 小时",
+          "summary": "入站 32 · 出站 25 · 磁盘 50 · 缓存 28"
+        },
+        "services": {
+          "title": "服务状态",
+          "subtitle": "8 个核心服务 · 2 个需关注",
+          "latency": "延迟",
+          "uptime": "可用率"
+        },
+        "alerts": {
+          "title": "告警事件",
+          "subtitle": "最新 8 条 · 已按严重度排序",
+          "criticalBadge": "2 严重"
+        },
+        "action": {
+          "runCheck": "立即巡检",
+          "handleAlerts": "处理告警"
+        },
+        "app": {
+          "title": "运维数据看板"
+        },
+        "toast": {
+          "refreshed": "数据已刷新 · 24 个实例上报完成",
+          "checkDispatched": "巡检任务已下发 · 共检查 8 项",
+          "openAlerts": "打开告警事件面板",
+          "openSettings": "打开看板配置"
+        },
+        "refresh": {
+          "justNow": "刚刚"
+        }
+      },
+      "en": {
+        "common": {
+          "vsYesterday": "vs. yesterday",
+          "last24h": "Last 24 hours",
+          "refresh": "Refresh"
+        },
+        "health": {
+          "todayTitle": "Today's System Health",
+          "scoreDelta": "+1.2 {{ t('common.vsYesterday') }}",
+          "sampling": "Past 24 hours · 8 core services · continuous sampling",
+          "refreshedAt": "Refreshed at 12:48"
+        },
+        "stat": {
+          "cpuAvg": "CPU avg.",
+          "memUsage": "Memory usage",
+          "qpsPeak": "QPS peak"
+        },
+        "qps": {
+          "title": "QPS Live Trend",
+          "summary": "Peak 7,900 req/s · Trough 950 req/s · Avg 4,180 req/s"
+        },
+        "cpu": {
+          "title": "CPU Usage",
+          "peak": "Peak 78% · 15:00"
+        },
+        "mem": {
+          "title": "Memory Usage",
+          "peak": "Peak 80% · 15:00"
+        },
+        "traffic": {
+          "title": "Traffic Distribution · Avg Mbps",
+          "subtitle": "Aggregated by channel · 24h",
+          "summary": "Inbound 32 · Outbound 25 · Disk 50 · Cache 28"
+        },
+        "services": {
+          "title": "Service Status",
+          "subtitle": "8 core services · 2 need attention",
+          "latency": "Latency",
+          "uptime": "Uptime"
+        },
+        "alerts": {
+          "title": "Alert Events",
+          "subtitle": "Latest 8 · sorted by severity",
+          "criticalBadge": "2 critical"
+        },
+        "action": {
+          "runCheck": "Run Check Now",
+          "handleAlerts": "Handle Alerts"
+        },
+        "app": {
+          "title": "Ops Data Dashboard"
+        },
+        "toast": {
+          "refreshed": "Data refreshed · 24 instances reported",
+          "checkDispatched": "Inspection task dispatched · 8 items checked",
+          "openAlerts": "Opening alert events panel",
+          "openSettings": "Opening dashboard settings"
+        },
+        "refresh": {
+          "justNow": "Just now"
+        }
+      },
+      "de": {
+        "common": {
+          "vsYesterday": "ggü. gestern",
+          "last24h": "Letzte 24 Stunden",
+          "refresh": "Aktualisieren"
+        },
+        "health": {
+          "todayTitle": "Heutige Systemgesundheit",
+          "scoreDelta": "+1.2 {{ t('common.vsYesterday') }}",
+          "sampling": "Letzte 24 Stunden · 8 Kerndienste · kontinuierliche Erfassung",
+          "refreshedAt": "Aktualisiert um 12:48"
+        },
+        "stat": {
+          "cpuAvg": "CPU Ø",
+          "memUsage": "Speichernutzung",
+          "qpsPeak": "QPS-Spitze"
+        },
+        "qps": {
+          "title": "QPS-Echtzeittrend",
+          "summary": "Spitze 7,900 req/s · Tief 950 req/s · Ø 4,180 req/s"
+        },
+        "cpu": {
+          "title": "CPU-Auslastung",
+          "peak": "Spitze 78% · 15:00"
+        },
+        "mem": {
+          "title": "Speicherauslastung",
+          "peak": "Spitze 80% · 15:00"
+        },
+        "traffic": {
+          "title": "Traffic-Verteilung · Ø Mbps",
+          "subtitle": "Nach Kanal aggregiert · 24 Std.",
+          "summary": "Eingehend 32 · Ausgehend 25 · Datenträger 50 · Cache 28"
+        },
+        "services": {
+          "title": "Dienststatus",
+          "subtitle": "8 Kerndienste · 2 erfordern Aufmerksamkeit",
+          "latency": "Latenz",
+          "uptime": "Verfügbarkeit"
+        },
+        "alerts": {
+          "title": "Alarmereignisse",
+          "subtitle": "Neueste 8 · nach Schweregrad sortiert",
+          "criticalBadge": "2 kritisch"
+        },
+        "action": {
+          "runCheck": "Jetzt prüfen",
+          "handleAlerts": "Alarme bearbeiten"
+        },
+        "app": {
+          "title": "Ops-Daten-Dashboard"
+        },
+        "toast": {
+          "refreshed": "Daten aktualisiert · 24 Instanzen gemeldet",
+          "checkDispatched": "Prüfauftrag gesendet · 8 Punkte geprüft",
+          "openAlerts": "Alarmereignis-Panel wird geöffnet",
+          "openSettings": "Dashboard-Einstellungen werden geöffnet"
+        },
+        "refresh": {
+          "justNow": "Gerade eben"
+        }
+      },
+      "es": {
+        "common": {
+          "vsYesterday": "vs. ayer",
+          "last24h": "Últimas 24 horas",
+          "refresh": "Actualizar"
+        },
+        "health": {
+          "todayTitle": "Salud del sistema hoy",
+          "scoreDelta": "+1.2 {{ t('common.vsYesterday') }}",
+          "sampling": "Últimas 24 horas · 8 servicios clave · muestreo continuo",
+          "refreshedAt": "Actualizado a las 12:48"
+        },
+        "stat": {
+          "cpuAvg": "CPU prom.",
+          "memUsage": "Uso de memoria",
+          "qpsPeak": "QPS máximo"
+        },
+        "qps": {
+          "title": "Tendencia de QPS en vivo",
+          "summary": "Máx. 7,900 req/s · Mín. 950 req/s · Prom. 4,180 req/s"
+        },
+        "cpu": {
+          "title": "Uso de CPU",
+          "peak": "Máx. 78% · 15:00"
+        },
+        "mem": {
+          "title": "Uso de memoria",
+          "peak": "Máx. 80% · 15:00"
+        },
+        "traffic": {
+          "title": "Distribución de tráfico · Mbps prom.",
+          "subtitle": "Agregado por canal · 24 h",
+          "summary": "Entrada 32 · Salida 25 · Disco 50 · Caché 28"
+        },
+        "services": {
+          "title": "Estado de servicios",
+          "subtitle": "8 servicios clave · 2 requieren atención",
+          "latency": "Latencia",
+          "uptime": "Disponibilidad"
+        },
+        "alerts": {
+          "title": "Eventos de alerta",
+          "subtitle": "Últimos 8 · ordenados por gravedad",
+          "criticalBadge": "2 críticos"
+        },
+        "action": {
+          "runCheck": "Inspeccionar ahora",
+          "handleAlerts": "Gestionar alertas"
+        },
+        "app": {
+          "title": "Panel de datos de Ops"
+        },
+        "toast": {
+          "refreshed": "Datos actualizados · 24 instancias reportadas",
+          "checkDispatched": "Tarea de inspección enviada · 8 elementos revisados",
+          "openAlerts": "Abriendo el panel de eventos de alerta",
+          "openSettings": "Abriendo la configuración del panel"
+        },
+        "refresh": {
+          "justNow": "Justo ahora"
+        }
+      },
+      "fr": {
+        "common": {
+          "vsYesterday": "vs hier",
+          "last24h": "Dernières 24 heures",
+          "refresh": "Actualiser"
+        },
+        "health": {
+          "todayTitle": "Santé du système aujourd'hui",
+          "scoreDelta": "+1.2 {{ t('common.vsYesterday') }}",
+          "sampling": "Dernières 24 heures · 8 services clés · échantillonnage continu",
+          "refreshedAt": "Actualisé à 12:48"
+        },
+        "stat": {
+          "cpuAvg": "CPU moy.",
+          "memUsage": "Utilisation mémoire",
+          "qpsPeak": "Pic QPS"
+        },
+        "qps": {
+          "title": "Tendance QPS en direct",
+          "summary": "Pic 7,900 req/s · Creux 950 req/s · Moy. 4,180 req/s"
+        },
+        "cpu": {
+          "title": "Utilisation CPU",
+          "peak": "Pic 78% · 15:00"
+        },
+        "mem": {
+          "title": "Utilisation mémoire",
+          "peak": "Pic 80% · 15:00"
+        },
+        "traffic": {
+          "title": "Répartition du trafic · Mbps moy.",
+          "subtitle": "Agrégé par canal · 24 h",
+          "summary": "Entrant 32 · Sortant 25 · Disque 50 · Cache 28"
+        },
+        "services": {
+          "title": "État des services",
+          "subtitle": "8 services clés · 2 à surveiller",
+          "latency": "Latence",
+          "uptime": "Disponibilité"
+        },
+        "alerts": {
+          "title": "Événements d'alerte",
+          "subtitle": "8 derniers · triés par gravité",
+          "criticalBadge": "2 critiques"
+        },
+        "action": {
+          "runCheck": "Inspecter maintenant",
+          "handleAlerts": "Gérer les alertes"
+        },
+        "app": {
+          "title": "Tableau de bord Ops"
+        },
+        "toast": {
+          "refreshed": "Données actualisées · 24 instances signalées",
+          "checkDispatched": "Tâche d'inspection envoyée · 8 éléments vérifiés",
+          "openAlerts": "Ouverture du panneau des événements d'alerte",
+          "openSettings": "Ouverture des paramètres du tableau de bord"
+        },
+        "refresh": {
+          "justNow": "À l'instant"
+        }
+      },
+      "pt": {
+        "common": {
+          "vsYesterday": "vs. ontem",
+          "last24h": "Últimas 24 horas",
+          "refresh": "Atualizar"
+        },
+        "health": {
+          "todayTitle": "Saúde do sistema hoje",
+          "scoreDelta": "+1.2 {{ t('common.vsYesterday') }}",
+          "sampling": "Últimas 24 horas · 8 serviços principais · amostragem contínua",
+          "refreshedAt": "Atualizado às 12:48"
+        },
+        "stat": {
+          "cpuAvg": "CPU méd.",
+          "memUsage": "Uso de memória",
+          "qpsPeak": "Pico de QPS"
+        },
+        "qps": {
+          "title": "Tendência de QPS em tempo real",
+          "summary": "Pico 7,900 req/s · Vale 950 req/s · Méd. 4,180 req/s"
+        },
+        "cpu": {
+          "title": "Uso de CPU",
+          "peak": "Pico 78% · 15:00"
+        },
+        "mem": {
+          "title": "Uso de memória",
+          "peak": "Pico 80% · 15:00"
+        },
+        "traffic": {
+          "title": "Distribuição de tráfego · Mbps méd.",
+          "subtitle": "Agregado por canal · 24h",
+          "summary": "Entrada 32 · Saída 25 · Disco 50 · Cache 28"
+        },
+        "services": {
+          "title": "Status dos serviços",
+          "subtitle": "8 serviços principais · 2 exigem atenção",
+          "latency": "Latência",
+          "uptime": "Disponibilidade"
+        },
+        "alerts": {
+          "title": "Eventos de alerta",
+          "subtitle": "Últimos 8 · ordenados por gravidade",
+          "criticalBadge": "2 críticos"
+        },
+        "action": {
+          "runCheck": "Inspecionar agora",
+          "handleAlerts": "Tratar alertas"
+        },
+        "app": {
+          "title": "Painel de dados de Ops"
+        },
+        "toast": {
+          "refreshed": "Dados atualizados · 24 instâncias reportadas",
+          "checkDispatched": "Tarefa de inspeção enviada · 8 itens verificados",
+          "openAlerts": "Abrindo o painel de eventos de alerta",
+          "openSettings": "Abrindo as configurações do painel"
+        },
+        "refresh": {
+          "justNow": "Agora mesmo"
+        }
+      },
+      "ca": {
+        "common": {
+          "vsYesterday": "vs. ahir",
+          "last24h": "Últimes 24 hores",
+          "refresh": "Actualitzar"
+        },
+        "health": {
+          "todayTitle": "Salut del sistema avui",
+          "scoreDelta": "+1.2 {{ t('common.vsYesterday') }}",
+          "sampling": "Últimes 24 hores · 8 serveis clau · mostreig continu",
+          "refreshedAt": "Actualitzat a les 12:48"
+        },
+        "stat": {
+          "cpuAvg": "CPU mitj.",
+          "memUsage": "Ús de memòria",
+          "qpsPeak": "Pic de QPS"
+        },
+        "qps": {
+          "title": "Tendència de QPS en directe",
+          "summary": "Pic 7,900 req/s · Vall 950 req/s · Mitj. 4,180 req/s"
+        },
+        "cpu": {
+          "title": "Ús de CPU",
+          "peak": "Pic 78% · 15:00"
+        },
+        "mem": {
+          "title": "Ús de memòria",
+          "peak": "Pic 80% · 15:00"
+        },
+        "traffic": {
+          "title": "Distribució del trànsit · Mbps mitj.",
+          "subtitle": "Agregat per canal · 24 h",
+          "summary": "Entrada 32 · Sortida 25 · Disc 50 · Cau 28"
+        },
+        "services": {
+          "title": "Estat dels serveis",
+          "subtitle": "8 serveis clau · 2 requereixen atenció",
+          "latency": "Latència",
+          "uptime": "Disponibilitat"
+        },
+        "alerts": {
+          "title": "Esdeveniments d'alerta",
+          "subtitle": "Últims 8 · ordenats per gravetat",
+          "criticalBadge": "2 crítics"
+        },
+        "action": {
+          "runCheck": "Inspecciona ara",
+          "handleAlerts": "Gestiona alertes"
+        },
+        "app": {
+          "title": "Tauler de dades d'Ops"
+        },
+        "toast": {
+          "refreshed": "Dades actualitzades · 24 instàncies reportades",
+          "checkDispatched": "Tasca d'inspecció enviada · 8 elements revisats",
+          "openAlerts": "Obrint el tauler d'esdeveniments d'alerta",
+          "openSettings": "Obrint la configuració del tauler"
+        },
+        "refresh": {
+          "justNow": "Ara mateix"
+        }
+      },
+      "hi": {
+        "common": {
+          "vsYesterday": "कल की तुलना में",
+          "last24h": "पिछले 24 घंटे",
+          "refresh": "रिफ्रेश"
+        },
+        "health": {
+          "todayTitle": "आज की सिस्टम हेल्थ",
+          "scoreDelta": "+1.2 {{ t('common.vsYesterday') }}",
+          "sampling": "पिछले 24 घंटे · 8 मुख्य सेवाएँ · सतत सैंपलिंग",
+          "refreshedAt": "12:48 पर रिफ्रेश किया गया"
+        },
+        "stat": {
+          "cpuAvg": "CPU औसत",
+          "memUsage": "मेमोरी उपयोग",
+          "qpsPeak": "QPS शिखर"
+        },
+        "qps": {
+          "title": "QPS लाइव ट्रेंड",
+          "summary": "शिखर 7,900 req/s · न्यूनतम 950 req/s · औसत 4,180 req/s"
+        },
+        "cpu": {
+          "title": "CPU उपयोग",
+          "peak": "शिखर 78% · 15:00"
+        },
+        "mem": {
+          "title": "मेमोरी उपयोग",
+          "peak": "शिखर 80% · 15:00"
+        },
+        "traffic": {
+          "title": "ट्रैफ़िक वितरण · औसत Mbps",
+          "subtitle": "चैनल के अनुसार समेकित · 24 घंटे",
+          "summary": "इनबाउंड 32 · आउटबाउंड 25 · डिस्क 50 · कैश 28"
+        },
+        "services": {
+          "title": "सेवा स्थिति",
+          "subtitle": "8 मुख्य सेवाएँ · 2 पर ध्यान दें",
+          "latency": "लेटेंसी",
+          "uptime": "अपटाइम"
+        },
+        "alerts": {
+          "title": "अलर्ट इवेंट",
+          "subtitle": "नवीनतम 8 · गंभीरता के अनुसार क्रमबद्ध",
+          "criticalBadge": "2 गंभीर"
+        },
+        "action": {
+          "runCheck": "अभी जाँच करें",
+          "handleAlerts": "अलर्ट संभालें"
+        },
+        "app": {
+          "title": "ऑप्स डेटा डैशबोर्ड"
+        },
+        "toast": {
+          "refreshed": "डेटा रिफ्रेश हुआ · 24 इंस्टेंस ने रिपोर्ट किया",
+          "checkDispatched": "निरीक्षण कार्य भेजा गया · 8 आइटम जाँचे गए",
+          "openAlerts": "अलर्ट इवेंट पैनल खोला जा रहा है",
+          "openSettings": "डैशबोर्ड सेटिंग्स खोली जा रही हैं"
+        },
+        "refresh": {
+          "justNow": "अभी-अभी"
+        }
+      },
+      "ko": {
+        "common": {
+          "vsYesterday": "전일 대비",
+          "last24h": "최근 24시간",
+          "refresh": "새로고침"
+        },
+        "health": {
+          "todayTitle": "오늘의 시스템 상태",
+          "scoreDelta": "+1.2 {{ t('common.vsYesterday') }}",
+          "sampling": "지난 24시간 · 핵심 서비스 8개 · 연속 샘플링",
+          "refreshedAt": "12:48 새로고침됨"
+        },
+        "stat": {
+          "cpuAvg": "CPU 평균",
+          "memUsage": "메모리 사용량",
+          "qpsPeak": "QPS 최고치"
+        },
+        "qps": {
+          "title": "QPS 실시간 추이",
+          "summary": "최고 7,900 req/s · 최저 950 req/s · 평균 4,180 req/s"
+        },
+        "cpu": {
+          "title": "CPU 사용률",
+          "peak": "최고 78% · 15:00"
+        },
+        "mem": {
+          "title": "메모리 사용률",
+          "peak": "최고 80% · 15:00"
+        },
+        "traffic": {
+          "title": "트래픽 분포 · 평균 Mbps",
+          "subtitle": "채널별 집계 · 24시간",
+          "summary": "수신 32 · 송신 25 · 디스크 50 · 캐시 28"
+        },
+        "services": {
+          "title": "서비스 상태",
+          "subtitle": "핵심 서비스 8개 · 2개 주의 필요",
+          "latency": "지연 시간",
+          "uptime": "가동률"
+        },
+        "alerts": {
+          "title": "알림 이벤트",
+          "subtitle": "최근 8건 · 심각도순 정렬",
+          "criticalBadge": "심각 2건"
+        },
+        "action": {
+          "runCheck": "지금 점검",
+          "handleAlerts": "알림 처리"
+        },
+        "app": {
+          "title": "운영 데이터 대시보드"
+        },
+        "toast": {
+          "refreshed": "데이터 새로고침됨 · 인스턴스 24개 보고 완료",
+          "checkDispatched": "점검 작업 전송됨 · 8개 항목 점검",
+          "openAlerts": "알림 이벤트 패널 여는 중",
+          "openSettings": "대시보드 설정 여는 중"
+        },
+        "refresh": {
+          "justNow": "방금"
+        }
+      },
+      "ja": {
+        "common": {
+          "vsYesterday": "前日比",
+          "last24h": "直近 24 時間",
+          "refresh": "更新"
+        },
+        "health": {
+          "todayTitle": "本日のシステム健全性",
+          "scoreDelta": "+1.2 {{ t('common.vsYesterday') }}",
+          "sampling": "過去 24 時間 · コアサービス 8 件 · 継続サンプリング",
+          "refreshedAt": "12:48 に更新"
+        },
+        "stat": {
+          "cpuAvg": "CPU 平均",
+          "memUsage": "メモリ使用量",
+          "qpsPeak": "QPS ピーク"
+        },
+        "qps": {
+          "title": "QPS リアルタイム推移",
+          "summary": "ピーク 7,900 req/s · ボトム 950 req/s · 平均 4,180 req/s"
+        },
+        "cpu": {
+          "title": "CPU 使用率",
+          "peak": "ピーク 78% · 15:00"
+        },
+        "mem": {
+          "title": "メモリ使用率",
+          "peak": "ピーク 80% · 15:00"
+        },
+        "traffic": {
+          "title": "トラフィック分布 · 平均 Mbps",
+          "subtitle": "チャネル別集計 · 24 時間",
+          "summary": "受信 32 · 送信 25 · ディスク 50 · キャッシュ 28"
+        },
+        "services": {
+          "title": "サービス状態",
+          "subtitle": "コアサービス 8 件 · 2 件要注意",
+          "latency": "レイテンシ",
+          "uptime": "稼働率"
+        },
+        "alerts": {
+          "title": "アラートイベント",
+          "subtitle": "最新 8 件 · 重大度順",
+          "criticalBadge": "重大 2 件"
+        },
+        "action": {
+          "runCheck": "今すぐ点検",
+          "handleAlerts": "アラート対応"
+        },
+        "app": {
+          "title": "運用データダッシュボード"
+        },
+        "toast": {
+          "refreshed": "データを更新 · 24 インスタンス報告完了",
+          "checkDispatched": "点検タスクを発行 · 計 8 項目を確認",
+          "openAlerts": "アラートイベントパネルを開いています",
+          "openSettings": "ダッシュボード設定を開いています"
+        },
+        "refresh": {
+          "justNow": "たった今"
+        }
+      },
+      "it": {
+        "common": {
+          "vsYesterday": "vs ieri",
+          "last24h": "Ultime 24 ore",
+          "refresh": "Aggiorna"
+        },
+        "health": {
+          "todayTitle": "Salute del sistema oggi",
+          "scoreDelta": "+1.2 {{ t('common.vsYesterday') }}",
+          "sampling": "Ultime 24 ore · 8 servizi principali · campionamento continuo",
+          "refreshedAt": "Aggiornato alle 12:48"
+        },
+        "stat": {
+          "cpuAvg": "CPU media",
+          "memUsage": "Uso memoria",
+          "qpsPeak": "Picco QPS"
+        },
+        "qps": {
+          "title": "Andamento QPS in tempo reale",
+          "summary": "Picco 7,900 req/s · Minimo 950 req/s · Media 4,180 req/s"
+        },
+        "cpu": {
+          "title": "Utilizzo CPU",
+          "peak": "Picco 78% · 15:00"
+        },
+        "mem": {
+          "title": "Utilizzo memoria",
+          "peak": "Picco 80% · 15:00"
+        },
+        "traffic": {
+          "title": "Distribuzione traffico · Mbps medi",
+          "subtitle": "Aggregato per canale · 24 h",
+          "summary": "In entrata 32 · In uscita 25 · Disco 50 · Cache 28"
+        },
+        "services": {
+          "title": "Stato dei servizi",
+          "subtitle": "8 servizi principali · 2 da monitorare",
+          "latency": "Latenza",
+          "uptime": "Disponibilità"
+        },
+        "alerts": {
+          "title": "Eventi di avviso",
+          "subtitle": "Ultimi 8 · ordinati per gravità",
+          "criticalBadge": "2 critici"
+        },
+        "action": {
+          "runCheck": "Controlla ora",
+          "handleAlerts": "Gestisci avvisi"
+        },
+        "app": {
+          "title": "Dashboard dati Ops"
+        },
+        "toast": {
+          "refreshed": "Dati aggiornati · 24 istanze segnalate",
+          "checkDispatched": "Attività di ispezione inviata · 8 elementi verificati",
+          "openAlerts": "Apertura del pannello eventi di avviso",
+          "openSettings": "Apertura delle impostazioni del dashboard"
+        },
+        "refresh": {
+          "justNow": "Proprio ora"
+        }
+      }
+    },
     "functions": {
       "refresh": {
         "params": [],
@@ -217,14 +914,14 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "数据已刷新 · 24 个实例上报完成"
+              "message": "{{ t('toast.refreshed') }}"
             }
           },
           {
             "call": "@set_global",
             "args": {
               "key": "lastRefreshedAt",
-              "value": "刚刚"
+              "value": "{{ t('refresh.justNow') }}"
             }
           }
         ]
@@ -235,7 +932,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "巡检任务已下发 · 共检查 8 项"
+              "message": "{{ t('toast.checkDispatched') }}"
             }
           }
         ]
@@ -246,7 +943,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "打开告警事件面板"
+              "message": "{{ t('toast.openAlerts') }}"
             }
           }
         ]
@@ -257,7 +954,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "打开看板配置"
+              "message": "{{ t('toast.openSettings') }}"
             }
           }
         ]
@@ -269,7 +966,7 @@
     "screens": [
       {
         "id": "dashboard",
-        "title": "运维数据看板",
+        "title": "{{ t('app.title') }}",
         "layout": "column",
         "children": [
           {
@@ -293,7 +990,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "今日系统健康度",
+                        "value": "{{ t('health.todayTitle') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#64748B"
@@ -340,7 +1037,7 @@
                           },
                           {
                             "type": "text",
-                            "value": "+1.2 较昨日",
+                            "value": "{{ t('health.scoreDelta') }}",
                             "style": {
                               "fontSize": 12,
                               "color": "#059669",
@@ -396,7 +1093,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "过去 24 小时 · 8 个核心服务 · 持续采样",
+                    "value": "{{ t('health.sampling') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#64748B"
@@ -404,7 +1101,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "刷新于 12:48",
+                    "value": "{{ t('health.refreshedAt') }}",
                     "style": {
                       "fontSize": 11,
                       "color": "#94A3B8"
@@ -447,7 +1144,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "CPU 平均",
+                          "value": "{{ t('stat.cpuAvg') }}",
                           "style": {
                             "fontSize": 12,
                             "color": "#64748B"
@@ -503,7 +1200,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "较昨日",
+                          "value": "{{ t('common.vsYesterday') }}",
                           "style": {
                             "fontSize": 11,
                             "color": "#94A3B8"
@@ -546,7 +1243,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "内存使用",
+                          "value": "{{ t('stat.memUsage') }}",
                           "style": {
                             "fontSize": 12,
                             "color": "#64748B"
@@ -602,7 +1299,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "较昨日",
+                          "value": "{{ t('common.vsYesterday') }}",
                           "style": {
                             "fontSize": 11,
                             "color": "#94A3B8"
@@ -645,7 +1342,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "QPS 峰值",
+                          "value": "{{ t('stat.qpsPeak') }}",
                           "style": {
                             "fontSize": 12,
                             "color": "#64748B"
@@ -701,7 +1398,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "较昨日",
+                          "value": "{{ t('common.vsYesterday') }}",
                           "style": {
                             "fontSize": 11,
                             "color": "#94A3B8"
@@ -731,7 +1428,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "QPS 实时趋势",
+                    "value": "{{ t('qps.title') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "bold",
@@ -740,7 +1437,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "最近 24 小时",
+                    "value": "{{ t('common.last24h') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#64748B"
@@ -862,7 +1559,7 @@
               },
               {
                 "type": "text",
-                "value": "峰值 7,900 req/s · 谷值 950 req/s · 平均 4,180 req/s",
+                "value": "{{ t('qps.summary') }}",
                 "style": {
                   "fontSize": 12,
                   "color": "#64748B"
@@ -894,7 +1591,7 @@
                       "children": [
                         {
                           "type": "text",
-                          "value": "CPU 使用率",
+                          "value": "{{ t('cpu.title') }}",
                           "style": {
                             "fontSize": 16,
                             "fontWeight": "bold",
@@ -1025,7 +1722,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "峰值 78% · 15:00",
+                      "value": "{{ t('cpu.peak') }}",
                       "style": {
                         "fontSize": 12,
                         "color": "#64748B"
@@ -1057,7 +1754,7 @@
                       "children": [
                         {
                           "type": "text",
-                          "value": "内存使用率",
+                          "value": "{{ t('mem.title') }}",
                           "style": {
                             "fontSize": 16,
                             "fontWeight": "bold",
@@ -1188,7 +1885,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "峰值 80% · 15:00",
+                      "value": "{{ t('mem.peak') }}",
                       "style": {
                         "fontSize": 12,
                         "color": "#64748B"
@@ -1216,7 +1913,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "流量分布 · 平均 Mbps",
+                    "value": "{{ t('traffic.title') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "bold",
@@ -1225,7 +1922,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "按通道聚合 · 24 小时",
+                    "value": "{{ t('traffic.subtitle') }}",
                     "style": {
                       "fontSize": 12,
                       "color": "#64748B"
@@ -1267,7 +1964,7 @@
               },
               {
                 "type": "text",
-                "value": "入站 32 · 出站 25 · 磁盘 50 · 缓存 28",
+                "value": "{{ t('traffic.summary') }}",
                 "style": {
                   "fontSize": 12,
                   "color": "#64748B"
@@ -1296,7 +1993,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "服务状态",
+                        "value": "{{ t('services.title') }}",
                         "style": {
                           "fontSize": 16,
                           "fontWeight": "bold",
@@ -1305,7 +2002,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "8 个核心服务 · 2 个需关注",
+                        "value": "{{ t('services.subtitle') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#64748B"
@@ -1333,7 +2030,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "刷新",
+                        "value": "{{ t('common.refresh') }}",
                         "style": {
                           "fontSize": 11,
                           "color": "#2563EB",
@@ -1539,7 +2236,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "延迟",
+                              "value": "{{ t('services.latency') }}",
                               "style": {
                                 "fontSize": 11,
                                 "color": "#64748B"
@@ -1562,7 +2259,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "可用率",
+                              "value": "{{ t('services.uptime') }}",
                               "style": {
                                 "fontSize": 11,
                                 "color": "#64748B"
@@ -1636,7 +2333,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "告警事件",
+                        "value": "{{ t('alerts.title') }}",
                         "style": {
                           "fontSize": 16,
                           "fontWeight": "bold",
@@ -1645,7 +2342,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "最新 8 条 · 已按严重度排序",
+                        "value": "{{ t('alerts.subtitle') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#64748B"
@@ -1673,7 +2370,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "2 严重",
+                        "value": "{{ t('alerts.criticalBadge') }}",
                         "style": {
                           "fontSize": 11,
                           "color": "#FFFFFF",
@@ -1860,7 +2557,7 @@
                 "type": "expanded",
                 "child": {
                   "type": "button",
-                  "label": "立即巡检",
+                  "label": "{{ t('action.runCheck') }}",
                   "variant": "filled",
                   "action": {
                     "call": "@global.runCheck",
@@ -1884,7 +2581,7 @@
                 "type": "expanded",
                 "child": {
                   "type": "button",
-                  "label": "处理告警",
+                  "label": "{{ t('action.handleAlerts') }}",
                   "variant": "filled",
                   "action": {
                     "call": "@global.viewAlerts",
@@ -1909,7 +2606,7 @@
         ],
         "backgroundColor": "#F1F5F9",
         "appBar": {
-          "title": "运维数据看板",
+          "title": "{{ t('app.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#0F172A",

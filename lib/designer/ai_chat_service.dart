@@ -8,6 +8,7 @@ import '../auth/auth_service.dart';
 import '../config/app_config.dart';
 import '../config/remote_config_service.dart';
 import '../i18n/framework_strings.dart';
+import '../i18n/locale_controller.dart';
 import '../platform/web_event_source.dart';
 import 'session_meta.dart';
 
@@ -522,8 +523,9 @@ class AiChatService {
   /// 拉取服务端下发的 demo 选择目录（uuid/title/prompt）。服务端是单一真相源，
   /// 加一个 demo 只改后端、不用客户端发版。失败抛异常，调用方自行回落本地兜底。
   static Future<List<Map<String, String>>> fetchDemoList() async {
+    final lang = Uri.encodeQueryComponent(LocaleController.currentLocaleTag());
     final resp = await http
-        .get(Uri.parse('$_baseUrl/api/ai/demo/list'))
+        .get(Uri.parse('$_baseUrl/api/ai/demo/list?lang=$lang'))
         .timeout(const Duration(seconds: 10));
     if (resp.statusCode != 200) {
       throw Exception('demo list HTTP ${resp.statusCode}');
@@ -2005,6 +2007,8 @@ class AiChatService {
           'agent': agentId,
           'agent_scope': agentScope,
           'force_restart': forceRestart,
+          // 当前框架语言：后端 demo 回放据此选对应语言的录制叙事（非 demo 忽略）。
+          'lang': LocaleController.currentLocaleTag(),
         });
         var resp = await http
             .post(

@@ -7,7 +7,18 @@
     "description": "健身训练助手：训练计划、动作计时、训练记录",
     "author": "fish",
     "displayName": {
-      "zh": "健身教练"
+      "default": "Fitness Coach",
+      "zh": "健身教练",
+      "en": "Fitness Coach",
+      "de": "Fitness-Coach",
+      "es": "Entrenador Fitness",
+      "fr": "Coach Fitness",
+      "pt": "Treinador Fitness",
+      "ca": "Entrenador Fitness",
+      "hi": "फ़िटनेस कोच",
+      "ko": "피트니스 코치",
+      "ja": "フィットネスコーチ",
+      "it": "Coach Fitness"
     }
   },
   "dependencies": {},
@@ -330,7 +341,7 @@
       "sessionCurrentSet": 1,
       "sessionActive": false,
       "sessionCompleted": false,
-      "sessionExLabel": "第 1 个动作",
+      "sessionExLabel": 1,
       "sessionSetLabel": "第 1 组",
       "sessionLogReps": "",
       "sessionLogWeight": "",
@@ -653,7 +664,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "计划已保存"
+              "message": "{{ t('toast.planSaved') }}"
             }
           },
           {
@@ -692,7 +703,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "计划已删除"
+              "message": "{{ t('toast.planDeleted') }}"
             }
           },
           {
@@ -1113,7 +1124,7 @@
             "call": "@set",
             "args": {
               "var": "global.sessionExLabel",
-              "value": "第 1 个动作"
+              "value": 1
             }
           },
           {
@@ -1204,7 +1215,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已记录，继续下一组"
+              "message": "{{ t('toast.setLogged') }}"
             }
           }
         ]
@@ -1237,14 +1248,8 @@
               "var": "global.sessionExLabel",
               "value": {
                 "+": [
-                  "第 ",
-                  {
-                    "+": [
-                      "{{ global.sessionExIdx }}",
-                      1
-                    ]
-                  },
-                  " 个动作"
+                  "{{ global.sessionExIdx }}",
+                  1
                 ]
               }
             }
@@ -1322,7 +1327,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "训练完成！记录已保存"
+              "message": "{{ t('toast.workoutDone') }}"
             }
           },
           {
@@ -1442,7 +1447,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "记录已删除"
+              "message": "{{ t('toast.recordDeleted') }}"
             }
           },
           {
@@ -1453,6 +1458,1328 @@
           }
         ]
       }
+    },
+    "i18n": {
+      "zh": {
+        "nav": {
+          "train": "训练",
+          "plans": "计划",
+          "timer": "计时",
+          "records": "记录"
+        },
+        "filter": {
+          "all": "全部"
+        },
+        "type": {
+          "strength": "力量",
+          "cardio": "有氧",
+          "recovery": "恢复"
+        },
+        "common": {
+          "new": "新建",
+          "edit": "编辑",
+          "delete": "删除",
+          "reps": "次数"
+        },
+        "train": {
+          "weekWorkouts": "本周训练",
+          "totalMin": "总时长(分)",
+          "completedSets": "完成组数",
+          "emptyPlans": "还没有训练计划，点击右上角 + 创建"
+        },
+        "plans": {
+          "heading": "训练计划",
+          "empty": "还没有训练计划",
+          "createNew": "创建新计划",
+          "exCount": "{{ loop.item.exCount }}个动作",
+          "estDuration": "{{ loop.item.estDuration }}分钟"
+        },
+        "planDetail": {
+          "appbar": "计划详情",
+          "estDuration": "约{{ global.currentPlan.estDuration }}分钟",
+          "exCount": "{{ global.currentPlan.exCount }}个动作",
+          "emptyEx": "暂无动作",
+          "start": "开始训练"
+        },
+        "exercise": {
+          "listTitle": "动作列表",
+          "setsReps": "{{ loop.item.targetSets }}组 × {{ loop.item.targetReps }}次",
+          "rest": "休{{ loop.item.restDuration }}s",
+          "formSummary": "{{ loop.item.targetSets }}组×{{ loop.item.targetReps }}次 · {{ loop.item.duration }}s · 休{{ loop.item.restDuration }}s"
+        },
+        "planForm": {
+          "appbar": "编辑计划",
+          "nameLabel": "计划名称",
+          "namePlaceholder": "例如 上肢力量训练",
+          "descLabel": "描述",
+          "descPlaceholder": "简短描述训练目标",
+          "typeLabel": "类型",
+          "emptyEx": "暂无动作，请在下方添加",
+          "addEx": "添加动作",
+          "exNamePlaceholder": "动作名称",
+          "setsLabel": "组数",
+          "durationLabel": "时长(s)",
+          "restLabel": "休息(s)",
+          "save": "保存计划"
+        },
+        "timer": {
+          "appbar": "计时器",
+          "modeExercise": "动作计时",
+          "modeRest": "休息计时",
+          "totalSec": "共 {{ global.timerTotal }} 秒",
+          "reset": "重置",
+          "pause": "暂停",
+          "start": "开始",
+          "presets": "快速预设",
+          "s30": "30秒",
+          "s45": "45秒",
+          "s60": "60秒",
+          "s90": "90秒",
+          "s120": "120秒",
+          "s180": "180秒",
+          "custom": "自定义时长（秒）",
+          "customPlaceholder": "输入秒数",
+          "set": "设置"
+        },
+        "session": {
+          "appbar": "训练中",
+          "exLabel": "第 {{ global.sessionExLabel }} 个动作",
+          "setLabel": "第 {{ global.sessionCurrentSet }} 组",
+          "done": "训练完成！",
+          "logCurrent": "记录当前组",
+          "weight": "重量(kg)",
+          "logSet": "记录此组",
+          "nextEx": "下一个动作",
+          "allDone": "所有动作已完成！",
+          "finish": "完成训练",
+          "openTimer": "打开计时器",
+          "cancel": "放弃训练"
+        },
+        "records": {
+          "appbar": "训练记录",
+          "totalCount": "总训练次数",
+          "weekCount": "本周次数",
+          "empty": "还没有训练记录，完成一次训练吧",
+          "duration": "{{ loop.item.duration }}分钟",
+          "completedSets": "{{ loop.item.completedSets }}组完成"
+        },
+        "recordDetail": {
+          "appbar": "记录详情",
+          "duration": "{{ global.viewRecord.duration }}分钟",
+          "completedSets": "{{ global.viewRecord.completedSets }}组",
+          "exDetail": "动作详情",
+          "emptyEx": "无动作记录",
+          "setsCompleted": "{{ loop.item.sets | len }} 组完成",
+          "delete": "删除记录"
+        },
+        "toast": {
+          "planSaved": "计划已保存",
+          "planDeleted": "计划已删除",
+          "setLogged": "已记录，继续下一组",
+          "workoutDone": "训练完成！记录已保存",
+          "recordDeleted": "记录已删除"
+        }
+      },
+      "en": {
+        "nav": {
+          "train": "Train",
+          "plans": "Plans",
+          "timer": "Timer",
+          "records": "Records"
+        },
+        "filter": {
+          "all": "All"
+        },
+        "type": {
+          "strength": "Strength",
+          "cardio": "Cardio",
+          "recovery": "Recovery"
+        },
+        "common": {
+          "new": "New",
+          "edit": "Edit",
+          "delete": "Delete",
+          "reps": "Reps"
+        },
+        "train": {
+          "weekWorkouts": "This Week",
+          "totalMin": "Total (min)",
+          "completedSets": "Sets Done",
+          "emptyPlans": "No plans yet. Tap + at the top right to create one."
+        },
+        "plans": {
+          "heading": "Training Plans",
+          "empty": "No plans yet",
+          "createNew": "Create New Plan",
+          "exCount": "{{ loop.item.exCount }} exercises",
+          "estDuration": "{{ loop.item.estDuration }} min"
+        },
+        "planDetail": {
+          "appbar": "Plan Details",
+          "estDuration": "~{{ global.currentPlan.estDuration }} min",
+          "exCount": "{{ global.currentPlan.exCount }} exercises",
+          "emptyEx": "No exercises",
+          "start": "Start Workout"
+        },
+        "exercise": {
+          "listTitle": "Exercises",
+          "setsReps": "{{ loop.item.targetSets }} sets × {{ loop.item.targetReps }} reps",
+          "rest": "rest {{ loop.item.restDuration }}s",
+          "formSummary": "{{ loop.item.targetSets }} sets × {{ loop.item.targetReps }} reps · {{ loop.item.duration }}s · rest {{ loop.item.restDuration }}s"
+        },
+        "planForm": {
+          "appbar": "Edit Plan",
+          "nameLabel": "Plan Name",
+          "namePlaceholder": "e.g. Upper Body Strength",
+          "descLabel": "Description",
+          "descPlaceholder": "Briefly describe the goal",
+          "typeLabel": "Type",
+          "emptyEx": "No exercises yet. Add one below.",
+          "addEx": "Add Exercise",
+          "exNamePlaceholder": "Exercise name",
+          "setsLabel": "Sets",
+          "durationLabel": "Duration (s)",
+          "restLabel": "Rest (s)",
+          "save": "Save Plan"
+        },
+        "timer": {
+          "appbar": "Timer",
+          "modeExercise": "Exercise",
+          "modeRest": "Rest",
+          "totalSec": "{{ global.timerTotal }} seconds total",
+          "reset": "Reset",
+          "pause": "Pause",
+          "start": "Start",
+          "presets": "Quick Presets",
+          "s30": "30s",
+          "s45": "45s",
+          "s60": "60s",
+          "s90": "90s",
+          "s120": "120s",
+          "s180": "180s",
+          "custom": "Custom (seconds)",
+          "customPlaceholder": "Enter seconds",
+          "set": "Set"
+        },
+        "session": {
+          "appbar": "Working Out",
+          "exLabel": "Exercise {{ global.sessionExLabel }}",
+          "setLabel": "Set {{ global.sessionCurrentSet }}",
+          "done": "Workout Complete!",
+          "logCurrent": "Log Current Set",
+          "weight": "Weight (kg)",
+          "logSet": "Log Set",
+          "nextEx": "Next Exercise",
+          "allDone": "All exercises done!",
+          "finish": "Finish Workout",
+          "openTimer": "Open Timer",
+          "cancel": "Quit Workout"
+        },
+        "records": {
+          "appbar": "Workout History",
+          "totalCount": "Total Workouts",
+          "weekCount": "This Week",
+          "empty": "No records yet. Complete a workout!",
+          "duration": "{{ loop.item.duration }} min",
+          "completedSets": "{{ loop.item.completedSets }} sets done"
+        },
+        "recordDetail": {
+          "appbar": "Record Details",
+          "duration": "{{ global.viewRecord.duration }} min",
+          "completedSets": "{{ global.viewRecord.completedSets }} sets",
+          "exDetail": "Exercise Details",
+          "emptyEx": "No exercise records",
+          "setsCompleted": "{{ loop.item.sets | len }} sets done",
+          "delete": "Delete Record"
+        },
+        "toast": {
+          "planSaved": "Plan saved",
+          "planDeleted": "Plan deleted",
+          "setLogged": "Logged. On to the next set.",
+          "workoutDone": "Workout complete! Record saved.",
+          "recordDeleted": "Record deleted"
+        }
+      },
+      "de": {
+        "nav": {
+          "train": "Training",
+          "plans": "Pläne",
+          "timer": "Timer",
+          "records": "Verlauf"
+        },
+        "filter": {
+          "all": "Alle"
+        },
+        "type": {
+          "strength": "Kraft",
+          "cardio": "Cardio",
+          "recovery": "Erholung"
+        },
+        "common": {
+          "new": "Neu",
+          "edit": "Bearbeiten",
+          "delete": "Löschen",
+          "reps": "Wdh."
+        },
+        "train": {
+          "weekWorkouts": "Diese Woche",
+          "totalMin": "Gesamt (Min)",
+          "completedSets": "Sätze",
+          "emptyPlans": "Noch keine Pläne. Tippe oben rechts auf +, um einen zu erstellen."
+        },
+        "plans": {
+          "heading": "Trainingspläne",
+          "empty": "Noch keine Pläne",
+          "createNew": "Neuen Plan erstellen",
+          "exCount": "{{ loop.item.exCount }} Übungen",
+          "estDuration": "{{ loop.item.estDuration }} Min."
+        },
+        "planDetail": {
+          "appbar": "Plandetails",
+          "estDuration": "ca. {{ global.currentPlan.estDuration }} Min.",
+          "exCount": "{{ global.currentPlan.exCount }} Übungen",
+          "emptyEx": "Keine Übungen",
+          "start": "Training starten"
+        },
+        "exercise": {
+          "listTitle": "Übungen",
+          "setsReps": "{{ loop.item.targetSets }} Sätze × {{ loop.item.targetReps }} Wdh.",
+          "rest": "Pause {{ loop.item.restDuration }}s",
+          "formSummary": "{{ loop.item.targetSets }} Sätze × {{ loop.item.targetReps }} Wdh. · {{ loop.item.duration }}s · Pause {{ loop.item.restDuration }}s"
+        },
+        "planForm": {
+          "appbar": "Plan bearbeiten",
+          "nameLabel": "Planname",
+          "namePlaceholder": "z. B. Oberkörper-Kraft",
+          "descLabel": "Beschreibung",
+          "descPlaceholder": "Beschreibe kurz das Ziel",
+          "typeLabel": "Typ",
+          "emptyEx": "Noch keine Übungen. Füge unten eine hinzu.",
+          "addEx": "Übung hinzufügen",
+          "exNamePlaceholder": "Übungsname",
+          "setsLabel": "Sätze",
+          "durationLabel": "Dauer (s)",
+          "restLabel": "Pause (s)",
+          "save": "Plan speichern"
+        },
+        "timer": {
+          "appbar": "Timer",
+          "modeExercise": "Übung",
+          "modeRest": "Pause",
+          "totalSec": "Insgesamt {{ global.timerTotal }} Sek.",
+          "reset": "Zurücksetzen",
+          "pause": "Pause",
+          "start": "Start",
+          "presets": "Schnellauswahl",
+          "s30": "30 Sek.",
+          "s45": "45 Sek.",
+          "s60": "60 Sek.",
+          "s90": "90 Sek.",
+          "s120": "120 Sek.",
+          "s180": "180 Sek.",
+          "custom": "Eigene Dauer (Sek.)",
+          "customPlaceholder": "Sekunden eingeben",
+          "set": "Setzen"
+        },
+        "session": {
+          "appbar": "Im Training",
+          "exLabel": "Übung {{ global.sessionExLabel }}",
+          "setLabel": "Satz {{ global.sessionCurrentSet }}",
+          "done": "Training abgeschlossen!",
+          "logCurrent": "Aktuellen Satz erfassen",
+          "weight": "Gewicht (kg)",
+          "logSet": "Satz erfassen",
+          "nextEx": "Nächste Übung",
+          "allDone": "Alle Übungen erledigt!",
+          "finish": "Training beenden",
+          "openTimer": "Timer öffnen",
+          "cancel": "Training abbrechen"
+        },
+        "records": {
+          "appbar": "Trainingsverlauf",
+          "totalCount": "Trainings gesamt",
+          "weekCount": "Diese Woche",
+          "empty": "Noch keine Einträge. Absolviere ein Training!",
+          "duration": "{{ loop.item.duration }} Min.",
+          "completedSets": "{{ loop.item.completedSets }} Sätze"
+        },
+        "recordDetail": {
+          "appbar": "Eintragsdetails",
+          "duration": "{{ global.viewRecord.duration }} Min.",
+          "completedSets": "{{ global.viewRecord.completedSets }} Sätze",
+          "exDetail": "Übungsdetails",
+          "emptyEx": "Keine Übungseinträge",
+          "setsCompleted": "{{ loop.item.sets | len }} Sätze",
+          "delete": "Eintrag löschen"
+        },
+        "toast": {
+          "planSaved": "Plan gespeichert",
+          "planDeleted": "Plan gelöscht",
+          "setLogged": "Erfasst. Weiter zum nächsten Satz.",
+          "workoutDone": "Training abgeschlossen! Eintrag gespeichert.",
+          "recordDeleted": "Eintrag gelöscht"
+        }
+      },
+      "es": {
+        "nav": {
+          "train": "Entrenar",
+          "plans": "Planes",
+          "timer": "Tiempo",
+          "records": "Registros"
+        },
+        "filter": {
+          "all": "Todos"
+        },
+        "type": {
+          "strength": "Fuerza",
+          "cardio": "Cardio",
+          "recovery": "Recuperación"
+        },
+        "common": {
+          "new": "Nuevo",
+          "edit": "Editar",
+          "delete": "Eliminar",
+          "reps": "Reps"
+        },
+        "train": {
+          "weekWorkouts": "Esta semana",
+          "totalMin": "Total (min)",
+          "completedSets": "Series",
+          "emptyPlans": "Aún no hay planes. Toca + arriba a la derecha para crear uno."
+        },
+        "plans": {
+          "heading": "Planes de entrenamiento",
+          "empty": "Aún no hay planes",
+          "createNew": "Crear nuevo plan",
+          "exCount": "{{ loop.item.exCount }} ejercicios",
+          "estDuration": "{{ loop.item.estDuration }} min"
+        },
+        "planDetail": {
+          "appbar": "Detalles del plan",
+          "estDuration": "~{{ global.currentPlan.estDuration }} min",
+          "exCount": "{{ global.currentPlan.exCount }} ejercicios",
+          "emptyEx": "Sin ejercicios",
+          "start": "Empezar entrenamiento"
+        },
+        "exercise": {
+          "listTitle": "Ejercicios",
+          "setsReps": "{{ loop.item.targetSets }} series × {{ loop.item.targetReps }} reps",
+          "rest": "descanso {{ loop.item.restDuration }}s",
+          "formSummary": "{{ loop.item.targetSets }} series × {{ loop.item.targetReps }} reps · {{ loop.item.duration }}s · descanso {{ loop.item.restDuration }}s"
+        },
+        "planForm": {
+          "appbar": "Editar plan",
+          "nameLabel": "Nombre del plan",
+          "namePlaceholder": "p. ej. Fuerza tren superior",
+          "descLabel": "Descripción",
+          "descPlaceholder": "Describe brevemente el objetivo",
+          "typeLabel": "Tipo",
+          "emptyEx": "Sin ejercicios. Añade uno abajo.",
+          "addEx": "Añadir ejercicio",
+          "exNamePlaceholder": "Nombre del ejercicio",
+          "setsLabel": "Series",
+          "durationLabel": "Duración (s)",
+          "restLabel": "Descanso (s)",
+          "save": "Guardar plan"
+        },
+        "timer": {
+          "appbar": "Temporizador",
+          "modeExercise": "Ejercicio",
+          "modeRest": "Descanso",
+          "totalSec": "{{ global.timerTotal }} segundos en total",
+          "reset": "Reiniciar",
+          "pause": "Pausar",
+          "start": "Iniciar",
+          "presets": "Ajustes rápidos",
+          "s30": "30 s",
+          "s45": "45 s",
+          "s60": "60 s",
+          "s90": "90 s",
+          "s120": "120 s",
+          "s180": "180 s",
+          "custom": "Personalizado (segundos)",
+          "customPlaceholder": "Introduce segundos",
+          "set": "Establecer"
+        },
+        "session": {
+          "appbar": "Entrenando",
+          "exLabel": "Ejercicio {{ global.sessionExLabel }}",
+          "setLabel": "Serie {{ global.sessionCurrentSet }}",
+          "done": "¡Entrenamiento completo!",
+          "logCurrent": "Registrar serie actual",
+          "weight": "Peso (kg)",
+          "logSet": "Registrar serie",
+          "nextEx": "Siguiente ejercicio",
+          "allDone": "¡Todos los ejercicios hechos!",
+          "finish": "Terminar entrenamiento",
+          "openTimer": "Abrir temporizador",
+          "cancel": "Abandonar entrenamiento"
+        },
+        "records": {
+          "appbar": "Historial de entrenamientos",
+          "totalCount": "Entrenamientos totales",
+          "weekCount": "Esta semana",
+          "empty": "Aún no hay registros. ¡Completa un entrenamiento!",
+          "duration": "{{ loop.item.duration }} min",
+          "completedSets": "{{ loop.item.completedSets }} series"
+        },
+        "recordDetail": {
+          "appbar": "Detalles del registro",
+          "duration": "{{ global.viewRecord.duration }} min",
+          "completedSets": "{{ global.viewRecord.completedSets }} series",
+          "exDetail": "Detalles de ejercicios",
+          "emptyEx": "Sin registros de ejercicios",
+          "setsCompleted": "{{ loop.item.sets | len }} series",
+          "delete": "Eliminar registro"
+        },
+        "toast": {
+          "planSaved": "Plan guardado",
+          "planDeleted": "Plan eliminado",
+          "setLogged": "Registrado. A la siguiente serie.",
+          "workoutDone": "¡Entrenamiento completo! Registro guardado.",
+          "recordDeleted": "Registro eliminado"
+        }
+      },
+      "fr": {
+        "nav": {
+          "train": "Séance",
+          "plans": "Plans",
+          "timer": "Minuteur",
+          "records": "Historique"
+        },
+        "filter": {
+          "all": "Tous"
+        },
+        "type": {
+          "strength": "Force",
+          "cardio": "Cardio",
+          "recovery": "Récupération"
+        },
+        "common": {
+          "new": "Nouveau",
+          "edit": "Modifier",
+          "delete": "Supprimer",
+          "reps": "Réps"
+        },
+        "train": {
+          "weekWorkouts": "Cette semaine",
+          "totalMin": "Total (min)",
+          "completedSets": "Séries",
+          "emptyPlans": "Aucun plan pour le moment. Touchez + en haut à droite pour en créer un."
+        },
+        "plans": {
+          "heading": "Plans d'entraînement",
+          "empty": "Aucun plan pour le moment",
+          "createNew": "Créer un plan",
+          "exCount": "{{ loop.item.exCount }} exercices",
+          "estDuration": "{{ loop.item.estDuration }} min"
+        },
+        "planDetail": {
+          "appbar": "Détails du plan",
+          "estDuration": "~{{ global.currentPlan.estDuration }} min",
+          "exCount": "{{ global.currentPlan.exCount }} exercices",
+          "emptyEx": "Aucun exercice",
+          "start": "Démarrer la séance"
+        },
+        "exercise": {
+          "listTitle": "Exercices",
+          "setsReps": "{{ loop.item.targetSets }} séries × {{ loop.item.targetReps }} réps",
+          "rest": "repos {{ loop.item.restDuration }}s",
+          "formSummary": "{{ loop.item.targetSets }} séries × {{ loop.item.targetReps }} réps · {{ loop.item.duration }}s · repos {{ loop.item.restDuration }}s"
+        },
+        "planForm": {
+          "appbar": "Modifier le plan",
+          "nameLabel": "Nom du plan",
+          "namePlaceholder": "p. ex. Force du haut du corps",
+          "descLabel": "Description",
+          "descPlaceholder": "Décrivez brièvement l'objectif",
+          "typeLabel": "Type",
+          "emptyEx": "Aucun exercice. Ajoutez-en un ci-dessous.",
+          "addEx": "Ajouter un exercice",
+          "exNamePlaceholder": "Nom de l'exercice",
+          "setsLabel": "Séries",
+          "durationLabel": "Durée (s)",
+          "restLabel": "Repos (s)",
+          "save": "Enregistrer le plan"
+        },
+        "timer": {
+          "appbar": "Minuteur",
+          "modeExercise": "Exercice",
+          "modeRest": "Repos",
+          "totalSec": "{{ global.timerTotal }} secondes au total",
+          "reset": "Réinitialiser",
+          "pause": "Pause",
+          "start": "Démarrer",
+          "presets": "Préréglages",
+          "s30": "30 s",
+          "s45": "45 s",
+          "s60": "60 s",
+          "s90": "90 s",
+          "s120": "120 s",
+          "s180": "180 s",
+          "custom": "Personnalisé (secondes)",
+          "customPlaceholder": "Saisir les secondes",
+          "set": "Définir"
+        },
+        "session": {
+          "appbar": "Séance en cours",
+          "exLabel": "Exercice {{ global.sessionExLabel }}",
+          "setLabel": "Série {{ global.sessionCurrentSet }}",
+          "done": "Séance terminée !",
+          "logCurrent": "Enregistrer la série",
+          "weight": "Poids (kg)",
+          "logSet": "Enregistrer la série",
+          "nextEx": "Exercice suivant",
+          "allDone": "Tous les exercices faits !",
+          "finish": "Terminer la séance",
+          "openTimer": "Ouvrir le minuteur",
+          "cancel": "Abandonner la séance"
+        },
+        "records": {
+          "appbar": "Historique des séances",
+          "totalCount": "Total des séances",
+          "weekCount": "Cette semaine",
+          "empty": "Aucun enregistrement. Terminez une séance !",
+          "duration": "{{ loop.item.duration }} min",
+          "completedSets": "{{ loop.item.completedSets }} séries"
+        },
+        "recordDetail": {
+          "appbar": "Détails de l'enregistrement",
+          "duration": "{{ global.viewRecord.duration }} min",
+          "completedSets": "{{ global.viewRecord.completedSets }} séries",
+          "exDetail": "Détails des exercices",
+          "emptyEx": "Aucun exercice enregistré",
+          "setsCompleted": "{{ loop.item.sets | len }} séries",
+          "delete": "Supprimer l'enregistrement"
+        },
+        "toast": {
+          "planSaved": "Plan enregistré",
+          "planDeleted": "Plan supprimé",
+          "setLogged": "Enregistré. Série suivante.",
+          "workoutDone": "Séance terminée ! Enregistrement sauvegardé.",
+          "recordDeleted": "Enregistrement supprimé"
+        }
+      },
+      "pt": {
+        "nav": {
+          "train": "Treinar",
+          "plans": "Planos",
+          "timer": "Tempo",
+          "records": "Registros"
+        },
+        "filter": {
+          "all": "Todos"
+        },
+        "type": {
+          "strength": "Força",
+          "cardio": "Cardio",
+          "recovery": "Recuperação"
+        },
+        "common": {
+          "new": "Novo",
+          "edit": "Editar",
+          "delete": "Excluir",
+          "reps": "Reps"
+        },
+        "train": {
+          "weekWorkouts": "Esta semana",
+          "totalMin": "Total (min)",
+          "completedSets": "Séries",
+          "emptyPlans": "Ainda não há planos. Toque em + no canto superior direito para criar um."
+        },
+        "plans": {
+          "heading": "Planos de treino",
+          "empty": "Ainda não há planos",
+          "createNew": "Criar novo plano",
+          "exCount": "{{ loop.item.exCount }} exercícios",
+          "estDuration": "{{ loop.item.estDuration }} min"
+        },
+        "planDetail": {
+          "appbar": "Detalhes do plano",
+          "estDuration": "~{{ global.currentPlan.estDuration }} min",
+          "exCount": "{{ global.currentPlan.exCount }} exercícios",
+          "emptyEx": "Sem exercícios",
+          "start": "Iniciar treino"
+        },
+        "exercise": {
+          "listTitle": "Exercícios",
+          "setsReps": "{{ loop.item.targetSets }} séries × {{ loop.item.targetReps }} reps",
+          "rest": "descanso {{ loop.item.restDuration }}s",
+          "formSummary": "{{ loop.item.targetSets }} séries × {{ loop.item.targetReps }} reps · {{ loop.item.duration }}s · descanso {{ loop.item.restDuration }}s"
+        },
+        "planForm": {
+          "appbar": "Editar plano",
+          "nameLabel": "Nome do plano",
+          "namePlaceholder": "ex. Força superior",
+          "descLabel": "Descrição",
+          "descPlaceholder": "Descreva brevemente o objetivo",
+          "typeLabel": "Tipo",
+          "emptyEx": "Sem exercícios. Adicione um abaixo.",
+          "addEx": "Adicionar exercício",
+          "exNamePlaceholder": "Nome do exercício",
+          "setsLabel": "Séries",
+          "durationLabel": "Duração (s)",
+          "restLabel": "Descanso (s)",
+          "save": "Salvar plano"
+        },
+        "timer": {
+          "appbar": "Temporizador",
+          "modeExercise": "Exercício",
+          "modeRest": "Descanso",
+          "totalSec": "{{ global.timerTotal }} segundos no total",
+          "reset": "Reiniciar",
+          "pause": "Pausar",
+          "start": "Iniciar",
+          "presets": "Predefinições",
+          "s30": "30 s",
+          "s45": "45 s",
+          "s60": "60 s",
+          "s90": "90 s",
+          "s120": "120 s",
+          "s180": "180 s",
+          "custom": "Personalizado (segundos)",
+          "customPlaceholder": "Insira os segundos",
+          "set": "Definir"
+        },
+        "session": {
+          "appbar": "Treinando",
+          "exLabel": "Exercício {{ global.sessionExLabel }}",
+          "setLabel": "Série {{ global.sessionCurrentSet }}",
+          "done": "Treino concluído!",
+          "logCurrent": "Registrar série atual",
+          "weight": "Peso (kg)",
+          "logSet": "Registrar série",
+          "nextEx": "Próximo exercício",
+          "allDone": "Todos os exercícios concluídos!",
+          "finish": "Concluir treino",
+          "openTimer": "Abrir temporizador",
+          "cancel": "Abandonar treino"
+        },
+        "records": {
+          "appbar": "Histórico de treinos",
+          "totalCount": "Total de treinos",
+          "weekCount": "Esta semana",
+          "empty": "Sem registros ainda. Conclua um treino!",
+          "duration": "{{ loop.item.duration }} min",
+          "completedSets": "{{ loop.item.completedSets }} séries"
+        },
+        "recordDetail": {
+          "appbar": "Detalhes do registro",
+          "duration": "{{ global.viewRecord.duration }} min",
+          "completedSets": "{{ global.viewRecord.completedSets }} séries",
+          "exDetail": "Detalhes dos exercícios",
+          "emptyEx": "Sem registros de exercícios",
+          "setsCompleted": "{{ loop.item.sets | len }} séries",
+          "delete": "Excluir registro"
+        },
+        "toast": {
+          "planSaved": "Plano salvo",
+          "planDeleted": "Plano excluído",
+          "setLogged": "Registrado. Próxima série.",
+          "workoutDone": "Treino concluído! Registro salvo.",
+          "recordDeleted": "Registro excluído"
+        }
+      },
+      "ca": {
+        "nav": {
+          "train": "Entrenar",
+          "plans": "Plans",
+          "timer": "Temps",
+          "records": "Registres"
+        },
+        "filter": {
+          "all": "Tots"
+        },
+        "type": {
+          "strength": "Força",
+          "cardio": "Cardio",
+          "recovery": "Recuperació"
+        },
+        "common": {
+          "new": "Nou",
+          "edit": "Edita",
+          "delete": "Elimina",
+          "reps": "Reps"
+        },
+        "train": {
+          "weekWorkouts": "Aquesta setmana",
+          "totalMin": "Total (min)",
+          "completedSets": "Sèries",
+          "emptyPlans": "Encara no hi ha plans. Toca + a dalt a la dreta per crear-ne un."
+        },
+        "plans": {
+          "heading": "Plans d'entrenament",
+          "empty": "Encara no hi ha plans",
+          "createNew": "Crea un pla nou",
+          "exCount": "{{ loop.item.exCount }} exercicis",
+          "estDuration": "{{ loop.item.estDuration }} min"
+        },
+        "planDetail": {
+          "appbar": "Detalls del pla",
+          "estDuration": "~{{ global.currentPlan.estDuration }} min",
+          "exCount": "{{ global.currentPlan.exCount }} exercicis",
+          "emptyEx": "Sense exercicis",
+          "start": "Comença l'entrenament"
+        },
+        "exercise": {
+          "listTitle": "Exercicis",
+          "setsReps": "{{ loop.item.targetSets }} sèries × {{ loop.item.targetReps }} reps",
+          "rest": "descans {{ loop.item.restDuration }}s",
+          "formSummary": "{{ loop.item.targetSets }} sèries × {{ loop.item.targetReps }} reps · {{ loop.item.duration }}s · descans {{ loop.item.restDuration }}s"
+        },
+        "planForm": {
+          "appbar": "Edita el pla",
+          "nameLabel": "Nom del pla",
+          "namePlaceholder": "p. ex. Força tren superior",
+          "descLabel": "Descripció",
+          "descPlaceholder": "Descriu breument l'objectiu",
+          "typeLabel": "Tipus",
+          "emptyEx": "Sense exercicis. Afegeix-ne un a sota.",
+          "addEx": "Afegeix exercici",
+          "exNamePlaceholder": "Nom de l'exercici",
+          "setsLabel": "Sèries",
+          "durationLabel": "Durada (s)",
+          "restLabel": "Descans (s)",
+          "save": "Desa el pla"
+        },
+        "timer": {
+          "appbar": "Temporitzador",
+          "modeExercise": "Exercici",
+          "modeRest": "Descans",
+          "totalSec": "{{ global.timerTotal }} segons en total",
+          "reset": "Reinicia",
+          "pause": "Pausa",
+          "start": "Comença",
+          "presets": "Predefinits",
+          "s30": "30 s",
+          "s45": "45 s",
+          "s60": "60 s",
+          "s90": "90 s",
+          "s120": "120 s",
+          "s180": "180 s",
+          "custom": "Personalitzat (segons)",
+          "customPlaceholder": "Introdueix segons",
+          "set": "Estableix"
+        },
+        "session": {
+          "appbar": "Entrenant",
+          "exLabel": "Exercici {{ global.sessionExLabel }}",
+          "setLabel": "Sèrie {{ global.sessionCurrentSet }}",
+          "done": "Entrenament completat!",
+          "logCurrent": "Registra la sèrie actual",
+          "weight": "Pes (kg)",
+          "logSet": "Registra la sèrie",
+          "nextEx": "Següent exercici",
+          "allDone": "Tots els exercicis fets!",
+          "finish": "Finalitza l'entrenament",
+          "openTimer": "Obre el temporitzador",
+          "cancel": "Abandona l'entrenament"
+        },
+        "records": {
+          "appbar": "Historial d'entrenaments",
+          "totalCount": "Total d'entrenaments",
+          "weekCount": "Aquesta setmana",
+          "empty": "Encara no hi ha registres. Completa un entrenament!",
+          "duration": "{{ loop.item.duration }} min",
+          "completedSets": "{{ loop.item.completedSets }} sèries"
+        },
+        "recordDetail": {
+          "appbar": "Detalls del registre",
+          "duration": "{{ global.viewRecord.duration }} min",
+          "completedSets": "{{ global.viewRecord.completedSets }} sèries",
+          "exDetail": "Detalls dels exercicis",
+          "emptyEx": "Sense registres d'exercicis",
+          "setsCompleted": "{{ loop.item.sets | len }} sèries",
+          "delete": "Elimina el registre"
+        },
+        "toast": {
+          "planSaved": "Pla desat",
+          "planDeleted": "Pla eliminat",
+          "setLogged": "Registrat. A la següent sèrie.",
+          "workoutDone": "Entrenament completat! Registre desat.",
+          "recordDeleted": "Registre eliminat"
+        }
+      },
+      "hi": {
+        "nav": {
+          "train": "वर्कआउट",
+          "plans": "प्लान",
+          "timer": "टाइमर",
+          "records": "रिकॉर्ड"
+        },
+        "filter": {
+          "all": "सभी"
+        },
+        "type": {
+          "strength": "ताकत",
+          "cardio": "कार्डियो",
+          "recovery": "रिकवरी"
+        },
+        "common": {
+          "new": "नया",
+          "edit": "संपादित करें",
+          "delete": "हटाएं",
+          "reps": "दोहराव"
+        },
+        "train": {
+          "weekWorkouts": "इस सप्ताह",
+          "totalMin": "कुल (मिनट)",
+          "completedSets": "पूर्ण सेट",
+          "emptyPlans": "अभी तक कोई प्लान नहीं। बनाने के लिए ऊपर दाईं ओर + टैप करें।"
+        },
+        "plans": {
+          "heading": "ट्रेनिंग प्लान",
+          "empty": "अभी तक कोई प्लान नहीं",
+          "createNew": "नया प्लान बनाएं",
+          "exCount": "{{ loop.item.exCount }} व्यायाम",
+          "estDuration": "{{ loop.item.estDuration }} मिनट"
+        },
+        "planDetail": {
+          "appbar": "प्लान विवरण",
+          "estDuration": "लगभग {{ global.currentPlan.estDuration }} मिनट",
+          "exCount": "{{ global.currentPlan.exCount }} व्यायाम",
+          "emptyEx": "कोई व्यायाम नहीं",
+          "start": "वर्कआउट शुरू करें"
+        },
+        "exercise": {
+          "listTitle": "व्यायाम सूची",
+          "setsReps": "{{ loop.item.targetSets }} सेट × {{ loop.item.targetReps }} दोहराव",
+          "rest": "आराम {{ loop.item.restDuration }}से",
+          "formSummary": "{{ loop.item.targetSets }} सेट × {{ loop.item.targetReps }} दोहराव · {{ loop.item.duration }}s · आराम {{ loop.item.restDuration }}से"
+        },
+        "planForm": {
+          "appbar": "प्लान संपादित करें",
+          "nameLabel": "प्लान का नाम",
+          "namePlaceholder": "उदा. ऊपरी शरीर की ताकत",
+          "descLabel": "विवरण",
+          "descPlaceholder": "लक्ष्य का संक्षिप्त विवरण दें",
+          "typeLabel": "प्रकार",
+          "emptyEx": "अभी कोई व्यायाम नहीं। नीचे जोड़ें।",
+          "addEx": "व्यायाम जोड़ें",
+          "exNamePlaceholder": "व्यायाम का नाम",
+          "setsLabel": "सेट",
+          "durationLabel": "अवधि (s)",
+          "restLabel": "आराम (s)",
+          "save": "प्लान सहेजें"
+        },
+        "timer": {
+          "appbar": "टाइमर",
+          "modeExercise": "व्यायाम",
+          "modeRest": "आराम",
+          "totalSec": "कुल {{ global.timerTotal }} सेकंड",
+          "reset": "रीसेट",
+          "pause": "रोकें",
+          "start": "शुरू",
+          "presets": "त्वरित प्रीसेट",
+          "s30": "30 से",
+          "s45": "45 से",
+          "s60": "60 से",
+          "s90": "90 से",
+          "s120": "120 से",
+          "s180": "180 से",
+          "custom": "कस्टम (सेकंड)",
+          "customPlaceholder": "सेकंड दर्ज करें",
+          "set": "सेट"
+        },
+        "session": {
+          "appbar": "वर्कआउट जारी",
+          "exLabel": "व्यायाम {{ global.sessionExLabel }}",
+          "setLabel": "सेट {{ global.sessionCurrentSet }}",
+          "done": "वर्कआउट पूरा!",
+          "logCurrent": "वर्तमान सेट दर्ज करें",
+          "weight": "वजन (kg)",
+          "logSet": "सेट दर्ज करें",
+          "nextEx": "अगला व्यायाम",
+          "allDone": "सभी व्यायाम पूरे!",
+          "finish": "वर्कआउट समाप्त करें",
+          "openTimer": "टाइमर खोलें",
+          "cancel": "वर्कआउट छोड़ें"
+        },
+        "records": {
+          "appbar": "वर्कआउट इतिहास",
+          "totalCount": "कुल वर्कआउट",
+          "weekCount": "इस सप्ताह",
+          "empty": "अभी कोई रिकॉर्ड नहीं। एक वर्कआउट पूरा करें!",
+          "duration": "{{ loop.item.duration }} मिनट",
+          "completedSets": "{{ loop.item.completedSets }} सेट पूरे"
+        },
+        "recordDetail": {
+          "appbar": "रिकॉर्ड विवरण",
+          "duration": "{{ global.viewRecord.duration }} मिनट",
+          "completedSets": "{{ global.viewRecord.completedSets }} सेट",
+          "exDetail": "व्यायाम विवरण",
+          "emptyEx": "कोई व्यायाम रिकॉर्ड नहीं",
+          "setsCompleted": "{{ loop.item.sets | len }} सेट पूरे",
+          "delete": "रिकॉर्ड हटाएं"
+        },
+        "toast": {
+          "planSaved": "प्लान सहेजा गया",
+          "planDeleted": "प्लान हटाया गया",
+          "setLogged": "दर्ज किया गया। अगले सेट पर।",
+          "workoutDone": "वर्कआउट पूरा! रिकॉर्ड सहेजा गया।",
+          "recordDeleted": "रिकॉर्ड हटाया गया"
+        }
+      },
+      "ko": {
+        "nav": {
+          "train": "운동",
+          "plans": "플랜",
+          "timer": "타이머",
+          "records": "기록"
+        },
+        "filter": {
+          "all": "전체"
+        },
+        "type": {
+          "strength": "근력",
+          "cardio": "유산소",
+          "recovery": "회복"
+        },
+        "common": {
+          "new": "새로",
+          "edit": "편집",
+          "delete": "삭제",
+          "reps": "횟수"
+        },
+        "train": {
+          "weekWorkouts": "이번 주",
+          "totalMin": "총 시간(분)",
+          "completedSets": "완료 세트",
+          "emptyPlans": "아직 플랜이 없습니다. 오른쪽 상단의 +를 눌러 만드세요."
+        },
+        "plans": {
+          "heading": "운동 플랜",
+          "empty": "아직 플랜이 없습니다",
+          "createNew": "새 플랜 만들기",
+          "exCount": "{{ loop.item.exCount }}개 동작",
+          "estDuration": "{{ loop.item.estDuration }}분"
+        },
+        "planDetail": {
+          "appbar": "플랜 상세",
+          "estDuration": "약 {{ global.currentPlan.estDuration }}분",
+          "exCount": "{{ global.currentPlan.exCount }}개 동작",
+          "emptyEx": "동작 없음",
+          "start": "운동 시작"
+        },
+        "exercise": {
+          "listTitle": "동작 목록",
+          "setsReps": "{{ loop.item.targetSets }}세트 × {{ loop.item.targetReps }}회",
+          "rest": "휴식 {{ loop.item.restDuration }}초",
+          "formSummary": "{{ loop.item.targetSets }}세트 × {{ loop.item.targetReps }}회 · {{ loop.item.duration }}초 · 휴식 {{ loop.item.restDuration }}초"
+        },
+        "planForm": {
+          "appbar": "플랜 편집",
+          "nameLabel": "플랜 이름",
+          "namePlaceholder": "예: 상체 근력",
+          "descLabel": "설명",
+          "descPlaceholder": "목표를 간단히 설명하세요",
+          "typeLabel": "유형",
+          "emptyEx": "동작이 없습니다. 아래에서 추가하세요.",
+          "addEx": "동작 추가",
+          "exNamePlaceholder": "동작 이름",
+          "setsLabel": "세트",
+          "durationLabel": "시간(초)",
+          "restLabel": "휴식(초)",
+          "save": "플랜 저장"
+        },
+        "timer": {
+          "appbar": "타이머",
+          "modeExercise": "운동",
+          "modeRest": "휴식",
+          "totalSec": "총 {{ global.timerTotal }}초",
+          "reset": "초기화",
+          "pause": "일시정지",
+          "start": "시작",
+          "presets": "빠른 설정",
+          "s30": "30초",
+          "s45": "45초",
+          "s60": "60초",
+          "s90": "90초",
+          "s120": "120초",
+          "s180": "180초",
+          "custom": "사용자 지정(초)",
+          "customPlaceholder": "초 입력",
+          "set": "설정"
+        },
+        "session": {
+          "appbar": "운동 중",
+          "exLabel": "{{ global.sessionExLabel }}번째 동작",
+          "setLabel": "{{ global.sessionCurrentSet }}번째 세트",
+          "done": "운동 완료!",
+          "logCurrent": "현재 세트 기록",
+          "weight": "무게(kg)",
+          "logSet": "세트 기록",
+          "nextEx": "다음 동작",
+          "allDone": "모든 동작 완료!",
+          "finish": "운동 완료",
+          "openTimer": "타이머 열기",
+          "cancel": "운동 중단"
+        },
+        "records": {
+          "appbar": "운동 기록",
+          "totalCount": "총 운동 횟수",
+          "weekCount": "이번 주",
+          "empty": "아직 기록이 없습니다. 운동을 완료해 보세요!",
+          "duration": "{{ loop.item.duration }}분",
+          "completedSets": "{{ loop.item.completedSets }}세트 완료"
+        },
+        "recordDetail": {
+          "appbar": "기록 상세",
+          "duration": "{{ global.viewRecord.duration }}분",
+          "completedSets": "{{ global.viewRecord.completedSets }}세트",
+          "exDetail": "동작 상세",
+          "emptyEx": "동작 기록 없음",
+          "setsCompleted": "{{ loop.item.sets | len }}세트 완료",
+          "delete": "기록 삭제"
+        },
+        "toast": {
+          "planSaved": "플랜이 저장되었습니다",
+          "planDeleted": "플랜이 삭제되었습니다",
+          "setLogged": "기록 완료. 다음 세트로.",
+          "workoutDone": "운동 완료! 기록이 저장되었습니다.",
+          "recordDeleted": "기록이 삭제되었습니다"
+        }
+      },
+      "ja": {
+        "nav": {
+          "train": "トレーニング",
+          "plans": "プラン",
+          "timer": "タイマー",
+          "records": "記録"
+        },
+        "filter": {
+          "all": "すべて"
+        },
+        "type": {
+          "strength": "筋力",
+          "cardio": "有酸素",
+          "recovery": "回復"
+        },
+        "common": {
+          "new": "新規",
+          "edit": "編集",
+          "delete": "削除",
+          "reps": "回数"
+        },
+        "train": {
+          "weekWorkouts": "今週",
+          "totalMin": "合計(分)",
+          "completedSets": "完了セット",
+          "emptyPlans": "プランがまだありません。右上の + をタップして作成しましょう。"
+        },
+        "plans": {
+          "heading": "トレーニングプラン",
+          "empty": "プランがまだありません",
+          "createNew": "新しいプランを作成",
+          "exCount": "{{ loop.item.exCount }}種目",
+          "estDuration": "{{ loop.item.estDuration }}分"
+        },
+        "planDetail": {
+          "appbar": "プランの詳細",
+          "estDuration": "約{{ global.currentPlan.estDuration }}分",
+          "exCount": "{{ global.currentPlan.exCount }}種目",
+          "emptyEx": "種目なし",
+          "start": "トレーニング開始"
+        },
+        "exercise": {
+          "listTitle": "種目リスト",
+          "setsReps": "{{ loop.item.targetSets }}セット × {{ loop.item.targetReps }}回",
+          "rest": "休憩{{ loop.item.restDuration }}秒",
+          "formSummary": "{{ loop.item.targetSets }}セット × {{ loop.item.targetReps }}回 · {{ loop.item.duration }}秒 · 休憩{{ loop.item.restDuration }}秒"
+        },
+        "planForm": {
+          "appbar": "プランを編集",
+          "nameLabel": "プラン名",
+          "namePlaceholder": "例: 上半身の筋力",
+          "descLabel": "説明",
+          "descPlaceholder": "目標を簡単に説明",
+          "typeLabel": "タイプ",
+          "emptyEx": "種目がありません。下から追加してください。",
+          "addEx": "種目を追加",
+          "exNamePlaceholder": "種目名",
+          "setsLabel": "セット",
+          "durationLabel": "時間(秒)",
+          "restLabel": "休憩(秒)",
+          "save": "プランを保存"
+        },
+        "timer": {
+          "appbar": "タイマー",
+          "modeExercise": "種目",
+          "modeRest": "休憩",
+          "totalSec": "合計{{ global.timerTotal }}秒",
+          "reset": "リセット",
+          "pause": "一時停止",
+          "start": "開始",
+          "presets": "クイックプリセット",
+          "s30": "30秒",
+          "s45": "45秒",
+          "s60": "60秒",
+          "s90": "90秒",
+          "s120": "120秒",
+          "s180": "180秒",
+          "custom": "カスタム(秒)",
+          "customPlaceholder": "秒数を入力",
+          "set": "設定"
+        },
+        "session": {
+          "appbar": "トレーニング中",
+          "exLabel": "{{ global.sessionExLabel }}番目の種目",
+          "setLabel": "{{ global.sessionCurrentSet }}セット目",
+          "done": "トレーニング完了！",
+          "logCurrent": "現在のセットを記録",
+          "weight": "重量(kg)",
+          "logSet": "セットを記録",
+          "nextEx": "次の種目",
+          "allDone": "全種目完了！",
+          "finish": "トレーニングを終了",
+          "openTimer": "タイマーを開く",
+          "cancel": "トレーニングを中止"
+        },
+        "records": {
+          "appbar": "トレーニング履歴",
+          "totalCount": "総トレーニング数",
+          "weekCount": "今週",
+          "empty": "まだ記録がありません。トレーニングを完了しましょう！",
+          "duration": "{{ loop.item.duration }}分",
+          "completedSets": "{{ loop.item.completedSets }}セット完了"
+        },
+        "recordDetail": {
+          "appbar": "記録の詳細",
+          "duration": "{{ global.viewRecord.duration }}分",
+          "completedSets": "{{ global.viewRecord.completedSets }}セット",
+          "exDetail": "種目の詳細",
+          "emptyEx": "種目の記録なし",
+          "setsCompleted": "{{ loop.item.sets | len }}セット完了",
+          "delete": "記録を削除"
+        },
+        "toast": {
+          "planSaved": "プランを保存しました",
+          "planDeleted": "プランを削除しました",
+          "setLogged": "記録しました。次のセットへ。",
+          "workoutDone": "トレーニング完了！記録を保存しました。",
+          "recordDeleted": "記録を削除しました"
+        }
+      },
+      "it": {
+        "nav": {
+          "train": "Allena",
+          "plans": "Schede",
+          "timer": "Timer",
+          "records": "Storico"
+        },
+        "filter": {
+          "all": "Tutti"
+        },
+        "type": {
+          "strength": "Forza",
+          "cardio": "Cardio",
+          "recovery": "Recupero"
+        },
+        "common": {
+          "new": "Nuovo",
+          "edit": "Modifica",
+          "delete": "Elimina",
+          "reps": "Ripetizioni"
+        },
+        "train": {
+          "weekWorkouts": "Questa settimana",
+          "totalMin": "Totale (min)",
+          "completedSets": "Serie fatte",
+          "emptyPlans": "Nessuna scheda ancora. Tocca + in alto a destra per crearne una."
+        },
+        "plans": {
+          "heading": "Schede di allenamento",
+          "empty": "Nessuna scheda ancora",
+          "createNew": "Crea nuova scheda",
+          "exCount": "{{ loop.item.exCount }} esercizi",
+          "estDuration": "{{ loop.item.estDuration }} min"
+        },
+        "planDetail": {
+          "appbar": "Dettagli scheda",
+          "estDuration": "~{{ global.currentPlan.estDuration }} min",
+          "exCount": "{{ global.currentPlan.exCount }} esercizi",
+          "emptyEx": "Nessun esercizio",
+          "start": "Inizia allenamento"
+        },
+        "exercise": {
+          "listTitle": "Esercizi",
+          "setsReps": "{{ loop.item.targetSets }} serie × {{ loop.item.targetReps }} ripetizioni",
+          "rest": "riposo {{ loop.item.restDuration }}s",
+          "formSummary": "{{ loop.item.targetSets }} serie × {{ loop.item.targetReps }} ripetizioni · {{ loop.item.duration }}s · riposo {{ loop.item.restDuration }}s"
+        },
+        "planForm": {
+          "appbar": "Modifica scheda",
+          "nameLabel": "Nome scheda",
+          "namePlaceholder": "es. Forza parte superiore",
+          "descLabel": "Descrizione",
+          "descPlaceholder": "Descrivi brevemente l'obiettivo",
+          "typeLabel": "Tipo",
+          "emptyEx": "Nessun esercizio. Aggiungine uno sotto.",
+          "addEx": "Aggiungi esercizio",
+          "exNamePlaceholder": "Nome esercizio",
+          "setsLabel": "Serie",
+          "durationLabel": "Durata (s)",
+          "restLabel": "Riposo (s)",
+          "save": "Salva scheda"
+        },
+        "timer": {
+          "appbar": "Timer",
+          "modeExercise": "Esercizio",
+          "modeRest": "Riposo",
+          "totalSec": "{{ global.timerTotal }} secondi in totale",
+          "reset": "Reimposta",
+          "pause": "Pausa",
+          "start": "Avvia",
+          "presets": "Preset rapidi",
+          "s30": "30 s",
+          "s45": "45 s",
+          "s60": "60 s",
+          "s90": "90 s",
+          "s120": "120 s",
+          "s180": "180 s",
+          "custom": "Personalizzato (secondi)",
+          "customPlaceholder": "Inserisci secondi",
+          "set": "Imposta"
+        },
+        "session": {
+          "appbar": "Allenamento in corso",
+          "exLabel": "Esercizio {{ global.sessionExLabel }}",
+          "setLabel": "Serie {{ global.sessionCurrentSet }}",
+          "done": "Allenamento completato!",
+          "logCurrent": "Registra serie corrente",
+          "weight": "Peso (kg)",
+          "logSet": "Registra serie",
+          "nextEx": "Prossimo esercizio",
+          "allDone": "Tutti gli esercizi fatti!",
+          "finish": "Termina allenamento",
+          "openTimer": "Apri timer",
+          "cancel": "Abbandona allenamento"
+        },
+        "records": {
+          "appbar": "Storico allenamenti",
+          "totalCount": "Allenamenti totali",
+          "weekCount": "Questa settimana",
+          "empty": "Nessun record ancora. Completa un allenamento!",
+          "duration": "{{ loop.item.duration }} min",
+          "completedSets": "{{ loop.item.completedSets }} serie"
+        },
+        "recordDetail": {
+          "appbar": "Dettagli record",
+          "duration": "{{ global.viewRecord.duration }} min",
+          "completedSets": "{{ global.viewRecord.completedSets }} serie",
+          "exDetail": "Dettagli esercizi",
+          "emptyEx": "Nessun esercizio registrato",
+          "setsCompleted": "{{ loop.item.sets | len }} serie",
+          "delete": "Elimina record"
+        },
+        "toast": {
+          "planSaved": "Scheda salvata",
+          "planDeleted": "Scheda eliminata",
+          "setLogged": "Registrato. Alla serie successiva.",
+          "workoutDone": "Allenamento completato! Record salvato.",
+          "recordDeleted": "Record eliminato"
+        }
+      }
     }
   },
   "steps": [],
@@ -1460,11 +2787,11 @@
     "screens": [
       {
         "id": "train_tab",
-        "title": "训练",
+        "title": "{{ t('nav.train') }}",
         "layout": "column",
         "backgroundColor": "#F5F5F7",
         "appBar": {
-          "title": "训练",
+          "title": "{{ t('nav.train') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -1524,7 +2851,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "本周训练",
+                              "value": "{{ t('train.weekWorkouts') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -1581,7 +2908,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "总时长(分)",
+                              "value": "{{ t('train.totalMin') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -1644,7 +2971,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "完成组数",
+                              "value": "{{ t('train.completedSets') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -1685,7 +3012,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "训练计划",
+                    "value": "{{ t('plans.heading') }}",
                     "style": {
                       "fontSize": 17,
                       "fontWeight": "bold",
@@ -1703,7 +3030,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "新建",
+                    "label": "{{ t('common.new') }}",
                     "variant": "text",
                     "action": {
                       "call": "@global.startCreatePlan",
@@ -1730,7 +3057,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "全部",
+                    "label": "{{ t('filter.all') }}",
                     "variant": "choice",
                     "bind": "global.selectedPlanType",
                     "value": "全部",
@@ -1738,7 +3065,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "力量",
+                    "label": "{{ t('type.strength') }}",
                     "variant": "choice",
                     "bind": "global.selectedPlanType",
                     "value": "力量",
@@ -1746,7 +3073,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "有氧",
+                    "label": "{{ t('type.cardio') }}",
                     "variant": "choice",
                     "bind": "global.selectedPlanType",
                     "value": "有氧",
@@ -1754,7 +3081,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "恢复",
+                    "label": "{{ t('type.recovery') }}",
                     "variant": "choice",
                     "bind": "global.selectedPlanType",
                     "value": "恢复",
@@ -1771,7 +3098,7 @@
           {
             "type": "list",
             "source": "{{ global.plans }}",
-            "emptyText": "还没有训练计划，点击右上角 + 创建",
+            "emptyText": "{{ t('train.emptyPlans') }}",
             "item_template": {
               "type": "card",
               "layout": "column",
@@ -1832,7 +3159,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "{{ loop.item.exCount }}个动作",
+                              "value": "{{ t('plans.exCount') }}",
                               "style": {
                                 "fontSize": 12,
                                 "color": "#9CA3AF"
@@ -1875,7 +3202,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "{{ loop.item.estDuration }}分钟",
+                              "value": "{{ t('plans.estDuration') }}",
                               "style": {
                                 "fontSize": 12,
                                 "color": "#9CA3AF"
@@ -1928,11 +3255,11 @@
       },
       {
         "id": "plans_tab",
-        "title": "计划",
+        "title": "{{ t('nav.plans') }}",
         "layout": "column",
         "backgroundColor": "#F5F5F7",
         "appBar": {
-          "title": "训练计划",
+          "title": "{{ t('plans.heading') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -1968,7 +3295,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "全部",
+                    "label": "{{ t('filter.all') }}",
                     "variant": "choice",
                     "bind": "global.selectedPlanType",
                     "value": "全部",
@@ -1976,7 +3303,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "力量",
+                    "label": "{{ t('type.strength') }}",
                     "variant": "choice",
                     "bind": "global.selectedPlanType",
                     "value": "力量",
@@ -1984,7 +3311,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "有氧",
+                    "label": "{{ t('type.cardio') }}",
                     "variant": "choice",
                     "bind": "global.selectedPlanType",
                     "value": "有氧",
@@ -1992,7 +3319,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "恢复",
+                    "label": "{{ t('type.recovery') }}",
                     "variant": "choice",
                     "bind": "global.selectedPlanType",
                     "value": "恢复",
@@ -2009,7 +3336,7 @@
           {
             "type": "list",
             "source": "{{ global.plans }}",
-            "emptyText": "还没有训练计划",
+            "emptyText": "{{ t('plans.empty') }}",
             "item_template": {
               "type": "card",
               "layout": "column",
@@ -2070,7 +3397,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "{{ loop.item.exCount }}个动作",
+                              "value": "{{ t('plans.exCount') }}",
                               "style": {
                                 "fontSize": 12,
                                 "color": "#9CA3AF"
@@ -2113,7 +3440,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "{{ loop.item.estDuration }}分钟",
+                              "value": "{{ t('plans.estDuration') }}",
                               "style": {
                                 "fontSize": 12,
                                 "color": "#9CA3AF"
@@ -2168,7 +3495,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "创建新计划",
+                "label": "{{ t('plans.createNew') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.startCreatePlan",
@@ -2192,11 +3519,11 @@
       },
       {
         "id": "plan_detail",
-        "title": "计划详情",
+        "title": "{{ t('planDetail.appbar') }}",
         "layout": "column",
         "backgroundColor": "#F5F5F7",
         "appBar": {
-          "title": "计划详情",
+          "title": "{{ t('planDetail.appbar') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -2279,7 +3606,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "约{{ global.currentPlan.estDuration }}分钟",
+                        "value": "{{ t('planDetail.estDuration') }}",
                         "style": {
                           "fontSize": 13,
                           "color": "#9CA3AF"
@@ -2308,7 +3635,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "{{ global.currentPlan.exCount }}个动作",
+                        "value": "{{ t('planDetail.exCount') }}",
                         "style": {
                           "fontSize": 13,
                           "color": "#9CA3AF"
@@ -2329,7 +3656,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "动作列表",
+                "value": "{{ t('exercise.listTitle') }}",
                 "style": {
                   "fontSize": 17,
                   "fontWeight": "bold",
@@ -2344,7 +3671,7 @@
             "type": "list",
             "source": "{{ global.currentPlan.exercises }}",
             "shrinkWrap": true,
-            "emptyText": "暂无动作",
+            "emptyText": "{{ t('planDetail.emptyEx') }}",
             "item_template": {
               "type": "card",
               "layout": "row",
@@ -2402,7 +3729,7 @@
                       "children": [
                         {
                           "type": "text",
-                          "value": "{{ loop.item.targetSets }}组 × {{ loop.item.targetReps }}次",
+                          "value": "{{ t('exercise.setsReps') }}",
                           "style": {
                             "fontSize": 12,
                             "color": "#6B7280"
@@ -2436,7 +3763,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "休{{ loop.item.restDuration }}s",
+                          "value": "{{ t('exercise.rest') }}",
                           "style": {
                             "fontSize": 12,
                             "color": "#9CA3AF"
@@ -2465,7 +3792,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "开始训练",
+                "label": "{{ t('planDetail.start') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.startWorkout",
@@ -2495,7 +3822,7 @@
                     "type": "expanded",
                     "child": {
                       "type": "button",
-                      "label": "编辑",
+                      "label": "{{ t('common.edit') }}",
                       "variant": "outlined",
                       "action": {
                         "call": "@global.startEditPlan",
@@ -2522,7 +3849,7 @@
                     "type": "expanded",
                     "child": {
                       "type": "button",
-                      "label": "删除",
+                      "label": "{{ t('common.delete') }}",
                       "variant": "outlined",
                       "action": {
                         "call": "@global.deletePlan",
@@ -2552,11 +3879,11 @@
       },
       {
         "id": "plan_form",
-        "title": "编辑计划",
+        "title": "{{ t('planForm.appbar') }}",
         "layout": "column",
         "backgroundColor": "#F5F5F7",
         "appBar": {
-          "title": "编辑计划",
+          "title": "{{ t('planForm.appbar') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -2574,7 +3901,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "计划名称",
+                "value": "{{ t('planForm.nameLabel') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2587,7 +3914,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "例如 上肢力量训练",
+                "placeholder": "{{ t('planForm.namePlaceholder') }}",
                 "bind": "global.formPlanName",
                 "style": {
                   "fontSize": 15,
@@ -2600,7 +3927,7 @@
               },
               {
                 "type": "text",
-                "value": "描述",
+                "value": "{{ t('planForm.descLabel') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2613,7 +3940,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "简短描述训练目标",
+                "placeholder": "{{ t('planForm.descPlaceholder') }}",
                 "bind": "global.formPlanDesc",
                 "style": {
                   "fontSize": 15,
@@ -2626,7 +3953,7 @@
               },
               {
                 "type": "text",
-                "value": "类型",
+                "value": "{{ t('planForm.typeLabel') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2644,7 +3971,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "力量",
+                    "label": "{{ t('type.strength') }}",
                     "variant": "choice",
                     "bind": "global.formPlanType",
                     "value": "力量",
@@ -2652,7 +3979,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "有氧",
+                    "label": "{{ t('type.cardio') }}",
                     "variant": "choice",
                     "bind": "global.formPlanType",
                     "value": "有氧",
@@ -2660,7 +3987,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "恢复",
+                    "label": "{{ t('type.recovery') }}",
                     "variant": "choice",
                     "bind": "global.formPlanType",
                     "value": "恢复",
@@ -2681,7 +4008,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "动作列表",
+                "value": "{{ t('exercise.listTitle') }}",
                 "style": {
                   "fontSize": 16,
                   "fontWeight": "bold",
@@ -2696,7 +4023,7 @@
                 "type": "list",
                 "source": "{{ global.formExercises }}",
                 "shrinkWrap": true,
-                "emptyText": "暂无动作，请在下方添加",
+                "emptyText": "{{ t('planForm.emptyEx') }}",
                 "item_template": {
                   "type": "container",
                   "layout": "row",
@@ -2745,7 +4072,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "{{ loop.item.targetSets }}组×{{ loop.item.targetReps }}次 · {{ loop.item.duration }}s · 休{{ loop.item.restDuration }}s",
+                          "value": "{{ t('exercise.formSummary') }}",
                           "style": {
                             "fontSize": 11,
                             "color": "#9CA3AF"
@@ -2796,7 +4123,7 @@
               },
               {
                 "type": "text",
-                "value": "添加动作",
+                "value": "{{ t('planForm.addEx') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2809,7 +4136,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "动作名称",
+                "placeholder": "{{ t('planForm.exNamePlaceholder') }}",
                 "bind": "global.formExName",
                 "style": {
                   "fontSize": 14,
@@ -2830,7 +4157,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "组数",
+                        "value": "{{ t('planForm.setsLabel') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#6B7280"
@@ -2866,7 +4193,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "次数",
+                        "value": "{{ t('common.reps') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#6B7280"
@@ -2902,7 +4229,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "时长(s)",
+                        "value": "{{ t('planForm.durationLabel') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#6B7280"
@@ -2938,7 +4265,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "休息(s)",
+                        "value": "{{ t('planForm.restLabel') }}",
                         "style": {
                           "fontSize": 12,
                           "color": "#6B7280"
@@ -2973,7 +4300,7 @@
               },
               {
                 "type": "button",
-                "label": "添加动作",
+                "label": "{{ t('planForm.addEx') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.addExerciseToForm",
@@ -3001,7 +4328,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "保存计划",
+                "label": "{{ t('planForm.save') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.savePlan",
@@ -3025,11 +4352,11 @@
       },
       {
         "id": "timer_tab",
-        "title": "计时",
+        "title": "{{ t('nav.timer') }}",
         "layout": "column",
         "backgroundColor": "#F5F5F7",
         "appBar": {
-          "title": "计时器",
+          "title": "{{ t('timer.appbar') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -3044,7 +4371,7 @@
                 "type": "expanded",
                 "child": {
                   "type": "chip",
-                  "label": "动作计时",
+                  "label": "{{ t('timer.modeExercise') }}",
                   "variant": "choice",
                   "bind": "global.timerMode",
                   "value": "exercise",
@@ -3066,7 +4393,7 @@
                 "type": "expanded",
                 "child": {
                   "type": "chip",
-                  "label": "休息计时",
+                  "label": "{{ t('timer.modeRest') }}",
                   "variant": "choice",
                   "bind": "global.timerMode",
                   "value": "rest",
@@ -3092,13 +4419,32 @@
             "layout": "column",
             "children": [
               {
-                "type": "text",
-                "value": "{{ global.timerLabel }}",
-                "style": {
-                  "fontSize": 16,
-                  "fontWeight": "500",
-                  "color": "#6B7280"
-                }
+                "if": [
+                  {
+                    "==": [
+                      "{{ global.timerMode }}",
+                      "rest"
+                    ]
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ t('timer.modeRest') }}",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "500",
+                      "color": "#6B7280"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "value": "{{ t('timer.modeExercise') }}",
+                    "style": {
+                      "fontSize": 16,
+                      "fontWeight": "500",
+                      "color": "#6B7280"
+                    }
+                  }
+                ]
               },
               {
                 "type": "spacer",
@@ -3120,7 +4466,7 @@
               },
               {
                 "type": "text",
-                "value": "共 {{ global.timerTotal }} 秒",
+                "value": "{{ t('timer.totalSec') }}",
                 "style": {
                   "fontSize": 14,
                   "color": "#9CA3AF"
@@ -3142,7 +4488,7 @@
                 "type": "expanded",
                 "child": {
                   "type": "button",
-                  "label": "重置",
+                  "label": "{{ t('timer.reset') }}",
                   "variant": "outlined",
                   "action": {
                     "call": "@global.resetTimer",
@@ -3175,7 +4521,7 @@
                     },
                     {
                       "type": "button",
-                      "label": "暂停",
+                      "label": "{{ t('timer.pause') }}",
                       "variant": "filled",
                       "action": {
                         "call": "@global.pauseTimer",
@@ -3193,7 +4539,7 @@
                     },
                     {
                       "type": "button",
-                      "label": "开始",
+                      "label": "{{ t('timer.start') }}",
                       "variant": "filled",
                       "action": {
                         "call": "@global.startTimer",
@@ -3240,7 +4586,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "快速预设",
+                "value": "{{ t('timer.presets') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -3258,7 +4604,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "30秒",
+                    "label": "{{ t('timer.s30') }}",
                     "variant": "choice",
                     "bind": "global.timerPreset",
                     "value": "30",
@@ -3273,7 +4619,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "45秒",
+                    "label": "{{ t('timer.s45') }}",
                     "variant": "choice",
                     "bind": "global.timerPreset",
                     "value": "45",
@@ -3288,7 +4634,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "60秒",
+                    "label": "{{ t('timer.s60') }}",
                     "variant": "choice",
                     "bind": "global.timerPreset",
                     "value": "60",
@@ -3303,7 +4649,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "90秒",
+                    "label": "{{ t('timer.s90') }}",
                     "variant": "choice",
                     "bind": "global.timerPreset",
                     "value": "90",
@@ -3318,7 +4664,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "120秒",
+                    "label": "{{ t('timer.s120') }}",
                     "variant": "choice",
                     "bind": "global.timerPreset",
                     "value": "120",
@@ -3333,7 +4679,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "180秒",
+                    "label": "{{ t('timer.s180') }}",
                     "variant": "choice",
                     "bind": "global.timerPreset",
                     "value": "180",
@@ -3354,7 +4700,7 @@
               },
               {
                 "type": "text",
-                "value": "自定义时长（秒）",
+                "value": "{{ t('timer.custom') }}",
                 "style": {
                   "fontSize": 13,
                   "color": "#6B7280"
@@ -3370,7 +4716,7 @@
                 "children": [
                   {
                     "type": "input",
-                    "placeholder": "输入秒数",
+                    "placeholder": "{{ t('timer.customPlaceholder') }}",
                     "bind": "global.timerPreset",
                     "style": {
                       "fontSize": 15,
@@ -3387,7 +4733,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "设置",
+                    "label": "{{ t('timer.set') }}",
                     "variant": "filled",
                     "action": {
                       "call": "@global.setCustomTimer",
@@ -3411,11 +4757,11 @@
       },
       {
         "id": "workout_session",
-        "title": "训练中",
+        "title": "{{ t('session.appbar') }}",
         "layout": "column",
         "backgroundColor": "#F5F5F7",
         "appBar": {
-          "title": "训练中",
+          "title": "{{ t('session.appbar') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -3487,7 +4833,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "{{ global.sessionExLabel }}",
+                        "value": "{{ t('session.exLabel') }}",
                         "style": {
                           "fontSize": 15,
                           "fontWeight": "600",
@@ -3500,7 +4846,7 @@
                       },
                       {
                         "type": "text",
-                        "value": "{{ global.sessionSetLabel }}",
+                        "value": "{{ t('session.setLabel') }}",
                         "style": {
                           "fontSize": 13,
                           "color": "#6B7280"
@@ -3515,7 +4861,7 @@
                     "children": [
                       {
                         "type": "text",
-                        "value": "训练完成！",
+                        "value": "{{ t('session.done') }}",
                         "style": {
                           "fontSize": 18,
                           "fontWeight": "bold",
@@ -3555,7 +4901,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "记录当前组",
+                    "value": "{{ t('session.logCurrent') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "bold",
@@ -3576,7 +4922,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "次数",
+                            "value": "{{ t('common.reps') }}",
                             "style": {
                               "fontSize": 12,
                               "color": "#6B7280"
@@ -3612,7 +4958,7 @@
                         "children": [
                           {
                             "type": "text",
-                            "value": "重量(kg)",
+                            "value": "{{ t('session.weight') }}",
                             "style": {
                               "fontSize": 12,
                               "color": "#6B7280"
@@ -3647,7 +4993,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "记录此组",
+                    "label": "{{ t('session.logSet') }}",
                     "variant": "filled",
                     "action": {
                       "call": "@global.logSet",
@@ -3669,7 +5015,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "下一个动作",
+                    "label": "{{ t('session.nextEx') }}",
                     "variant": "outlined",
                     "action": {
                       "call": "@global.nextExercise",
@@ -3698,7 +5044,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "所有动作已完成！",
+                    "value": "{{ t('session.allDone') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "bold",
@@ -3711,7 +5057,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "完成训练",
+                    "label": "{{ t('session.finish') }}",
                     "variant": "filled",
                     "action": {
                       "call": "@global.finishWorkout",
@@ -3738,7 +5084,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "打开计时器",
+                "label": "{{ t('session.openTimer') }}",
                 "variant": "outlined",
                 "action": {
                   "call": "@global.goTimer",
@@ -3760,7 +5106,7 @@
               },
               {
                 "type": "button",
-                "label": "放弃训练",
+                "label": "{{ t('session.cancel') }}",
                 "variant": "text",
                 "action": {
                   "call": "@global.cancelWorkout",
@@ -3784,11 +5130,11 @@
       },
       {
         "id": "records_tab",
-        "title": "记录",
+        "title": "{{ t('nav.records') }}",
         "layout": "column",
         "backgroundColor": "#F5F5F7",
         "appBar": {
-          "title": "训练记录",
+          "title": "{{ t('records.appbar') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -3826,7 +5172,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "总训练次数",
+                          "value": "{{ t('records.totalCount') }}",
                           "style": {
                             "fontSize": 13,
                             "color": "#6B7280"
@@ -3883,7 +5229,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "本周次数",
+                          "value": "{{ t('records.weekCount') }}",
                           "style": {
                             "fontSize": 13,
                             "color": "#6B7280"
@@ -3923,7 +5269,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "全部",
+                    "label": "{{ t('filter.all') }}",
                     "variant": "choice",
                     "bind": "global.selectedPlanType",
                     "value": "全部",
@@ -3931,7 +5277,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "力量",
+                    "label": "{{ t('type.strength') }}",
                     "variant": "choice",
                     "bind": "global.selectedPlanType",
                     "value": "力量",
@@ -3939,7 +5285,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "有氧",
+                    "label": "{{ t('type.cardio') }}",
                     "variant": "choice",
                     "bind": "global.selectedPlanType",
                     "value": "有氧",
@@ -3947,7 +5293,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "恢复",
+                    "label": "{{ t('type.recovery') }}",
                     "variant": "choice",
                     "bind": "global.selectedPlanType",
                     "value": "恢复",
@@ -3964,7 +5310,7 @@
           {
             "type": "list",
             "source": "{{ global.records }}",
-            "emptyText": "还没有训练记录，完成一次训练吧",
+            "emptyText": "{{ t('records.empty') }}",
             "item_template": {
               "type": "card",
               "layout": "column",
@@ -4025,7 +5371,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "{{ loop.item.duration }}分钟",
+                              "value": "{{ t('records.duration') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -4076,7 +5422,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "{{ loop.item.completedSets }}组完成",
+                              "value": "{{ t('records.completedSets') }}",
                               "style": {
                                 "fontSize": 12,
                                 "color": "#9CA3AF"
@@ -4107,11 +5453,11 @@
       },
       {
         "id": "record_detail",
-        "title": "记录详情",
+        "title": "{{ t('recordDetail.appbar') }}",
         "layout": "column",
         "backgroundColor": "#F5F5F7",
         "appBar": {
-          "title": "记录详情",
+          "title": "{{ t('recordDetail.appbar') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -4200,7 +5546,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "{{ global.viewRecord.duration }}分钟",
+                    "value": "{{ t('recordDetail.duration') }}",
                     "style": {
                       "fontSize": 13,
                       "color": "#9CA3AF"
@@ -4222,7 +5568,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "{{ global.viewRecord.completedSets }}组",
+                    "value": "{{ t('recordDetail.completedSets') }}",
                     "style": {
                       "fontSize": 13,
                       "color": "#9CA3AF"
@@ -4240,7 +5586,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "动作详情",
+                "value": "{{ t('recordDetail.exDetail') }}",
                 "style": {
                   "fontSize": 17,
                   "fontWeight": "bold",
@@ -4255,7 +5601,7 @@
             "type": "list",
             "source": "{{ global.viewRecord.exercises }}",
             "shrinkWrap": true,
-            "emptyText": "无动作记录",
+            "emptyText": "{{ t('recordDetail.emptyEx') }}",
             "item_template": {
               "type": "card",
               "layout": "column",
@@ -4280,7 +5626,7 @@
                 },
                 {
                   "type": "text",
-                  "value": "{{ loop.item.sets | len }} 组完成",
+                  "value": "{{ t('recordDetail.setsCompleted') }}",
                   "style": {
                     "fontSize": 12,
                     "color": "#6B7280"
@@ -4299,7 +5645,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "删除记录",
+                "label": "{{ t('recordDetail.delete') }}",
                 "variant": "outlined",
                 "action": {
                   "call": "@global.deleteRecord",
@@ -4331,22 +5677,22 @@
     "items": [
       {
         "id": "train_tab",
-        "label": "训练",
+        "label": "{{ t('nav.train') }}",
         "icon": "bolt"
       },
       {
         "id": "plans_tab",
-        "label": "计划",
+        "label": "{{ t('nav.plans') }}",
         "icon": "list"
       },
       {
         "id": "timer_tab",
-        "label": "计时",
+        "label": "{{ t('nav.timer') }}",
         "icon": "clock"
       },
       {
         "id": "records_tab",
-        "label": "记录",
+        "label": "{{ t('nav.records') }}",
         "icon": "receipt"
       }
     ]

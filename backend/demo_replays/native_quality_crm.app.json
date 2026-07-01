@@ -6,7 +6,20 @@
     "type": "app",
     "description": "轻量 CRM：客户列表、跟进记录、状态标签",
     "author": "fish",
-    "displayName": "轻量CRM"
+    "displayName": {
+      "default": "轻量CRM",
+      "zh": "轻量CRM",
+      "en": "Lite CRM",
+      "de": "Schlankes CRM",
+      "es": "CRM Ligero",
+      "fr": "CRM Léger",
+      "pt": "CRM Leve",
+      "ca": "CRM Lleuger",
+      "hi": "लाइट CRM",
+      "ko": "라이트 CRM",
+      "ja": "ライトCRM",
+      "it": "CRM Leggero"
+    }
   },
   "dependencies": {},
   "global": {
@@ -509,7 +522,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "客户已保存"
+              "message": "{{ t('toast.customerSaved') }}"
             }
           },
           {
@@ -614,7 +627,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "客户已删除"
+              "message": "{{ t('toast.customerDeleted') }}"
             }
           },
           {
@@ -720,7 +733,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "跟进记录已添加"
+              "message": "{{ t('toast.followupAdded') }}"
             }
           },
           {
@@ -791,7 +804,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "跟进记录已删除"
+              "message": "{{ t('toast.followupDeleted') }}"
             }
           }
         ]
@@ -1000,7 +1013,7 @@
               "var": "global.toastMsg",
               "value": {
                 "+": [
-                  "状态已更新为 ",
+                  "{{ t('toast.statusUpdatedPrefix') }}",
                   "{{ params.newStatus }}"
                 ]
               }
@@ -1014,6 +1027,734 @@
           }
         ]
       }
+    },
+    "i18n": {
+      "zh": {
+        "nav": {
+          "home": "客户",
+          "detail": "客户详情"
+        },
+        "status": {
+          "all": "全部",
+          "pending": "待跟进",
+          "negotiating": "洽谈中",
+          "won": "已成交",
+          "lost": "已流失"
+        },
+        "followType": {
+          "call": "电话",
+          "visit": "拜访",
+          "email": "邮件",
+          "note": "备注"
+        },
+        "stats": {
+          "total": "客户总数"
+        },
+        "home": {
+          "searchPlaceholder": "搜索姓名、公司、电话",
+          "empty": "暂无客户，点击下方新增第一位客户"
+        },
+        "detail": {
+          "followupsTitle": "跟进记录",
+          "followupsEmpty": "暂无跟进记录，点击下方添加",
+          "edit": "编辑",
+          "delete": "删除"
+        },
+        "action": {
+          "addCustomer": "新增客户",
+          "addFollowup": "添加跟进记录"
+        },
+        "common": {
+          "status": "状态"
+        },
+        "form": {
+          "titleEdit": "编辑客户",
+          "name": "姓名",
+          "namePlaceholder": "客户姓名",
+          "phone": "电话",
+          "phonePlaceholder": "手机号或座机",
+          "company": "公司",
+          "companyPlaceholder": "公司名称",
+          "nextStep": "下一步计划",
+          "nextStepPlaceholder": "例如：周五发送报价方案",
+          "note": "备注",
+          "notePlaceholder": "备注信息",
+          "save": "保存客户"
+        },
+        "followForm": {
+          "method": "跟进方式",
+          "content": "跟进内容",
+          "contentPlaceholder": "记录本次跟进的主要内容...",
+          "save": "保存跟进记录"
+        },
+        "toast": {
+          "customerSaved": "客户已保存",
+          "customerDeleted": "客户已删除",
+          "followupAdded": "跟进记录已添加",
+          "followupDeleted": "跟进记录已删除",
+          "statusUpdatedPrefix": "状态已更新为 "
+        }
+      },
+      "en": {
+        "nav": {
+          "home": "Customers",
+          "detail": "Customer Details"
+        },
+        "status": {
+          "all": "All",
+          "pending": "To Follow Up",
+          "negotiating": "Negotiating",
+          "won": "Closed Won",
+          "lost": "Lost"
+        },
+        "followType": {
+          "call": "Call",
+          "visit": "Visit",
+          "email": "Email",
+          "note": "Note"
+        },
+        "stats": {
+          "total": "Total Customers"
+        },
+        "home": {
+          "searchPlaceholder": "Search name, company, phone",
+          "empty": "No customers yet — tap below to add your first"
+        },
+        "detail": {
+          "followupsTitle": "Follow-ups",
+          "followupsEmpty": "No follow-ups yet — tap below to add",
+          "edit": "Edit",
+          "delete": "Delete"
+        },
+        "action": {
+          "addCustomer": "Add Customer",
+          "addFollowup": "Add Follow-up"
+        },
+        "common": {
+          "status": "Status"
+        },
+        "form": {
+          "titleEdit": "Edit Customer",
+          "name": "Name",
+          "namePlaceholder": "Customer name",
+          "phone": "Phone",
+          "phonePlaceholder": "Mobile or landline",
+          "company": "Company",
+          "companyPlaceholder": "Company name",
+          "nextStep": "Next Step",
+          "nextStepPlaceholder": "e.g. Send the quote on Friday",
+          "note": "Note",
+          "notePlaceholder": "Notes",
+          "save": "Save Customer"
+        },
+        "followForm": {
+          "method": "Follow-up Method",
+          "content": "Follow-up Details",
+          "contentPlaceholder": "Record the key points of this follow-up...",
+          "save": "Save Follow-up"
+        },
+        "toast": {
+          "customerSaved": "Customer saved",
+          "customerDeleted": "Customer deleted",
+          "followupAdded": "Follow-up added",
+          "followupDeleted": "Follow-up deleted",
+          "statusUpdatedPrefix": "Status updated to "
+        }
+      },
+      "de": {
+        "nav": {
+          "home": "Kunden",
+          "detail": "Kundendetails"
+        },
+        "status": {
+          "all": "Alle",
+          "pending": "Nachverfolgen",
+          "negotiating": "In Verhandlung",
+          "won": "Abgeschlossen",
+          "lost": "Verloren"
+        },
+        "followType": {
+          "call": "Anruf",
+          "visit": "Besuch",
+          "email": "E-Mail",
+          "note": "Notiz"
+        },
+        "stats": {
+          "total": "Kunden gesamt"
+        },
+        "home": {
+          "searchPlaceholder": "Name, Firma, Telefon suchen",
+          "empty": "Noch keine Kunden – unten den ersten hinzufügen"
+        },
+        "detail": {
+          "followupsTitle": "Nachverfolgungen",
+          "followupsEmpty": "Noch keine Nachverfolgungen – unten hinzufügen",
+          "edit": "Bearbeiten",
+          "delete": "Löschen"
+        },
+        "action": {
+          "addCustomer": "Kunde hinzufügen",
+          "addFollowup": "Nachverfolgung hinzufügen"
+        },
+        "common": {
+          "status": "Status"
+        },
+        "form": {
+          "titleEdit": "Kunde bearbeiten",
+          "name": "Name",
+          "namePlaceholder": "Kundenname",
+          "phone": "Telefon",
+          "phonePlaceholder": "Mobil oder Festnetz",
+          "company": "Firma",
+          "companyPlaceholder": "Firmenname",
+          "nextStep": "Nächster Schritt",
+          "nextStepPlaceholder": "z. B. Angebot am Freitag senden",
+          "note": "Notiz",
+          "notePlaceholder": "Anmerkungen",
+          "save": "Kunde speichern"
+        },
+        "followForm": {
+          "method": "Art der Nachverfolgung",
+          "content": "Inhalt der Nachverfolgung",
+          "contentPlaceholder": "Wichtigste Punkte dieser Nachverfolgung festhalten ...",
+          "save": "Nachverfolgung speichern"
+        },
+        "toast": {
+          "customerSaved": "Kunde gespeichert",
+          "customerDeleted": "Kunde gelöscht",
+          "followupAdded": "Nachverfolgung hinzugefügt",
+          "followupDeleted": "Nachverfolgung gelöscht",
+          "statusUpdatedPrefix": "Status geändert zu "
+        }
+      },
+      "es": {
+        "nav": {
+          "home": "Clientes",
+          "detail": "Detalles del cliente"
+        },
+        "status": {
+          "all": "Todos",
+          "pending": "Por seguir",
+          "negotiating": "Negociando",
+          "won": "Cerrado",
+          "lost": "Perdido"
+        },
+        "followType": {
+          "call": "Llamada",
+          "visit": "Visita",
+          "email": "Correo",
+          "note": "Nota"
+        },
+        "stats": {
+          "total": "Total de clientes"
+        },
+        "home": {
+          "searchPlaceholder": "Buscar nombre, empresa, teléfono",
+          "empty": "Aún no hay clientes; toca abajo para añadir el primero"
+        },
+        "detail": {
+          "followupsTitle": "Seguimientos",
+          "followupsEmpty": "Aún no hay seguimientos; toca abajo para añadir",
+          "edit": "Editar",
+          "delete": "Eliminar"
+        },
+        "action": {
+          "addCustomer": "Añadir cliente",
+          "addFollowup": "Añadir seguimiento"
+        },
+        "common": {
+          "status": "Estado"
+        },
+        "form": {
+          "titleEdit": "Editar cliente",
+          "name": "Nombre",
+          "namePlaceholder": "Nombre del cliente",
+          "phone": "Teléfono",
+          "phonePlaceholder": "Móvil o fijo",
+          "company": "Empresa",
+          "companyPlaceholder": "Nombre de la empresa",
+          "nextStep": "Próximo paso",
+          "nextStepPlaceholder": "p. ej., enviar la cotización el viernes",
+          "note": "Nota",
+          "notePlaceholder": "Notas",
+          "save": "Guardar cliente"
+        },
+        "followForm": {
+          "method": "Tipo de seguimiento",
+          "content": "Detalles del seguimiento",
+          "contentPlaceholder": "Anota los puntos clave de este seguimiento...",
+          "save": "Guardar seguimiento"
+        },
+        "toast": {
+          "customerSaved": "Cliente guardado",
+          "customerDeleted": "Cliente eliminado",
+          "followupAdded": "Seguimiento añadido",
+          "followupDeleted": "Seguimiento eliminado",
+          "statusUpdatedPrefix": "Estado actualizado a "
+        }
+      },
+      "fr": {
+        "nav": {
+          "home": "Clients",
+          "detail": "Détails du client"
+        },
+        "status": {
+          "all": "Tous",
+          "pending": "À suivre",
+          "negotiating": "En négociation",
+          "won": "Conclu",
+          "lost": "Perdu"
+        },
+        "followType": {
+          "call": "Appel",
+          "visit": "Visite",
+          "email": "E-mail",
+          "note": "Note"
+        },
+        "stats": {
+          "total": "Total clients"
+        },
+        "home": {
+          "searchPlaceholder": "Rechercher nom, société, téléphone",
+          "empty": "Aucun client pour l'instant — touchez ci-dessous pour ajouter le premier"
+        },
+        "detail": {
+          "followupsTitle": "Suivis",
+          "followupsEmpty": "Aucun suivi pour l'instant — touchez ci-dessous pour ajouter",
+          "edit": "Modifier",
+          "delete": "Supprimer"
+        },
+        "action": {
+          "addCustomer": "Ajouter un client",
+          "addFollowup": "Ajouter un suivi"
+        },
+        "common": {
+          "status": "Statut"
+        },
+        "form": {
+          "titleEdit": "Modifier le client",
+          "name": "Nom",
+          "namePlaceholder": "Nom du client",
+          "phone": "Téléphone",
+          "phonePlaceholder": "Mobile ou fixe",
+          "company": "Société",
+          "companyPlaceholder": "Nom de la société",
+          "nextStep": "Prochaine étape",
+          "nextStepPlaceholder": "p. ex. envoyer le devis vendredi",
+          "note": "Note",
+          "notePlaceholder": "Remarques",
+          "save": "Enregistrer le client"
+        },
+        "followForm": {
+          "method": "Type de suivi",
+          "content": "Détails du suivi",
+          "contentPlaceholder": "Notez les points clés de ce suivi...",
+          "save": "Enregistrer le suivi"
+        },
+        "toast": {
+          "customerSaved": "Client enregistré",
+          "customerDeleted": "Client supprimé",
+          "followupAdded": "Suivi ajouté",
+          "followupDeleted": "Suivi supprimé",
+          "statusUpdatedPrefix": "Statut mis à jour : "
+        }
+      },
+      "pt": {
+        "nav": {
+          "home": "Clientes",
+          "detail": "Detalhes do cliente"
+        },
+        "status": {
+          "all": "Todos",
+          "pending": "A acompanhar",
+          "negotiating": "Em negociação",
+          "won": "Fechado",
+          "lost": "Perdido"
+        },
+        "followType": {
+          "call": "Chamada",
+          "visit": "Visita",
+          "email": "E-mail",
+          "note": "Nota"
+        },
+        "stats": {
+          "total": "Total de clientes"
+        },
+        "home": {
+          "searchPlaceholder": "Pesquisar nome, empresa, telefone",
+          "empty": "Ainda não há clientes — toque abaixo para adicionar o primeiro"
+        },
+        "detail": {
+          "followupsTitle": "Acompanhamentos",
+          "followupsEmpty": "Ainda não há acompanhamentos — toque abaixo para adicionar",
+          "edit": "Editar",
+          "delete": "Excluir"
+        },
+        "action": {
+          "addCustomer": "Adicionar cliente",
+          "addFollowup": "Adicionar acompanhamento"
+        },
+        "common": {
+          "status": "Status"
+        },
+        "form": {
+          "titleEdit": "Editar cliente",
+          "name": "Nome",
+          "namePlaceholder": "Nome do cliente",
+          "phone": "Telefone",
+          "phonePlaceholder": "Celular ou fixo",
+          "company": "Empresa",
+          "companyPlaceholder": "Nome da empresa",
+          "nextStep": "Próximo passo",
+          "nextStepPlaceholder": "ex.: enviar o orçamento na sexta",
+          "note": "Nota",
+          "notePlaceholder": "Observações",
+          "save": "Salvar cliente"
+        },
+        "followForm": {
+          "method": "Tipo de acompanhamento",
+          "content": "Detalhes do acompanhamento",
+          "contentPlaceholder": "Registre os pontos principais deste acompanhamento...",
+          "save": "Salvar acompanhamento"
+        },
+        "toast": {
+          "customerSaved": "Cliente salvo",
+          "customerDeleted": "Cliente excluído",
+          "followupAdded": "Acompanhamento adicionado",
+          "followupDeleted": "Acompanhamento excluído",
+          "statusUpdatedPrefix": "Status atualizado para "
+        }
+      },
+      "ca": {
+        "nav": {
+          "home": "Clients",
+          "detail": "Detalls del client"
+        },
+        "status": {
+          "all": "Tots",
+          "pending": "Per seguir",
+          "negotiating": "En negociació",
+          "won": "Tancat",
+          "lost": "Perdut"
+        },
+        "followType": {
+          "call": "Trucada",
+          "visit": "Visita",
+          "email": "Correu",
+          "note": "Nota"
+        },
+        "stats": {
+          "total": "Total de clients"
+        },
+        "home": {
+          "searchPlaceholder": "Cerca nom, empresa, telèfon",
+          "empty": "Encara no hi ha clients; toca a sota per afegir-ne el primer"
+        },
+        "detail": {
+          "followupsTitle": "Seguiments",
+          "followupsEmpty": "Encara no hi ha seguiments; toca a sota per afegir-ne",
+          "edit": "Edita",
+          "delete": "Elimina"
+        },
+        "action": {
+          "addCustomer": "Afegeix client",
+          "addFollowup": "Afegeix seguiment"
+        },
+        "common": {
+          "status": "Estat"
+        },
+        "form": {
+          "titleEdit": "Edita client",
+          "name": "Nom",
+          "namePlaceholder": "Nom del client",
+          "phone": "Telèfon",
+          "phonePlaceholder": "Mòbil o fix",
+          "company": "Empresa",
+          "companyPlaceholder": "Nom de l'empresa",
+          "nextStep": "Següent pas",
+          "nextStepPlaceholder": "p. ex. enviar el pressupost divendres",
+          "note": "Nota",
+          "notePlaceholder": "Notes",
+          "save": "Desa client"
+        },
+        "followForm": {
+          "method": "Tipus de seguiment",
+          "content": "Detalls del seguiment",
+          "contentPlaceholder": "Anota els punts clau d'aquest seguiment...",
+          "save": "Desa seguiment"
+        },
+        "toast": {
+          "customerSaved": "Client desat",
+          "customerDeleted": "Client eliminat",
+          "followupAdded": "Seguiment afegit",
+          "followupDeleted": "Seguiment eliminat",
+          "statusUpdatedPrefix": "Estat actualitzat a "
+        }
+      },
+      "hi": {
+        "nav": {
+          "home": "ग्राहक",
+          "detail": "ग्राहक विवरण"
+        },
+        "status": {
+          "all": "सभी",
+          "pending": "फ़ॉलो-अप बाकी",
+          "negotiating": "बातचीत जारी",
+          "won": "सौदा पूर्ण",
+          "lost": "खोया"
+        },
+        "followType": {
+          "call": "कॉल",
+          "visit": "मुलाक़ात",
+          "email": "ईमेल",
+          "note": "टिप्पणी"
+        },
+        "stats": {
+          "total": "कुल ग्राहक"
+        },
+        "home": {
+          "searchPlaceholder": "नाम, कंपनी, फ़ोन खोजें",
+          "empty": "अभी कोई ग्राहक नहीं — पहला जोड़ने के लिए नीचे टैप करें"
+        },
+        "detail": {
+          "followupsTitle": "फ़ॉलो-अप",
+          "followupsEmpty": "अभी कोई फ़ॉलो-अप नहीं — जोड़ने के लिए नीचे टैप करें",
+          "edit": "संपादित करें",
+          "delete": "हटाएँ"
+        },
+        "action": {
+          "addCustomer": "ग्राहक जोड़ें",
+          "addFollowup": "फ़ॉलो-अप जोड़ें"
+        },
+        "common": {
+          "status": "स्थिति"
+        },
+        "form": {
+          "titleEdit": "ग्राहक संपादित करें",
+          "name": "नाम",
+          "namePlaceholder": "ग्राहक का नाम",
+          "phone": "फ़ोन",
+          "phonePlaceholder": "मोबाइल या लैंडलाइन",
+          "company": "कंपनी",
+          "companyPlaceholder": "कंपनी का नाम",
+          "nextStep": "अगला कदम",
+          "nextStepPlaceholder": "उदा. शुक्रवार को कोटेशन भेजें",
+          "note": "टिप्पणी",
+          "notePlaceholder": "टिप्पणियाँ",
+          "save": "ग्राहक सहेजें"
+        },
+        "followForm": {
+          "method": "फ़ॉलो-अप का तरीका",
+          "content": "फ़ॉलो-अप विवरण",
+          "contentPlaceholder": "इस फ़ॉलो-अप के मुख्य बिंदु दर्ज करें...",
+          "save": "फ़ॉलो-अप सहेजें"
+        },
+        "toast": {
+          "customerSaved": "ग्राहक सहेजा गया",
+          "customerDeleted": "ग्राहक हटाया गया",
+          "followupAdded": "फ़ॉलो-अप जोड़ा गया",
+          "followupDeleted": "फ़ॉलो-अप हटाया गया",
+          "statusUpdatedPrefix": "स्थिति बदली गई: "
+        }
+      },
+      "ko": {
+        "nav": {
+          "home": "고객",
+          "detail": "고객 상세"
+        },
+        "status": {
+          "all": "전체",
+          "pending": "후속 대기",
+          "negotiating": "협상 중",
+          "won": "성사됨",
+          "lost": "이탈"
+        },
+        "followType": {
+          "call": "전화",
+          "visit": "방문",
+          "email": "이메일",
+          "note": "메모"
+        },
+        "stats": {
+          "total": "전체 고객"
+        },
+        "home": {
+          "searchPlaceholder": "이름, 회사, 전화 검색",
+          "empty": "아직 고객이 없습니다 — 아래를 눌러 첫 고객을 추가하세요"
+        },
+        "detail": {
+          "followupsTitle": "후속 기록",
+          "followupsEmpty": "아직 후속 기록이 없습니다 — 아래를 눌러 추가하세요",
+          "edit": "편집",
+          "delete": "삭제"
+        },
+        "action": {
+          "addCustomer": "고객 추가",
+          "addFollowup": "후속 기록 추가"
+        },
+        "common": {
+          "status": "상태"
+        },
+        "form": {
+          "titleEdit": "고객 편집",
+          "name": "이름",
+          "namePlaceholder": "고객 이름",
+          "phone": "전화",
+          "phonePlaceholder": "휴대폰 또는 유선전화",
+          "company": "회사",
+          "companyPlaceholder": "회사명",
+          "nextStep": "다음 단계",
+          "nextStepPlaceholder": "예: 금요일에 견적서 발송",
+          "note": "메모",
+          "notePlaceholder": "메모 내용",
+          "save": "고객 저장"
+        },
+        "followForm": {
+          "method": "후속 방식",
+          "content": "후속 내용",
+          "contentPlaceholder": "이번 후속의 핵심 내용을 기록하세요...",
+          "save": "후속 기록 저장"
+        },
+        "toast": {
+          "customerSaved": "고객이 저장되었습니다",
+          "customerDeleted": "고객이 삭제되었습니다",
+          "followupAdded": "후속 기록이 추가되었습니다",
+          "followupDeleted": "후속 기록이 삭제되었습니다",
+          "statusUpdatedPrefix": "상태가 다음으로 변경됨: "
+        }
+      },
+      "ja": {
+        "nav": {
+          "home": "顧客",
+          "detail": "顧客詳細"
+        },
+        "status": {
+          "all": "すべて",
+          "pending": "フォロー待ち",
+          "negotiating": "商談中",
+          "won": "成約済み",
+          "lost": "失注"
+        },
+        "followType": {
+          "call": "電話",
+          "visit": "訪問",
+          "email": "メール",
+          "note": "メモ"
+        },
+        "stats": {
+          "total": "顧客総数"
+        },
+        "home": {
+          "searchPlaceholder": "名前・会社・電話で検索",
+          "empty": "顧客がまだいません。下をタップして最初の顧客を追加"
+        },
+        "detail": {
+          "followupsTitle": "フォロー履歴",
+          "followupsEmpty": "フォロー履歴がまだありません。下をタップして追加",
+          "edit": "編集",
+          "delete": "削除"
+        },
+        "action": {
+          "addCustomer": "顧客を追加",
+          "addFollowup": "フォローを追加"
+        },
+        "common": {
+          "status": "ステータス"
+        },
+        "form": {
+          "titleEdit": "顧客を編集",
+          "name": "氏名",
+          "namePlaceholder": "顧客名",
+          "phone": "電話",
+          "phonePlaceholder": "携帯または固定電話",
+          "company": "会社",
+          "companyPlaceholder": "会社名",
+          "nextStep": "次のステップ",
+          "nextStepPlaceholder": "例：金曜日に見積もりを送付",
+          "note": "備考",
+          "notePlaceholder": "備考内容",
+          "save": "顧客を保存"
+        },
+        "followForm": {
+          "method": "フォロー方法",
+          "content": "フォロー内容",
+          "contentPlaceholder": "今回のフォローの要点を記録...",
+          "save": "フォローを保存"
+        },
+        "toast": {
+          "customerSaved": "顧客を保存しました",
+          "customerDeleted": "顧客を削除しました",
+          "followupAdded": "フォローを追加しました",
+          "followupDeleted": "フォローを削除しました",
+          "statusUpdatedPrefix": "ステータスを次に更新： "
+        }
+      },
+      "it": {
+        "nav": {
+          "home": "Clienti",
+          "detail": "Dettagli cliente"
+        },
+        "status": {
+          "all": "Tutti",
+          "pending": "Da seguire",
+          "negotiating": "In trattativa",
+          "won": "Concluso",
+          "lost": "Perso"
+        },
+        "followType": {
+          "call": "Chiamata",
+          "visit": "Visita",
+          "email": "Email",
+          "note": "Nota"
+        },
+        "stats": {
+          "total": "Clienti totali"
+        },
+        "home": {
+          "searchPlaceholder": "Cerca nome, azienda, telefono",
+          "empty": "Ancora nessun cliente: tocca qui sotto per aggiungere il primo"
+        },
+        "detail": {
+          "followupsTitle": "Follow-up",
+          "followupsEmpty": "Ancora nessun follow-up: tocca qui sotto per aggiungere",
+          "edit": "Modifica",
+          "delete": "Elimina"
+        },
+        "action": {
+          "addCustomer": "Aggiungi cliente",
+          "addFollowup": "Aggiungi follow-up"
+        },
+        "common": {
+          "status": "Stato"
+        },
+        "form": {
+          "titleEdit": "Modifica cliente",
+          "name": "Nome",
+          "namePlaceholder": "Nome del cliente",
+          "phone": "Telefono",
+          "phonePlaceholder": "Cellulare o fisso",
+          "company": "Azienda",
+          "companyPlaceholder": "Nome dell'azienda",
+          "nextStep": "Prossimo passo",
+          "nextStepPlaceholder": "es. inviare il preventivo venerdì",
+          "note": "Nota",
+          "notePlaceholder": "Note",
+          "save": "Salva cliente"
+        },
+        "followForm": {
+          "method": "Tipo di follow-up",
+          "content": "Dettagli del follow-up",
+          "contentPlaceholder": "Annota i punti chiave di questo follow-up...",
+          "save": "Salva follow-up"
+        },
+        "toast": {
+          "customerSaved": "Cliente salvato",
+          "customerDeleted": "Cliente eliminato",
+          "followupAdded": "Follow-up aggiunto",
+          "followupDeleted": "Follow-up eliminato",
+          "statusUpdatedPrefix": "Stato aggiornato a "
+        }
+      }
     }
   },
   "steps": [],
@@ -1021,7 +1762,7 @@
     "screens": [
       {
         "id": "home",
-        "title": "客户",
+        "title": "{{ t('nav.home') }}",
         "layout": "column",
         "children": [
           {
@@ -1059,7 +1800,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "客户总数",
+                              "value": "{{ t('stats.total') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -1116,7 +1857,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "待跟进",
+                              "value": "{{ t('status.pending') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -1179,7 +1920,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "洽谈中",
+                              "value": "{{ t('status.negotiating') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -1236,7 +1977,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "已成交",
+                              "value": "{{ t('status.won') }}",
                               "style": {
                                 "fontSize": 13,
                                 "color": "#6B7280"
@@ -1283,7 +2024,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "搜索姓名、公司、电话",
+                "placeholder": "{{ t('home.searchPlaceholder') }}",
                 "bind": "global.searchQuery",
                 "position": {
                   "type": "flex",
@@ -1312,7 +2053,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "全部",
+                    "label": "{{ t('status.all') }}",
                     "variant": "choice",
                     "bind": "global.selectedStatus",
                     "value": "全部",
@@ -1320,7 +2061,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "待跟进",
+                    "label": "{{ t('status.pending') }}",
                     "variant": "choice",
                     "bind": "global.selectedStatus",
                     "value": "待跟进",
@@ -1328,7 +2069,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "洽谈中",
+                    "label": "{{ t('status.negotiating') }}",
                     "variant": "choice",
                     "bind": "global.selectedStatus",
                     "value": "洽谈中",
@@ -1336,7 +2077,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "已成交",
+                    "label": "{{ t('status.won') }}",
                     "variant": "choice",
                     "bind": "global.selectedStatus",
                     "value": "已成交",
@@ -1344,7 +2085,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "已流失",
+                    "label": "{{ t('status.lost') }}",
                     "variant": "choice",
                     "bind": "global.selectedStatus",
                     "value": "已流失",
@@ -1361,7 +2102,7 @@
           {
             "type": "list",
             "source": "{{ global.customers | filter(global.selectedStatus == '全部' or loop.item.status == global.selectedStatus) | filter(global.searchQuery == '' or (loop.item.name + loop.item.company + loop.item.phone) | includes(global.searchQuery)) }}",
-            "emptyText": "暂无客户，点击下方新增第一位客户",
+            "emptyText": "{{ t('home.empty') }}",
             "item_template": {
               "type": "card",
               "layout": "column",
@@ -1508,7 +2249,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "新增客户",
+                "label": "{{ t('action.addCustomer') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.startCreate",
@@ -1530,7 +2271,7 @@
         ],
         "backgroundColor": "#F4F6F8",
         "appBar": {
-          "title": "客户",
+          "title": "{{ t('nav.home') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -1551,14 +2292,14 @@
                 "paddingH": 10,
                 "paddingV": 8
               },
-              "tooltip": "新增客户"
+              "tooltip": "{{ t('action.addCustomer') }}"
             }
           ]
         }
       },
       {
         "id": "customer_detail",
-        "title": "客户详情",
+        "title": "{{ t('nav.detail') }}",
         "layout": "column",
         "children": [
           {
@@ -1629,7 +2370,7 @@
                 "children": [
                   {
                     "type": "text",
-                    "value": "状态",
+                    "value": "{{ t('common.status') }}",
                     "style": {
                       "fontSize": 13,
                       "color": "#6B7280"
@@ -1646,7 +2387,7 @@
                     "children": [
                       {
                         "type": "chip",
-                        "label": "待跟进",
+                        "label": "{{ t('status.pending') }}",
                         "variant": "choice",
                         "bind": "global.currentStatus",
                         "value": "待跟进",
@@ -1660,7 +2401,7 @@
                       },
                       {
                         "type": "chip",
-                        "label": "洽谈中",
+                        "label": "{{ t('status.negotiating') }}",
                         "variant": "choice",
                         "bind": "global.currentStatus",
                         "value": "洽谈中",
@@ -1674,7 +2415,7 @@
                       },
                       {
                         "type": "chip",
-                        "label": "已成交",
+                        "label": "{{ t('status.won') }}",
                         "variant": "choice",
                         "bind": "global.currentStatus",
                         "value": "已成交",
@@ -1688,7 +2429,7 @@
                       },
                       {
                         "type": "chip",
-                        "label": "已流失",
+                        "label": "{{ t('status.lost') }}",
                         "variant": "choice",
                         "bind": "global.currentStatus",
                         "value": "已流失",
@@ -1817,7 +2558,7 @@
                   },
                   {
                     "type": "text",
-                    "value": "跟进记录",
+                    "value": "{{ t('detail.followupsTitle') }}",
                     "style": {
                       "fontSize": 16,
                       "fontWeight": "bold",
@@ -1841,7 +2582,7 @@
             "type": "list",
             "source": "{{ global.currentFollowUps }}",
             "shrinkWrap": true,
-            "emptyText": "暂无跟进记录，点击下方添加",
+            "emptyText": "{{ t('detail.followupsEmpty') }}",
             "item_template": {
               "type": "container",
               "layout": "row",
@@ -1952,7 +2693,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "添加跟进记录",
+                "label": "{{ t('action.addFollowup') }}",
                 "variant": "outlined",
                 "action": {
                   "call": "@global.startAddFollowUp",
@@ -1974,7 +2715,7 @@
         ],
         "backgroundColor": "#F4F6F8",
         "appBar": {
-          "title": "客户详情",
+          "title": "{{ t('nav.detail') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -1995,7 +2736,7 @@
                 "paddingH": 10,
                 "paddingV": 8
               },
-              "tooltip": "编辑"
+              "tooltip": "{{ t('detail.edit') }}"
             },
             {
               "type": "button",
@@ -2012,14 +2753,14 @@
                 "paddingH": 10,
                 "paddingV": 8
               },
-              "tooltip": "删除"
+              "tooltip": "{{ t('detail.delete') }}"
             }
           ]
         }
       },
       {
         "id": "customer_form",
-        "title": "编辑客户",
+        "title": "{{ t('form.titleEdit') }}",
         "layout": "column",
         "children": [
           {
@@ -2033,7 +2774,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "姓名",
+                "value": "{{ t('form.name') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2046,7 +2787,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "客户姓名",
+                "placeholder": "{{ t('form.namePlaceholder') }}",
                 "bind": "global.formName"
               },
               {
@@ -2055,7 +2796,7 @@
               },
               {
                 "type": "text",
-                "value": "电话",
+                "value": "{{ t('form.phone') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2068,7 +2809,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "手机号或座机",
+                "placeholder": "{{ t('form.phonePlaceholder') }}",
                 "bind": "global.formPhone"
               },
               {
@@ -2077,7 +2818,7 @@
               },
               {
                 "type": "text",
-                "value": "公司",
+                "value": "{{ t('form.company') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2090,7 +2831,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "公司名称",
+                "placeholder": "{{ t('form.companyPlaceholder') }}",
                 "bind": "global.formCompany"
               },
               {
@@ -2099,7 +2840,7 @@
               },
               {
                 "type": "text",
-                "value": "状态",
+                "value": "{{ t('common.status') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2117,7 +2858,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "待跟进",
+                    "label": "{{ t('status.pending') }}",
                     "variant": "choice",
                     "bind": "global.formStatus",
                     "value": "待跟进",
@@ -2125,7 +2866,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "洽谈中",
+                    "label": "{{ t('status.negotiating') }}",
                     "variant": "choice",
                     "bind": "global.formStatus",
                     "value": "洽谈中",
@@ -2133,7 +2874,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "已成交",
+                    "label": "{{ t('status.won') }}",
                     "variant": "choice",
                     "bind": "global.formStatus",
                     "value": "已成交",
@@ -2141,7 +2882,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "已流失",
+                    "label": "{{ t('status.lost') }}",
                     "variant": "choice",
                     "bind": "global.formStatus",
                     "value": "已流失",
@@ -2155,7 +2896,7 @@
               },
               {
                 "type": "text",
-                "value": "下一步计划",
+                "value": "{{ t('form.nextStep') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2168,7 +2909,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "例如：周五发送报价方案",
+                "placeholder": "{{ t('form.nextStepPlaceholder') }}",
                 "bind": "global.formNextStep"
               },
               {
@@ -2177,7 +2918,7 @@
               },
               {
                 "type": "text",
-                "value": "备注",
+                "value": "{{ t('form.note') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2190,7 +2931,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "备注信息",
+                "placeholder": "{{ t('form.notePlaceholder') }}",
                 "bind": "global.formNote",
                 "multiline": true
               },
@@ -2200,7 +2941,7 @@
               },
               {
                 "type": "button",
-                "label": "保存客户",
+                "label": "{{ t('form.save') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.saveCustomer",
@@ -2220,7 +2961,7 @@
         ],
         "backgroundColor": "#F4F6F8",
         "appBar": {
-          "title": "{{ global.formMode == 'create' ? '新增客户' : '编辑客户' }}",
+          "title": "{{ global.formMode == 'create' ? t('action.addCustomer') : t('form.titleEdit') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -2229,7 +2970,7 @@
       },
       {
         "id": "followup_form",
-        "title": "添加跟进记录",
+        "title": "{{ t('action.addFollowup') }}",
         "layout": "column",
         "children": [
           {
@@ -2243,7 +2984,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "跟进方式",
+                "value": "{{ t('followForm.method') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2261,7 +3002,7 @@
                 "children": [
                   {
                     "type": "chip",
-                    "label": "电话",
+                    "label": "{{ t('followType.call') }}",
                     "variant": "choice",
                     "bind": "global.followUpType",
                     "value": "电话",
@@ -2269,7 +3010,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "拜访",
+                    "label": "{{ t('followType.visit') }}",
                     "variant": "choice",
                     "bind": "global.followUpType",
                     "value": "拜访",
@@ -2277,7 +3018,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "邮件",
+                    "label": "{{ t('followType.email') }}",
                     "variant": "choice",
                     "bind": "global.followUpType",
                     "value": "邮件",
@@ -2285,7 +3026,7 @@
                   },
                   {
                     "type": "chip",
-                    "label": "备注",
+                    "label": "{{ t('followType.note') }}",
                     "variant": "choice",
                     "bind": "global.followUpType",
                     "value": "备注",
@@ -2299,7 +3040,7 @@
               },
               {
                 "type": "text",
-                "value": "跟进内容",
+                "value": "{{ t('followForm.content') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -2312,7 +3053,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "记录本次跟进的主要内容...",
+                "placeholder": "{{ t('followForm.contentPlaceholder') }}",
                 "bind": "global.followUpContent",
                 "multiline": true
               },
@@ -2322,7 +3063,7 @@
               },
               {
                 "type": "button",
-                "label": "保存跟进记录",
+                "label": "{{ t('followForm.save') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.saveFollowUp",
@@ -2342,7 +3083,7 @@
         ],
         "backgroundColor": "#F4F6F8",
         "appBar": {
-          "title": "添加跟进记录",
+          "title": "{{ t('action.addFollowup') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",

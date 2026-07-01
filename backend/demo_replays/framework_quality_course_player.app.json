@@ -6,7 +6,20 @@
     "type": "app",
     "description": "在线课程播放器：章节列表 + 视频播放 + 学习进度",
     "author": "fish",
-    "displayName": "在线课程"
+    "displayName": {
+      "default": "在线课程",
+      "zh": "在线课程",
+      "en": "Online Course",
+      "de": "Online-Kurs",
+      "es": "Curso en línea",
+      "fr": "Cours en ligne",
+      "pt": "Curso online",
+      "ca": "Curs en línia",
+      "hi": "ऑनलाइन कोर्स",
+      "ko": "온라인 강좌",
+      "ja": "オンライン講座",
+      "it": "Corso online"
+    }
   },
   "dependencies": {},
   "global": {
@@ -105,6 +118,195 @@
         }
       ]
     },
+    "i18n": {
+      "zh": {
+        "course": { "name": "Python 入门实战" },
+        "tabs": { "catalog": "目录", "stats": "统计" },
+        "player": { "subtitle": "{{ t('course.name') }} · 第 {{ global.currentIndex }} 节" },
+        "stats": {
+          "totalLessons": "总章节",
+          "totalLessonsValue": "{{ global.totalLessons }} 节",
+          "completed": "已完成",
+          "completedValue": "{{ global.completedCount }} 节",
+          "totalDuration": "总时长",
+          "overallProgress": "整体进度",
+          "courseOverallProgress": "课程整体进度",
+          "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} 章节已完成"
+        },
+        "button": { "markComplete": "标记当前为已完成" },
+        "toast": { "markComplete": "🎉 本节已标记为完成！" }
+      },
+      "en": {
+        "course": { "name": "Python Hands-On Tutorial" },
+        "tabs": { "catalog": "Contents", "stats": "Stats" },
+        "player": { "subtitle": "{{ t('course.name') }} · Lesson {{ global.currentIndex }}" },
+        "stats": {
+          "totalLessons": "Total Lessons",
+          "totalLessonsValue": "{{ global.totalLessons }} lessons",
+          "completed": "Completed",
+          "completedValue": "{{ global.completedCount }} lessons",
+          "totalDuration": "Total Duration",
+          "overallProgress": "Overall Progress",
+          "courseOverallProgress": "Course Overall Progress",
+          "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} lessons completed"
+        },
+        "button": { "markComplete": "Mark Current as Completed" },
+        "toast": { "markComplete": "🎉 This lesson has been marked as completed!" }
+      },
+      "de": {
+        "course": { "name": "Python Praxiseinstieg" },
+        "tabs": { "catalog": "Inhalt", "stats": "Statistik" },
+        "player": { "subtitle": "{{ t('course.name') }} · Lektion {{ global.currentIndex }}" },
+        "stats": {
+          "totalLessons": "Lektionen gesamt",
+          "totalLessonsValue": "{{ global.totalLessons }} Lektionen",
+          "completed": "Abgeschlossen",
+          "completedValue": "{{ global.completedCount }} Lektionen",
+          "totalDuration": "Gesamtdauer",
+          "overallProgress": "Gesamtfortschritt",
+          "courseOverallProgress": "Gesamtfortschritt des Kurses",
+          "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} Lektionen abgeschlossen"
+        },
+        "button": { "markComplete": "Aktuelle als abgeschlossen markieren" },
+        "toast": { "markComplete": "🎉 Diese Lektion wurde als abgeschlossen markiert!" }
+      },
+      "es": {
+        "course": { "name": "Introducción práctica a Python" },
+        "tabs": { "catalog": "Índice", "stats": "Estadísticas" },
+        "player": { "subtitle": "{{ t('course.name') }} · Lección {{ global.currentIndex }}" },
+        "stats": {
+          "totalLessons": "Total de lecciones",
+          "totalLessonsValue": "{{ global.totalLessons }} lecciones",
+          "completed": "Completadas",
+          "completedValue": "{{ global.completedCount }} lecciones",
+          "totalDuration": "Duración total",
+          "overallProgress": "Progreso general",
+          "courseOverallProgress": "Progreso general del curso",
+          "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} lecciones completadas"
+        },
+        "button": { "markComplete": "Marcar la actual como completada" },
+        "toast": { "markComplete": "🎉 ¡Esta lección se ha marcado como completada!" }
+      },
+      "fr": {
+        "course": { "name": "Python : introduction pratique" },
+        "tabs": { "catalog": "Sommaire", "stats": "Statistiques" },
+        "player": { "subtitle": "{{ t('course.name') }} · Leçon {{ global.currentIndex }}" },
+        "stats": {
+          "totalLessons": "Total des leçons",
+          "totalLessonsValue": "{{ global.totalLessons }} leçons",
+          "completed": "Terminées",
+          "completedValue": "{{ global.completedCount }} leçons",
+          "totalDuration": "Durée totale",
+          "overallProgress": "Progression globale",
+          "courseOverallProgress": "Progression globale du cours",
+          "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} leçons terminées"
+        },
+        "button": { "markComplete": "Marquer la leçon actuelle comme terminée" },
+        "toast": { "markComplete": "🎉 Cette leçon a été marquée comme terminée !" }
+      },
+      "pt": {
+        "course": { "name": "Introdução prática ao Python" },
+        "tabs": { "catalog": "Conteúdo", "stats": "Estatísticas" },
+        "player": { "subtitle": "{{ t('course.name') }} · Aula {{ global.currentIndex }}" },
+        "stats": {
+          "totalLessons": "Total de aulas",
+          "totalLessonsValue": "{{ global.totalLessons }} aulas",
+          "completed": "Concluídas",
+          "completedValue": "{{ global.completedCount }} aulas",
+          "totalDuration": "Duração total",
+          "overallProgress": "Progresso geral",
+          "courseOverallProgress": "Progresso geral do curso",
+          "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} aulas concluídas"
+        },
+        "button": { "markComplete": "Marcar a atual como concluída" },
+        "toast": { "markComplete": "🎉 Esta aula foi marcada como concluída!" }
+      },
+      "ca": {
+        "course": { "name": "Introducció pràctica a Python" },
+        "tabs": { "catalog": "Índex", "stats": "Estadístiques" },
+        "player": { "subtitle": "{{ t('course.name') }} · Lliçó {{ global.currentIndex }}" },
+        "stats": {
+          "totalLessons": "Total de lliçons",
+          "totalLessonsValue": "{{ global.totalLessons }} lliçons",
+          "completed": "Completades",
+          "completedValue": "{{ global.completedCount }} lliçons",
+          "totalDuration": "Durada total",
+          "overallProgress": "Progrés general",
+          "courseOverallProgress": "Progrés general del curs",
+          "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} lliçons completades"
+        },
+        "button": { "markComplete": "Marcar l'actual com a completada" },
+        "toast": { "markComplete": "🎉 Aquesta lliçó s'ha marcat com a completada!" }
+      },
+      "hi": {
+        "course": { "name": "Python व्यावहारिक परिचय" },
+        "tabs": { "catalog": "सूची", "stats": "आँकड़े" },
+        "player": { "subtitle": "{{ t('course.name') }} · पाठ {{ global.currentIndex }}" },
+        "stats": {
+          "totalLessons": "कुल पाठ",
+          "totalLessonsValue": "{{ global.totalLessons }} पाठ",
+          "completed": "पूर्ण",
+          "completedValue": "{{ global.completedCount }} पाठ",
+          "totalDuration": "कुल अवधि",
+          "overallProgress": "समग्र प्रगति",
+          "courseOverallProgress": "पाठ्यक्रम की समग्र प्रगति",
+          "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} पाठ पूर्ण"
+        },
+        "button": { "markComplete": "वर्तमान को पूर्ण के रूप में चिह्नित करें" },
+        "toast": { "markComplete": "🎉 यह पाठ पूर्ण के रूप में चिह्नित कर दिया गया है!" }
+      },
+      "ko": {
+        "course": { "name": "파이썬 실전 입문" },
+        "tabs": { "catalog": "목차", "stats": "통계" },
+        "player": { "subtitle": "{{ t('course.name') }} · {{ global.currentIndex }}강" },
+        "stats": {
+          "totalLessons": "전체 강의",
+          "totalLessonsValue": "{{ global.totalLessons }}강",
+          "completed": "완료",
+          "completedValue": "{{ global.completedCount }}강",
+          "totalDuration": "총 시간",
+          "overallProgress": "전체 진행률",
+          "courseOverallProgress": "강좌 전체 진행률",
+          "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }}강 완료"
+        },
+        "button": { "markComplete": "현재 강의를 완료로 표시" },
+        "toast": { "markComplete": "🎉 이 강의가 완료로 표시되었습니다!" }
+      },
+      "ja": {
+        "course": { "name": "Python 実践入門" },
+        "tabs": { "catalog": "目次", "stats": "統計" },
+        "player": { "subtitle": "{{ t('course.name') }} · 第 {{ global.currentIndex }} 回" },
+        "stats": {
+          "totalLessons": "総レッスン数",
+          "totalLessonsValue": "{{ global.totalLessons }} 回",
+          "completed": "完了",
+          "completedValue": "{{ global.completedCount }} 回",
+          "totalDuration": "総時間",
+          "overallProgress": "全体の進捗",
+          "courseOverallProgress": "コース全体の進捗",
+          "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} レッスン完了"
+        },
+        "button": { "markComplete": "現在のレッスンを完了にする" },
+        "toast": { "markComplete": "🎉 このレッスンを完了にしました！" }
+      },
+      "it": {
+        "course": { "name": "Introduzione pratica a Python" },
+        "tabs": { "catalog": "Indice", "stats": "Statistiche" },
+        "player": { "subtitle": "{{ t('course.name') }} · Lezione {{ global.currentIndex }}" },
+        "stats": {
+          "totalLessons": "Lezioni totali",
+          "totalLessonsValue": "{{ global.totalLessons }} lezioni",
+          "completed": "Completate",
+          "completedValue": "{{ global.completedCount }} lezioni",
+          "totalDuration": "Durata totale",
+          "overallProgress": "Avanzamento totale",
+          "courseOverallProgress": "Avanzamento totale del corso",
+          "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} lezioni completate"
+        },
+        "button": { "markComplete": "Segna l'attuale come completata" },
+        "toast": { "markComplete": "🎉 Questa lezione è stata segnata come completata!" }
+      }
+    },
     "functions": {
       "selectLesson": {
         "params": [
@@ -195,7 +397,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "🎉 本节已标记为完成！"
+              "message": "{{ t('toast.markComplete') }}"
             }
           }
         ]
@@ -207,11 +409,11 @@
     "screens": [
       {
         "id": "home",
-        "title": "Python 入门实战",
+        "title": "{{ t('course.name') }}",
         "layout": "column",
         "backgroundColor": "#F5F5F7",
         "appBar": {
-          "title": "Python 入门实战",
+          "title": "{{ t('course.name') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -257,7 +459,7 @@
               },
               {
                 "type": "text",
-                "value": "Python 入门实战 · 第 {{ global.currentIndex }} 节",
+                "value": "{{ t('player.subtitle') }}",
                 "style": {
                   "fontSize": 13,
                   "color": "#6B7280"
@@ -333,7 +535,7 @@
                 "color": "#EA580C",
                 "tabs": [
                   {
-                    "label": "目录",
+                    "label": "{{ t('tabs.catalog') }}",
                     "icon": "list",
                     "content": {
                       "type": "container",
@@ -447,7 +649,7 @@
                     }
                   },
                   {
-                    "label": "统计",
+                    "label": "{{ t('tabs.stats') }}",
                     "icon": "analytics",
                     "content": {
                       "type": "container",
@@ -482,7 +684,7 @@
                                   },
                                   {
                                     "type": "text",
-                                    "value": "总章节",
+                                    "value": "{{ t('stats.totalLessons') }}",
                                     "style": {
                                       "fontSize": 12,
                                       "color": "#6B7280"
@@ -494,7 +696,7 @@
                                   },
                                   {
                                     "type": "text",
-                                    "value": "{{ global.totalLessons }} 节",
+                                    "value": "{{ t('stats.totalLessonsValue') }}",
                                     "style": {
                                       "fontSize": 18,
                                       "fontWeight": "bold",
@@ -532,7 +734,7 @@
                                   },
                                   {
                                     "type": "text",
-                                    "value": "已完成",
+                                    "value": "{{ t('stats.completed') }}",
                                     "style": {
                                       "fontSize": 12,
                                       "color": "#6B7280"
@@ -544,7 +746,7 @@
                                   },
                                   {
                                     "type": "text",
-                                    "value": "{{ global.completedCount }} 节",
+                                    "value": "{{ t('stats.completedValue') }}",
                                     "style": {
                                       "fontSize": 18,
                                       "fontWeight": "bold",
@@ -588,7 +790,7 @@
                                   },
                                   {
                                     "type": "text",
-                                    "value": "总时长",
+                                    "value": "{{ t('stats.totalDuration') }}",
                                     "style": {
                                       "fontSize": 12,
                                       "color": "#6B7280"
@@ -638,7 +840,7 @@
                                   },
                                   {
                                     "type": "text",
-                                    "value": "整体进度",
+                                    "value": "{{ t('stats.overallProgress') }}",
                                     "style": {
                                       "fontSize": 12,
                                       "color": "#6B7280"
@@ -677,7 +879,7 @@
                           "children": [
                             {
                               "type": "text",
-                              "value": "课程整体进度",
+                              "value": "{{ t('stats.courseOverallProgress') }}",
                               "style": {
                                 "fontSize": 14,
                                 "fontWeight": "600",
@@ -702,7 +904,7 @@
                             },
                             {
                               "type": "text",
-                              "value": "{{ global.completedCount }} / {{ global.totalLessons }} 章节已完成",
+                              "value": "{{ t('stats.completedOfTotal') }}",
                               "style": {
                                 "fontSize": 12,
                                 "color": "#6B7280"
@@ -716,7 +918,7 @@
                         },
                         {
                           "type": "button",
-                          "label": "标记当前为已完成",
+                          "label": "{{ t('button.markComplete') }}",
                           "variant": "filled",
                           "action": {
                             "call": "@global.markComplete",

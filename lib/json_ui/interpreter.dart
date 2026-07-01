@@ -1070,7 +1070,11 @@ class JsonInterpreter extends ChangeNotifier {
             (path.startsWith('event.') && _eventContextStack.isEmpty)) {
           return raw;
         }
-        return getVariable(path);
+        // 纯 {{ t('key') }} 也要能在函数参数位（@show_toast / @set / @list_add 等）
+        // 解析 i18n——否则会被当成变量路径 getVariable("t('key')") → null，
+        // toast/dialog 等 UI 文本 i18n 会显示成原始 key。复用 _resolveTemplateExpression：
+        // t(...) → i18n 查表；其余 → getVariable（原始类型返回，行为与原来完全一致）。
+        return _resolveTemplateExpression(path);
       }
       return resolveTemplate(raw);
     }

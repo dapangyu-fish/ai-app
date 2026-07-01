@@ -2,6 +2,20 @@
   "dsl": "3.3",
   "meta": {
     "name": "2048",
+    "displayName": {
+      "default": "2048",
+      "zh": "2048",
+      "en": "2048",
+      "de": "2048",
+      "es": "2048",
+      "fr": "2048",
+      "pt": "2048",
+      "ca": "2048",
+      "hi": "2048",
+      "ko": "2048",
+      "ja": "2048",
+      "it": "2048"
+    },
     "version": "1.0.0",
     "type": "app",
     "description": "经典 2048 数字合并游戏 — 滑动合并，挑战 2048！",
@@ -22,6 +36,206 @@
       "_date": "",
       "_id": "",
       "_choice": null
+    },
+    "i18n": {
+      "zh": {
+        "hud": {
+          "current": "得分：{{ global.currentScore }}",
+          "best": "最佳：{{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "本局结束",
+          "message": "得分：{{ params.score }}\n最佳：{{ global.bestScore }}",
+          "close": "关闭",
+          "restart": "再来一局"
+        },
+        "history": {
+          "title": "历史记录",
+          "subtitle": "共 {{ global.historyCount }} 局",
+          "empty": "暂无记录，快来玩一局吧",
+          "scoreItem": "{{ loop.item.score }} 分"
+        }
+      },
+      "en": {
+        "hud": {
+          "current": "Score: {{ global.currentScore }}",
+          "best": "Best: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Game Over",
+          "message": "Score: {{ params.score }}\nBest: {{ global.bestScore }}",
+          "close": "Close",
+          "restart": "Play Again"
+        },
+        "history": {
+          "title": "History",
+          "subtitle": "{{ global.historyCount }} games total",
+          "empty": "No records yet — play a round!",
+          "scoreItem": "{{ loop.item.score }} pts"
+        }
+      },
+      "de": {
+        "hud": {
+          "current": "Punkte: {{ global.currentScore }}",
+          "best": "Bestwert: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Spiel vorbei",
+          "message": "Punkte: {{ params.score }}\nBestwert: {{ global.bestScore }}",
+          "close": "Schließen",
+          "restart": "Nochmal spielen"
+        },
+        "history": {
+          "title": "Verlauf",
+          "subtitle": "{{ global.historyCount }} Spiele insgesamt",
+          "empty": "Noch keine Einträge — spiel eine Runde!",
+          "scoreItem": "{{ loop.item.score }} Pkt."
+        }
+      },
+      "es": {
+        "hud": {
+          "current": "Puntos: {{ global.currentScore }}",
+          "best": "Mejor: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Fin de la partida",
+          "message": "Puntos: {{ params.score }}\nMejor: {{ global.bestScore }}",
+          "close": "Cerrar",
+          "restart": "Jugar de nuevo"
+        },
+        "history": {
+          "title": "Historial",
+          "subtitle": "{{ global.historyCount }} partidas en total",
+          "empty": "Aún no hay registros, ¡juega una partida!",
+          "scoreItem": "{{ loop.item.score }} pts"
+        }
+      },
+      "fr": {
+        "hud": {
+          "current": "Score : {{ global.currentScore }}",
+          "best": "Meilleur : {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Partie terminée",
+          "message": "Score : {{ params.score }}\nMeilleur : {{ global.bestScore }}",
+          "close": "Fermer",
+          "restart": "Rejouer"
+        },
+        "history": {
+          "title": "Historique",
+          "subtitle": "{{ global.historyCount }} parties au total",
+          "empty": "Aucun enregistrement pour l'instant, lancez une partie !",
+          "scoreItem": "{{ loop.item.score }} pts"
+        }
+      },
+      "pt": {
+        "hud": {
+          "current": "Pontos: {{ global.currentScore }}",
+          "best": "Melhor: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Fim de jogo",
+          "message": "Pontos: {{ params.score }}\nMelhor: {{ global.bestScore }}",
+          "close": "Fechar",
+          "restart": "Jogar de novo"
+        },
+        "history": {
+          "title": "Histórico",
+          "subtitle": "{{ global.historyCount }} jogos no total",
+          "empty": "Ainda não há registros, jogue uma partida!",
+          "scoreItem": "{{ loop.item.score }} pts"
+        }
+      },
+      "ca": {
+        "hud": {
+          "current": "Punts: {{ global.currentScore }}",
+          "best": "Millor: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Fi de la partida",
+          "message": "Punts: {{ params.score }}\nMillor: {{ global.bestScore }}",
+          "close": "Tanca",
+          "restart": "Torna a jugar"
+        },
+        "history": {
+          "title": "Historial",
+          "subtitle": "{{ global.historyCount }} partides en total",
+          "empty": "Encara no hi ha registres, fes una partida!",
+          "scoreItem": "{{ loop.item.score }} pts"
+        }
+      },
+      "hi": {
+        "hud": {
+          "current": "स्कोर: {{ global.currentScore }}",
+          "best": "सर्वश्रेष्ठ: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "खेल समाप्त",
+          "message": "स्कोर: {{ params.score }}\nसर्वश्रेष्ठ: {{ global.bestScore }}",
+          "close": "बंद करें",
+          "restart": "फिर से खेलें"
+        },
+        "history": {
+          "title": "इतिहास",
+          "subtitle": "कुल {{ global.historyCount }} खेल",
+          "empty": "अभी कोई रिकॉर्ड नहीं, एक बार खेलें!",
+          "scoreItem": "{{ loop.item.score }} अंक"
+        }
+      },
+      "ko": {
+        "hud": {
+          "current": "점수: {{ global.currentScore }}",
+          "best": "최고: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "게임 종료",
+          "message": "점수: {{ params.score }}\n최고: {{ global.bestScore }}",
+          "close": "닫기",
+          "restart": "다시 하기"
+        },
+        "history": {
+          "title": "기록",
+          "subtitle": "총 {{ global.historyCount }}판",
+          "empty": "아직 기록이 없어요. 한 판 해보세요!",
+          "scoreItem": "{{ loop.item.score }}점"
+        }
+      },
+      "ja": {
+        "hud": {
+          "current": "スコア：{{ global.currentScore }}",
+          "best": "ベスト：{{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "ゲームオーバー",
+          "message": "スコア：{{ params.score }}\nベスト：{{ global.bestScore }}",
+          "close": "閉じる",
+          "restart": "もう一度プレイ"
+        },
+        "history": {
+          "title": "履歴",
+          "subtitle": "合計 {{ global.historyCount }} 回",
+          "empty": "まだ記録がありません。一局プレイしましょう！",
+          "scoreItem": "{{ loop.item.score }} 点"
+        }
+      },
+      "it": {
+        "hud": {
+          "current": "Punteggio: {{ global.currentScore }}",
+          "best": "Migliore: {{ global.bestScore }}"
+        },
+        "gameover": {
+          "title": "Partita finita",
+          "message": "Punteggio: {{ params.score }}\nMigliore: {{ global.bestScore }}",
+          "close": "Chiudi",
+          "restart": "Gioca ancora"
+        },
+        "history": {
+          "title": "Cronologia",
+          "subtitle": "{{ global.historyCount }} partite in totale",
+          "empty": "Ancora nessun record, gioca una partita!",
+          "scoreItem": "{{ loop.item.score }} pt"
+        }
+      }
     },
     "functions": {
       "initDB": {
@@ -224,16 +438,16 @@
           {
             "call": "@common-ui.choose",
             "args": {
-              "title": "本局结束",
-              "message": "得分：{{ params.score }}\n最佳：{{ global.bestScore }}",
+              "title": "{{ t('gameover.title') }}",
+              "message": "{{ t('gameover.message') }}",
               "buttons": [
                 {
-                  "label": "关闭",
+                  "label": "{{ t('gameover.close') }}",
                   "value": null,
                   "style": "text"
                 },
                 {
-                  "label": "再来一局",
+                  "label": "{{ t('gameover.restart') }}",
                   "value": "restart"
                 }
               ]
@@ -270,12 +484,12 @@
           {
             "call": "@common-ui.showSheet",
             "args": {
-              "title": "历史记录",
-              "subtitle": "共 {{ global.historyCount }} 局",
+              "title": "{{ t('history.title') }}",
+              "subtitle": "{{ t('history.subtitle') }}",
               "content": {
                 "type": "list",
                 "source": "{{ global.history }}",
-                "emptyText": "暂无记录，快来玩一局吧",
+                "emptyText": "{{ t('history.empty') }}",
                 "item_template": {
                   "type": "container",
                   "padding": 12,
@@ -296,7 +510,7 @@
                     },
                     {
                       "type": "text",
-                      "value": "{{ loop.item.score }} 分",
+                      "value": "{{ t('history.scoreItem') }}",
                       "style": {
                         "fontSize": 15,
                         "fontWeight": "bold",
@@ -365,7 +579,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "得分：{{ global.currentScore }}",
+                "value": "{{ t('hud.current') }}",
                 "style": {
                   "fontSize": 14,
                   "color": "#FFFFFF",
@@ -378,7 +592,7 @@
               },
               {
                 "type": "text",
-                "value": "最佳：{{ global.bestScore }}",
+                "value": "{{ t('hud.best') }}",
                 "style": {
                   "fontSize": 13,
                   "color": "#F0E0CF"

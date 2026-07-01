@@ -6,7 +6,20 @@
     "type": "app",
     "description": "快速记录、列表管理、复制",
     "author": "fish",
-    "displayName": "文本收集器"
+    "displayName": {
+      "default": "文本收集器",
+      "zh": "文本收集器",
+      "en": "Text Collector",
+      "de": "Textsammler",
+      "es": "Colector de textos",
+      "fr": "Collecteur de textes",
+      "pt": "Coletor de textos",
+      "ca": "Col·lector de textos",
+      "hi": "टेक्स्ट संग्राहक",
+      "ko": "텍스트 수집기",
+      "ja": "テキストコレクター",
+      "it": "Raccoglitore di testi"
+    }
   },
   "dependencies": {},
   "global": {
@@ -22,6 +35,338 @@
       "totalCount": 0,
       "todayCount": 0,
       "todayLabel": "今天"
+    },
+    "i18n": {
+      "zh": {
+        "home": {
+          "title": "{{ t('home.title') }}",
+          "allRecords": "全部记录",
+          "today": "今天",
+          "searchPlaceholder": "搜索文本内容",
+          "empty": "还没有记录，点击右下角按钮开始记录",
+          "copy": "复制",
+          "quickAdd": "快速记录"
+        },
+        "form": {
+          "appBarTitle": "记录",
+          "label": "文本内容",
+          "placeholder": "输入或粘贴文本...",
+          "save": "保存"
+        },
+        "detail": {
+          "title": "详情",
+          "appBarTitle": "文本详情",
+          "copyFull": "复制全文",
+          "edit": "编辑",
+          "delete": "删除"
+        },
+        "toast": {
+          "emptyContent": "请输入文本内容",
+          "saved": "已保存",
+          "deleted": "已删除",
+          "copied": "已复制到剪贴板"
+        }
+      },
+      "en": {
+        "home": {
+          "title": "Text Collector",
+          "allRecords": "All records",
+          "today": "Today",
+          "searchPlaceholder": "Search text",
+          "empty": "No records yet. Tap the button in the bottom right to start.",
+          "copy": "Copy",
+          "quickAdd": "Quick note"
+        },
+        "form": {
+          "appBarTitle": "Note",
+          "label": "Text content",
+          "placeholder": "Type or paste text...",
+          "save": "Save"
+        },
+        "detail": {
+          "title": "Details",
+          "appBarTitle": "Text details",
+          "copyFull": "Copy all",
+          "edit": "Edit",
+          "delete": "Delete"
+        },
+        "toast": {
+          "emptyContent": "Please enter some text",
+          "saved": "Saved",
+          "deleted": "Deleted",
+          "copied": "Copied to clipboard"
+        }
+      },
+      "de": {
+        "home": {
+          "title": "Textsammler",
+          "allRecords": "Alle Einträge",
+          "today": "Heute",
+          "searchPlaceholder": "Text durchsuchen",
+          "empty": "Noch keine Einträge. Tippen Sie unten rechts auf die Schaltfläche, um zu beginnen.",
+          "copy": "Kopieren",
+          "quickAdd": "Schnellnotiz"
+        },
+        "form": {
+          "appBarTitle": "Notiz",
+          "label": "Textinhalt",
+          "placeholder": "Text eingeben oder einfügen...",
+          "save": "Speichern"
+        },
+        "detail": {
+          "title": "Details",
+          "appBarTitle": "Textdetails",
+          "copyFull": "Alles kopieren",
+          "edit": "Bearbeiten",
+          "delete": "Löschen"
+        },
+        "toast": {
+          "emptyContent": "Bitte geben Sie einen Text ein",
+          "saved": "Gespeichert",
+          "deleted": "Gelöscht",
+          "copied": "In die Zwischenablage kopiert"
+        }
+      },
+      "es": {
+        "home": {
+          "title": "Colector de textos",
+          "allRecords": "Todos los registros",
+          "today": "Hoy",
+          "searchPlaceholder": "Buscar texto",
+          "empty": "Aún no hay registros. Toca el botón de abajo a la derecha para empezar.",
+          "copy": "Copiar",
+          "quickAdd": "Nota rápida"
+        },
+        "form": {
+          "appBarTitle": "Nota",
+          "label": "Contenido del texto",
+          "placeholder": "Escribe o pega texto...",
+          "save": "Guardar"
+        },
+        "detail": {
+          "title": "Detalles",
+          "appBarTitle": "Detalles del texto",
+          "copyFull": "Copiar todo",
+          "edit": "Editar",
+          "delete": "Eliminar"
+        },
+        "toast": {
+          "emptyContent": "Introduce algún texto",
+          "saved": "Guardado",
+          "deleted": "Eliminado",
+          "copied": "Copiado al portapapeles"
+        }
+      },
+      "fr": {
+        "home": {
+          "title": "Collecteur de textes",
+          "allRecords": "Tous les enregistrements",
+          "today": "Aujourd'hui",
+          "searchPlaceholder": "Rechercher du texte",
+          "empty": "Aucun enregistrement pour l'instant. Appuyez sur le bouton en bas à droite pour commencer.",
+          "copy": "Copier",
+          "quickAdd": "Note rapide"
+        },
+        "form": {
+          "appBarTitle": "Note",
+          "label": "Contenu du texte",
+          "placeholder": "Saisissez ou collez du texte...",
+          "save": "Enregistrer"
+        },
+        "detail": {
+          "title": "Détails",
+          "appBarTitle": "Détails du texte",
+          "copyFull": "Tout copier",
+          "edit": "Modifier",
+          "delete": "Supprimer"
+        },
+        "toast": {
+          "emptyContent": "Veuillez saisir du texte",
+          "saved": "Enregistré",
+          "deleted": "Supprimé",
+          "copied": "Copié dans le presse-papiers"
+        }
+      },
+      "pt": {
+        "home": {
+          "title": "Coletor de textos",
+          "allRecords": "Todos os registros",
+          "today": "Hoje",
+          "searchPlaceholder": "Pesquisar texto",
+          "empty": "Ainda não há registros. Toque no botão no canto inferior direito para começar.",
+          "copy": "Copiar",
+          "quickAdd": "Nota rápida"
+        },
+        "form": {
+          "appBarTitle": "Nota",
+          "label": "Conteúdo do texto",
+          "placeholder": "Digite ou cole o texto...",
+          "save": "Salvar"
+        },
+        "detail": {
+          "title": "Detalhes",
+          "appBarTitle": "Detalhes do texto",
+          "copyFull": "Copiar tudo",
+          "edit": "Editar",
+          "delete": "Excluir"
+        },
+        "toast": {
+          "emptyContent": "Insira algum texto",
+          "saved": "Salvo",
+          "deleted": "Excluído",
+          "copied": "Copiado para a área de transferência"
+        }
+      },
+      "ca": {
+        "home": {
+          "title": "Col·lector de textos",
+          "allRecords": "Tots els registres",
+          "today": "Avui",
+          "searchPlaceholder": "Cerca text",
+          "empty": "Encara no hi ha registres. Toca el botó de la part inferior dreta per començar.",
+          "copy": "Copia",
+          "quickAdd": "Nota ràpida"
+        },
+        "form": {
+          "appBarTitle": "Nota",
+          "label": "Contingut del text",
+          "placeholder": "Escriu o enganxa text...",
+          "save": "Desa"
+        },
+        "detail": {
+          "title": "Detalls",
+          "appBarTitle": "Detalls del text",
+          "copyFull": "Copia-ho tot",
+          "edit": "Edita",
+          "delete": "Elimina"
+        },
+        "toast": {
+          "emptyContent": "Introdueix algun text",
+          "saved": "Desat",
+          "deleted": "Eliminat",
+          "copied": "Copiat al porta-retalls"
+        }
+      },
+      "hi": {
+        "home": {
+          "title": "टेक्स्ट संग्राहक",
+          "allRecords": "सभी रिकॉर्ड",
+          "today": "आज",
+          "searchPlaceholder": "टेक्स्ट खोजें",
+          "empty": "अभी तक कोई रिकॉर्ड नहीं है। शुरू करने के लिए नीचे दाईं ओर के बटन पर टैप करें।",
+          "copy": "कॉपी करें",
+          "quickAdd": "त्वरित नोट"
+        },
+        "form": {
+          "appBarTitle": "नोट",
+          "label": "टेक्स्ट सामग्री",
+          "placeholder": "टेक्स्ट लिखें या पेस्ट करें...",
+          "save": "सहेजें"
+        },
+        "detail": {
+          "title": "विवरण",
+          "appBarTitle": "टेक्स्ट विवरण",
+          "copyFull": "सब कुछ कॉपी करें",
+          "edit": "संपादित करें",
+          "delete": "हटाएं"
+        },
+        "toast": {
+          "emptyContent": "कृपया कुछ टेक्स्ट दर्ज करें",
+          "saved": "सहेजा गया",
+          "deleted": "हटा दिया गया",
+          "copied": "क्लिपबोर्ड पर कॉपी किया गया"
+        }
+      },
+      "ko": {
+        "home": {
+          "title": "텍스트 수집기",
+          "allRecords": "전체 기록",
+          "today": "오늘",
+          "searchPlaceholder": "텍스트 검색",
+          "empty": "아직 기록이 없습니다. 오른쪽 아래 버튼을 눌러 시작하세요.",
+          "copy": "복사",
+          "quickAdd": "빠른 기록"
+        },
+        "form": {
+          "appBarTitle": "기록",
+          "label": "텍스트 내용",
+          "placeholder": "텍스트를 입력하거나 붙여넣으세요...",
+          "save": "저장"
+        },
+        "detail": {
+          "title": "상세",
+          "appBarTitle": "텍스트 상세",
+          "copyFull": "전체 복사",
+          "edit": "편집",
+          "delete": "삭제"
+        },
+        "toast": {
+          "emptyContent": "텍스트를 입력하세요",
+          "saved": "저장됨",
+          "deleted": "삭제됨",
+          "copied": "클립보드에 복사됨"
+        }
+      },
+      "ja": {
+        "home": {
+          "title": "テキストコレクター",
+          "allRecords": "すべての記録",
+          "today": "今日",
+          "searchPlaceholder": "テキストを検索",
+          "empty": "まだ記録がありません。右下のボタンをタップして始めましょう。",
+          "copy": "コピー",
+          "quickAdd": "クイック記録"
+        },
+        "form": {
+          "appBarTitle": "記録",
+          "label": "テキスト内容",
+          "placeholder": "テキストを入力または貼り付け...",
+          "save": "保存"
+        },
+        "detail": {
+          "title": "詳細",
+          "appBarTitle": "テキストの詳細",
+          "copyFull": "全文をコピー",
+          "edit": "編集",
+          "delete": "削除"
+        },
+        "toast": {
+          "emptyContent": "テキストを入力してください",
+          "saved": "保存しました",
+          "deleted": "削除しました",
+          "copied": "クリップボードにコピーしました"
+        }
+      },
+      "it": {
+        "home": {
+          "title": "Raccoglitore di testi",
+          "allRecords": "Tutti i record",
+          "today": "Oggi",
+          "searchPlaceholder": "Cerca testo",
+          "empty": "Ancora nessun record. Tocca il pulsante in basso a destra per iniziare.",
+          "copy": "Copia",
+          "quickAdd": "Nota rapida"
+        },
+        "form": {
+          "appBarTitle": "Nota",
+          "label": "Contenuto del testo",
+          "placeholder": "Inserisci o incolla il testo...",
+          "save": "Salva"
+        },
+        "detail": {
+          "title": "Dettagli",
+          "appBarTitle": "Dettagli del testo",
+          "copyFull": "Copia tutto",
+          "edit": "Modifica",
+          "delete": "Elimina"
+        },
+        "toast": {
+          "emptyContent": "Inserisci del testo",
+          "saved": "Salvato",
+          "deleted": "Eliminato",
+          "copied": "Copiato negli appunti"
+        }
+      }
     },
     "functions": {
       "updateCounts": {
@@ -155,7 +500,7 @@
                 {
                   "call": "@show_toast",
                   "args": {
-                    "message": "请输入文本内容"
+                    "message": "{{ t('toast.emptyContent') }}"
                   }
                 }
               ],
@@ -255,7 +600,7 @@
                 {
                   "call": "@show_toast",
                   "args": {
-                    "message": "已保存"
+                    "message": "{{ t('toast.saved') }}"
                   }
                 }
               ]
@@ -361,7 +706,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已删除"
+              "message": "{{ t('toast.deleted') }}"
             }
           }
         ]
@@ -407,7 +752,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已删除"
+              "message": "{{ t('toast.deleted') }}"
             }
           }
         ]
@@ -424,7 +769,7 @@
           {
             "call": "@show_toast",
             "args": {
-              "message": "已复制到剪贴板"
+              "message": "{{ t('toast.copied') }}"
             }
           }
         ]
@@ -443,7 +788,7 @@
     "screens": [
       {
         "id": "home",
-        "title": "文本收集器",
+        "title": "{{ t('home.title') }}",
         "layout": "column",
         "children": [
           {
@@ -477,7 +822,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "全部记录",
+                          "value": "{{ t('home.allRecords') }}",
                           "style": {
                             "fontSize": 13,
                             "color": "#6B7280"
@@ -534,7 +879,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "今天",
+                          "value": "{{ t('home.today') }}",
                           "style": {
                             "fontSize": 13,
                             "color": "#6B7280"
@@ -579,7 +924,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "搜索文本内容",
+                "placeholder": "{{ t('home.searchPlaceholder') }}",
                 "bind": "global.searchQuery",
                 "position": {
                   "type": "flex",
@@ -600,7 +945,7 @@
           {
             "type": "list",
             "source": "{{ global.filteredEntries }}",
-            "emptyText": "还没有记录，点击右下角按钮开始记录",
+            "emptyText": "{{ t('home.empty') }}",
             "item_template": {
               "type": "card",
               "layout": "column",
@@ -652,7 +997,7 @@
                     },
                     {
                       "type": "button",
-                      "label": "复制",
+                      "label": "{{ t('home.copy') }}",
                       "variant": "text",
                       "action": {
                         "call": "@clipboard_copy",
@@ -710,7 +1055,7 @@
             "children": [
               {
                 "type": "button",
-                "label": "快速记录",
+                "label": "{{ t('home.quickAdd') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.startCreate",
@@ -732,7 +1077,7 @@
         ],
         "backgroundColor": "#F5F5F7",
         "appBar": {
-          "title": "文本收集器",
+          "title": "{{ t('home.title') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -759,7 +1104,7 @@
       },
       {
         "id": "add_form",
-        "title": "快速记录",
+        "title": "{{ t('home.quickAdd') }}",
         "layout": "column",
         "children": [
           {
@@ -773,7 +1118,7 @@
             "children": [
               {
                 "type": "text",
-                "value": "文本内容",
+                "value": "{{ t('form.label') }}",
                 "style": {
                   "fontSize": 14,
                   "fontWeight": "600",
@@ -786,7 +1131,7 @@
               },
               {
                 "type": "input",
-                "placeholder": "输入或粘贴文本...",
+                "placeholder": "{{ t('form.placeholder') }}",
                 "bind": "global.formContent",
                 "maxLines": 10,
                 "style": {
@@ -800,7 +1145,7 @@
               },
               {
                 "type": "button",
-                "label": "保存",
+                "label": "{{ t('form.save') }}",
                 "variant": "filled",
                 "action": {
                   "call": "@global.saveEntry",
@@ -820,7 +1165,7 @@
         ],
         "backgroundColor": "#F5F5F7",
         "appBar": {
-          "title": "记录",
+          "title": "{{ t('form.appBarTitle') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -841,14 +1186,14 @@
                 "paddingH": 10,
                 "paddingV": 8
               },
-              "tooltip": "保存"
+              "tooltip": "{{ t('form.save') }}"
             }
           ]
         }
       },
       {
         "id": "detail",
-        "title": "详情",
+        "title": "{{ t('detail.title') }}",
         "layout": "column",
         "children": [
           {
@@ -908,7 +1253,7 @@
                 "children": [
                   {
                     "type": "button",
-                    "label": "复制全文",
+                    "label": "{{ t('detail.copyFull') }}",
                     "variant": "filled",
                     "action": {
                       "call": "@global.copyCurrent",
@@ -929,7 +1274,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "编辑",
+                    "label": "{{ t('detail.edit') }}",
                     "variant": "outlined",
                     "action": {
                       "call": "@global.editCurrent",
@@ -950,7 +1295,7 @@
                   },
                   {
                     "type": "button",
-                    "label": "删除",
+                    "label": "{{ t('detail.delete') }}",
                     "variant": "outlined",
                     "action": {
                       "call": "@global.deleteCurrent",
@@ -972,7 +1317,7 @@
         ],
         "backgroundColor": "#F5F5F7",
         "appBar": {
-          "title": "文本详情",
+          "title": "{{ t('detail.appBarTitle') }}",
           "centerTitle": true,
           "backgroundColor": "#FFFFFF",
           "color": "#111827",
@@ -993,7 +1338,7 @@
                 "paddingH": 10,
                 "paddingV": 8
               },
-              "tooltip": "编辑"
+              "tooltip": "{{ t('detail.edit') }}"
             },
             {
               "type": "button",
@@ -1010,7 +1355,7 @@
                 "paddingH": 10,
                 "paddingV": 8
               },
-              "tooltip": "删除"
+              "tooltip": "{{ t('detail.delete') }}"
             }
           ]
         }

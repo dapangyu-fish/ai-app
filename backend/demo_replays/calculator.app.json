@@ -6,7 +6,21 @@
     "version": "1.0.0",
     "type": "app",
     "description": "功能完整的计算器：加减乘除、百分比、正负号、退格清除、等号连续运算、完整历史记录管理。",
-    "author": "fish"
+    "author": "fish",
+    "displayName": {
+      "default": "Calculator",
+      "zh": "计算器",
+      "en": "Calculator",
+      "de": "Rechner",
+      "es": "Calculadora",
+      "fr": "Calculatrice",
+      "pt": "Calculadora",
+      "ca": "Calculadora",
+      "hi": "कैलकुलेटर",
+      "ko": "계산기",
+      "ja": "電卓",
+      "it": "Calcolatrice"
+    }
   },
   "global": {
     "variables": {
@@ -48,6 +62,140 @@
         }
       ],
       "_historySeq": 6
+    },
+    "i18n": {
+      "zh": {
+        "app": { "title": "计算器" },
+        "tab": { "calc": "计算", "history": "历史" },
+        "history": {
+          "title": "历史记录",
+          "count": "共 {{ global.history | length }} 条",
+          "clear": "清空",
+          "empty": "暂无历史记录，开始计算吧",
+          "use": "使用",
+          "delete": "删除"
+        }
+      },
+      "en": {
+        "app": { "title": "Calculator" },
+        "tab": { "calc": "Calculator", "history": "History" },
+        "history": {
+          "title": "History",
+          "count": "{{ global.history | length }} total",
+          "clear": "Clear",
+          "empty": "No history yet — start calculating",
+          "use": "Use",
+          "delete": "Delete"
+        }
+      },
+      "de": {
+        "app": { "title": "Rechner" },
+        "tab": { "calc": "Rechner", "history": "Verlauf" },
+        "history": {
+          "title": "Verlauf",
+          "count": "{{ global.history | length }} insgesamt",
+          "clear": "Löschen",
+          "empty": "Noch kein Verlauf – fang an zu rechnen",
+          "use": "Verwenden",
+          "delete": "Löschen"
+        }
+      },
+      "es": {
+        "app": { "title": "Calculadora" },
+        "tab": { "calc": "Calculadora", "history": "Historial" },
+        "history": {
+          "title": "Historial",
+          "count": "{{ global.history | length }} en total",
+          "clear": "Borrar",
+          "empty": "Aún no hay historial, empieza a calcular",
+          "use": "Usar",
+          "delete": "Eliminar"
+        }
+      },
+      "fr": {
+        "app": { "title": "Calculatrice" },
+        "tab": { "calc": "Calculatrice", "history": "Historique" },
+        "history": {
+          "title": "Historique",
+          "count": "{{ global.history | length }} au total",
+          "clear": "Effacer",
+          "empty": "Pas encore d'historique, commencez à calculer",
+          "use": "Utiliser",
+          "delete": "Supprimer"
+        }
+      },
+      "pt": {
+        "app": { "title": "Calculadora" },
+        "tab": { "calc": "Calculadora", "history": "Histórico" },
+        "history": {
+          "title": "Histórico",
+          "count": "{{ global.history | length }} no total",
+          "clear": "Limpar",
+          "empty": "Ainda não há histórico, comece a calcular",
+          "use": "Usar",
+          "delete": "Excluir"
+        }
+      },
+      "ca": {
+        "app": { "title": "Calculadora" },
+        "tab": { "calc": "Calculadora", "history": "Historial" },
+        "history": {
+          "title": "Historial",
+          "count": "{{ global.history | length }} en total",
+          "clear": "Esborra",
+          "empty": "Encara no hi ha historial, comença a calcular",
+          "use": "Utilitza",
+          "delete": "Elimina"
+        }
+      },
+      "hi": {
+        "app": { "title": "कैलकुलेटर" },
+        "tab": { "calc": "कैलकुलेटर", "history": "इतिहास" },
+        "history": {
+          "title": "इतिहास",
+          "count": "कुल {{ global.history | length }}",
+          "clear": "साफ़ करें",
+          "empty": "अभी कोई इतिहास नहीं है, गणना करना शुरू करें",
+          "use": "उपयोग करें",
+          "delete": "हटाएँ"
+        }
+      },
+      "ko": {
+        "app": { "title": "계산기" },
+        "tab": { "calc": "계산기", "history": "기록" },
+        "history": {
+          "title": "기록",
+          "count": "총 {{ global.history | length }}개",
+          "clear": "지우기",
+          "empty": "아직 기록이 없습니다. 계산을 시작해 보세요",
+          "use": "사용",
+          "delete": "삭제"
+        }
+      },
+      "ja": {
+        "app": { "title": "電卓" },
+        "tab": { "calc": "電卓", "history": "履歴" },
+        "history": {
+          "title": "履歴",
+          "count": "全 {{ global.history | length }} 件",
+          "clear": "クリア",
+          "empty": "履歴はまだありません。計算を始めましょう",
+          "use": "使う",
+          "delete": "削除"
+        }
+      },
+      "it": {
+        "app": { "title": "Calcolatrice" },
+        "tab": { "calc": "Calcolatrice", "history": "Cronologia" },
+        "history": {
+          "title": "Cronologia",
+          "count": "{{ global.history | length }} in totale",
+          "clear": "Cancella",
+          "empty": "Nessuna cronologia, inizia a calcolare",
+          "use": "Usa",
+          "delete": "Elimina"
+        }
+      }
     },
     "functions": {
       "pressDigit": {
@@ -1048,7 +1196,7 @@
         "children": [
           {
             "type": "app_bar",
-            "title": "计算器",
+            "title": "{{ t('app.title') }}",
             "backgroundColor": "#1C1C1C",
             "color": "#FFFFFF",
             "elevation": 0,
@@ -1067,7 +1215,7 @@
             "type": "tab_view",
             "tabs": [
               {
-                "label": "计算",
+                "label": "{{ t('tab.calc') }}",
                 "content": {
                   "type": "container",
                   "layout": "column",
@@ -1564,7 +1712,7 @@
                 }
               },
               {
-                "label": "历史",
+                "label": "{{ t('tab.history') }}",
                 "content": {
                   "type": "container",
                   "layout": "column",
@@ -1580,7 +1728,7 @@
                       "children": [
                         {
                           "type": "text",
-                          "value": "历史记录",
+                          "value": "{{ t('history.title') }}",
                           "style": {
                             "fontSize": 18,
                             "fontWeight": "bold",
@@ -1596,7 +1744,7 @@
                         },
                         {
                           "type": "text",
-                          "value": "共 {{ global.history | length }} 条",
+                          "value": "{{ t('history.count') }}",
                           "style": {
                             "fontSize": 13,
                             "color": "#8E8E93"
@@ -1608,7 +1756,7 @@
                         },
                         {
                           "type": "button",
-                          "label": "清空",
+                          "label": "{{ t('history.clear') }}",
                           "variant": "text",
                           "style": {
                             "textColor": "#FF3B30",
@@ -1626,7 +1774,7 @@
                       "source": "{{ global.history }}",
                       "shrinkWrap": true,
                       "separator": "none",
-                      "emptyText": "暂无历史记录，开始计算吧",
+                      "emptyText": "{{ t('history.empty') }}",
                       "item_template": {
                         "type": "container",
                         "layout": "row",
@@ -1670,7 +1818,7 @@
                           },
                           {
                             "type": "button",
-                            "label": "使用",
+                            "label": "{{ t('history.use') }}",
                             "variant": "text",
                             "style": {
                               "textColor": "#007AFF",
@@ -1689,7 +1837,7 @@
                           },
                           {
                             "type": "button",
-                            "label": "删除",
+                            "label": "{{ t('history.delete') }}",
                             "variant": "text",
                             "style": {
                               "textColor": "#FF3B30",
