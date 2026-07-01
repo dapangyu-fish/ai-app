@@ -4419,32 +4419,34 @@
             "layout": "column",
             "children": [
               {
-                "if": [
-                  {
-                    "==": [
-                      "{{ global.timerMode }}",
-                      "rest"
-                    ]
-                  },
-                  {
-                    "type": "text",
-                    "value": "{{ t('timer.modeRest') }}",
-                    "style": {
-                      "fontSize": 16,
-                      "fontWeight": "500",
-                      "color": "#6B7280"
-                    }
-                  },
-                  {
-                    "type": "text",
-                    "value": "{{ t('timer.modeExercise') }}",
-                    "style": {
-                      "fontSize": 16,
-                      "fontWeight": "500",
-                      "color": "#6B7280"
-                    }
-                  }
-                ]
+                "type": "text",
+                "value": "{{ t('timer.modeRest') }}",
+                "visible": {
+                  "==": [
+                    "{{ global.timerMode }}",
+                    "rest"
+                  ]
+                },
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "500",
+                  "color": "#6B7280"
+                }
+              },
+              {
+                "type": "text",
+                "value": "{{ t('timer.modeExercise') }}",
+                "visible": {
+                  "!=": [
+                    "{{ global.timerMode }}",
+                    "rest"
+                  ]
+                },
+                "style": {
+                  "fontSize": 16,
+                  "fontWeight": "500",
+                  "color": "#6B7280"
+                }
               },
               {
                 "type": "spacer",

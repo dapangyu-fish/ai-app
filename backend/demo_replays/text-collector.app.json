@@ -39,7 +39,7 @@
     "i18n": {
       "zh": {
         "home": {
-          "title": "{{ t('home.title') }}",
+          "title": "文本收集器",
           "allRecords": "全部记录",
           "today": "今天",
           "searchPlaceholder": "搜索文本内容",
