@@ -2,15 +2,41 @@
 
 [中文](README.zh.md) · [English](README.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md) · [Português](README.pt.md) · [Català](README.ca.md) · [हिन्दी](README.hi.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · **Italiano**
 
-> **L'IA descrive → app full-stack (UI + backend + database) → in esecuzione immediata sul telefono dell'utente. Nessun passaggio di build, nessuna revisione dell'app store.**
+<div align="center">
+
+### Basta vibe-*coding*. Lancia vibe-*app*.
+
+**Descrivila → un'app full-stack (UI + backend reale + database) è live su ogni schermo.**
+
+**Niente codebase. Niente build. Niente deploy. Niente app store.**
+
+</div>
+
+> Tutto il settore sta ancora discutendo su come *scrivere codice* con l'IA. Noi il codice l'abbiamo saltato.
 >
-> Un runtime Flutter che interpreta JSON-DSL in UI nativa + logica di business. Gli utenti dicono all'IA cosa vogliono; l'IA emette il front-end JSON **e, quando l'app ne ha bisogno, un vero backend Python/Flask con il proprio database Postgres isolato** — poi lo renderizza ed esegue immediatamente all'interno di un set di capacità precompilato. Altri costruttori di app IA ti consegnano codice front-end da collegare e distribuire da solo; MyApp consegna l'intero stack, già in esecuzione.
+> Il vibe coding — anche i migliori costruttori di app IA (Lovable, Bolt, v0, Replit) — ti consegna comunque un **codebase** da collegare, ospitare e pubblicare. MyApp ti consegna l'**app in esecuzione**: descrivi ciò che vuoi, l'IA emette un front-end JSON-DSL **e**, quando l'app ne ha bisogno, un vero backend Python/Flask con il proprio database Postgres isolato — poi renderizza ed esegue il tutto immediatamente all'interno di un runtime precompilato e multipiattaforma. La *stessa* frase può dar vita a un **gioco giocabile** o a un **forum con un vero backend con login, post e risposte in thread** — live su **iOS, Android, Web e desktop a partire da una sola descrizione**. Non c'è alcun progetto da aprire, niente da compilare, niente da distribuire.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()
+[![DSL](https://img.shields.io/badge/JSON--DSL-v3.4-7c5cff)](JSON-DSL.md)
 
 > **Stato della piattaforma**: ✅ Produzione (iOS/Android/Web) • ⚠️ Sperimentale (macOS, solo funzionalità di base) • 🚧 Non testato (Linux/Windows)
+
+---
+
+## Vibe *coding* vs. vibe *app*
+
+|  | Vibe coding / costruttori di app IA | **MyApp — una vibe app** |
+|---|---|---|
+| Cosa ottieni | Un **codebase** (React/Next + un backend) | Un'**app in esecuzione** |
+| L'artefatto | Codice che ospiti, mantieni e accudisci | Una configurazione JSON — **nessun codice da mantenere** |
+| Fase di rilascio | Build → deploy → (revisione dell'app store) | **Nessuna.** È già live. |
+| Dove gira | Di solito una web app | **iOS · Android · Web · macOS · Linux · Windows** — una sola descrizione |
+| Backend | "Collega Supabase da solo" | **Python/Flask generato dall'IA + Postgres isolato**, distribuito per te |
+| Gamma | Form, dashboard, CRUD | …**e chat in tempo reale, e giochi giocabili** (Tetris, 2048, un platform) dallo *stesso* runtime |
+
+Non è uno slogan campato in aria. Continua a leggere — i numeri del motore sono qui sotto.
 
 ---
 
@@ -18,13 +44,13 @@
 
 Tre cose in un unico repository:
 
-1. **Un motore Flutter di UI server-driven** (`lib/`) — renderizza qualsiasi configurazione JSON-DSL in una vera app multipiattaforma in fase di esecuzione
-2. **Un generatore full-stack basato su IA** (`backend/`, `user_center/`, `config_center/`) — l'IA genera il front-end JSON **e un backend FaaS corrispondente + database Postgres isolato** quando l'app ne ha bisogno, sopra autenticazione (Supabase), IM (OpenIM), push (APNs + FCM), proxy chat IA, registro dei pacchetti e amministrazione utenti
-3. **Un ecosistema di pacchetti** (`templates/`) — esempi di JSON-APP (IM, giochi, profilo utente, calcolatrice…) che puoi installare sopra il runtime
+1. **Un motore Flutter di UI server-driven** (`lib/`) — interpreta una configurazione JSON-DSL in una vera app nativa e multipiattaforma in fase di esecuzione. **91 tipi di widget, oltre 100 funzioni integrate, un motore di espressioni con 28 operatori e un motore di gioco 2D completo** — tutto precompilato nel client.
+2. **Un generatore full-stack basato su IA** (`backend/`, `user_center/`, `config_center/`) — l'IA genera il front-end JSON **e un backend FaaS corrispondente + database Postgres isolato** quando l'app ne ha bisogno, sopra autenticazione (Supabase), IM (OpenIM), push (APNs + FCM), proxy chat IA, registro dei pacchetti e amministrazione utenti.
+3. **Un ecosistema di pacchetti** (`templates/`) — oltre 70 JSON-App di esempio e librerie riutilizzabili (IM, giochi, profilo utente, calcolatrice, dashboard…) che puoi installare sopra il runtime.
 
 Il nome **MyApp** è intenzionale: ogni utente può creare, installare e gestire "la mia app" sopra il runtime condiviso.
 
-Il caso d'uso di punta: **un utente apre l'app → chatta con l'IA (la generazione richiede tipicamente 10-20 minuti) → l'IA restituisce un JSON-DSL → l'app lo carica ed esegue immediatamente** all'interno delle capacità già compilate nel client.
+Il caso d'uso di punta: **un utente apre l'app → chatta con l'IA → l'IA restituisce un JSON-DSL (e un backend, se necessario) → l'app lo carica ed esegue immediatamente** all'interno delle capacità già compilate nel client. Nessuna build, nessuna revisione, nessuna attesa di un app store.
 
 ---
 
@@ -69,11 +95,12 @@ La maggior parte delle app JSON-DSL funziona su tutte le piattaforme. Le funzion
 ## Perché è interessante?
 
 - **Full-stack in un colpo solo — l'elemento differenziante.** La maggior parte dei costruttori di app IA (v0, Lovable, Bolt, …) genera codice *front-end* che devi comunque collegare a un backend e distribuire da solo. MyApp genera il front-end **e** un vero backend FaaS Python/Flask — ciascuno con il proprio database Postgres isolato, un modello di permessi per app e l'isolamento dei dati per chiamante — poi esegue il tutto immediatamente. Nessun progetto backend separato, nessun passaggio di distribuzione, nessuna sottomissione allo store.
+- **Nessun artefatto di codice.** Ciò che ottieni è una configurazione JSON in esecuzione in un client precompilato, non un codebase. Niente da ospitare, niente da mantenere, niente che si rompa al prossimo aggiornamento di dipendenze. Aggiorni un'app descrivendone la modifica; è live ovunque al successivo caricamento.
+- **Davvero multipiattaforma.** Lo *stesso* JSON-DSL viene renderizzato su iOS, Android, Web (testato in produzione), macOS (sperimentale), Linux e Windows. La maggior parte degli strumenti "app IA" ti dà una web app; questo ti dà app native, ovunque, a partire da una sola descrizione.
 - **Server-driven** — distribuisci UI e comportamento come dati attraverso un confine di runtime fisso e precompilato. Vedi le [note sulla conformità all'App Store](docs/APP_STORE_COMPLIANCE.md).
-- **Nativo per l'IA** — il DSL è progettato per essere LLM-friendly. La chat IA inclusa esegue più provider (DeepSeek, MiniMax, aggregatore Volcengine con GLM / Kimi) attraverso tre runtime di agente collegabili (Claude Code, Codex, OpenCode), e genera app che effettivamente vengono renderizzate — con playbook di generazione e una passata di auto-revisione visiva in fase di esecuzione per mantenere l'output eseguibile.
+- **Nativo per l'IA** — il DSL è progettato per essere LLM-friendly. La chat IA inclusa esegue più provider (DeepSeek, MiniMax, aggregatore Volcengine con GLM / Kimi) attraverso tre runtime di agente collegabili (Claude Code, Codex, OpenCode), con playbook di generazione e una passata di auto-revisione visiva in fase di esecuzione per mantenere l'output eseguibile.
 - **Tutto incluso** — IM con push, proxy IA, registro dei pacchetti, namespace, mirroring, centro utenti, cambio di ambiente — tutto collegato insieme. Non "l'ennesimo framework low-code che rinuncia all'autenticazione".
 - **Self-hostable** — `myapp-ctl deploy` gestisce lo stack backend, il runtime degli agenti, il registro, il config center e i segreti dei servizi da un'unica CLI a livello di host.
-- **Multipiattaforma** — lo stesso JSON-DSL viene renderizzato su iOS, Android, Web (testato in produzione), macOS (testato sperimentalmente), Linux, Windows. Le funzionalità di base funzionano su tutte le piattaforme; le funzionalità specifiche della piattaforma (IM, push) degradano in modo controllato sulle piattaforme non supportate.
 
 ---
 
@@ -307,14 +334,14 @@ Inseriscilo attraverso il flusso di generazione IA, oppure usa `flutter run` e s
 ## Funzionalità
 
 ### Motore
-- Oltre 30 widget (text / button / input / list / image / video / chart / map / webview / camera / qr / fumetto chat / …)
-- Motore di espressioni JsonLogic con 15 operatori personalizzati
-- Oltre 30 funzioni integrate (HTTP, JSON, stringhe, array, controllo del flusso, feedback UI)
+- **91 tipi di widget** — text / button / input / list / container / image / video / chart / map / webview / camera / qr / tab_view / **uno stack di gioco 2D Flame completo** (canvas di gioco, stick analogico, canvas di particelle/a scena proiettata) / animazioni (animated_*, Rive) / gesti avanzati (password gestuale, slide-to-verify) / layout di livello sliver
+- **Motore di espressioni JsonLogic con 28 operatori personalizzati** (stringhe / array / tipi / matematica)
+- **Oltre 100 funzioni integrate `@`** — HTTP (tutti i verbi + SSE), un vero livello DB (query/insert/update/delete + chiave-valore + create_table), IM (amici / conversazioni / cronologia / inbox), I/O su file, autenticazione biometrica, appunti, feedback aptico, permessi, selezione immagini, temi, i18n, navigazione, finestre di dialogo, controllo di gioco
 - `@parallel` per passaggi concorrenti
 - I template `{{ path }}` si risolvono nel tipo originale (non convertito in stringa)
 - Scambio a caldo della configurazione da rete / disco / registro
-- Motore di gioco 2D Flame (sprite, fisica, mappe Tiled)
 - Gate di autorizzazione per app per le capacità sensibili (token di autenticazione, profilo)
+- **UI del client localizzata in 11 lingue** (zh / en / de / es / fr / pt / ca / hi / ko / ja / it)
 
 ### Backend
 - **Full-stack FaaS generato dall'IA** — l'IA emette un backend Python/Flask validato per ogni "service group" (1 servizio funzione + DB Postgres opzionale), distribuito su un runtime FaaS Docker autogestito (un container per servizio, scale-to-zero + cold-wake). Isolamento dello schema per app, identità pseudonima intra-gruppo non falsificabile, accesso ai dati per chiamante mediato dal backend (il codice della funzione non detiene mai una connessione DB), hardening del container e una politica di accesso revocabile a 3 livelli.
@@ -340,11 +367,11 @@ Inseriscilo attraverso il flusso di generazione IA, oppure usa `flutter run` e s
 
 | Area | Stato |
 |---|---|
-| Motore (Dart) | Produzione. 65k LOC. Alimenta un'app reale. UI del client localizzata in 11 lingue. |
+| Motore (Dart) | Produzione. 64k LOC, 91 widget, oltre 100 funzioni integrate. Alimenta un'app reale. UI del client localizzata in 11 lingue. |
 | Backend (Python) | Produzione. 32k LOC. Serve utenti reali. |
 | Test | Smoke test dei widget più suite di regressione JSON (`templates/regression-test.json`). PR che aggiungono copertura sono molto benvenute. |
 | Documentazione | Media (`JSON-DSL.md`, `deploy/production/README.md`, note sull'architettura backend). In miglioramento. |
-| Stabilità delle API | DSL v3.3 — possibili modifiche minori che rompono la compatibilità fino alla v4. API HTTP del backend stabile. |
+| Stabilità delle API | DSL v3.4 — possibili modifiche minori che rompono la compatibilità fino alla v4. API HTTP del backend stabile. |
 | Ospitato pubblicamente? | Sì (soggetto a uso corretto, vedi i Termini) |
 
 ---
@@ -392,7 +419,7 @@ concessi in licenza dai loro autori a meno che non dichiarino esplicitamente div
 
 ## Roadmap (in ordine di priorità)
 
-- [ ] Pubblicare un video demo virale di 60 secondi (IA → configurazione JSON in ~10-20 min → app in esecuzione immediata)
+- [ ] Pubblicare un video demo virale di 60 secondi (IA → configurazione JSON → app in esecuzione immediata, senza build/deploy)
 - [ ] Tier gratuito ospitato pubblicamente
 - [ ] Link di condivisione dell'app con QR (apri l'app generata dall'IA tramite deep link)
 - [ ] Aggiungere CI (GitHub Actions: pub get, analyze, build APK)

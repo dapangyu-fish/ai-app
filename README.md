@@ -2,15 +2,41 @@
 
 [中文](README.zh.md) · **English** · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md) · [Português](README.pt.md) · [Català](README.ca.md) · [हिन्दी](README.hi.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [Italiano](README.it.md)
 
-> **AI describe → full-stack app (UI + backend + database) → instantly running on user's phone. No build step, no app-store review.**
+<div align="center">
+
+### Stop vibe-*coding*. Ship vibe-*apps*.
+
+**Describe it → a full-stack app (UI + real backend + database) is live on every screen.**
+
+**No codebase. No build. No deploy. No app store.**
+
+</div>
+
+> The whole industry is still arguing about how to *write code* with AI. We skipped the code.
 >
-> A Flutter runtime that interprets JSON-DSL into native UI + business logic. Users tell AI what they want; AI emits the JSON front-end **and, when the app needs one, a real Python/Flask backend with its own isolated Postgres database** — then it renders and runs instantly inside a precompiled capability set. Other AI app builders hand you front-end code to wire up and deploy yourself; MyApp ships the whole stack, already running.
+> Vibe coding — even the best AI app builders (Lovable, Bolt, v0, Replit) — still hands you a **codebase** to wire up, host, and ship. MyApp hands you the **running app**: you describe what you want, AI emits a JSON-DSL front-end **and**, when the app needs one, a real Python/Flask backend with its own isolated Postgres database — then renders and runs the whole thing instantly inside a precompiled, cross-platform runtime. The *same* sentence can spin up a **playable game** or a **forum with a real backend with login, posts and threaded replies** — live on **iOS, Android, Web, and desktop from one description**. There is no project to open, nothing to compile, nothing to deploy.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()
+[![DSL](https://img.shields.io/badge/JSON--DSL-v3.4-7c5cff)](JSON-DSL.md)
 
 > **Platform Status**: ✅ Production (iOS/Android/Web) • ⚠️ Experimental (macOS, core features only) • 🚧 Untested (Linux/Windows)
+
+---
+
+## Vibe *coding* vs. vibe *app*
+
+|  | Vibe coding / AI app builders | **MyApp — a vibe app** |
+|---|---|---|
+| What you get | A **codebase** (React/Next + a backend) | A **running app** |
+| The artifact | Code you host, maintain, and babysit | A JSON config — **no code to maintain** |
+| Ship step | Build → deploy → (app-store review) | **None.** It's already live. |
+| Where it runs | Usually a web app | **iOS · Android · Web · macOS · Linux · Windows** — one description |
+| Backend | "Wire up Supabase yourself" | **AI-generated Python/Flask + isolated Postgres**, deployed for you |
+| Range | Forms, dashboards, CRUD | …**and real-time chat, and playable games** (Tetris, 2048, a platformer) from the *same* runtime |
+
+This is not a slogan we can't back up. Keep reading — the engine numbers are below.
 
 ---
 
@@ -18,13 +44,13 @@
 
 Three things in one repo:
 
-1. **A Flutter Server-Driven UI engine** (`lib/`) — renders any JSON-DSL config into a real cross-platform app at runtime
-2. **A full-stack AI generator** (`backend/`, `user_center/`, `config_center/`) — AI generates the JSON front-end **and a matching FaaS backend + isolated Postgres database** when the app needs one, on top of auth (Supabase), IM (OpenIM), push (APNs + FCM), AI chat proxy, package registry, and user admin
-3. **A package ecosystem** (`templates/`) — example JSON-APPs (IM, games, user profile, calculator…) you can install on top of the runtime
+1. **A Flutter Server-Driven UI engine** (`lib/`) — interprets a JSON-DSL config into a real, native, cross-platform app at runtime. **91 widget types, 100+ built-in functions, a 28-operator expression engine, and a full 2D game engine** — all precompiled into the client.
+2. **A full-stack AI generator** (`backend/`, `user_center/`, `config_center/`) — AI generates the JSON front-end **and a matching FaaS backend + isolated Postgres database** when the app needs one, on top of auth (Supabase), IM (OpenIM), push (APNs + FCM), AI chat proxy, package registry, and user admin.
+3. **A package ecosystem** (`templates/`) — 70+ example JSON-Apps and reusable libraries (IM, games, user profile, calculator, dashboards…) you can install on top of the runtime.
 
 The name **MyApp** is intentional: each user can create, install, and operate "my app" on top of the shared runtime.
 
-The flagship use case: **a user opens the app → chats with AI (generation typically takes 10-20 minutes) → AI returns a JSON-DSL → the app loads and runs it instantly** inside the capabilities already compiled into the client.
+The flagship use case: **a user opens the app → chats with AI → AI returns a JSON-DSL (and a backend, if needed) → the app loads and runs it instantly** inside the capabilities already compiled into the client. No build, no review, no waiting on an app store.
 
 ---
 
@@ -69,11 +95,12 @@ Most JSON-DSL apps work across all platforms. Platform-specific features gracefu
 ## Why is this interesting?
 
 - **Full-stack in one shot — the differentiator.** Most AI app builders (v0, Lovable, Bolt, …) generate *front-end* code that you still have to wire to a backend and deploy yourself. MyApp generates the front-end **and** a real Python/Flask FaaS backend — each with its own isolated Postgres database, per-app permission model, and per-caller data isolation — then runs the whole thing instantly. No separate backend project, no deploy step, no store submission.
+- **No code artifact.** The deliverable is a JSON config running in a precompiled client, not a codebase. Nothing to host, nothing to maintain, nothing to break on the next dependency bump. Update an app by describing the change; it's live everywhere the next time it loads.
+- **Genuinely cross-platform.** The *same* JSON-DSL renders on iOS, Android, Web (production-tested), macOS (experimental), Linux, and Windows. Most "AI app" tools give you a web app; this gives you native, everywhere, from one description.
 - **Server-driven** — ship UI and behavior data through a fixed, precompiled runtime boundary. See [App Store compliance notes](docs/APP_STORE_COMPLIANCE.md).
-- **AI-native** — the DSL is designed to be LLM-friendly. The included AI chat runs multiple providers (DeepSeek, MiniMax, Volcengine aggregator with GLM / Kimi) through three pluggable agent runtimes (Claude Code, Codex, OpenCode), and generates apps that actually render — with generation playbooks and an in-run visual self-review pass to keep output runnable.
+- **AI-native** — the DSL is designed to be LLM-friendly. The included AI chat runs multiple providers (DeepSeek, MiniMax, Volcengine aggregator with GLM / Kimi) through three pluggable agent runtimes (Claude Code, Codex, OpenCode), with generation playbooks and an in-run visual self-review pass to keep output runnable.
 - **Batteries included** — IM with push, AI proxy, package registry, namespaces, mirroring, user center, environment switching — all wired together. Not "yet another low-code framework that punts on auth".
 - **Self-hostable** — `myapp-ctl deploy` manages the backend stack, agent runtime, registry, config center, and service secrets from one host-level CLI.
-- **Cross-platform** — same JSON-DSL renders on iOS, Android, Web (production-tested), macOS (experimentally tested), Linux, Windows. Core features work across all platforms; platform-specific features (IM, push) gracefully degrade on unsupported platforms.
 
 ---
 
@@ -307,14 +334,14 @@ Drop this through the AI generation flow, or `flutter run` and pick the JSON fil
 ## Features
 
 ### Engine
-- 30+ widgets (text / button / input / list / image / video / chart / map / webview / camera / qr / chat bubble / …)
-- JsonLogic expression engine with 15 custom operators
-- 30+ built-in functions (HTTP, JSON, string, array, control flow, UI feedback)
+- **91 widget types** — text / button / input / list / container / image / video / chart / map / webview / camera / qr / tab_view / **a full Flame 2D game stack** (game canvas, analog stick, particle/projected-scene canvases) / animations (animated_*, Rive) / advanced gestures (gesture password, slide-to-verify) / sliver-grade layout
+- **JsonLogic expression engine with 28 custom operators** (string / array / type / math)
+- **100+ built-in `@`-functions** — HTTP (all verbs + SSE), a real DB layer (query/insert/update/delete + key-value + create_table), IM (friends / conversations / history / inbox), file I/O, biometric auth, clipboard, haptics, permissions, image picking, theming, i18n, navigation, dialogs, game control
 - `@parallel` for concurrent steps
 - Templates `{{ path }}` resolve to original type (not stringified)
 - Hot-swap config from network / disk / registry
-- Flame 2D game engine (sprites, physics, Tiled maps)
 - Per-app authorization gate for sensitive capabilities (auth token, profile)
+- **Client UI localized to 11 languages** (zh / en / de / es / fr / pt / ca / hi / ko / ja / it)
 
 ### Backend
 - **AI-generated FaaS full-stack** — AI emits a validated Python/Flask backend per "service group" (1 function service + optional Postgres DB), deployed to a self-managed Docker FaaS runtime (one container per service, scale-to-zero + cold-wake). Per-app schema isolation, unforgeable in-group pseudonymous identity, backend-mediated per-caller data access (function code never holds a DB connection), container hardening, and a revocable 3-tier access policy.
@@ -340,11 +367,11 @@ Drop this through the AI generation flow, or `flutter run` and pick the JSON fil
 
 | Area | State |
 |---|---|
-| Engine (Dart) | Production. 65k LOC. Powering a real app. Client UI localized to 11 languages. |
+| Engine (Dart) | Production. 64k LOC, 91 widgets, 100+ builtins. Powering a real app. Client UI localized to 11 languages. |
 | Backend (Python) | Production. 32k LOC. Running real users. |
 | Tests | Widget smoke test plus JSON regression suite (`templates/regression-test.json`). PRs adding coverage very welcome. |
 | Docs | Mid (`JSON-DSL.md`, `deploy/production/README.md`, backend architecture notes). Improving. |
-| API stability | DSL v3.3 — minor breaking changes possible until v4. Backend HTTP API stable. |
+| API stability | DSL v3.4 — minor breaking changes possible until v4. Backend HTTP API stable. |
 | Public hosted? | Yes (subject to fair use, see Terms) |
 
 ---
@@ -392,7 +419,7 @@ licensed by their authors unless they explicitly say otherwise.
 
 ## Roadmap (in priority order)
 
-- [ ] Drop a 60-second viral demo video (AI → JSON config in ~10-20 min → app runs instantly)
+- [ ] Drop a 60-second viral demo video (AI → JSON config → app runs instantly, no build/deploy)
 - [ ] Public hosted free tier
 - [ ] App share-link with QR (open AI-generated app via deep link)
 - [ ] Add CI (GitHub Actions: pub get, analyze, build APK)

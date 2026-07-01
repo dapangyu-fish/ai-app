@@ -2,15 +2,41 @@
 
 [中文](README.zh.md) · [English](README.md) · **Deutsch** · [Español](README.es.md) · [Français](README.fr.md) · [Português](README.pt.md) · [Català](README.ca.md) · [हिन्दी](README.hi.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [Italiano](README.it.md)
 
-> **KI beschreibt → Full-Stack-App (UI + Backend + Datenbank) → läuft sofort auf dem Handy des Nutzers. Kein Build-Schritt, keine App-Store-Prüfung.**
+<div align="center">
+
+### Schluss mit vibe-*coding*. Her mit vibe-*apps*.
+
+**Beschreibe es → eine Full-Stack-App (UI + echtes Backend + Datenbank) läuft live auf jedem Bildschirm.**
+
+**Keine Codebasis. Kein Build. Kein Deploy. Kein App Store.**
+
+</div>
+
+> Die ganze Branche streitet immer noch darüber, wie man mit KI *Code schreibt*. Wir haben den Code übersprungen.
 >
-> Eine Flutter-Laufzeitumgebung, die JSON-DSL in native UI + Geschäftslogik interpretiert. Nutzer sagen der KI, was sie möchten; die KI erzeugt das JSON-Frontend **und, wenn die App eines benötigt, ein echtes Python/Flask-Backend mit einer eigenen isolierten Postgres-Datenbank** — dann wird das Ganze sofort innerhalb eines vorkompilierten Funktionsumfangs gerendert und ausgeführt. Andere KI-App-Builder liefern dir Frontend-Code, den du selbst verdrahten und deployen musst; MyApp liefert den gesamten Stack, bereits laufend.
+> Vibe coding — selbst die besten KI-App-Builder (Lovable, Bolt, v0, Replit) — gibt dir am Ende immer noch eine **Codebasis** in die Hand, die du verdrahten, hosten und ausliefern musst. MyApp gibt dir die **laufende App** in die Hand: Du beschreibst, was du willst, die KI erzeugt ein JSON-DSL-Frontend **und**, wenn die App eines benötigt, ein echtes Python/Flask-Backend mit einer eigenen isolierten Postgres-Datenbank — und rendert und führt dann das Ganze sofort innerhalb einer vorkompilierten, plattformübergreifenden Laufzeitumgebung aus. Derselbe Satz kann ein **spielbares Spiel** hervorbringen oder ein **Forum mit echtem Backend, mit Login, Beiträgen und verschachtelten Antworten** — live auf **iOS, Android, Web und Desktop, aus einer einzigen Beschreibung**. Es gibt kein Projekt zu öffnen, nichts zu kompilieren, nichts zu deployen.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()
+[![DSL](https://img.shields.io/badge/JSON--DSL-v3.4-7c5cff)](JSON-DSL.md)
 
 > **Plattform-Status**: ✅ Produktiv (iOS/Android/Web) • ⚠️ Experimentell (macOS, nur Kernfunktionen) • 🚧 Ungetestet (Linux/Windows)
+
+---
+
+## Vibe *coding* vs. vibe *app*
+
+|  | Vibe coding / KI-App-Builder | **MyApp — eine vibe app** |
+|---|---|---|
+| Was du bekommst | Eine **Codebasis** (React/Next + ein Backend) | Eine **laufende App** |
+| Das Artefakt | Code, den du hostest, wartest und hütest | Eine JSON-Konfiguration — **kein Code zu warten** |
+| Ship-Schritt | Build → Deploy → (App-Store-Prüfung) | **Keiner.** Sie läuft bereits. |
+| Wo es läuft | Meist eine Web-App | **iOS · Android · Web · macOS · Linux · Windows** — eine Beschreibung |
+| Backend | „Verdrahte Supabase selbst" | **KI-generiertes Python/Flask + isoliertes Postgres**, für dich deployt |
+| Spektrum | Formulare, Dashboards, CRUD | …**und Echtzeit-Chat und spielbare Spiele** (Tetris, 2048, ein Jump ’n’ Run) aus *derselben* Laufzeitumgebung |
+
+Das ist kein Slogan, den wir nicht belegen können. Lies weiter — die Engine-Zahlen folgen unten.
 
 ---
 
@@ -18,13 +44,13 @@
 
 Drei Dinge in einem Repository:
 
-1. **Eine Flutter Server-Driven-UI-Engine** (`lib/`) — rendert jede JSON-DSL-Konfiguration zur Laufzeit in eine echte plattformübergreifende App
-2. **Ein Full-Stack-KI-Generator** (`backend/`, `user_center/`, `config_center/`) — die KI generiert das JSON-Frontend **und ein passendes FaaS-Backend + eine isolierte Postgres-Datenbank**, wenn die App eines benötigt, auf Basis von Auth (Supabase), IM (OpenIM), Push (APNs + FCM), KI-Chat-Proxy, Paket-Registry und Nutzerverwaltung
-3. **Ein Paket-Ökosystem** (`templates/`) — Beispiel-JSON-APPs (IM, Spiele, Nutzerprofil, Taschenrechner …), die du auf der Laufzeitumgebung installieren kannst
+1. **Eine Flutter Server-Driven-UI-Engine** (`lib/`) — interpretiert eine JSON-DSL-Konfiguration zur Laufzeit in eine echte, native, plattformübergreifende App. **91 Widget-Typen, über 100 eingebaute Funktionen, eine Ausdrucksengine mit 28 Operatoren und eine vollständige 2D-Spiel-Engine** — alles in den Client vorkompiliert.
+2. **Ein Full-Stack-KI-Generator** (`backend/`, `user_center/`, `config_center/`) — die KI generiert das JSON-Frontend **und ein passendes FaaS-Backend + eine isolierte Postgres-Datenbank**, wenn die App eines benötigt, auf Basis von Auth (Supabase), IM (OpenIM), Push (APNs + FCM), KI-Chat-Proxy, Paket-Registry und Nutzerverwaltung.
+3. **Ein Paket-Ökosystem** (`templates/`) — über 70 Beispiel-JSON-Apps und wiederverwendbare Bibliotheken (IM, Spiele, Nutzerprofil, Taschenrechner, Dashboards …), die du auf der Laufzeitumgebung installieren kannst.
 
 Der Name **MyApp** ist Absicht: Jeder Nutzer kann auf der gemeinsam genutzten Laufzeitumgebung „meine App" erstellen, installieren und betreiben.
 
-Der wichtigste Anwendungsfall: **Ein Nutzer öffnet die App → chattet mit der KI (die Generierung dauert typischerweise 10-20 Minuten) → die KI liefert ein JSON-DSL → die App lädt und führt es sofort aus** innerhalb der Fähigkeiten, die bereits in den Client kompiliert sind.
+Der wichtigste Anwendungsfall: **Ein Nutzer öffnet die App → chattet mit der KI → die KI liefert ein JSON-DSL zurück (und ein Backend, falls nötig) → die App lädt und führt es sofort aus** innerhalb der Fähigkeiten, die bereits in den Client kompiliert sind. Kein Build, keine Prüfung, kein Warten auf einen App Store.
 
 ---
 
@@ -69,11 +95,12 @@ Die meisten JSON-DSL-Apps funktionieren plattformübergreifend. Plattformspezifi
 ## Warum ist das interessant?
 
 - **Full-Stack in einem Schritt — der entscheidende Unterschied.** Die meisten KI-App-Builder (v0, Lovable, Bolt, …) generieren *Frontend*-Code, den du immer noch an ein Backend anbinden und selbst deployen musst. MyApp generiert das Frontend **und** ein echtes Python/Flask-FaaS-Backend — jeweils mit einer eigenen isolierten Postgres-Datenbank, einem App-spezifischen Berechtigungsmodell und Datenisolierung pro Aufrufer — und führt dann das Ganze sofort aus. Kein separates Backend-Projekt, kein Deploy-Schritt, keine Store-Einreichung.
-- **Server-driven** — liefere UI und Verhalten als Daten durch eine feste, vorkompilierte Laufzeitgrenze. Siehe [App Store compliance notes](docs/APP_STORE_COMPLIANCE.md).
-- **KI-nativ** — die DSL ist darauf ausgelegt, LLM-freundlich zu sein. Der enthaltene KI-Chat betreibt mehrere Anbieter (DeepSeek, MiniMax, Volcengine-Aggregator mit GLM / Kimi) über drei austauschbare Agent-Laufzeitumgebungen (Claude Code, Codex, OpenCode) und generiert Apps, die tatsächlich rendern — mit Generierungs-Playbooks und einer visuellen Selbstüberprüfung während des Laufs, damit die Ausgabe lauffähig bleibt.
+- **Kein Code-Artefakt.** Das Lieferergebnis ist eine JSON-Konfiguration, die in einem vorkompilierten Client läuft, keine Codebasis. Nichts zu hosten, nichts zu warten, nichts, das beim nächsten Dependency-Update kaputtgeht. Aktualisiere eine App, indem du die Änderung beschreibst; sie ist beim nächsten Laden überall live.
+- **Echt plattformübergreifend.** *Dasselbe* JSON-DSL rendert auf iOS, Android, Web (produktionserprobt), macOS (experimentell), Linux und Windows. Die meisten „KI-App"-Tools geben dir eine Web-App; dies gibt dir nativ, überall, aus einer einzigen Beschreibung.
+- **Server-driven** — liefere UI und Verhalten als Daten durch eine feste, vorkompilierte Laufzeitgrenze. Siehe [Hinweise zur App-Store-Konformität](docs/APP_STORE_COMPLIANCE.md).
+- **KI-nativ** — die DSL ist darauf ausgelegt, LLM-freundlich zu sein. Der enthaltene KI-Chat betreibt mehrere Anbieter (DeepSeek, MiniMax, Volcengine-Aggregator mit GLM / Kimi) über drei austauschbare Agent-Laufzeitumgebungen (Claude Code, Codex, OpenCode) — mit Generierungs-Playbooks und einer visuellen Selbstüberprüfung während des Laufs, damit die Ausgabe lauffähig bleibt.
 - **Batteries included** — IM mit Push, KI-Proxy, Paket-Registry, Namespaces, Spiegelung, Nutzerzentrum, Umgebungswechsel — alles miteinander verdrahtet. Nicht „noch ein Low-Code-Framework, das sich um Auth herumdrückt".
 - **Selbst hostbar** — `myapp-ctl deploy` verwaltet den Backend-Stack, die Agent-Laufzeitumgebung, die Registry, das Config-Center und die Service-Secrets über eine einzige CLI auf Host-Ebene.
-- **Plattformübergreifend** — dasselbe JSON-DSL rendert auf iOS, Android, Web (produktionserprobt), macOS (experimentell getestet), Linux, Windows. Kernfunktionen funktionieren auf allen Plattformen; plattformspezifische Funktionen (IM, Push) werden auf nicht unterstützten Plattformen elegant heruntergestuft.
 
 ---
 
@@ -307,14 +334,14 @@ Minimales Beispiel:
 ## Funktionen
 
 ### Engine
-- Über 30 Widgets (text / button / input / list / image / video / chart / map / webview / camera / qr / chat bubble / …)
-- JsonLogic-Ausdrucksengine mit 15 benutzerdefinierten Operatoren
-- Über 30 eingebaute Funktionen (HTTP, JSON, String, Array, Kontrollfluss, UI-Feedback)
+- **91 Widget-Typen** — text / button / input / list / container / image / video / chart / map / webview / camera / qr / tab_view / **ein vollständiger Flame-2D-Spiel-Stack** (Spiel-Canvas, Analog-Stick, Canvases für Partikel/projizierte Szenen) / Animationen (animated_*, Rive) / fortgeschrittene Gesten (Gesten-Passwort, Slide-to-Verify) / Layout auf Sliver-Niveau
+- **JsonLogic-Ausdrucksengine mit 28 benutzerdefinierten Operatoren** (String / Array / Typ / Mathematik)
+- **Über 100 eingebaute `@`-Funktionen** — HTTP (alle Verben + SSE), eine echte DB-Schicht (query/insert/update/delete + Key-Value + create_table), IM (Freunde / Unterhaltungen / Verlauf / Posteingang), Datei-I/O, biometrische Authentifizierung, Zwischenablage, Haptik, Berechtigungen, Bildauswahl, Theming, i18n, Navigation, Dialoge, Spielsteuerung
 - `@parallel` für nebenläufige Schritte
 - Templates `{{ path }}` werden zum ursprünglichen Typ aufgelöst (nicht in String umgewandelt)
 - Hot-Swap der Konfiguration aus Netzwerk / Festplatte / Registry
-- Flame-2D-Spiel-Engine (Sprites, Physik, Tiled-Karten)
 - App-spezifisches Autorisierungs-Gate für sensible Fähigkeiten (Auth-Token, Profil)
+- **Client-UI in 11 Sprachen lokalisiert** (zh / en / de / es / fr / pt / ca / hi / ko / ja / it)
 
 ### Backend
 - **KI-generierter FaaS-Full-Stack** — die KI erzeugt pro „Service-Gruppe" ein validiertes Python/Flask-Backend (1 Funktionsdienst + optionale Postgres-DB), deployt auf eine selbstverwaltete Docker-FaaS-Laufzeitumgebung (ein Container pro Service, Scale-to-Zero + Cold-Wake). Schema-Isolierung pro App, nicht fälschbare gruppeninterne pseudonyme Identität, backend-vermittelter Datenzugriff pro Aufrufer (der Funktionscode hält nie eine DB-Verbindung), Container-Härtung und eine widerrufbare 3-stufige Zugriffsrichtlinie.
@@ -340,11 +367,11 @@ Minimales Beispiel:
 
 | Bereich | Zustand |
 |---|---|
-| Engine (Dart) | Produktiv. 65k LOC. Treibt eine echte App an. Client-UI in 11 Sprachen lokalisiert. |
+| Engine (Dart) | Produktiv. 64k LOC, 91 Widgets, über 100 Builtins. Treibt eine echte App an. Client-UI in 11 Sprachen lokalisiert. |
 | Backend (Python) | Produktiv. 32k LOC. Mit echten Nutzern im Einsatz. |
 | Tests | Widget-Smoke-Test plus JSON-Regressions-Suite (`templates/regression-test.json`). PRs, die die Abdeckung erweitern, sind sehr willkommen. |
 | Docs | Mittel (`JSON-DSL.md`, `deploy/production/README.md`, Backend-Architektur-Notizen). Wird verbessert. |
-| API-Stabilität | DSL v3.3 — kleinere Breaking Changes bis v4 möglich. Backend-HTTP-API stabil. |
+| API-Stabilität | DSL v3.4 — kleinere Breaking Changes bis v4 möglich. Backend-HTTP-API stabil. |
 | Öffentlich gehostet? | Ja (vorbehaltlich fairer Nutzung, siehe Nutzungsbedingungen) |
 
 ---
@@ -372,7 +399,7 @@ Du darfst:
 - Den gesamten Stack selbst hosten
 
 Du darfst nicht:
-- Den **„MyApp"-Namen oder das Logo** ohne Erlaubnis verwenden (um Erlaubnis anzufragen, [open an issue](https://github.com/dapangyu-fish/ai-app/issues))
+- Den **„MyApp"-Namen oder das Logo** ohne Erlaubnis verwenden (um Erlaubnis anzufragen, [ein Issue öffnen](https://github.com/dapangyu-fish/ai-app/issues))
 - Die Herkunft des Codes falsch darstellen
 
 Marktplatz-Pakete, hochgeladene Assets und von Nutzern erstellte JSON-Apps sind Eigentum ihrer Autoren und
@@ -392,7 +419,7 @@ werden von diesen lizenziert, sofern nicht ausdrücklich anders angegeben.
 
 ## Roadmap (nach Priorität geordnet)
 
-- [ ] Ein 60-sekündiges virales Demo-Video veröffentlichen (KI → JSON-Konfiguration in ~10-20 Min → App läuft sofort)
+- [ ] Ein 60-sekündiges virales Demo-Video veröffentlichen (KI → JSON-Konfiguration → App läuft sofort, kein Build/Deploy)
 - [ ] Öffentlich gehostete kostenlose Stufe
 - [ ] App-Share-Link mit QR (KI-generierte App über Deep-Link öffnen)
 - [ ] CI hinzufügen (GitHub Actions: pub get, analyze, APK bauen)

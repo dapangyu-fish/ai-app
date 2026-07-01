@@ -2,15 +2,41 @@
 
 [中文](README.zh.md) · [English](README.md) · [Deutsch](README.de.md) · [Español](README.es.md) · [Français](README.fr.md) · [Português](README.pt.md) · **Català** · [हिन्दी](README.hi.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [Italiano](README.it.md)
 
-> **L'IA descriu → app full-stack (UI + backend + base de dades) → funcionant a l'instant al telèfon de l'usuari. Sense pas de compilació, sense revisió de l'app store.**
+<div align="center">
+
+### Prou de vibe-*coding*. Llança vibe-*apps*.
+
+**Descriu-la → una app full-stack (UI + backend real + base de dades) en marxa a totes les pantalles.**
+
+**Sense base de codi. Sense compilació. Sense desplegament. Sense app store.**
+
+</div>
+
+> Tota la indústria encara discuteix com *escriure codi* amb IA. Nosaltres ens hem saltat el codi.
 >
-> Un runtime de Flutter que interpreta JSON-DSL i el converteix en UI nativa + lògica de negoci. Els usuaris diuen a l'IA què volen; l'IA emet el front-end JSON **i, quan l'app ho necessita, un backend Python/Flask real amb la seva pròpia base de dades Postgres aïllada** — després el renderitza i l'executa a l'instant dins d'un conjunt de capacitats precompilat. Altres constructors d'apps amb IA et donen codi de front-end perquè el connectis i el despleguis tu mateix; MyApp lliura tota la pila, ja en funcionament.
+> El vibe coding — fins i tot els millors constructors d'apps amb IA (Lovable, Bolt, v0, Replit) — encara et lliura una **base de codi** que has de connectar, allotjar i publicar. MyApp et lliura l'**app en funcionament**: descrius el que vols, l'IA emet un front-end JSON-DSL **i**, quan l'app ho necessita, un backend Python/Flask real amb la seva pròpia base de dades Postgres aïllada — i després renderitza i executa tot el conjunt a l'instant dins d'un runtime multiplataforma precompilat. La *mateixa* frase pot engegar un **joc jugable** o un **fòrum amb backend real, amb inici de sessió, publicacions i respostes en fil** — en marxa a **iOS, Android, Web i escriptori a partir d'una sola descripció**. No hi ha cap projecte per obrir, res per compilar, res per desplegar.
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()
+[![DSL](https://img.shields.io/badge/JSON--DSL-v3.4-7c5cff)](JSON-DSL.md)
 
 > **Estat de la plataforma**: ✅ Producció (iOS/Android/Web) • ⚠️ Experimental (macOS, només funcions bàsiques) • 🚧 Sense provar (Linux/Windows)
+
+---
+
+## Vibe *coding* vs. vibe *app*
+
+|  | Vibe coding / constructors d'apps amb IA | **MyApp — una vibe app** |
+|---|---|---|
+| Què obtens | Una **base de codi** (React/Next + un backend) | Una **app en funcionament** |
+| L'artefacte | Codi que has d'allotjar, mantenir i vigilar | Una configuració JSON — **sense codi a mantenir** |
+| Pas de publicació | Compilar → desplegar → (revisió de l'app store) | **Cap.** Ja està en marxa. |
+| On s'executa | Normalment una app web | **iOS · Android · Web · macOS · Linux · Windows** — una sola descripció |
+| Backend | «Connecta Supabase tu mateix» | **Python/Flask + Postgres aïllat generats per IA**, desplegats per a tu |
+| Abast | Formularis, taulers, CRUD | …**i xat en temps real, i jocs jugables** (Tetris, 2048, un joc de plataformes) des del *mateix* runtime |
+
+Això no és un eslògan que no puguem sostenir. Continua llegint — les xifres del motor són més avall.
 
 ---
 
@@ -18,13 +44,13 @@
 
 Tres coses en un sol repositori:
 
-1. **Un motor de UI dirigida pel servidor amb Flutter** (`lib/`) — renderitza qualsevol configuració JSON-DSL i la converteix en una app multiplataforma real en temps d'execució
-2. **Un generador full-stack amb IA** (`backend/`, `user_center/`, `config_center/`) — l'IA genera el front-end JSON **i un backend FaaS associat + una base de dades Postgres aïllada** quan l'app ho necessita, a sobre d'autenticació (Supabase), IM (OpenIM), notificacions push (APNs + FCM), proxy de xat amb IA, registre de paquets i administració d'usuaris
-3. **Un ecosistema de paquets** (`templates/`) — JSON-APPs d'exemple (IM, jocs, perfil d'usuari, calculadora…) que pots instal·lar a sobre del runtime
+1. **Un motor de UI dirigida pel servidor amb Flutter** (`lib/`) — interpreta una configuració JSON-DSL i la converteix en una app real, nativa i multiplataforma en temps d'execució. **91 tipus de widget, més de 100 funcions integrades, un motor d'expressions de 28 operadors i un motor de jocs 2D complet** — tot precompilat al client.
+2. **Un generador full-stack amb IA** (`backend/`, `user_center/`, `config_center/`) — l'IA genera el front-end JSON **i un backend FaaS associat + una base de dades Postgres aïllada** quan l'app ho necessita, a sobre d'autenticació (Supabase), IM (OpenIM), notificacions push (APNs + FCM), proxy de xat amb IA, registre de paquets i administració d'usuaris.
+3. **Un ecosistema de paquets** (`templates/`) — més de 70 JSON-Apps d'exemple i llibreries reutilitzables (IM, jocs, perfil d'usuari, calculadora, taulers…) que pots instal·lar a sobre del runtime.
 
-El nom **MyApp** és intencionat: cada usuari pot crear, instal·lar i operar "la meva app" a sobre del runtime compartit.
+El nom **MyApp** és intencionat: cada usuari pot crear, instal·lar i operar «la meva app» a sobre del runtime compartit.
 
-El cas d'ús estrella: **un usuari obre l'app → conversa amb l'IA (la generació sol trigar 10-20 minuts) → l'IA retorna un JSON-DSL → l'app el carrega i l'executa a l'instant** dins de les capacitats ja compilades al client.
+El cas d'ús estrella: **un usuari obre l'app → conversa amb l'IA → l'IA retorna un JSON-DSL (i un backend, si cal) → l'app el carrega i l'executa a l'instant** dins de les capacitats ja compilades al client. Sense compilació, sense revisió, sense esperar cap app store.
 
 ---
 
@@ -69,11 +95,12 @@ La majoria d'apps JSON-DSL funcionen a totes les plataformes. Les funcions espec
 ## Per què és interessant?
 
 - **Full-stack d'un sol cop — el factor diferencial.** La majoria de constructors d'apps amb IA (v0, Lovable, Bolt, …) generen codi de *front-end* que encara has de connectar a un backend i desplegar tu mateix. MyApp genera el front-end **i** un backend FaaS Python/Flask real — cadascun amb la seva pròpia base de dades Postgres aïllada, model de permisos per app i aïllament de dades per cada qui crida — i després executa tot el conjunt a l'instant. Sense projecte de backend separat, sense pas de desplegament, sense enviament a l'store.
+- **Sense artefacte de codi.** El que es lliura és una configuració JSON que s'executa en un client precompilat, no una base de codi. Res per allotjar, res per mantenir, res que es trenqui a la pròxima actualització de dependències. Actualitza una app descrivint el canvi; estarà en marxa a tot arreu el pròxim cop que es carregui.
+- **Genuïnament multiplataforma.** El *mateix* JSON-DSL es renderitza a iOS, Android, Web (provat en producció), macOS (experimental), Linux i Windows. La majoria d'eines d'«apps amb IA» et donen una app web; això et dóna nativa, a tot arreu, a partir d'una sola descripció.
 - **Dirigida pel servidor** — lliura UI i comportament com a dades a través d'una frontera de runtime fixa i precompilada. Vegeu les [notes de compliment de l'App Store](docs/APP_STORE_COMPLIANCE.md).
-- **Nativa d'IA** — el DSL està dissenyat per ser amigable amb els LLM. El xat amb IA inclòs executa múltiples proveïdors (DeepSeek, MiniMax, l'agregador Volcengine amb GLM / Kimi) a través de tres runtimes d'agent intercanviables (Claude Code, Codex, OpenCode), i genera apps que realment es renderitzen — amb playbooks de generació i una passada d'auto-revisió visual durant l'execució per mantenir la sortida executable.
-- **Tot inclòs** — IM amb push, proxy d'IA, registre de paquets, espais de noms, replicació, centre d'usuaris, canvi d'entorn — tot connectat entre si. No "un altre framework low-code que defuig l'autenticació".
+- **Nativa d'IA** — el DSL està dissenyat per ser amigable amb els LLM. El xat amb IA inclòs executa múltiples proveïdors (DeepSeek, MiniMax, l'agregador Volcengine amb GLM / Kimi) a través de tres runtimes d'agent intercanviables (Claude Code, Codex, OpenCode), amb playbooks de generació i una passada d'auto-revisió visual durant l'execució per mantenir la sortida executable.
+- **Tot inclòs** — IM amb push, proxy d'IA, registre de paquets, espais de noms, replicació, centre d'usuaris, canvi d'entorn — tot connectat entre si. No «un altre framework low-code que defuig l'autenticació».
 - **Auto-allotjable** — `myapp-ctl deploy` gestiona la pila de backend, el runtime d'agent, el registre, el centre de configuració i els secrets de servei des d'una sola CLI a nivell de host.
-- **Multiplataforma** — el mateix JSON-DSL es renderitza a iOS, Android, Web (provat en producció), macOS (provat experimentalment), Linux i Windows. Les funcions bàsiques funcionen a totes les plataformes; les funcions específiques de cada plataforma (IM, push) es degraden de manera elegant a les plataformes no admeses.
 
 ---
 
@@ -186,7 +213,7 @@ de desplegament autoritzada.
 El projecte ara s'acosta més a una petita plataforma d'apps que a una sola demo de Flutter.
 El client Flutter és un runtime compilat; les JSON-APPs, els components, els actius, l'IM,
 la generació amb IA i els **backends FaaS generats per IA** són servits tots per la pila de backend
-— que pot funcionar tot en un en un sol host (backend + pila de Docker Compose
+— que pot funcionar tot junt en un sol host (backend + pila de Docker Compose
 + el runtime FaaS de Docker autogestionat, vegeu `docs/faas-docker-runtime.md`).
 
 ```mermaid
@@ -307,17 +334,17 @@ Passa això a través del flux de generació amb IA, o fes `flutter run` i tria 
 ## Funcions
 
 ### Motor
-- Més de 30 widgets (text / botó / entrada / llista / imatge / vídeo / gràfic / mapa / webview / càmera / qr / bombolla de xat / …)
-- Motor d'expressions JsonLogic amb 15 operadors personalitzats
-- Més de 30 funcions integrades (HTTP, JSON, cadenes, arrays, control de flux, retroalimentació d'UI)
+- **91 tipus de widget** — text / botó / entrada / llista / contenidor / imatge / vídeo / gràfic / mapa / webview / càmera / qr / tab_view / **una pila completa de jocs 2D Flame** (llenç de joc, palanca analògica, llenços de partícules/escenes projectades) / animacions (animated_*, Rive) / gestos avançats (contrasenya de gest, lliscar per verificar) / disposició de nivell sliver
+- **Motor d'expressions JsonLogic amb 28 operadors personalitzats** (cadena / array / tipus / matemàtics)
+- **Més de 100 funcions `@` integrades** — HTTP (tots els verbs + SSE), una capa de DB real (query/insert/update/delete + clau-valor + create_table), IM (amics / converses / historial / safata d'entrada), E/S de fitxers, autenticació biomètrica, porta-retalls, retorn hàptic, permisos, selecció d'imatges, temes, i18n, navegació, diàlegs, control de joc
 - `@parallel` per a passos concurrents
 - Les plantilles `{{ path }}` es resolen al tipus original (no convertit a cadena)
 - Intercanvi en calent de configuració des de xarxa / disc / registre
-- Motor de jocs 2D Flame (sprites, física, mapes Tiled)
 - Porta d'autorització per app per a capacitats sensibles (token d'autenticació, perfil)
+- **UI del client localitzada a 11 idiomes** (zh / en / de / es / fr / pt / ca / hi / ko / ja / it)
 
 ### Backend
-- **Full-stack FaaS generat per IA** — l'IA emet un backend Python/Flask validat per cada "grup de servei" (1 servei de funció + DB Postgres opcional), desplegat a un runtime FaaS de Docker autogestionat (un contenidor per servei, escalat a zero + despertar en fred). Aïllament d'esquema per app, identitat pseudònima dins del grup no falsificable, accés a dades per cada qui crida intermediat pel backend (el codi de la funció mai no té una connexió a la DB), enduriment de contenidors i una política d'accés revocable de 3 nivells.
+- **Full-stack FaaS generat per IA** — l'IA emet un backend Python/Flask validat per cada «grup de servei» (1 servei de funció + DB Postgres opcional), desplegat a un runtime FaaS de Docker autogestionat (un contenidor per servei, escalat a zero + despertar en fred). Aïllament d'esquema per app, identitat pseudònima dins del grup no falsificable, accés a dades per cada qui crida intermediat pel backend (el codi de la funció mai no té una connexió a la DB), enduriment de contenidors i una política d'accés revocable de 3 nivells.
 - Integració d'autenticació amb Supabase
 - Xat amb IA amb cues d'àmbit de proveïdor i execució d'agent aïllada — proveïdors (DeepSeek, MiniMax, agregador Volcengine: GLM / Kimi) × tres runtimes d'agent (Claude Code, Codex, OpenCode), més playbooks de generació i una passada d'auto-revisió visual durant l'execució
 - **Mode demo sense inici de sessió** — els usuaris no autenticats toquen la bola flotant → Demo, disparen una generació amb IA d'aspecte real que reprodueix per SSE una sessió gravada, i obtenen una app realment executable (sense agent-node, sense creació de FaaS) — una mostra instantània del flux complet
@@ -340,11 +367,11 @@ Passa això a través del flux de generació amb IA, o fes `flutter run` i tria 
 
 | Àrea | Estat |
 |---|---|
-| Motor (Dart) | Producció. 65k LOC. Impulsant una app real. UI del client localitzada a 11 idiomes. |
+| Motor (Dart) | Producció. 64k LOC, 91 widgets, 100+ funcions integrades. Impulsant una app real. UI del client localitzada a 11 idiomes. |
 | Backend (Python) | Producció. 32k LOC. Amb usuaris reals en funcionament. |
 | Tests | Test de fum de widgets més una suite de regressió JSON (`templates/regression-test.json`). Les PRs que afegeixen cobertura són molt benvingudes. |
 | Documentació | Mitjana (`JSON-DSL.md`, `deploy/production/README.md`, notes d'arquitectura de backend). En millora. |
-| Estabilitat de l'API | DSL v3.3 — possibles canvis menors incompatibles fins a la v4. API HTTP de backend estable. |
+| Estabilitat de l'API | DSL v3.4 — possibles canvis menors incompatibles fins a la v4. API HTTP de backend estable. |
 | Allotjament públic? | Sí (subjecte a ús raonable, vegeu els Termes) |
 
 ---
@@ -391,7 +418,7 @@ Els paquets del mercat, els actius pujats i les apps JSON creades pels usuaris s
 
 ## Full de ruta (per ordre de prioritat)
 
-- [ ] Publicar un vídeo demo viral de 60 segons (IA → configuració JSON en ~10-20 min → l'app s'executa a l'instant)
+- [ ] Publicar un vídeo demo viral de 60 segons (IA → configuració JSON → l'app s'executa a l'instant, sense compilació/desplegament)
 - [ ] Nivell gratuït públic allotjat
 - [ ] Enllaç per compartir l'app amb QR (obre l'app generada per IA mitjançant deep link)
 - [ ] Afegir CI (GitHub Actions: pub get, analyze, build APK)
