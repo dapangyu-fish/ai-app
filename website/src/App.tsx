@@ -947,6 +947,7 @@ const copy = {
 };
 
 const docsI18n: Record<string, Partial<Record<Lang, string>>> = {
+  'The demo is an accelerated replay of a real, recorded generation run; multilingual support was added later.': { de: 'Die Demo ist eine beschleunigte Wiedergabe eines echten, aufgezeichneten Generierungslaufs; die Mehrsprachigkeit kam später dazu.', es: 'La demo es una reproducción acelerada de una ejecución de generación real grabada; el soporte multilingüe se añadió después.', fr: "La démo est une relecture accélérée d'une génération réelle enregistrée ; le multilingue a été ajouté par la suite.", pt: 'A demo é uma reprodução acelerada de uma execução de geração real gravada; o suporte multilíngue foi adicionado depois.', ca: "La demo és una reproducció accelerada d'una execució de generació real enregistrada; el suport multilingüe es va afegir després.", hi: 'यह डेमो वास्तविक, रिकॉर्ड किए गए जेनरेशन रन का त्वरित रीप्ले है; बहुभाषी समर्थन बाद में जोड़ा गया।', ko: '이 데모는 실제로 기록된 생성 실행의 가속 재생이며, 다국어 지원은 나중에 추가되었습니다.', ja: 'このデモは実際に記録した生成フローの加速再生で、多言語対応は後から追加しました。', it: 'La demo è una riproduzione accelerata di una esecuzione di generazione reale registrata; il supporto multilingue è stato aggiunto in seguito.' },
   'Entry': { de: 'Einstieg', es: 'Entrada', fr: 'Entrée', pt: 'Entrada', ca: 'Entrada', hi: 'प्रवेश बिंदु', ko: '진입점', ja: '入口', it: 'Ingresso' },
   'Web client': { de: 'Web-Client', es: 'Cliente Web', fr: 'Client Web', pt: 'Cliente Web', ca: 'Client web', hi: 'Web क्लाइंट', ko: 'Web 클라이언트', ja: 'Web クライアント', it: 'Client Web' },
   'iOS / Android': { de: 'iOS / Android', es: 'iOS / Android', fr: 'iOS / Android', pt: 'iOS / Android', ca: 'iOS / Android', hi: 'iOS / Android', ko: 'iOS / Android', ja: 'iOS / Android', it: 'iOS / Android' },
@@ -2174,6 +2175,7 @@ function App() {
           <div className="heroAside">
             <PhonePreview lang={lang} />
             <p className="phoneCaption">{t.phoneCaption}</p>
+            <p className="phoneReplayNote">{tl(lang, '演示为真实生成链路的录制、加速回放；多语言为后期补充。', 'The demo is an accelerated replay of a real, recorded generation run; multilingual support was added later.')}</p>
           </div>
         </div>
         <div className="shell heroTrustGrid">
