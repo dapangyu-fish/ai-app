@@ -16,6 +16,32 @@
 >
 > El vibe coding — fins i tot els millors constructors d'apps amb IA (Lovable, Bolt, v0, Replit) — encara et lliura una **base de codi** que has de connectar, allotjar i publicar. MyApp et lliura l'**app en funcionament**: descrius el que vols, l'IA emet un front-end JSON-DSL **i**, quan l'app ho necessita, un backend Python/Flask real amb la seva pròpia base de dades Postgres aïllada — i després renderitza i executa tot el conjunt a l'instant dins d'un runtime multiplataforma precompilat. La *mateixa* frase pot engegar un **joc jugable** o un **fòrum amb backend real, amb inici de sessió, publicacions i respostes en fil** — en marxa a **iOS, Android, Web i escriptori a partir d'una sola descripció**. No hi ha cap projecte per obrir, res per compilar, res per desplegar.
 
+
+<div align="center">
+
+<img src="assets/images/pic01-en.png" alt="You describe it, AI arranges the capabilities, the app is live — no codebase, no build" width="840">
+
+</div>
+
+### From vibe *coding* to *no* coding
+
+Vibe coding — even the best AI app builders — still keeps you in the loop: write commands, build, package, deploy, spot the bug, argue with the AI, loop back. We deleted the loop. You talk straight to the app on your phone — *"make this button green"* — and it changes. Nothing to compile, nothing to publish, no project to open.
+
+<div align="center">
+
+<img src="assets/images/vibe-vs-no-en.png" alt="Traditional vibe coding (develop, build, deploy, find the bug, loop) versus a no-coding app (just tell your phone what you want)" width="840">
+
+</div>
+
+You end up arguing with the AI either way — so drop the toolchain and argue straight at the app in your hand.
+
+<div align="center">
+
+<img src="assets/images/argue-en.png" alt="Vibe-coding app: rage through develop, build, deploy, loop forever. No-coding app: yell the change straight at your phone." width="820">
+
+</div>
+
+
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()

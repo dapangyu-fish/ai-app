@@ -16,6 +16,32 @@
 >
 > Vibe coding——哪怕是最好的 AI 应用构建工具（Lovable、Bolt、v0、Replit）——交给你的仍然是一个需要自己接线、托管、发布的**代码库**。MyApp 交给你的是**正在运行的应用**：你描述想要什么，AI 产出一份 JSON-DSL 前端，**并在应用需要时**，产出一个带有独立 Postgres 数据库的真实 Python/Flask 后端——然后在预编译的跨平台运行时里即刻渲染并运行整套系统。*同一句话*既能生成一个**可玩的游戏**，也能生成一个**带有真实后端、支持登录、发帖和楼层回复的论坛**——*一句描述*就在 **iOS、Android、Web 和桌面**上运行起来。没有项目要打开，没有东西要编译，没有东西要部署。
 
+
+<div align="center">
+
+<img src="assets/images/pic01-zh.png" alt="你描述，AI 编排能力，应用即刻上线——没有代码库、不用构建" width="840">
+
+</div>
+
+### 从 vibe *编程* 到*不写代码*
+
+Vibe 编程——哪怕最好的 AI 应用生成器——仍然把你困在循环里：写命令、构建、打包、发布、发现 bug、和 AI 吵、再绕回来。我们把这个循环删掉了。你直接对手机里的应用说话——*“把这个按钮改成绿色”*——它就变了。没有东西要编译、没有东西要发布、没有工程要打开。
+
+<div align="center">
+
+<img src="assets/images/vibe-vs-no-zh.png" alt="传统 vibe 编程（开发、构建、发布、找 bug、循环）对比不写代码的应用（直接告诉手机你要什么）" width="840">
+
+</div>
+
+反正你横竖都要和 AI 吵——那就扔掉工具链，直接冲着手里的应用吵。
+
+<div align="center">
+
+<img src="assets/images/argue-zh.png" alt="vibe 编程应用：在开发、构建、发布里永远循环发火。不写代码的应用：直接冲手机喊出要改的地方。" width="820">
+
+</div>
+
+
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()
