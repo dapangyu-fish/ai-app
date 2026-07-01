@@ -19,7 +19,7 @@
 
 <div align="center">
 
-<img src="assets/images/pic01.en.png" alt="You describe it, AI arranges the capabilities, the app is live — no codebase, no build" width="840">
+<img src="assets/images/pic01-en.png" alt="You describe it, AI arranges the capabilities, the app is live — no codebase, no build" width="840">
 
 </div>
 
@@ -37,7 +37,7 @@ You end up arguing with the AI either way — so drop the toolchain and argue st
 
 <div align="center">
 
-<img src="assets/images/argue.en.png" alt="Vibe-coding app: rage through develop, build, deploy, loop forever. No-coding app: yell the change straight at your phone." width="820">
+<img src="assets/images/argue-en.png" alt="Vibe-coding app: rage through develop, build, deploy, loop forever. No-coding app: yell the change straight at your phone." width="820">
 
 </div>
 

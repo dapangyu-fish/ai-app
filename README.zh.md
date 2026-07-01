@@ -19,7 +19,7 @@
 
 <div align="center">
 
-<img src="assets/images/pic01.zh.png" alt="你描述，AI 编排能力，应用即刻上线——没有代码库、不用构建" width="840">
+<img src="assets/images/pic01-zh.png" alt="你描述，AI 编排能力，应用即刻上线——没有代码库、不用构建" width="840">
 
 </div>
 
@@ -37,7 +37,7 @@ Vibe 编程——哪怕最好的 AI 应用生成器——仍然把你困在循�
 
 <div align="center">
 
-<img src="assets/images/argue.zh.png" alt="vibe 编程应用：在开发、构建、发布里永远循环发火。不写代码的应用：直接冲手机喊出要改的地方。" width="820">
+<img src="assets/images/argue-zh.png" alt="vibe 编程应用：在开发、构建、发布里永远循环发火。不写代码的应用：直接冲手机喊出要改的地方。" width="820">
 
 </div>
 
