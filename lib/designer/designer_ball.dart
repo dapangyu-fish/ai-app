@@ -12,6 +12,7 @@ import 'gesture_exclusion_helper.dart';
 import '../config/app_config.dart';
 import '../auth/auth_service.dart';
 import '../i18n/framework_strings.dart';
+import '../i18n/locale_controller.dart';
 import '../main.dart' show JsonDslApp, appLifecycleEvent;
 import '../onboarding/onboarding_keys.dart';
 
@@ -1288,21 +1289,21 @@ class _DesignerBallState extends State<DesignerBall>
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
                 child: Text(
-                  '用 AI 创建应用',
+                  T.current.demoMenuCreateWithAi,
                   style: Theme.of(ctx).textTheme.titleMedium,
                 ),
               ),
               ListTile(
                 leading: Icon(Icons.login_rounded, color: cs.primary),
                 title: Text(T.current.chatErrPleaseLogin), // 请登录
-                subtitle: const Text('用真实账号创建并保存你的应用'),
+                subtitle: Text(T.current.demoMenuLoginSubtitle),
                 onTap: () => Navigator.of(ctx).pop(),
                 // 未登录时 AuthGate 已经把登录页显示在底层，pop 即可看到登录表单
               ),
               ListTile(
                 leading: Icon(Icons.play_circle_outline, color: cs.primary),
-                title: const Text('Demo 体验模式'),
-                subtitle: const Text('免登录，点一下示例需求即可生成可运行的 App'),
+                title: Text(T.current.demoMenuTitle),
+                subtitle: Text(T.current.demoMenuSubtitle),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   unawaited(_enterDemoAndPrompt());
@@ -1323,7 +1324,7 @@ class _DesignerBallState extends State<DesignerBall>
       await AuthService.enterDemoMode();
     } catch (e) {
       ScaffoldMessenger.maybeOf(navContext)?.showSnackBar(
-        SnackBar(content: Text('Demo 模式暂不可用：$e')),
+        SnackBar(content: Text(T.fmt(T.current.demoUnavailable, {'err': e.toString()}))),
       );
       return;
     }
@@ -1349,16 +1350,20 @@ class _DesignerBallState extends State<DesignerBall>
   ];
 
   // 服务端下发的 demo 目录缓存（首次拉取后复用，省重复请求）。
+  // 按语言 tag 记缓存：切换语言后要重新拉，否则一直显示首次拉取语言的列表（曾是 bug）。
   static List<Map<String, String>>? _cachedDemoPrompts;
+  static String? _cachedDemoLang;
 
   // 拉取服务端下发的 demo 目录；失败回落到极小兜底。
   Future<List<Map<String, String>>> _loadDemoPrompts() async {
+    final lang = LocaleController.currentLocaleTag();
     final cached = _cachedDemoPrompts;
-    if (cached != null) return cached;
+    if (cached != null && _cachedDemoLang == lang) return cached;
     try {
       final list = await AiChatService.fetchDemoList();
       if (list.isNotEmpty) {
         _cachedDemoPrompts = list;
+        _cachedDemoLang = lang;
         return list;
       }
     } catch (_) {}
@@ -1387,7 +1392,7 @@ class _DesignerBallState extends State<DesignerBall>
                   child: Align(
                     alignment: AlignmentDirectional.centerStart,
                     child: Text(
-                      '选择一个示例需求（Demo）',
+                      T.current.demoPickerTitle,
                       style: Theme.of(ctx).textTheme.titleMedium,
                     ),
                   ),
@@ -2183,7 +2188,7 @@ class _DesignerBallState extends State<DesignerBall>
       _messages.add(
         ChatMessage(
           role: 'system',
-          content: 'JSON-APP 已生成，点击下载并运行：',
+          content: T.current.chatJsonAppGenerated,
           jsonUrl: jsonUrl,
         ),
       );
@@ -2585,7 +2590,7 @@ class _DesignerBallState extends State<DesignerBall>
                 _messages.add(
                   ChatMessage(
                     role: 'system',
-                    content: '🔧 修复版 JSON-APP 已生成，点击试运行',
+                    content: T.current.chatJsonAppFixGenerated,
                     jsonApp: event.jsonApp,
                   ),
                 );
