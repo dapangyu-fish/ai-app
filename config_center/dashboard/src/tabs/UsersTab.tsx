@@ -133,6 +133,11 @@ export default function UsersTab({ toast }: { toast: (m: string, ok?: boolean) =
                         if (v === null) return;
                         act(u.id, '配额', () => api.setQuota(u.id, v.trim() === '' ? null : v.trim()));
                       }}>配额</button>
+                      <button className="btn btn-sm btn-danger" disabled={busy === u.id + '删除用户'} onClick={() => {
+                        const label = u.email || u.username || u.id;
+                        if (!window.confirm(`确定永久删除用户「${label}」？\n此操作不可撤销，将从 Supabase 中彻底移除该账号。`)) return;
+                        act(u.id, '删除用户', () => api.deleteUser(u.id));
+                      }}>删除</button>
                     </div>
                   </td>
                 </tr>

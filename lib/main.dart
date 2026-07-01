@@ -353,8 +353,9 @@ void main() async {
   // 失败 fail-open 回退到生产，绝不阻塞启动。
   await EnvironmentService.instance.load();
 
-  // 加载用户语言偏好（SharedPreferences app_locale；未设置则跟随系统）
-  await LocaleController.loadFromPrefs();
+  // 加载用户语言偏好：Web 优先读 URL 的 ?lang=xx（官网内嵌透传），否则读
+  // SharedPreferences app_locale；都没有则跟随系统。
+  await LocaleController.loadFromUrlOrPrefs();
 
   // 加载用户主题偏好（SharedPreferences app_theme_mode；未设置则跟随系统）
   await ThemeController.loadFromPrefs();

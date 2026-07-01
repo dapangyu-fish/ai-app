@@ -44,6 +44,32 @@ class LocaleController {
     }
   }
 
+  /// 启动时优先用 URL 的 ?lang=xx（Web 内嵌场景：官网把当前语言透传进 iframe，
+  /// 如 https://myapp-web.dapangyu.work/?lang=de），命中且受支持则用它并持久化；
+  /// 否则回退到 SharedPreferences 里保存的选择。Uri.base 在非 Web 上无 query，天然 no-op。
+  static Future<void> loadFromUrlOrPrefs() async {
+    try {
+      final q = Uri.base.queryParameters['lang'];
+      if (q != null && q.trim().isNotEmpty) {
+        final parsed = _parseTag(q.trim());
+        if (parsed != null && _isSupported(parsed)) {
+          await setLocale(parsed);
+          return;
+        }
+      }
+    } catch (_) {
+      // URL 解析异常时忽略，走 prefs
+    }
+    await loadFromPrefs();
+  }
+
+  static bool _isSupported(Locale l) {
+    for (final s in T.supportedLocales) {
+      if (s.languageCode.toLowerCase() == l.languageCode.toLowerCase()) return true;
+    }
+    return false;
+  }
+
   /// 切换 locale 并持久化。传 null 表示跟随系统。
   static Future<void> setLocale(Locale? locale) async {
     appLocale.value = locale;

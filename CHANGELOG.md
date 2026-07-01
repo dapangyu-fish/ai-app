@@ -6,6 +6,27 @@
 
 ## [Unreleased]
 
+## [1.2.11] - 2026-07-01
+> 版本线回到 **1.2.x**（承接 1.2.10）。已发布的 1.3.0 / 1.3.1 作为孤儿保留，不再续；后续
+> 大版本升级需产品确认。本版包含 1.3.1 的全部内容（demo 全链路 + seed i18n）叠加以下改动。
+### Added
+- **客户端「下载并运行」双阶段提示**：服务端刚生成 JSON-APP 时的按钮，过去从点击到进入 app 只
+  显示「下载中…」，下载完成后的解析/`loadConfig`/`executeSteps`（可能含 HTTP 启动步骤，较慢）无任
+  何反馈、像点了没反应。现拆成 **下载中 → 加载运行中** 两阶段：`_DownloadRunButton` 增加 phase
+  状态，下载完成回调 `onDownloaded` 把按钮切到「加载运行中…」（新增 11 语 i18n key
+  `chatDownloadStateLoading`），并 `await` 住 `onRunJsonApp` 让该阶段持续到导航进入 `JsonScreenView`。
+- **web 管理面板支持删除用户**：config-center dashboard SPA 用户 Tab 增加「删除」按钮（`btn-danger`
+  + 二次确认），后端新增 `POST /api/admin/dashboard/users/<id>/delete` 代理 Supabase GoTrue
+  Admin `DELETE`。
+- **官网切语言持久化到 URL**：切换语言时把 `?lang=xx` 写进地址（`replaceState`），刷新后保持；
+  首页/文档导航也带上该参数，避免跳转丢语言。
+- **官网语言同步注入内嵌 web app**：`PhonePreview` 内嵌的 `myapp-web` iframe src 现带
+  `?lang=<当前语言>`；Flutter web app 启动改走 `LocaleController.loadFromUrlOrPrefs()`，优先读
+  URL 的 `?lang`（受支持才用），否则回退 SharedPreferences。
+### Changed
+- config-center 主路由 `/` 现直达新版 dashboard SPA（`/admin/dashboard`），不再落到旧 Jinja
+  模板 `/admin`（旧模板仍保留，但不再作默认入口，规避偶发打不开）。
+
 ## [1.3.1] - 2026-07-01
 ### Added
 - **demo app 显示型 seed 数据 i18n**（13 app / 26 个 `_seed_*` 变量）：把示例数据（账单流水、笔记、

@@ -58,7 +58,7 @@ class ChatOverlay extends StatefulWidget {
   final void Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
   final VoidCallback? onUploadCurrentApp;
   final void Function(String url)? onRetryDownload;
-  final Future<void> Function(String url)? onDownloadAndRun;
+  final Future<void> Function(String url, {VoidCallback? onDownloaded})? onDownloadAndRun;
   final VoidCallback? onRetryLastTurn; // worker 死了时的重试按钮
 
   // 多会话回调（由 designer_ball 注入；service 完成实际状态变更）
@@ -2012,7 +2012,7 @@ class _SessionMenuRow extends StatelessWidget {
 
 class _DownloadRunButton extends StatefulWidget {
   final String url;
-  final Future<void> Function(String url)? onDownloadAndRun;
+  final Future<void> Function(String url, {VoidCallback? onDownloaded})? onDownloadAndRun;
 
   const _DownloadRunButton({required this.url, this.onDownloadAndRun});
 
@@ -2021,27 +2021,34 @@ class _DownloadRunButton extends StatefulWidget {
 }
 
 class _DownloadRunButtonState extends State<_DownloadRunButton> {
-  bool _isLoading = false;
+  // 0=空闲, 1=下载中, 2=加载运行中（下载完成、正在解析/保存/loadConfig/executeSteps）
+  int _phase = 0;
   String? _error;
 
+  bool get _busy => _phase != 0;
+
   Future<void> _handleTap() async {
-    if (_isLoading || widget.onDownloadAndRun == null) return;
+    if (_busy || widget.onDownloadAndRun == null) return;
 
     setState(() {
-      _isLoading = true;
+      _phase = 1;
       _error = null;
     });
 
     String? err;
     try {
-      await widget.onDownloadAndRun!(widget.url);
+      // onDownloaded 在 http 下载完成、即将 loadConfig/executeSteps 时回调，
+      // 把按钮从「下载中」切到「加载运行中」，让用户知道点了有反应、只是在等。
+      await widget.onDownloadAndRun!(widget.url, onDownloaded: () {
+        if (mounted) setState(() => _phase = 2);
+      });
     } catch (e) {
       err = e.toString();
     }
 
     if (!mounted) return;
     setState(() {
-      _isLoading = false;
+      _phase = 0;
       _error = err;
     });
   }
@@ -2049,9 +2056,11 @@ class _DownloadRunButtonState extends State<_DownloadRunButton> {
   @override
   Widget build(BuildContext context) {
     final t = T.of(context);
-    final buttonLabel = _isLoading
+    final buttonLabel = _phase == 1
         ? t.chatDownloadStateDownloading
-        : (_error == null ? t.chatDownloadStateRun : t.chatDownloadStateRetry);
+        : _phase == 2
+            ? t.chatDownloadStateLoading
+            : (_error == null ? t.chatDownloadStateRun : t.chatDownloadStateRetry);
 
     return GestureDetector(
       onTap: _handleTap,
@@ -2066,7 +2075,7 @@ class _DownloadRunButtonState extends State<_DownloadRunButton> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (_isLoading)
+            if (_busy)
               const SizedBox(
                 width: 16,
                 height: 16,

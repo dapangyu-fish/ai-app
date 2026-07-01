@@ -459,6 +459,7 @@ class _Strings {
   final String chatDownloadStateDownloading; // "下载中..."
   final String chatDownloadStateRun; // "下载并运行"
   final String chatDownloadStateRetry; // "重试下载并运行"
+  final String chatDownloadStateLoading; // "加载运行中..."
 
   // ── AI 对话错误 / 编辑消息 ──
   final String chatErrorWith; // "出错了: {err}"
@@ -956,6 +957,7 @@ class _Strings {
     required this.chatDownloadStateDownloading,
     required this.chatDownloadStateRun,
     required this.chatDownloadStateRetry,
+    required this.chatDownloadStateLoading,
     required this.chatErrorWith,
     required this.chatJsonDownloadFailed,
     required this.chatNoActiveApp,
@@ -1443,6 +1445,7 @@ const _Strings _zhCN = _Strings(
   chatDownloadStateDownloading: '下载中...',
   chatDownloadStateRun: '下载并运行',
   chatDownloadStateRetry: '重试下载并运行',
+  chatDownloadStateLoading: '加载运行中...',
   chatErrorWith: '出错了: {err}',
   chatJsonDownloadFailed: '下载 JSON 失败',
   chatNoActiveApp: '当前没有运行的应用配置',
@@ -1941,6 +1944,7 @@ const _Strings _enUS = _Strings(
   chatDownloadStateDownloading: 'Downloading...',
   chatDownloadStateRun: 'Download & run',
   chatDownloadStateRetry: 'Retry download & run',
+  chatDownloadStateLoading: 'Launching...',
   chatErrorWith: 'Error: {err}',
   chatJsonDownloadFailed: 'Failed to download JSON',
   chatNoActiveApp: 'No running app config right now',
@@ -2450,6 +2454,7 @@ const _Strings _deDE = _Strings(
   chatDownloadStateDownloading: 'Wird geladen...',
   chatDownloadStateRun: 'Herunterladen & starten',
   chatDownloadStateRetry: 'Erneut herunterladen & starten',
+  chatDownloadStateLoading: 'Wird gestartet...',
   chatErrorWith: 'Fehler: {err}',
   chatJsonDownloadFailed: 'JSON konnte nicht heruntergeladen werden',
   chatNoActiveApp: 'Aktuell läuft keine App-Konfiguration',
@@ -2960,6 +2965,7 @@ const _Strings _esES = _Strings(
   chatDownloadStateDownloading: 'Descargando...',
   chatDownloadStateRun: 'Descargar y ejecutar',
   chatDownloadStateRetry: 'Reintentar descarga y ejecución',
+  chatDownloadStateLoading: 'Iniciando...',
   chatErrorWith: 'Error: {err}',
   chatJsonDownloadFailed: 'Error al descargar el JSON',
   chatNoActiveApp: 'No hay configuración de app activa',
@@ -3451,6 +3457,7 @@ const _Strings _frFR = _Strings(
   chatDownloadStateDownloading: 'Téléchargement...',
   chatDownloadStateRun: 'Télécharger et lancer',
   chatDownloadStateRetry: 'Réessayer téléchargement et lancement',
+  chatDownloadStateLoading: 'Lancement...',
   chatErrorWith: 'Erreur : {err}',
   chatJsonDownloadFailed: 'Échec du téléchargement du JSON',
   chatNoActiveApp: 'Aucune config d\'appli en cours d\'exécution',
@@ -3935,6 +3942,7 @@ const _Strings _ptPT = _Strings(
   chatDownloadStateDownloading: 'A transferir...',
   chatDownloadStateRun: 'Transferir e executar',
   chatDownloadStateRetry: 'Tentar transferir e executar',
+  chatDownloadStateLoading: 'A iniciar...',
   chatErrorWith: 'Erro: {err}',
   chatJsonDownloadFailed: 'Falha ao transferir o JSON',
   chatNoActiveApp: 'Nenhuma configuração de app em execução de momento',
@@ -4419,6 +4427,7 @@ const _Strings _caES = _Strings(
   chatDownloadStateDownloading: 'Baixant...',
   chatDownloadStateRun: 'Baixa i executa',
   chatDownloadStateRetry: 'Torna a baixar i executar',
+  chatDownloadStateLoading: 'Iniciant...',
   chatErrorWith: 'Error: {err}',
   chatJsonDownloadFailed: 'No s\'ha pogut baixar el JSON',
   chatNoActiveApp: 'Ara mateix no hi ha cap app en execució',
@@ -4903,6 +4912,7 @@ const _Strings _hiIN = _Strings(
   chatDownloadStateDownloading: 'डाउनलोड हो रहा है...',
   chatDownloadStateRun: 'डाउनलोड करें और चलाएँ',
   chatDownloadStateRetry: 'फिर डाउनलोड करें और चलाएँ',
+  chatDownloadStateLoading: 'लॉन्च हो रहा है...',
   chatErrorWith: 'त्रुटि: {err}',
   chatJsonDownloadFailed: 'JSON डाउनलोड विफल',
   chatNoActiveApp: 'अभी कोई ऐप कॉन्फ़िग नहीं चल रहा',
@@ -5387,6 +5397,7 @@ const _Strings _koKR = _Strings(
   chatDownloadStateDownloading: '다운로드 중...',
   chatDownloadStateRun: '다운로드 후 실행',
   chatDownloadStateRetry: '다시 다운로드 후 실행',
+  chatDownloadStateLoading: '실행 중...',
   chatErrorWith: '오류: {err}',
   chatJsonDownloadFailed: 'JSON 다운로드에 실패했습니다',
   chatNoActiveApp: '현재 실행 중인 앱 설정이 없습니다',
@@ -5871,6 +5882,7 @@ const _Strings _jaJP = _Strings(
   chatDownloadStateDownloading: 'ダウンロード中...',
   chatDownloadStateRun: 'ダウンロードして実行',
   chatDownloadStateRetry: '再ダウンロードして実行',
+  chatDownloadStateLoading: '起動中...',
   chatErrorWith: 'エラー：{err}',
   chatJsonDownloadFailed: 'JSONのダウンロードに失敗しました',
   chatNoActiveApp: '現在実行中のアプリ設定はありません',
@@ -6355,6 +6367,7 @@ const _Strings _itIT = _Strings(
   chatDownloadStateDownloading: 'Download in corso...',
   chatDownloadStateRun: 'Scarica ed esegui',
   chatDownloadStateRetry: 'Riprova a scaricare ed eseguire',
+  chatDownloadStateLoading: 'Avvio...',
   chatErrorWith: 'Errore: {err}',
   chatJsonDownloadFailed: 'Download del JSON non riuscito',
   chatNoActiveApp: 'Nessuna configurazione app in esecuzione al momento',

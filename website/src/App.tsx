@@ -1131,7 +1131,7 @@ function tl(lang: Lang, zh: string, en: string): string {
   return docsI18n[en]?.[lang] ?? en;
 }
 
-function PhonePreview({ compact = false }: { compact?: boolean }) {
+function PhonePreview({ compact = false, lang }: { compact?: boolean; lang: Lang }) {
   return (
     <div className={`phoneStage ${compact ? 'compact' : ''}`} aria-label="MyApp live web preview">
       <div className="phoneGlow" />
@@ -1152,7 +1152,7 @@ function PhonePreview({ compact = false }: { compact?: boolean }) {
           <div className="phoneViewport">
             <iframe
               title="MyApp live Web client"
-              src={WEB_APP_URL}
+              src={`${WEB_APP_URL}?lang=${lang}`}
               loading="eager"
               referrerPolicy="no-referrer"
               allow="clipboard-read; clipboard-write; camera; microphone"
@@ -2001,17 +2001,27 @@ function App() {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
+  // 切语言时把 lang 写进 URL（?lang=xx），刷新后仍保持；同时下方内嵌 iframe 的 src 也会带上它。
+  function changeLang(next: Lang) {
+    setLang(next);
+    const u = new URL(window.location.href);
+    u.searchParams.set('lang', next);
+    window.history.replaceState(null, '', u.pathname + u.search + u.hash);
+  }
+
   function goHome(event: ReactMouseEvent<HTMLAnchorElement>, hash = '#top') {
     event.preventDefault();
     setPage('home');
-    window.history.pushState(null, '', hash === '#top' ? '/' : `/${hash}`);
+    const h = hash === '#top' ? '' : hash;
+    window.history.pushState(null, '', `/?lang=${lang}${h}`);
     requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView({ behavior: 'smooth' }));
   }
 
   function goDocs(event: ReactMouseEvent<HTMLAnchorElement>, hash = '#docs') {
     event.preventDefault();
     setPage('docs');
-    window.history.pushState(null, '', hash === '#docs' ? '/docs' : `/docs${hash}`);
+    const h = hash === '#docs' ? '' : hash;
+    window.history.pushState(null, '', `/docs?lang=${lang}${h}`);
     requestAnimationFrame(() => {
       if (hash === '#docs') {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2067,7 +2077,7 @@ function App() {
             <label className="languageSelect" aria-label="Language">
               <Globe2 size={16} />
               <span>{activeLanguage.flag}</span>
-              <select value={lang} onChange={(event) => setLang(event.target.value as Lang)}>
+              <select value={lang} onChange={(event) => changeLang(event.target.value as Lang)}>
                 {languageOptions.map((item) => (
                   <option key={item.key} value={item.key}>
                     {item.label}
@@ -2162,7 +2172,7 @@ function App() {
             </div>
           </div>
           <div className="heroAside">
-            <PhonePreview />
+            <PhonePreview lang={lang} />
             <p className="phoneCaption">{t.phoneCaption}</p>
           </div>
         </div>

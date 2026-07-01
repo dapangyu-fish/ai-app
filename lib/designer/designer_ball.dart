@@ -68,7 +68,7 @@ class AsrModePrefs {
 /// 凌驾于所有页面之上，不影响 JSON APP。
 class DesignerBall extends StatefulWidget {
   final Widget child;
-  final void Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
+  final Future<void> Function(Map<String, dynamic> jsonConfig)? onRunJsonApp;
 
   /// 获取当前运行中的 JSON-APP 配置（用于对话上下文）
   final Map<String, dynamic>? Function()? getCurrentConfig;
@@ -2293,10 +2293,15 @@ class _DesignerBallState extends State<DesignerBall>
     }
   }
 
-  Future<void> _handleDownloadAndRun(String url) async {
+  Future<void> _handleDownloadAndRun(String url, {VoidCallback? onDownloaded}) async {
     final parsedApp = await _chatService.retryDownloadJson(url);
     _lastGeneratedJson = parsedApp;
-    widget.onRunJsonApp?.call(parsedApp);
+    // 下载完成，进入「加载运行中」阶段（onRunJsonApp 会 loadConfig + executeSteps，
+    // 有 HTTP 启动步骤时可能耗时；先给按钮一个阶段切换，避免看起来点了没反应）。
+    onDownloaded?.call();
+    // await 住整个加载/执行（loadConfig + executeSteps，含 HTTP 启动步骤），
+    // 让「加载运行中」阶段一直显示到导航进入 JsonScreenView 为止。
+    await widget.onRunJsonApp?.call(parsedApp);
     Future.microtask(() {
       if (mounted) {
         _closeChatMode();
