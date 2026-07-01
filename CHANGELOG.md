@@ -6,6 +6,25 @@
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-01
+### Added
+- **免登录 demo 全链路 i18n（11 语）**：提示词目录 + AI 回放叙事 + 生成的 app 三段全部支持框架 11 语。
+  后端接 lang（`/api/ai/demo/list?lang=`、chat_start `body.lang`→ per-lang 录制 `<base>.<lang>.jsonl`，
+  缺译回退 zh；`DEMO_PROMPTS` 改 11 语 map + `_pick_lang`）；客户端把 `LocaleController` 当前 locale 发给
+  demo-list 与 chat/start；**23 个 demo app 改 DSL 原生 i18n**（`global.i18n` 11 语 + `{{ t() }}` +
+  `meta.displayName` 11 语，框架按用户 locale 自动渲染，**一份即可、不复制 11 份**）；**23×10=230 份录制
+  翻译**（`tool.`/`status.` 键与 `client_action` 原样保留）。用 253-agent workflow 并行翻译，
+  `validate_json_app` 逐个把关：23/23 app + 230/230 录制 + `DEMO_PROMPTS` 全通过。
+- **Vibe App 定调**：README ×11 语 + 官网 landing 重定位为 "Vibe App"（feat/vibe-app-positioning 并入 main）。
+### Fixed
+- **框架 `{{ t('key') }}` 在函数参数位不解析**：`resolveExpression` 对纯 `{{ t() }}` 会当变量路径
+  `getVariable("t('key')")`→null，使 `@show_toast`/`@set`/`@list_add` 等参数里的 i18n 显示原始 key。
+  改为复用 `_resolveTemplateExpression`（`t()`→查表；其余→`getVariable`，原始类型返回、行为不变）→
+  `t()` 在 widget 文本与函数参数位**全部可用**。
+
+### Changed（客户端，需重新构建客户端生效）
+- 客户端发 demo lang + 框架 `t()` 函数参数位修复：demo i18n 完整生效需重建客户端一次。
+
 ## [1.2.10] - 2026-06-30
 ### Changed
 - **论坛 demo 录制改用 agent-node 完整 log 重建**：`community_forum_0023` 此前从 Redis 业务事件流
