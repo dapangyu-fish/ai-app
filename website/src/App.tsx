@@ -2222,6 +2222,50 @@ function App() {
         </div>
       </section>
 
+      <section className="conceptSection" id="no-coding">
+        <div className="shell">
+          <img
+            className="conceptHeroImg"
+            src={`/images/pic01-${lang === 'zh' ? 'zh' : 'en'}.png`}
+            alt={tl(lang, '你描述，AI 编排能力，应用即刻上线——没有代码库、不用构建', 'You describe it, AI arranges the capabilities, the app goes live — no codebase, no build')}
+            loading="lazy"
+          />
+          <div className="conceptCopy">
+            <p className="eyebrow">{tl(lang, '从 vibe 编程到不写代码', 'From vibe coding to no coding')}</p>
+            <h2>{tl(lang, '开发到头来都是在和 AI 吵架，不如直接冲手机里的 App 吵', 'You end up arguing with the AI either way — so argue straight at the app in your hand')}</h2>
+            <p>
+              {tl(
+                lang,
+                'Vibe 编程——哪怕最好的 AI 应用生成器——仍然把你困在循环里：写命令、构建、打包、发布、发现 bug、和 AI 吵、再绕回来。我们把 coding 这一步整个删掉了：你直接对手机里的应用提需求，它就变。没有东西要编译、没有东西要发布、没有工程要打开。',
+                'Vibe coding — even the best AI app builders — still keeps you in the loop: write commands, build, package, deploy, spot the bug, argue with the AI, loop back. We removed the coding step entirely: you talk your requirements straight to the app on your phone and it changes. Nothing to compile, nothing to publish, no project to open.',
+              )}
+            </p>
+          </div>
+          <div className="conceptCompare">
+            <figure>
+              <img
+                src={`/images/vibe-vs-no-${lang === 'zh' ? 'zh' : 'en'}.png`}
+                alt={tl(lang, '传统 vibe 编程 vs 不写代码的应用', 'Traditional vibe coding versus a no-coding app')}
+                loading="lazy"
+              />
+              <figcaption>
+                {tl(lang, '左：写命令 → 构建 → 发布 → 发现 bug → 循环。右：直接告诉手机“把按钮改成绿色”。', 'Left: write commands → build → deploy → find the bug → loop. Right: just tell your phone “make this button green.”')}
+              </figcaption>
+            </figure>
+            <figure>
+              <img
+                src={`/images/argue-${lang === 'zh' ? 'zh' : 'en'}.png`}
+                alt={tl(lang, '横竖都要和 AI 吵，不如直接冲手机吵', 'You argue with the AI either way — so argue straight at your phone')}
+                loading="lazy"
+              />
+              <figcaption>
+                {tl(lang, '既然横竖都要吵，就跳过整条工具链，直接冲手里的 App 吵。', 'If you are going to argue anyway, skip the whole toolchain and argue at the app in your hand.')}
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
       <section className="videosSection" id="videos">
         <div className="shell">
           <div className="sectionHeader split">

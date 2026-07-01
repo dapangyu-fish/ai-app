@@ -814,6 +814,66 @@ select {
   line-height: 1.5;
 }
 
+.conceptSection {
+  padding: 80px 0;
+  border-top: 1px solid var(--line);
+}
+.conceptHeroImg {
+  width: 100%;
+  max-width: 1000px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+}
+.conceptCopy {
+  max-width: 800px;
+  margin: 44px auto 0;
+  text-align: center;
+}
+.conceptCopy h2 {
+  font-size: 28px;
+  line-height: 1.3;
+  margin: 10px 0 16px;
+}
+.conceptCopy p {
+  color: var(--muted);
+  line-height: 1.75;
+  font-size: 15px;
+}
+.conceptCompare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  margin-top: 52px;
+}
+.conceptCompare figure {
+  margin: 0;
+}
+.conceptCompare img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+}
+.conceptCompare figcaption {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.55;
+}
+@media (max-width: 860px) {
+  .conceptCompare {
+    grid-template-columns: 1fr;
+  }
+  .conceptCopy h2 {
+    font-size: 23px;
+  }
+}
+
 section {
   padding: 72px 0;
 }

@@ -16,6 +16,32 @@
 >
 > Vibe coding은 — 최고의 AI 앱 빌더(Lovable, Bolt, v0, Replit)조차도 — 여전히 직접 연결하고, 호스팅하고, 출시해야 하는 **코드베이스**를 건네줍니다. MyApp은 **실행 중인 앱**을 건네줍니다: 원하는 것을 설명하면, AI가 JSON-DSL 프런트엔드를, **그리고** 앱에 필요할 경우 자체 격리된 Postgres 데이터베이스를 갖춘 실제 Python/Flask 백엔드를 만들어낸 뒤, 사전 컴파일된 크로스플랫폼 런타임 안에서 전체를 즉시 렌더링하고 실행합니다. *똑같은* 한 문장이 **플레이 가능한 게임**을, 또는 **로그인·게시글·스레드형 답글을 갖춘 실제 백엔드 기반 포럼**을 띄울 수 있습니다 — **하나의 설명만으로 iOS, Android, Web, 데스크톱에서** 바로 실행됩니다. 열어야 할 프로젝트도, 컴파일할 것도, 배포할 것도 없습니다.
 
+
+<div align="center">
+
+<img src="assets/images/pic01.en.png" alt="You describe it, AI arranges the capabilities, the app is live — no codebase, no build" width="840">
+
+</div>
+
+### From vibe *coding* to *no* coding
+
+Vibe coding — even the best AI app builders — still keeps you in the loop: write commands, build, package, deploy, spot the bug, argue with the AI, loop back. We deleted the loop. You talk straight to the app on your phone — *"make this button green"* — and it changes. Nothing to compile, nothing to publish, no project to open.
+
+<div align="center">
+
+<img src="assets/images/vibe-vs-no-en.png" alt="Traditional vibe coding (develop, build, deploy, find the bug, loop) versus a no-coding app (just tell your phone what you want)" width="840">
+
+</div>
+
+You end up arguing with the AI either way — so drop the toolchain and argue straight at the app in your hand.
+
+<div align="center">
+
+<img src="assets/images/argue.en.png" alt="Vibe-coding app: rage through develop, build, deploy, loop forever. No-coding app: yell the change straight at your phone." width="820">
+
+</div>
+
+
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()

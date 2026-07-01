@@ -16,6 +16,32 @@
 >
 > Vibe coding — बेहतरीन AI ऐप बिल्डर (Lovable, Bolt, v0, Replit) तक — आपको फिर भी एक **codebase** थमाते हैं जिसे जोड़ना, होस्ट करना और शिप करना पड़ता है। MyApp आपको **चलता हुआ ऐप** थमाता है: आप बताते हैं कि आपको क्या चाहिए, AI एक JSON-DSL फ्रंट-एंड **और**, जब ऐप को ज़रूरत हो, अपने अलग-थलग Postgres डेटाबेस वाला एक असली Python/Flask बैकएंड उत्सर्जित करता है — फिर पूरी चीज़ को एक पूर्व-संकलित, क्रॉस-प्लेटफ़ॉर्म रनटाइम के भीतर तुरंत रेंडर और चलाता है। *वही* एक वाक्य एक **खेलने योग्य गेम** या **लॉगिन, पोस्ट और थ्रेडेड रिप्लाई वाले असली बैकएंड के साथ एक फ़ोरम** खड़ा कर सकता है — **एक ही विवरण से iOS, Android, Web, और डेस्कटॉप पर लाइव**। न कोई प्रोजेक्ट खोलना है, न कुछ कंपाइल करना है, न कुछ deploy करना है।
 
+
+<div align="center">
+
+<img src="assets/images/pic01.en.png" alt="You describe it, AI arranges the capabilities, the app is live — no codebase, no build" width="840">
+
+</div>
+
+### From vibe *coding* to *no* coding
+
+Vibe coding — even the best AI app builders — still keeps you in the loop: write commands, build, package, deploy, spot the bug, argue with the AI, loop back. We deleted the loop. You talk straight to the app on your phone — *"make this button green"* — and it changes. Nothing to compile, nothing to publish, no project to open.
+
+<div align="center">
+
+<img src="assets/images/vibe-vs-no-en.png" alt="Traditional vibe coding (develop, build, deploy, find the bug, loop) versus a no-coding app (just tell your phone what you want)" width="840">
+
+</div>
+
+You end up arguing with the AI either way — so drop the toolchain and argue straight at the app in your hand.
+
+<div align="center">
+
+<img src="assets/images/argue.en.png" alt="Vibe-coding app: rage through develop, build, deploy, loop forever. No-coding app: yell the change straight at your phone." width="820">
+
+</div>
+
+
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
 [![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20Android%20%7C%20Web%20%7C%20macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)]()
