@@ -35,6 +35,910 @@
       "overallProgress": 0.182,
       "overallProgressPct": "18%",
       "totalDuration": "222小时30分钟",
+      "_seed_lessons": {
+        "zh": [
+          {
+            "id": "1",
+            "title": "01 Python 简介与环境搭建",
+            "duration": "15:30",
+            "progress": 1.0,
+            "stateLabel": "已完成",
+            "stateColor": "#22C55E",
+            "iconName": "check_circle",
+            "iconColor": "#22C55E"
+          },
+          {
+            "id": "2",
+            "title": "02 变量与基本数据类型",
+            "duration": "22:15",
+            "progress": 0.46,
+            "stateLabel": "学习中",
+            "stateColor": "#EA580C",
+            "iconName": "play",
+            "iconColor": "#EA580C"
+          },
+          {
+            "id": "3",
+            "title": "03 条件判断与循环控制",
+            "duration": "28:40",
+            "progress": 0.0,
+            "stateLabel": "待学习",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "4",
+            "title": "04 列表、元组与字典",
+            "duration": "32:10",
+            "progress": 0.0,
+            "stateLabel": "待学习",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "5",
+            "title": "05 函数定义与作用域",
+            "duration": "25:50",
+            "progress": 0.0,
+            "stateLabel": "待学习",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "6",
+            "title": "06 面向对象编程基础",
+            "duration": "35:20",
+            "progress": 0.0,
+            "stateLabel": "待学习",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "7",
+            "title": "07 文件操作与异常处理",
+            "duration": "20:45",
+            "progress": 0.0,
+            "stateLabel": "待学习",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "8",
+            "title": "08 综合项目实战",
+            "duration": "42:00",
+            "progress": 0.0,
+            "stateLabel": "待学习",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          }
+        ],
+        "en": [
+          {
+            "id": "1",
+            "title": "01 Python Intro & Environment Setup",
+            "duration": "15:30",
+            "progress": 1.0,
+            "stateLabel": "Completed",
+            "stateColor": "#22C55E",
+            "iconName": "check_circle",
+            "iconColor": "#22C55E"
+          },
+          {
+            "id": "2",
+            "title": "02 Variables & Basic Data Types",
+            "duration": "22:15",
+            "progress": 0.46,
+            "stateLabel": "In Progress",
+            "stateColor": "#EA580C",
+            "iconName": "play",
+            "iconColor": "#EA580C"
+          },
+          {
+            "id": "3",
+            "title": "03 Conditionals & Loops",
+            "duration": "28:40",
+            "progress": 0.0,
+            "stateLabel": "Not Started",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "4",
+            "title": "04 Lists, Tuples & Dictionaries",
+            "duration": "32:10",
+            "progress": 0.0,
+            "stateLabel": "Not Started",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "5",
+            "title": "05 Function Definitions & Scope",
+            "duration": "25:50",
+            "progress": 0.0,
+            "stateLabel": "Not Started",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "6",
+            "title": "06 OOP Fundamentals",
+            "duration": "35:20",
+            "progress": 0.0,
+            "stateLabel": "Not Started",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "7",
+            "title": "07 File I/O & Exception Handling",
+            "duration": "20:45",
+            "progress": 0.0,
+            "stateLabel": "Not Started",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "8",
+            "title": "08 Capstone Project",
+            "duration": "42:00",
+            "progress": 0.0,
+            "stateLabel": "Not Started",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          }
+        ],
+        "de": [
+          {
+            "id": "1",
+            "title": "01 Python – Einführung & Einrichtung",
+            "duration": "15:30",
+            "progress": 1.0,
+            "stateLabel": "Abgeschlossen",
+            "stateColor": "#22C55E",
+            "iconName": "check_circle",
+            "iconColor": "#22C55E"
+          },
+          {
+            "id": "2",
+            "title": "02 Variablen & grundlegende Datentypen",
+            "duration": "22:15",
+            "progress": 0.46,
+            "stateLabel": "In Bearbeitung",
+            "stateColor": "#EA580C",
+            "iconName": "play",
+            "iconColor": "#EA580C"
+          },
+          {
+            "id": "3",
+            "title": "03 Bedingungen & Schleifen",
+            "duration": "28:40",
+            "progress": 0.0,
+            "stateLabel": "Ausstehend",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "4",
+            "title": "04 Listen, Tupel & Dictionaries",
+            "duration": "32:10",
+            "progress": 0.0,
+            "stateLabel": "Ausstehend",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "5",
+            "title": "05 Funktionsdefinition & Gültigkeitsbereich",
+            "duration": "25:50",
+            "progress": 0.0,
+            "stateLabel": "Ausstehend",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "6",
+            "title": "06 Grundlagen der OOP",
+            "duration": "35:20",
+            "progress": 0.0,
+            "stateLabel": "Ausstehend",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "7",
+            "title": "07 Dateioperationen & Ausnahmebehandlung",
+            "duration": "20:45",
+            "progress": 0.0,
+            "stateLabel": "Ausstehend",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "8",
+            "title": "08 Abschlussprojekt",
+            "duration": "42:00",
+            "progress": 0.0,
+            "stateLabel": "Ausstehend",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          }
+        ],
+        "es": [
+          {
+            "id": "1",
+            "title": "01 Introducción a Python y configuración",
+            "duration": "15:30",
+            "progress": 1.0,
+            "stateLabel": "Completadas",
+            "stateColor": "#22C55E",
+            "iconName": "check_circle",
+            "iconColor": "#22C55E"
+          },
+          {
+            "id": "2",
+            "title": "02 Variables y tipos de datos básicos",
+            "duration": "22:15",
+            "progress": 0.46,
+            "stateLabel": "En curso",
+            "stateColor": "#EA580C",
+            "iconName": "play",
+            "iconColor": "#EA580C"
+          },
+          {
+            "id": "3",
+            "title": "03 Condicionales y bucles",
+            "duration": "28:40",
+            "progress": 0.0,
+            "stateLabel": "Pendiente",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "4",
+            "title": "04 Listas, tuplas y diccionarios",
+            "duration": "32:10",
+            "progress": 0.0,
+            "stateLabel": "Pendiente",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "5",
+            "title": "05 Definición de funciones y ámbito",
+            "duration": "25:50",
+            "progress": 0.0,
+            "stateLabel": "Pendiente",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "6",
+            "title": "06 Fundamentos de la POO",
+            "duration": "35:20",
+            "progress": 0.0,
+            "stateLabel": "Pendiente",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "7",
+            "title": "07 Archivos y manejo de excepciones",
+            "duration": "20:45",
+            "progress": 0.0,
+            "stateLabel": "Pendiente",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "8",
+            "title": "08 Proyecto final",
+            "duration": "42:00",
+            "progress": 0.0,
+            "stateLabel": "Pendiente",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          }
+        ],
+        "fr": [
+          {
+            "id": "1",
+            "title": "01 Introduction à Python et installation",
+            "duration": "15:30",
+            "progress": 1.0,
+            "stateLabel": "Terminées",
+            "stateColor": "#22C55E",
+            "iconName": "check_circle",
+            "iconColor": "#22C55E"
+          },
+          {
+            "id": "2",
+            "title": "02 Variables et types de données de base",
+            "duration": "22:15",
+            "progress": 0.46,
+            "stateLabel": "En cours",
+            "stateColor": "#EA580C",
+            "iconName": "play",
+            "iconColor": "#EA580C"
+          },
+          {
+            "id": "3",
+            "title": "03 Conditions et boucles",
+            "duration": "28:40",
+            "progress": 0.0,
+            "stateLabel": "À venir",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "4",
+            "title": "04 Listes, tuples et dictionnaires",
+            "duration": "32:10",
+            "progress": 0.0,
+            "stateLabel": "À venir",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "5",
+            "title": "05 Définition de fonctions et portée",
+            "duration": "25:50",
+            "progress": 0.0,
+            "stateLabel": "À venir",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "6",
+            "title": "06 Bases de la POO",
+            "duration": "35:20",
+            "progress": 0.0,
+            "stateLabel": "À venir",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "7",
+            "title": "07 Fichiers et gestion des exceptions",
+            "duration": "20:45",
+            "progress": 0.0,
+            "stateLabel": "À venir",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "8",
+            "title": "08 Projet de synthèse",
+            "duration": "42:00",
+            "progress": 0.0,
+            "stateLabel": "À venir",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          }
+        ],
+        "pt": [
+          {
+            "id": "1",
+            "title": "01 Introdução ao Python e configuração",
+            "duration": "15:30",
+            "progress": 1.0,
+            "stateLabel": "Concluídas",
+            "stateColor": "#22C55E",
+            "iconName": "check_circle",
+            "iconColor": "#22C55E"
+          },
+          {
+            "id": "2",
+            "title": "02 Variáveis e tipos de dados básicos",
+            "duration": "22:15",
+            "progress": 0.46,
+            "stateLabel": "Em andamento",
+            "stateColor": "#EA580C",
+            "iconName": "play",
+            "iconColor": "#EA580C"
+          },
+          {
+            "id": "3",
+            "title": "03 Condicionais e laços",
+            "duration": "28:40",
+            "progress": 0.0,
+            "stateLabel": "Pendente",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "4",
+            "title": "04 Listas, tuplas e dicionários",
+            "duration": "32:10",
+            "progress": 0.0,
+            "stateLabel": "Pendente",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "5",
+            "title": "05 Definição de funções e escopo",
+            "duration": "25:50",
+            "progress": 0.0,
+            "stateLabel": "Pendente",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "6",
+            "title": "06 Fundamentos de POO",
+            "duration": "35:20",
+            "progress": 0.0,
+            "stateLabel": "Pendente",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "7",
+            "title": "07 Arquivos e tratamento de exceções",
+            "duration": "20:45",
+            "progress": 0.0,
+            "stateLabel": "Pendente",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "8",
+            "title": "08 Projeto final",
+            "duration": "42:00",
+            "progress": 0.0,
+            "stateLabel": "Pendente",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          }
+        ],
+        "ca": [
+          {
+            "id": "1",
+            "title": "01 Introducció a Python i configuració",
+            "duration": "15:30",
+            "progress": 1.0,
+            "stateLabel": "Completades",
+            "stateColor": "#22C55E",
+            "iconName": "check_circle",
+            "iconColor": "#22C55E"
+          },
+          {
+            "id": "2",
+            "title": "02 Variables i tipus de dades bàsics",
+            "duration": "22:15",
+            "progress": 0.46,
+            "stateLabel": "En curs",
+            "stateColor": "#EA580C",
+            "iconName": "play",
+            "iconColor": "#EA580C"
+          },
+          {
+            "id": "3",
+            "title": "03 Condicionals i bucles",
+            "duration": "28:40",
+            "progress": 0.0,
+            "stateLabel": "Pendent",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "4",
+            "title": "04 Llistes, tuples i diccionaris",
+            "duration": "32:10",
+            "progress": 0.0,
+            "stateLabel": "Pendent",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "5",
+            "title": "05 Definició de funcions i àmbit",
+            "duration": "25:50",
+            "progress": 0.0,
+            "stateLabel": "Pendent",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "6",
+            "title": "06 Fonaments de la POO",
+            "duration": "35:20",
+            "progress": 0.0,
+            "stateLabel": "Pendent",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "7",
+            "title": "07 Fitxers i gestió d'excepcions",
+            "duration": "20:45",
+            "progress": 0.0,
+            "stateLabel": "Pendent",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "8",
+            "title": "08 Projecte final",
+            "duration": "42:00",
+            "progress": 0.0,
+            "stateLabel": "Pendent",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          }
+        ],
+        "hi": [
+          {
+            "id": "1",
+            "title": "01 Python परिचय और सेटअप",
+            "duration": "15:30",
+            "progress": 1.0,
+            "stateLabel": "पूर्ण",
+            "stateColor": "#22C55E",
+            "iconName": "check_circle",
+            "iconColor": "#22C55E"
+          },
+          {
+            "id": "2",
+            "title": "02 वेरिएबल और मूल डेटा प्रकार",
+            "duration": "22:15",
+            "progress": 0.46,
+            "stateLabel": "जारी",
+            "stateColor": "#EA580C",
+            "iconName": "play",
+            "iconColor": "#EA580C"
+          },
+          {
+            "id": "3",
+            "title": "03 शर्तें और लूप",
+            "duration": "28:40",
+            "progress": 0.0,
+            "stateLabel": "लंबित",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "4",
+            "title": "04 सूची, टपल और डिक्शनरी",
+            "duration": "32:10",
+            "progress": 0.0,
+            "stateLabel": "लंबित",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "5",
+            "title": "05 फ़ंक्शन परिभाषा और स्कोप",
+            "duration": "25:50",
+            "progress": 0.0,
+            "stateLabel": "लंबित",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "6",
+            "title": "06 OOP की मूल बातें",
+            "duration": "35:20",
+            "progress": 0.0,
+            "stateLabel": "लंबित",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "7",
+            "title": "07 फ़ाइल संचालन और अपवाद प्रबंधन",
+            "duration": "20:45",
+            "progress": 0.0,
+            "stateLabel": "लंबित",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "8",
+            "title": "08 समापन परियोजना",
+            "duration": "42:00",
+            "progress": 0.0,
+            "stateLabel": "लंबित",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          }
+        ],
+        "ko": [
+          {
+            "id": "1",
+            "title": "01 파이썬 소개와 환경 설정",
+            "duration": "15:30",
+            "progress": 1.0,
+            "stateLabel": "완료",
+            "stateColor": "#22C55E",
+            "iconName": "check_circle",
+            "iconColor": "#22C55E"
+          },
+          {
+            "id": "2",
+            "title": "02 변수와 기본 데이터 타입",
+            "duration": "22:15",
+            "progress": 0.46,
+            "stateLabel": "학습 중",
+            "stateColor": "#EA580C",
+            "iconName": "play",
+            "iconColor": "#EA580C"
+          },
+          {
+            "id": "3",
+            "title": "03 조건문과 반복문",
+            "duration": "28:40",
+            "progress": 0.0,
+            "stateLabel": "대기 중",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "4",
+            "title": "04 리스트, 튜플, 딕셔너리",
+            "duration": "32:10",
+            "progress": 0.0,
+            "stateLabel": "대기 중",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "5",
+            "title": "05 함수 정의와 스코프",
+            "duration": "25:50",
+            "progress": 0.0,
+            "stateLabel": "대기 중",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "6",
+            "title": "06 객체지향 프로그래밍 기초",
+            "duration": "35:20",
+            "progress": 0.0,
+            "stateLabel": "대기 중",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "7",
+            "title": "07 파일 처리와 예외 처리",
+            "duration": "20:45",
+            "progress": 0.0,
+            "stateLabel": "대기 중",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "8",
+            "title": "08 종합 프로젝트 실습",
+            "duration": "42:00",
+            "progress": 0.0,
+            "stateLabel": "대기 중",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          }
+        ],
+        "ja": [
+          {
+            "id": "1",
+            "title": "01 Python 入門と環境構築",
+            "duration": "15:30",
+            "progress": 1.0,
+            "stateLabel": "完了",
+            "stateColor": "#22C55E",
+            "iconName": "check_circle",
+            "iconColor": "#22C55E"
+          },
+          {
+            "id": "2",
+            "title": "02 変数と基本データ型",
+            "duration": "22:15",
+            "progress": 0.46,
+            "stateLabel": "学習中",
+            "stateColor": "#EA580C",
+            "iconName": "play",
+            "iconColor": "#EA580C"
+          },
+          {
+            "id": "3",
+            "title": "03 条件分岐とループ制御",
+            "duration": "28:40",
+            "progress": 0.0,
+            "stateLabel": "未受講",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "4",
+            "title": "04 リスト・タプル・辞書",
+            "duration": "32:10",
+            "progress": 0.0,
+            "stateLabel": "未受講",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "5",
+            "title": "05 関数定義とスコープ",
+            "duration": "25:50",
+            "progress": 0.0,
+            "stateLabel": "未受講",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "6",
+            "title": "06 オブジェクト指向プログラミング入門",
+            "duration": "35:20",
+            "progress": 0.0,
+            "stateLabel": "未受講",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "7",
+            "title": "07 ファイル操作と例外処理",
+            "duration": "20:45",
+            "progress": 0.0,
+            "stateLabel": "未受講",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "8",
+            "title": "08 総合プロジェクト実践",
+            "duration": "42:00",
+            "progress": 0.0,
+            "stateLabel": "未受講",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          }
+        ],
+        "it": [
+          {
+            "id": "1",
+            "title": "01 Introduzione a Python e configurazione",
+            "duration": "15:30",
+            "progress": 1.0,
+            "stateLabel": "Completate",
+            "stateColor": "#22C55E",
+            "iconName": "check_circle",
+            "iconColor": "#22C55E"
+          },
+          {
+            "id": "2",
+            "title": "02 Variabili e tipi di dati di base",
+            "duration": "22:15",
+            "progress": 0.46,
+            "stateLabel": "In corso",
+            "stateColor": "#EA580C",
+            "iconName": "play",
+            "iconColor": "#EA580C"
+          },
+          {
+            "id": "3",
+            "title": "03 Condizioni e cicli",
+            "duration": "28:40",
+            "progress": 0.0,
+            "stateLabel": "Da fare",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "4",
+            "title": "04 Liste, tuple e dizionari",
+            "duration": "32:10",
+            "progress": 0.0,
+            "stateLabel": "Da fare",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "5",
+            "title": "05 Definizione di funzioni e ambito",
+            "duration": "25:50",
+            "progress": 0.0,
+            "stateLabel": "Da fare",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "6",
+            "title": "06 Fondamenti di OOP",
+            "duration": "35:20",
+            "progress": 0.0,
+            "stateLabel": "Da fare",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "7",
+            "title": "07 File e gestione delle eccezioni",
+            "duration": "20:45",
+            "progress": 0.0,
+            "stateLabel": "Da fare",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          },
+          {
+            "id": "8",
+            "title": "08 Progetto finale",
+            "duration": "42:00",
+            "progress": 0.0,
+            "stateLabel": "Da fare",
+            "stateColor": "#9CA3AF",
+            "iconName": "schedule",
+            "iconColor": "#9CA3AF"
+          }
+        ]
+      },
       "lessons": [
         {
           "id": "1",
@@ -129,6 +1033,7 @@
           "completed": "已完成",
           "completedValue": "{{ global.completedCount }} 节",
           "totalDuration": "总时长",
+          "totalDurationValue": "222小时30分钟",
           "overallProgress": "整体进度",
           "courseOverallProgress": "课程整体进度",
           "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} 章节已完成"
@@ -146,6 +1051,7 @@
           "completed": "Completed",
           "completedValue": "{{ global.completedCount }} lessons",
           "totalDuration": "Total Duration",
+          "totalDurationValue": "222 h 30 min",
           "overallProgress": "Overall Progress",
           "courseOverallProgress": "Course Overall Progress",
           "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} lessons completed"
@@ -163,6 +1069,7 @@
           "completed": "Abgeschlossen",
           "completedValue": "{{ global.completedCount }} Lektionen",
           "totalDuration": "Gesamtdauer",
+          "totalDurationValue": "222 Std. 30 Min.",
           "overallProgress": "Gesamtfortschritt",
           "courseOverallProgress": "Gesamtfortschritt des Kurses",
           "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} Lektionen abgeschlossen"
@@ -180,6 +1087,7 @@
           "completed": "Completadas",
           "completedValue": "{{ global.completedCount }} lecciones",
           "totalDuration": "Duración total",
+          "totalDurationValue": "222 h 30 min",
           "overallProgress": "Progreso general",
           "courseOverallProgress": "Progreso general del curso",
           "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} lecciones completadas"
@@ -197,6 +1105,7 @@
           "completed": "Terminées",
           "completedValue": "{{ global.completedCount }} leçons",
           "totalDuration": "Durée totale",
+          "totalDurationValue": "222 h 30 min",
           "overallProgress": "Progression globale",
           "courseOverallProgress": "Progression globale du cours",
           "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} leçons terminées"
@@ -214,6 +1123,7 @@
           "completed": "Concluídas",
           "completedValue": "{{ global.completedCount }} aulas",
           "totalDuration": "Duração total",
+          "totalDurationValue": "222 h 30 min",
           "overallProgress": "Progresso geral",
           "courseOverallProgress": "Progresso geral do curso",
           "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} aulas concluídas"
@@ -231,6 +1141,7 @@
           "completed": "Completades",
           "completedValue": "{{ global.completedCount }} lliçons",
           "totalDuration": "Durada total",
+          "totalDurationValue": "222 h 30 min",
           "overallProgress": "Progrés general",
           "courseOverallProgress": "Progrés general del curs",
           "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} lliçons completades"
@@ -248,6 +1159,7 @@
           "completed": "पूर्ण",
           "completedValue": "{{ global.completedCount }} पाठ",
           "totalDuration": "कुल अवधि",
+          "totalDurationValue": "222 घंटे 30 मिनट",
           "overallProgress": "समग्र प्रगति",
           "courseOverallProgress": "पाठ्यक्रम की समग्र प्रगति",
           "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} पाठ पूर्ण"
@@ -265,6 +1177,7 @@
           "completed": "완료",
           "completedValue": "{{ global.completedCount }}강",
           "totalDuration": "총 시간",
+          "totalDurationValue": "222시간 30분",
           "overallProgress": "전체 진행률",
           "courseOverallProgress": "강좌 전체 진행률",
           "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }}강 완료"
@@ -282,6 +1195,7 @@
           "completed": "完了",
           "completedValue": "{{ global.completedCount }} 回",
           "totalDuration": "総時間",
+          "totalDurationValue": "222時間30分",
           "overallProgress": "全体の進捗",
           "courseOverallProgress": "コース全体の進捗",
           "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} レッスン完了"
@@ -299,6 +1213,7 @@
           "completed": "Completate",
           "completedValue": "{{ global.completedCount }} lezioni",
           "totalDuration": "Durata totale",
+          "totalDurationValue": "222 h 30 min",
           "overallProgress": "Avanzamento totale",
           "courseOverallProgress": "Avanzamento totale del corso",
           "completedOfTotal": "{{ global.completedCount }} / {{ global.totalLessons }} lezioni completate"
@@ -391,7 +1306,7 @@
           {
             "set": [
               "global.currentStateLabel",
-              "已完成"
+              "{{ t('stats.completed') }}"
             ]
           },
           {
@@ -404,7 +1319,64 @@
       }
     }
   },
-  "steps": [],
+  "steps": [
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.lessons",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_lessons.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_lessons.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_lessons.zh"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.currentTitle",
+        "value": {
+          "var": [
+            "global.lessons",
+            {
+              "var": "global.currentIndex"
+            },
+            "title"
+          ]
+        }
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.currentStateLabel",
+        "value": {
+          "var": [
+            "global.lessons",
+            {
+              "var": "global.currentIndex"
+            },
+            "stateLabel"
+          ]
+        }
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.totalDuration",
+        "value": "{{ t('stats.totalDurationValue') }}"
+      }
+    }
+  ],
   "ui": {
     "screens": [
       {

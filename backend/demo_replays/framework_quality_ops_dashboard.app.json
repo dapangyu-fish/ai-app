@@ -115,6 +115,998 @@
           "tint": "#DBEAFE"
         }
       ],
+      "_seed_alerts": {
+        "zh": [
+          {
+            "level": "critical",
+            "label": "严重",
+            "title": "订单中心响应延迟超阈值",
+            "subtitle": "P99 延迟 1260ms · 已持续 6 分钟",
+            "time": "12:42",
+            "source": "order-svc/prod",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "warning",
+            "label": "警告",
+            "title": "对象存储 us-west 上传失败率上升",
+            "subtitle": "失败率 3.2% · 影响 4 个上游服务",
+            "time": "12:18",
+            "source": "oss-adapter",
+            "icon": "warning_amber",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "warning",
+            "label": "警告",
+            "title": "Kafka broker-2 磁盘水位 86%",
+            "subtitle": "预计 5 小时内耗尽 · 已开启告警",
+            "time": "11:55",
+            "source": "kafka/cluster-a",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "通知",
+            "title": "搜索集群索引重建完成",
+            "subtitle": "重建 1.2 亿条文档 · 耗时 38 分钟",
+            "time": "11:20",
+            "source": "elastic/main",
+            "icon": "info",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "warning",
+            "label": "警告",
+            "title": "API 网关某机房出口带宽 82%",
+            "subtitle": "BGP 流量异常 · 正在切换备用线路",
+            "time": "10:48",
+            "source": "edge/ali-bj",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "通知",
+            "title": "数据库主库完成主备切换演练",
+            "subtitle": "切换耗时 28s · 数据零丢失",
+            "time": "10:05",
+            "source": "mysql/primary",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "critical",
+            "label": "严重",
+            "title": "支付回调 5xx 错误率突增",
+            "subtitle": "错误率 1.8% · 已自动扩容 4 个 pod",
+            "time": "09:30",
+            "source": "pay-svc/callback",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "info",
+            "label": "通知",
+            "title": "新版本 v3.4.2 灰度发布完成",
+            "subtitle": "覆盖 30% 流量 · 错误率 -12%",
+            "time": "08:50",
+            "source": "release/v3.4.2",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          }
+        ],
+        "en": [
+          {
+            "level": "critical",
+            "label": "Critical",
+            "title": "Order Center response latency over threshold",
+            "subtitle": "P99 latency 1260ms · ongoing for 6 min",
+            "time": "12:42",
+            "source": "order-svc/prod",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "warning",
+            "label": "Warning",
+            "title": "Object Storage us-west upload failure rate rising",
+            "subtitle": "Failure rate 3.2% · affects 4 upstream services",
+            "time": "12:18",
+            "source": "oss-adapter",
+            "icon": "warning_amber",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "warning",
+            "label": "Warning",
+            "title": "Kafka broker-2 disk usage 86%",
+            "subtitle": "Est. full within 5 hours · alert enabled",
+            "time": "11:55",
+            "source": "kafka/cluster-a",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Notice",
+            "title": "Search cluster index rebuild complete",
+            "subtitle": "Rebuilt 120M documents · took 38 min",
+            "time": "11:20",
+            "source": "elastic/main",
+            "icon": "info",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "warning",
+            "label": "Warning",
+            "title": "API Gateway egress bandwidth 82% at a datacenter",
+            "subtitle": "BGP traffic anomaly · switching to backup route",
+            "time": "10:48",
+            "source": "edge/ali-bj",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Notice",
+            "title": "Database primary completed failover drill",
+            "subtitle": "Switchover took 28s · zero data loss",
+            "time": "10:05",
+            "source": "mysql/primary",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "critical",
+            "label": "Critical",
+            "title": "Payment callback 5xx error rate spiking",
+            "subtitle": "Error rate 1.8% · auto-scaled 4 pods",
+            "time": "09:30",
+            "source": "pay-svc/callback",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "info",
+            "label": "Notice",
+            "title": "New version v3.4.2 canary rollout complete",
+            "subtitle": "Covers 30% of traffic · error rate -12%",
+            "time": "08:50",
+            "source": "release/v3.4.2",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          }
+        ],
+        "de": [
+          {
+            "level": "critical",
+            "label": "Kritisch",
+            "title": "Order Center: Antwortlatenz über Schwellenwert",
+            "subtitle": "P99-Latenz 1260ms · seit 6 Min anhaltend",
+            "time": "12:42",
+            "source": "order-svc/prod",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "warning",
+            "label": "Warnung",
+            "title": "Object Storage us-west: Upload-Fehlerrate steigt",
+            "subtitle": "Fehlerrate 3.2% · betrifft 4 vorgelagerte Dienste",
+            "time": "12:18",
+            "source": "oss-adapter",
+            "icon": "warning_amber",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "warning",
+            "label": "Warnung",
+            "title": "Kafka broker-2 Festplattenauslastung 86%",
+            "subtitle": "Voraussichtlich in 5 Std voll · Alarm aktiviert",
+            "time": "11:55",
+            "source": "kafka/cluster-a",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Hinweis",
+            "title": "Neuaufbau des Suchcluster-Index abgeschlossen",
+            "subtitle": "120 Mio Dokumente neu aufgebaut · 38 Min gedauert",
+            "time": "11:20",
+            "source": "elastic/main",
+            "icon": "info",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "warning",
+            "label": "Warnung",
+            "title": "API-Gateway Ausgangsbandbreite 82% in einem Rechenzentrum",
+            "subtitle": "BGP-Traffic-Anomalie · Wechsel auf Backup-Route",
+            "time": "10:48",
+            "source": "edge/ali-bj",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Hinweis",
+            "title": "Datenbank-Primary hat Failover-Übung abgeschlossen",
+            "subtitle": "Umschaltung dauerte 28s · kein Datenverlust",
+            "time": "10:05",
+            "source": "mysql/primary",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "critical",
+            "label": "Kritisch",
+            "title": "Payment-Callback 5xx-Fehlerrate steigt sprunghaft",
+            "subtitle": "Fehlerrate 1.8% · 4 Pods automatisch skaliert",
+            "time": "09:30",
+            "source": "pay-svc/callback",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "info",
+            "label": "Hinweis",
+            "title": "Canary-Rollout der neuen Version v3.4.2 abgeschlossen",
+            "subtitle": "Deckt 30% des Traffics ab · Fehlerrate -12%",
+            "time": "08:50",
+            "source": "release/v3.4.2",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          }
+        ],
+        "es": [
+          {
+            "level": "critical",
+            "label": "Crítico",
+            "title": "Latencia de respuesta de Order Center sobre el umbral",
+            "subtitle": "Latencia P99 1260ms · durante 6 min",
+            "time": "12:42",
+            "source": "order-svc/prod",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "warning",
+            "label": "Advertencia",
+            "title": "Aumenta la tasa de fallos de subida en Object Storage us-west",
+            "subtitle": "Tasa de fallos 3.2% · afecta a 4 servicios upstream",
+            "time": "12:18",
+            "source": "oss-adapter",
+            "icon": "warning_amber",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "warning",
+            "label": "Advertencia",
+            "title": "Uso de disco de Kafka broker-2 al 86%",
+            "subtitle": "Se llenará en ~5 horas · alerta activada",
+            "time": "11:55",
+            "source": "kafka/cluster-a",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Aviso",
+            "title": "Reconstrucción del índice del clúster de búsqueda completada",
+            "subtitle": "Reconstruidos 120M de documentos · 38 min",
+            "time": "11:20",
+            "source": "elastic/main",
+            "icon": "info",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "warning",
+            "label": "Advertencia",
+            "title": "Ancho de banda de salida del API Gateway al 82% en un centro de datos",
+            "subtitle": "Anomalía de tráfico BGP · cambiando a ruta de respaldo",
+            "time": "10:48",
+            "source": "edge/ali-bj",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Aviso",
+            "title": "La base de datos principal completó el simulacro de conmutación",
+            "subtitle": "La conmutación tardó 28s · sin pérdida de datos",
+            "time": "10:05",
+            "source": "mysql/primary",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "critical",
+            "label": "Crítico",
+            "title": "Aumento brusco de la tasa de errores 5xx en el callback de pago",
+            "subtitle": "Tasa de errores 1.8% · 4 pods autoescalados",
+            "time": "09:30",
+            "source": "pay-svc/callback",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "info",
+            "label": "Aviso",
+            "title": "Despliegue canary de la nueva versión v3.4.2 completado",
+            "subtitle": "Cubre el 30% del tráfico · tasa de errores -12%",
+            "time": "08:50",
+            "source": "release/v3.4.2",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          }
+        ],
+        "fr": [
+          {
+            "level": "critical",
+            "label": "Critique",
+            "title": "Latence de réponse d'Order Center au-dessus du seuil",
+            "subtitle": "Latence P99 1260ms · depuis 6 min",
+            "time": "12:42",
+            "source": "order-svc/prod",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "warning",
+            "label": "Avertissement",
+            "title": "Taux d'échec d'envoi en hausse sur Object Storage us-west",
+            "subtitle": "Taux d'échec 3.2% · affecte 4 services en amont",
+            "time": "12:18",
+            "source": "oss-adapter",
+            "icon": "warning_amber",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "warning",
+            "label": "Avertissement",
+            "title": "Utilisation disque de Kafka broker-2 à 86%",
+            "subtitle": "Saturation estimée sous 5 h · alerte activée",
+            "time": "11:55",
+            "source": "kafka/cluster-a",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Info",
+            "title": "Reconstruction de l'index du cluster de recherche terminée",
+            "subtitle": "120 M documents reconstruits · 38 min",
+            "time": "11:20",
+            "source": "elastic/main",
+            "icon": "info",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "warning",
+            "label": "Avertissement",
+            "title": "Bande passante sortante de l'API Gateway à 82% dans un datacenter",
+            "subtitle": "Anomalie de trafic BGP · bascule vers la route de secours",
+            "time": "10:48",
+            "source": "edge/ali-bj",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Info",
+            "title": "La base de données primaire a terminé l'exercice de bascule",
+            "subtitle": "Bascule en 28s · aucune perte de données",
+            "time": "10:05",
+            "source": "mysql/primary",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "critical",
+            "label": "Critique",
+            "title": "Pic du taux d'erreurs 5xx sur le callback de paiement",
+            "subtitle": "Taux d'erreurs 1.8% · 4 pods mis à l'échelle auto",
+            "time": "09:30",
+            "source": "pay-svc/callback",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "info",
+            "label": "Info",
+            "title": "Déploiement canari de la nouvelle version v3.4.2 terminé",
+            "subtitle": "Couvre 30% du trafic · taux d'erreurs -12%",
+            "time": "08:50",
+            "source": "release/v3.4.2",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          }
+        ],
+        "pt": [
+          {
+            "level": "critical",
+            "label": "Crítico",
+            "title": "Latência de resposta do Order Center acima do limite",
+            "subtitle": "Latência P99 1260ms · há 6 min",
+            "time": "12:42",
+            "source": "order-svc/prod",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "warning",
+            "label": "Aviso",
+            "title": "Taxa de falha de upload subindo no Object Storage us-west",
+            "subtitle": "Taxa de falha 3.2% · afeta 4 serviços upstream",
+            "time": "12:18",
+            "source": "oss-adapter",
+            "icon": "warning_amber",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "warning",
+            "label": "Aviso",
+            "title": "Uso de disco do Kafka broker-2 em 86%",
+            "subtitle": "Deve encher em 5 horas · alerta ativado",
+            "time": "11:55",
+            "source": "kafka/cluster-a",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Nota",
+            "title": "Reconstrução do índice do cluster de busca concluída",
+            "subtitle": "120 mi de documentos reconstruídos · 38 min",
+            "time": "11:20",
+            "source": "elastic/main",
+            "icon": "info",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "warning",
+            "label": "Aviso",
+            "title": "Largura de banda de saída do API Gateway em 82% num datacenter",
+            "subtitle": "Anomalia de tráfego BGP · a mudar para rota de reserva",
+            "time": "10:48",
+            "source": "edge/ali-bj",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Nota",
+            "title": "O banco de dados primário concluiu o exercício de failover",
+            "subtitle": "A comutação levou 28s · sem perda de dados",
+            "time": "10:05",
+            "source": "mysql/primary",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "critical",
+            "label": "Crítico",
+            "title": "Pico na taxa de erros 5xx no callback de pagamento",
+            "subtitle": "Taxa de erros 1.8% · 4 pods autoescalados",
+            "time": "09:30",
+            "source": "pay-svc/callback",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "info",
+            "label": "Nota",
+            "title": "Lançamento canário da nova versão v3.4.2 concluído",
+            "subtitle": "Cobre 30% do tráfego · taxa de erros -12%",
+            "time": "08:50",
+            "source": "release/v3.4.2",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          }
+        ],
+        "ca": [
+          {
+            "level": "critical",
+            "label": "Crític",
+            "title": "Latència de resposta d'Order Center per sobre del llindar",
+            "subtitle": "Latència P99 1260ms · durant 6 min",
+            "time": "12:42",
+            "source": "order-svc/prod",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "warning",
+            "label": "Advertència",
+            "title": "Augmenta la taxa d'errors de pujada a Object Storage us-west",
+            "subtitle": "Taxa d'errors 3.2% · afecta 4 serveis upstream",
+            "time": "12:18",
+            "source": "oss-adapter",
+            "icon": "warning_amber",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "warning",
+            "label": "Advertència",
+            "title": "Ús de disc de Kafka broker-2 al 86%",
+            "subtitle": "S'omplirà en ~5 hores · alerta activada",
+            "time": "11:55",
+            "source": "kafka/cluster-a",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Avís",
+            "title": "Reconstrucció de l'índex del clúster de cerca completada",
+            "subtitle": "120 M de documents reconstruïts · 38 min",
+            "time": "11:20",
+            "source": "elastic/main",
+            "icon": "info",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "warning",
+            "label": "Advertència",
+            "title": "Amplada de banda de sortida de l'API Gateway al 82% en un centre de dades",
+            "subtitle": "Anomalia de trànsit BGP · canviant a ruta de reserva",
+            "time": "10:48",
+            "source": "edge/ali-bj",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Avís",
+            "title": "La base de dades primària ha completat el simulacre de commutació",
+            "subtitle": "La commutació ha trigat 28s · sense pèrdua de dades",
+            "time": "10:05",
+            "source": "mysql/primary",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "critical",
+            "label": "Crític",
+            "title": "Pic de la taxa d'errors 5xx al callback de pagament",
+            "subtitle": "Taxa d'errors 1.8% · 4 pods autoescalats",
+            "time": "09:30",
+            "source": "pay-svc/callback",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "info",
+            "label": "Avís",
+            "title": "Desplegament canari de la nova versió v3.4.2 completat",
+            "subtitle": "Cobreix el 30% del trànsit · taxa d'errors -12%",
+            "time": "08:50",
+            "source": "release/v3.4.2",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          }
+        ],
+        "hi": [
+          {
+            "level": "critical",
+            "label": "गंभीर",
+            "title": "ऑर्डर सेंटर की प्रतिक्रिया विलंबता सीमा से अधिक",
+            "subtitle": "P99 विलंबता 1260ms · 6 मिनट से जारी",
+            "time": "12:42",
+            "source": "order-svc/prod",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "warning",
+            "label": "चेतावनी",
+            "title": "ऑब्जेक्ट स्टोरेज us-west में अपलोड विफलता दर बढ़ रही है",
+            "subtitle": "विफलता दर 3.2% · 4 अपस्ट्रीम सेवाएँ प्रभावित",
+            "time": "12:18",
+            "source": "oss-adapter",
+            "icon": "warning_amber",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "warning",
+            "label": "चेतावनी",
+            "title": "Kafka broker-2 डिस्क उपयोग 86%",
+            "subtitle": "अनुमानित 5 घंटे में भर जाएगा · अलर्ट सक्षम",
+            "time": "11:55",
+            "source": "kafka/cluster-a",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "सूचना",
+            "title": "सर्च क्लस्टर इंडेक्स पुनर्निर्माण पूर्ण",
+            "subtitle": "12 करोड़ दस्तावेज़ पुनर्निर्मित · 38 मिनट लगे",
+            "time": "11:20",
+            "source": "elastic/main",
+            "icon": "info",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "warning",
+            "label": "चेतावनी",
+            "title": "एक डेटासेंटर पर API गेटवे आउटबाउंड बैंडविड्थ 82%",
+            "subtitle": "BGP ट्रैफ़िक विसंगति · बैकअप रूट पर स्विच हो रहा है",
+            "time": "10:48",
+            "source": "edge/ali-bj",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "सूचना",
+            "title": "डेटाबेस प्राइमरी ने फेलओवर ड्रिल पूरी की",
+            "subtitle": "स्विचओवर में 28s लगे · कोई डेटा हानि नहीं",
+            "time": "10:05",
+            "source": "mysql/primary",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "critical",
+            "label": "गंभीर",
+            "title": "पेमेंट कॉलबैक 5xx त्रुटि दर में अचानक उछाल",
+            "subtitle": "त्रुटि दर 1.8% · 4 pod ऑटो-स्केल किए गए",
+            "time": "09:30",
+            "source": "pay-svc/callback",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "info",
+            "label": "सूचना",
+            "title": "नया संस्करण v3.4.2 कैनरी रोलआउट पूर्ण",
+            "subtitle": "30% ट्रैफ़िक कवर · त्रुटि दर -12%",
+            "time": "08:50",
+            "source": "release/v3.4.2",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          }
+        ],
+        "ko": [
+          {
+            "level": "critical",
+            "label": "심각",
+            "title": "주문 센터 응답 지연이 임계값 초과",
+            "subtitle": "P99 지연 1260ms · 6분간 지속",
+            "time": "12:42",
+            "source": "order-svc/prod",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "warning",
+            "label": "경고",
+            "title": "오브젝트 스토리지 us-west 업로드 실패율 상승",
+            "subtitle": "실패율 3.2% · 상위 서비스 4개 영향",
+            "time": "12:18",
+            "source": "oss-adapter",
+            "icon": "warning_amber",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "warning",
+            "label": "경고",
+            "title": "Kafka broker-2 디스크 사용량 86%",
+            "subtitle": "5시간 내 소진 예상 · 알림 활성화",
+            "time": "11:55",
+            "source": "kafka/cluster-a",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "알림",
+            "title": "검색 클러스터 인덱스 재구성 완료",
+            "subtitle": "문서 1.2억 건 재구성 · 38분 소요",
+            "time": "11:20",
+            "source": "elastic/main",
+            "icon": "info",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "warning",
+            "label": "경고",
+            "title": "한 데이터센터의 API 게이트웨이 아웃바운드 대역폭 82%",
+            "subtitle": "BGP 트래픽 이상 · 백업 경로로 전환 중",
+            "time": "10:48",
+            "source": "edge/ali-bj",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "알림",
+            "title": "데이터베이스 주 인스턴스 장애 조치 훈련 완료",
+            "subtitle": "전환 28초 소요 · 데이터 손실 없음",
+            "time": "10:05",
+            "source": "mysql/primary",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "critical",
+            "label": "심각",
+            "title": "결제 콜백 5xx 오류율 급증",
+            "subtitle": "오류율 1.8% · pod 4개 자동 확장",
+            "time": "09:30",
+            "source": "pay-svc/callback",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "info",
+            "label": "알림",
+            "title": "새 버전 v3.4.2 카나리 배포 완료",
+            "subtitle": "트래픽 30% 커버 · 오류율 -12%",
+            "time": "08:50",
+            "source": "release/v3.4.2",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          }
+        ],
+        "ja": [
+          {
+            "level": "critical",
+            "label": "重大",
+            "title": "注文センターの応答遅延がしきい値超過",
+            "subtitle": "P99 遅延 1260ms · 6 分間継続",
+            "time": "12:42",
+            "source": "order-svc/prod",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "warning",
+            "label": "警告",
+            "title": "オブジェクトストレージ us-west のアップロード失敗率が上昇",
+            "subtitle": "失敗率 3.2% · 上流サービス 4 件に影響",
+            "time": "12:18",
+            "source": "oss-adapter",
+            "icon": "warning_amber",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "warning",
+            "label": "警告",
+            "title": "Kafka broker-2 のディスク使用率 86%",
+            "subtitle": "5 時間以内に枯渇見込み · アラート有効",
+            "time": "11:55",
+            "source": "kafka/cluster-a",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "通知",
+            "title": "検索クラスタのインデックス再構築が完了",
+            "subtitle": "1.2 億件のドキュメントを再構築 · 38 分",
+            "time": "11:20",
+            "source": "elastic/main",
+            "icon": "info",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "warning",
+            "label": "警告",
+            "title": "あるデータセンターの API ゲートウェイ送信帯域が 82%",
+            "subtitle": "BGP トラフィック異常 · 予備回線へ切り替え中",
+            "time": "10:48",
+            "source": "edge/ali-bj",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "通知",
+            "title": "データベースのプライマリがフェイルオーバー訓練を完了",
+            "subtitle": "切り替えに 28 秒 · データ損失なし",
+            "time": "10:05",
+            "source": "mysql/primary",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "critical",
+            "label": "重大",
+            "title": "決済コールバックの 5xx エラー率が急増",
+            "subtitle": "エラー率 1.8% · 4 個の Pod を自動スケール",
+            "time": "09:30",
+            "source": "pay-svc/callback",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "info",
+            "label": "通知",
+            "title": "新バージョン v3.4.2 のカナリアリリースが完了",
+            "subtitle": "トラフィックの 30% をカバー · エラー率 -12%",
+            "time": "08:50",
+            "source": "release/v3.4.2",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          }
+        ],
+        "it": [
+          {
+            "level": "critical",
+            "label": "Critico",
+            "title": "Latenza di risposta di Order Center oltre la soglia",
+            "subtitle": "Latenza P99 1260ms · da 6 min",
+            "time": "12:42",
+            "source": "order-svc/prod",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "warning",
+            "label": "Avviso",
+            "title": "Tasso di errore di caricamento in aumento su Object Storage us-west",
+            "subtitle": "Tasso di errore 3.2% · colpisce 4 servizi upstream",
+            "time": "12:18",
+            "source": "oss-adapter",
+            "icon": "warning_amber",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "warning",
+            "label": "Avviso",
+            "title": "Utilizzo disco di Kafka broker-2 all'86%",
+            "subtitle": "Esaurimento stimato entro 5 ore · avviso attivato",
+            "time": "11:55",
+            "source": "kafka/cluster-a",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Notifica",
+            "title": "Ricostruzione dell'indice del cluster di ricerca completata",
+            "subtitle": "120 mln di documenti ricostruiti · 38 min",
+            "time": "11:20",
+            "source": "elastic/main",
+            "icon": "info",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "warning",
+            "label": "Avviso",
+            "title": "Banda in uscita dell'API Gateway all'82% in un datacenter",
+            "subtitle": "Anomalia di traffico BGP · passaggio alla rotta di backup",
+            "time": "10:48",
+            "source": "edge/ali-bj",
+            "icon": "warning",
+            "accent": "#D97706",
+            "tint": "#FEF3C7"
+          },
+          {
+            "level": "info",
+            "label": "Notifica",
+            "title": "Il database primario ha completato l'esercitazione di failover",
+            "subtitle": "Commutazione in 28s · nessuna perdita di dati",
+            "time": "10:05",
+            "source": "mysql/primary",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "level": "critical",
+            "label": "Critico",
+            "title": "Picco del tasso di errori 5xx nel callback di pagamento",
+            "subtitle": "Tasso di errori 1.8% · 4 pod scalati automaticamente",
+            "time": "09:30",
+            "source": "pay-svc/callback",
+            "icon": "error",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "level": "info",
+            "label": "Notifica",
+            "title": "Rilascio canary della nuova versione v3.4.2 completato",
+            "subtitle": "Copre il 30% del traffico · tasso di errori -12%",
+            "time": "08:50",
+            "source": "release/v3.4.2",
+            "icon": "check_circle",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          }
+        ]
+      },
       "services": [
         {
           "name": "API 网关",
@@ -221,6 +1213,1174 @@
           "statusLabel": "运行中"
         }
       ],
+      "_seed_services": {
+        "zh": [
+          {
+            "name": "API 网关",
+            "subtitle": "nginx · 8 节点",
+            "status": "healthy",
+            "latency": "32 ms",
+            "uptime": "99.98%",
+            "icon": "router",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "运行中"
+          },
+          {
+            "name": "鉴权服务",
+            "subtitle": "auth-svc · 4 节点",
+            "status": "healthy",
+            "latency": "18 ms",
+            "uptime": "99.99%",
+            "icon": "lock",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "运行中"
+          },
+          {
+            "name": "订单中心",
+            "subtitle": "order-svc · 6 节点",
+            "status": "warning",
+            "latency": "126 ms",
+            "uptime": "99.62%",
+            "icon": "receipt",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "需关注"
+          },
+          {
+            "name": "支付网关",
+            "subtitle": "pay-svc · 4 节点",
+            "status": "healthy",
+            "latency": "44 ms",
+            "uptime": "99.95%",
+            "icon": "payment",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "运行中"
+          },
+          {
+            "name": "搜索集群",
+            "subtitle": "elastic · 3 节点",
+            "status": "healthy",
+            "latency": "67 ms",
+            "uptime": "99.91%",
+            "icon": "search",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "运行中"
+          },
+          {
+            "name": "消息队列",
+            "subtitle": "kafka · 5 broker",
+            "status": "healthy",
+            "latency": "9 ms",
+            "uptime": "99.97%",
+            "icon": "chat",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "运行中"
+          },
+          {
+            "name": "对象存储",
+            "subtitle": "oss · 多区域",
+            "status": "warning",
+            "latency": "85 ms",
+            "uptime": "99.74%",
+            "icon": "inventory_2",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "需关注"
+          },
+          {
+            "name": "数据库主库",
+            "subtitle": "mysql · 2 主 4 从",
+            "status": "healthy",
+            "latency": "12 ms",
+            "uptime": "99.99%",
+            "icon": "key",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "运行中"
+          }
+        ],
+        "en": [
+          {
+            "name": "API Gateway",
+            "subtitle": "nginx · 8 nodes",
+            "status": "healthy",
+            "latency": "32 ms",
+            "uptime": "99.98%",
+            "icon": "router",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Running"
+          },
+          {
+            "name": "Auth Service",
+            "subtitle": "auth-svc · 4 nodes",
+            "status": "healthy",
+            "latency": "18 ms",
+            "uptime": "99.99%",
+            "icon": "lock",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Running"
+          },
+          {
+            "name": "Order Center",
+            "subtitle": "order-svc · 6 nodes",
+            "status": "warning",
+            "latency": "126 ms",
+            "uptime": "99.62%",
+            "icon": "receipt",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "Needs attention"
+          },
+          {
+            "name": "Payment Gateway",
+            "subtitle": "pay-svc · 4 nodes",
+            "status": "healthy",
+            "latency": "44 ms",
+            "uptime": "99.95%",
+            "icon": "payment",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Running"
+          },
+          {
+            "name": "Search Cluster",
+            "subtitle": "elastic · 3 nodes",
+            "status": "healthy",
+            "latency": "67 ms",
+            "uptime": "99.91%",
+            "icon": "search",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Running"
+          },
+          {
+            "name": "Message Queue",
+            "subtitle": "kafka · 5 broker",
+            "status": "healthy",
+            "latency": "9 ms",
+            "uptime": "99.97%",
+            "icon": "chat",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Running"
+          },
+          {
+            "name": "Object Storage",
+            "subtitle": "oss · multi-region",
+            "status": "warning",
+            "latency": "85 ms",
+            "uptime": "99.74%",
+            "icon": "inventory_2",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "Needs attention"
+          },
+          {
+            "name": "Database Primary",
+            "subtitle": "mysql · 2 primary 4 replica",
+            "status": "healthy",
+            "latency": "12 ms",
+            "uptime": "99.99%",
+            "icon": "key",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Running"
+          }
+        ],
+        "de": [
+          {
+            "name": "API-Gateway",
+            "subtitle": "nginx · 8 Knoten",
+            "status": "healthy",
+            "latency": "32 ms",
+            "uptime": "99.98%",
+            "icon": "router",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Läuft"
+          },
+          {
+            "name": "Auth-Dienst",
+            "subtitle": "auth-svc · 4 Knoten",
+            "status": "healthy",
+            "latency": "18 ms",
+            "uptime": "99.99%",
+            "icon": "lock",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Läuft"
+          },
+          {
+            "name": "Order Center",
+            "subtitle": "order-svc · 6 Knoten",
+            "status": "warning",
+            "latency": "126 ms",
+            "uptime": "99.62%",
+            "icon": "receipt",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "Beachten"
+          },
+          {
+            "name": "Payment-Gateway",
+            "subtitle": "pay-svc · 4 Knoten",
+            "status": "healthy",
+            "latency": "44 ms",
+            "uptime": "99.95%",
+            "icon": "payment",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Läuft"
+          },
+          {
+            "name": "Suchcluster",
+            "subtitle": "elastic · 3 Knoten",
+            "status": "healthy",
+            "latency": "67 ms",
+            "uptime": "99.91%",
+            "icon": "search",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Läuft"
+          },
+          {
+            "name": "Nachrichtenwarteschlange",
+            "subtitle": "kafka · 5 broker",
+            "status": "healthy",
+            "latency": "9 ms",
+            "uptime": "99.97%",
+            "icon": "chat",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Läuft"
+          },
+          {
+            "name": "Objektspeicher",
+            "subtitle": "oss · Multi-Region",
+            "status": "warning",
+            "latency": "85 ms",
+            "uptime": "99.74%",
+            "icon": "inventory_2",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "Beachten"
+          },
+          {
+            "name": "Datenbank-Primary",
+            "subtitle": "mysql · 2 Primär 4 Replika",
+            "status": "healthy",
+            "latency": "12 ms",
+            "uptime": "99.99%",
+            "icon": "key",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Läuft"
+          }
+        ],
+        "es": [
+          {
+            "name": "Puerta de enlace API",
+            "subtitle": "nginx · 8 nodos",
+            "status": "healthy",
+            "latency": "32 ms",
+            "uptime": "99.98%",
+            "icon": "router",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En ejecución"
+          },
+          {
+            "name": "Servicio de autenticación",
+            "subtitle": "auth-svc · 4 nodos",
+            "status": "healthy",
+            "latency": "18 ms",
+            "uptime": "99.99%",
+            "icon": "lock",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En ejecución"
+          },
+          {
+            "name": "Centro de pedidos",
+            "subtitle": "order-svc · 6 nodos",
+            "status": "warning",
+            "latency": "126 ms",
+            "uptime": "99.62%",
+            "icon": "receipt",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "Requiere atención"
+          },
+          {
+            "name": "Pasarela de pago",
+            "subtitle": "pay-svc · 4 nodos",
+            "status": "healthy",
+            "latency": "44 ms",
+            "uptime": "99.95%",
+            "icon": "payment",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En ejecución"
+          },
+          {
+            "name": "Clúster de búsqueda",
+            "subtitle": "elastic · 3 nodos",
+            "status": "healthy",
+            "latency": "67 ms",
+            "uptime": "99.91%",
+            "icon": "search",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En ejecución"
+          },
+          {
+            "name": "Cola de mensajes",
+            "subtitle": "kafka · 5 broker",
+            "status": "healthy",
+            "latency": "9 ms",
+            "uptime": "99.97%",
+            "icon": "chat",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En ejecución"
+          },
+          {
+            "name": "Almacenamiento de objetos",
+            "subtitle": "oss · multirregión",
+            "status": "warning",
+            "latency": "85 ms",
+            "uptime": "99.74%",
+            "icon": "inventory_2",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "Requiere atención"
+          },
+          {
+            "name": "Base de datos principal",
+            "subtitle": "mysql · 2 principal 4 réplica",
+            "status": "healthy",
+            "latency": "12 ms",
+            "uptime": "99.99%",
+            "icon": "key",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En ejecución"
+          }
+        ],
+        "fr": [
+          {
+            "name": "Passerelle API",
+            "subtitle": "nginx · 8 nœuds",
+            "status": "healthy",
+            "latency": "32 ms",
+            "uptime": "99.98%",
+            "icon": "router",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En cours"
+          },
+          {
+            "name": "Service d'authentification",
+            "subtitle": "auth-svc · 4 nœuds",
+            "status": "healthy",
+            "latency": "18 ms",
+            "uptime": "99.99%",
+            "icon": "lock",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En cours"
+          },
+          {
+            "name": "Centre de commandes",
+            "subtitle": "order-svc · 6 nœuds",
+            "status": "warning",
+            "latency": "126 ms",
+            "uptime": "99.62%",
+            "icon": "receipt",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "À surveiller"
+          },
+          {
+            "name": "Passerelle de paiement",
+            "subtitle": "pay-svc · 4 nœuds",
+            "status": "healthy",
+            "latency": "44 ms",
+            "uptime": "99.95%",
+            "icon": "payment",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En cours"
+          },
+          {
+            "name": "Cluster de recherche",
+            "subtitle": "elastic · 3 nœuds",
+            "status": "healthy",
+            "latency": "67 ms",
+            "uptime": "99.91%",
+            "icon": "search",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En cours"
+          },
+          {
+            "name": "File de messages",
+            "subtitle": "kafka · 5 broker",
+            "status": "healthy",
+            "latency": "9 ms",
+            "uptime": "99.97%",
+            "icon": "chat",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En cours"
+          },
+          {
+            "name": "Stockage d'objets",
+            "subtitle": "oss · multi-région",
+            "status": "warning",
+            "latency": "85 ms",
+            "uptime": "99.74%",
+            "icon": "inventory_2",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "À surveiller"
+          },
+          {
+            "name": "Base de données primaire",
+            "subtitle": "mysql · 2 primaire 4 réplica",
+            "status": "healthy",
+            "latency": "12 ms",
+            "uptime": "99.99%",
+            "icon": "key",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En cours"
+          }
+        ],
+        "pt": [
+          {
+            "name": "Gateway de API",
+            "subtitle": "nginx · 8 nós",
+            "status": "healthy",
+            "latency": "32 ms",
+            "uptime": "99.98%",
+            "icon": "router",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Em execução"
+          },
+          {
+            "name": "Serviço de autenticação",
+            "subtitle": "auth-svc · 4 nós",
+            "status": "healthy",
+            "latency": "18 ms",
+            "uptime": "99.99%",
+            "icon": "lock",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Em execução"
+          },
+          {
+            "name": "Central de pedidos",
+            "subtitle": "order-svc · 6 nós",
+            "status": "warning",
+            "latency": "126 ms",
+            "uptime": "99.62%",
+            "icon": "receipt",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "Requer atenção"
+          },
+          {
+            "name": "Gateway de pagamento",
+            "subtitle": "pay-svc · 4 nós",
+            "status": "healthy",
+            "latency": "44 ms",
+            "uptime": "99.95%",
+            "icon": "payment",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Em execução"
+          },
+          {
+            "name": "Cluster de busca",
+            "subtitle": "elastic · 3 nós",
+            "status": "healthy",
+            "latency": "67 ms",
+            "uptime": "99.91%",
+            "icon": "search",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Em execução"
+          },
+          {
+            "name": "Fila de mensagens",
+            "subtitle": "kafka · 5 broker",
+            "status": "healthy",
+            "latency": "9 ms",
+            "uptime": "99.97%",
+            "icon": "chat",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Em execução"
+          },
+          {
+            "name": "Armazenamento de objetos",
+            "subtitle": "oss · multirregião",
+            "status": "warning",
+            "latency": "85 ms",
+            "uptime": "99.74%",
+            "icon": "inventory_2",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "Requer atenção"
+          },
+          {
+            "name": "Banco de dados primário",
+            "subtitle": "mysql · 2 primário 4 réplica",
+            "status": "healthy",
+            "latency": "12 ms",
+            "uptime": "99.99%",
+            "icon": "key",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "Em execução"
+          }
+        ],
+        "ca": [
+          {
+            "name": "Passarel·la API",
+            "subtitle": "nginx · 8 nodes",
+            "status": "healthy",
+            "latency": "32 ms",
+            "uptime": "99.98%",
+            "icon": "router",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En execució"
+          },
+          {
+            "name": "Servei d'autenticació",
+            "subtitle": "auth-svc · 4 nodes",
+            "status": "healthy",
+            "latency": "18 ms",
+            "uptime": "99.99%",
+            "icon": "lock",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En execució"
+          },
+          {
+            "name": "Centre de comandes",
+            "subtitle": "order-svc · 6 nodes",
+            "status": "warning",
+            "latency": "126 ms",
+            "uptime": "99.62%",
+            "icon": "receipt",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "Requereix atenció"
+          },
+          {
+            "name": "Passarel·la de pagament",
+            "subtitle": "pay-svc · 4 nodes",
+            "status": "healthy",
+            "latency": "44 ms",
+            "uptime": "99.95%",
+            "icon": "payment",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En execució"
+          },
+          {
+            "name": "Clúster de cerca",
+            "subtitle": "elastic · 3 nodes",
+            "status": "healthy",
+            "latency": "67 ms",
+            "uptime": "99.91%",
+            "icon": "search",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En execució"
+          },
+          {
+            "name": "Cua de missatges",
+            "subtitle": "kafka · 5 broker",
+            "status": "healthy",
+            "latency": "9 ms",
+            "uptime": "99.97%",
+            "icon": "chat",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En execució"
+          },
+          {
+            "name": "Emmagatzematge d'objectes",
+            "subtitle": "oss · multiregió",
+            "status": "warning",
+            "latency": "85 ms",
+            "uptime": "99.74%",
+            "icon": "inventory_2",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "Requereix atenció"
+          },
+          {
+            "name": "Base de dades primària",
+            "subtitle": "mysql · 2 primari 4 rèplica",
+            "status": "healthy",
+            "latency": "12 ms",
+            "uptime": "99.99%",
+            "icon": "key",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "En execució"
+          }
+        ],
+        "hi": [
+          {
+            "name": "API गेटवे",
+            "subtitle": "nginx · 8 नोड",
+            "status": "healthy",
+            "latency": "32 ms",
+            "uptime": "99.98%",
+            "icon": "router",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "चालू"
+          },
+          {
+            "name": "प्रमाणीकरण सेवा",
+            "subtitle": "auth-svc · 4 नोड",
+            "status": "healthy",
+            "latency": "18 ms",
+            "uptime": "99.99%",
+            "icon": "lock",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "चालू"
+          },
+          {
+            "name": "ऑर्डर सेंटर",
+            "subtitle": "order-svc · 6 नोड",
+            "status": "warning",
+            "latency": "126 ms",
+            "uptime": "99.62%",
+            "icon": "receipt",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "ध्यान दें"
+          },
+          {
+            "name": "पेमेंट गेटवे",
+            "subtitle": "pay-svc · 4 नोड",
+            "status": "healthy",
+            "latency": "44 ms",
+            "uptime": "99.95%",
+            "icon": "payment",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "चालू"
+          },
+          {
+            "name": "सर्च क्लस्टर",
+            "subtitle": "elastic · 3 नोड",
+            "status": "healthy",
+            "latency": "67 ms",
+            "uptime": "99.91%",
+            "icon": "search",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "चालू"
+          },
+          {
+            "name": "मैसेज क्यू",
+            "subtitle": "kafka · 5 broker",
+            "status": "healthy",
+            "latency": "9 ms",
+            "uptime": "99.97%",
+            "icon": "chat",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "चालू"
+          },
+          {
+            "name": "ऑब्जेक्ट स्टोरेज",
+            "subtitle": "oss · बहु-क्षेत्र",
+            "status": "warning",
+            "latency": "85 ms",
+            "uptime": "99.74%",
+            "icon": "inventory_2",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "ध्यान दें"
+          },
+          {
+            "name": "डेटाबेस प्राइमरी",
+            "subtitle": "mysql · 2 प्राथमिक 4 प्रतिकृति",
+            "status": "healthy",
+            "latency": "12 ms",
+            "uptime": "99.99%",
+            "icon": "key",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "चालू"
+          }
+        ],
+        "ko": [
+          {
+            "name": "API 게이트웨이",
+            "subtitle": "nginx · 8 노드",
+            "status": "healthy",
+            "latency": "32 ms",
+            "uptime": "99.98%",
+            "icon": "router",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "실행 중"
+          },
+          {
+            "name": "인증 서비스",
+            "subtitle": "auth-svc · 4 노드",
+            "status": "healthy",
+            "latency": "18 ms",
+            "uptime": "99.99%",
+            "icon": "lock",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "실행 중"
+          },
+          {
+            "name": "주문 센터",
+            "subtitle": "order-svc · 6 노드",
+            "status": "warning",
+            "latency": "126 ms",
+            "uptime": "99.62%",
+            "icon": "receipt",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "주의 필요"
+          },
+          {
+            "name": "결제 게이트웨이",
+            "subtitle": "pay-svc · 4 노드",
+            "status": "healthy",
+            "latency": "44 ms",
+            "uptime": "99.95%",
+            "icon": "payment",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "실행 중"
+          },
+          {
+            "name": "검색 클러스터",
+            "subtitle": "elastic · 3 노드",
+            "status": "healthy",
+            "latency": "67 ms",
+            "uptime": "99.91%",
+            "icon": "search",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "실행 중"
+          },
+          {
+            "name": "메시지 큐",
+            "subtitle": "kafka · 5 broker",
+            "status": "healthy",
+            "latency": "9 ms",
+            "uptime": "99.97%",
+            "icon": "chat",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "실행 중"
+          },
+          {
+            "name": "오브젝트 스토리지",
+            "subtitle": "oss · 다중 리전",
+            "status": "warning",
+            "latency": "85 ms",
+            "uptime": "99.74%",
+            "icon": "inventory_2",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "주의 필요"
+          },
+          {
+            "name": "데이터베이스 주",
+            "subtitle": "mysql · 주 2 복제 4",
+            "status": "healthy",
+            "latency": "12 ms",
+            "uptime": "99.99%",
+            "icon": "key",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "실행 중"
+          }
+        ],
+        "ja": [
+          {
+            "name": "API ゲートウェイ",
+            "subtitle": "nginx · 8 ノード",
+            "status": "healthy",
+            "latency": "32 ms",
+            "uptime": "99.98%",
+            "icon": "router",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "稼働中"
+          },
+          {
+            "name": "認証サービス",
+            "subtitle": "auth-svc · 4 ノード",
+            "status": "healthy",
+            "latency": "18 ms",
+            "uptime": "99.99%",
+            "icon": "lock",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "稼働中"
+          },
+          {
+            "name": "注文センター",
+            "subtitle": "order-svc · 6 ノード",
+            "status": "warning",
+            "latency": "126 ms",
+            "uptime": "99.62%",
+            "icon": "receipt",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "要注意"
+          },
+          {
+            "name": "決済ゲートウェイ",
+            "subtitle": "pay-svc · 4 ノード",
+            "status": "healthy",
+            "latency": "44 ms",
+            "uptime": "99.95%",
+            "icon": "payment",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "稼働中"
+          },
+          {
+            "name": "検索クラスタ",
+            "subtitle": "elastic · 3 ノード",
+            "status": "healthy",
+            "latency": "67 ms",
+            "uptime": "99.91%",
+            "icon": "search",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "稼働中"
+          },
+          {
+            "name": "メッセージキュー",
+            "subtitle": "kafka · 5 broker",
+            "status": "healthy",
+            "latency": "9 ms",
+            "uptime": "99.97%",
+            "icon": "chat",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "稼働中"
+          },
+          {
+            "name": "オブジェクトストレージ",
+            "subtitle": "oss · マルチリージョン",
+            "status": "warning",
+            "latency": "85 ms",
+            "uptime": "99.74%",
+            "icon": "inventory_2",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "要注意"
+          },
+          {
+            "name": "データベースプライマリ",
+            "subtitle": "mysql · プライマリ2 レプリカ4",
+            "status": "healthy",
+            "latency": "12 ms",
+            "uptime": "99.99%",
+            "icon": "key",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "稼働中"
+          }
+        ],
+        "it": [
+          {
+            "name": "Gateway API",
+            "subtitle": "nginx · 8 nodi",
+            "status": "healthy",
+            "latency": "32 ms",
+            "uptime": "99.98%",
+            "icon": "router",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "In esecuzione"
+          },
+          {
+            "name": "Servizio di autenticazione",
+            "subtitle": "auth-svc · 4 nodi",
+            "status": "healthy",
+            "latency": "18 ms",
+            "uptime": "99.99%",
+            "icon": "lock",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "In esecuzione"
+          },
+          {
+            "name": "Centro ordini",
+            "subtitle": "order-svc · 6 nodi",
+            "status": "warning",
+            "latency": "126 ms",
+            "uptime": "99.62%",
+            "icon": "receipt",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "Da controllare"
+          },
+          {
+            "name": "Gateway di pagamento",
+            "subtitle": "pay-svc · 4 nodi",
+            "status": "healthy",
+            "latency": "44 ms",
+            "uptime": "99.95%",
+            "icon": "payment",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "In esecuzione"
+          },
+          {
+            "name": "Cluster di ricerca",
+            "subtitle": "elastic · 3 nodi",
+            "status": "healthy",
+            "latency": "67 ms",
+            "uptime": "99.91%",
+            "icon": "search",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "In esecuzione"
+          },
+          {
+            "name": "Coda di messaggi",
+            "subtitle": "kafka · 5 broker",
+            "status": "healthy",
+            "latency": "9 ms",
+            "uptime": "99.97%",
+            "icon": "chat",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "In esecuzione"
+          },
+          {
+            "name": "Archiviazione oggetti",
+            "subtitle": "oss · multi-regione",
+            "status": "warning",
+            "latency": "85 ms",
+            "uptime": "99.74%",
+            "icon": "inventory_2",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "statusIcon": "warning_amber",
+            "statusAccent": "#D97706",
+            "statusLabel": "Da controllare"
+          },
+          {
+            "name": "Database primario",
+            "subtitle": "mysql · 2 primario 4 replica",
+            "status": "healthy",
+            "latency": "12 ms",
+            "uptime": "99.99%",
+            "icon": "key",
+            "accent": "#059669",
+            "tint": "#E7F8EF",
+            "statusIcon": "check_circle",
+            "statusAccent": "#059669",
+            "statusLabel": "In esecuzione"
+          }
+        ]
+      },
       "lastRefreshedAt": "12:48"
     },
     "i18n": {
@@ -961,7 +3121,46 @@
       }
     }
   },
-  "steps": [],
+  "steps": [
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.alerts",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_alerts.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_alerts.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_alerts.zh"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.services",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_services.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_services.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_services.zh"
+            }
+          ]
+        }
+      }
+    }
+  ],
   "ui": {
     "screens": [
       {

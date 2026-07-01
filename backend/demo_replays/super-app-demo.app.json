@@ -96,7 +96,814 @@
           "time": "5 小时前",
           "icon": "payments"
         }
-      ]
+      ],
+      "_seed_serviceGrid": {
+        "zh": [
+          {
+            "icon": "shopping_cart",
+            "label": "商城",
+            "color": "#FF6B6B",
+            "bgColor": "#FFF0F0"
+          },
+          {
+            "icon": "restaurant",
+            "label": "外卖",
+            "color": "#FF922B",
+            "bgColor": "#FFF3E8"
+          },
+          {
+            "icon": "local_laundry_service",
+            "label": "洗护",
+            "color": "#20C997",
+            "bgColor": "#E8FBF4"
+          },
+          {
+            "icon": "local_pharmacy",
+            "label": "医药",
+            "color": "#339AF0",
+            "bgColor": "#E8F2FD"
+          },
+          {
+            "icon": "theaters",
+            "label": "影票",
+            "color": "#845EF7",
+            "bgColor": "#F0EBFD"
+          },
+          {
+            "icon": "map",
+            "label": "出行",
+            "color": "#F59F00",
+            "bgColor": "#FFF8E6"
+          },
+          {
+            "icon": "payment",
+            "label": "缴费",
+            "color": "#F06595",
+            "bgColor": "#FDE8F0"
+          },
+          {
+            "icon": "health_and_safety",
+            "label": "健康",
+            "color": "#38D9A9",
+            "bgColor": "#E6FCF5"
+          },
+          {
+            "icon": "menu_book",
+            "label": "阅读",
+            "color": "#748FFC",
+            "bgColor": "#EDF0FF"
+          }
+        ],
+        "en": [
+          {
+            "icon": "shopping_cart",
+            "label": "Mall",
+            "color": "#FF6B6B",
+            "bgColor": "#FFF0F0"
+          },
+          {
+            "icon": "restaurant",
+            "label": "Food",
+            "color": "#FF922B",
+            "bgColor": "#FFF3E8"
+          },
+          {
+            "icon": "local_laundry_service",
+            "label": "Laundry",
+            "color": "#20C997",
+            "bgColor": "#E8FBF4"
+          },
+          {
+            "icon": "local_pharmacy",
+            "label": "Pharmacy",
+            "color": "#339AF0",
+            "bgColor": "#E8F2FD"
+          },
+          {
+            "icon": "theaters",
+            "label": "Movies",
+            "color": "#845EF7",
+            "bgColor": "#F0EBFD"
+          },
+          {
+            "icon": "map",
+            "label": "Travel",
+            "color": "#F59F00",
+            "bgColor": "#FFF8E6"
+          },
+          {
+            "icon": "payment",
+            "label": "Bills",
+            "color": "#F06595",
+            "bgColor": "#FDE8F0"
+          },
+          {
+            "icon": "health_and_safety",
+            "label": "Health",
+            "color": "#38D9A9",
+            "bgColor": "#E6FCF5"
+          },
+          {
+            "icon": "menu_book",
+            "label": "Reading",
+            "color": "#748FFC",
+            "bgColor": "#EDF0FF"
+          }
+        ],
+        "de": [
+          {
+            "icon": "shopping_cart",
+            "label": "Shop",
+            "color": "#FF6B6B",
+            "bgColor": "#FFF0F0"
+          },
+          {
+            "icon": "restaurant",
+            "label": "Essen",
+            "color": "#FF922B",
+            "bgColor": "#FFF3E8"
+          },
+          {
+            "icon": "local_laundry_service",
+            "label": "Wäsche",
+            "color": "#20C997",
+            "bgColor": "#E8FBF4"
+          },
+          {
+            "icon": "local_pharmacy",
+            "label": "Apotheke",
+            "color": "#339AF0",
+            "bgColor": "#E8F2FD"
+          },
+          {
+            "icon": "theaters",
+            "label": "Kino",
+            "color": "#845EF7",
+            "bgColor": "#F0EBFD"
+          },
+          {
+            "icon": "map",
+            "label": "Reisen",
+            "color": "#F59F00",
+            "bgColor": "#FFF8E6"
+          },
+          {
+            "icon": "payment",
+            "label": "Rechnungen",
+            "color": "#F06595",
+            "bgColor": "#FDE8F0"
+          },
+          {
+            "icon": "health_and_safety",
+            "label": "Gesundheit",
+            "color": "#38D9A9",
+            "bgColor": "#E6FCF5"
+          },
+          {
+            "icon": "menu_book",
+            "label": "Lesen",
+            "color": "#748FFC",
+            "bgColor": "#EDF0FF"
+          }
+        ],
+        "es": [
+          {
+            "icon": "shopping_cart",
+            "label": "Tienda",
+            "color": "#FF6B6B",
+            "bgColor": "#FFF0F0"
+          },
+          {
+            "icon": "restaurant",
+            "label": "Comida",
+            "color": "#FF922B",
+            "bgColor": "#FFF3E8"
+          },
+          {
+            "icon": "local_laundry_service",
+            "label": "Lavandería",
+            "color": "#20C997",
+            "bgColor": "#E8FBF4"
+          },
+          {
+            "icon": "local_pharmacy",
+            "label": "Farmacia",
+            "color": "#339AF0",
+            "bgColor": "#E8F2FD"
+          },
+          {
+            "icon": "theaters",
+            "label": "Cine",
+            "color": "#845EF7",
+            "bgColor": "#F0EBFD"
+          },
+          {
+            "icon": "map",
+            "label": "Viajes",
+            "color": "#F59F00",
+            "bgColor": "#FFF8E6"
+          },
+          {
+            "icon": "payment",
+            "label": "Pagos",
+            "color": "#F06595",
+            "bgColor": "#FDE8F0"
+          },
+          {
+            "icon": "health_and_safety",
+            "label": "Salud",
+            "color": "#38D9A9",
+            "bgColor": "#E6FCF5"
+          },
+          {
+            "icon": "menu_book",
+            "label": "Lectura",
+            "color": "#748FFC",
+            "bgColor": "#EDF0FF"
+          }
+        ],
+        "fr": [
+          {
+            "icon": "shopping_cart",
+            "label": "Boutique",
+            "color": "#FF6B6B",
+            "bgColor": "#FFF0F0"
+          },
+          {
+            "icon": "restaurant",
+            "label": "Repas",
+            "color": "#FF922B",
+            "bgColor": "#FFF3E8"
+          },
+          {
+            "icon": "local_laundry_service",
+            "label": "Blanchisserie",
+            "color": "#20C997",
+            "bgColor": "#E8FBF4"
+          },
+          {
+            "icon": "local_pharmacy",
+            "label": "Pharmacie",
+            "color": "#339AF0",
+            "bgColor": "#E8F2FD"
+          },
+          {
+            "icon": "theaters",
+            "label": "Cinéma",
+            "color": "#845EF7",
+            "bgColor": "#F0EBFD"
+          },
+          {
+            "icon": "map",
+            "label": "Voyage",
+            "color": "#F59F00",
+            "bgColor": "#FFF8E6"
+          },
+          {
+            "icon": "payment",
+            "label": "Factures",
+            "color": "#F06595",
+            "bgColor": "#FDE8F0"
+          },
+          {
+            "icon": "health_and_safety",
+            "label": "Santé",
+            "color": "#38D9A9",
+            "bgColor": "#E6FCF5"
+          },
+          {
+            "icon": "menu_book",
+            "label": "Lecture",
+            "color": "#748FFC",
+            "bgColor": "#EDF0FF"
+          }
+        ],
+        "pt": [
+          {
+            "icon": "shopping_cart",
+            "label": "Loja",
+            "color": "#FF6B6B",
+            "bgColor": "#FFF0F0"
+          },
+          {
+            "icon": "restaurant",
+            "label": "Comida",
+            "color": "#FF922B",
+            "bgColor": "#FFF3E8"
+          },
+          {
+            "icon": "local_laundry_service",
+            "label": "Lavanderia",
+            "color": "#20C997",
+            "bgColor": "#E8FBF4"
+          },
+          {
+            "icon": "local_pharmacy",
+            "label": "Farmácia",
+            "color": "#339AF0",
+            "bgColor": "#E8F2FD"
+          },
+          {
+            "icon": "theaters",
+            "label": "Cinema",
+            "color": "#845EF7",
+            "bgColor": "#F0EBFD"
+          },
+          {
+            "icon": "map",
+            "label": "Viagem",
+            "color": "#F59F00",
+            "bgColor": "#FFF8E6"
+          },
+          {
+            "icon": "payment",
+            "label": "Contas",
+            "color": "#F06595",
+            "bgColor": "#FDE8F0"
+          },
+          {
+            "icon": "health_and_safety",
+            "label": "Saúde",
+            "color": "#38D9A9",
+            "bgColor": "#E6FCF5"
+          },
+          {
+            "icon": "menu_book",
+            "label": "Leitura",
+            "color": "#748FFC",
+            "bgColor": "#EDF0FF"
+          }
+        ],
+        "ca": [
+          {
+            "icon": "shopping_cart",
+            "label": "Botiga",
+            "color": "#FF6B6B",
+            "bgColor": "#FFF0F0"
+          },
+          {
+            "icon": "restaurant",
+            "label": "Menjar",
+            "color": "#FF922B",
+            "bgColor": "#FFF3E8"
+          },
+          {
+            "icon": "local_laundry_service",
+            "label": "Bugaderia",
+            "color": "#20C997",
+            "bgColor": "#E8FBF4"
+          },
+          {
+            "icon": "local_pharmacy",
+            "label": "Farmàcia",
+            "color": "#339AF0",
+            "bgColor": "#E8F2FD"
+          },
+          {
+            "icon": "theaters",
+            "label": "Cinema",
+            "color": "#845EF7",
+            "bgColor": "#F0EBFD"
+          },
+          {
+            "icon": "map",
+            "label": "Viatges",
+            "color": "#F59F00",
+            "bgColor": "#FFF8E6"
+          },
+          {
+            "icon": "payment",
+            "label": "Pagaments",
+            "color": "#F06595",
+            "bgColor": "#FDE8F0"
+          },
+          {
+            "icon": "health_and_safety",
+            "label": "Salut",
+            "color": "#38D9A9",
+            "bgColor": "#E6FCF5"
+          },
+          {
+            "icon": "menu_book",
+            "label": "Lectura",
+            "color": "#748FFC",
+            "bgColor": "#EDF0FF"
+          }
+        ],
+        "hi": [
+          {
+            "icon": "shopping_cart",
+            "label": "स्टोर",
+            "color": "#FF6B6B",
+            "bgColor": "#FFF0F0"
+          },
+          {
+            "icon": "restaurant",
+            "label": "खाना",
+            "color": "#FF922B",
+            "bgColor": "#FFF3E8"
+          },
+          {
+            "icon": "local_laundry_service",
+            "label": "धुलाई",
+            "color": "#20C997",
+            "bgColor": "#E8FBF4"
+          },
+          {
+            "icon": "local_pharmacy",
+            "label": "फार्मेसी",
+            "color": "#339AF0",
+            "bgColor": "#E8F2FD"
+          },
+          {
+            "icon": "theaters",
+            "label": "फ़िल्में",
+            "color": "#845EF7",
+            "bgColor": "#F0EBFD"
+          },
+          {
+            "icon": "map",
+            "label": "यात्रा",
+            "color": "#F59F00",
+            "bgColor": "#FFF8E6"
+          },
+          {
+            "icon": "payment",
+            "label": "बिल",
+            "color": "#F06595",
+            "bgColor": "#FDE8F0"
+          },
+          {
+            "icon": "health_and_safety",
+            "label": "स्वास्थ्य",
+            "color": "#38D9A9",
+            "bgColor": "#E6FCF5"
+          },
+          {
+            "icon": "menu_book",
+            "label": "पढ़ना",
+            "color": "#748FFC",
+            "bgColor": "#EDF0FF"
+          }
+        ],
+        "ko": [
+          {
+            "icon": "shopping_cart",
+            "label": "쇼핑몰",
+            "color": "#FF6B6B",
+            "bgColor": "#FFF0F0"
+          },
+          {
+            "icon": "restaurant",
+            "label": "배달",
+            "color": "#FF922B",
+            "bgColor": "#FFF3E8"
+          },
+          {
+            "icon": "local_laundry_service",
+            "label": "세탁",
+            "color": "#20C997",
+            "bgColor": "#E8FBF4"
+          },
+          {
+            "icon": "local_pharmacy",
+            "label": "약국",
+            "color": "#339AF0",
+            "bgColor": "#E8F2FD"
+          },
+          {
+            "icon": "theaters",
+            "label": "영화표",
+            "color": "#845EF7",
+            "bgColor": "#F0EBFD"
+          },
+          {
+            "icon": "map",
+            "label": "이동",
+            "color": "#F59F00",
+            "bgColor": "#FFF8E6"
+          },
+          {
+            "icon": "payment",
+            "label": "납부",
+            "color": "#F06595",
+            "bgColor": "#FDE8F0"
+          },
+          {
+            "icon": "health_and_safety",
+            "label": "건강",
+            "color": "#38D9A9",
+            "bgColor": "#E6FCF5"
+          },
+          {
+            "icon": "menu_book",
+            "label": "독서",
+            "color": "#748FFC",
+            "bgColor": "#EDF0FF"
+          }
+        ],
+        "ja": [
+          {
+            "icon": "shopping_cart",
+            "label": "モール",
+            "color": "#FF6B6B",
+            "bgColor": "#FFF0F0"
+          },
+          {
+            "icon": "restaurant",
+            "label": "出前",
+            "color": "#FF922B",
+            "bgColor": "#FFF3E8"
+          },
+          {
+            "icon": "local_laundry_service",
+            "label": "洗濯",
+            "color": "#20C997",
+            "bgColor": "#E8FBF4"
+          },
+          {
+            "icon": "local_pharmacy",
+            "label": "薬局",
+            "color": "#339AF0",
+            "bgColor": "#E8F2FD"
+          },
+          {
+            "icon": "theaters",
+            "label": "映画",
+            "color": "#845EF7",
+            "bgColor": "#F0EBFD"
+          },
+          {
+            "icon": "map",
+            "label": "移動",
+            "color": "#F59F00",
+            "bgColor": "#FFF8E6"
+          },
+          {
+            "icon": "payment",
+            "label": "支払い",
+            "color": "#F06595",
+            "bgColor": "#FDE8F0"
+          },
+          {
+            "icon": "health_and_safety",
+            "label": "健康",
+            "color": "#38D9A9",
+            "bgColor": "#E6FCF5"
+          },
+          {
+            "icon": "menu_book",
+            "label": "読書",
+            "color": "#748FFC",
+            "bgColor": "#EDF0FF"
+          }
+        ],
+        "it": [
+          {
+            "icon": "shopping_cart",
+            "label": "Negozio",
+            "color": "#FF6B6B",
+            "bgColor": "#FFF0F0"
+          },
+          {
+            "icon": "restaurant",
+            "label": "Cibo",
+            "color": "#FF922B",
+            "bgColor": "#FFF3E8"
+          },
+          {
+            "icon": "local_laundry_service",
+            "label": "Lavanderia",
+            "color": "#20C997",
+            "bgColor": "#E8FBF4"
+          },
+          {
+            "icon": "local_pharmacy",
+            "label": "Farmacia",
+            "color": "#339AF0",
+            "bgColor": "#E8F2FD"
+          },
+          {
+            "icon": "theaters",
+            "label": "Cinema",
+            "color": "#845EF7",
+            "bgColor": "#F0EBFD"
+          },
+          {
+            "icon": "map",
+            "label": "Viaggi",
+            "color": "#F59F00",
+            "bgColor": "#FFF8E6"
+          },
+          {
+            "icon": "payment",
+            "label": "Bollette",
+            "color": "#F06595",
+            "bgColor": "#FDE8F0"
+          },
+          {
+            "icon": "health_and_safety",
+            "label": "Salute",
+            "color": "#38D9A9",
+            "bgColor": "#E6FCF5"
+          },
+          {
+            "icon": "menu_book",
+            "label": "Lettura",
+            "color": "#748FFC",
+            "bgColor": "#EDF0FF"
+          }
+        ]
+      },
+      "_seed_recentItems": {
+        "zh": [
+          {
+            "title": "最近浏览：夏季轻薄 T 恤",
+            "time": "10 分钟前",
+            "icon": "history"
+          },
+          {
+            "title": "您的订单已发货",
+            "time": "2 小时前",
+            "icon": "inventory_2"
+          },
+          {
+            "title": "优惠券即将到期",
+            "time": "5 小时前",
+            "icon": "payments"
+          }
+        ],
+        "en": [
+          {
+            "title": "Recently viewed: Summer lightweight T-shirt",
+            "time": "10 minutes ago",
+            "icon": "history"
+          },
+          {
+            "title": "Your order has shipped",
+            "time": "2 hours ago",
+            "icon": "inventory_2"
+          },
+          {
+            "title": "Coupon expiring soon",
+            "time": "5 hours ago",
+            "icon": "payments"
+          }
+        ],
+        "de": [
+          {
+            "title": "Zuletzt angesehen: Leichtes Sommer-T-Shirt",
+            "time": "vor 10 Minuten",
+            "icon": "history"
+          },
+          {
+            "title": "Deine Bestellung wurde versandt",
+            "time": "vor 2 Stunden",
+            "icon": "inventory_2"
+          },
+          {
+            "title": "Gutschein läuft bald ab",
+            "time": "vor 5 Stunden",
+            "icon": "payments"
+          }
+        ],
+        "es": [
+          {
+            "title": "Visto recientemente: Camiseta ligera de verano",
+            "time": "hace 10 minutos",
+            "icon": "history"
+          },
+          {
+            "title": "Tu pedido ha sido enviado",
+            "time": "hace 2 horas",
+            "icon": "inventory_2"
+          },
+          {
+            "title": "El cupón vence pronto",
+            "time": "hace 5 horas",
+            "icon": "payments"
+          }
+        ],
+        "fr": [
+          {
+            "title": "Vu récemment : T-shirt léger d'été",
+            "time": "il y a 10 minutes",
+            "icon": "history"
+          },
+          {
+            "title": "Votre commande a été expédiée",
+            "time": "il y a 2 heures",
+            "icon": "inventory_2"
+          },
+          {
+            "title": "Le coupon expire bientôt",
+            "time": "il y a 5 heures",
+            "icon": "payments"
+          }
+        ],
+        "pt": [
+          {
+            "title": "Visto recentemente: Camiseta leve de verão",
+            "time": "há 10 minutos",
+            "icon": "history"
+          },
+          {
+            "title": "Seu pedido foi enviado",
+            "time": "há 2 horas",
+            "icon": "inventory_2"
+          },
+          {
+            "title": "O cupom expira em breve",
+            "time": "há 5 horas",
+            "icon": "payments"
+          }
+        ],
+        "ca": [
+          {
+            "title": "Vist recentment: Samarreta lleugera d'estiu",
+            "time": "fa 10 minuts",
+            "icon": "history"
+          },
+          {
+            "title": "La teva comanda s'ha enviat",
+            "time": "fa 2 hores",
+            "icon": "inventory_2"
+          },
+          {
+            "title": "El cupó caduca aviat",
+            "time": "fa 5 hores",
+            "icon": "payments"
+          }
+        ],
+        "hi": [
+          {
+            "title": "हाल में देखा: गर्मियों की हल्की टी-शर्ट",
+            "time": "10 मिनट पहले",
+            "icon": "history"
+          },
+          {
+            "title": "आपका ऑर्डर भेज दिया गया है",
+            "time": "2 घंटे पहले",
+            "icon": "inventory_2"
+          },
+          {
+            "title": "कूपन जल्द समाप्त हो रहा है",
+            "time": "5 घंटे पहले",
+            "icon": "payments"
+          }
+        ],
+        "ko": [
+          {
+            "title": "최근 본 상품: 여름 경량 티셔츠",
+            "time": "10분 전",
+            "icon": "history"
+          },
+          {
+            "title": "주문이 발송되었습니다",
+            "time": "2시간 전",
+            "icon": "inventory_2"
+          },
+          {
+            "title": "쿠폰이 곧 만료됩니다",
+            "time": "5시간 전",
+            "icon": "payments"
+          }
+        ],
+        "ja": [
+          {
+            "title": "最近チェック：夏の薄手Tシャツ",
+            "time": "10分前",
+            "icon": "history"
+          },
+          {
+            "title": "ご注文を発送しました",
+            "time": "2時間前",
+            "icon": "inventory_2"
+          },
+          {
+            "title": "クーポンがまもなく期限切れ",
+            "time": "5時間前",
+            "icon": "payments"
+          }
+        ],
+        "it": [
+          {
+            "title": "Visto di recente: T-shirt leggera estiva",
+            "time": "10 minuti fa",
+            "icon": "history"
+          },
+          {
+            "title": "Il tuo ordine è stato spedito",
+            "time": "2 ore fa",
+            "icon": "inventory_2"
+          },
+          {
+            "title": "Il coupon sta per scadere",
+            "time": "5 ore fa",
+            "icon": "payments"
+          }
+        ]
+      }
     },
     "functions": {
       "onServiceTap": {
@@ -468,7 +1275,46 @@
       }
     }
   },
-  "steps": [],
+  "steps": [
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.serviceGrid",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_serviceGrid.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_serviceGrid.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_serviceGrid.zh"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.recentItems",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_recentItems.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_recentItems.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_recentItems.zh"
+            }
+          ]
+        }
+      }
+    }
+  ],
   "ui": {
     "screens": [
       {

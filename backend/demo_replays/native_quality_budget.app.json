@@ -87,6 +87,525 @@
           "color": "#6B7280"
         }
       ],
+      "_seed_pieData": {
+        "zh": [
+          {
+            "label": "餐饮",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "交通",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "购物",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "居家",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "娱乐",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "医疗",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "学习",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "通讯",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "其他",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "en": [
+          {
+            "label": "Dining",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Transport",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Shopping",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Household",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Entertainment",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Medical",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Education",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Telecom",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Other",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "de": [
+          {
+            "label": "Essen",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Transport",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Einkaufen",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Wohnen",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Unterhaltung",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Gesundheit",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Bildung",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Kommunikation",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Sonstiges",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "es": [
+          {
+            "label": "Comida",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Transporte",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Compras",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Hogar",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Ocio",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Salud",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Educación",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Comunicaciones",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Otros",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "fr": [
+          {
+            "label": "Repas",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Transport",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Achats",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Logement",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Loisirs",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Santé",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Éducation",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Télécom",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Autres",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "pt": [
+          {
+            "label": "Alimentação",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Transporte",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Compras",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Moradia",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Lazer",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Saúde",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Educação",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Telecom",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Outros",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "ca": [
+          {
+            "label": "Menjar",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Transport",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Compres",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Llar",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Oci",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Salut",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Educació",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Comunicacions",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Altres",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "hi": [
+          {
+            "label": "भोजन",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "परिवहन",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "खरीदारी",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "घर",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "मनोरंजन",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "चिकित्सा",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "शिक्षा",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "संचार",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "अन्य",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "ko": [
+          {
+            "label": "식비",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "교통",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "쇼핑",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "주거",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "여가",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "의료",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "교육",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "통신",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "기타",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "ja": [
+          {
+            "label": "食費",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "交通",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "買い物",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "住まい",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "娯楽",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "医療",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "教育",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "通信",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "その他",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "it": [
+          {
+            "label": "Cibo",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Trasporti",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Acquisti",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Casa",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Svago",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Salute",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Istruzione",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Comunicazioni",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Altro",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ]
+      },
       "barData": [
         {
           "label": "餐饮",
@@ -134,6 +653,525 @@
           "color": "#6B7280"
         }
       ],
+      "_seed_barData": {
+        "zh": [
+          {
+            "label": "餐饮",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "交通",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "购物",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "居家",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "娱乐",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "医疗",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "学习",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "通讯",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "其他",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "en": [
+          {
+            "label": "Dining",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Transport",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Shopping",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Household",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Entertainment",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Medical",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Education",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Telecom",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Other",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "de": [
+          {
+            "label": "Essen",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Transport",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Einkaufen",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Wohnen",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Unterhaltung",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Gesundheit",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Bildung",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Kommunikation",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Sonstiges",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "es": [
+          {
+            "label": "Comida",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Transporte",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Compras",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Hogar",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Ocio",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Salud",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Educación",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Comunicaciones",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Otros",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "fr": [
+          {
+            "label": "Repas",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Transport",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Achats",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Logement",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Loisirs",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Santé",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Éducation",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Télécom",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Autres",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "pt": [
+          {
+            "label": "Alimentação",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Transporte",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Compras",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Moradia",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Lazer",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Saúde",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Educação",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Telecom",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Outros",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "ca": [
+          {
+            "label": "Menjar",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Transport",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Compres",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Llar",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Oci",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Salut",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Educació",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Comunicacions",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Altres",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "hi": [
+          {
+            "label": "भोजन",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "परिवहन",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "खरीदारी",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "घर",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "मनोरंजन",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "चिकित्सा",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "शिक्षा",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "संचार",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "अन्य",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "ko": [
+          {
+            "label": "식비",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "교통",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "쇼핑",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "주거",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "여가",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "의료",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "교육",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "통신",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "기타",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "ja": [
+          {
+            "label": "食費",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "交通",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "買い物",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "住まい",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "娯楽",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "医療",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "教育",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "通信",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "その他",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ],
+        "it": [
+          {
+            "label": "Cibo",
+            "value": 240,
+            "color": "#DC2626"
+          },
+          {
+            "label": "Trasporti",
+            "value": 364,
+            "color": "#2563EB"
+          },
+          {
+            "label": "Acquisti",
+            "value": 601,
+            "color": "#7C3AED"
+          },
+          {
+            "label": "Casa",
+            "value": 2586,
+            "color": "#0F766E"
+          },
+          {
+            "label": "Svago",
+            "value": 276,
+            "color": "#EC4899"
+          },
+          {
+            "label": "Salute",
+            "value": 345,
+            "color": "#F59E0B"
+          },
+          {
+            "label": "Istruzione",
+            "value": 291,
+            "color": "#10B981"
+          },
+          {
+            "label": "Comunicazioni",
+            "value": 157,
+            "color": "#6366F1"
+          },
+          {
+            "label": "Altro",
+            "value": 0,
+            "color": "#6B7280"
+          }
+        ]
+      },
       "lineData": [
         {
           "x": 0,
@@ -292,6 +1330,1416 @@
           "remaining_label": "剩余 ¥200"
         }
       ],
+      "_seed_budgetsData": {
+        "zh": [
+          {
+            "key": "餐饮",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2",
+            "spent": "240",
+            "budget": "1,500",
+            "ratio": 0.16,
+            "ratio_clamped": 0.16,
+            "pct": 16,
+            "bar_color": "#DC2626",
+            "over": false,
+            "remaining_label": "剩余 ¥1,260"
+          },
+          {
+            "key": "交通",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE",
+            "spent": "364",
+            "budget": "600",
+            "ratio": 0.607,
+            "ratio_clamped": 0.607,
+            "pct": 61,
+            "bar_color": "#2563EB",
+            "over": false,
+            "remaining_label": "剩余 ¥236"
+          },
+          {
+            "key": "购物",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE",
+            "spent": "601",
+            "budget": "1,200",
+            "ratio": 0.501,
+            "ratio_clamped": 0.501,
+            "pct": 50,
+            "bar_color": "#7C3AED",
+            "over": false,
+            "remaining_label": "剩余 ¥599"
+          },
+          {
+            "key": "居家",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1",
+            "spent": "2,586",
+            "budget": "2,000",
+            "ratio": 1.293,
+            "ratio_clamped": 1.0,
+            "pct": 129,
+            "bar_color": "#DC2626",
+            "over": true,
+            "remaining_label": "超支 ¥586"
+          },
+          {
+            "key": "娱乐",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3",
+            "spent": "276",
+            "budget": "500",
+            "ratio": 0.552,
+            "ratio_clamped": 0.552,
+            "pct": 55,
+            "bar_color": "#EC4899",
+            "over": false,
+            "remaining_label": "剩余 ¥224"
+          },
+          {
+            "key": "医疗",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7",
+            "spent": "345",
+            "budget": "400",
+            "ratio": 0.863,
+            "ratio_clamped": 0.863,
+            "pct": 86,
+            "bar_color": "#F59E0B",
+            "over": false,
+            "remaining_label": "剩余 ¥55"
+          },
+          {
+            "key": "学习",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5",
+            "spent": "291",
+            "budget": "300",
+            "ratio": 0.97,
+            "ratio_clamped": 0.97,
+            "pct": 97,
+            "bar_color": "#10B981",
+            "over": false,
+            "remaining_label": "剩余 ¥9"
+          },
+          {
+            "key": "通讯",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF",
+            "spent": "157",
+            "budget": "200",
+            "ratio": 0.785,
+            "ratio_clamped": 0.785,
+            "pct": 78,
+            "bar_color": "#6366F1",
+            "over": false,
+            "remaining_label": "剩余 ¥43"
+          },
+          {
+            "key": "其他",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB",
+            "spent": "0",
+            "budget": "200",
+            "ratio": 0.0,
+            "ratio_clamped": 0.0,
+            "pct": 0,
+            "bar_color": "#6B7280",
+            "over": false,
+            "remaining_label": "剩余 ¥200"
+          }
+        ],
+        "en": [
+          {
+            "key": "Dining",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2",
+            "spent": "240",
+            "budget": "1,500",
+            "ratio": 0.16,
+            "ratio_clamped": 0.16,
+            "pct": 16,
+            "bar_color": "#DC2626",
+            "over": false,
+            "remaining_label": "Remaining ¥1,260"
+          },
+          {
+            "key": "Transport",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE",
+            "spent": "364",
+            "budget": "600",
+            "ratio": 0.607,
+            "ratio_clamped": 0.607,
+            "pct": 61,
+            "bar_color": "#2563EB",
+            "over": false,
+            "remaining_label": "Remaining ¥236"
+          },
+          {
+            "key": "Shopping",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE",
+            "spent": "601",
+            "budget": "1,200",
+            "ratio": 0.501,
+            "ratio_clamped": 0.501,
+            "pct": 50,
+            "bar_color": "#7C3AED",
+            "over": false,
+            "remaining_label": "Remaining ¥599"
+          },
+          {
+            "key": "Household",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1",
+            "spent": "2,586",
+            "budget": "2,000",
+            "ratio": 1.293,
+            "ratio_clamped": 1.0,
+            "pct": 129,
+            "bar_color": "#DC2626",
+            "over": true,
+            "remaining_label": "Over ¥586"
+          },
+          {
+            "key": "Entertainment",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3",
+            "spent": "276",
+            "budget": "500",
+            "ratio": 0.552,
+            "ratio_clamped": 0.552,
+            "pct": 55,
+            "bar_color": "#EC4899",
+            "over": false,
+            "remaining_label": "Remaining ¥224"
+          },
+          {
+            "key": "Medical",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7",
+            "spent": "345",
+            "budget": "400",
+            "ratio": 0.863,
+            "ratio_clamped": 0.863,
+            "pct": 86,
+            "bar_color": "#F59E0B",
+            "over": false,
+            "remaining_label": "Remaining ¥55"
+          },
+          {
+            "key": "Education",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5",
+            "spent": "291",
+            "budget": "300",
+            "ratio": 0.97,
+            "ratio_clamped": 0.97,
+            "pct": 97,
+            "bar_color": "#10B981",
+            "over": false,
+            "remaining_label": "Remaining ¥9"
+          },
+          {
+            "key": "Telecom",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF",
+            "spent": "157",
+            "budget": "200",
+            "ratio": 0.785,
+            "ratio_clamped": 0.785,
+            "pct": 78,
+            "bar_color": "#6366F1",
+            "over": false,
+            "remaining_label": "Remaining ¥43"
+          },
+          {
+            "key": "Other",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB",
+            "spent": "0",
+            "budget": "200",
+            "ratio": 0.0,
+            "ratio_clamped": 0.0,
+            "pct": 0,
+            "bar_color": "#6B7280",
+            "over": false,
+            "remaining_label": "Remaining ¥200"
+          }
+        ],
+        "de": [
+          {
+            "key": "Essen",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2",
+            "spent": "240",
+            "budget": "1,500",
+            "ratio": 0.16,
+            "ratio_clamped": 0.16,
+            "pct": 16,
+            "bar_color": "#DC2626",
+            "over": false,
+            "remaining_label": "Verbleibend ¥1,260"
+          },
+          {
+            "key": "Transport",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE",
+            "spent": "364",
+            "budget": "600",
+            "ratio": 0.607,
+            "ratio_clamped": 0.607,
+            "pct": 61,
+            "bar_color": "#2563EB",
+            "over": false,
+            "remaining_label": "Verbleibend ¥236"
+          },
+          {
+            "key": "Einkaufen",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE",
+            "spent": "601",
+            "budget": "1,200",
+            "ratio": 0.501,
+            "ratio_clamped": 0.501,
+            "pct": 50,
+            "bar_color": "#7C3AED",
+            "over": false,
+            "remaining_label": "Verbleibend ¥599"
+          },
+          {
+            "key": "Wohnen",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1",
+            "spent": "2,586",
+            "budget": "2,000",
+            "ratio": 1.293,
+            "ratio_clamped": 1.0,
+            "pct": 129,
+            "bar_color": "#DC2626",
+            "over": true,
+            "remaining_label": "Überzogen ¥586"
+          },
+          {
+            "key": "Unterhaltung",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3",
+            "spent": "276",
+            "budget": "500",
+            "ratio": 0.552,
+            "ratio_clamped": 0.552,
+            "pct": 55,
+            "bar_color": "#EC4899",
+            "over": false,
+            "remaining_label": "Verbleibend ¥224"
+          },
+          {
+            "key": "Gesundheit",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7",
+            "spent": "345",
+            "budget": "400",
+            "ratio": 0.863,
+            "ratio_clamped": 0.863,
+            "pct": 86,
+            "bar_color": "#F59E0B",
+            "over": false,
+            "remaining_label": "Verbleibend ¥55"
+          },
+          {
+            "key": "Bildung",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5",
+            "spent": "291",
+            "budget": "300",
+            "ratio": 0.97,
+            "ratio_clamped": 0.97,
+            "pct": 97,
+            "bar_color": "#10B981",
+            "over": false,
+            "remaining_label": "Verbleibend ¥9"
+          },
+          {
+            "key": "Kommunikation",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF",
+            "spent": "157",
+            "budget": "200",
+            "ratio": 0.785,
+            "ratio_clamped": 0.785,
+            "pct": 78,
+            "bar_color": "#6366F1",
+            "over": false,
+            "remaining_label": "Verbleibend ¥43"
+          },
+          {
+            "key": "Sonstiges",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB",
+            "spent": "0",
+            "budget": "200",
+            "ratio": 0.0,
+            "ratio_clamped": 0.0,
+            "pct": 0,
+            "bar_color": "#6B7280",
+            "over": false,
+            "remaining_label": "Verbleibend ¥200"
+          }
+        ],
+        "es": [
+          {
+            "key": "Comida",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2",
+            "spent": "240",
+            "budget": "1,500",
+            "ratio": 0.16,
+            "ratio_clamped": 0.16,
+            "pct": 16,
+            "bar_color": "#DC2626",
+            "over": false,
+            "remaining_label": "Restante ¥1,260"
+          },
+          {
+            "key": "Transporte",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE",
+            "spent": "364",
+            "budget": "600",
+            "ratio": 0.607,
+            "ratio_clamped": 0.607,
+            "pct": 61,
+            "bar_color": "#2563EB",
+            "over": false,
+            "remaining_label": "Restante ¥236"
+          },
+          {
+            "key": "Compras",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE",
+            "spent": "601",
+            "budget": "1,200",
+            "ratio": 0.501,
+            "ratio_clamped": 0.501,
+            "pct": 50,
+            "bar_color": "#7C3AED",
+            "over": false,
+            "remaining_label": "Restante ¥599"
+          },
+          {
+            "key": "Hogar",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1",
+            "spent": "2,586",
+            "budget": "2,000",
+            "ratio": 1.293,
+            "ratio_clamped": 1.0,
+            "pct": 129,
+            "bar_color": "#DC2626",
+            "over": true,
+            "remaining_label": "Excedido ¥586"
+          },
+          {
+            "key": "Ocio",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3",
+            "spent": "276",
+            "budget": "500",
+            "ratio": 0.552,
+            "ratio_clamped": 0.552,
+            "pct": 55,
+            "bar_color": "#EC4899",
+            "over": false,
+            "remaining_label": "Restante ¥224"
+          },
+          {
+            "key": "Salud",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7",
+            "spent": "345",
+            "budget": "400",
+            "ratio": 0.863,
+            "ratio_clamped": 0.863,
+            "pct": 86,
+            "bar_color": "#F59E0B",
+            "over": false,
+            "remaining_label": "Restante ¥55"
+          },
+          {
+            "key": "Educación",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5",
+            "spent": "291",
+            "budget": "300",
+            "ratio": 0.97,
+            "ratio_clamped": 0.97,
+            "pct": 97,
+            "bar_color": "#10B981",
+            "over": false,
+            "remaining_label": "Restante ¥9"
+          },
+          {
+            "key": "Comunicaciones",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF",
+            "spent": "157",
+            "budget": "200",
+            "ratio": 0.785,
+            "ratio_clamped": 0.785,
+            "pct": 78,
+            "bar_color": "#6366F1",
+            "over": false,
+            "remaining_label": "Restante ¥43"
+          },
+          {
+            "key": "Otros",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB",
+            "spent": "0",
+            "budget": "200",
+            "ratio": 0.0,
+            "ratio_clamped": 0.0,
+            "pct": 0,
+            "bar_color": "#6B7280",
+            "over": false,
+            "remaining_label": "Restante ¥200"
+          }
+        ],
+        "fr": [
+          {
+            "key": "Repas",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2",
+            "spent": "240",
+            "budget": "1,500",
+            "ratio": 0.16,
+            "ratio_clamped": 0.16,
+            "pct": 16,
+            "bar_color": "#DC2626",
+            "over": false,
+            "remaining_label": "Restant ¥1,260"
+          },
+          {
+            "key": "Transport",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE",
+            "spent": "364",
+            "budget": "600",
+            "ratio": 0.607,
+            "ratio_clamped": 0.607,
+            "pct": 61,
+            "bar_color": "#2563EB",
+            "over": false,
+            "remaining_label": "Restant ¥236"
+          },
+          {
+            "key": "Achats",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE",
+            "spent": "601",
+            "budget": "1,200",
+            "ratio": 0.501,
+            "ratio_clamped": 0.501,
+            "pct": 50,
+            "bar_color": "#7C3AED",
+            "over": false,
+            "remaining_label": "Restant ¥599"
+          },
+          {
+            "key": "Logement",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1",
+            "spent": "2,586",
+            "budget": "2,000",
+            "ratio": 1.293,
+            "ratio_clamped": 1.0,
+            "pct": 129,
+            "bar_color": "#DC2626",
+            "over": true,
+            "remaining_label": "Dépassé ¥586"
+          },
+          {
+            "key": "Loisirs",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3",
+            "spent": "276",
+            "budget": "500",
+            "ratio": 0.552,
+            "ratio_clamped": 0.552,
+            "pct": 55,
+            "bar_color": "#EC4899",
+            "over": false,
+            "remaining_label": "Restant ¥224"
+          },
+          {
+            "key": "Santé",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7",
+            "spent": "345",
+            "budget": "400",
+            "ratio": 0.863,
+            "ratio_clamped": 0.863,
+            "pct": 86,
+            "bar_color": "#F59E0B",
+            "over": false,
+            "remaining_label": "Restant ¥55"
+          },
+          {
+            "key": "Éducation",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5",
+            "spent": "291",
+            "budget": "300",
+            "ratio": 0.97,
+            "ratio_clamped": 0.97,
+            "pct": 97,
+            "bar_color": "#10B981",
+            "over": false,
+            "remaining_label": "Restant ¥9"
+          },
+          {
+            "key": "Télécom",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF",
+            "spent": "157",
+            "budget": "200",
+            "ratio": 0.785,
+            "ratio_clamped": 0.785,
+            "pct": 78,
+            "bar_color": "#6366F1",
+            "over": false,
+            "remaining_label": "Restant ¥43"
+          },
+          {
+            "key": "Autres",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB",
+            "spent": "0",
+            "budget": "200",
+            "ratio": 0.0,
+            "ratio_clamped": 0.0,
+            "pct": 0,
+            "bar_color": "#6B7280",
+            "over": false,
+            "remaining_label": "Restant ¥200"
+          }
+        ],
+        "pt": [
+          {
+            "key": "Alimentação",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2",
+            "spent": "240",
+            "budget": "1,500",
+            "ratio": 0.16,
+            "ratio_clamped": 0.16,
+            "pct": 16,
+            "bar_color": "#DC2626",
+            "over": false,
+            "remaining_label": "Restante ¥1,260"
+          },
+          {
+            "key": "Transporte",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE",
+            "spent": "364",
+            "budget": "600",
+            "ratio": 0.607,
+            "ratio_clamped": 0.607,
+            "pct": 61,
+            "bar_color": "#2563EB",
+            "over": false,
+            "remaining_label": "Restante ¥236"
+          },
+          {
+            "key": "Compras",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE",
+            "spent": "601",
+            "budget": "1,200",
+            "ratio": 0.501,
+            "ratio_clamped": 0.501,
+            "pct": 50,
+            "bar_color": "#7C3AED",
+            "over": false,
+            "remaining_label": "Restante ¥599"
+          },
+          {
+            "key": "Moradia",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1",
+            "spent": "2,586",
+            "budget": "2,000",
+            "ratio": 1.293,
+            "ratio_clamped": 1.0,
+            "pct": 129,
+            "bar_color": "#DC2626",
+            "over": true,
+            "remaining_label": "Excedido ¥586"
+          },
+          {
+            "key": "Lazer",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3",
+            "spent": "276",
+            "budget": "500",
+            "ratio": 0.552,
+            "ratio_clamped": 0.552,
+            "pct": 55,
+            "bar_color": "#EC4899",
+            "over": false,
+            "remaining_label": "Restante ¥224"
+          },
+          {
+            "key": "Saúde",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7",
+            "spent": "345",
+            "budget": "400",
+            "ratio": 0.863,
+            "ratio_clamped": 0.863,
+            "pct": 86,
+            "bar_color": "#F59E0B",
+            "over": false,
+            "remaining_label": "Restante ¥55"
+          },
+          {
+            "key": "Educação",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5",
+            "spent": "291",
+            "budget": "300",
+            "ratio": 0.97,
+            "ratio_clamped": 0.97,
+            "pct": 97,
+            "bar_color": "#10B981",
+            "over": false,
+            "remaining_label": "Restante ¥9"
+          },
+          {
+            "key": "Telecom",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF",
+            "spent": "157",
+            "budget": "200",
+            "ratio": 0.785,
+            "ratio_clamped": 0.785,
+            "pct": 78,
+            "bar_color": "#6366F1",
+            "over": false,
+            "remaining_label": "Restante ¥43"
+          },
+          {
+            "key": "Outros",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB",
+            "spent": "0",
+            "budget": "200",
+            "ratio": 0.0,
+            "ratio_clamped": 0.0,
+            "pct": 0,
+            "bar_color": "#6B7280",
+            "over": false,
+            "remaining_label": "Restante ¥200"
+          }
+        ],
+        "ca": [
+          {
+            "key": "Menjar",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2",
+            "spent": "240",
+            "budget": "1,500",
+            "ratio": 0.16,
+            "ratio_clamped": 0.16,
+            "pct": 16,
+            "bar_color": "#DC2626",
+            "over": false,
+            "remaining_label": "Restant ¥1,260"
+          },
+          {
+            "key": "Transport",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE",
+            "spent": "364",
+            "budget": "600",
+            "ratio": 0.607,
+            "ratio_clamped": 0.607,
+            "pct": 61,
+            "bar_color": "#2563EB",
+            "over": false,
+            "remaining_label": "Restant ¥236"
+          },
+          {
+            "key": "Compres",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE",
+            "spent": "601",
+            "budget": "1,200",
+            "ratio": 0.501,
+            "ratio_clamped": 0.501,
+            "pct": 50,
+            "bar_color": "#7C3AED",
+            "over": false,
+            "remaining_label": "Restant ¥599"
+          },
+          {
+            "key": "Llar",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1",
+            "spent": "2,586",
+            "budget": "2,000",
+            "ratio": 1.293,
+            "ratio_clamped": 1.0,
+            "pct": 129,
+            "bar_color": "#DC2626",
+            "over": true,
+            "remaining_label": "Excedit ¥586"
+          },
+          {
+            "key": "Oci",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3",
+            "spent": "276",
+            "budget": "500",
+            "ratio": 0.552,
+            "ratio_clamped": 0.552,
+            "pct": 55,
+            "bar_color": "#EC4899",
+            "over": false,
+            "remaining_label": "Restant ¥224"
+          },
+          {
+            "key": "Salut",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7",
+            "spent": "345",
+            "budget": "400",
+            "ratio": 0.863,
+            "ratio_clamped": 0.863,
+            "pct": 86,
+            "bar_color": "#F59E0B",
+            "over": false,
+            "remaining_label": "Restant ¥55"
+          },
+          {
+            "key": "Educació",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5",
+            "spent": "291",
+            "budget": "300",
+            "ratio": 0.97,
+            "ratio_clamped": 0.97,
+            "pct": 97,
+            "bar_color": "#10B981",
+            "over": false,
+            "remaining_label": "Restant ¥9"
+          },
+          {
+            "key": "Comunicacions",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF",
+            "spent": "157",
+            "budget": "200",
+            "ratio": 0.785,
+            "ratio_clamped": 0.785,
+            "pct": 78,
+            "bar_color": "#6366F1",
+            "over": false,
+            "remaining_label": "Restant ¥43"
+          },
+          {
+            "key": "Altres",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB",
+            "spent": "0",
+            "budget": "200",
+            "ratio": 0.0,
+            "ratio_clamped": 0.0,
+            "pct": 0,
+            "bar_color": "#6B7280",
+            "over": false,
+            "remaining_label": "Restant ¥200"
+          }
+        ],
+        "hi": [
+          {
+            "key": "भोजन",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2",
+            "spent": "240",
+            "budget": "1,500",
+            "ratio": 0.16,
+            "ratio_clamped": 0.16,
+            "pct": 16,
+            "bar_color": "#DC2626",
+            "over": false,
+            "remaining_label": "शेष ¥1,260"
+          },
+          {
+            "key": "परिवहन",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE",
+            "spent": "364",
+            "budget": "600",
+            "ratio": 0.607,
+            "ratio_clamped": 0.607,
+            "pct": 61,
+            "bar_color": "#2563EB",
+            "over": false,
+            "remaining_label": "शेष ¥236"
+          },
+          {
+            "key": "खरीदारी",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE",
+            "spent": "601",
+            "budget": "1,200",
+            "ratio": 0.501,
+            "ratio_clamped": 0.501,
+            "pct": 50,
+            "bar_color": "#7C3AED",
+            "over": false,
+            "remaining_label": "शेष ¥599"
+          },
+          {
+            "key": "घर",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1",
+            "spent": "2,586",
+            "budget": "2,000",
+            "ratio": 1.293,
+            "ratio_clamped": 1.0,
+            "pct": 129,
+            "bar_color": "#DC2626",
+            "over": true,
+            "remaining_label": "अधिक ¥586"
+          },
+          {
+            "key": "मनोरंजन",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3",
+            "spent": "276",
+            "budget": "500",
+            "ratio": 0.552,
+            "ratio_clamped": 0.552,
+            "pct": 55,
+            "bar_color": "#EC4899",
+            "over": false,
+            "remaining_label": "शेष ¥224"
+          },
+          {
+            "key": "चिकित्सा",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7",
+            "spent": "345",
+            "budget": "400",
+            "ratio": 0.863,
+            "ratio_clamped": 0.863,
+            "pct": 86,
+            "bar_color": "#F59E0B",
+            "over": false,
+            "remaining_label": "शेष ¥55"
+          },
+          {
+            "key": "शिक्षा",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5",
+            "spent": "291",
+            "budget": "300",
+            "ratio": 0.97,
+            "ratio_clamped": 0.97,
+            "pct": 97,
+            "bar_color": "#10B981",
+            "over": false,
+            "remaining_label": "शेष ¥9"
+          },
+          {
+            "key": "संचार",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF",
+            "spent": "157",
+            "budget": "200",
+            "ratio": 0.785,
+            "ratio_clamped": 0.785,
+            "pct": 78,
+            "bar_color": "#6366F1",
+            "over": false,
+            "remaining_label": "शेष ¥43"
+          },
+          {
+            "key": "अन्य",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB",
+            "spent": "0",
+            "budget": "200",
+            "ratio": 0.0,
+            "ratio_clamped": 0.0,
+            "pct": 0,
+            "bar_color": "#6B7280",
+            "over": false,
+            "remaining_label": "शेष ¥200"
+          }
+        ],
+        "ko": [
+          {
+            "key": "식비",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2",
+            "spent": "240",
+            "budget": "1,500",
+            "ratio": 0.16,
+            "ratio_clamped": 0.16,
+            "pct": 16,
+            "bar_color": "#DC2626",
+            "over": false,
+            "remaining_label": "남음 ¥1,260"
+          },
+          {
+            "key": "교통",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE",
+            "spent": "364",
+            "budget": "600",
+            "ratio": 0.607,
+            "ratio_clamped": 0.607,
+            "pct": 61,
+            "bar_color": "#2563EB",
+            "over": false,
+            "remaining_label": "남음 ¥236"
+          },
+          {
+            "key": "쇼핑",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE",
+            "spent": "601",
+            "budget": "1,200",
+            "ratio": 0.501,
+            "ratio_clamped": 0.501,
+            "pct": 50,
+            "bar_color": "#7C3AED",
+            "over": false,
+            "remaining_label": "남음 ¥599"
+          },
+          {
+            "key": "주거",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1",
+            "spent": "2,586",
+            "budget": "2,000",
+            "ratio": 1.293,
+            "ratio_clamped": 1.0,
+            "pct": 129,
+            "bar_color": "#DC2626",
+            "over": true,
+            "remaining_label": "초과 ¥586"
+          },
+          {
+            "key": "여가",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3",
+            "spent": "276",
+            "budget": "500",
+            "ratio": 0.552,
+            "ratio_clamped": 0.552,
+            "pct": 55,
+            "bar_color": "#EC4899",
+            "over": false,
+            "remaining_label": "남음 ¥224"
+          },
+          {
+            "key": "의료",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7",
+            "spent": "345",
+            "budget": "400",
+            "ratio": 0.863,
+            "ratio_clamped": 0.863,
+            "pct": 86,
+            "bar_color": "#F59E0B",
+            "over": false,
+            "remaining_label": "남음 ¥55"
+          },
+          {
+            "key": "교육",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5",
+            "spent": "291",
+            "budget": "300",
+            "ratio": 0.97,
+            "ratio_clamped": 0.97,
+            "pct": 97,
+            "bar_color": "#10B981",
+            "over": false,
+            "remaining_label": "남음 ¥9"
+          },
+          {
+            "key": "통신",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF",
+            "spent": "157",
+            "budget": "200",
+            "ratio": 0.785,
+            "ratio_clamped": 0.785,
+            "pct": 78,
+            "bar_color": "#6366F1",
+            "over": false,
+            "remaining_label": "남음 ¥43"
+          },
+          {
+            "key": "기타",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB",
+            "spent": "0",
+            "budget": "200",
+            "ratio": 0.0,
+            "ratio_clamped": 0.0,
+            "pct": 0,
+            "bar_color": "#6B7280",
+            "over": false,
+            "remaining_label": "남음 ¥200"
+          }
+        ],
+        "ja": [
+          {
+            "key": "食費",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2",
+            "spent": "240",
+            "budget": "1,500",
+            "ratio": 0.16,
+            "ratio_clamped": 0.16,
+            "pct": 16,
+            "bar_color": "#DC2626",
+            "over": false,
+            "remaining_label": "残り ¥1,260"
+          },
+          {
+            "key": "交通",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE",
+            "spent": "364",
+            "budget": "600",
+            "ratio": 0.607,
+            "ratio_clamped": 0.607,
+            "pct": 61,
+            "bar_color": "#2563EB",
+            "over": false,
+            "remaining_label": "残り ¥236"
+          },
+          {
+            "key": "買い物",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE",
+            "spent": "601",
+            "budget": "1,200",
+            "ratio": 0.501,
+            "ratio_clamped": 0.501,
+            "pct": 50,
+            "bar_color": "#7C3AED",
+            "over": false,
+            "remaining_label": "残り ¥599"
+          },
+          {
+            "key": "住まい",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1",
+            "spent": "2,586",
+            "budget": "2,000",
+            "ratio": 1.293,
+            "ratio_clamped": 1.0,
+            "pct": 129,
+            "bar_color": "#DC2626",
+            "over": true,
+            "remaining_label": "超過 ¥586"
+          },
+          {
+            "key": "娯楽",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3",
+            "spent": "276",
+            "budget": "500",
+            "ratio": 0.552,
+            "ratio_clamped": 0.552,
+            "pct": 55,
+            "bar_color": "#EC4899",
+            "over": false,
+            "remaining_label": "残り ¥224"
+          },
+          {
+            "key": "医療",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7",
+            "spent": "345",
+            "budget": "400",
+            "ratio": 0.863,
+            "ratio_clamped": 0.863,
+            "pct": 86,
+            "bar_color": "#F59E0B",
+            "over": false,
+            "remaining_label": "残り ¥55"
+          },
+          {
+            "key": "教育",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5",
+            "spent": "291",
+            "budget": "300",
+            "ratio": 0.97,
+            "ratio_clamped": 0.97,
+            "pct": 97,
+            "bar_color": "#10B981",
+            "over": false,
+            "remaining_label": "残り ¥9"
+          },
+          {
+            "key": "通信",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF",
+            "spent": "157",
+            "budget": "200",
+            "ratio": 0.785,
+            "ratio_clamped": 0.785,
+            "pct": 78,
+            "bar_color": "#6366F1",
+            "over": false,
+            "remaining_label": "残り ¥43"
+          },
+          {
+            "key": "その他",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB",
+            "spent": "0",
+            "budget": "200",
+            "ratio": 0.0,
+            "ratio_clamped": 0.0,
+            "pct": 0,
+            "bar_color": "#6B7280",
+            "over": false,
+            "remaining_label": "残り ¥200"
+          }
+        ],
+        "it": [
+          {
+            "key": "Cibo",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2",
+            "spent": "240",
+            "budget": "1,500",
+            "ratio": 0.16,
+            "ratio_clamped": 0.16,
+            "pct": 16,
+            "bar_color": "#DC2626",
+            "over": false,
+            "remaining_label": "Rimanente ¥1,260"
+          },
+          {
+            "key": "Trasporti",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE",
+            "spent": "364",
+            "budget": "600",
+            "ratio": 0.607,
+            "ratio_clamped": 0.607,
+            "pct": 61,
+            "bar_color": "#2563EB",
+            "over": false,
+            "remaining_label": "Rimanente ¥236"
+          },
+          {
+            "key": "Acquisti",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE",
+            "spent": "601",
+            "budget": "1,200",
+            "ratio": 0.501,
+            "ratio_clamped": 0.501,
+            "pct": 50,
+            "bar_color": "#7C3AED",
+            "over": false,
+            "remaining_label": "Rimanente ¥599"
+          },
+          {
+            "key": "Casa",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1",
+            "spent": "2,586",
+            "budget": "2,000",
+            "ratio": 1.293,
+            "ratio_clamped": 1.0,
+            "pct": 129,
+            "bar_color": "#DC2626",
+            "over": true,
+            "remaining_label": "Sforato ¥586"
+          },
+          {
+            "key": "Svago",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3",
+            "spent": "276",
+            "budget": "500",
+            "ratio": 0.552,
+            "ratio_clamped": 0.552,
+            "pct": 55,
+            "bar_color": "#EC4899",
+            "over": false,
+            "remaining_label": "Rimanente ¥224"
+          },
+          {
+            "key": "Salute",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7",
+            "spent": "345",
+            "budget": "400",
+            "ratio": 0.863,
+            "ratio_clamped": 0.863,
+            "pct": 86,
+            "bar_color": "#F59E0B",
+            "over": false,
+            "remaining_label": "Rimanente ¥55"
+          },
+          {
+            "key": "Istruzione",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5",
+            "spent": "291",
+            "budget": "300",
+            "ratio": 0.97,
+            "ratio_clamped": 0.97,
+            "pct": 97,
+            "bar_color": "#10B981",
+            "over": false,
+            "remaining_label": "Rimanente ¥9"
+          },
+          {
+            "key": "Comunicazioni",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF",
+            "spent": "157",
+            "budget": "200",
+            "ratio": 0.785,
+            "ratio_clamped": 0.785,
+            "pct": 78,
+            "bar_color": "#6366F1",
+            "over": false,
+            "remaining_label": "Rimanente ¥43"
+          },
+          {
+            "key": "Altro",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB",
+            "spent": "0",
+            "budget": "200",
+            "ratio": 0.0,
+            "ratio_clamped": 0.0,
+            "pct": 0,
+            "bar_color": "#6B7280",
+            "over": false,
+            "remaining_label": "Rimanente ¥200"
+          }
+        ]
+      },
       "txns": [
         {
           "id": "t01",
@@ -638,7 +3086,3826 @@
           "accent": "#6B7280",
           "tint": "#E5E7EB"
         }
-      ]
+      ],
+      "_seed_txns": {
+        "zh": [
+          {
+            "id": "t01",
+            "title": "公司月薪",
+            "amount": "+¥12,000",
+            "raw_amount": 12000,
+            "abs_amount": 12000,
+            "category": "工资",
+            "type": "income",
+            "date": "06-05 09:00",
+            "days_ago": 20,
+            "note": "六月初发薪，扣除五险一金。",
+            "icon": "payments",
+            "accent": "#059669",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t02",
+            "title": "早餐豆浆油条",
+            "amount": "-¥12",
+            "raw_amount": -12,
+            "abs_amount": 12,
+            "category": "餐饮",
+            "type": "expense",
+            "date": "今天 08:15",
+            "days_ago": 0,
+            "note": "路边摊：豆浆+油条+茶叶蛋。",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t03",
+            "title": "午餐外卖",
+            "amount": "-¥38",
+            "raw_amount": -38,
+            "abs_amount": 38,
+            "category": "餐饮",
+            "type": "expense",
+            "date": "今天 12:30",
+            "days_ago": 0,
+            "note": "工作日午餐拼单：麻辣烫。",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t04",
+            "title": "晚餐日料",
+            "amount": "-¥168",
+            "raw_amount": -168,
+            "abs_amount": 168,
+            "category": "餐饮",
+            "type": "expense",
+            "date": "昨天 19:20",
+            "days_ago": 1,
+            "note": "项目完成后部门聚餐，AA 后实付。",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t05",
+            "title": "咖啡",
+            "amount": "-¥22",
+            "raw_amount": -22,
+            "abs_amount": 22,
+            "category": "餐饮",
+            "type": "expense",
+            "date": "昨天 15:00",
+            "days_ago": 1,
+            "note": "美式 + 司康，下午茶。",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t06",
+            "title": "地铁通勤",
+            "amount": "-¥8",
+            "raw_amount": -8,
+            "abs_amount": 8,
+            "category": "交通",
+            "type": "expense",
+            "date": "今天 08:40",
+            "days_ago": 0,
+            "note": "单程票：家 → 公司。",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t07",
+            "title": "打车回家",
+            "amount": "-¥36",
+            "raw_amount": -36,
+            "abs_amount": 36,
+            "category": "交通",
+            "type": "expense",
+            "date": "昨天 22:10",
+            "days_ago": 1,
+            "note": "加班到深夜，地铁停了。",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t08",
+            "title": "加油",
+            "amount": "-¥320",
+            "raw_amount": -320,
+            "abs_amount": 320,
+            "category": "交通",
+            "type": "expense",
+            "date": "06-22 18:00",
+            "days_ago": 3,
+            "note": "中石化 95#，加满 40L。",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t09",
+            "title": "超市日用",
+            "amount": "-¥142",
+            "raw_amount": -142,
+            "abs_amount": 142,
+            "category": "购物",
+            "type": "expense",
+            "date": "06-22 14:30",
+            "days_ago": 3,
+            "note": "洗发水、纸巾、厨房清洁。",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t10",
+            "title": "夏装",
+            "amount": "-¥459",
+            "raw_amount": -459,
+            "abs_amount": 459,
+            "category": "购物",
+            "type": "expense",
+            "date": "06-20 16:00",
+            "days_ago": 5,
+            "note": "优衣库短袖+短裤两套。",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t11",
+            "title": "电费",
+            "amount": "-¥186",
+            "raw_amount": -186,
+            "abs_amount": 186,
+            "category": "居家",
+            "type": "expense",
+            "date": "06-18 11:20",
+            "days_ago": 7,
+            "note": "夏季空调使用，5月账单。",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t12",
+            "title": "房租",
+            "amount": "-¥2,400",
+            "raw_amount": -2400,
+            "abs_amount": 2400,
+            "category": "居家",
+            "type": "expense",
+            "date": "06-01 10:00",
+            "days_ago": 24,
+            "note": "整租一居室月租，转账房东。",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t13",
+            "title": "网费",
+            "amount": "-¥99",
+            "raw_amount": -99,
+            "abs_amount": 99,
+            "category": "通讯",
+            "type": "expense",
+            "date": "06-12 09:00",
+            "days_ago": 13,
+            "note": "电信宽带 200M，季度缴。",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t14",
+            "title": "话费",
+            "amount": "-¥58",
+            "raw_amount": -58,
+            "abs_amount": 58,
+            "category": "通讯",
+            "type": "expense",
+            "date": "06-08 10:30",
+            "days_ago": 17,
+            "note": "全球通 99 套餐，自动续。",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t15",
+            "title": "电影票",
+            "amount": "-¥78",
+            "raw_amount": -78,
+            "abs_amount": 78,
+            "category": "娱乐",
+            "type": "expense",
+            "date": "06-21 20:30",
+            "days_ago": 4,
+            "note": "IMAX《速度与激情10》两张。",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t16",
+            "title": "健身房",
+            "amount": "-¥198",
+            "raw_amount": -198,
+            "abs_amount": 198,
+            "category": "娱乐",
+            "type": "expense",
+            "date": "06-15 19:00",
+            "days_ago": 10,
+            "note": "续费月卡，不限次数。",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t17",
+            "title": "感冒药",
+            "amount": "-¥65",
+            "raw_amount": -65,
+            "abs_amount": 65,
+            "category": "医疗",
+            "type": "expense",
+            "date": "06-19 12:00",
+            "days_ago": 6,
+            "note": "药店购：复方感冒灵+维C。",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t18",
+            "title": "牙科复诊",
+            "amount": "-¥280",
+            "raw_amount": -280,
+            "abs_amount": 280,
+            "category": "医疗",
+            "type": "expense",
+            "date": "06-10 15:00",
+            "days_ago": 15,
+            "note": "补牙复查 + 超声波洁牙。",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t19",
+            "title": "技术书",
+            "amount": "-¥92",
+            "raw_amount": -92,
+            "abs_amount": 92,
+            "category": "学习",
+            "type": "expense",
+            "date": "06-17 21:00",
+            "days_ago": 8,
+            "note": "《数据密集型应用系统设计》。",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t20",
+            "title": "在线课程",
+            "amount": "-¥199",
+            "raw_amount": -199,
+            "abs_amount": 199,
+            "category": "学习",
+            "type": "expense",
+            "date": "06-14 22:00",
+            "days_ago": 11,
+            "note": "极客时间年度会员。",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t21",
+            "title": "基金定投",
+            "amount": "+¥2,000",
+            "raw_amount": 2000,
+            "abs_amount": 2000,
+            "category": "理财",
+            "type": "income",
+            "date": "06-05 14:00",
+            "days_ago": 20,
+            "note": "沪深300指数基金，月定投。",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t22",
+            "title": "利息收入",
+            "amount": "+¥36",
+            "raw_amount": 36,
+            "abs_amount": 36,
+            "category": "理财",
+            "type": "income",
+            "date": "06-23 09:00",
+            "days_ago": 2,
+            "note": "货币基金 T+1 结算。",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t23",
+            "title": "同事请客",
+            "amount": "-¥0",
+            "raw_amount": 0,
+            "abs_amount": 0,
+            "category": "其他",
+            "type": "expense",
+            "date": "06-09 12:30",
+            "days_ago": 16,
+            "note": "项目上线庆祝，AA 已清。",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB"
+          }
+        ],
+        "en": [
+          {
+            "id": "t01",
+            "title": "Monthly salary",
+            "amount": "+¥12,000",
+            "raw_amount": 12000,
+            "abs_amount": 12000,
+            "category": "Salary",
+            "type": "income",
+            "date": "06-05 09:00",
+            "days_ago": 20,
+            "note": "Paid in early June, after social insurance and housing fund.",
+            "icon": "payments",
+            "accent": "#059669",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t02",
+            "title": "Breakfast",
+            "amount": "-¥12",
+            "raw_amount": -12,
+            "abs_amount": 12,
+            "category": "Dining",
+            "type": "expense",
+            "date": "Today 08:15",
+            "days_ago": 0,
+            "note": "Street stall: soy milk, fried dough stick, tea egg.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t03",
+            "title": "Lunch delivery",
+            "amount": "-¥38",
+            "raw_amount": -38,
+            "abs_amount": 38,
+            "category": "Dining",
+            "type": "expense",
+            "date": "Today 12:30",
+            "days_ago": 0,
+            "note": "Weekday lunch group order: malatang.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t04",
+            "title": "Japanese dinner",
+            "amount": "-¥168",
+            "raw_amount": -168,
+            "abs_amount": 168,
+            "category": "Dining",
+            "type": "expense",
+            "date": "Yesterday 19:20",
+            "days_ago": 1,
+            "note": "Team dinner after the project, bill split.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t05",
+            "title": "Coffee",
+            "amount": "-¥22",
+            "raw_amount": -22,
+            "abs_amount": 22,
+            "category": "Dining",
+            "type": "expense",
+            "date": "Yesterday 15:00",
+            "days_ago": 1,
+            "note": "Americano and a scone, afternoon tea.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t06",
+            "title": "Subway commute",
+            "amount": "-¥8",
+            "raw_amount": -8,
+            "abs_amount": 8,
+            "category": "Transport",
+            "type": "expense",
+            "date": "Today 08:40",
+            "days_ago": 0,
+            "note": "One-way ticket: home to office.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t07",
+            "title": "Taxi home",
+            "amount": "-¥36",
+            "raw_amount": -36,
+            "abs_amount": 36,
+            "category": "Transport",
+            "type": "expense",
+            "date": "Yesterday 22:10",
+            "days_ago": 1,
+            "note": "Worked late; the subway had stopped.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t08",
+            "title": "Refuel",
+            "amount": "-¥320",
+            "raw_amount": -320,
+            "abs_amount": 320,
+            "category": "Transport",
+            "type": "expense",
+            "date": "06-22 18:00",
+            "days_ago": 3,
+            "note": "Sinopec 95#, filled up 40L.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t09",
+            "title": "Groceries",
+            "amount": "-¥142",
+            "raw_amount": -142,
+            "abs_amount": 142,
+            "category": "Shopping",
+            "type": "expense",
+            "date": "06-22 14:30",
+            "days_ago": 3,
+            "note": "Shampoo, tissues, kitchen cleaner.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t10",
+            "title": "Summer clothes",
+            "amount": "-¥459",
+            "raw_amount": -459,
+            "abs_amount": 459,
+            "category": "Shopping",
+            "type": "expense",
+            "date": "06-20 16:00",
+            "days_ago": 5,
+            "note": "Uniqlo: two sets of tee and shorts.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t11",
+            "title": "Electricity",
+            "amount": "-¥186",
+            "raw_amount": -186,
+            "abs_amount": 186,
+            "category": "Household",
+            "type": "expense",
+            "date": "06-18 11:20",
+            "days_ago": 7,
+            "note": "Summer AC usage, May bill.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t12",
+            "title": "Rent",
+            "amount": "-¥2,400",
+            "raw_amount": -2400,
+            "abs_amount": 2400,
+            "category": "Household",
+            "type": "expense",
+            "date": "06-01 10:00",
+            "days_ago": 24,
+            "note": "Monthly rent for a one-bedroom, paid to landlord.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t13",
+            "title": "Internet",
+            "amount": "-¥99",
+            "raw_amount": -99,
+            "abs_amount": 99,
+            "category": "Telecom",
+            "type": "expense",
+            "date": "06-12 09:00",
+            "days_ago": 13,
+            "note": "Telecom broadband 200M, paid quarterly.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t14",
+            "title": "Phone bill",
+            "amount": "-¥58",
+            "raw_amount": -58,
+            "abs_amount": 58,
+            "category": "Telecom",
+            "type": "expense",
+            "date": "06-08 10:30",
+            "days_ago": 17,
+            "note": "¥99 mobile plan, auto-renew.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t15",
+            "title": "Movie tickets",
+            "amount": "-¥78",
+            "raw_amount": -78,
+            "abs_amount": 78,
+            "category": "Entertainment",
+            "type": "expense",
+            "date": "06-21 20:30",
+            "days_ago": 4,
+            "note": "Two IMAX tickets for Fast & Furious 10.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t16",
+            "title": "Gym",
+            "amount": "-¥198",
+            "raw_amount": -198,
+            "abs_amount": 198,
+            "category": "Entertainment",
+            "type": "expense",
+            "date": "06-15 19:00",
+            "days_ago": 10,
+            "note": "Renewed monthly pass, unlimited visits.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t17",
+            "title": "Cold medicine",
+            "amount": "-¥65",
+            "raw_amount": -65,
+            "abs_amount": 65,
+            "category": "Medical",
+            "type": "expense",
+            "date": "06-19 12:00",
+            "days_ago": 6,
+            "note": "From pharmacy: cold remedy and vitamin C.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t18",
+            "title": "Dental follow-up",
+            "amount": "-¥280",
+            "raw_amount": -280,
+            "abs_amount": 280,
+            "category": "Medical",
+            "type": "expense",
+            "date": "06-10 15:00",
+            "days_ago": 15,
+            "note": "Filling check-up and ultrasonic cleaning.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t19",
+            "title": "Tech book",
+            "amount": "-¥92",
+            "raw_amount": -92,
+            "abs_amount": 92,
+            "category": "Education",
+            "type": "expense",
+            "date": "06-17 21:00",
+            "days_ago": 8,
+            "note": "Designing Data-Intensive Applications.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t20",
+            "title": "Online course",
+            "amount": "-¥199",
+            "raw_amount": -199,
+            "abs_amount": 199,
+            "category": "Education",
+            "type": "expense",
+            "date": "06-14 22:00",
+            "days_ago": 11,
+            "note": "GeekTime annual membership.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t21",
+            "title": "Fund auto-invest",
+            "amount": "+¥2,000",
+            "raw_amount": 2000,
+            "abs_amount": 2000,
+            "category": "Investments",
+            "type": "income",
+            "date": "06-05 14:00",
+            "days_ago": 20,
+            "note": "CSI 300 index fund, monthly plan.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t22",
+            "title": "Interest income",
+            "amount": "+¥36",
+            "raw_amount": 36,
+            "abs_amount": 36,
+            "category": "Investments",
+            "type": "income",
+            "date": "06-23 09:00",
+            "days_ago": 2,
+            "note": "Money-market fund, T+1 settlement.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t23",
+            "title": "Colleague treated",
+            "amount": "-¥0",
+            "raw_amount": 0,
+            "abs_amount": 0,
+            "category": "Other",
+            "type": "expense",
+            "date": "06-09 12:30",
+            "days_ago": 16,
+            "note": "Launch celebration, bill already settled.",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB"
+          }
+        ],
+        "de": [
+          {
+            "id": "t01",
+            "title": "Monatsgehalt",
+            "amount": "+¥12,000",
+            "raw_amount": 12000,
+            "abs_amount": 12000,
+            "category": "Gehalt",
+            "type": "income",
+            "date": "06-05 09:00",
+            "days_ago": 20,
+            "note": "Anfang Juni ausgezahlt, nach Sozial- und Wohnungsabgaben.",
+            "icon": "payments",
+            "accent": "#059669",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t02",
+            "title": "Frühstück",
+            "amount": "-¥12",
+            "raw_amount": -12,
+            "abs_amount": 12,
+            "category": "Essen",
+            "type": "expense",
+            "date": "Heute 08:15",
+            "days_ago": 0,
+            "note": "Straßenstand: Sojamilch, Ölkringel, Tee-Ei.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t03",
+            "title": "Mittagessen (Lieferung)",
+            "amount": "-¥38",
+            "raw_amount": -38,
+            "abs_amount": 38,
+            "category": "Essen",
+            "type": "expense",
+            "date": "Heute 12:30",
+            "days_ago": 0,
+            "note": "Sammelbestellung am Arbeitstag: Malatang.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t04",
+            "title": "Japanisches Abendessen",
+            "amount": "-¥168",
+            "raw_amount": -168,
+            "abs_amount": 168,
+            "category": "Essen",
+            "type": "expense",
+            "date": "Gestern 19:20",
+            "days_ago": 1,
+            "note": "Team-Essen nach dem Projekt, Rechnung geteilt.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t05",
+            "title": "Kaffee",
+            "amount": "-¥22",
+            "raw_amount": -22,
+            "abs_amount": 22,
+            "category": "Essen",
+            "type": "expense",
+            "date": "Gestern 15:00",
+            "days_ago": 1,
+            "note": "Americano und ein Scone, Nachmittagstee.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t06",
+            "title": "U-Bahn-Pendeln",
+            "amount": "-¥8",
+            "raw_amount": -8,
+            "abs_amount": 8,
+            "category": "Transport",
+            "type": "expense",
+            "date": "Heute 08:40",
+            "days_ago": 0,
+            "note": "Einzelfahrt: Zuhause zum Büro.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t07",
+            "title": "Taxi nach Hause",
+            "amount": "-¥36",
+            "raw_amount": -36,
+            "abs_amount": 36,
+            "category": "Transport",
+            "type": "expense",
+            "date": "Gestern 22:10",
+            "days_ago": 1,
+            "note": "Bis spät gearbeitet; U-Bahn fuhr nicht mehr.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t08",
+            "title": "Tanken",
+            "amount": "-¥320",
+            "raw_amount": -320,
+            "abs_amount": 320,
+            "category": "Transport",
+            "type": "expense",
+            "date": "06-22 18:00",
+            "days_ago": 3,
+            "note": "Sinopec 95#, 40L vollgetankt.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t09",
+            "title": "Supermarkt",
+            "amount": "-¥142",
+            "raw_amount": -142,
+            "abs_amount": 142,
+            "category": "Einkaufen",
+            "type": "expense",
+            "date": "06-22 14:30",
+            "days_ago": 3,
+            "note": "Shampoo, Taschentücher, Küchenreiniger.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t10",
+            "title": "Sommerkleidung",
+            "amount": "-¥459",
+            "raw_amount": -459,
+            "abs_amount": 459,
+            "category": "Einkaufen",
+            "type": "expense",
+            "date": "06-20 16:00",
+            "days_ago": 5,
+            "note": "Uniqlo: zwei Sets T-Shirt und Shorts.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t11",
+            "title": "Strom",
+            "amount": "-¥186",
+            "raw_amount": -186,
+            "abs_amount": 186,
+            "category": "Wohnen",
+            "type": "expense",
+            "date": "06-18 11:20",
+            "days_ago": 7,
+            "note": "Klimaanlage im Sommer, Mai-Rechnung.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t12",
+            "title": "Miete",
+            "amount": "-¥2,400",
+            "raw_amount": -2400,
+            "abs_amount": 2400,
+            "category": "Wohnen",
+            "type": "expense",
+            "date": "06-01 10:00",
+            "days_ago": 24,
+            "note": "Monatsmiete für Einzimmerwohnung, an Vermieter.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t13",
+            "title": "Internet",
+            "amount": "-¥99",
+            "raw_amount": -99,
+            "abs_amount": 99,
+            "category": "Kommunikation",
+            "type": "expense",
+            "date": "06-12 09:00",
+            "days_ago": 13,
+            "note": "Breitband 200M, vierteljährlich gezahlt.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t14",
+            "title": "Handyrechnung",
+            "amount": "-¥58",
+            "raw_amount": -58,
+            "abs_amount": 58,
+            "category": "Kommunikation",
+            "type": "expense",
+            "date": "06-08 10:30",
+            "days_ago": 17,
+            "note": "Mobilfunktarif ¥99, automatische Verlängerung.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t15",
+            "title": "Kinotickets",
+            "amount": "-¥78",
+            "raw_amount": -78,
+            "abs_amount": 78,
+            "category": "Unterhaltung",
+            "type": "expense",
+            "date": "06-21 20:30",
+            "days_ago": 4,
+            "note": "Zwei IMAX-Tickets für Fast & Furious 10.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t16",
+            "title": "Fitnessstudio",
+            "amount": "-¥198",
+            "raw_amount": -198,
+            "abs_amount": 198,
+            "category": "Unterhaltung",
+            "type": "expense",
+            "date": "06-15 19:00",
+            "days_ago": 10,
+            "note": "Monatskarte verlängert, unbegrenzt.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t17",
+            "title": "Erkältungsmittel",
+            "amount": "-¥65",
+            "raw_amount": -65,
+            "abs_amount": 65,
+            "category": "Gesundheit",
+            "type": "expense",
+            "date": "06-19 12:00",
+            "days_ago": 6,
+            "note": "Aus der Apotheke: Erkältungsmittel und Vitamin C.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t18",
+            "title": "Zahnarzt-Nachsorge",
+            "amount": "-¥280",
+            "raw_amount": -280,
+            "abs_amount": 280,
+            "category": "Gesundheit",
+            "type": "expense",
+            "date": "06-10 15:00",
+            "days_ago": 15,
+            "note": "Füllungskontrolle und Ultraschallreinigung.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t19",
+            "title": "Fachbuch",
+            "amount": "-¥92",
+            "raw_amount": -92,
+            "abs_amount": 92,
+            "category": "Bildung",
+            "type": "expense",
+            "date": "06-17 21:00",
+            "days_ago": 8,
+            "note": "Designing Data-Intensive Applications.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t20",
+            "title": "Online-Kurs",
+            "amount": "-¥199",
+            "raw_amount": -199,
+            "abs_amount": 199,
+            "category": "Bildung",
+            "type": "expense",
+            "date": "06-14 22:00",
+            "days_ago": 11,
+            "note": "GeekTime-Jahresmitgliedschaft.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t21",
+            "title": "Fonds-Sparplan",
+            "amount": "+¥2,000",
+            "raw_amount": 2000,
+            "abs_amount": 2000,
+            "category": "Geldanlage",
+            "type": "income",
+            "date": "06-05 14:00",
+            "days_ago": 20,
+            "note": "CSI-300-Indexfonds, monatlich.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t22",
+            "title": "Zinsertrag",
+            "amount": "+¥36",
+            "raw_amount": 36,
+            "abs_amount": 36,
+            "category": "Geldanlage",
+            "type": "income",
+            "date": "06-23 09:00",
+            "days_ago": 2,
+            "note": "Geldmarktfonds, T+1-Abrechnung.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t23",
+            "title": "Kollege lud ein",
+            "amount": "-¥0",
+            "raw_amount": 0,
+            "abs_amount": 0,
+            "category": "Sonstiges",
+            "type": "expense",
+            "date": "06-09 12:30",
+            "days_ago": 16,
+            "note": "Launch-Feier, Rechnung schon beglichen.",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB"
+          }
+        ],
+        "es": [
+          {
+            "id": "t01",
+            "title": "Salario mensual",
+            "amount": "+¥12,000",
+            "raw_amount": 12000,
+            "abs_amount": 12000,
+            "category": "Salario",
+            "type": "income",
+            "date": "06-05 09:00",
+            "days_ago": 20,
+            "note": "Pagado a principios de junio, tras cargas sociales.",
+            "icon": "payments",
+            "accent": "#059669",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t02",
+            "title": "Desayuno",
+            "amount": "-¥12",
+            "raw_amount": -12,
+            "abs_amount": 12,
+            "category": "Comida",
+            "type": "expense",
+            "date": "Hoy 08:15",
+            "days_ago": 0,
+            "note": "Puesto callejero: leche de soja, masa frita, huevo al té.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t03",
+            "title": "Almuerzo a domicilio",
+            "amount": "-¥38",
+            "raw_amount": -38,
+            "abs_amount": 38,
+            "category": "Comida",
+            "type": "expense",
+            "date": "Hoy 12:30",
+            "days_ago": 0,
+            "note": "Pedido grupal entre semana: malatang.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t04",
+            "title": "Cena japonesa",
+            "amount": "-¥168",
+            "raw_amount": -168,
+            "abs_amount": 168,
+            "category": "Comida",
+            "type": "expense",
+            "date": "Ayer 19:20",
+            "days_ago": 1,
+            "note": "Cena de equipo tras el proyecto, cuenta a escote.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t05",
+            "title": "Café",
+            "amount": "-¥22",
+            "raw_amount": -22,
+            "abs_amount": 22,
+            "category": "Comida",
+            "type": "expense",
+            "date": "Ayer 15:00",
+            "days_ago": 1,
+            "note": "Americano y un scone, merienda.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t06",
+            "title": "Metro al trabajo",
+            "amount": "-¥8",
+            "raw_amount": -8,
+            "abs_amount": 8,
+            "category": "Transporte",
+            "type": "expense",
+            "date": "Hoy 08:40",
+            "days_ago": 0,
+            "note": "Billete sencillo: casa a la oficina.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t07",
+            "title": "Taxi a casa",
+            "amount": "-¥36",
+            "raw_amount": -36,
+            "abs_amount": 36,
+            "category": "Transporte",
+            "type": "expense",
+            "date": "Ayer 22:10",
+            "days_ago": 1,
+            "note": "Trabajé hasta tarde; el metro ya no operaba.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t08",
+            "title": "Combustible",
+            "amount": "-¥320",
+            "raw_amount": -320,
+            "abs_amount": 320,
+            "category": "Transporte",
+            "type": "expense",
+            "date": "06-22 18:00",
+            "days_ago": 3,
+            "note": "Sinopec 95#, lleno de 40L.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t09",
+            "title": "Supermercado",
+            "amount": "-¥142",
+            "raw_amount": -142,
+            "abs_amount": 142,
+            "category": "Compras",
+            "type": "expense",
+            "date": "06-22 14:30",
+            "days_ago": 3,
+            "note": "Champú, pañuelos, limpiador de cocina.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t10",
+            "title": "Ropa de verano",
+            "amount": "-¥459",
+            "raw_amount": -459,
+            "abs_amount": 459,
+            "category": "Compras",
+            "type": "expense",
+            "date": "06-20 16:00",
+            "days_ago": 5,
+            "note": "Uniqlo: dos conjuntos de camiseta y short.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t11",
+            "title": "Electricidad",
+            "amount": "-¥186",
+            "raw_amount": -186,
+            "abs_amount": 186,
+            "category": "Hogar",
+            "type": "expense",
+            "date": "06-18 11:20",
+            "days_ago": 7,
+            "note": "Uso de aire acondicionado, factura de mayo.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t12",
+            "title": "Alquiler",
+            "amount": "-¥2,400",
+            "raw_amount": -2400,
+            "abs_amount": 2400,
+            "category": "Hogar",
+            "type": "expense",
+            "date": "06-01 10:00",
+            "days_ago": 24,
+            "note": "Renta mensual de un apartamento, al casero.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t13",
+            "title": "Internet",
+            "amount": "-¥99",
+            "raw_amount": -99,
+            "abs_amount": 99,
+            "category": "Comunicaciones",
+            "type": "expense",
+            "date": "06-12 09:00",
+            "days_ago": 13,
+            "note": "Banda ancha 200M, pago trimestral.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t14",
+            "title": "Factura móvil",
+            "amount": "-¥58",
+            "raw_amount": -58,
+            "abs_amount": 58,
+            "category": "Comunicaciones",
+            "type": "expense",
+            "date": "06-08 10:30",
+            "days_ago": 17,
+            "note": "Plan móvil ¥99, renovación automática.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t15",
+            "title": "Entradas de cine",
+            "amount": "-¥78",
+            "raw_amount": -78,
+            "abs_amount": 78,
+            "category": "Ocio",
+            "type": "expense",
+            "date": "06-21 20:30",
+            "days_ago": 4,
+            "note": "Dos entradas IMAX para Fast & Furious 10.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t16",
+            "title": "Gimnasio",
+            "amount": "-¥198",
+            "raw_amount": -198,
+            "abs_amount": 198,
+            "category": "Ocio",
+            "type": "expense",
+            "date": "06-15 19:00",
+            "days_ago": 10,
+            "note": "Pase mensual renovado, visitas ilimitadas.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t17",
+            "title": "Medicina para resfriado",
+            "amount": "-¥65",
+            "raw_amount": -65,
+            "abs_amount": 65,
+            "category": "Salud",
+            "type": "expense",
+            "date": "06-19 12:00",
+            "days_ago": 6,
+            "note": "En farmacia: antigripal y vitamina C.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t18",
+            "title": "Revisión dental",
+            "amount": "-¥280",
+            "raw_amount": -280,
+            "abs_amount": 280,
+            "category": "Salud",
+            "type": "expense",
+            "date": "06-10 15:00",
+            "days_ago": 15,
+            "note": "Control de empaste y limpieza ultrasónica.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t19",
+            "title": "Libro técnico",
+            "amount": "-¥92",
+            "raw_amount": -92,
+            "abs_amount": 92,
+            "category": "Educación",
+            "type": "expense",
+            "date": "06-17 21:00",
+            "days_ago": 8,
+            "note": "Designing Data-Intensive Applications.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t20",
+            "title": "Curso en línea",
+            "amount": "-¥199",
+            "raw_amount": -199,
+            "abs_amount": 199,
+            "category": "Educación",
+            "type": "expense",
+            "date": "06-14 22:00",
+            "days_ago": 11,
+            "note": "Membresía anual de GeekTime.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t21",
+            "title": "Inversión en fondo",
+            "amount": "+¥2,000",
+            "raw_amount": 2000,
+            "abs_amount": 2000,
+            "category": "Inversiones",
+            "type": "income",
+            "date": "06-05 14:00",
+            "days_ago": 20,
+            "note": "Fondo índice CSI 300, plan mensual.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t22",
+            "title": "Ingreso por intereses",
+            "amount": "+¥36",
+            "raw_amount": 36,
+            "abs_amount": 36,
+            "category": "Inversiones",
+            "type": "income",
+            "date": "06-23 09:00",
+            "days_ago": 2,
+            "note": "Fondo monetario, liquidación T+1.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t23",
+            "title": "Invitó un colega",
+            "amount": "-¥0",
+            "raw_amount": 0,
+            "abs_amount": 0,
+            "category": "Otros",
+            "type": "expense",
+            "date": "06-09 12:30",
+            "days_ago": 16,
+            "note": "Celebración del lanzamiento, cuenta saldada.",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB"
+          }
+        ],
+        "fr": [
+          {
+            "id": "t01",
+            "title": "Salaire mensuel",
+            "amount": "+¥12,000",
+            "raw_amount": 12000,
+            "abs_amount": 12000,
+            "category": "Salaire",
+            "type": "income",
+            "date": "06-05 09:00",
+            "days_ago": 20,
+            "note": "Versé début juin, après cotisations sociales.",
+            "icon": "payments",
+            "accent": "#059669",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t02",
+            "title": "Petit-déjeuner",
+            "amount": "-¥12",
+            "raw_amount": -12,
+            "abs_amount": 12,
+            "category": "Repas",
+            "type": "expense",
+            "date": "Aujourd'hui 08:15",
+            "days_ago": 0,
+            "note": "Stand de rue : lait de soja, beignet, œuf au thé.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t03",
+            "title": "Déjeuner livré",
+            "amount": "-¥38",
+            "raw_amount": -38,
+            "abs_amount": 38,
+            "category": "Repas",
+            "type": "expense",
+            "date": "Aujourd'hui 12:30",
+            "days_ago": 0,
+            "note": "Commande groupée en semaine : malatang.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t04",
+            "title": "Dîner japonais",
+            "amount": "-¥168",
+            "raw_amount": -168,
+            "abs_amount": 168,
+            "category": "Repas",
+            "type": "expense",
+            "date": "Hier 19:20",
+            "days_ago": 1,
+            "note": "Dîner d'équipe après le projet, addition partagée.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t05",
+            "title": "Café",
+            "amount": "-¥22",
+            "raw_amount": -22,
+            "abs_amount": 22,
+            "category": "Repas",
+            "type": "expense",
+            "date": "Hier 15:00",
+            "days_ago": 1,
+            "note": "Americano et un scone, goûter.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t06",
+            "title": "Métro domicile-travail",
+            "amount": "-¥8",
+            "raw_amount": -8,
+            "abs_amount": 8,
+            "category": "Transport",
+            "type": "expense",
+            "date": "Aujourd'hui 08:40",
+            "days_ago": 0,
+            "note": "Billet simple : maison au bureau.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t07",
+            "title": "Taxi retour",
+            "amount": "-¥36",
+            "raw_amount": -36,
+            "abs_amount": 36,
+            "category": "Transport",
+            "type": "expense",
+            "date": "Hier 22:10",
+            "days_ago": 1,
+            "note": "Travaillé tard ; le métro ne roulait plus.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t08",
+            "title": "Carburant",
+            "amount": "-¥320",
+            "raw_amount": -320,
+            "abs_amount": 320,
+            "category": "Transport",
+            "type": "expense",
+            "date": "06-22 18:00",
+            "days_ago": 3,
+            "note": "Sinopec 95#, plein de 40L.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t09",
+            "title": "Courses",
+            "amount": "-¥142",
+            "raw_amount": -142,
+            "abs_amount": 142,
+            "category": "Achats",
+            "type": "expense",
+            "date": "06-22 14:30",
+            "days_ago": 3,
+            "note": "Shampoing, mouchoirs, nettoyant cuisine.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t10",
+            "title": "Vêtements d'été",
+            "amount": "-¥459",
+            "raw_amount": -459,
+            "abs_amount": 459,
+            "category": "Achats",
+            "type": "expense",
+            "date": "06-20 16:00",
+            "days_ago": 5,
+            "note": "Uniqlo : deux ensembles tee et short.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t11",
+            "title": "Électricité",
+            "amount": "-¥186",
+            "raw_amount": -186,
+            "abs_amount": 186,
+            "category": "Logement",
+            "type": "expense",
+            "date": "06-18 11:20",
+            "days_ago": 7,
+            "note": "Climatisation d'été, facture de mai.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t12",
+            "title": "Loyer",
+            "amount": "-¥2,400",
+            "raw_amount": -2400,
+            "abs_amount": 2400,
+            "category": "Logement",
+            "type": "expense",
+            "date": "06-01 10:00",
+            "days_ago": 24,
+            "note": "Loyer mensuel d'un studio, versé au propriétaire.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t13",
+            "title": "Internet",
+            "amount": "-¥99",
+            "raw_amount": -99,
+            "abs_amount": 99,
+            "category": "Télécom",
+            "type": "expense",
+            "date": "06-12 09:00",
+            "days_ago": 13,
+            "note": "Haut débit 200M, paiement trimestriel.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t14",
+            "title": "Forfait mobile",
+            "amount": "-¥58",
+            "raw_amount": -58,
+            "abs_amount": 58,
+            "category": "Télécom",
+            "type": "expense",
+            "date": "06-08 10:30",
+            "days_ago": 17,
+            "note": "Forfait ¥99, renouvellement auto.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t15",
+            "title": "Billets de cinéma",
+            "amount": "-¥78",
+            "raw_amount": -78,
+            "abs_amount": 78,
+            "category": "Loisirs",
+            "type": "expense",
+            "date": "06-21 20:30",
+            "days_ago": 4,
+            "note": "Deux billets IMAX pour Fast & Furious 10.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t16",
+            "title": "Salle de sport",
+            "amount": "-¥198",
+            "raw_amount": -198,
+            "abs_amount": 198,
+            "category": "Loisirs",
+            "type": "expense",
+            "date": "06-15 19:00",
+            "days_ago": 10,
+            "note": "Abonnement mensuel renouvelé, illimité.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t17",
+            "title": "Médicament rhume",
+            "amount": "-¥65",
+            "raw_amount": -65,
+            "abs_amount": 65,
+            "category": "Santé",
+            "type": "expense",
+            "date": "06-19 12:00",
+            "days_ago": 6,
+            "note": "En pharmacie : remède contre le rhume et vitamine C.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t18",
+            "title": "Suivi dentaire",
+            "amount": "-¥280",
+            "raw_amount": -280,
+            "abs_amount": 280,
+            "category": "Santé",
+            "type": "expense",
+            "date": "06-10 15:00",
+            "days_ago": 15,
+            "note": "Contrôle du plombage et détartrage ultrasonique.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t19",
+            "title": "Livre technique",
+            "amount": "-¥92",
+            "raw_amount": -92,
+            "abs_amount": 92,
+            "category": "Éducation",
+            "type": "expense",
+            "date": "06-17 21:00",
+            "days_ago": 8,
+            "note": "Designing Data-Intensive Applications.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t20",
+            "title": "Cours en ligne",
+            "amount": "-¥199",
+            "raw_amount": -199,
+            "abs_amount": 199,
+            "category": "Éducation",
+            "type": "expense",
+            "date": "06-14 22:00",
+            "days_ago": 11,
+            "note": "Abonnement annuel GeekTime.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t21",
+            "title": "Investissement fonds",
+            "amount": "+¥2,000",
+            "raw_amount": 2000,
+            "abs_amount": 2000,
+            "category": "Finances",
+            "type": "income",
+            "date": "06-05 14:00",
+            "days_ago": 20,
+            "note": "Fonds indiciel CSI 300, plan mensuel.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t22",
+            "title": "Revenu d'intérêts",
+            "amount": "+¥36",
+            "raw_amount": 36,
+            "abs_amount": 36,
+            "category": "Finances",
+            "type": "income",
+            "date": "06-23 09:00",
+            "days_ago": 2,
+            "note": "Fonds monétaire, règlement T+1.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t23",
+            "title": "Collègue a offert",
+            "amount": "-¥0",
+            "raw_amount": 0,
+            "abs_amount": 0,
+            "category": "Autres",
+            "type": "expense",
+            "date": "06-09 12:30",
+            "days_ago": 16,
+            "note": "Fête de lancement, addition déjà réglée.",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB"
+          }
+        ],
+        "pt": [
+          {
+            "id": "t01",
+            "title": "Salário mensal",
+            "amount": "+¥12,000",
+            "raw_amount": 12000,
+            "abs_amount": 12000,
+            "category": "Salário",
+            "type": "income",
+            "date": "06-05 09:00",
+            "days_ago": 20,
+            "note": "Pago no início de junho, após encargos sociais.",
+            "icon": "payments",
+            "accent": "#059669",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t02",
+            "title": "Café da manhã",
+            "amount": "-¥12",
+            "raw_amount": -12,
+            "abs_amount": 12,
+            "category": "Alimentação",
+            "type": "expense",
+            "date": "Hoje 08:15",
+            "days_ago": 0,
+            "note": "Barraca de rua: leite de soja, massa frita, ovo no chá.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t03",
+            "title": "Almoço delivery",
+            "amount": "-¥38",
+            "raw_amount": -38,
+            "abs_amount": 38,
+            "category": "Alimentação",
+            "type": "expense",
+            "date": "Hoje 12:30",
+            "days_ago": 0,
+            "note": "Pedido em grupo em dia útil: malatang.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t04",
+            "title": "Jantar japonês",
+            "amount": "-¥168",
+            "raw_amount": -168,
+            "abs_amount": 168,
+            "category": "Alimentação",
+            "type": "expense",
+            "date": "Ontem 19:20",
+            "days_ago": 1,
+            "note": "Jantar da equipe após o projeto, conta dividida.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t05",
+            "title": "Café",
+            "amount": "-¥22",
+            "raw_amount": -22,
+            "abs_amount": 22,
+            "category": "Alimentação",
+            "type": "expense",
+            "date": "Ontem 15:00",
+            "days_ago": 1,
+            "note": "Americano e um scone, lanche da tarde.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t06",
+            "title": "Metrô para o trabalho",
+            "amount": "-¥8",
+            "raw_amount": -8,
+            "abs_amount": 8,
+            "category": "Transporte",
+            "type": "expense",
+            "date": "Hoje 08:40",
+            "days_ago": 0,
+            "note": "Bilhete de ida: casa ao escritório.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t07",
+            "title": "Táxi para casa",
+            "amount": "-¥36",
+            "raw_amount": -36,
+            "abs_amount": 36,
+            "category": "Transporte",
+            "type": "expense",
+            "date": "Ontem 22:10",
+            "days_ago": 1,
+            "note": "Trabalhei até tarde; o metrô já havia parado.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t08",
+            "title": "Combustível",
+            "amount": "-¥320",
+            "raw_amount": -320,
+            "abs_amount": 320,
+            "category": "Transporte",
+            "type": "expense",
+            "date": "06-22 18:00",
+            "days_ago": 3,
+            "note": "Sinopec 95#, tanque cheio de 40L.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t09",
+            "title": "Supermercado",
+            "amount": "-¥142",
+            "raw_amount": -142,
+            "abs_amount": 142,
+            "category": "Compras",
+            "type": "expense",
+            "date": "06-22 14:30",
+            "days_ago": 3,
+            "note": "Xampu, lenços, limpador de cozinha.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t10",
+            "title": "Roupa de verão",
+            "amount": "-¥459",
+            "raw_amount": -459,
+            "abs_amount": 459,
+            "category": "Compras",
+            "type": "expense",
+            "date": "06-20 16:00",
+            "days_ago": 5,
+            "note": "Uniqlo: dois conjuntos de camiseta e short.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t11",
+            "title": "Energia elétrica",
+            "amount": "-¥186",
+            "raw_amount": -186,
+            "abs_amount": 186,
+            "category": "Moradia",
+            "type": "expense",
+            "date": "06-18 11:20",
+            "days_ago": 7,
+            "note": "Uso do ar-condicionado, conta de maio.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t12",
+            "title": "Aluguel",
+            "amount": "-¥2,400",
+            "raw_amount": -2400,
+            "abs_amount": 2400,
+            "category": "Moradia",
+            "type": "expense",
+            "date": "06-01 10:00",
+            "days_ago": 24,
+            "note": "Aluguel mensal de um quarto, ao proprietário.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t13",
+            "title": "Internet",
+            "amount": "-¥99",
+            "raw_amount": -99,
+            "abs_amount": 99,
+            "category": "Telecom",
+            "type": "expense",
+            "date": "06-12 09:00",
+            "days_ago": 13,
+            "note": "Banda larga 200M, pagamento trimestral.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t14",
+            "title": "Conta de celular",
+            "amount": "-¥58",
+            "raw_amount": -58,
+            "abs_amount": 58,
+            "category": "Telecom",
+            "type": "expense",
+            "date": "06-08 10:30",
+            "days_ago": 17,
+            "note": "Plano móvel ¥99, renovação automática.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t15",
+            "title": "Ingressos de cinema",
+            "amount": "-¥78",
+            "raw_amount": -78,
+            "abs_amount": 78,
+            "category": "Lazer",
+            "type": "expense",
+            "date": "06-21 20:30",
+            "days_ago": 4,
+            "note": "Dois ingressos IMAX para Velozes e Furiosos 10.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t16",
+            "title": "Academia",
+            "amount": "-¥198",
+            "raw_amount": -198,
+            "abs_amount": 198,
+            "category": "Lazer",
+            "type": "expense",
+            "date": "06-15 19:00",
+            "days_ago": 10,
+            "note": "Passe mensal renovado, acessos ilimitados.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t17",
+            "title": "Remédio para gripe",
+            "amount": "-¥65",
+            "raw_amount": -65,
+            "abs_amount": 65,
+            "category": "Saúde",
+            "type": "expense",
+            "date": "06-19 12:00",
+            "days_ago": 6,
+            "note": "Na farmácia: antigripal e vitamina C.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t18",
+            "title": "Retorno odontológico",
+            "amount": "-¥280",
+            "raw_amount": -280,
+            "abs_amount": 280,
+            "category": "Saúde",
+            "type": "expense",
+            "date": "06-10 15:00",
+            "days_ago": 15,
+            "note": "Revisão da obturação e limpeza ultrassônica.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t19",
+            "title": "Livro técnico",
+            "amount": "-¥92",
+            "raw_amount": -92,
+            "abs_amount": 92,
+            "category": "Educação",
+            "type": "expense",
+            "date": "06-17 21:00",
+            "days_ago": 8,
+            "note": "Designing Data-Intensive Applications.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t20",
+            "title": "Curso online",
+            "amount": "-¥199",
+            "raw_amount": -199,
+            "abs_amount": 199,
+            "category": "Educação",
+            "type": "expense",
+            "date": "06-14 22:00",
+            "days_ago": 11,
+            "note": "Assinatura anual do GeekTime.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t21",
+            "title": "Aporte em fundo",
+            "amount": "+¥2,000",
+            "raw_amount": 2000,
+            "abs_amount": 2000,
+            "category": "Investimentos",
+            "type": "income",
+            "date": "06-05 14:00",
+            "days_ago": 20,
+            "note": "Fundo de índice CSI 300, plano mensal.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t22",
+            "title": "Rendimento de juros",
+            "amount": "+¥36",
+            "raw_amount": 36,
+            "abs_amount": 36,
+            "category": "Investimentos",
+            "type": "income",
+            "date": "06-23 09:00",
+            "days_ago": 2,
+            "note": "Fundo de mercado monetário, liquidação T+1.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t23",
+            "title": "Colega pagou",
+            "amount": "-¥0",
+            "raw_amount": 0,
+            "abs_amount": 0,
+            "category": "Outros",
+            "type": "expense",
+            "date": "06-09 12:30",
+            "days_ago": 16,
+            "note": "Comemoração do lançamento, conta quitada.",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB"
+          }
+        ],
+        "ca": [
+          {
+            "id": "t01",
+            "title": "Salari mensual",
+            "amount": "+¥12,000",
+            "raw_amount": 12000,
+            "abs_amount": 12000,
+            "category": "Salari",
+            "type": "income",
+            "date": "06-05 09:00",
+            "days_ago": 20,
+            "note": "Pagat a principis de juny, després de càrregues socials.",
+            "icon": "payments",
+            "accent": "#059669",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t02",
+            "title": "Esmorzar",
+            "amount": "-¥12",
+            "raw_amount": -12,
+            "abs_amount": 12,
+            "category": "Menjar",
+            "type": "expense",
+            "date": "Avui 08:15",
+            "days_ago": 0,
+            "note": "Parada de carrer: llet de soja, massa fregida, ou al te.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t03",
+            "title": "Dinar a domicili",
+            "amount": "-¥38",
+            "raw_amount": -38,
+            "abs_amount": 38,
+            "category": "Menjar",
+            "type": "expense",
+            "date": "Avui 12:30",
+            "days_ago": 0,
+            "note": "Comanda de grup entre setmana: malatang.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t04",
+            "title": "Sopar japonès",
+            "amount": "-¥168",
+            "raw_amount": -168,
+            "abs_amount": 168,
+            "category": "Menjar",
+            "type": "expense",
+            "date": "Ahir 19:20",
+            "days_ago": 1,
+            "note": "Sopar d'equip després del projecte, compte a escot.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t05",
+            "title": "Cafè",
+            "amount": "-¥22",
+            "raw_amount": -22,
+            "abs_amount": 22,
+            "category": "Menjar",
+            "type": "expense",
+            "date": "Ahir 15:00",
+            "days_ago": 1,
+            "note": "Americano i un scone, berenar.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t06",
+            "title": "Metro a la feina",
+            "amount": "-¥8",
+            "raw_amount": -8,
+            "abs_amount": 8,
+            "category": "Transport",
+            "type": "expense",
+            "date": "Avui 08:40",
+            "days_ago": 0,
+            "note": "Bitllet senzill: casa a l'oficina.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t07",
+            "title": "Taxi a casa",
+            "amount": "-¥36",
+            "raw_amount": -36,
+            "abs_amount": 36,
+            "category": "Transport",
+            "type": "expense",
+            "date": "Ahir 22:10",
+            "days_ago": 1,
+            "note": "Vaig treballar fins tard; el metro no funcionava.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t08",
+            "title": "Combustible",
+            "amount": "-¥320",
+            "raw_amount": -320,
+            "abs_amount": 320,
+            "category": "Transport",
+            "type": "expense",
+            "date": "06-22 18:00",
+            "days_ago": 3,
+            "note": "Sinopec 95#, ple de 40L.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t09",
+            "title": "Supermercat",
+            "amount": "-¥142",
+            "raw_amount": -142,
+            "abs_amount": 142,
+            "category": "Compres",
+            "type": "expense",
+            "date": "06-22 14:30",
+            "days_ago": 3,
+            "note": "Xampú, mocadors, netejador de cuina.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t10",
+            "title": "Roba d'estiu",
+            "amount": "-¥459",
+            "raw_amount": -459,
+            "abs_amount": 459,
+            "category": "Compres",
+            "type": "expense",
+            "date": "06-20 16:00",
+            "days_ago": 5,
+            "note": "Uniqlo: dos conjunts de samarreta i pantaló curt.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t11",
+            "title": "Electricitat",
+            "amount": "-¥186",
+            "raw_amount": -186,
+            "abs_amount": 186,
+            "category": "Llar",
+            "type": "expense",
+            "date": "06-18 11:20",
+            "days_ago": 7,
+            "note": "Ús d'aire condicionat, factura de maig.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t12",
+            "title": "Lloguer",
+            "amount": "-¥2,400",
+            "raw_amount": -2400,
+            "abs_amount": 2400,
+            "category": "Llar",
+            "type": "expense",
+            "date": "06-01 10:00",
+            "days_ago": 24,
+            "note": "Lloguer mensual d'un pis, al propietari.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t13",
+            "title": "Internet",
+            "amount": "-¥99",
+            "raw_amount": -99,
+            "abs_amount": 99,
+            "category": "Comunicacions",
+            "type": "expense",
+            "date": "06-12 09:00",
+            "days_ago": 13,
+            "note": "Banda ampla 200M, pagament trimestral.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t14",
+            "title": "Factura mòbil",
+            "amount": "-¥58",
+            "raw_amount": -58,
+            "abs_amount": 58,
+            "category": "Comunicacions",
+            "type": "expense",
+            "date": "06-08 10:30",
+            "days_ago": 17,
+            "note": "Pla mòbil ¥99, renovació automàtica.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t15",
+            "title": "Entrades de cinema",
+            "amount": "-¥78",
+            "raw_amount": -78,
+            "abs_amount": 78,
+            "category": "Oci",
+            "type": "expense",
+            "date": "06-21 20:30",
+            "days_ago": 4,
+            "note": "Dues entrades IMAX per a Fast & Furious 10.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t16",
+            "title": "Gimnàs",
+            "amount": "-¥198",
+            "raw_amount": -198,
+            "abs_amount": 198,
+            "category": "Oci",
+            "type": "expense",
+            "date": "06-15 19:00",
+            "days_ago": 10,
+            "note": "Passi mensual renovat, sense límit.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t17",
+            "title": "Medicina refredat",
+            "amount": "-¥65",
+            "raw_amount": -65,
+            "abs_amount": 65,
+            "category": "Salut",
+            "type": "expense",
+            "date": "06-19 12:00",
+            "days_ago": 6,
+            "note": "A la farmàcia: antigripal i vitamina C.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t18",
+            "title": "Revisió dental",
+            "amount": "-¥280",
+            "raw_amount": -280,
+            "abs_amount": 280,
+            "category": "Salut",
+            "type": "expense",
+            "date": "06-10 15:00",
+            "days_ago": 15,
+            "note": "Control de l'empast i neteja ultrasònica.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t19",
+            "title": "Llibre tècnic",
+            "amount": "-¥92",
+            "raw_amount": -92,
+            "abs_amount": 92,
+            "category": "Educació",
+            "type": "expense",
+            "date": "06-17 21:00",
+            "days_ago": 8,
+            "note": "Designing Data-Intensive Applications.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t20",
+            "title": "Curs en línia",
+            "amount": "-¥199",
+            "raw_amount": -199,
+            "abs_amount": 199,
+            "category": "Educació",
+            "type": "expense",
+            "date": "06-14 22:00",
+            "days_ago": 11,
+            "note": "Subscripció anual de GeekTime.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t21",
+            "title": "Inversió en fons",
+            "amount": "+¥2,000",
+            "raw_amount": 2000,
+            "abs_amount": 2000,
+            "category": "Inversions",
+            "type": "income",
+            "date": "06-05 14:00",
+            "days_ago": 20,
+            "note": "Fons índex CSI 300, pla mensual.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t22",
+            "title": "Ingrés d'interessos",
+            "amount": "+¥36",
+            "raw_amount": 36,
+            "abs_amount": 36,
+            "category": "Inversions",
+            "type": "income",
+            "date": "06-23 09:00",
+            "days_ago": 2,
+            "note": "Fons monetari, liquidació T+1.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t23",
+            "title": "Company va convidar",
+            "amount": "-¥0",
+            "raw_amount": 0,
+            "abs_amount": 0,
+            "category": "Altres",
+            "type": "expense",
+            "date": "06-09 12:30",
+            "days_ago": 16,
+            "note": "Celebració del llançament, compte saldat.",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB"
+          }
+        ],
+        "hi": [
+          {
+            "id": "t01",
+            "title": "मासिक वेतन",
+            "amount": "+¥12,000",
+            "raw_amount": 12000,
+            "abs_amount": 12000,
+            "category": "वेतन",
+            "type": "income",
+            "date": "06-05 09:00",
+            "days_ago": 20,
+            "note": "जून की शुरुआत में मिला, सामाजिक कटौती के बाद।",
+            "icon": "payments",
+            "accent": "#059669",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t02",
+            "title": "नाश्ता",
+            "amount": "-¥12",
+            "raw_amount": -12,
+            "abs_amount": 12,
+            "category": "भोजन",
+            "type": "expense",
+            "date": "आज 08:15",
+            "days_ago": 0,
+            "note": "स्ट्रीट स्टॉल: सोया मिल्क, तला ब्रेड, चाय अंडा।",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t03",
+            "title": "लंच डिलीवरी",
+            "amount": "-¥38",
+            "raw_amount": -38,
+            "abs_amount": 38,
+            "category": "भोजन",
+            "type": "expense",
+            "date": "आज 12:30",
+            "days_ago": 0,
+            "note": "कार्यदिवस का ग्रुप ऑर्डर: मालातांग।",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t04",
+            "title": "जापानी डिनर",
+            "amount": "-¥168",
+            "raw_amount": -168,
+            "abs_amount": 168,
+            "category": "भोजन",
+            "type": "expense",
+            "date": "कल 19:20",
+            "days_ago": 1,
+            "note": "प्रोजेक्ट के बाद टीम डिनर, बिल बाँटकर।",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t05",
+            "title": "कॉफ़ी",
+            "amount": "-¥22",
+            "raw_amount": -22,
+            "abs_amount": 22,
+            "category": "भोजन",
+            "type": "expense",
+            "date": "कल 15:00",
+            "days_ago": 1,
+            "note": "अमेरिकानो और स्कोन, दोपहर की चाय।",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t06",
+            "title": "मेट्रो सफर",
+            "amount": "-¥8",
+            "raw_amount": -8,
+            "abs_amount": 8,
+            "category": "परिवहन",
+            "type": "expense",
+            "date": "आज 08:40",
+            "days_ago": 0,
+            "note": "एकतरफा टिकट: घर से ऑफिस।",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t07",
+            "title": "टैक्सी से घर",
+            "amount": "-¥36",
+            "raw_amount": -36,
+            "abs_amount": 36,
+            "category": "परिवहन",
+            "type": "expense",
+            "date": "कल 22:10",
+            "days_ago": 1,
+            "note": "देर रात तक काम; मेट्रो बंद हो गई थी।",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t08",
+            "title": "ईंधन",
+            "amount": "-¥320",
+            "raw_amount": -320,
+            "abs_amount": 320,
+            "category": "परिवहन",
+            "type": "expense",
+            "date": "06-22 18:00",
+            "days_ago": 3,
+            "note": "Sinopec 95#, 40L फुल टैंक।",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t09",
+            "title": "किराना",
+            "amount": "-¥142",
+            "raw_amount": -142,
+            "abs_amount": 142,
+            "category": "खरीदारी",
+            "type": "expense",
+            "date": "06-22 14:30",
+            "days_ago": 3,
+            "note": "शैम्पू, टिशू, किचन क्लीनर।",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t10",
+            "title": "गर्मी के कपड़े",
+            "amount": "-¥459",
+            "raw_amount": -459,
+            "abs_amount": 459,
+            "category": "खरीदारी",
+            "type": "expense",
+            "date": "06-20 16:00",
+            "days_ago": 5,
+            "note": "यूनिक्लो: टी-शर्ट और शॉर्ट्स के दो सेट।",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t11",
+            "title": "बिजली बिल",
+            "amount": "-¥186",
+            "raw_amount": -186,
+            "abs_amount": 186,
+            "category": "घर",
+            "type": "expense",
+            "date": "06-18 11:20",
+            "days_ago": 7,
+            "note": "गर्मी में एसी का उपयोग, मई का बिल।",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t12",
+            "title": "किराया",
+            "amount": "-¥2,400",
+            "raw_amount": -2400,
+            "abs_amount": 2400,
+            "category": "घर",
+            "type": "expense",
+            "date": "06-01 10:00",
+            "days_ago": 24,
+            "note": "एक कमरे का मासिक किराया, मकान मालिक को।",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t13",
+            "title": "इंटरनेट",
+            "amount": "-¥99",
+            "raw_amount": -99,
+            "abs_amount": 99,
+            "category": "संचार",
+            "type": "expense",
+            "date": "06-12 09:00",
+            "days_ago": 13,
+            "note": "ब्रॉडबैंड 200M, तिमाही भुगतान।",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t14",
+            "title": "मोबाइल बिल",
+            "amount": "-¥58",
+            "raw_amount": -58,
+            "abs_amount": 58,
+            "category": "संचार",
+            "type": "expense",
+            "date": "06-08 10:30",
+            "days_ago": 17,
+            "note": "¥99 मोबाइल प्लान, ऑटो-रिन्यू।",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t15",
+            "title": "मूवी टिकट",
+            "amount": "-¥78",
+            "raw_amount": -78,
+            "abs_amount": 78,
+            "category": "मनोरंजन",
+            "type": "expense",
+            "date": "06-21 20:30",
+            "days_ago": 4,
+            "note": "Fast & Furious 10 के दो IMAX टिकट।",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t16",
+            "title": "जिम",
+            "amount": "-¥198",
+            "raw_amount": -198,
+            "abs_amount": 198,
+            "category": "मनोरंजन",
+            "type": "expense",
+            "date": "06-15 19:00",
+            "days_ago": 10,
+            "note": "मंथली पास रिन्यू, असीमित विज़िट।",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t17",
+            "title": "सर्दी की दवा",
+            "amount": "-¥65",
+            "raw_amount": -65,
+            "abs_amount": 65,
+            "category": "चिकित्सा",
+            "type": "expense",
+            "date": "06-19 12:00",
+            "days_ago": 6,
+            "note": "फार्मेसी से: सर्दी की दवा और विटामिन C।",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t18",
+            "title": "दंत जांच",
+            "amount": "-¥280",
+            "raw_amount": -280,
+            "abs_amount": 280,
+            "category": "चिकित्सा",
+            "type": "expense",
+            "date": "06-10 15:00",
+            "days_ago": 15,
+            "note": "फिलिंग जांच और अल्ट्रासोनिक सफाई।",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t19",
+            "title": "तकनीकी किताब",
+            "amount": "-¥92",
+            "raw_amount": -92,
+            "abs_amount": 92,
+            "category": "शिक्षा",
+            "type": "expense",
+            "date": "06-17 21:00",
+            "days_ago": 8,
+            "note": "Designing Data-Intensive Applications।",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t20",
+            "title": "ऑनलाइन कोर्स",
+            "amount": "-¥199",
+            "raw_amount": -199,
+            "abs_amount": 199,
+            "category": "शिक्षा",
+            "type": "expense",
+            "date": "06-14 22:00",
+            "days_ago": 11,
+            "note": "GeekTime वार्षिक सदस्यता।",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t21",
+            "title": "फंड निवेश",
+            "amount": "+¥2,000",
+            "raw_amount": 2000,
+            "abs_amount": 2000,
+            "category": "निवेश",
+            "type": "income",
+            "date": "06-05 14:00",
+            "days_ago": 20,
+            "note": "CSI 300 इंडेक्स फंड, मासिक निवेश।",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t22",
+            "title": "ब्याज आय",
+            "amount": "+¥36",
+            "raw_amount": 36,
+            "abs_amount": 36,
+            "category": "निवेश",
+            "type": "income",
+            "date": "06-23 09:00",
+            "days_ago": 2,
+            "note": "मनी-मार्केट फंड, T+1 निपटान।",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t23",
+            "title": "सहकर्मी ने खिलाया",
+            "amount": "-¥0",
+            "raw_amount": 0,
+            "abs_amount": 0,
+            "category": "अन्य",
+            "type": "expense",
+            "date": "06-09 12:30",
+            "days_ago": 16,
+            "note": "लॉन्च जश्न, बिल चुकता।",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB"
+          }
+        ],
+        "ko": [
+          {
+            "id": "t01",
+            "title": "월급",
+            "amount": "+¥12,000",
+            "raw_amount": 12000,
+            "abs_amount": 12000,
+            "category": "급여",
+            "type": "income",
+            "date": "06-05 09:00",
+            "days_ago": 20,
+            "note": "6월 초 지급, 4대 보험 공제 후.",
+            "icon": "payments",
+            "accent": "#059669",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t02",
+            "title": "아침 식사",
+            "amount": "-¥12",
+            "raw_amount": -12,
+            "abs_amount": 12,
+            "category": "식비",
+            "type": "expense",
+            "date": "오늘 08:15",
+            "days_ago": 0,
+            "note": "노점: 두유, 유탸오, 차예단.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t03",
+            "title": "점심 배달",
+            "amount": "-¥38",
+            "raw_amount": -38,
+            "abs_amount": 38,
+            "category": "식비",
+            "type": "expense",
+            "date": "오늘 12:30",
+            "days_ago": 0,
+            "note": "평일 점심 공동 주문: 마라탕.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t04",
+            "title": "일식 저녁",
+            "amount": "-¥168",
+            "raw_amount": -168,
+            "abs_amount": 168,
+            "category": "식비",
+            "type": "expense",
+            "date": "어제 19:20",
+            "days_ago": 1,
+            "note": "프로젝트 후 팀 회식, 더치페이.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t05",
+            "title": "커피",
+            "amount": "-¥22",
+            "raw_amount": -22,
+            "abs_amount": 22,
+            "category": "식비",
+            "type": "expense",
+            "date": "어제 15:00",
+            "days_ago": 1,
+            "note": "아메리카노와 스콘, 오후 티타임.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t06",
+            "title": "지하철 출근",
+            "amount": "-¥8",
+            "raw_amount": -8,
+            "abs_amount": 8,
+            "category": "교통",
+            "type": "expense",
+            "date": "오늘 08:40",
+            "days_ago": 0,
+            "note": "편도 승차권: 집에서 회사.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t07",
+            "title": "택시 귀가",
+            "amount": "-¥36",
+            "raw_amount": -36,
+            "abs_amount": 36,
+            "category": "교통",
+            "type": "expense",
+            "date": "어제 22:10",
+            "days_ago": 1,
+            "note": "야근으로 늦어 지하철이 끊김.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t08",
+            "title": "주유",
+            "amount": "-¥320",
+            "raw_amount": -320,
+            "abs_amount": 320,
+            "category": "교통",
+            "type": "expense",
+            "date": "06-22 18:00",
+            "days_ago": 3,
+            "note": "Sinopec 95#, 40L 가득.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t09",
+            "title": "생필품",
+            "amount": "-¥142",
+            "raw_amount": -142,
+            "abs_amount": 142,
+            "category": "쇼핑",
+            "type": "expense",
+            "date": "06-22 14:30",
+            "days_ago": 3,
+            "note": "샴푸, 티슈, 주방 세제.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t10",
+            "title": "여름 옷",
+            "amount": "-¥459",
+            "raw_amount": -459,
+            "abs_amount": 459,
+            "category": "쇼핑",
+            "type": "expense",
+            "date": "06-20 16:00",
+            "days_ago": 5,
+            "note": "유니클로: 티셔츠와 반바지 두 세트.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t11",
+            "title": "전기요금",
+            "amount": "-¥186",
+            "raw_amount": -186,
+            "abs_amount": 186,
+            "category": "주거",
+            "type": "expense",
+            "date": "06-18 11:20",
+            "days_ago": 7,
+            "note": "여름 에어컨 사용, 5월 청구서.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t12",
+            "title": "월세",
+            "amount": "-¥2,400",
+            "raw_amount": -2400,
+            "abs_amount": 2400,
+            "category": "주거",
+            "type": "expense",
+            "date": "06-01 10:00",
+            "days_ago": 24,
+            "note": "원룸 월세, 집주인에게 이체.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t13",
+            "title": "인터넷",
+            "amount": "-¥99",
+            "raw_amount": -99,
+            "abs_amount": 99,
+            "category": "통신",
+            "type": "expense",
+            "date": "06-12 09:00",
+            "days_ago": 13,
+            "note": "광대역 200M, 분기 납부.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t14",
+            "title": "휴대폰 요금",
+            "amount": "-¥58",
+            "raw_amount": -58,
+            "abs_amount": 58,
+            "category": "통신",
+            "type": "expense",
+            "date": "06-08 10:30",
+            "days_ago": 17,
+            "note": "¥99 요금제, 자동 갱신.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t15",
+            "title": "영화표",
+            "amount": "-¥78",
+            "raw_amount": -78,
+            "abs_amount": 78,
+            "category": "여가",
+            "type": "expense",
+            "date": "06-21 20:30",
+            "days_ago": 4,
+            "note": "분노의 질주 10 IMAX 2매.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t16",
+            "title": "헬스장",
+            "amount": "-¥198",
+            "raw_amount": -198,
+            "abs_amount": 198,
+            "category": "여가",
+            "type": "expense",
+            "date": "06-15 19:00",
+            "days_ago": 10,
+            "note": "월 이용권 갱신, 무제한.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t17",
+            "title": "감기약",
+            "amount": "-¥65",
+            "raw_amount": -65,
+            "abs_amount": 65,
+            "category": "의료",
+            "type": "expense",
+            "date": "06-19 12:00",
+            "days_ago": 6,
+            "note": "약국에서: 감기약과 비타민 C.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t18",
+            "title": "치과 재진",
+            "amount": "-¥280",
+            "raw_amount": -280,
+            "abs_amount": 280,
+            "category": "의료",
+            "type": "expense",
+            "date": "06-10 15:00",
+            "days_ago": 15,
+            "note": "충치 치료 점검과 스케일링.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t19",
+            "title": "기술 서적",
+            "amount": "-¥92",
+            "raw_amount": -92,
+            "abs_amount": 92,
+            "category": "교육",
+            "type": "expense",
+            "date": "06-17 21:00",
+            "days_ago": 8,
+            "note": "데이터 중심 애플리케이션 설계.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t20",
+            "title": "온라인 강의",
+            "amount": "-¥199",
+            "raw_amount": -199,
+            "abs_amount": 199,
+            "category": "교육",
+            "type": "expense",
+            "date": "06-14 22:00",
+            "days_ago": 11,
+            "note": "GeekTime 연간 멤버십.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t21",
+            "title": "펀드 적립",
+            "amount": "+¥2,000",
+            "raw_amount": 2000,
+            "abs_amount": 2000,
+            "category": "재테크",
+            "type": "income",
+            "date": "06-05 14:00",
+            "days_ago": 20,
+            "note": "CSI 300 인덱스 펀드, 월 적립.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t22",
+            "title": "이자 수입",
+            "amount": "+¥36",
+            "raw_amount": 36,
+            "abs_amount": 36,
+            "category": "재테크",
+            "type": "income",
+            "date": "06-23 09:00",
+            "days_ago": 2,
+            "note": "MMF, T+1 정산.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t23",
+            "title": "동료가 한턱",
+            "amount": "-¥0",
+            "raw_amount": 0,
+            "abs_amount": 0,
+            "category": "기타",
+            "type": "expense",
+            "date": "06-09 12:30",
+            "days_ago": 16,
+            "note": "출시 기념, 정산 완료.",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB"
+          }
+        ],
+        "ja": [
+          {
+            "id": "t01",
+            "title": "月給",
+            "amount": "+¥12,000",
+            "raw_amount": 12000,
+            "abs_amount": 12000,
+            "category": "給料",
+            "type": "income",
+            "date": "06-05 09:00",
+            "days_ago": 20,
+            "note": "6月初旬に支給、社会保険料控除後。",
+            "icon": "payments",
+            "accent": "#059669",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t02",
+            "title": "朝食",
+            "amount": "-¥12",
+            "raw_amount": -12,
+            "abs_amount": 12,
+            "category": "食費",
+            "type": "expense",
+            "date": "今日 08:15",
+            "days_ago": 0,
+            "note": "屋台：豆乳、揚げパン、煮卵。",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t03",
+            "title": "昼食デリバリー",
+            "amount": "-¥38",
+            "raw_amount": -38,
+            "abs_amount": 38,
+            "category": "食費",
+            "type": "expense",
+            "date": "今日 12:30",
+            "days_ago": 0,
+            "note": "平日のまとめ注文：マーラータン。",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t04",
+            "title": "和食ディナー",
+            "amount": "-¥168",
+            "raw_amount": -168,
+            "abs_amount": 168,
+            "category": "食費",
+            "type": "expense",
+            "date": "昨日 19:20",
+            "days_ago": 1,
+            "note": "プロジェクト完了後の部署会食、割り勘。",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t05",
+            "title": "コーヒー",
+            "amount": "-¥22",
+            "raw_amount": -22,
+            "abs_amount": 22,
+            "category": "食費",
+            "type": "expense",
+            "date": "昨日 15:00",
+            "days_ago": 1,
+            "note": "アメリカーノとスコーン、午後のお茶。",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t06",
+            "title": "地下鉄通勤",
+            "amount": "-¥8",
+            "raw_amount": -8,
+            "abs_amount": 8,
+            "category": "交通",
+            "type": "expense",
+            "date": "今日 08:40",
+            "days_ago": 0,
+            "note": "片道切符：自宅から会社。",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t07",
+            "title": "タクシー帰宅",
+            "amount": "-¥36",
+            "raw_amount": -36,
+            "abs_amount": 36,
+            "category": "交通",
+            "type": "expense",
+            "date": "昨日 22:10",
+            "days_ago": 1,
+            "note": "残業で終電後、地下鉄が停止。",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t08",
+            "title": "給油",
+            "amount": "-¥320",
+            "raw_amount": -320,
+            "abs_amount": 320,
+            "category": "交通",
+            "type": "expense",
+            "date": "06-22 18:00",
+            "days_ago": 3,
+            "note": "Sinopec 95#、40L 満タン。",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t09",
+            "title": "日用品",
+            "amount": "-¥142",
+            "raw_amount": -142,
+            "abs_amount": 142,
+            "category": "買い物",
+            "type": "expense",
+            "date": "06-22 14:30",
+            "days_ago": 3,
+            "note": "シャンプー、ティッシュ、台所用洗剤。",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t10",
+            "title": "夏服",
+            "amount": "-¥459",
+            "raw_amount": -459,
+            "abs_amount": 459,
+            "category": "買い物",
+            "type": "expense",
+            "date": "06-20 16:00",
+            "days_ago": 5,
+            "note": "ユニクロ：Tシャツと短パン2セット。",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t11",
+            "title": "電気代",
+            "amount": "-¥186",
+            "raw_amount": -186,
+            "abs_amount": 186,
+            "category": "住まい",
+            "type": "expense",
+            "date": "06-18 11:20",
+            "days_ago": 7,
+            "note": "夏のエアコン使用、5月分請求。",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t12",
+            "title": "家賃",
+            "amount": "-¥2,400",
+            "raw_amount": -2400,
+            "abs_amount": 2400,
+            "category": "住まい",
+            "type": "expense",
+            "date": "06-01 10:00",
+            "days_ago": 24,
+            "note": "1DK の月額家賃、大家へ振込。",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t13",
+            "title": "通信費",
+            "amount": "-¥99",
+            "raw_amount": -99,
+            "abs_amount": 99,
+            "category": "通信",
+            "type": "expense",
+            "date": "06-12 09:00",
+            "days_ago": 13,
+            "note": "光回線 200M、四半期払い。",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t14",
+            "title": "携帯料金",
+            "amount": "-¥58",
+            "raw_amount": -58,
+            "abs_amount": 58,
+            "category": "通信",
+            "type": "expense",
+            "date": "06-08 10:30",
+            "days_ago": 17,
+            "note": "¥99 プラン、自動更新。",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t15",
+            "title": "映画チケット",
+            "amount": "-¥78",
+            "raw_amount": -78,
+            "abs_amount": 78,
+            "category": "娯楽",
+            "type": "expense",
+            "date": "06-21 20:30",
+            "days_ago": 4,
+            "note": "ワイルド・スピード10 の IMAX 2枚。",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t16",
+            "title": "ジム",
+            "amount": "-¥198",
+            "raw_amount": -198,
+            "abs_amount": 198,
+            "category": "娯楽",
+            "type": "expense",
+            "date": "06-15 19:00",
+            "days_ago": 10,
+            "note": "月会員を更新、回数無制限。",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t17",
+            "title": "風邪薬",
+            "amount": "-¥65",
+            "raw_amount": -65,
+            "abs_amount": 65,
+            "category": "医療",
+            "type": "expense",
+            "date": "06-19 12:00",
+            "days_ago": 6,
+            "note": "薬局で：風邪薬とビタミンC。",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t18",
+            "title": "歯科再診",
+            "amount": "-¥280",
+            "raw_amount": -280,
+            "abs_amount": 280,
+            "category": "医療",
+            "type": "expense",
+            "date": "06-10 15:00",
+            "days_ago": 15,
+            "note": "詰め物の検査と超音波クリーニング。",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t19",
+            "title": "技術書",
+            "amount": "-¥92",
+            "raw_amount": -92,
+            "abs_amount": 92,
+            "category": "教育",
+            "type": "expense",
+            "date": "06-17 21:00",
+            "days_ago": 8,
+            "note": "データ指向アプリケーションデザイン。",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t20",
+            "title": "オンライン講座",
+            "amount": "-¥199",
+            "raw_amount": -199,
+            "abs_amount": 199,
+            "category": "教育",
+            "type": "expense",
+            "date": "06-14 22:00",
+            "days_ago": 11,
+            "note": "GeekTime 年間会員。",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t21",
+            "title": "投信積立",
+            "amount": "+¥2,000",
+            "raw_amount": 2000,
+            "abs_amount": 2000,
+            "category": "資産運用",
+            "type": "income",
+            "date": "06-05 14:00",
+            "days_ago": 20,
+            "note": "CSI300 インデックス、毎月積立。",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t22",
+            "title": "利息収入",
+            "amount": "+¥36",
+            "raw_amount": 36,
+            "abs_amount": 36,
+            "category": "資産運用",
+            "type": "income",
+            "date": "06-23 09:00",
+            "days_ago": 2,
+            "note": "MMF、T+1 決済。",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t23",
+            "title": "同僚のおごり",
+            "amount": "-¥0",
+            "raw_amount": 0,
+            "abs_amount": 0,
+            "category": "その他",
+            "type": "expense",
+            "date": "06-09 12:30",
+            "days_ago": 16,
+            "note": "リリース記念、精算済み。",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB"
+          }
+        ],
+        "it": [
+          {
+            "id": "t01",
+            "title": "Stipendio mensile",
+            "amount": "+¥12,000",
+            "raw_amount": 12000,
+            "abs_amount": 12000,
+            "category": "Stipendio",
+            "type": "income",
+            "date": "06-05 09:00",
+            "days_ago": 20,
+            "note": "Pagato a inizio giugno, al netto degli oneri sociali.",
+            "icon": "payments",
+            "accent": "#059669",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t02",
+            "title": "Colazione",
+            "amount": "-¥12",
+            "raw_amount": -12,
+            "abs_amount": 12,
+            "category": "Cibo",
+            "type": "expense",
+            "date": "Oggi 08:15",
+            "days_ago": 0,
+            "note": "Bancarella: latte di soia, frittella, uovo al tè.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t03",
+            "title": "Pranzo a domicilio",
+            "amount": "-¥38",
+            "raw_amount": -38,
+            "abs_amount": 38,
+            "category": "Cibo",
+            "type": "expense",
+            "date": "Oggi 12:30",
+            "days_ago": 0,
+            "note": "Ordine di gruppo feriale: malatang.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t04",
+            "title": "Cena giapponese",
+            "amount": "-¥168",
+            "raw_amount": -168,
+            "abs_amount": 168,
+            "category": "Cibo",
+            "type": "expense",
+            "date": "Ieri 19:20",
+            "days_ago": 1,
+            "note": "Cena di squadra dopo il progetto, conto diviso.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t05",
+            "title": "Caffè",
+            "amount": "-¥22",
+            "raw_amount": -22,
+            "abs_amount": 22,
+            "category": "Cibo",
+            "type": "expense",
+            "date": "Ieri 15:00",
+            "days_ago": 1,
+            "note": "Americano e uno scone, merenda.",
+            "icon": "restaurant",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "id": "t06",
+            "title": "Metro per l'ufficio",
+            "amount": "-¥8",
+            "raw_amount": -8,
+            "abs_amount": 8,
+            "category": "Trasporti",
+            "type": "expense",
+            "date": "Oggi 08:40",
+            "days_ago": 0,
+            "note": "Biglietto di sola andata: casa-ufficio.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t07",
+            "title": "Taxi verso casa",
+            "amount": "-¥36",
+            "raw_amount": -36,
+            "abs_amount": 36,
+            "category": "Trasporti",
+            "type": "expense",
+            "date": "Ieri 22:10",
+            "days_ago": 1,
+            "note": "Lavorato fino a tardi; la metro era chiusa.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t08",
+            "title": "Carburante",
+            "amount": "-¥320",
+            "raw_amount": -320,
+            "abs_amount": 320,
+            "category": "Trasporti",
+            "type": "expense",
+            "date": "06-22 18:00",
+            "days_ago": 3,
+            "note": "Sinopec 95#, pieno da 40L.",
+            "icon": "bolt",
+            "accent": "#2563EB",
+            "tint": "#DBEAFE"
+          },
+          {
+            "id": "t09",
+            "title": "Spesa",
+            "amount": "-¥142",
+            "raw_amount": -142,
+            "abs_amount": 142,
+            "category": "Acquisti",
+            "type": "expense",
+            "date": "06-22 14:30",
+            "days_ago": 3,
+            "note": "Shampoo, fazzoletti, detergente cucina.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t10",
+            "title": "Abiti estivi",
+            "amount": "-¥459",
+            "raw_amount": -459,
+            "abs_amount": 459,
+            "category": "Acquisti",
+            "type": "expense",
+            "date": "06-20 16:00",
+            "days_ago": 5,
+            "note": "Uniqlo: due completi di maglietta e pantaloncini.",
+            "icon": "shopping_cart",
+            "accent": "#7C3AED",
+            "tint": "#EDE9FE"
+          },
+          {
+            "id": "t11",
+            "title": "Elettricità",
+            "amount": "-¥186",
+            "raw_amount": -186,
+            "abs_amount": 186,
+            "category": "Casa",
+            "type": "expense",
+            "date": "06-18 11:20",
+            "days_ago": 7,
+            "note": "Uso del condizionatore, bolletta di maggio.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t12",
+            "title": "Affitto",
+            "amount": "-¥2,400",
+            "raw_amount": -2400,
+            "abs_amount": 2400,
+            "category": "Casa",
+            "type": "expense",
+            "date": "06-01 10:00",
+            "days_ago": 24,
+            "note": "Affitto mensile di un monolocale, al proprietario.",
+            "icon": "home",
+            "accent": "#0F766E",
+            "tint": "#CCFBF1"
+          },
+          {
+            "id": "t13",
+            "title": "Internet",
+            "amount": "-¥99",
+            "raw_amount": -99,
+            "abs_amount": 99,
+            "category": "Comunicazioni",
+            "type": "expense",
+            "date": "06-12 09:00",
+            "days_ago": 13,
+            "note": "Banda larga 200M, pagamento trimestrale.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t14",
+            "title": "Bolletta mobile",
+            "amount": "-¥58",
+            "raw_amount": -58,
+            "abs_amount": 58,
+            "category": "Comunicazioni",
+            "type": "expense",
+            "date": "06-08 10:30",
+            "days_ago": 17,
+            "note": "Piano mobile ¥99, rinnovo automatico.",
+            "icon": "wifi",
+            "accent": "#6366F1",
+            "tint": "#E0E7FF"
+          },
+          {
+            "id": "t15",
+            "title": "Biglietti cinema",
+            "amount": "-¥78",
+            "raw_amount": -78,
+            "abs_amount": 78,
+            "category": "Svago",
+            "type": "expense",
+            "date": "06-21 20:30",
+            "days_ago": 4,
+            "note": "Due biglietti IMAX per Fast & Furious 10.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t16",
+            "title": "Palestra",
+            "amount": "-¥198",
+            "raw_amount": -198,
+            "abs_amount": 198,
+            "category": "Svago",
+            "type": "expense",
+            "date": "06-15 19:00",
+            "days_ago": 10,
+            "note": "Abbonamento mensile rinnovato, illimitato.",
+            "icon": "theaters",
+            "accent": "#EC4899",
+            "tint": "#FCE7F3"
+          },
+          {
+            "id": "t17",
+            "title": "Medicina raffreddore",
+            "amount": "-¥65",
+            "raw_amount": -65,
+            "abs_amount": 65,
+            "category": "Salute",
+            "type": "expense",
+            "date": "06-19 12:00",
+            "days_ago": 6,
+            "note": "In farmacia: antinfluenzale e vitamina C.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t18",
+            "title": "Controllo dentistico",
+            "amount": "-¥280",
+            "raw_amount": -280,
+            "abs_amount": 280,
+            "category": "Salute",
+            "type": "expense",
+            "date": "06-10 15:00",
+            "days_ago": 15,
+            "note": "Controllo otturazione e pulizia a ultrasuoni.",
+            "icon": "medication",
+            "accent": "#F59E0B",
+            "tint": "#FEF3C7"
+          },
+          {
+            "id": "t19",
+            "title": "Libro tecnico",
+            "amount": "-¥92",
+            "raw_amount": -92,
+            "abs_amount": 92,
+            "category": "Istruzione",
+            "type": "expense",
+            "date": "06-17 21:00",
+            "days_ago": 8,
+            "note": "Designing Data-Intensive Applications.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t20",
+            "title": "Corso online",
+            "amount": "-¥199",
+            "raw_amount": -199,
+            "abs_amount": 199,
+            "category": "Istruzione",
+            "type": "expense",
+            "date": "06-14 22:00",
+            "days_ago": 11,
+            "note": "Abbonamento annuale GeekTime.",
+            "icon": "menu_book",
+            "accent": "#10B981",
+            "tint": "#D1FAE5"
+          },
+          {
+            "id": "t21",
+            "title": "Investimento fondo",
+            "amount": "+¥2,000",
+            "raw_amount": 2000,
+            "abs_amount": 2000,
+            "category": "Investimenti",
+            "type": "income",
+            "date": "06-05 14:00",
+            "days_ago": 20,
+            "note": "Fondo indice CSI 300, piano mensile.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t22",
+            "title": "Interessi attivi",
+            "amount": "+¥36",
+            "raw_amount": 36,
+            "abs_amount": 36,
+            "category": "Investimenti",
+            "type": "income",
+            "date": "06-23 09:00",
+            "days_ago": 2,
+            "note": "Fondo monetario, regolamento T+1.",
+            "icon": "analytics",
+            "accent": "#0EA5E9",
+            "tint": "#E0F2FE"
+          },
+          {
+            "id": "t23",
+            "title": "Collega ha offerto",
+            "amount": "-¥0",
+            "raw_amount": 0,
+            "abs_amount": 0,
+            "category": "Altro",
+            "type": "expense",
+            "date": "06-09 12:30",
+            "days_ago": 16,
+            "note": "Festa di lancio, conto già saldato.",
+            "icon": "tag",
+            "accent": "#6B7280",
+            "tint": "#E5E7EB"
+          }
+        ]
+      }
     },
     "functions": {
       "viewTxn": {
@@ -1495,7 +7762,84 @@
       }
     }
   },
-  "steps": [],
+  "steps": [
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.pieData",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_pieData.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_pieData.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_pieData.zh"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.barData",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_barData.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_barData.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_barData.zh"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.budgetsData",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_budgetsData.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_budgetsData.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_budgetsData.zh"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.txns",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_txns.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_txns.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_txns.zh"
+            }
+          ]
+        }
+      }
+    }
+  ],
   "ui": {
     "screens": [
       {

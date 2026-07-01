@@ -122,12 +122,1096 @@
           "qrData": "BC:CZ3102:20260628:8C:PEK-CAN:CN002"
         }
       ],
+      "_seed_trips": {
+        "zh": [
+          {
+            "id": "1",
+            "from": "上海",
+            "fromCode": "PVG",
+            "to": "北京",
+            "toCode": "PEK",
+            "flight": "MU 5107",
+            "date": "2026-06-25",
+            "departureTime": "10:05",
+            "arrivalTime": "12:30",
+            "seat": "12A",
+            "gate": "23",
+            "terminal": "2",
+            "status": "boarding",
+            "statusLabel": "正在登机",
+            "baggage": "B-08",
+            "duration": "2h 25m",
+            "weather": "晴 28°C",
+            "progress": 0.75,
+            "checkpoints": [
+              {
+                "time": "07:30",
+                "title": "值机完成",
+                "desc": "2 号航站楼 · B 区安检"
+              },
+              {
+                "time": "08:45",
+                "title": "安检通过",
+                "desc": "快速通道 · 已通过"
+              },
+              {
+                "time": "09:15",
+                "title": "登机口开放",
+                "desc": "Gate 23 · 步行约 8 分钟"
+              },
+              {
+                "time": "09:45",
+                "title": "开始登机",
+                "desc": "优先登机 · Zone 2"
+              },
+              {
+                "time": "10:05",
+                "title": "预计起飞",
+                "desc": "MU 5107 · 靠窗 12A"
+              }
+            ],
+            "qrData": "BC:MU5107:20260625:12A:PVG-PEK:CN001"
+          },
+          {
+            "id": "2",
+            "from": "北京",
+            "fromCode": "PEK",
+            "to": "广州",
+            "toCode": "CAN",
+            "flight": "CZ 3102",
+            "date": "2026-06-28",
+            "departureTime": "14:20",
+            "arrivalTime": "17:45",
+            "seat": "8C",
+            "gate": "15",
+            "terminal": "3",
+            "status": "upcoming",
+            "statusLabel": "即将出行",
+            "baggage": "C-12",
+            "duration": "3h 25m",
+            "weather": "多云 32°C",
+            "progress": 0.1,
+            "checkpoints": [
+              {
+                "time": "12:00",
+                "title": "开放值机",
+                "desc": "线上值机已开放"
+              },
+              {
+                "time": "12:20",
+                "title": "到达机场",
+                "desc": "3 号航站楼出发层"
+              },
+              {
+                "time": "13:30",
+                "title": "建议安检",
+                "desc": "预留充足过检时间"
+              },
+              {
+                "time": "13:50",
+                "title": "登机口开放",
+                "desc": "Gate 15 · 步行约 6 分钟"
+              },
+              {
+                "time": "14:20",
+                "title": "预计起飞",
+                "desc": "CZ 3102 · 过道 8C"
+              }
+            ],
+            "qrData": "BC:CZ3102:20260628:8C:PEK-CAN:CN002"
+          }
+        ],
+        "en": [
+          {
+            "id": "1",
+            "from": "Shanghai",
+            "fromCode": "PVG",
+            "to": "Beijing",
+            "toCode": "PEK",
+            "flight": "MU 5107",
+            "date": "2026-06-25",
+            "departureTime": "10:05",
+            "arrivalTime": "12:30",
+            "seat": "12A",
+            "gate": "23",
+            "terminal": "2",
+            "status": "boarding",
+            "statusLabel": "Boarding",
+            "baggage": "B-08",
+            "duration": "2h 25m",
+            "weather": "Sunny 28°C",
+            "progress": 0.75,
+            "checkpoints": [
+              {
+                "time": "07:30",
+                "title": "Check-in Complete",
+                "desc": "Terminal 2 · Zone B Security"
+              },
+              {
+                "time": "08:45",
+                "title": "Security Cleared",
+                "desc": "Fast Track · Cleared"
+              },
+              {
+                "time": "09:15",
+                "title": "Gate Open",
+                "desc": "Gate 23 · ~8 min walk"
+              },
+              {
+                "time": "09:45",
+                "title": "Boarding Started",
+                "desc": "Priority Boarding · Zone 2"
+              },
+              {
+                "time": "10:05",
+                "title": "Estimated Departure",
+                "desc": "MU 5107 · Window 12A"
+              }
+            ],
+            "qrData": "BC:MU5107:20260625:12A:PVG-PEK:CN001"
+          },
+          {
+            "id": "2",
+            "from": "Beijing",
+            "fromCode": "PEK",
+            "to": "Guangzhou",
+            "toCode": "CAN",
+            "flight": "CZ 3102",
+            "date": "2026-06-28",
+            "departureTime": "14:20",
+            "arrivalTime": "17:45",
+            "seat": "8C",
+            "gate": "15",
+            "terminal": "3",
+            "status": "upcoming",
+            "statusLabel": "Upcoming",
+            "baggage": "C-12",
+            "duration": "3h 25m",
+            "weather": "Cloudy 32°C",
+            "progress": 0.1,
+            "checkpoints": [
+              {
+                "time": "12:00",
+                "title": "Check-in Open",
+                "desc": "Online check-in open"
+              },
+              {
+                "time": "12:20",
+                "title": "Arrive at Airport",
+                "desc": "Terminal 3 Departures"
+              },
+              {
+                "time": "13:30",
+                "title": "Head to Security",
+                "desc": "Allow ample time for security"
+              },
+              {
+                "time": "13:50",
+                "title": "Gate Open",
+                "desc": "Gate 15 · ~6 min walk"
+              },
+              {
+                "time": "14:20",
+                "title": "Estimated Departure",
+                "desc": "CZ 3102 · Aisle 8C"
+              }
+            ],
+            "qrData": "BC:CZ3102:20260628:8C:PEK-CAN:CN002"
+          }
+        ],
+        "de": [
+          {
+            "id": "1",
+            "from": "Shanghai",
+            "fromCode": "PVG",
+            "to": "Peking",
+            "toCode": "PEK",
+            "flight": "MU 5107",
+            "date": "2026-06-25",
+            "departureTime": "10:05",
+            "arrivalTime": "12:30",
+            "seat": "12A",
+            "gate": "23",
+            "terminal": "2",
+            "status": "boarding",
+            "statusLabel": "Boarding",
+            "baggage": "B-08",
+            "duration": "2h 25m",
+            "weather": "Sonnig 28°C",
+            "progress": 0.75,
+            "checkpoints": [
+              {
+                "time": "07:30",
+                "title": "Check-in abgeschlossen",
+                "desc": "Terminal 2 · Sicherheitskontrolle Zone B"
+              },
+              {
+                "time": "08:45",
+                "title": "Sicherheitskontrolle passiert",
+                "desc": "Fast Track · Passiert"
+              },
+              {
+                "time": "09:15",
+                "title": "Gate geöffnet",
+                "desc": "Gate 23 · ca. 8 Min. Fußweg"
+              },
+              {
+                "time": "09:45",
+                "title": "Boarding begonnen",
+                "desc": "Priority Boarding · Zone 2"
+              },
+              {
+                "time": "10:05",
+                "title": "Voraussichtlicher Abflug",
+                "desc": "MU 5107 · Fenster 12A"
+              }
+            ],
+            "qrData": "BC:MU5107:20260625:12A:PVG-PEK:CN001"
+          },
+          {
+            "id": "2",
+            "from": "Peking",
+            "fromCode": "PEK",
+            "to": "Guangzhou",
+            "toCode": "CAN",
+            "flight": "CZ 3102",
+            "date": "2026-06-28",
+            "departureTime": "14:20",
+            "arrivalTime": "17:45",
+            "seat": "8C",
+            "gate": "15",
+            "terminal": "3",
+            "status": "upcoming",
+            "statusLabel": "Demnächst",
+            "baggage": "C-12",
+            "duration": "3h 25m",
+            "weather": "Bewölkt 32°C",
+            "progress": 0.1,
+            "checkpoints": [
+              {
+                "time": "12:00",
+                "title": "Check-in geöffnet",
+                "desc": "Online-Check-in geöffnet"
+              },
+              {
+                "time": "12:20",
+                "title": "Ankunft am Flughafen",
+                "desc": "Terminal 3 Abflugebene"
+              },
+              {
+                "time": "13:30",
+                "title": "Zur Sicherheitskontrolle",
+                "desc": "Genug Zeit für die Kontrolle einplanen"
+              },
+              {
+                "time": "13:50",
+                "title": "Gate geöffnet",
+                "desc": "Gate 15 · ca. 6 Min. Fußweg"
+              },
+              {
+                "time": "14:20",
+                "title": "Voraussichtlicher Abflug",
+                "desc": "CZ 3102 · Gang 8C"
+              }
+            ],
+            "qrData": "BC:CZ3102:20260628:8C:PEK-CAN:CN002"
+          }
+        ],
+        "es": [
+          {
+            "id": "1",
+            "from": "Shanghái",
+            "fromCode": "PVG",
+            "to": "Pekín",
+            "toCode": "PEK",
+            "flight": "MU 5107",
+            "date": "2026-06-25",
+            "departureTime": "10:05",
+            "arrivalTime": "12:30",
+            "seat": "12A",
+            "gate": "23",
+            "terminal": "2",
+            "status": "boarding",
+            "statusLabel": "Embarcando",
+            "baggage": "B-08",
+            "duration": "2h 25m",
+            "weather": "Soleado 28°C",
+            "progress": 0.75,
+            "checkpoints": [
+              {
+                "time": "07:30",
+                "title": "Facturación completada",
+                "desc": "Terminal 2 · Seguridad Zona B"
+              },
+              {
+                "time": "08:45",
+                "title": "Control de seguridad superado",
+                "desc": "Vía rápida · Superado"
+              },
+              {
+                "time": "09:15",
+                "title": "Puerta abierta",
+                "desc": "Puerta 23 · ~8 min a pie"
+              },
+              {
+                "time": "09:45",
+                "title": "Embarque iniciado",
+                "desc": "Embarque prioritario · Zona 2"
+              },
+              {
+                "time": "10:05",
+                "title": "Salida estimada",
+                "desc": "MU 5107 · Ventana 12A"
+              }
+            ],
+            "qrData": "BC:MU5107:20260625:12A:PVG-PEK:CN001"
+          },
+          {
+            "id": "2",
+            "from": "Pekín",
+            "fromCode": "PEK",
+            "to": "Cantón",
+            "toCode": "CAN",
+            "flight": "CZ 3102",
+            "date": "2026-06-28",
+            "departureTime": "14:20",
+            "arrivalTime": "17:45",
+            "seat": "8C",
+            "gate": "15",
+            "terminal": "3",
+            "status": "upcoming",
+            "statusLabel": "Próximamente",
+            "baggage": "C-12",
+            "duration": "3h 25m",
+            "weather": "Nublado 32°C",
+            "progress": 0.1,
+            "checkpoints": [
+              {
+                "time": "12:00",
+                "title": "Facturación abierta",
+                "desc": "Facturación en línea abierta"
+              },
+              {
+                "time": "12:20",
+                "title": "Llegada al aeropuerto",
+                "desc": "Terminal 3 Salidas"
+              },
+              {
+                "time": "13:30",
+                "title": "Ir al control de seguridad",
+                "desc": "Reserve tiempo suficiente para el control"
+              },
+              {
+                "time": "13:50",
+                "title": "Puerta abierta",
+                "desc": "Puerta 15 · ~6 min a pie"
+              },
+              {
+                "time": "14:20",
+                "title": "Salida estimada",
+                "desc": "CZ 3102 · Pasillo 8C"
+              }
+            ],
+            "qrData": "BC:CZ3102:20260628:8C:PEK-CAN:CN002"
+          }
+        ],
+        "fr": [
+          {
+            "id": "1",
+            "from": "Shanghai",
+            "fromCode": "PVG",
+            "to": "Pékin",
+            "toCode": "PEK",
+            "flight": "MU 5107",
+            "date": "2026-06-25",
+            "departureTime": "10:05",
+            "arrivalTime": "12:30",
+            "seat": "12A",
+            "gate": "23",
+            "terminal": "2",
+            "status": "boarding",
+            "statusLabel": "Embarquement",
+            "baggage": "B-08",
+            "duration": "2h 25m",
+            "weather": "Ensoleillé 28°C",
+            "progress": 0.75,
+            "checkpoints": [
+              {
+                "time": "07:30",
+                "title": "Enregistrement terminé",
+                "desc": "Terminal 2 · Sécurité Zone B"
+              },
+              {
+                "time": "08:45",
+                "title": "Contrôle de sécurité passé",
+                "desc": "Voie rapide · Passé"
+              },
+              {
+                "time": "09:15",
+                "title": "Porte ouverte",
+                "desc": "Porte 23 · ~8 min à pied"
+              },
+              {
+                "time": "09:45",
+                "title": "Embarquement commencé",
+                "desc": "Embarquement prioritaire · Zone 2"
+              },
+              {
+                "time": "10:05",
+                "title": "Départ estimé",
+                "desc": "MU 5107 · Hublot 12A"
+              }
+            ],
+            "qrData": "BC:MU5107:20260625:12A:PVG-PEK:CN001"
+          },
+          {
+            "id": "2",
+            "from": "Pékin",
+            "fromCode": "PEK",
+            "to": "Canton",
+            "toCode": "CAN",
+            "flight": "CZ 3102",
+            "date": "2026-06-28",
+            "departureTime": "14:20",
+            "arrivalTime": "17:45",
+            "seat": "8C",
+            "gate": "15",
+            "terminal": "3",
+            "status": "upcoming",
+            "statusLabel": "À venir",
+            "baggage": "C-12",
+            "duration": "3h 25m",
+            "weather": "Nuageux 32°C",
+            "progress": 0.1,
+            "checkpoints": [
+              {
+                "time": "12:00",
+                "title": "Enregistrement ouvert",
+                "desc": "Enregistrement en ligne ouvert"
+              },
+              {
+                "time": "12:20",
+                "title": "Arrivée à l'aéroport",
+                "desc": "Terminal 3 Départs"
+              },
+              {
+                "time": "13:30",
+                "title": "Aller au contrôle de sécurité",
+                "desc": "Prévoyez assez de temps pour le contrôle"
+              },
+              {
+                "time": "13:50",
+                "title": "Porte ouverte",
+                "desc": "Porte 15 · ~6 min à pied"
+              },
+              {
+                "time": "14:20",
+                "title": "Départ estimé",
+                "desc": "CZ 3102 · Couloir 8C"
+              }
+            ],
+            "qrData": "BC:CZ3102:20260628:8C:PEK-CAN:CN002"
+          }
+        ],
+        "pt": [
+          {
+            "id": "1",
+            "from": "Xangai",
+            "fromCode": "PVG",
+            "to": "Pequim",
+            "toCode": "PEK",
+            "flight": "MU 5107",
+            "date": "2026-06-25",
+            "departureTime": "10:05",
+            "arrivalTime": "12:30",
+            "seat": "12A",
+            "gate": "23",
+            "terminal": "2",
+            "status": "boarding",
+            "statusLabel": "Embarcando",
+            "baggage": "B-08",
+            "duration": "2h 25m",
+            "weather": "Ensolarado 28°C",
+            "progress": 0.75,
+            "checkpoints": [
+              {
+                "time": "07:30",
+                "title": "Check-in concluído",
+                "desc": "Terminal 2 · Segurança Zona B"
+              },
+              {
+                "time": "08:45",
+                "title": "Segurança liberada",
+                "desc": "Via rápida · Concluído"
+              },
+              {
+                "time": "09:15",
+                "title": "Portão aberto",
+                "desc": "Portão 23 · ~8 min a pé"
+              },
+              {
+                "time": "09:45",
+                "title": "Embarque iniciado",
+                "desc": "Embarque prioritário · Zona 2"
+              },
+              {
+                "time": "10:05",
+                "title": "Partida estimada",
+                "desc": "MU 5107 · Janela 12A"
+              }
+            ],
+            "qrData": "BC:MU5107:20260625:12A:PVG-PEK:CN001"
+          },
+          {
+            "id": "2",
+            "from": "Pequim",
+            "fromCode": "PEK",
+            "to": "Cantão",
+            "toCode": "CAN",
+            "flight": "CZ 3102",
+            "date": "2026-06-28",
+            "departureTime": "14:20",
+            "arrivalTime": "17:45",
+            "seat": "8C",
+            "gate": "15",
+            "terminal": "3",
+            "status": "upcoming",
+            "statusLabel": "Em breve",
+            "baggage": "C-12",
+            "duration": "3h 25m",
+            "weather": "Nublado 32°C",
+            "progress": 0.1,
+            "checkpoints": [
+              {
+                "time": "12:00",
+                "title": "Check-in aberto",
+                "desc": "Check-in online aberto"
+              },
+              {
+                "time": "12:20",
+                "title": "Chegada ao aeroporto",
+                "desc": "Terminal 3 Partidas"
+              },
+              {
+                "time": "13:30",
+                "title": "Ir à segurança",
+                "desc": "Reserve tempo suficiente para a segurança"
+              },
+              {
+                "time": "13:50",
+                "title": "Portão aberto",
+                "desc": "Portão 15 · ~6 min a pé"
+              },
+              {
+                "time": "14:20",
+                "title": "Partida estimada",
+                "desc": "CZ 3102 · Corredor 8C"
+              }
+            ],
+            "qrData": "BC:CZ3102:20260628:8C:PEK-CAN:CN002"
+          }
+        ],
+        "ca": [
+          {
+            "id": "1",
+            "from": "Xangai",
+            "fromCode": "PVG",
+            "to": "Pequín",
+            "toCode": "PEK",
+            "flight": "MU 5107",
+            "date": "2026-06-25",
+            "departureTime": "10:05",
+            "arrivalTime": "12:30",
+            "seat": "12A",
+            "gate": "23",
+            "terminal": "2",
+            "status": "boarding",
+            "statusLabel": "Embarcant",
+            "baggage": "B-08",
+            "duration": "2h 25m",
+            "weather": "Assolellat 28°C",
+            "progress": 0.75,
+            "checkpoints": [
+              {
+                "time": "07:30",
+                "title": "Facturació completada",
+                "desc": "Terminal 2 · Seguretat Zona B"
+              },
+              {
+                "time": "08:45",
+                "title": "Control de seguretat superat",
+                "desc": "Via ràpida · Superat"
+              },
+              {
+                "time": "09:15",
+                "title": "Porta oberta",
+                "desc": "Porta 23 · ~8 min a peu"
+              },
+              {
+                "time": "09:45",
+                "title": "Embarcament iniciat",
+                "desc": "Embarcament prioritari · Zona 2"
+              },
+              {
+                "time": "10:05",
+                "title": "Sortida estimada",
+                "desc": "MU 5107 · Finestra 12A"
+              }
+            ],
+            "qrData": "BC:MU5107:20260625:12A:PVG-PEK:CN001"
+          },
+          {
+            "id": "2",
+            "from": "Pequín",
+            "fromCode": "PEK",
+            "to": "Canton",
+            "toCode": "CAN",
+            "flight": "CZ 3102",
+            "date": "2026-06-28",
+            "departureTime": "14:20",
+            "arrivalTime": "17:45",
+            "seat": "8C",
+            "gate": "15",
+            "terminal": "3",
+            "status": "upcoming",
+            "statusLabel": "Properament",
+            "baggage": "C-12",
+            "duration": "3h 25m",
+            "weather": "Ennuvolat 32°C",
+            "progress": 0.1,
+            "checkpoints": [
+              {
+                "time": "12:00",
+                "title": "Facturació oberta",
+                "desc": "Facturació en línia oberta"
+              },
+              {
+                "time": "12:20",
+                "title": "Arribada a l'aeroport",
+                "desc": "Terminal 3 Sortides"
+              },
+              {
+                "time": "13:30",
+                "title": "Anar al control de seguretat",
+                "desc": "Reserveu prou temps per al control"
+              },
+              {
+                "time": "13:50",
+                "title": "Porta oberta",
+                "desc": "Porta 15 · ~6 min a peu"
+              },
+              {
+                "time": "14:20",
+                "title": "Sortida estimada",
+                "desc": "CZ 3102 · Passadís 8C"
+              }
+            ],
+            "qrData": "BC:CZ3102:20260628:8C:PEK-CAN:CN002"
+          }
+        ],
+        "hi": [
+          {
+            "id": "1",
+            "from": "शंघाई",
+            "fromCode": "PVG",
+            "to": "बीजिंग",
+            "toCode": "PEK",
+            "flight": "MU 5107",
+            "date": "2026-06-25",
+            "departureTime": "10:05",
+            "arrivalTime": "12:30",
+            "seat": "12A",
+            "gate": "23",
+            "terminal": "2",
+            "status": "boarding",
+            "statusLabel": "बोर्डिंग",
+            "baggage": "B-08",
+            "duration": "2h 25m",
+            "weather": "धूप 28°C",
+            "progress": 0.75,
+            "checkpoints": [
+              {
+                "time": "07:30",
+                "title": "चेक-इन पूर्ण",
+                "desc": "टर्मिनल 2 · ज़ोन B सुरक्षा"
+              },
+              {
+                "time": "08:45",
+                "title": "सुरक्षा जांच पूर्ण",
+                "desc": "फास्ट ट्रैक · पूर्ण"
+              },
+              {
+                "time": "09:15",
+                "title": "गेट खुला",
+                "desc": "गेट 23 · लगभग 8 मिनट पैदल"
+              },
+              {
+                "time": "09:45",
+                "title": "बोर्डिंग शुरू",
+                "desc": "प्राथमिकता बोर्डिंग · ज़ोन 2"
+              },
+              {
+                "time": "10:05",
+                "title": "अनुमानित प्रस्थान",
+                "desc": "MU 5107 · खिड़की 12A"
+              }
+            ],
+            "qrData": "BC:MU5107:20260625:12A:PVG-PEK:CN001"
+          },
+          {
+            "id": "2",
+            "from": "बीजिंग",
+            "fromCode": "PEK",
+            "to": "गुआंगझोउ",
+            "toCode": "CAN",
+            "flight": "CZ 3102",
+            "date": "2026-06-28",
+            "departureTime": "14:20",
+            "arrivalTime": "17:45",
+            "seat": "8C",
+            "gate": "15",
+            "terminal": "3",
+            "status": "upcoming",
+            "statusLabel": "आगामी",
+            "baggage": "C-12",
+            "duration": "3h 25m",
+            "weather": "बादल 32°C",
+            "progress": 0.1,
+            "checkpoints": [
+              {
+                "time": "12:00",
+                "title": "चेक-इन खुला",
+                "desc": "ऑनलाइन चेक-इन खुला"
+              },
+              {
+                "time": "12:20",
+                "title": "हवाई अड्डे पर पहुँचें",
+                "desc": "टर्मिनल 3 प्रस्थान"
+              },
+              {
+                "time": "13:30",
+                "title": "सुरक्षा जांच की सलाह",
+                "desc": "सुरक्षा जांच के लिए पर्याप्त समय रखें"
+              },
+              {
+                "time": "13:50",
+                "title": "गेट खुला",
+                "desc": "गेट 15 · लगभग 6 मिनट पैदल"
+              },
+              {
+                "time": "14:20",
+                "title": "अनुमानित प्रस्थान",
+                "desc": "CZ 3102 · गलियारा 8C"
+              }
+            ],
+            "qrData": "BC:CZ3102:20260628:8C:PEK-CAN:CN002"
+          }
+        ],
+        "ko": [
+          {
+            "id": "1",
+            "from": "상하이",
+            "fromCode": "PVG",
+            "to": "베이징",
+            "toCode": "PEK",
+            "flight": "MU 5107",
+            "date": "2026-06-25",
+            "departureTime": "10:05",
+            "arrivalTime": "12:30",
+            "seat": "12A",
+            "gate": "23",
+            "terminal": "2",
+            "status": "boarding",
+            "statusLabel": "탑승 중",
+            "baggage": "B-08",
+            "duration": "2h 25m",
+            "weather": "맑음 28°C",
+            "progress": 0.75,
+            "checkpoints": [
+              {
+                "time": "07:30",
+                "title": "체크인 완료",
+                "desc": "터미널 2 · B 구역 보안"
+              },
+              {
+                "time": "08:45",
+                "title": "보안 검색 통과",
+                "desc": "패스트트랙 · 통과"
+              },
+              {
+                "time": "09:15",
+                "title": "게이트 오픈",
+                "desc": "게이트 23 · 도보 약 8분"
+              },
+              {
+                "time": "09:45",
+                "title": "탑승 시작",
+                "desc": "우선 탑승 · 존 2"
+              },
+              {
+                "time": "10:05",
+                "title": "예상 출발",
+                "desc": "MU 5107 · 창가 12A"
+              }
+            ],
+            "qrData": "BC:MU5107:20260625:12A:PVG-PEK:CN001"
+          },
+          {
+            "id": "2",
+            "from": "베이징",
+            "fromCode": "PEK",
+            "to": "광저우",
+            "toCode": "CAN",
+            "flight": "CZ 3102",
+            "date": "2026-06-28",
+            "departureTime": "14:20",
+            "arrivalTime": "17:45",
+            "seat": "8C",
+            "gate": "15",
+            "terminal": "3",
+            "status": "upcoming",
+            "statusLabel": "예정",
+            "baggage": "C-12",
+            "duration": "3h 25m",
+            "weather": "흐림 32°C",
+            "progress": 0.1,
+            "checkpoints": [
+              {
+                "time": "12:00",
+                "title": "체크인 오픈",
+                "desc": "온라인 체크인 오픈"
+              },
+              {
+                "time": "12:20",
+                "title": "공항 도착",
+                "desc": "터미널 3 출발층"
+              },
+              {
+                "time": "13:30",
+                "title": "보안 검색 권장",
+                "desc": "보안 검색 시간 넉넉히 확보"
+              },
+              {
+                "time": "13:50",
+                "title": "게이트 오픈",
+                "desc": "게이트 15 · 도보 약 6분"
+              },
+              {
+                "time": "14:20",
+                "title": "예상 출발",
+                "desc": "CZ 3102 · 통로 8C"
+              }
+            ],
+            "qrData": "BC:CZ3102:20260628:8C:PEK-CAN:CN002"
+          }
+        ],
+        "ja": [
+          {
+            "id": "1",
+            "from": "上海",
+            "fromCode": "PVG",
+            "to": "北京",
+            "toCode": "PEK",
+            "flight": "MU 5107",
+            "date": "2026-06-25",
+            "departureTime": "10:05",
+            "arrivalTime": "12:30",
+            "seat": "12A",
+            "gate": "23",
+            "terminal": "2",
+            "status": "boarding",
+            "statusLabel": "搭乗中",
+            "baggage": "B-08",
+            "duration": "2h 25m",
+            "weather": "晴れ 28°C",
+            "progress": 0.75,
+            "checkpoints": [
+              {
+                "time": "07:30",
+                "title": "チェックイン完了",
+                "desc": "ターミナル2 · Bゾーン保安検査"
+              },
+              {
+                "time": "08:45",
+                "title": "保安検査通過",
+                "desc": "ファストトラック · 通過済み"
+              },
+              {
+                "time": "09:15",
+                "title": "ゲート開放",
+                "desc": "ゲート23 · 徒歩約8分"
+              },
+              {
+                "time": "09:45",
+                "title": "搭乗開始",
+                "desc": "優先搭乗 · ゾーン2"
+              },
+              {
+                "time": "10:05",
+                "title": "出発予定",
+                "desc": "MU 5107 · 窓側 12A"
+              }
+            ],
+            "qrData": "BC:MU5107:20260625:12A:PVG-PEK:CN001"
+          },
+          {
+            "id": "2",
+            "from": "北京",
+            "fromCode": "PEK",
+            "to": "広州",
+            "toCode": "CAN",
+            "flight": "CZ 3102",
+            "date": "2026-06-28",
+            "departureTime": "14:20",
+            "arrivalTime": "17:45",
+            "seat": "8C",
+            "gate": "15",
+            "terminal": "3",
+            "status": "upcoming",
+            "statusLabel": "出発予定",
+            "baggage": "C-12",
+            "duration": "3h 25m",
+            "weather": "曇り 32°C",
+            "progress": 0.1,
+            "checkpoints": [
+              {
+                "time": "12:00",
+                "title": "チェックイン開始",
+                "desc": "オンラインチェックイン開始"
+              },
+              {
+                "time": "12:20",
+                "title": "空港到着",
+                "desc": "ターミナル3 出発フロア"
+              },
+              {
+                "time": "13:30",
+                "title": "保安検査へ",
+                "desc": "保安検査の時間を十分に確保"
+              },
+              {
+                "time": "13:50",
+                "title": "ゲート開放",
+                "desc": "ゲート15 · 徒歩約6分"
+              },
+              {
+                "time": "14:20",
+                "title": "出発予定",
+                "desc": "CZ 3102 · 通路側 8C"
+              }
+            ],
+            "qrData": "BC:CZ3102:20260628:8C:PEK-CAN:CN002"
+          }
+        ],
+        "it": [
+          {
+            "id": "1",
+            "from": "Shanghai",
+            "fromCode": "PVG",
+            "to": "Pechino",
+            "toCode": "PEK",
+            "flight": "MU 5107",
+            "date": "2026-06-25",
+            "departureTime": "10:05",
+            "arrivalTime": "12:30",
+            "seat": "12A",
+            "gate": "23",
+            "terminal": "2",
+            "status": "boarding",
+            "statusLabel": "Imbarco",
+            "baggage": "B-08",
+            "duration": "2h 25m",
+            "weather": "Soleggiato 28°C",
+            "progress": 0.75,
+            "checkpoints": [
+              {
+                "time": "07:30",
+                "title": "Check-in completato",
+                "desc": "Terminal 2 · Sicurezza Zona B"
+              },
+              {
+                "time": "08:45",
+                "title": "Controllo sicurezza superato",
+                "desc": "Corsia rapida · Superato"
+              },
+              {
+                "time": "09:15",
+                "title": "Gate aperto",
+                "desc": "Gate 23 · ~8 min a piedi"
+              },
+              {
+                "time": "09:45",
+                "title": "Imbarco iniziato",
+                "desc": "Imbarco prioritario · Zona 2"
+              },
+              {
+                "time": "10:05",
+                "title": "Partenza stimata",
+                "desc": "MU 5107 · Finestrino 12A"
+              }
+            ],
+            "qrData": "BC:MU5107:20260625:12A:PVG-PEK:CN001"
+          },
+          {
+            "id": "2",
+            "from": "Pechino",
+            "fromCode": "PEK",
+            "to": "Canton",
+            "toCode": "CAN",
+            "flight": "CZ 3102",
+            "date": "2026-06-28",
+            "departureTime": "14:20",
+            "arrivalTime": "17:45",
+            "seat": "8C",
+            "gate": "15",
+            "terminal": "3",
+            "status": "upcoming",
+            "statusLabel": "In arrivo",
+            "baggage": "C-12",
+            "duration": "3h 25m",
+            "weather": "Nuvoloso 32°C",
+            "progress": 0.1,
+            "checkpoints": [
+              {
+                "time": "12:00",
+                "title": "Check-in aperto",
+                "desc": "Check-in online aperto"
+              },
+              {
+                "time": "12:20",
+                "title": "Arrivo in aeroporto",
+                "desc": "Terminal 3 Partenze"
+              },
+              {
+                "time": "13:30",
+                "title": "Vai al controllo sicurezza",
+                "desc": "Preveda tempo sufficiente per i controlli"
+              },
+              {
+                "time": "13:50",
+                "title": "Gate aperto",
+                "desc": "Gate 15 · ~6 min a piedi"
+              },
+              {
+                "time": "14:20",
+                "title": "Partenza stimata",
+                "desc": "CZ 3102 · Corridoio 8C"
+              }
+            ],
+            "qrData": "BC:CZ3102:20260628:8C:PEK-CAN:CN002"
+          }
+        ]
+      },
       "currentTripIndex": 0
     },
     "i18n": {
       "zh": {
-        "app": { "title": "旅行通行证" },
-        "timeline": { "title": "行程时间线" },
+        "app": {
+          "title": "旅行通行证"
+        },
+        "timeline": {
+          "title": "行程时间线"
+        },
         "boarding": {
           "title": "登机信息",
           "gate": "登机口",
@@ -136,15 +1220,21 @@
           "baggage": "行李转盘",
           "weather": "目的地天气"
         },
-        "trips": { "otherTitle": "其他行程" },
+        "trips": {
+          "otherTitle": "其他行程"
+        },
         "toast": {
           "shareReady": "行程卡已准备分享",
           "addPassSoon": "添加登机牌功能即将上线"
         }
       },
       "en": {
-        "app": { "title": "Travel Pass" },
-        "timeline": { "title": "Trip Timeline" },
+        "app": {
+          "title": "Travel Pass"
+        },
+        "timeline": {
+          "title": "Trip Timeline"
+        },
         "boarding": {
           "title": "Boarding Info",
           "gate": "Gate",
@@ -153,15 +1243,21 @@
           "baggage": "Baggage Carousel",
           "weather": "Destination Weather"
         },
-        "trips": { "otherTitle": "Other Trips" },
+        "trips": {
+          "otherTitle": "Other Trips"
+        },
         "toast": {
           "shareReady": "Trip card is ready to share",
           "addPassSoon": "Add boarding pass feature is coming soon"
         }
       },
       "de": {
-        "app": { "title": "Reisepass" },
-        "timeline": { "title": "Reise-Zeitleiste" },
+        "app": {
+          "title": "Reisepass"
+        },
+        "timeline": {
+          "title": "Reise-Zeitleiste"
+        },
         "boarding": {
           "title": "Boarding-Infos",
           "gate": "Gate",
@@ -170,15 +1266,21 @@
           "baggage": "Gepäckband",
           "weather": "Wetter am Zielort"
         },
-        "trips": { "otherTitle": "Weitere Reisen" },
+        "trips": {
+          "otherTitle": "Weitere Reisen"
+        },
         "toast": {
           "shareReady": "Reisekarte ist bereit zum Teilen",
           "addPassSoon": "Die Funktion zum Hinzufügen von Bordkarten kommt bald"
         }
       },
       "es": {
-        "app": { "title": "Pase de viaje" },
-        "timeline": { "title": "Cronología del viaje" },
+        "app": {
+          "title": "Pase de viaje"
+        },
+        "timeline": {
+          "title": "Cronología del viaje"
+        },
         "boarding": {
           "title": "Información de embarque",
           "gate": "Puerta",
@@ -187,15 +1289,21 @@
           "baggage": "Cinta de equipaje",
           "weather": "Clima del destino"
         },
-        "trips": { "otherTitle": "Otros viajes" },
+        "trips": {
+          "otherTitle": "Otros viajes"
+        },
         "toast": {
           "shareReady": "La tarjeta de viaje está lista para compartir",
           "addPassSoon": "La función para añadir tarjetas de embarque llegará pronto"
         }
       },
       "fr": {
-        "app": { "title": "Carte de voyage" },
-        "timeline": { "title": "Chronologie du voyage" },
+        "app": {
+          "title": "Carte de voyage"
+        },
+        "timeline": {
+          "title": "Chronologie du voyage"
+        },
         "boarding": {
           "title": "Informations d'embarquement",
           "gate": "Porte",
@@ -204,15 +1312,21 @@
           "baggage": "Tapis à bagages",
           "weather": "Météo à destination"
         },
-        "trips": { "otherTitle": "Autres voyages" },
+        "trips": {
+          "otherTitle": "Autres voyages"
+        },
         "toast": {
           "shareReady": "La carte de voyage est prête à partager",
           "addPassSoon": "La fonction d'ajout de carte d'embarquement arrive bientôt"
         }
       },
       "pt": {
-        "app": { "title": "Passe de viagem" },
-        "timeline": { "title": "Linha do tempo da viagem" },
+        "app": {
+          "title": "Passe de viagem"
+        },
+        "timeline": {
+          "title": "Linha do tempo da viagem"
+        },
         "boarding": {
           "title": "Informações de embarque",
           "gate": "Portão",
@@ -221,15 +1335,21 @@
           "baggage": "Esteira de bagagem",
           "weather": "Clima no destino"
         },
-        "trips": { "otherTitle": "Outras viagens" },
+        "trips": {
+          "otherTitle": "Outras viagens"
+        },
         "toast": {
           "shareReady": "O cartão de viagem está pronto para compartilhar",
           "addPassSoon": "O recurso para adicionar cartão de embarque chega em breve"
         }
       },
       "ca": {
-        "app": { "title": "Passi de viatge" },
-        "timeline": { "title": "Cronologia del viatge" },
+        "app": {
+          "title": "Passi de viatge"
+        },
+        "timeline": {
+          "title": "Cronologia del viatge"
+        },
         "boarding": {
           "title": "Informació d'embarcament",
           "gate": "Porta",
@@ -238,15 +1358,21 @@
           "baggage": "Cinta d'equipatge",
           "weather": "Temps a la destinació"
         },
-        "trips": { "otherTitle": "Altres viatges" },
+        "trips": {
+          "otherTitle": "Altres viatges"
+        },
         "toast": {
           "shareReady": "La targeta de viatge està a punt per compartir",
           "addPassSoon": "La funció per afegir targetes d'embarcament arribarà aviat"
         }
       },
       "hi": {
-        "app": { "title": "यात्रा पास" },
-        "timeline": { "title": "यात्रा समयरेखा" },
+        "app": {
+          "title": "यात्रा पास"
+        },
+        "timeline": {
+          "title": "यात्रा समयरेखा"
+        },
         "boarding": {
           "title": "बोर्डिंग जानकारी",
           "gate": "गेट",
@@ -255,15 +1381,21 @@
           "baggage": "सामान बेल्ट",
           "weather": "गंतव्य का मौसम"
         },
-        "trips": { "otherTitle": "अन्य यात्राएँ" },
+        "trips": {
+          "otherTitle": "अन्य यात्राएँ"
+        },
         "toast": {
           "shareReady": "यात्रा कार्ड साझा करने के लिए तैयार है",
           "addPassSoon": "बोर्डिंग पास जोड़ने की सुविधा जल्द आ रही है"
         }
       },
       "ko": {
-        "app": { "title": "여행 패스" },
-        "timeline": { "title": "여행 타임라인" },
+        "app": {
+          "title": "여행 패스"
+        },
+        "timeline": {
+          "title": "여행 타임라인"
+        },
         "boarding": {
           "title": "탑승 정보",
           "gate": "게이트",
@@ -272,15 +1404,21 @@
           "baggage": "수하물 수취대",
           "weather": "도착지 날씨"
         },
-        "trips": { "otherTitle": "다른 여행" },
+        "trips": {
+          "otherTitle": "다른 여행"
+        },
         "toast": {
           "shareReady": "여행 카드를 공유할 준비가 되었습니다",
           "addPassSoon": "탑승권 추가 기능이 곧 출시됩니다"
         }
       },
       "ja": {
-        "app": { "title": "旅行パス" },
-        "timeline": { "title": "旅程タイムライン" },
+        "app": {
+          "title": "旅行パス"
+        },
+        "timeline": {
+          "title": "旅程タイムライン"
+        },
         "boarding": {
           "title": "搭乗情報",
           "gate": "ゲート",
@@ -289,15 +1427,21 @@
           "baggage": "手荷物受取所",
           "weather": "目的地の天気"
         },
-        "trips": { "otherTitle": "その他の旅程" },
+        "trips": {
+          "otherTitle": "その他の旅程"
+        },
         "toast": {
           "shareReady": "旅程カードを共有する準備ができました",
           "addPassSoon": "搭乗券の追加機能は近日公開予定です"
         }
       },
       "it": {
-        "app": { "title": "Pass di viaggio" },
-        "timeline": { "title": "Cronologia del viaggio" },
+        "app": {
+          "title": "Pass di viaggio"
+        },
+        "timeline": {
+          "title": "Cronologia del viaggio"
+        },
         "boarding": {
           "title": "Informazioni d'imbarco",
           "gate": "Gate",
@@ -306,7 +1450,9 @@
           "baggage": "Nastro bagagli",
           "weather": "Meteo a destinazione"
         },
-        "trips": { "otherTitle": "Altri viaggi" },
+        "trips": {
+          "otherTitle": "Altri viaggi"
+        },
         "toast": {
           "shareReady": "La carta di viaggio è pronta per essere condivisa",
           "addPassSoon": "La funzione per aggiungere la carta d'imbarco arriverà presto"
@@ -350,7 +1496,27 @@
       }
     }
   },
-  "steps": [],
+  "steps": [
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.trips",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_trips.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_trips.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_trips.zh"
+            }
+          ]
+        }
+      }
+    }
+  ],
   "ui": {
     "screens": [
       {

@@ -162,7 +162,1463 @@
       "currentPhotoSeed": "",
       "currentPhotoTitle": "",
       "currentPhotoCategory": "",
-      "currentPhotoUrl": ""
+      "currentPhotoUrl": "",
+      "_seed_videos": {
+        "zh": [
+          {
+            "id": "v1",
+            "title": "Big Buck Bunny",
+            "category": "动画 / 10 s",
+            "src": "W3Schools 公开示例短片",
+            "url": "https://www.w3schools.com/html/mov_bbb.mp4"
+          },
+          {
+            "id": "v2",
+            "title": "Flowers 短片",
+            "category": "W3Schools 公开示例",
+            "src": "W3Schools 公开示例短片",
+            "url": "https://www.w3schools.com/html/movie.mp4"
+          },
+          {
+            "id": "v3",
+            "title": "Sintel 预告",
+            "category": "W3C 媒体库",
+            "src": "W3C 开源电影预告",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          },
+          {
+            "id": "v4",
+            "title": "Bunny 预告",
+            "category": "W3C 媒体库",
+            "src": "Big Buck Bunny 预告",
+            "url": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+          },
+          {
+            "id": "v5",
+            "title": "Bunny 完整版",
+            "category": "W3C 媒体库",
+            "src": "Big Buck Bunny 完整版",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v6",
+            "title": "Mango 开源动画",
+            "category": "W3C 媒体库",
+            "src": "Mango 开源短片",
+            "url": "https://media.w3.org/2010/05/video/movie_300.mp4"
+          },
+          {
+            "id": "v7",
+            "title": "Elephants Dream 预告",
+            "category": "W3C 媒体库",
+            "src": "Blender 基金会开源电影",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v8",
+            "title": "标准测试短片",
+            "category": "W3C 媒体库",
+            "src": "标准测试视频",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          }
+        ],
+        "en": [
+          {
+            "id": "v1",
+            "title": "Big Buck Bunny",
+            "category": "Animation / 10 s",
+            "src": "W3Schools public sample short",
+            "url": "https://www.w3schools.com/html/mov_bbb.mp4"
+          },
+          {
+            "id": "v2",
+            "title": "Flowers Short",
+            "category": "W3Schools Public Sample",
+            "src": "W3Schools public sample short",
+            "url": "https://www.w3schools.com/html/movie.mp4"
+          },
+          {
+            "id": "v3",
+            "title": "Sintel Trailer",
+            "category": "W3C Media Library",
+            "src": "W3C open-source movie trailer",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          },
+          {
+            "id": "v4",
+            "title": "Bunny Trailer",
+            "category": "W3C Media Library",
+            "src": "Big Buck Bunny trailer",
+            "url": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+          },
+          {
+            "id": "v5",
+            "title": "Bunny Full Version",
+            "category": "W3C Media Library",
+            "src": "Big Buck Bunny full version",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v6",
+            "title": "Mango Open-Source Animation",
+            "category": "W3C Media Library",
+            "src": "Mango open-source short",
+            "url": "https://media.w3.org/2010/05/video/movie_300.mp4"
+          },
+          {
+            "id": "v7",
+            "title": "Elephants Dream Trailer",
+            "category": "W3C Media Library",
+            "src": "Blender Foundation open-source movie",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v8",
+            "title": "Standard Test Short",
+            "category": "W3C Media Library",
+            "src": "Standard test video",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          }
+        ],
+        "de": [
+          {
+            "id": "v1",
+            "title": "Big Buck Bunny",
+            "category": "Animation / 10 s",
+            "src": "W3Schools öffentlicher Beispielkurzfilm",
+            "url": "https://www.w3schools.com/html/mov_bbb.mp4"
+          },
+          {
+            "id": "v2",
+            "title": "Flowers Kurzfilm",
+            "category": "W3Schools öffentliches Beispiel",
+            "src": "W3Schools öffentlicher Beispielkurzfilm",
+            "url": "https://www.w3schools.com/html/movie.mp4"
+          },
+          {
+            "id": "v3",
+            "title": "Sintel Trailer",
+            "category": "W3C Mediathek",
+            "src": "W3C Open-Source-Filmtrailer",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          },
+          {
+            "id": "v4",
+            "title": "Bunny Trailer",
+            "category": "W3C Mediathek",
+            "src": "Big Buck Bunny Trailer",
+            "url": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+          },
+          {
+            "id": "v5",
+            "title": "Bunny Vollversion",
+            "category": "W3C Mediathek",
+            "src": "Big Buck Bunny Vollversion",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v6",
+            "title": "Mango Open-Source-Animation",
+            "category": "W3C Mediathek",
+            "src": "Mango Open-Source-Kurzfilm",
+            "url": "https://media.w3.org/2010/05/video/movie_300.mp4"
+          },
+          {
+            "id": "v7",
+            "title": "Elephants Dream Trailer",
+            "category": "W3C Mediathek",
+            "src": "Blender Foundation Open-Source-Film",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v8",
+            "title": "Standard-Testkurzfilm",
+            "category": "W3C Mediathek",
+            "src": "Standard-Testvideo",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          }
+        ],
+        "es": [
+          {
+            "id": "v1",
+            "title": "Big Buck Bunny",
+            "category": "Animación / 10 s",
+            "src": "Corto de muestra pública de W3Schools",
+            "url": "https://www.w3schools.com/html/mov_bbb.mp4"
+          },
+          {
+            "id": "v2",
+            "title": "Flowers Corto",
+            "category": "Muestra pública de W3Schools",
+            "src": "Corto de muestra pública de W3Schools",
+            "url": "https://www.w3schools.com/html/movie.mp4"
+          },
+          {
+            "id": "v3",
+            "title": "Sintel Tráiler",
+            "category": "Biblioteca multimedia de W3C",
+            "src": "Tráiler de película de código abierto de W3C",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          },
+          {
+            "id": "v4",
+            "title": "Bunny Tráiler",
+            "category": "Biblioteca multimedia de W3C",
+            "src": "Tráiler de Big Buck Bunny",
+            "url": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+          },
+          {
+            "id": "v5",
+            "title": "Bunny Versión completa",
+            "category": "Biblioteca multimedia de W3C",
+            "src": "Versión completa de Big Buck Bunny",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v6",
+            "title": "Mango Animación de código abierto",
+            "category": "Biblioteca multimedia de W3C",
+            "src": "Corto de código abierto de Mango",
+            "url": "https://media.w3.org/2010/05/video/movie_300.mp4"
+          },
+          {
+            "id": "v7",
+            "title": "Elephants Dream Tráiler",
+            "category": "Biblioteca multimedia de W3C",
+            "src": "Película de código abierto de Blender Foundation",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v8",
+            "title": "Corto de prueba estándar",
+            "category": "Biblioteca multimedia de W3C",
+            "src": "Vídeo de prueba estándar",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          }
+        ],
+        "fr": [
+          {
+            "id": "v1",
+            "title": "Big Buck Bunny",
+            "category": "Animation / 10 s",
+            "src": "Court métrage exemple public W3Schools",
+            "url": "https://www.w3schools.com/html/mov_bbb.mp4"
+          },
+          {
+            "id": "v2",
+            "title": "Flowers Court métrage",
+            "category": "Exemple public W3Schools",
+            "src": "Court métrage exemple public W3Schools",
+            "url": "https://www.w3schools.com/html/movie.mp4"
+          },
+          {
+            "id": "v3",
+            "title": "Sintel Bande-annonce",
+            "category": "Médiathèque W3C",
+            "src": "Bande-annonce de film open source W3C",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          },
+          {
+            "id": "v4",
+            "title": "Bunny Bande-annonce",
+            "category": "Médiathèque W3C",
+            "src": "Bande-annonce Big Buck Bunny",
+            "url": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+          },
+          {
+            "id": "v5",
+            "title": "Bunny Version complète",
+            "category": "Médiathèque W3C",
+            "src": "Version complète de Big Buck Bunny",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v6",
+            "title": "Mango Animation open source",
+            "category": "Médiathèque W3C",
+            "src": "Court métrage open source Mango",
+            "url": "https://media.w3.org/2010/05/video/movie_300.mp4"
+          },
+          {
+            "id": "v7",
+            "title": "Elephants Dream Bande-annonce",
+            "category": "Médiathèque W3C",
+            "src": "Film open source de la Blender Foundation",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v8",
+            "title": "Court métrage de test standard",
+            "category": "Médiathèque W3C",
+            "src": "Vidéo de test standard",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          }
+        ],
+        "pt": [
+          {
+            "id": "v1",
+            "title": "Big Buck Bunny",
+            "category": "Animação / 10 s",
+            "src": "Curta de amostra pública da W3Schools",
+            "url": "https://www.w3schools.com/html/mov_bbb.mp4"
+          },
+          {
+            "id": "v2",
+            "title": "Flowers Curta",
+            "category": "Amostra pública da W3Schools",
+            "src": "Curta de amostra pública da W3Schools",
+            "url": "https://www.w3schools.com/html/movie.mp4"
+          },
+          {
+            "id": "v3",
+            "title": "Sintel Trailer",
+            "category": "Biblioteca de mídia da W3C",
+            "src": "Trailer de filme de código aberto da W3C",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          },
+          {
+            "id": "v4",
+            "title": "Bunny Trailer",
+            "category": "Biblioteca de mídia da W3C",
+            "src": "Trailer de Big Buck Bunny",
+            "url": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+          },
+          {
+            "id": "v5",
+            "title": "Bunny Versão completa",
+            "category": "Biblioteca de mídia da W3C",
+            "src": "Versão completa de Big Buck Bunny",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v6",
+            "title": "Mango Animação de código aberto",
+            "category": "Biblioteca de mídia da W3C",
+            "src": "Curta de código aberto da Mango",
+            "url": "https://media.w3.org/2010/05/video/movie_300.mp4"
+          },
+          {
+            "id": "v7",
+            "title": "Elephants Dream Trailer",
+            "category": "Biblioteca de mídia da W3C",
+            "src": "Filme de código aberto da Blender Foundation",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v8",
+            "title": "Curta de teste padrão",
+            "category": "Biblioteca de mídia da W3C",
+            "src": "Vídeo de teste padrão",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          }
+        ],
+        "ca": [
+          {
+            "id": "v1",
+            "title": "Big Buck Bunny",
+            "category": "Animació / 10 s",
+            "src": "Curt de mostra pública de W3Schools",
+            "url": "https://www.w3schools.com/html/mov_bbb.mp4"
+          },
+          {
+            "id": "v2",
+            "title": "Flowers Curt",
+            "category": "Mostra pública de W3Schools",
+            "src": "Curt de mostra pública de W3Schools",
+            "url": "https://www.w3schools.com/html/movie.mp4"
+          },
+          {
+            "id": "v3",
+            "title": "Sintel Tràiler",
+            "category": "Biblioteca multimèdia de W3C",
+            "src": "Tràiler de pel·lícula de codi obert de W3C",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          },
+          {
+            "id": "v4",
+            "title": "Bunny Tràiler",
+            "category": "Biblioteca multimèdia de W3C",
+            "src": "Tràiler de Big Buck Bunny",
+            "url": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+          },
+          {
+            "id": "v5",
+            "title": "Bunny Versió completa",
+            "category": "Biblioteca multimèdia de W3C",
+            "src": "Versió completa de Big Buck Bunny",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v6",
+            "title": "Mango Animació de codi obert",
+            "category": "Biblioteca multimèdia de W3C",
+            "src": "Curt de codi obert de Mango",
+            "url": "https://media.w3.org/2010/05/video/movie_300.mp4"
+          },
+          {
+            "id": "v7",
+            "title": "Elephants Dream Tràiler",
+            "category": "Biblioteca multimèdia de W3C",
+            "src": "Pel·lícula de codi obert de Blender Foundation",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v8",
+            "title": "Curt de prova estàndard",
+            "category": "Biblioteca multimèdia de W3C",
+            "src": "Vídeo de prova estàndard",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          }
+        ],
+        "hi": [
+          {
+            "id": "v1",
+            "title": "Big Buck Bunny",
+            "category": "एनिमेशन / 10 s",
+            "src": "W3Schools सार्वजनिक नमूना शॉर्ट",
+            "url": "https://www.w3schools.com/html/mov_bbb.mp4"
+          },
+          {
+            "id": "v2",
+            "title": "Flowers शॉर्ट",
+            "category": "W3Schools सार्वजनिक नमूना",
+            "src": "W3Schools सार्वजनिक नमूना शॉर्ट",
+            "url": "https://www.w3schools.com/html/movie.mp4"
+          },
+          {
+            "id": "v3",
+            "title": "Sintel ट्रेलर",
+            "category": "W3C मीडिया लाइब्रेरी",
+            "src": "W3C ओपन-सोर्स मूवी ट्रेलर",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          },
+          {
+            "id": "v4",
+            "title": "Bunny ट्रेलर",
+            "category": "W3C मीडिया लाइब्रेरी",
+            "src": "Big Buck Bunny ट्रेलर",
+            "url": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+          },
+          {
+            "id": "v5",
+            "title": "Bunny पूर्ण संस्करण",
+            "category": "W3C मीडिया लाइब्रेरी",
+            "src": "Big Buck Bunny पूर्ण संस्करण",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v6",
+            "title": "Mango ओपन-सोर्स एनिमेशन",
+            "category": "W3C मीडिया लाइब्रेरी",
+            "src": "Mango ओपन-सोर्स शॉर्ट",
+            "url": "https://media.w3.org/2010/05/video/movie_300.mp4"
+          },
+          {
+            "id": "v7",
+            "title": "Elephants Dream ट्रेलर",
+            "category": "W3C मीडिया लाइब्रेरी",
+            "src": "Blender Foundation ओपन-सोर्स मूवी",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v8",
+            "title": "मानक परीक्षण शॉर्ट",
+            "category": "W3C मीडिया लाइब्रेरी",
+            "src": "मानक परीक्षण वीडियो",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          }
+        ],
+        "ko": [
+          {
+            "id": "v1",
+            "title": "Big Buck Bunny",
+            "category": "애니메이션 / 10 s",
+            "src": "W3Schools 공개 샘플 단편",
+            "url": "https://www.w3schools.com/html/mov_bbb.mp4"
+          },
+          {
+            "id": "v2",
+            "title": "Flowers 단편",
+            "category": "W3Schools 공개 샘플",
+            "src": "W3Schools 공개 샘플 단편",
+            "url": "https://www.w3schools.com/html/movie.mp4"
+          },
+          {
+            "id": "v3",
+            "title": "Sintel 예고편",
+            "category": "W3C 미디어 라이브러리",
+            "src": "W3C 오픈소스 영화 예고편",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          },
+          {
+            "id": "v4",
+            "title": "Bunny 예고편",
+            "category": "W3C 미디어 라이브러리",
+            "src": "Big Buck Bunny 예고편",
+            "url": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+          },
+          {
+            "id": "v5",
+            "title": "Bunny 완전판",
+            "category": "W3C 미디어 라이브러리",
+            "src": "Big Buck Bunny 완전판",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v6",
+            "title": "Mango 오픈소스 애니메이션",
+            "category": "W3C 미디어 라이브러리",
+            "src": "Mango 오픈소스 단편",
+            "url": "https://media.w3.org/2010/05/video/movie_300.mp4"
+          },
+          {
+            "id": "v7",
+            "title": "Elephants Dream 예고편",
+            "category": "W3C 미디어 라이브러리",
+            "src": "Blender Foundation 오픈소스 영화",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v8",
+            "title": "표준 테스트 단편",
+            "category": "W3C 미디어 라이브러리",
+            "src": "표준 테스트 영상",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          }
+        ],
+        "ja": [
+          {
+            "id": "v1",
+            "title": "Big Buck Bunny",
+            "category": "アニメーション / 10 s",
+            "src": "W3Schools 公開サンプルショート",
+            "url": "https://www.w3schools.com/html/mov_bbb.mp4"
+          },
+          {
+            "id": "v2",
+            "title": "Flowers ショート",
+            "category": "W3Schools 公開サンプル",
+            "src": "W3Schools 公開サンプルショート",
+            "url": "https://www.w3schools.com/html/movie.mp4"
+          },
+          {
+            "id": "v3",
+            "title": "Sintel 予告編",
+            "category": "W3C メディアライブラリ",
+            "src": "W3C オープンソース映画予告編",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          },
+          {
+            "id": "v4",
+            "title": "Bunny 予告編",
+            "category": "W3C メディアライブラリ",
+            "src": "Big Buck Bunny 予告編",
+            "url": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+          },
+          {
+            "id": "v5",
+            "title": "Bunny 完全版",
+            "category": "W3C メディアライブラリ",
+            "src": "Big Buck Bunny 完全版",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v6",
+            "title": "Mango オープンソースアニメ",
+            "category": "W3C メディアライブラリ",
+            "src": "Mango オープンソースショート",
+            "url": "https://media.w3.org/2010/05/video/movie_300.mp4"
+          },
+          {
+            "id": "v7",
+            "title": "Elephants Dream 予告編",
+            "category": "W3C メディアライブラリ",
+            "src": "Blender Foundation オープンソース映画",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v8",
+            "title": "標準テストショート",
+            "category": "W3C メディアライブラリ",
+            "src": "標準テスト動画",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          }
+        ],
+        "it": [
+          {
+            "id": "v1",
+            "title": "Big Buck Bunny",
+            "category": "Animazione / 10 s",
+            "src": "Cortometraggio campione pubblico W3Schools",
+            "url": "https://www.w3schools.com/html/mov_bbb.mp4"
+          },
+          {
+            "id": "v2",
+            "title": "Flowers Cortometraggio",
+            "category": "Campione pubblico W3Schools",
+            "src": "Cortometraggio campione pubblico W3Schools",
+            "url": "https://www.w3schools.com/html/movie.mp4"
+          },
+          {
+            "id": "v3",
+            "title": "Sintel Trailer",
+            "category": "Libreria multimediale W3C",
+            "src": "Trailer di film open source W3C",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          },
+          {
+            "id": "v4",
+            "title": "Bunny Trailer",
+            "category": "Libreria multimediale W3C",
+            "src": "Trailer di Big Buck Bunny",
+            "url": "https://media.w3.org/2010/05/bunny/trailer.mp4"
+          },
+          {
+            "id": "v5",
+            "title": "Bunny Versione completa",
+            "category": "Libreria multimediale W3C",
+            "src": "Versione completa di Big Buck Bunny",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v6",
+            "title": "Mango Animazione open source",
+            "category": "Libreria multimediale W3C",
+            "src": "Cortometraggio open source Mango",
+            "url": "https://media.w3.org/2010/05/video/movie_300.mp4"
+          },
+          {
+            "id": "v7",
+            "title": "Elephants Dream Trailer",
+            "category": "Libreria multimediale W3C",
+            "src": "Film open source della Blender Foundation",
+            "url": "https://media.w3.org/2010/05/bunny/movie.mp4"
+          },
+          {
+            "id": "v8",
+            "title": "Cortometraggio di test standard",
+            "category": "Libreria multimediale W3C",
+            "src": "Video di test standard",
+            "url": "https://media.w3.org/2010/05/sintel/trailer.mp4"
+          }
+        ]
+      },
+      "_seed_photos": {
+        "zh": [
+          {
+            "seed": "forest",
+            "title": "静谧森林",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/forest/900/900"
+          },
+          {
+            "seed": "lake",
+            "title": "高山湖",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/lake/900/900"
+          },
+          {
+            "seed": "city",
+            "title": "都市夜景",
+            "category": "城市",
+            "url": "https://picsum.photos/seed/city/900/900"
+          },
+          {
+            "seed": "desert",
+            "title": "沙漠日落",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/desert/900/900"
+          },
+          {
+            "seed": "aurora",
+            "title": "极光之夜",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/aurora/900/900"
+          },
+          {
+            "seed": "cafe",
+            "title": "咖啡时光",
+            "category": "生活",
+            "url": "https://picsum.photos/seed/cafe/900/900"
+          },
+          {
+            "seed": "mountain",
+            "title": "雪山远眺",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/mountain/900/900"
+          },
+          {
+            "seed": "rainbow",
+            "title": "彩虹山",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/rainbow/900/900"
+          },
+          {
+            "seed": "ocean",
+            "title": "海岸线",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/ocean/900/900"
+          },
+          {
+            "seed": "macro",
+            "title": "微距花蕊",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/macro/900/900"
+          },
+          {
+            "seed": "snow",
+            "title": "雪国小镇",
+            "category": "城市",
+            "url": "https://picsum.photos/seed/snow/900/900"
+          },
+          {
+            "seed": "zen",
+            "title": "晨光禅意",
+            "category": "生活",
+            "url": "https://picsum.photos/seed/zen/900/900"
+          }
+        ],
+        "en": [
+          {
+            "seed": "forest",
+            "title": "Serene Forest",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/forest/900/900"
+          },
+          {
+            "seed": "lake",
+            "title": "Alpine Lake",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/lake/900/900"
+          },
+          {
+            "seed": "city",
+            "title": "City Nightscape",
+            "category": "City",
+            "url": "https://picsum.photos/seed/city/900/900"
+          },
+          {
+            "seed": "desert",
+            "title": "Desert Sunset",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/desert/900/900"
+          },
+          {
+            "seed": "aurora",
+            "title": "Aurora Night",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/aurora/900/900"
+          },
+          {
+            "seed": "cafe",
+            "title": "Coffee Time",
+            "category": "Life",
+            "url": "https://picsum.photos/seed/cafe/900/900"
+          },
+          {
+            "seed": "mountain",
+            "title": "Snow Mountain Vista",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/mountain/900/900"
+          },
+          {
+            "seed": "rainbow",
+            "title": "Rainbow Mountain",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/rainbow/900/900"
+          },
+          {
+            "seed": "ocean",
+            "title": "Coastline",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/ocean/900/900"
+          },
+          {
+            "seed": "macro",
+            "title": "Macro Flower",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/macro/900/900"
+          },
+          {
+            "seed": "snow",
+            "title": "Snowy Town",
+            "category": "City",
+            "url": "https://picsum.photos/seed/snow/900/900"
+          },
+          {
+            "seed": "zen",
+            "title": "Morning Zen",
+            "category": "Life",
+            "url": "https://picsum.photos/seed/zen/900/900"
+          }
+        ],
+        "de": [
+          {
+            "seed": "forest",
+            "title": "Stiller Wald",
+            "category": "Natur",
+            "url": "https://picsum.photos/seed/forest/900/900"
+          },
+          {
+            "seed": "lake",
+            "title": "Bergsee",
+            "category": "Natur",
+            "url": "https://picsum.photos/seed/lake/900/900"
+          },
+          {
+            "seed": "city",
+            "title": "Stadt bei Nacht",
+            "category": "Stadt",
+            "url": "https://picsum.photos/seed/city/900/900"
+          },
+          {
+            "seed": "desert",
+            "title": "Wüstensonnenuntergang",
+            "category": "Natur",
+            "url": "https://picsum.photos/seed/desert/900/900"
+          },
+          {
+            "seed": "aurora",
+            "title": "Polarlichtnacht",
+            "category": "Natur",
+            "url": "https://picsum.photos/seed/aurora/900/900"
+          },
+          {
+            "seed": "cafe",
+            "title": "Kaffeezeit",
+            "category": "Leben",
+            "url": "https://picsum.photos/seed/cafe/900/900"
+          },
+          {
+            "seed": "mountain",
+            "title": "Blick auf verschneite Berge",
+            "category": "Natur",
+            "url": "https://picsum.photos/seed/mountain/900/900"
+          },
+          {
+            "seed": "rainbow",
+            "title": "Regenbogenberg",
+            "category": "Natur",
+            "url": "https://picsum.photos/seed/rainbow/900/900"
+          },
+          {
+            "seed": "ocean",
+            "title": "Küstenlinie",
+            "category": "Natur",
+            "url": "https://picsum.photos/seed/ocean/900/900"
+          },
+          {
+            "seed": "macro",
+            "title": "Makro-Blüte",
+            "category": "Natur",
+            "url": "https://picsum.photos/seed/macro/900/900"
+          },
+          {
+            "seed": "snow",
+            "title": "Verschneite Kleinstadt",
+            "category": "Stadt",
+            "url": "https://picsum.photos/seed/snow/900/900"
+          },
+          {
+            "seed": "zen",
+            "title": "Morgendliche Ruhe",
+            "category": "Leben",
+            "url": "https://picsum.photos/seed/zen/900/900"
+          }
+        ],
+        "es": [
+          {
+            "seed": "forest",
+            "title": "Bosque sereno",
+            "category": "Naturaleza",
+            "url": "https://picsum.photos/seed/forest/900/900"
+          },
+          {
+            "seed": "lake",
+            "title": "Lago alpino",
+            "category": "Naturaleza",
+            "url": "https://picsum.photos/seed/lake/900/900"
+          },
+          {
+            "seed": "city",
+            "title": "Ciudad de noche",
+            "category": "Ciudad",
+            "url": "https://picsum.photos/seed/city/900/900"
+          },
+          {
+            "seed": "desert",
+            "title": "Atardecer en el desierto",
+            "category": "Naturaleza",
+            "url": "https://picsum.photos/seed/desert/900/900"
+          },
+          {
+            "seed": "aurora",
+            "title": "Noche de auroras",
+            "category": "Naturaleza",
+            "url": "https://picsum.photos/seed/aurora/900/900"
+          },
+          {
+            "seed": "cafe",
+            "title": "Hora del café",
+            "category": "Vida",
+            "url": "https://picsum.photos/seed/cafe/900/900"
+          },
+          {
+            "seed": "mountain",
+            "title": "Vista de montañas nevadas",
+            "category": "Naturaleza",
+            "url": "https://picsum.photos/seed/mountain/900/900"
+          },
+          {
+            "seed": "rainbow",
+            "title": "Montaña arcoíris",
+            "category": "Naturaleza",
+            "url": "https://picsum.photos/seed/rainbow/900/900"
+          },
+          {
+            "seed": "ocean",
+            "title": "Costa",
+            "category": "Naturaleza",
+            "url": "https://picsum.photos/seed/ocean/900/900"
+          },
+          {
+            "seed": "macro",
+            "title": "Flor en macro",
+            "category": "Naturaleza",
+            "url": "https://picsum.photos/seed/macro/900/900"
+          },
+          {
+            "seed": "snow",
+            "title": "Pueblo nevado",
+            "category": "Ciudad",
+            "url": "https://picsum.photos/seed/snow/900/900"
+          },
+          {
+            "seed": "zen",
+            "title": "Zen matutino",
+            "category": "Vida",
+            "url": "https://picsum.photos/seed/zen/900/900"
+          }
+        ],
+        "fr": [
+          {
+            "seed": "forest",
+            "title": "Forêt paisible",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/forest/900/900"
+          },
+          {
+            "seed": "lake",
+            "title": "Lac de montagne",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/lake/900/900"
+          },
+          {
+            "seed": "city",
+            "title": "Ville de nuit",
+            "category": "Ville",
+            "url": "https://picsum.photos/seed/city/900/900"
+          },
+          {
+            "seed": "desert",
+            "title": "Coucher de soleil sur le désert",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/desert/900/900"
+          },
+          {
+            "seed": "aurora",
+            "title": "Nuit d'aurores",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/aurora/900/900"
+          },
+          {
+            "seed": "cafe",
+            "title": "Pause café",
+            "category": "Vie",
+            "url": "https://picsum.photos/seed/cafe/900/900"
+          },
+          {
+            "seed": "mountain",
+            "title": "Vue sur les montagnes enneigées",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/mountain/900/900"
+          },
+          {
+            "seed": "rainbow",
+            "title": "Montagne arc-en-ciel",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/rainbow/900/900"
+          },
+          {
+            "seed": "ocean",
+            "title": "Littoral",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/ocean/900/900"
+          },
+          {
+            "seed": "macro",
+            "title": "Fleur en macro",
+            "category": "Nature",
+            "url": "https://picsum.photos/seed/macro/900/900"
+          },
+          {
+            "seed": "snow",
+            "title": "Village enneigé",
+            "category": "Ville",
+            "url": "https://picsum.photos/seed/snow/900/900"
+          },
+          {
+            "seed": "zen",
+            "title": "Zen matinal",
+            "category": "Vie",
+            "url": "https://picsum.photos/seed/zen/900/900"
+          }
+        ],
+        "pt": [
+          {
+            "seed": "forest",
+            "title": "Floresta serena",
+            "category": "Natureza",
+            "url": "https://picsum.photos/seed/forest/900/900"
+          },
+          {
+            "seed": "lake",
+            "title": "Lago alpino",
+            "category": "Natureza",
+            "url": "https://picsum.photos/seed/lake/900/900"
+          },
+          {
+            "seed": "city",
+            "title": "Cidade à noite",
+            "category": "Cidade",
+            "url": "https://picsum.photos/seed/city/900/900"
+          },
+          {
+            "seed": "desert",
+            "title": "Pôr do sol no deserto",
+            "category": "Natureza",
+            "url": "https://picsum.photos/seed/desert/900/900"
+          },
+          {
+            "seed": "aurora",
+            "title": "Noite de auroras",
+            "category": "Natureza",
+            "url": "https://picsum.photos/seed/aurora/900/900"
+          },
+          {
+            "seed": "cafe",
+            "title": "Hora do café",
+            "category": "Vida",
+            "url": "https://picsum.photos/seed/cafe/900/900"
+          },
+          {
+            "seed": "mountain",
+            "title": "Vista de montanhas nevadas",
+            "category": "Natureza",
+            "url": "https://picsum.photos/seed/mountain/900/900"
+          },
+          {
+            "seed": "rainbow",
+            "title": "Montanha arco-íris",
+            "category": "Natureza",
+            "url": "https://picsum.photos/seed/rainbow/900/900"
+          },
+          {
+            "seed": "ocean",
+            "title": "Litoral",
+            "category": "Natureza",
+            "url": "https://picsum.photos/seed/ocean/900/900"
+          },
+          {
+            "seed": "macro",
+            "title": "Flor em macro",
+            "category": "Natureza",
+            "url": "https://picsum.photos/seed/macro/900/900"
+          },
+          {
+            "seed": "snow",
+            "title": "Cidadezinha nevada",
+            "category": "Cidade",
+            "url": "https://picsum.photos/seed/snow/900/900"
+          },
+          {
+            "seed": "zen",
+            "title": "Zen matinal",
+            "category": "Vida",
+            "url": "https://picsum.photos/seed/zen/900/900"
+          }
+        ],
+        "ca": [
+          {
+            "seed": "forest",
+            "title": "Bosc serè",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/forest/900/900"
+          },
+          {
+            "seed": "lake",
+            "title": "Llac alpí",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/lake/900/900"
+          },
+          {
+            "seed": "city",
+            "title": "Ciutat de nit",
+            "category": "Ciutat",
+            "url": "https://picsum.photos/seed/city/900/900"
+          },
+          {
+            "seed": "desert",
+            "title": "Posta de sol al desert",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/desert/900/900"
+          },
+          {
+            "seed": "aurora",
+            "title": "Nit d'aurores",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/aurora/900/900"
+          },
+          {
+            "seed": "cafe",
+            "title": "Hora del cafè",
+            "category": "Vida",
+            "url": "https://picsum.photos/seed/cafe/900/900"
+          },
+          {
+            "seed": "mountain",
+            "title": "Vista de muntanyes nevades",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/mountain/900/900"
+          },
+          {
+            "seed": "rainbow",
+            "title": "Muntanya de l'arc de Sant Martí",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/rainbow/900/900"
+          },
+          {
+            "seed": "ocean",
+            "title": "Costa",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/ocean/900/900"
+          },
+          {
+            "seed": "macro",
+            "title": "Flor en macro",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/macro/900/900"
+          },
+          {
+            "seed": "snow",
+            "title": "Poble nevat",
+            "category": "Ciutat",
+            "url": "https://picsum.photos/seed/snow/900/900"
+          },
+          {
+            "seed": "zen",
+            "title": "Zen matinal",
+            "category": "Vida",
+            "url": "https://picsum.photos/seed/zen/900/900"
+          }
+        ],
+        "hi": [
+          {
+            "seed": "forest",
+            "title": "शांत वन",
+            "category": "प्रकृति",
+            "url": "https://picsum.photos/seed/forest/900/900"
+          },
+          {
+            "seed": "lake",
+            "title": "पर्वतीय झील",
+            "category": "प्रकृति",
+            "url": "https://picsum.photos/seed/lake/900/900"
+          },
+          {
+            "seed": "city",
+            "title": "शहर का रात्रि दृश्य",
+            "category": "शहर",
+            "url": "https://picsum.photos/seed/city/900/900"
+          },
+          {
+            "seed": "desert",
+            "title": "रेगिस्तानी सूर्यास्त",
+            "category": "प्रकृति",
+            "url": "https://picsum.photos/seed/desert/900/900"
+          },
+          {
+            "seed": "aurora",
+            "title": "ध्रुवीय ज्योति की रात",
+            "category": "प्रकृति",
+            "url": "https://picsum.photos/seed/aurora/900/900"
+          },
+          {
+            "seed": "cafe",
+            "title": "कॉफ़ी का समय",
+            "category": "जीवन",
+            "url": "https://picsum.photos/seed/cafe/900/900"
+          },
+          {
+            "seed": "mountain",
+            "title": "बर्फीले पहाड़ों का दृश्य",
+            "category": "प्रकृति",
+            "url": "https://picsum.photos/seed/mountain/900/900"
+          },
+          {
+            "seed": "rainbow",
+            "title": "इंद्रधनुष पर्वत",
+            "category": "प्रकृति",
+            "url": "https://picsum.photos/seed/rainbow/900/900"
+          },
+          {
+            "seed": "ocean",
+            "title": "तटरेखा",
+            "category": "प्रकृति",
+            "url": "https://picsum.photos/seed/ocean/900/900"
+          },
+          {
+            "seed": "macro",
+            "title": "मैक्रो फूल",
+            "category": "प्रकृति",
+            "url": "https://picsum.photos/seed/macro/900/900"
+          },
+          {
+            "seed": "snow",
+            "title": "बर्फीला कस्बा",
+            "category": "शहर",
+            "url": "https://picsum.photos/seed/snow/900/900"
+          },
+          {
+            "seed": "zen",
+            "title": "प्रातःकालीन ज़ेन",
+            "category": "जीवन",
+            "url": "https://picsum.photos/seed/zen/900/900"
+          }
+        ],
+        "ko": [
+          {
+            "seed": "forest",
+            "title": "고요한 숲",
+            "category": "자연",
+            "url": "https://picsum.photos/seed/forest/900/900"
+          },
+          {
+            "seed": "lake",
+            "title": "고산 호수",
+            "category": "자연",
+            "url": "https://picsum.photos/seed/lake/900/900"
+          },
+          {
+            "seed": "city",
+            "title": "도시의 야경",
+            "category": "도시",
+            "url": "https://picsum.photos/seed/city/900/900"
+          },
+          {
+            "seed": "desert",
+            "title": "사막의 일몰",
+            "category": "자연",
+            "url": "https://picsum.photos/seed/desert/900/900"
+          },
+          {
+            "seed": "aurora",
+            "title": "오로라의 밤",
+            "category": "자연",
+            "url": "https://picsum.photos/seed/aurora/900/900"
+          },
+          {
+            "seed": "cafe",
+            "title": "커피 타임",
+            "category": "일상",
+            "url": "https://picsum.photos/seed/cafe/900/900"
+          },
+          {
+            "seed": "mountain",
+            "title": "설산 조망",
+            "category": "자연",
+            "url": "https://picsum.photos/seed/mountain/900/900"
+          },
+          {
+            "seed": "rainbow",
+            "title": "무지개 산",
+            "category": "자연",
+            "url": "https://picsum.photos/seed/rainbow/900/900"
+          },
+          {
+            "seed": "ocean",
+            "title": "해안선",
+            "category": "자연",
+            "url": "https://picsum.photos/seed/ocean/900/900"
+          },
+          {
+            "seed": "macro",
+            "title": "접사 꽃",
+            "category": "자연",
+            "url": "https://picsum.photos/seed/macro/900/900"
+          },
+          {
+            "seed": "snow",
+            "title": "눈 덮인 마을",
+            "category": "도시",
+            "url": "https://picsum.photos/seed/snow/900/900"
+          },
+          {
+            "seed": "zen",
+            "title": "아침의 선",
+            "category": "일상",
+            "url": "https://picsum.photos/seed/zen/900/900"
+          }
+        ],
+        "ja": [
+          {
+            "seed": "forest",
+            "title": "静かな森",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/forest/900/900"
+          },
+          {
+            "seed": "lake",
+            "title": "高山の湖",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/lake/900/900"
+          },
+          {
+            "seed": "city",
+            "title": "都市の夜景",
+            "category": "都市",
+            "url": "https://picsum.photos/seed/city/900/900"
+          },
+          {
+            "seed": "desert",
+            "title": "砂漠の夕日",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/desert/900/900"
+          },
+          {
+            "seed": "aurora",
+            "title": "オーロラの夜",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/aurora/900/900"
+          },
+          {
+            "seed": "cafe",
+            "title": "コーヒータイム",
+            "category": "暮らし",
+            "url": "https://picsum.photos/seed/cafe/900/900"
+          },
+          {
+            "seed": "mountain",
+            "title": "雪山の眺め",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/mountain/900/900"
+          },
+          {
+            "seed": "rainbow",
+            "title": "虹の山",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/rainbow/900/900"
+          },
+          {
+            "seed": "ocean",
+            "title": "海岸線",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/ocean/900/900"
+          },
+          {
+            "seed": "macro",
+            "title": "マクロの花",
+            "category": "自然",
+            "url": "https://picsum.photos/seed/macro/900/900"
+          },
+          {
+            "seed": "snow",
+            "title": "雪国の小さな町",
+            "category": "都市",
+            "url": "https://picsum.photos/seed/snow/900/900"
+          },
+          {
+            "seed": "zen",
+            "title": "朝の禅",
+            "category": "暮らし",
+            "url": "https://picsum.photos/seed/zen/900/900"
+          }
+        ],
+        "it": [
+          {
+            "seed": "forest",
+            "title": "Foresta serena",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/forest/900/900"
+          },
+          {
+            "seed": "lake",
+            "title": "Lago alpino",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/lake/900/900"
+          },
+          {
+            "seed": "city",
+            "title": "Città di notte",
+            "category": "Città",
+            "url": "https://picsum.photos/seed/city/900/900"
+          },
+          {
+            "seed": "desert",
+            "title": "Tramonto nel deserto",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/desert/900/900"
+          },
+          {
+            "seed": "aurora",
+            "title": "Notte di aurore",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/aurora/900/900"
+          },
+          {
+            "seed": "cafe",
+            "title": "Ora del caffè",
+            "category": "Vita",
+            "url": "https://picsum.photos/seed/cafe/900/900"
+          },
+          {
+            "seed": "mountain",
+            "title": "Vista sulle montagne innevate",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/mountain/900/900"
+          },
+          {
+            "seed": "rainbow",
+            "title": "Montagna arcobaleno",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/rainbow/900/900"
+          },
+          {
+            "seed": "ocean",
+            "title": "Costa",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/ocean/900/900"
+          },
+          {
+            "seed": "macro",
+            "title": "Fiore in macro",
+            "category": "Natura",
+            "url": "https://picsum.photos/seed/macro/900/900"
+          },
+          {
+            "seed": "snow",
+            "title": "Paesino innevato",
+            "category": "Città",
+            "url": "https://picsum.photos/seed/snow/900/900"
+          },
+          {
+            "seed": "zen",
+            "title": "Zen mattutino",
+            "category": "Vita",
+            "url": "https://picsum.photos/seed/zen/900/900"
+          }
+        ]
+      }
     },
     "functions": {
       "playVideo": {
@@ -1037,6 +2493,44 @@
       "call": "@print",
       "args": {
         "value": "媒体展厅启动"
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.videos",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_videos.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_videos.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_videos.zh"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.photos",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_photos.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_photos.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_photos.zh"
+            }
+          ]
+        }
       }
     }
   ],

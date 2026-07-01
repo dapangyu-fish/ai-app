@@ -119,7 +119,471 @@
       ],
       "_nextSeq": 5,
       "_tmpAccent": "#2563EB",
-      "_tmpTint": "#EAF1FF"
+      "_tmpTint": "#EAF1FF",
+      "_seed_notes": {
+        "zh": [
+          {
+            "id": "n1",
+            "heading": "产品想法整理",
+            "tag": "工作",
+            "date": "今天 09:30",
+            "excerpt": "把待验证的功能拆成三组：核心流程、付费触点、次要体验。",
+            "content": "把待验证的功能拆成三组：核心流程、付费触点、次要体验。\n\n下次评审前需要补齐用户路径截图和失败状态。",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "id": "n2",
+            "heading": "周末阅读清单",
+            "tag": "生活",
+            "date": "昨天 14:20",
+            "excerpt": "系统设计、交互心理学、一本短篇小说。控制在 3 小时内。",
+            "content": "系统设计、交互心理学、一本短篇小说。控制在 3 小时内。\n\n读完只记录能落到实践里的结论。",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "id": "n3",
+            "heading": "旅行备忘",
+            "tag": "灵感",
+            "date": "6月20日",
+            "excerpt": "证件、充电器、降噪耳机、备用银行卡。出发前一天再检查。",
+            "content": "证件、充电器、降噪耳机、备用银行卡。出发前一天再检查。\n\n酒店确认邮件和路线截图都放到同一个文件夹。",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "id": "n4",
+            "heading": "React 性能优化笔记",
+            "tag": "学习",
+            "date": "6月18日",
+            "excerpt": "useMemo、useCallback 使用场景，避免不必要的重渲染。",
+            "content": "useMemo、useCallback 使用场景。\n\n1. 列表虚拟化用 react-window\n2. 图片懒加载\n3. Code splitting",
+            "accent": "#7C3AED",
+            "tint": "#F3EDFF"
+          }
+        ],
+        "en": [
+          {
+            "id": "n1",
+            "heading": "Product Ideas",
+            "tag": "工作",
+            "date": "Today 09:30",
+            "excerpt": "Split the features to validate into three groups: core flows, paid touchpoints, secondary experience.",
+            "content": "Split the features to validate into three groups: core flows, paid touchpoints, secondary experience.\n\nBefore the next review, add user-path screenshots and failure states.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "id": "n2",
+            "heading": "Weekend Reading List",
+            "tag": "生活",
+            "date": "Yesterday 14:20",
+            "excerpt": "System design, interaction psychology, a short novel. Keep it within 3 hours.",
+            "content": "System design, interaction psychology, a short novel. Keep it within 3 hours.\n\nAfter reading, note only the conclusions you can put into practice.",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "id": "n3",
+            "heading": "Travel Memo",
+            "tag": "灵感",
+            "date": "Jun 20",
+            "excerpt": "ID documents, charger, noise-cancelling headphones, backup bank card. Check again the day before departure.",
+            "content": "ID documents, charger, noise-cancelling headphones, backup bank card. Check again the day before departure.\n\nPut the hotel confirmation email and route screenshots in the same folder.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "id": "n4",
+            "heading": "React Performance Notes",
+            "tag": "学习",
+            "date": "Jun 18",
+            "excerpt": "useMemo and useCallback use cases; avoid unnecessary re-renders.",
+            "content": "useMemo and useCallback use cases.\n\n1. List virtualization with react-window\n2. Image lazy loading\n3. Code splitting",
+            "accent": "#7C3AED",
+            "tint": "#F3EDFF"
+          }
+        ],
+        "de": [
+          {
+            "id": "n1",
+            "heading": "Produktideen sortieren",
+            "tag": "工作",
+            "date": "Heute 09:30",
+            "excerpt": "Die zu prüfenden Funktionen in drei Gruppen aufteilen: Kernabläufe, Bezahl-Touchpoints, sekundäre Erlebnisse.",
+            "content": "Die zu prüfenden Funktionen in drei Gruppen aufteilen: Kernabläufe, Bezahl-Touchpoints, sekundäre Erlebnisse.\n\nVor dem nächsten Review noch User-Path-Screenshots und Fehlerzustände ergänzen.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "id": "n2",
+            "heading": "Wochenend-Leseliste",
+            "tag": "生活",
+            "date": "Gestern 14:20",
+            "excerpt": "Systemdesign, Interaktionspsychologie, ein Kurzroman. Auf 3 Stunden begrenzen.",
+            "content": "Systemdesign, Interaktionspsychologie, ein Kurzroman. Auf 3 Stunden begrenzen.\n\nNach dem Lesen nur die Erkenntnisse notieren, die sich umsetzen lassen.",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "id": "n3",
+            "heading": "Reise-Memo",
+            "tag": "灵感",
+            "date": "20. Juni",
+            "excerpt": "Ausweise, Ladegerät, Noise-Cancelling-Kopfhörer, Ersatz-Bankkarte. Am Tag vor der Abreise erneut prüfen.",
+            "content": "Ausweise, Ladegerät, Noise-Cancelling-Kopfhörer, Ersatz-Bankkarte. Am Tag vor der Abreise erneut prüfen.\n\nHotelbestätigung und Routen-Screenshots im selben Ordner ablegen.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "id": "n4",
+            "heading": "React-Performance-Notizen",
+            "tag": "学习",
+            "date": "18. Juni",
+            "excerpt": "Einsatzfälle von useMemo und useCallback; unnötige Re-Renders vermeiden.",
+            "content": "Einsatzfälle von useMemo und useCallback.\n\n1. Listen-Virtualisierung mit react-window\n2. Bilder per Lazy Loading laden\n3. Code splitting",
+            "accent": "#7C3AED",
+            "tint": "#F3EDFF"
+          }
+        ],
+        "es": [
+          {
+            "id": "n1",
+            "heading": "Ideas de producto",
+            "tag": "工作",
+            "date": "Hoy 09:30",
+            "excerpt": "Divide las funciones por validar en tres grupos: flujos clave, puntos de pago, experiencia secundaria.",
+            "content": "Divide las funciones por validar en tres grupos: flujos clave, puntos de pago, experiencia secundaria.\n\nAntes de la próxima revisión, añade capturas del recorrido del usuario y los estados de error.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "id": "n2",
+            "heading": "Lista de lectura del fin de semana",
+            "tag": "生活",
+            "date": "Ayer 14:20",
+            "excerpt": "Diseño de sistemas, psicología de la interacción, una novela corta. Mantenlo en 3 horas.",
+            "content": "Diseño de sistemas, psicología de la interacción, una novela corta. Mantenlo en 3 horas.\n\nAl terminar, anota solo las conclusiones que puedas llevar a la práctica.",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "id": "n3",
+            "heading": "Nota de viaje",
+            "tag": "灵感",
+            "date": "20 jun",
+            "excerpt": "Documentos, cargador, auriculares con cancelación de ruido, tarjeta bancaria de reserva. Revisa de nuevo el día antes de salir.",
+            "content": "Documentos, cargador, auriculares con cancelación de ruido, tarjeta bancaria de reserva. Revisa de nuevo el día antes de salir.\n\nGuarda el correo de confirmación del hotel y las capturas de ruta en la misma carpeta.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "id": "n4",
+            "heading": "Notas de rendimiento de React",
+            "tag": "学习",
+            "date": "18 jun",
+            "excerpt": "Casos de uso de useMemo y useCallback; evita renderizados innecesarios.",
+            "content": "Casos de uso de useMemo y useCallback.\n\n1. Virtualización de listas con react-window\n2. Carga diferida de imágenes\n3. Code splitting",
+            "accent": "#7C3AED",
+            "tint": "#F3EDFF"
+          }
+        ],
+        "fr": [
+          {
+            "id": "n1",
+            "heading": "Idées de produit",
+            "tag": "工作",
+            "date": "Aujourd'hui 09:30",
+            "excerpt": "Répartir les fonctionnalités à valider en trois groupes : parcours clés, points de paiement, expérience secondaire.",
+            "content": "Répartir les fonctionnalités à valider en trois groupes : parcours clés, points de paiement, expérience secondaire.\n\nAvant la prochaine revue, ajouter les captures du parcours utilisateur et les états d’échec.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "id": "n2",
+            "heading": "Liste de lecture du week-end",
+            "tag": "生活",
+            "date": "Hier 14:20",
+            "excerpt": "Conception de systèmes, psychologie de l’interaction, un court roman. À limiter à 3 heures.",
+            "content": "Conception de systèmes, psychologie de l’interaction, un court roman. À limiter à 3 heures.\n\nAprès lecture, ne noter que les conclusions applicables en pratique.",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "id": "n3",
+            "heading": "Mémo de voyage",
+            "tag": "灵感",
+            "date": "20 juin",
+            "excerpt": "Papiers d’identité, chargeur, casque à réduction de bruit, carte bancaire de secours. Revérifier la veille du départ.",
+            "content": "Papiers d’identité, chargeur, casque à réduction de bruit, carte bancaire de secours. Revérifier la veille du départ.\n\nRanger l’e-mail de confirmation de l’hôtel et les captures d’itinéraire dans le même dossier.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "id": "n4",
+            "heading": "Notes sur la performance de React",
+            "tag": "学习",
+            "date": "18 juin",
+            "excerpt": "Cas d’usage de useMemo et useCallback ; éviter les rendus inutiles.",
+            "content": "Cas d’usage de useMemo et useCallback.\n\n1. Virtualisation des listes avec react-window\n2. Chargement différé des images\n3. Code splitting",
+            "accent": "#7C3AED",
+            "tint": "#F3EDFF"
+          }
+        ],
+        "pt": [
+          {
+            "id": "n1",
+            "heading": "Ideias de produto",
+            "tag": "工作",
+            "date": "Hoje 09:30",
+            "excerpt": "Divida as funções a validar em três grupos: fluxos principais, pontos de pagamento, experiência secundária.",
+            "content": "Divida as funções a validar em três grupos: fluxos principais, pontos de pagamento, experiência secundária.\n\nAntes da próxima revisão, adicione capturas do percurso do usuário e os estados de falha.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "id": "n2",
+            "heading": "Lista de leitura do fim de semana",
+            "tag": "生活",
+            "date": "Ontem 14:20",
+            "excerpt": "Design de sistemas, psicologia da interação, um romance curto. Mantenha em 3 horas.",
+            "content": "Design de sistemas, psicologia da interação, um romance curto. Mantenha em 3 horas.\n\nApós a leitura, anote apenas as conclusões que dá para pôr em prática.",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "id": "n3",
+            "heading": "Memorando de viagem",
+            "tag": "灵感",
+            "date": "20 jun",
+            "excerpt": "Documentos, carregador, fones com cancelamento de ruído, cartão bancário reserva. Confira novamente na véspera da partida.",
+            "content": "Documentos, carregador, fones com cancelamento de ruído, cartão bancário reserva. Confira novamente na véspera da partida.\n\nColoque o e-mail de confirmação do hotel e as capturas da rota na mesma pasta.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "id": "n4",
+            "heading": "Notas de desempenho do React",
+            "tag": "学习",
+            "date": "18 jun",
+            "excerpt": "Casos de uso de useMemo e useCallback; evite renderizações desnecessárias.",
+            "content": "Casos de uso de useMemo e useCallback.\n\n1. Virtualização de listas com react-window\n2. Carregamento lazy de imagens\n3. Code splitting",
+            "accent": "#7C3AED",
+            "tint": "#F3EDFF"
+          }
+        ],
+        "ca": [
+          {
+            "id": "n1",
+            "heading": "Idees de producte",
+            "tag": "工作",
+            "date": "Avui 09:30",
+            "excerpt": "Divideix les funcions a validar en tres grups: fluxos clau, punts de pagament, experiència secundària.",
+            "content": "Divideix les funcions a validar en tres grups: fluxos clau, punts de pagament, experiència secundària.\n\nAbans de la propera revisió, afegeix captures del recorregut de l'usuari i els estats d'error.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "id": "n2",
+            "heading": "Llista de lectura del cap de setmana",
+            "tag": "生活",
+            "date": "Ahir 14:20",
+            "excerpt": "Disseny de sistemes, psicologia de la interacció, una novel·la curta. Limita-ho a 3 hores.",
+            "content": "Disseny de sistemes, psicologia de la interacció, una novel·la curta. Limita-ho a 3 hores.\n\nUn cop llegit, anota només les conclusions que puguis posar en pràctica.",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "id": "n3",
+            "heading": "Nota de viatge",
+            "tag": "灵感",
+            "date": "20 juny",
+            "excerpt": "Documents, carregador, auriculars amb cancel·lació de soroll, targeta bancària de reserva. Torna-ho a comprovar el dia abans de sortir.",
+            "content": "Documents, carregador, auriculars amb cancel·lació de soroll, targeta bancària de reserva. Torna-ho a comprovar el dia abans de sortir.\n\nDesa el correu de confirmació de l'hotel i les captures de la ruta a la mateixa carpeta.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "id": "n4",
+            "heading": "Notes de rendiment de React",
+            "tag": "学习",
+            "date": "18 juny",
+            "excerpt": "Casos d'ús de useMemo i useCallback; evita renderitzacions innecessàries.",
+            "content": "Casos d'ús de useMemo i useCallback.\n\n1. Virtualització de llistes amb react-window\n2. Càrrega diferida d'imatges\n3. Code splitting",
+            "accent": "#7C3AED",
+            "tint": "#F3EDFF"
+          }
+        ],
+        "hi": [
+          {
+            "id": "n1",
+            "heading": "उत्पाद विचार",
+            "tag": "工作",
+            "date": "आज 09:30",
+            "excerpt": "सत्यापित करने वाली सुविधाओं को तीन समूहों में बाँटें: मुख्य प्रवाह, भुगतान बिंदु, गौण अनुभव।",
+            "content": "सत्यापित करने वाली सुविधाओं को तीन समूहों में बाँटें: मुख्य प्रवाह, भुगतान बिंदु, गौण अनुभव।\n\nअगली समीक्षा से पहले उपयोगकर्ता पथ के स्क्रीनशॉट और विफलता स्थितियाँ जोड़ें।",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "id": "n2",
+            "heading": "सप्ताहांत पठन सूची",
+            "tag": "生活",
+            "date": "कल 14:20",
+            "excerpt": "सिस्टम डिज़ाइन, इंटरैक्शन मनोविज्ञान, एक लघु उपन्यास। 3 घंटे के भीतर रखें।",
+            "content": "सिस्टम डिज़ाइन, इंटरैक्शन मनोविज्ञान, एक लघु उपन्यास। 3 घंटे के भीतर रखें।\n\nपढ़ने के बाद केवल वही निष्कर्ष लिखें जिन्हें व्यवहार में लाया जा सके।",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "id": "n3",
+            "heading": "यात्रा ज्ञापन",
+            "tag": "灵感",
+            "date": "20 जून",
+            "excerpt": "पहचान पत्र, चार्जर, शोर-रद्द हेडफ़ोन, बैकअप बैंक कार्ड। प्रस्थान से एक दिन पहले फिर जाँचें।",
+            "content": "पहचान पत्र, चार्जर, शोर-रद्द हेडफ़ोन, बैकअप बैंक कार्ड। प्रस्थान से एक दिन पहले फिर जाँचें।\n\nहोटल पुष्टि ईमेल और मार्ग के स्क्रीनशॉट एक ही फ़ोल्डर में रखें।",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "id": "n4",
+            "heading": "React प्रदर्शन नोट्स",
+            "tag": "学习",
+            "date": "18 जून",
+            "excerpt": "useMemo और useCallback के उपयोग के मामले; अनावश्यक री-रेंडर से बचें।",
+            "content": "useMemo और useCallback के उपयोग के मामले।\n\n1. react-window से सूची वर्चुअलाइज़ेशन\n2. छवि लेज़ी लोडिंग\n3. Code splitting",
+            "accent": "#7C3AED",
+            "tint": "#F3EDFF"
+          }
+        ],
+        "ko": [
+          {
+            "id": "n1",
+            "heading": "제품 아이디어 정리",
+            "tag": "工作",
+            "date": "오늘 09:30",
+            "excerpt": "검증할 기능을 세 그룹으로 나누기: 핵심 흐름, 결제 접점, 부가 경험.",
+            "content": "검증할 기능을 세 그룹으로 나누기: 핵심 흐름, 결제 접점, 부가 경험.\n\n다음 리뷰 전에 사용자 경로 스크린샷과 실패 상태를 보완해야 함.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "id": "n2",
+            "heading": "주말 읽기 목록",
+            "tag": "生活",
+            "date": "어제 14:20",
+            "excerpt": "시스템 설계, 인터랙션 심리학, 단편 소설 한 권. 3시간 이내로 유지.",
+            "content": "시스템 설계, 인터랙션 심리학, 단편 소설 한 권. 3시간 이내로 유지.\n\n다 읽고 나서 실천으로 옮길 수 있는 결론만 기록.",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "id": "n3",
+            "heading": "여행 메모",
+            "tag": "灵感",
+            "date": "6월 20일",
+            "excerpt": "신분증, 충전기, 노이즈 캔슬링 헤드폰, 예비 은행 카드. 출발 하루 전에 다시 확인.",
+            "content": "신분증, 충전기, 노이즈 캔슬링 헤드폰, 예비 은행 카드. 출발 하루 전에 다시 확인.\n\n호텔 확인 이메일과 경로 스크린샷을 같은 폴더에 넣기.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "id": "n4",
+            "heading": "React 성능 최적화 노트",
+            "tag": "学习",
+            "date": "6월 18일",
+            "excerpt": "useMemo, useCallback 사용 사례; 불필요한 리렌더 방지.",
+            "content": "useMemo, useCallback 사용 사례.\n\n1. react-window로 리스트 가상화\n2. 이미지 지연 로딩\n3. Code splitting",
+            "accent": "#7C3AED",
+            "tint": "#F3EDFF"
+          }
+        ],
+        "ja": [
+          {
+            "id": "n1",
+            "heading": "プロダクトのアイデア整理",
+            "tag": "工作",
+            "date": "今日 09:30",
+            "excerpt": "検証する機能を3つに分ける：コアフロー、課金接点、副次的な体験。",
+            "content": "検証する機能を3つに分ける：コアフロー、課金接点、副次的な体験。\n\n次のレビュー前にユーザー導線のスクショと失敗状態を補う。",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "id": "n2",
+            "heading": "週末の読書リスト",
+            "tag": "生活",
+            "date": "昨日 14:20",
+            "excerpt": "システム設計、インタラクション心理学、短編小説を1冊。3時間以内に収める。",
+            "content": "システム設計、インタラクション心理学、短編小説を1冊。3時間以内に収める。\n\n読み終えたら、実践に落とせる結論だけを記録する。",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "id": "n3",
+            "heading": "旅行メモ",
+            "tag": "灵感",
+            "date": "6月20日",
+            "excerpt": "身分証、充電器、ノイズキャンセリングヘッドホン、予備の銀行カード。出発前日にもう一度確認。",
+            "content": "身分証、充電器、ノイズキャンセリングヘッドホン、予備の銀行カード。出発前日にもう一度確認。\n\nホテルの確認メールとルートのスクショは同じフォルダにまとめる。",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "id": "n4",
+            "heading": "React パフォーマンス最適化メモ",
+            "tag": "学习",
+            "date": "6月18日",
+            "excerpt": "useMemo・useCallback の使いどころ、不要な再レンダリングを避ける。",
+            "content": "useMemo・useCallback の使いどころ。\n\n1. react-window でリスト仮想化\n2. 画像の遅延読み込み\n3. Code splitting",
+            "accent": "#7C3AED",
+            "tint": "#F3EDFF"
+          }
+        ],
+        "it": [
+          {
+            "id": "n1",
+            "heading": "Idee di prodotto",
+            "tag": "工作",
+            "date": "Oggi 09:30",
+            "excerpt": "Dividi le funzioni da validare in tre gruppi: flussi principali, punti di pagamento, esperienza secondaria.",
+            "content": "Dividi le funzioni da validare in tre gruppi: flussi principali, punti di pagamento, esperienza secondaria.\n\nPrima della prossima revisione, aggiungi screenshot del percorso utente e gli stati di errore.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "id": "n2",
+            "heading": "Lista di lettura del weekend",
+            "tag": "生活",
+            "date": "Ieri 14:20",
+            "excerpt": "Progettazione di sistemi, psicologia dell’interazione, un romanzo breve. Mantienilo entro 3 ore.",
+            "content": "Progettazione di sistemi, psicologia dell’interazione, un romanzo breve. Mantienilo entro 3 ore.\n\nDopo la lettura, annota solo le conclusioni applicabili nella pratica.",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "id": "n3",
+            "heading": "Promemoria di viaggio",
+            "tag": "灵感",
+            "date": "20 giu",
+            "excerpt": "Documenti, caricabatterie, cuffie con cancellazione del rumore, carta bancaria di riserva. Ricontrolla il giorno prima della partenza.",
+            "content": "Documenti, caricabatterie, cuffie con cancellazione del rumore, carta bancaria di riserva. Ricontrolla il giorno prima della partenza.\n\nMetti l’e-mail di conferma dell’hotel e gli screenshot del percorso nella stessa cartella.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "id": "n4",
+            "heading": "Note sulle prestazioni di React",
+            "tag": "学习",
+            "date": "18 giu",
+            "excerpt": "Casi d’uso di useMemo e useCallback; evita render non necessari.",
+            "content": "Casi d’uso di useMemo e useCallback.\n\n1. Virtualizzazione delle liste con react-window\n2. Caricamento lazy delle immagini\n3. Code splitting",
+            "accent": "#7C3AED",
+            "tint": "#F3EDFF"
+          }
+        ]
+      }
     },
     "i18n": {
       "zh": {
@@ -152,6 +616,9 @@
         "toast": {
           "saved": "笔记已保存",
           "deleted": "笔记已删除"
+        },
+        "note": {
+          "justNow": "刚刚"
         }
       },
       "en": {
@@ -184,6 +651,9 @@
         "toast": {
           "saved": "Note saved",
           "deleted": "Note deleted"
+        },
+        "note": {
+          "justNow": "Just now"
         }
       },
       "de": {
@@ -216,6 +686,9 @@
         "toast": {
           "saved": "Notiz gespeichert",
           "deleted": "Notiz gelöscht"
+        },
+        "note": {
+          "justNow": "Gerade eben"
         }
       },
       "es": {
@@ -248,6 +721,9 @@
         "toast": {
           "saved": "Nota guardada",
           "deleted": "Nota eliminada"
+        },
+        "note": {
+          "justNow": "Justo ahora"
         }
       },
       "fr": {
@@ -280,6 +756,9 @@
         "toast": {
           "saved": "Note enregistrée",
           "deleted": "Note supprimée"
+        },
+        "note": {
+          "justNow": "À l’instant"
         }
       },
       "pt": {
@@ -312,6 +791,9 @@
         "toast": {
           "saved": "Nota salva",
           "deleted": "Nota excluída"
+        },
+        "note": {
+          "justNow": "Agora mesmo"
         }
       },
       "ca": {
@@ -344,6 +826,9 @@
         "toast": {
           "saved": "Nota desada",
           "deleted": "Nota eliminada"
+        },
+        "note": {
+          "justNow": "Ara mateix"
         }
       },
       "hi": {
@@ -376,6 +861,9 @@
         "toast": {
           "saved": "नोट सहेजा गया",
           "deleted": "नोट हटाया गया"
+        },
+        "note": {
+          "justNow": "अभी-अभी"
         }
       },
       "ko": {
@@ -408,6 +896,9 @@
         "toast": {
           "saved": "노트가 저장되었습니다",
           "deleted": "노트가 삭제되었습니다"
+        },
+        "note": {
+          "justNow": "방금"
         }
       },
       "ja": {
@@ -440,6 +931,9 @@
         "toast": {
           "saved": "メモを保存しました",
           "deleted": "メモを削除しました"
+        },
+        "note": {
+          "justNow": "たった今"
         }
       },
       "it": {
@@ -472,6 +966,9 @@
         "toast": {
           "saved": "Nota salvata",
           "deleted": "Nota eliminata"
+        },
+        "note": {
+          "justNow": "Proprio ora"
         }
       }
     },
@@ -833,7 +1330,7 @@
                 "tag": {
                   "var": "global.formTag"
                 },
-                "date": "刚刚",
+                "date": "{{ t('note.justNow') }}",
                 "excerpt": {
                   "substr": [
                     {
@@ -974,6 +1471,44 @@
     {
       "call": "@global.refreshList",
       "args": {}
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.notes",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_notes.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_notes.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_notes.zh"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.filteredNotes",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_notes.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_notes.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_notes.zh"
+            }
+          ]
+        }
+      }
     }
   ],
   "ui": {

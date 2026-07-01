@@ -85,7 +85,493 @@
           "accent": "#0891B2",
           "tint": "#E0F2FE"
         }
-      ]
+      ],
+      "_seed_roomTiles": {
+        "zh": [
+          {
+            "name": "客厅",
+            "device": "灯·空调·窗帘",
+            "icon": "home",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "name": "主卧",
+            "device": "灯·加湿器·空调",
+            "icon": "king_bed",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF"
+          },
+          {
+            "name": "厨房",
+            "device": "灯·烟感·净水器",
+            "icon": "kitchen",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "name": "餐厅",
+            "device": "灯·音响",
+            "icon": "weekend",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "name": "书房",
+            "device": "灯·电脑·打印机",
+            "icon": "lightbulb",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "name": "卫生间",
+            "device": "灯·排风·热水器",
+            "icon": "bathroom",
+            "accent": "#0891B2",
+            "tint": "#E0F2FE"
+          }
+        ],
+        "en": [
+          {
+            "name": "Living room",
+            "device": "Light·AC·Curtain",
+            "icon": "home",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "name": "Master bedroom",
+            "device": "Light·Humidifier·AC",
+            "icon": "king_bed",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF"
+          },
+          {
+            "name": "Kitchen",
+            "device": "Light·Smoke sensor·Water purifier",
+            "icon": "kitchen",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "name": "Dining room",
+            "device": "Light·Speaker",
+            "icon": "weekend",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "name": "Study",
+            "device": "Light·Computer·Printer",
+            "icon": "lightbulb",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "name": "Bathroom",
+            "device": "Light·Exhaust·Water heater",
+            "icon": "bathroom",
+            "accent": "#0891B2",
+            "tint": "#E0F2FE"
+          }
+        ],
+        "de": [
+          {
+            "name": "Wohnzimmer",
+            "device": "Licht·Klima·Vorhang",
+            "icon": "home",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "name": "Hauptschlafzimmer",
+            "device": "Licht·Luftbefeuchter·Klima",
+            "icon": "king_bed",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF"
+          },
+          {
+            "name": "Küche",
+            "device": "Licht·Rauchmelder·Wasserfilter",
+            "icon": "kitchen",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "name": "Esszimmer",
+            "device": "Licht·Lautsprecher",
+            "icon": "weekend",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "name": "Arbeitszimmer",
+            "device": "Licht·Computer·Drucker",
+            "icon": "lightbulb",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "name": "Badezimmer",
+            "device": "Licht·Abluft·Boiler",
+            "icon": "bathroom",
+            "accent": "#0891B2",
+            "tint": "#E0F2FE"
+          }
+        ],
+        "es": [
+          {
+            "name": "Salón",
+            "device": "Luz·Aire·Cortina",
+            "icon": "home",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "name": "Dormitorio principal",
+            "device": "Luz·Humidificador·Aire",
+            "icon": "king_bed",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF"
+          },
+          {
+            "name": "Cocina",
+            "device": "Luz·Detector de humo·Purificador de agua",
+            "icon": "kitchen",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "name": "Comedor",
+            "device": "Luz·Altavoz",
+            "icon": "weekend",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "name": "Estudio",
+            "device": "Luz·Ordenador·Impresora",
+            "icon": "lightbulb",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "name": "Baño",
+            "device": "Luz·Extractor·Calentador",
+            "icon": "bathroom",
+            "accent": "#0891B2",
+            "tint": "#E0F2FE"
+          }
+        ],
+        "fr": [
+          {
+            "name": "Salon",
+            "device": "Lumière·Clim·Rideau",
+            "icon": "home",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "name": "Chambre principale",
+            "device": "Lumière·Humidificateur·Clim",
+            "icon": "king_bed",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF"
+          },
+          {
+            "name": "Cuisine",
+            "device": "Lumière·Détecteur de fumée·Purificateur d'eau",
+            "icon": "kitchen",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "name": "Salle à manger",
+            "device": "Lumière·Enceinte",
+            "icon": "weekend",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "name": "Bureau",
+            "device": "Lumière·Ordinateur·Imprimante",
+            "icon": "lightbulb",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "name": "Salle de bain",
+            "device": "Lumière·Ventilation·Chauffe-eau",
+            "icon": "bathroom",
+            "accent": "#0891B2",
+            "tint": "#E0F2FE"
+          }
+        ],
+        "pt": [
+          {
+            "name": "Sala",
+            "device": "Luz·Ar·Cortina",
+            "icon": "home",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "name": "Quarto principal",
+            "device": "Luz·Umidificador·Ar",
+            "icon": "king_bed",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF"
+          },
+          {
+            "name": "Cozinha",
+            "device": "Luz·Detector de fumaça·Purificador de água",
+            "icon": "kitchen",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "name": "Sala de jantar",
+            "device": "Luz·Som",
+            "icon": "weekend",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "name": "Escritório",
+            "device": "Luz·Computador·Impressora",
+            "icon": "lightbulb",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "name": "Banheiro",
+            "device": "Luz·Exaustor·Aquecedor",
+            "icon": "bathroom",
+            "accent": "#0891B2",
+            "tint": "#E0F2FE"
+          }
+        ],
+        "ca": [
+          {
+            "name": "Saló",
+            "device": "Llum·Aire·Cortina",
+            "icon": "home",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "name": "Dormitori principal",
+            "device": "Llum·Humidificador·Aire",
+            "icon": "king_bed",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF"
+          },
+          {
+            "name": "Cuina",
+            "device": "Llum·Detector de fum·Purificador d'aigua",
+            "icon": "kitchen",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "name": "Menjador",
+            "device": "Llum·Altaveu",
+            "icon": "weekend",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "name": "Estudi",
+            "device": "Llum·Ordinador·Impressora",
+            "icon": "lightbulb",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "name": "Bany",
+            "device": "Llum·Extractor·Escalfador",
+            "icon": "bathroom",
+            "accent": "#0891B2",
+            "tint": "#E0F2FE"
+          }
+        ],
+        "hi": [
+          {
+            "name": "लिविंग रूम",
+            "device": "लाइट·एसी·पर्दा",
+            "icon": "home",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "name": "मास्टर बेडरूम",
+            "device": "लाइट·ह्यूमिडिफायर·एसी",
+            "icon": "king_bed",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF"
+          },
+          {
+            "name": "किचन",
+            "device": "लाइट·स्मोक सेंसर·वाटर प्यूरिफायर",
+            "icon": "kitchen",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "name": "डाइनिंग रूम",
+            "device": "लाइट·स्पीकर",
+            "icon": "weekend",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "name": "स्टडी",
+            "device": "लाइट·कंप्यूटर·प्रिंटर",
+            "icon": "lightbulb",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "name": "बाथरूम",
+            "device": "लाइट·एग्जॉस्ट·वाटर हीटर",
+            "icon": "bathroom",
+            "accent": "#0891B2",
+            "tint": "#E0F2FE"
+          }
+        ],
+        "ko": [
+          {
+            "name": "거실",
+            "device": "조명·에어컨·커튼",
+            "icon": "home",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "name": "안방",
+            "device": "조명·가습기·에어컨",
+            "icon": "king_bed",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF"
+          },
+          {
+            "name": "주방",
+            "device": "조명·연기감지기·정수기",
+            "icon": "kitchen",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "name": "다이닝룸",
+            "device": "조명·스피커",
+            "icon": "weekend",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "name": "서재",
+            "device": "조명·컴퓨터·프린터",
+            "icon": "lightbulb",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "name": "욕실",
+            "device": "조명·환풍기·온수기",
+            "icon": "bathroom",
+            "accent": "#0891B2",
+            "tint": "#E0F2FE"
+          }
+        ],
+        "ja": [
+          {
+            "name": "リビング",
+            "device": "照明·エアコン·カーテン",
+            "icon": "home",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "name": "主寝室",
+            "device": "照明·加湿器·エアコン",
+            "icon": "king_bed",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF"
+          },
+          {
+            "name": "キッチン",
+            "device": "照明·煙感知器·浄水器",
+            "icon": "kitchen",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "name": "ダイニング",
+            "device": "照明·スピーカー",
+            "icon": "weekend",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "name": "書斎",
+            "device": "照明·パソコン·プリンター",
+            "icon": "lightbulb",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "name": "浴室",
+            "device": "照明·換気·給湯器",
+            "icon": "bathroom",
+            "accent": "#0891B2",
+            "tint": "#E0F2FE"
+          }
+        ],
+        "it": [
+          {
+            "name": "Soggiorno",
+            "device": "Luce·Clima·Tenda",
+            "icon": "home",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF"
+          },
+          {
+            "name": "Camera principale",
+            "device": "Luce·Umidificatore·Clima",
+            "icon": "king_bed",
+            "accent": "#7C3AED",
+            "tint": "#F1EAFF"
+          },
+          {
+            "name": "Cucina",
+            "device": "Luce·Rilevatore di fumo·Depuratore",
+            "icon": "kitchen",
+            "accent": "#D97706",
+            "tint": "#FFF4DE"
+          },
+          {
+            "name": "Sala da pranzo",
+            "device": "Luce·Altoparlante",
+            "icon": "weekend",
+            "accent": "#059669",
+            "tint": "#E8F7F0"
+          },
+          {
+            "name": "Studio",
+            "device": "Luce·Computer·Stampante",
+            "icon": "lightbulb",
+            "accent": "#DC2626",
+            "tint": "#FEE2E2"
+          },
+          {
+            "name": "Bagno",
+            "device": "Luce·Aspiratore·Scaldabagno",
+            "icon": "bathroom",
+            "accent": "#0891B2",
+            "tint": "#E0F2FE"
+          }
+        ]
+      }
     },
     "functions": {
       "sync": {
@@ -1387,7 +1873,27 @@
       }
     }
   },
-  "steps": [],
+  "steps": [
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.roomTiles",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_roomTiles.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_roomTiles.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_roomTiles.zh"
+            }
+          ]
+        }
+      }
+    }
+  ],
   "ui": {
     "screens": [
       {

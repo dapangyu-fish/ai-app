@@ -6,6 +6,21 @@
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-07-01
+### Added
+- **demo app 显示型 seed 数据 i18n**（13 app / 26 个 `_seed_*` 变量）：把示例数据（账单流水、笔记、
+  CRM 客户、视频描述、日程等）也按 11 语本地化。机制：显示型 seed 数组搬进
+  `global.variables._seed_<var> = {11 语}`，appended 一个 startup `@set` 按 `{{ global.locale }}`
+  选对应副本（zh 兜底，验证 `_buildDataContext` 的 jsonlogic `{"var":"global.x"}` 会解析）；非显示
+  字段（id/金额/日期数值/enum 键/icon）11 语字节一致、zh 副本==原值（zh 零变化）。逻辑耦合的 enum 值
+  （status/type/category 等既显示又参与 `==`/@faas/bind）**留原样**——本地化会破坏筛选/匹配（DSL
+  display=logic 耦合限制）。253+32-agent workflow（prototype→fan-out→逐个 verify），23/23 validate、0 逻辑 bug。
+### Fixed
+- **review 发现的 2 处 demo 显示 bug**：`text-collector` 的 `i18n.zh.home.title` 被误设成自引用
+  `{{ t('home.title') }}`（递归到 `_maxI18nDepth` 显示原始模板）→ 改回字面；`native_quality_workout`
+  计时器 mode label 被改成 `children` 里的裸 `{"if":[...]}` 节点（`widget_builder` 对无 `type` 节点返回
+  `SizedBox.shrink()` → 不渲染）→ 改成两个 typed `text` + `visible` 门控。
+
 ## [1.3.0] - 2026-07-01
 ### Added
 - **免登录 demo 全链路 i18n（11 语）**：提示词目录 + AI 回放叙事 + 生成的 app 三段全部支持框架 11 语。

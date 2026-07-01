@@ -109,6 +109,921 @@
           ]
         }
       ],
+      "_seed_customers": {
+        "zh": [
+          {
+            "id": "c1",
+            "name": "林青",
+            "company": "北辰科技",
+            "phone": "138 0000 1201",
+            "status": "待跟进",
+            "nextStep": "明天 10:00 回访预算",
+            "note": "关注部署周期和售后响应，希望本周拿到报价。",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "followUps": [
+              {
+                "id": "f1",
+                "date": "2026-06-20 14:30",
+                "type": "电话",
+                "content": "初次联系，了解客户基本需求，对方对云端部署比较关注。"
+              },
+              {
+                "id": "f2",
+                "date": "2026-06-22 10:00",
+                "type": "邮件",
+                "content": "发送产品介绍文档和报价方案，等待客户反馈。"
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "name": "周远",
+            "company": "恒泰贸易",
+            "phone": "139 0000 2302",
+            "status": "洽谈中",
+            "nextStep": "周五发送试用账号",
+            "note": "团队 12 人，核心诉求是移动端审批和客户数据沉淀。",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "followUps": [
+              {
+                "id": "f3",
+                "date": "2026-06-18 09:00",
+                "type": "拜访",
+                "content": "上门演示产品，对方技术负责人对API对接有疑问。"
+              },
+              {
+                "id": "f4",
+                "date": "2026-06-21 15:00",
+                "type": "电话",
+                "content": "跟进API对接问题，确认下周发送试用环境。"
+              },
+              {
+                "id": "f5",
+                "date": "2026-06-24 11:30",
+                "type": "备注",
+                "content": "内部评审通过，进入商务谈判阶段。"
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "name": "陈白",
+            "company": "云谷设计",
+            "phone": "137 0000 4503",
+            "status": "已成交",
+            "nextStep": "下月复盘续费计划",
+            "note": "已完成首单，后续可能扩展到第二部门。",
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "followUps": [
+              {
+                "id": "f6",
+                "date": "2026-06-15 13:00",
+                "type": "电话",
+                "content": "确认首期合同细节，约定周五签约。"
+              },
+              {
+                "id": "f7",
+                "date": "2026-06-17 16:30",
+                "type": "拜访",
+                "content": "完成合同签署，客户对服务非常满意。"
+              }
+            ]
+          }
+        ],
+        "en": [
+          {
+            "id": "c1",
+            "name": "Lin Qing",
+            "company": "Beichen Technology",
+            "phone": "138 0000 1201",
+            "status": "待跟进",
+            "nextStep": "Tomorrow 10:00 — follow up on budget",
+            "note": "Focused on deployment timeline and after-sales response; hopes to get a quote this week.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "followUps": [
+              {
+                "id": "f1",
+                "date": "2026-06-20 14:30",
+                "type": "电话",
+                "content": "First contact; learned the customer's basic needs — quite interested in cloud deployment."
+              },
+              {
+                "id": "f2",
+                "date": "2026-06-22 10:00",
+                "type": "邮件",
+                "content": "Sent the product overview and quote; awaiting the customer's feedback."
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "name": "Zhou Yuan",
+            "company": "Hengtai Trading",
+            "phone": "139 0000 2302",
+            "status": "洽谈中",
+            "nextStep": "Send trial account on Friday",
+            "note": "Team of 12; core needs are mobile approvals and customer-data retention.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "followUps": [
+              {
+                "id": "f3",
+                "date": "2026-06-18 09:00",
+                "type": "拜访",
+                "content": "On-site product demo; their tech lead had questions about API integration."
+              },
+              {
+                "id": "f4",
+                "date": "2026-06-21 15:00",
+                "type": "电话",
+                "content": "Followed up on the API integration; confirmed we'll send the trial environment next week."
+              },
+              {
+                "id": "f5",
+                "date": "2026-06-24 11:30",
+                "type": "备注",
+                "content": "Internal review passed; entering the business negotiation stage."
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "name": "Chen Bai",
+            "company": "Yungu Design",
+            "phone": "137 0000 4503",
+            "status": "已成交",
+            "nextStep": "Review the renewal plan next month",
+            "note": "First order completed; may expand to a second department later.",
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "followUps": [
+              {
+                "id": "f6",
+                "date": "2026-06-15 13:00",
+                "type": "电话",
+                "content": "Confirmed the first-phase contract details; agreed to sign on Friday."
+              },
+              {
+                "id": "f7",
+                "date": "2026-06-17 16:30",
+                "type": "拜访",
+                "content": "Contract signed; the customer is very satisfied with the service."
+              }
+            ]
+          }
+        ],
+        "de": [
+          {
+            "id": "c1",
+            "name": "Lin Qing",
+            "company": "Beichen Technology",
+            "phone": "138 0000 1201",
+            "status": "待跟进",
+            "nextStep": "Morgen 10:00 – Budget nachfassen",
+            "note": "Achtet auf Einführungszeitraum und After-Sales-Reaktion; möchte diese Woche ein Angebot erhalten.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "followUps": [
+              {
+                "id": "f1",
+                "date": "2026-06-20 14:30",
+                "type": "电话",
+                "content": "Erstkontakt; Grundbedarf des Kunden erfasst – großes Interesse an Cloud-Bereitstellung."
+              },
+              {
+                "id": "f2",
+                "date": "2026-06-22 10:00",
+                "type": "邮件",
+                "content": "Produktbroschüre und Angebot gesendet; warten auf Rückmeldung des Kunden."
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "name": "Zhou Yuan",
+            "company": "Hengtai Handel",
+            "phone": "139 0000 2302",
+            "status": "洽谈中",
+            "nextStep": "Am Freitag Testzugang senden",
+            "note": "Team mit 12 Personen; Kernanforderungen sind mobile Freigaben und Kundendaten-Speicherung.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "followUps": [
+              {
+                "id": "f3",
+                "date": "2026-06-18 09:00",
+                "type": "拜访",
+                "content": "Produktdemo vor Ort; der technische Leiter hatte Fragen zur API-Anbindung."
+              },
+              {
+                "id": "f4",
+                "date": "2026-06-21 15:00",
+                "type": "电话",
+                "content": "API-Anbindung nachverfolgt; Versand der Testumgebung für nächste Woche bestätigt."
+              },
+              {
+                "id": "f5",
+                "date": "2026-06-24 11:30",
+                "type": "备注",
+                "content": "Interne Prüfung bestanden; Eintritt in die Vertragsverhandlung."
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "name": "Chen Bai",
+            "company": "Yungu Design",
+            "phone": "137 0000 4503",
+            "status": "已成交",
+            "nextStep": "Nächsten Monat den Verlängerungsplan prüfen",
+            "note": "Erstauftrag abgeschlossen; spätere Ausweitung auf eine zweite Abteilung möglich.",
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "followUps": [
+              {
+                "id": "f6",
+                "date": "2026-06-15 13:00",
+                "type": "电话",
+                "content": "Details des ersten Vertragsabschnitts bestätigt; Unterzeichnung für Freitag vereinbart."
+              },
+              {
+                "id": "f7",
+                "date": "2026-06-17 16:30",
+                "type": "拜访",
+                "content": "Vertrag unterzeichnet; der Kunde ist sehr zufrieden mit dem Service."
+              }
+            ]
+          }
+        ],
+        "es": [
+          {
+            "id": "c1",
+            "name": "Lin Qing",
+            "company": "Beichen Technology",
+            "phone": "138 0000 1201",
+            "status": "待跟进",
+            "nextStep": "Mañana 10:00: seguimiento del presupuesto",
+            "note": "Le interesan el plazo de implementación y la respuesta posventa; espera recibir una cotización esta semana.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "followUps": [
+              {
+                "id": "f1",
+                "date": "2026-06-20 14:30",
+                "type": "电话",
+                "content": "Primer contacto; se conocieron las necesidades básicas del cliente, muy interesado en el despliegue en la nube."
+              },
+              {
+                "id": "f2",
+                "date": "2026-06-22 10:00",
+                "type": "邮件",
+                "content": "Se enviaron la presentación del producto y la cotización; a la espera de la respuesta del cliente."
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "name": "Zhou Yuan",
+            "company": "Hengtai Comercio",
+            "phone": "139 0000 2302",
+            "status": "洽谈中",
+            "nextStep": "Enviar la cuenta de prueba el viernes",
+            "note": "Equipo de 12 personas; las necesidades clave son las aprobaciones móviles y la retención de datos de clientes.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "followUps": [
+              {
+                "id": "f3",
+                "date": "2026-06-18 09:00",
+                "type": "拜访",
+                "content": "Demostración del producto in situ; el responsable técnico tenía dudas sobre la integración de la API."
+              },
+              {
+                "id": "f4",
+                "date": "2026-06-21 15:00",
+                "type": "电话",
+                "content": "Seguimiento de la integración de la API; se confirmó el envío del entorno de prueba la próxima semana."
+              },
+              {
+                "id": "f5",
+                "date": "2026-06-24 11:30",
+                "type": "备注",
+                "content": "Revisión interna aprobada; se entra en la fase de negociación comercial."
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "name": "Chen Bai",
+            "company": "Yungu Diseño",
+            "phone": "137 0000 4503",
+            "status": "已成交",
+            "nextStep": "Revisar el plan de renovación el próximo mes",
+            "note": "Primer pedido completado; es posible ampliar a un segundo departamento más adelante.",
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "followUps": [
+              {
+                "id": "f6",
+                "date": "2026-06-15 13:00",
+                "type": "电话",
+                "content": "Se confirmaron los detalles de la primera fase del contrato; se acordó firmar el viernes."
+              },
+              {
+                "id": "f7",
+                "date": "2026-06-17 16:30",
+                "type": "拜访",
+                "content": "Contrato firmado; el cliente está muy satisfecho con el servicio."
+              }
+            ]
+          }
+        ],
+        "fr": [
+          {
+            "id": "c1",
+            "name": "Lin Qing",
+            "company": "Beichen Technology",
+            "phone": "138 0000 1201",
+            "status": "待跟进",
+            "nextStep": "Demain 10:00 — relance sur le budget",
+            "note": "Attentif au délai de déploiement et à la réactivité du service après-vente ; souhaite recevoir un devis cette semaine.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "followUps": [
+              {
+                "id": "f1",
+                "date": "2026-06-20 14:30",
+                "type": "电话",
+                "content": "Premier contact ; besoins de base du client identifiés — très intéressé par le déploiement dans le cloud."
+              },
+              {
+                "id": "f2",
+                "date": "2026-06-22 10:00",
+                "type": "邮件",
+                "content": "Envoi de la présentation produit et du devis ; en attente du retour du client."
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "name": "Zhou Yuan",
+            "company": "Hengtai Commerce",
+            "phone": "139 0000 2302",
+            "status": "洽谈中",
+            "nextStep": "Envoyer le compte d'essai vendredi",
+            "note": "Équipe de 12 personnes ; besoins clés : validations mobiles et conservation des données clients.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "followUps": [
+              {
+                "id": "f3",
+                "date": "2026-06-18 09:00",
+                "type": "拜访",
+                "content": "Démonstration produit sur site ; le responsable technique avait des questions sur l'intégration de l'API."
+              },
+              {
+                "id": "f4",
+                "date": "2026-06-21 15:00",
+                "type": "电话",
+                "content": "Suivi de l'intégration de l'API ; envoi de l'environnement d'essai confirmé pour la semaine prochaine."
+              },
+              {
+                "id": "f5",
+                "date": "2026-06-24 11:30",
+                "type": "备注",
+                "content": "Revue interne validée ; passage à la phase de négociation commerciale."
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "name": "Chen Bai",
+            "company": "Yungu Design",
+            "phone": "137 0000 4503",
+            "status": "已成交",
+            "nextStep": "Revoir le plan de renouvellement le mois prochain",
+            "note": "Première commande terminée ; extension possible à un second service plus tard.",
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "followUps": [
+              {
+                "id": "f6",
+                "date": "2026-06-15 13:00",
+                "type": "电话",
+                "content": "Détails de la première phase du contrat confirmés ; signature convenue pour vendredi."
+              },
+              {
+                "id": "f7",
+                "date": "2026-06-17 16:30",
+                "type": "拜访",
+                "content": "Contrat signé ; le client est très satisfait du service."
+              }
+            ]
+          }
+        ],
+        "pt": [
+          {
+            "id": "c1",
+            "name": "Lin Qing",
+            "company": "Beichen Technology",
+            "phone": "138 0000 1201",
+            "status": "待跟进",
+            "nextStep": "Amanhã 10:00 — acompanhar o orçamento",
+            "note": "Atento ao prazo de implantação e à resposta do pós-venda; espera receber uma cotação esta semana.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "followUps": [
+              {
+                "id": "f1",
+                "date": "2026-06-20 14:30",
+                "type": "电话",
+                "content": "Primeiro contato; necessidades básicas do cliente identificadas — bastante interessado na implantação em nuvem."
+              },
+              {
+                "id": "f2",
+                "date": "2026-06-22 10:00",
+                "type": "邮件",
+                "content": "Enviados a apresentação do produto e a cotação; aguardando o retorno do cliente."
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "name": "Zhou Yuan",
+            "company": "Hengtai Comércio",
+            "phone": "139 0000 2302",
+            "status": "洽谈中",
+            "nextStep": "Enviar a conta de teste na sexta-feira",
+            "note": "Equipe de 12 pessoas; necessidades principais são aprovações no celular e retenção de dados dos clientes.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "followUps": [
+              {
+                "id": "f3",
+                "date": "2026-06-18 09:00",
+                "type": "拜访",
+                "content": "Demonstração do produto no local; o responsável técnico tinha dúvidas sobre a integração da API."
+              },
+              {
+                "id": "f4",
+                "date": "2026-06-21 15:00",
+                "type": "电话",
+                "content": "Acompanhamento da integração da API; confirmado o envio do ambiente de teste na próxima semana."
+              },
+              {
+                "id": "f5",
+                "date": "2026-06-24 11:30",
+                "type": "备注",
+                "content": "Revisão interna aprovada; entrando na fase de negociação comercial."
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "name": "Chen Bai",
+            "company": "Yungu Design",
+            "phone": "137 0000 4503",
+            "status": "已成交",
+            "nextStep": "Revisar o plano de renovação no próximo mês",
+            "note": "Primeiro pedido concluído; pode expandir para um segundo departamento mais adiante.",
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "followUps": [
+              {
+                "id": "f6",
+                "date": "2026-06-15 13:00",
+                "type": "电话",
+                "content": "Detalhes da primeira fase do contrato confirmados; assinatura combinada para sexta-feira."
+              },
+              {
+                "id": "f7",
+                "date": "2026-06-17 16:30",
+                "type": "拜访",
+                "content": "Contrato assinado; o cliente está muito satisfeito com o serviço."
+              }
+            ]
+          }
+        ],
+        "ca": [
+          {
+            "id": "c1",
+            "name": "Lin Qing",
+            "company": "Beichen Technology",
+            "phone": "138 0000 1201",
+            "status": "待跟进",
+            "nextStep": "Demà 10:00 — seguiment del pressupost",
+            "note": "Atent al termini d'implementació i a la resposta postvenda; espera rebre un pressupost aquesta setmana.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "followUps": [
+              {
+                "id": "f1",
+                "date": "2026-06-20 14:30",
+                "type": "电话",
+                "content": "Primer contacte; identificades les necessitats bàsiques del client, molt interessat en el desplegament al núvol."
+              },
+              {
+                "id": "f2",
+                "date": "2026-06-22 10:00",
+                "type": "邮件",
+                "content": "Enviades la presentació del producte i el pressupost; a l'espera de la resposta del client."
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "name": "Zhou Yuan",
+            "company": "Hengtai Comerç",
+            "phone": "139 0000 2302",
+            "status": "洽谈中",
+            "nextStep": "Enviar el compte de prova divendres",
+            "note": "Equip de 12 persones; les necessitats clau són les aprovacions mòbils i la conservació de les dades dels clients.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "followUps": [
+              {
+                "id": "f3",
+                "date": "2026-06-18 09:00",
+                "type": "拜访",
+                "content": "Demostració del producte in situ; el responsable tècnic tenia dubtes sobre la integració de l'API."
+              },
+              {
+                "id": "f4",
+                "date": "2026-06-21 15:00",
+                "type": "电话",
+                "content": "Seguiment de la integració de l'API; confirmat l'enviament de l'entorn de prova la setmana vinent."
+              },
+              {
+                "id": "f5",
+                "date": "2026-06-24 11:30",
+                "type": "备注",
+                "content": "Revisió interna aprovada; s'entra a la fase de negociació comercial."
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "name": "Chen Bai",
+            "company": "Yungu Disseny",
+            "phone": "137 0000 4503",
+            "status": "已成交",
+            "nextStep": "Revisar el pla de renovació el mes vinent",
+            "note": "Primera comanda completada; és possible ampliar a un segon departament més endavant.",
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "followUps": [
+              {
+                "id": "f6",
+                "date": "2026-06-15 13:00",
+                "type": "电话",
+                "content": "Detalls de la primera fase del contracte confirmats; signatura acordada per divendres."
+              },
+              {
+                "id": "f7",
+                "date": "2026-06-17 16:30",
+                "type": "拜访",
+                "content": "Contracte signat; el client està molt satisfet amb el servei."
+              }
+            ]
+          }
+        ],
+        "hi": [
+          {
+            "id": "c1",
+            "name": "लिन छिंग",
+            "company": "बेइचेन टेक्नोलॉजी",
+            "phone": "138 0000 1201",
+            "status": "待跟进",
+            "nextStep": "कल 10:00 — बजट पर फ़ॉलो-अप",
+            "note": "तैनाती की समयसीमा और बिक्री-पश्चात प्रतिक्रिया पर ध्यान; इसी सप्ताह कोटेशन चाहते हैं।",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "followUps": [
+              {
+                "id": "f1",
+                "date": "2026-06-20 14:30",
+                "type": "电话",
+                "content": "पहला संपर्क; ग्राहक की बुनियादी ज़रूरतें समझीं — क्लाउड परिनियोजन में काफ़ी रुचि है।"
+              },
+              {
+                "id": "f2",
+                "date": "2026-06-22 10:00",
+                "type": "邮件",
+                "content": "उत्पाद परिचय दस्तावेज़ और कोटेशन भेजा; ग्राहक की प्रतिक्रिया की प्रतीक्षा।"
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "name": "झोउ युआन",
+            "company": "हेंगताई ट्रेडिंग",
+            "phone": "139 0000 2302",
+            "status": "洽谈中",
+            "nextStep": "शुक्रवार को ट्रायल अकाउंट भेजें",
+            "note": "12 लोगों की टीम; मुख्य ज़रूरतें मोबाइल स्वीकृति और ग्राहक-डेटा संग्रह हैं।",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "followUps": [
+              {
+                "id": "f3",
+                "date": "2026-06-18 09:00",
+                "type": "拜访",
+                "content": "मौके पर उत्पाद का प्रदर्शन; उनके तकनीकी प्रमुख को API एकीकरण पर सवाल थे।"
+              },
+              {
+                "id": "f4",
+                "date": "2026-06-21 15:00",
+                "type": "电话",
+                "content": "API एकीकरण पर फ़ॉलो-अप; अगले सप्ताह ट्रायल वातावरण भेजने की पुष्टि।"
+              },
+              {
+                "id": "f5",
+                "date": "2026-06-24 11:30",
+                "type": "备注",
+                "content": "आंतरिक समीक्षा पास; व्यावसायिक वार्ता के चरण में प्रवेश।"
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "name": "चेन बाई",
+            "company": "युंगू डिज़ाइन",
+            "phone": "137 0000 4503",
+            "status": "已成交",
+            "nextStep": "अगले महीने नवीनीकरण योजना की समीक्षा करें",
+            "note": "पहला ऑर्डर पूरा; आगे दूसरे विभाग तक विस्तार संभव।",
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "followUps": [
+              {
+                "id": "f6",
+                "date": "2026-06-15 13:00",
+                "type": "电话",
+                "content": "पहले चरण के अनुबंध का विवरण पक्का किया; शुक्रवार को हस्ताक्षर तय।"
+              },
+              {
+                "id": "f7",
+                "date": "2026-06-17 16:30",
+                "type": "拜访",
+                "content": "अनुबंध पर हस्ताक्षर हुए; ग्राहक सेवा से बहुत संतुष्ट है।"
+              }
+            ]
+          }
+        ],
+        "ko": [
+          {
+            "id": "c1",
+            "name": "린칭",
+            "company": "베이천 테크놀로지",
+            "phone": "138 0000 1201",
+            "status": "待跟进",
+            "nextStep": "내일 10:00 — 예산 후속",
+            "note": "도입 기간과 애프터서비스 대응에 관심; 이번 주 안에 견적을 받길 원함.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "followUps": [
+              {
+                "id": "f1",
+                "date": "2026-06-20 14:30",
+                "type": "电话",
+                "content": "첫 연락; 고객의 기본 요구사항 파악 — 클라우드 배포에 관심이 많음."
+              },
+              {
+                "id": "f2",
+                "date": "2026-06-22 10:00",
+                "type": "邮件",
+                "content": "제품 소개 자료와 견적서 발송; 고객 피드백 대기 중."
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "name": "저우위안",
+            "company": "헝타이 무역",
+            "phone": "139 0000 2302",
+            "status": "洽谈中",
+            "nextStep": "금요일에 체험 계정 발송",
+            "note": "12명 팀; 핵심 요구는 모바일 결재와 고객 데이터 축적.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "followUps": [
+              {
+                "id": "f3",
+                "date": "2026-06-18 09:00",
+                "type": "拜访",
+                "content": "현장 제품 시연; 상대 기술 책임자가 API 연동에 대해 문의함."
+              },
+              {
+                "id": "f4",
+                "date": "2026-06-21 15:00",
+                "type": "电话",
+                "content": "API 연동 문제 후속; 다음 주 체험 환경 발송 확정."
+              },
+              {
+                "id": "f5",
+                "date": "2026-06-24 11:30",
+                "type": "备注",
+                "content": "내부 검토 통과; 비즈니스 협상 단계 진입."
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "name": "천바이",
+            "company": "윈구 디자인",
+            "phone": "137 0000 4503",
+            "status": "已成交",
+            "nextStep": "다음 달 갱신 계획 리뷰",
+            "note": "첫 주문 완료; 이후 두 번째 부서로 확장 가능성 있음.",
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "followUps": [
+              {
+                "id": "f6",
+                "date": "2026-06-15 13:00",
+                "type": "电话",
+                "content": "1차 계약 세부사항 확인; 금요일 체결 약속."
+              },
+              {
+                "id": "f7",
+                "date": "2026-06-17 16:30",
+                "type": "拜访",
+                "content": "계약 체결 완료; 고객이 서비스에 매우 만족함."
+              }
+            ]
+          }
+        ],
+        "ja": [
+          {
+            "id": "c1",
+            "name": "リン・チン",
+            "company": "ベイチェン・テクノロジー",
+            "phone": "138 0000 1201",
+            "status": "待跟进",
+            "nextStep": "明日 10:00 — 予算をフォロー",
+            "note": "導入期間とアフターサービスの対応を重視。今週中に見積もりを希望。",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "followUps": [
+              {
+                "id": "f1",
+                "date": "2026-06-20 14:30",
+                "type": "电话",
+                "content": "初回コンタクト。顧客の基本ニーズを把握 — クラウド導入に強い関心。"
+              },
+              {
+                "id": "f2",
+                "date": "2026-06-22 10:00",
+                "type": "邮件",
+                "content": "製品紹介資料と見積もりを送付。顧客の返信待ち。"
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "name": "ジョウ・ユアン",
+            "company": "ホンタイ商事",
+            "phone": "139 0000 2302",
+            "status": "洽谈中",
+            "nextStep": "金曜日にトライアルアカウントを送付",
+            "note": "12名のチーム。主なニーズはモバイル承認と顧客データの蓄積。",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "followUps": [
+              {
+                "id": "f3",
+                "date": "2026-06-18 09:00",
+                "type": "拜访",
+                "content": "現地で製品デモを実施。先方の技術責任者がAPI連携について質問。"
+              },
+              {
+                "id": "f4",
+                "date": "2026-06-21 15:00",
+                "type": "电话",
+                "content": "API連携の件をフォロー。来週トライアル環境を送ることを確認。"
+              },
+              {
+                "id": "f5",
+                "date": "2026-06-24 11:30",
+                "type": "备注",
+                "content": "社内レビューを通過。商談フェーズへ移行。"
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "name": "チェン・バイ",
+            "company": "ユングー・デザイン",
+            "phone": "137 0000 4503",
+            "status": "已成交",
+            "nextStep": "来月に更新プランを見直し",
+            "note": "初回受注が完了。今後、第二部門への拡大の可能性。",
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "followUps": [
+              {
+                "id": "f6",
+                "date": "2026-06-15 13:00",
+                "type": "电话",
+                "content": "初期契約の詳細を確認。金曜日の締結を約束。"
+              },
+              {
+                "id": "f7",
+                "date": "2026-06-17 16:30",
+                "type": "拜访",
+                "content": "契約締結が完了。顧客はサービスに非常に満足。"
+              }
+            ]
+          }
+        ],
+        "it": [
+          {
+            "id": "c1",
+            "name": "Lin Qing",
+            "company": "Beichen Technology",
+            "phone": "138 0000 1201",
+            "status": "待跟进",
+            "nextStep": "Domani 10:00 — sollecito sul preventivo",
+            "note": "Attento ai tempi di implementazione e alla risposta post-vendita; spera di ricevere un preventivo questa settimana.",
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "followUps": [
+              {
+                "id": "f1",
+                "date": "2026-06-20 14:30",
+                "type": "电话",
+                "content": "Primo contatto; individuate le esigenze di base del cliente, molto interessato al deployment in cloud."
+              },
+              {
+                "id": "f2",
+                "date": "2026-06-22 10:00",
+                "type": "邮件",
+                "content": "Inviati la presentazione del prodotto e il preventivo; in attesa del riscontro del cliente."
+              }
+            ]
+          },
+          {
+            "id": "c2",
+            "name": "Zhou Yuan",
+            "company": "Hengtai Commercio",
+            "phone": "139 0000 2302",
+            "status": "洽谈中",
+            "nextStep": "Inviare l'account di prova venerdì",
+            "note": "Team di 12 persone; le esigenze principali sono le approvazioni da mobile e la conservazione dei dati dei clienti.",
+            "accent": "#D97706",
+            "tint": "#FFF4DE",
+            "followUps": [
+              {
+                "id": "f3",
+                "date": "2026-06-18 09:00",
+                "type": "拜访",
+                "content": "Demo del prodotto in loco; il responsabile tecnico aveva dubbi sull'integrazione dell'API."
+              },
+              {
+                "id": "f4",
+                "date": "2026-06-21 15:00",
+                "type": "电话",
+                "content": "Seguito il tema dell'integrazione API; confermato l'invio dell'ambiente di prova la prossima settimana."
+              },
+              {
+                "id": "f5",
+                "date": "2026-06-24 11:30",
+                "type": "备注",
+                "content": "Revisione interna superata; si entra nella fase di trattativa commerciale."
+              }
+            ]
+          },
+          {
+            "id": "c3",
+            "name": "Chen Bai",
+            "company": "Yungu Design",
+            "phone": "137 0000 4503",
+            "status": "已成交",
+            "nextStep": "Rivedere il piano di rinnovo il mese prossimo",
+            "note": "Primo ordine completato; possibile estensione a un secondo reparto in seguito.",
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "followUps": [
+              {
+                "id": "f6",
+                "date": "2026-06-15 13:00",
+                "type": "电话",
+                "content": "Confermati i dettagli della prima fase del contratto; firma concordata per venerdì."
+              },
+              {
+                "id": "f7",
+                "date": "2026-06-17 16:30",
+                "type": "拜访",
+                "content": "Contratto firmato; il cliente è molto soddisfatto del servizio."
+              }
+            ]
+          }
+        ]
+      },
       "currentCustomerId": "",
       "currentName": "",
       "currentCompany": "",
@@ -1757,7 +2672,27 @@
       }
     }
   },
-  "steps": [],
+  "steps": [
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.customers",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_customers.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_customers.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_customers.zh"
+            }
+          ]
+        }
+      }
+    }
+  ],
   "ui": {
     "screens": [
       {

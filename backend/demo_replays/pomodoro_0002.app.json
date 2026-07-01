@@ -130,6 +130,1020 @@
           "tint": "#ECFDF5"
         }
       ],
+      "_seed_history": {
+        "zh": [
+          {
+            "mode": "focus",
+            "modeLabel": "专注",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "今日 14:40",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "休息",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "今日 14:30",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "专注",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "今日 14:00",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "休息",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "今日 11:05",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "专注",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "今日 11:15",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "休息",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "今日 09:55",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "专注",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "今日 09:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "专注",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "昨日 16:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "专注",
+            "duration": 3000,
+            "minutesLabel": "50m",
+            "timestamp": "昨日 15:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "休息",
+            "duration": 600,
+            "minutesLabel": "10m",
+            "timestamp": "昨日 15:20",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          }
+        ],
+        "en": [
+          {
+            "mode": "focus",
+            "modeLabel": "Focus",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Today 14:40",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Break",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Today 14:30",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Focus",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Today 14:00",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Break",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Today 11:05",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Focus",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Today 11:15",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Break",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Today 09:55",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Focus",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Today 09:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Focus",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Yesterday 16:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Focus",
+            "duration": 3000,
+            "minutesLabel": "50m",
+            "timestamp": "Yesterday 15:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Break",
+            "duration": 600,
+            "minutesLabel": "10m",
+            "timestamp": "Yesterday 15:20",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          }
+        ],
+        "de": [
+          {
+            "mode": "focus",
+            "modeLabel": "Fokus",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Heute 14:40",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pause",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Heute 14:30",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Fokus",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Heute 14:00",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pause",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Heute 11:05",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Fokus",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Heute 11:15",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pause",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Heute 09:55",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Fokus",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Heute 09:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Fokus",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Gestern 16:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Fokus",
+            "duration": 3000,
+            "minutesLabel": "50m",
+            "timestamp": "Gestern 15:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pause",
+            "duration": 600,
+            "minutesLabel": "10m",
+            "timestamp": "Gestern 15:20",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          }
+        ],
+        "es": [
+          {
+            "mode": "focus",
+            "modeLabel": "Concentración",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Hoy 14:40",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Descanso",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Hoy 14:30",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentración",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Hoy 14:00",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Descanso",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Hoy 11:05",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentración",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Hoy 11:15",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Descanso",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Hoy 09:55",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentración",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Hoy 09:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentración",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Ayer 16:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentración",
+            "duration": 3000,
+            "minutesLabel": "50m",
+            "timestamp": "Ayer 15:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Descanso",
+            "duration": 600,
+            "minutesLabel": "10m",
+            "timestamp": "Ayer 15:20",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          }
+        ],
+        "fr": [
+          {
+            "mode": "focus",
+            "modeLabel": "Concentration",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Aujourd’hui 14:40",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pause",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Aujourd’hui 14:30",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentration",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Aujourd’hui 14:00",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pause",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Aujourd’hui 11:05",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentration",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Aujourd’hui 11:15",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pause",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Aujourd’hui 09:55",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentration",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Aujourd’hui 09:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentration",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Hier 16:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentration",
+            "duration": 3000,
+            "minutesLabel": "50m",
+            "timestamp": "Hier 15:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pause",
+            "duration": 600,
+            "minutesLabel": "10m",
+            "timestamp": "Hier 15:20",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          }
+        ],
+        "pt": [
+          {
+            "mode": "focus",
+            "modeLabel": "Foco",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Hoje 14:40",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pausa",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Hoje 14:30",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Foco",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Hoje 14:00",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pausa",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Hoje 11:05",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Foco",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Hoje 11:15",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pausa",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Hoje 09:55",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Foco",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Hoje 09:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Foco",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Ontem 16:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Foco",
+            "duration": 3000,
+            "minutesLabel": "50m",
+            "timestamp": "Ontem 15:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pausa",
+            "duration": 600,
+            "minutesLabel": "10m",
+            "timestamp": "Ontem 15:20",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          }
+        ],
+        "ca": [
+          {
+            "mode": "focus",
+            "modeLabel": "Concentració",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Avui 14:40",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Descans",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Avui 14:30",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentració",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Avui 14:00",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Descans",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Avui 11:05",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentració",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Avui 11:15",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Descans",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Avui 09:55",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentració",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Avui 09:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentració",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Ahir 16:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentració",
+            "duration": 3000,
+            "minutesLabel": "50m",
+            "timestamp": "Ahir 15:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Descans",
+            "duration": 600,
+            "minutesLabel": "10m",
+            "timestamp": "Ahir 15:20",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          }
+        ],
+        "hi": [
+          {
+            "mode": "focus",
+            "modeLabel": "फ़़ोकस",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "आज 14:40",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "ब्रेक",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "आज 14:30",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "फ़़ोकस",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "आज 14:00",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "ब्रेक",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "आज 11:05",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "फ़़ोकस",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "आज 11:15",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "ब्रेक",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "आज 09:55",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "फ़़ोकस",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "आज 09:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "फ़़ोकस",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "कल 16:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "फ़़ोकस",
+            "duration": 3000,
+            "minutesLabel": "50m",
+            "timestamp": "कल 15:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "ब्रेक",
+            "duration": 600,
+            "minutesLabel": "10m",
+            "timestamp": "कल 15:20",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          }
+        ],
+        "ko": [
+          {
+            "mode": "focus",
+            "modeLabel": "집중",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "오늘 14:40",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "휴식",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "오늘 14:30",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "집중",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "오늘 14:00",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "휴식",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "오늘 11:05",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "집중",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "오늘 11:15",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "휴식",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "오늘 09:55",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "집중",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "오늘 09:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "집중",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "어제 16:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "집중",
+            "duration": 3000,
+            "minutesLabel": "50m",
+            "timestamp": "어제 15:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "휴식",
+            "duration": 600,
+            "minutesLabel": "10m",
+            "timestamp": "어제 15:20",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          }
+        ],
+        "ja": [
+          {
+            "mode": "focus",
+            "modeLabel": "集中",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "今日 14:40",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "休憩",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "今日 14:30",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "集中",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "今日 14:00",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "休憩",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "今日 11:05",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "集中",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "今日 11:15",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "休憩",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "今日 09:55",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "集中",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "今日 09:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "集中",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "昨日 16:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "集中",
+            "duration": 3000,
+            "minutesLabel": "50m",
+            "timestamp": "昨日 15:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "休憩",
+            "duration": 600,
+            "minutesLabel": "10m",
+            "timestamp": "昨日 15:20",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          }
+        ],
+        "it": [
+          {
+            "mode": "focus",
+            "modeLabel": "Concentrazione",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Oggi 14:40",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pausa",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Oggi 14:30",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentrazione",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Oggi 14:00",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pausa",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Oggi 11:05",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentrazione",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Oggi 11:15",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pausa",
+            "duration": 300,
+            "minutesLabel": "5m",
+            "timestamp": "Oggi 09:55",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentrazione",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Oggi 09:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentrazione",
+            "duration": 1500,
+            "minutesLabel": "25m",
+            "timestamp": "Ieri 16:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "focus",
+            "modeLabel": "Concentrazione",
+            "duration": 3000,
+            "minutesLabel": "50m",
+            "timestamp": "Ieri 15:30",
+            "accent": "#EF4444",
+            "tint": "#FEF2F2"
+          },
+          {
+            "mode": "break",
+            "modeLabel": "Pausa",
+            "duration": 600,
+            "minutesLabel": "10m",
+            "timestamp": "Ieri 15:20",
+            "accent": "#10B981",
+            "tint": "#ECFDF5"
+          }
+        ]
+      },
       "minutesLabel": "25",
       "secondsLabel": "00",
       "remainingLabel": "25:00",
@@ -2086,6 +3100,19 @@
     {
       "call": "@global.compute_labels",
       "args": {}
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.history",
+        "value": {
+          "if": [
+            { "var": "global._seed_history.{{ global.locale }}" },
+            { "var": "global._seed_history.{{ global.locale }}" },
+            { "var": "global._seed_history.zh" }
+          ]
+        }
+      }
     }
   ],
   "ui": {

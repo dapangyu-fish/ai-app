@@ -346,7 +346,3223 @@
       "sessionLogReps": "",
       "sessionLogWeight": "",
       "timerDisplay": "60",
-      "viewRecord": {}
+      "viewRecord": {},
+      "_seed_plans": {
+        "zh": [
+          {
+            "id": "p1",
+            "name": "上肢力量训练",
+            "type": "力量",
+            "desc": "重点训练胸部、肩部、三头肌",
+            "estDuration": 45,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e1_1",
+                "name": "卧推",
+                "targetSets": 4,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e1_2",
+                "name": "哑铃飞鸟",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 45
+              },
+              {
+                "id": "e1_3",
+                "name": "肩推",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e1_4",
+                "name": "侧平举",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 40
+              },
+              {
+                "id": "e1_5",
+                "name": "三头下压",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 35,
+                "restDuration": 40
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "name": "腿部训练",
+            "type": "力量",
+            "desc": "深蹲、硬拉、箭步蹲全面刺激下肢",
+            "estDuration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "exCount": 4,
+            "exercises": [
+              {
+                "id": "e2_1",
+                "name": "深蹲",
+                "targetSets": 4,
+                "targetReps": 8,
+                "duration": 50,
+                "restDuration": 90
+              },
+              {
+                "id": "e2_2",
+                "name": "罗马尼亚硬拉",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e2_3",
+                "name": "箭步蹲",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e2_4",
+                "name": "腿弯举",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 45
+              }
+            ]
+          },
+          {
+            "id": "p3",
+            "name": "有氧恢复",
+            "type": "有氧",
+            "desc": "中低强度有氧+全身拉伸放松",
+            "estDuration": 35,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "exCount": 3,
+            "exercises": [
+              {
+                "id": "e3_1",
+                "name": "椭圆机",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 1200,
+                "restDuration": 0
+              },
+              {
+                "id": "e3_2",
+                "name": "划船机",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 120
+              },
+              {
+                "id": "e3_3",
+                "name": "全身拉伸",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 0
+              }
+            ]
+          },
+          {
+            "id": "p4",
+            "name": "核心训练",
+            "type": "力量",
+            "desc": "腹肌、下背部和核心稳定性训练",
+            "estDuration": 30,
+            "accent": "#7C3AED",
+            "tint": "#F3EEFF",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e4_1",
+                "name": "平板支撑",
+                "targetSets": 3,
+                "targetReps": 1,
+                "duration": 60,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_2",
+                "name": "卷腹",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_3",
+                "name": "俄罗斯转体",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_4",
+                "name": "超人式",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_5",
+                "name": "侧平板",
+                "targetSets": 2,
+                "targetReps": 1,
+                "duration": 45,
+                "restDuration": 30
+              }
+            ]
+          }
+        ],
+        "en": [
+          {
+            "id": "p1",
+            "name": "Upper Body Strength",
+            "type": "力量",
+            "desc": "Focus on chest, shoulders, and triceps",
+            "estDuration": 45,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e1_1",
+                "name": "Bench Press",
+                "targetSets": 4,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e1_2",
+                "name": "Dumbbell Fly",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 45
+              },
+              {
+                "id": "e1_3",
+                "name": "Shoulder Press",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e1_4",
+                "name": "Lateral Raise",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 40
+              },
+              {
+                "id": "e1_5",
+                "name": "Triceps Pushdown",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 35,
+                "restDuration": 40
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "name": "Leg Training",
+            "type": "力量",
+            "desc": "Squats, deadlifts, and lunges for full lower-body work",
+            "estDuration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "exCount": 4,
+            "exercises": [
+              {
+                "id": "e2_1",
+                "name": "Squat",
+                "targetSets": 4,
+                "targetReps": 8,
+                "duration": 50,
+                "restDuration": 90
+              },
+              {
+                "id": "e2_2",
+                "name": "Romanian Deadlift",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e2_3",
+                "name": "Lunge",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e2_4",
+                "name": "Leg Curl",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 45
+              }
+            ]
+          },
+          {
+            "id": "p3",
+            "name": "Cardio Recovery",
+            "type": "有氧",
+            "desc": "Low-to-moderate cardio plus full-body stretching",
+            "estDuration": 35,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "exCount": 3,
+            "exercises": [
+              {
+                "id": "e3_1",
+                "name": "Elliptical",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 1200,
+                "restDuration": 0
+              },
+              {
+                "id": "e3_2",
+                "name": "Rowing Machine",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 120
+              },
+              {
+                "id": "e3_3",
+                "name": "Full-body Stretch",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 0
+              }
+            ]
+          },
+          {
+            "id": "p4",
+            "name": "Core Training",
+            "type": "力量",
+            "desc": "Abs, lower back, and core stability training",
+            "estDuration": 30,
+            "accent": "#7C3AED",
+            "tint": "#F3EEFF",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e4_1",
+                "name": "Plank",
+                "targetSets": 3,
+                "targetReps": 1,
+                "duration": 60,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_2",
+                "name": "Crunch",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_3",
+                "name": "Russian Twist",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_4",
+                "name": "Superman",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_5",
+                "name": "Side Plank",
+                "targetSets": 2,
+                "targetReps": 1,
+                "duration": 45,
+                "restDuration": 30
+              }
+            ]
+          }
+        ],
+        "de": [
+          {
+            "id": "p1",
+            "name": "Oberkörper-Krafttraining",
+            "type": "力量",
+            "desc": "Fokus auf Brust, Schultern und Trizeps",
+            "estDuration": 45,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e1_1",
+                "name": "Bankdrücken",
+                "targetSets": 4,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e1_2",
+                "name": "Kurzhantel-Fliegende",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 45
+              },
+              {
+                "id": "e1_3",
+                "name": "Schulterdrücken",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e1_4",
+                "name": "Seitheben",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 40
+              },
+              {
+                "id": "e1_5",
+                "name": "Trizepsdrücken",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 35,
+                "restDuration": 40
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "name": "Beintraining",
+            "type": "力量",
+            "desc": "Kniebeugen, Kreuzheben und Ausfallschritte für den ganzen Unterkörper",
+            "estDuration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "exCount": 4,
+            "exercises": [
+              {
+                "id": "e2_1",
+                "name": "Kniebeuge",
+                "targetSets": 4,
+                "targetReps": 8,
+                "duration": 50,
+                "restDuration": 90
+              },
+              {
+                "id": "e2_2",
+                "name": "Rumänisches Kreuzheben",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e2_3",
+                "name": "Ausfallschritt",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e2_4",
+                "name": "Beinbeuger",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 45
+              }
+            ]
+          },
+          {
+            "id": "p3",
+            "name": "Cardio-Erholung",
+            "type": "有氧",
+            "desc": "Cardio mit niedriger bis mittlerer Intensität plus Ganzkörperdehnung",
+            "estDuration": 35,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "exCount": 3,
+            "exercises": [
+              {
+                "id": "e3_1",
+                "name": "Crosstrainer",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 1200,
+                "restDuration": 0
+              },
+              {
+                "id": "e3_2",
+                "name": "Rudergerät",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 120
+              },
+              {
+                "id": "e3_3",
+                "name": "Ganzkörperdehnung",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 0
+              }
+            ]
+          },
+          {
+            "id": "p4",
+            "name": "Core-Training",
+            "type": "力量",
+            "desc": "Training für Bauch, unteren Rücken und Rumpfstabilität",
+            "estDuration": 30,
+            "accent": "#7C3AED",
+            "tint": "#F3EEFF",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e4_1",
+                "name": "Plank",
+                "targetSets": 3,
+                "targetReps": 1,
+                "duration": 60,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_2",
+                "name": "Crunch",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_3",
+                "name": "Russian Twist",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_4",
+                "name": "Superman",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_5",
+                "name": "Side Plank",
+                "targetSets": 2,
+                "targetReps": 1,
+                "duration": 45,
+                "restDuration": 30
+              }
+            ]
+          }
+        ],
+        "es": [
+          {
+            "id": "p1",
+            "name": "Fuerza de tren superior",
+            "type": "力量",
+            "desc": "Enfoque en pecho, hombros y tríceps",
+            "estDuration": 45,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e1_1",
+                "name": "Press de banca",
+                "targetSets": 4,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e1_2",
+                "name": "Aperturas con mancuernas",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 45
+              },
+              {
+                "id": "e1_3",
+                "name": "Press de hombros",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e1_4",
+                "name": "Elevaciones laterales",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 40
+              },
+              {
+                "id": "e1_5",
+                "name": "Extensión de tríceps en polea",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 35,
+                "restDuration": 40
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "name": "Entrenamiento de piernas",
+            "type": "力量",
+            "desc": "Sentadillas, peso muerto y zancadas para todo el tren inferior",
+            "estDuration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "exCount": 4,
+            "exercises": [
+              {
+                "id": "e2_1",
+                "name": "Sentadilla",
+                "targetSets": 4,
+                "targetReps": 8,
+                "duration": 50,
+                "restDuration": 90
+              },
+              {
+                "id": "e2_2",
+                "name": "Peso muerto rumano",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e2_3",
+                "name": "Zancada",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e2_4",
+                "name": "Curl femoral",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 45
+              }
+            ]
+          },
+          {
+            "id": "p3",
+            "name": "Recuperación cardiovascular",
+            "type": "有氧",
+            "desc": "Cardio de intensidad baja-media y estiramiento de todo el cuerpo",
+            "estDuration": 35,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "exCount": 3,
+            "exercises": [
+              {
+                "id": "e3_1",
+                "name": "Elíptica",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 1200,
+                "restDuration": 0
+              },
+              {
+                "id": "e3_2",
+                "name": "Máquina de remo",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 120
+              },
+              {
+                "id": "e3_3",
+                "name": "Estiramiento de cuerpo completo",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 0
+              }
+            ]
+          },
+          {
+            "id": "p4",
+            "name": "Entrenamiento de core",
+            "type": "力量",
+            "desc": "Entrenamiento de abdominales, zona lumbar y estabilidad del core",
+            "estDuration": 30,
+            "accent": "#7C3AED",
+            "tint": "#F3EEFF",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e4_1",
+                "name": "Plancha",
+                "targetSets": 3,
+                "targetReps": 1,
+                "duration": 60,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_2",
+                "name": "Crunch abdominal",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_3",
+                "name": "Giro ruso",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_4",
+                "name": "Superman",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_5",
+                "name": "Plancha lateral",
+                "targetSets": 2,
+                "targetReps": 1,
+                "duration": 45,
+                "restDuration": 30
+              }
+            ]
+          }
+        ],
+        "fr": [
+          {
+            "id": "p1",
+            "name": "Force du haut du corps",
+            "type": "力量",
+            "desc": "Cible la poitrine, les épaules et les triceps",
+            "estDuration": 45,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e1_1",
+                "name": "Développé couché",
+                "targetSets": 4,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e1_2",
+                "name": "Écarté haltères",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 45
+              },
+              {
+                "id": "e1_3",
+                "name": "Développé épaules",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e1_4",
+                "name": "Élévations latérales",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 40
+              },
+              {
+                "id": "e1_5",
+                "name": "Extension triceps à la poulie",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 35,
+                "restDuration": 40
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "name": "Entraînement des jambes",
+            "type": "力量",
+            "desc": "Squats, soulevés de terre et fentes pour tout le bas du corps",
+            "estDuration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "exCount": 4,
+            "exercises": [
+              {
+                "id": "e2_1",
+                "name": "Squat",
+                "targetSets": 4,
+                "targetReps": 8,
+                "duration": 50,
+                "restDuration": 90
+              },
+              {
+                "id": "e2_2",
+                "name": "Soulevé de terre roumain",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e2_3",
+                "name": "Fente",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e2_4",
+                "name": "Leg curl",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 45
+              }
+            ]
+          },
+          {
+            "id": "p3",
+            "name": "Récupération cardio",
+            "type": "有氧",
+            "desc": "Cardio d'intensité faible à modérée et étirements de tout le corps",
+            "estDuration": 35,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "exCount": 3,
+            "exercises": [
+              {
+                "id": "e3_1",
+                "name": "Vélo elliptique",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 1200,
+                "restDuration": 0
+              },
+              {
+                "id": "e3_2",
+                "name": "Rameur",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 120
+              },
+              {
+                "id": "e3_3",
+                "name": "Étirement complet",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 0
+              }
+            ]
+          },
+          {
+            "id": "p4",
+            "name": "Entraînement du core",
+            "type": "力量",
+            "desc": "Travail des abdominaux, du bas du dos et de la stabilité du tronc",
+            "estDuration": 30,
+            "accent": "#7C3AED",
+            "tint": "#F3EEFF",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e4_1",
+                "name": "Planche",
+                "targetSets": 3,
+                "targetReps": 1,
+                "duration": 60,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_2",
+                "name": "Crunch",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_3",
+                "name": "Russian twist",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_4",
+                "name": "Superman",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_5",
+                "name": "Planche latérale",
+                "targetSets": 2,
+                "targetReps": 1,
+                "duration": 45,
+                "restDuration": 30
+              }
+            ]
+          }
+        ],
+        "pt": [
+          {
+            "id": "p1",
+            "name": "Força de membros superiores",
+            "type": "力量",
+            "desc": "Foco em peito, ombros e tríceps",
+            "estDuration": 45,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e1_1",
+                "name": "Supino",
+                "targetSets": 4,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e1_2",
+                "name": "Crucifixo com halteres",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 45
+              },
+              {
+                "id": "e1_3",
+                "name": "Desenvolvimento de ombros",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e1_4",
+                "name": "Elevação lateral",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 40
+              },
+              {
+                "id": "e1_5",
+                "name": "Tríceps na polia",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 35,
+                "restDuration": 40
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "name": "Treino de pernas",
+            "type": "力量",
+            "desc": "Agachamentos, levantamento terra e afundos para todo o membro inferior",
+            "estDuration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "exCount": 4,
+            "exercises": [
+              {
+                "id": "e2_1",
+                "name": "Agachamento",
+                "targetSets": 4,
+                "targetReps": 8,
+                "duration": 50,
+                "restDuration": 90
+              },
+              {
+                "id": "e2_2",
+                "name": "Levantamento terra romeno",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e2_3",
+                "name": "Afundo",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e2_4",
+                "name": "Flexão de pernas",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 45
+              }
+            ]
+          },
+          {
+            "id": "p3",
+            "name": "Recuperação cardio",
+            "type": "有氧",
+            "desc": "Cardio de intensidade baixa a média e alongamento de corpo inteiro",
+            "estDuration": 35,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "exCount": 3,
+            "exercises": [
+              {
+                "id": "e3_1",
+                "name": "Elíptico",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 1200,
+                "restDuration": 0
+              },
+              {
+                "id": "e3_2",
+                "name": "Máquina de remo",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 120
+              },
+              {
+                "id": "e3_3",
+                "name": "Alongamento de corpo inteiro",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 0
+              }
+            ]
+          },
+          {
+            "id": "p4",
+            "name": "Treino de core",
+            "type": "力量",
+            "desc": "Treino de abdominais, lombar e estabilidade do core",
+            "estDuration": 30,
+            "accent": "#7C3AED",
+            "tint": "#F3EEFF",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e4_1",
+                "name": "Prancha",
+                "targetSets": 3,
+                "targetReps": 1,
+                "duration": 60,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_2",
+                "name": "Abdominal",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_3",
+                "name": "Rotação russa",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_4",
+                "name": "Superman",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_5",
+                "name": "Prancha lateral",
+                "targetSets": 2,
+                "targetReps": 1,
+                "duration": 45,
+                "restDuration": 30
+              }
+            ]
+          }
+        ],
+        "ca": [
+          {
+            "id": "p1",
+            "name": "Força del tren superior",
+            "type": "力量",
+            "desc": "Enfocament en pit, espatlles i tríceps",
+            "estDuration": 45,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e1_1",
+                "name": "Press de banca",
+                "targetSets": 4,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e1_2",
+                "name": "Obertures amb manuelles",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 45
+              },
+              {
+                "id": "e1_3",
+                "name": "Press d'espatlles",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e1_4",
+                "name": "Elevacions laterals",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 40
+              },
+              {
+                "id": "e1_5",
+                "name": "Extensió de tríceps a politja",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 35,
+                "restDuration": 40
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "name": "Entrenament de cames",
+            "type": "力量",
+            "desc": "Esquats, pes mort i estocades per a tot el tren inferior",
+            "estDuration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "exCount": 4,
+            "exercises": [
+              {
+                "id": "e2_1",
+                "name": "Esquat",
+                "targetSets": 4,
+                "targetReps": 8,
+                "duration": 50,
+                "restDuration": 90
+              },
+              {
+                "id": "e2_2",
+                "name": "Pes mort romanès",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e2_3",
+                "name": "Estocada",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e2_4",
+                "name": "Curl femoral",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 45
+              }
+            ]
+          },
+          {
+            "id": "p3",
+            "name": "Recuperació cardiovascular",
+            "type": "有氧",
+            "desc": "Cardio d'intensitat baixa-mitjana i estiraments de tot el cos",
+            "estDuration": 35,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "exCount": 3,
+            "exercises": [
+              {
+                "id": "e3_1",
+                "name": "El·líptica",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 1200,
+                "restDuration": 0
+              },
+              {
+                "id": "e3_2",
+                "name": "Màquina de rem",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 120
+              },
+              {
+                "id": "e3_3",
+                "name": "Estirament de tot el cos",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 0
+              }
+            ]
+          },
+          {
+            "id": "p4",
+            "name": "Entrenament del core",
+            "type": "力量",
+            "desc": "Entrenament d'abdominals, zona lumbar i estabilitat del core",
+            "estDuration": 30,
+            "accent": "#7C3AED",
+            "tint": "#F3EEFF",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e4_1",
+                "name": "Planxa",
+                "targetSets": 3,
+                "targetReps": 1,
+                "duration": 60,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_2",
+                "name": "Crunch abdominal",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_3",
+                "name": "Gir rus",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_4",
+                "name": "Superman",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_5",
+                "name": "Planxa lateral",
+                "targetSets": 2,
+                "targetReps": 1,
+                "duration": 45,
+                "restDuration": 30
+              }
+            ]
+          }
+        ],
+        "hi": [
+          {
+            "id": "p1",
+            "name": "ऊपरी शरीर की ताकत",
+            "type": "力量",
+            "desc": "छाती, कंधे और ट्राइसेप्स पर ध्यान",
+            "estDuration": 45,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e1_1",
+                "name": "बेंच प्रेस",
+                "targetSets": 4,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e1_2",
+                "name": "डम्बल फ्लाई",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 45
+              },
+              {
+                "id": "e1_3",
+                "name": "शोल्डर प्रेस",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e1_4",
+                "name": "लेटरल रेज़",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 40
+              },
+              {
+                "id": "e1_5",
+                "name": "ट्राइसेप्स पुशडाउन",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 35,
+                "restDuration": 40
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "name": "पैर की कसरत",
+            "type": "力量",
+            "desc": "पूरे निचले शरीर के लिए स्क्वाट, डेडलिफ्ट और लंज",
+            "estDuration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "exCount": 4,
+            "exercises": [
+              {
+                "id": "e2_1",
+                "name": "स्क्वाट",
+                "targetSets": 4,
+                "targetReps": 8,
+                "duration": 50,
+                "restDuration": 90
+              },
+              {
+                "id": "e2_2",
+                "name": "रोमानियन डेडलिफ्ट",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e2_3",
+                "name": "लंज",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e2_4",
+                "name": "लेग कर्ल",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 45
+              }
+            ]
+          },
+          {
+            "id": "p3",
+            "name": "कार्डियो रिकवरी",
+            "type": "有氧",
+            "desc": "कम-मध्यम तीव्रता वाला कार्डियो और पूरे शरीर की स्ट्रेचिंग",
+            "estDuration": 35,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "exCount": 3,
+            "exercises": [
+              {
+                "id": "e3_1",
+                "name": "एलिप्टिकल",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 1200,
+                "restDuration": 0
+              },
+              {
+                "id": "e3_2",
+                "name": "रोइंग मशीन",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 120
+              },
+              {
+                "id": "e3_3",
+                "name": "पूरे शरीर की स्ट्रेचिंग",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 0
+              }
+            ]
+          },
+          {
+            "id": "p4",
+            "name": "कोर कसरत",
+            "type": "力量",
+            "desc": "पेट, निचली पीठ और कोर स्थिरता का प्रशिक्षण",
+            "estDuration": 30,
+            "accent": "#7C3AED",
+            "tint": "#F3EEFF",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e4_1",
+                "name": "प्लैंक",
+                "targetSets": 3,
+                "targetReps": 1,
+                "duration": 60,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_2",
+                "name": "क्रंच",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_3",
+                "name": "रशियन ट्विस्ट",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_4",
+                "name": "सुपरमैन",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_5",
+                "name": "साइड प्लैंक",
+                "targetSets": 2,
+                "targetReps": 1,
+                "duration": 45,
+                "restDuration": 30
+              }
+            ]
+          }
+        ],
+        "ko": [
+          {
+            "id": "p1",
+            "name": "상체 근력 운동",
+            "type": "力量",
+            "desc": "가슴, 어깨, 삼두근 집중 훈련",
+            "estDuration": 45,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e1_1",
+                "name": "벤치 프레스",
+                "targetSets": 4,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e1_2",
+                "name": "덤벨 플라이",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 45
+              },
+              {
+                "id": "e1_3",
+                "name": "숄더 프레스",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e1_4",
+                "name": "사이드 레터럴 레이즈",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 40
+              },
+              {
+                "id": "e1_5",
+                "name": "트라이셉스 푸시다운",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 35,
+                "restDuration": 40
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "name": "하체 운동",
+            "type": "力量",
+            "desc": "스쿼트, 데드리프트, 런지로 하체 전체 자극",
+            "estDuration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "exCount": 4,
+            "exercises": [
+              {
+                "id": "e2_1",
+                "name": "스쿼트",
+                "targetSets": 4,
+                "targetReps": 8,
+                "duration": 50,
+                "restDuration": 90
+              },
+              {
+                "id": "e2_2",
+                "name": "루마니안 데드리프트",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e2_3",
+                "name": "런지",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e2_4",
+                "name": "레그 컬",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 45
+              }
+            ]
+          },
+          {
+            "id": "p3",
+            "name": "유산소 회복",
+            "type": "有氧",
+            "desc": "저중강도 유산소와 전신 스트레칭",
+            "estDuration": 35,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "exCount": 3,
+            "exercises": [
+              {
+                "id": "e3_1",
+                "name": "일립티컬",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 1200,
+                "restDuration": 0
+              },
+              {
+                "id": "e3_2",
+                "name": "로잉 머신",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 120
+              },
+              {
+                "id": "e3_3",
+                "name": "전신 스트레칭",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 0
+              }
+            ]
+          },
+          {
+            "id": "p4",
+            "name": "코어 운동",
+            "type": "力量",
+            "desc": "복근, 허리, 코어 안정성 훈련",
+            "estDuration": 30,
+            "accent": "#7C3AED",
+            "tint": "#F3EEFF",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e4_1",
+                "name": "플랭크",
+                "targetSets": 3,
+                "targetReps": 1,
+                "duration": 60,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_2",
+                "name": "크런치",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_3",
+                "name": "러시안 트위스트",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_4",
+                "name": "슈퍼맨",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_5",
+                "name": "사이드 플랭크",
+                "targetSets": 2,
+                "targetReps": 1,
+                "duration": 45,
+                "restDuration": 30
+              }
+            ]
+          }
+        ],
+        "ja": [
+          {
+            "id": "p1",
+            "name": "上半身筋力トレーニング",
+            "type": "力量",
+            "desc": "胸・肩・三頭筋を重点的に鍛える",
+            "estDuration": 45,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e1_1",
+                "name": "ベンチプレス",
+                "targetSets": 4,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e1_2",
+                "name": "ダンベルフライ",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 45
+              },
+              {
+                "id": "e1_3",
+                "name": "ショルダープレス",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e1_4",
+                "name": "サイドレイズ",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 40
+              },
+              {
+                "id": "e1_5",
+                "name": "トライセプスプレスダウン",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 35,
+                "restDuration": 40
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "name": "脚のトレーニング",
+            "type": "力量",
+            "desc": "スクワット・デッドリフト・ランジで下半身を全面的に刺激",
+            "estDuration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "exCount": 4,
+            "exercises": [
+              {
+                "id": "e2_1",
+                "name": "スクワット",
+                "targetSets": 4,
+                "targetReps": 8,
+                "duration": 50,
+                "restDuration": 90
+              },
+              {
+                "id": "e2_2",
+                "name": "ルーマニアンデッドリフト",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e2_3",
+                "name": "ランジ",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e2_4",
+                "name": "レッグカール",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 45
+              }
+            ]
+          },
+          {
+            "id": "p3",
+            "name": "有酸素リカバリー",
+            "type": "有氧",
+            "desc": "低〜中強度の有酸素運動と全身ストレッチ",
+            "estDuration": 35,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "exCount": 3,
+            "exercises": [
+              {
+                "id": "e3_1",
+                "name": "エリプティカル",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 1200,
+                "restDuration": 0
+              },
+              {
+                "id": "e3_2",
+                "name": "ローイングマシン",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 120
+              },
+              {
+                "id": "e3_3",
+                "name": "全身ストレッチ",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 0
+              }
+            ]
+          },
+          {
+            "id": "p4",
+            "name": "体幹トレーニング",
+            "type": "力量",
+            "desc": "腹筋・下背部・体幹の安定性トレーニング",
+            "estDuration": 30,
+            "accent": "#7C3AED",
+            "tint": "#F3EEFF",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e4_1",
+                "name": "プランク",
+                "targetSets": 3,
+                "targetReps": 1,
+                "duration": 60,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_2",
+                "name": "クランチ",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_3",
+                "name": "ロシアンツイスト",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_4",
+                "name": "スーパーマン",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_5",
+                "name": "サイドプランク",
+                "targetSets": 2,
+                "targetReps": 1,
+                "duration": 45,
+                "restDuration": 30
+              }
+            ]
+          }
+        ],
+        "it": [
+          {
+            "id": "p1",
+            "name": "Forza parte superiore",
+            "type": "力量",
+            "desc": "Focus su petto, spalle e tricipiti",
+            "estDuration": 45,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e1_1",
+                "name": "Panca piana",
+                "targetSets": 4,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e1_2",
+                "name": "Croci con manubri",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 45
+              },
+              {
+                "id": "e1_3",
+                "name": "Lento avanti",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e1_4",
+                "name": "Alzate laterali",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 40
+              },
+              {
+                "id": "e1_5",
+                "name": "Push down per tricipiti",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 35,
+                "restDuration": 40
+              }
+            ]
+          },
+          {
+            "id": "p2",
+            "name": "Allenamento gambe",
+            "type": "力量",
+            "desc": "Squat, stacchi e affondi per tutta la parte inferiore",
+            "estDuration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "exCount": 4,
+            "exercises": [
+              {
+                "id": "e2_1",
+                "name": "Squat",
+                "targetSets": 4,
+                "targetReps": 8,
+                "duration": 50,
+                "restDuration": 90
+              },
+              {
+                "id": "e2_2",
+                "name": "Stacco rumeno",
+                "targetSets": 3,
+                "targetReps": 10,
+                "duration": 45,
+                "restDuration": 60
+              },
+              {
+                "id": "e2_3",
+                "name": "Affondo",
+                "targetSets": 3,
+                "targetReps": 12,
+                "duration": 40,
+                "restDuration": 50
+              },
+              {
+                "id": "e2_4",
+                "name": "Leg curl",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 45
+              }
+            ]
+          },
+          {
+            "id": "p3",
+            "name": "Recupero cardio",
+            "type": "有氧",
+            "desc": "Cardio a intensità medio-bassa e stretching di tutto il corpo",
+            "estDuration": 35,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "exCount": 3,
+            "exercises": [
+              {
+                "id": "e3_1",
+                "name": "Ellittica",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 1200,
+                "restDuration": 0
+              },
+              {
+                "id": "e3_2",
+                "name": "Vogatore",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 120
+              },
+              {
+                "id": "e3_3",
+                "name": "Stretching completo",
+                "targetSets": 1,
+                "targetReps": 1,
+                "duration": 600,
+                "restDuration": 0
+              }
+            ]
+          },
+          {
+            "id": "p4",
+            "name": "Allenamento del core",
+            "type": "力量",
+            "desc": "Allenamento di addominali, zona lombare e stabilità del core",
+            "estDuration": 30,
+            "accent": "#7C3AED",
+            "tint": "#F3EEFF",
+            "exCount": 5,
+            "exercises": [
+              {
+                "id": "e4_1",
+                "name": "Plank",
+                "targetSets": 3,
+                "targetReps": 1,
+                "duration": 60,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_2",
+                "name": "Crunch",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_3",
+                "name": "Russian twist",
+                "targetSets": 3,
+                "targetReps": 20,
+                "duration": 40,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_4",
+                "name": "Superman",
+                "targetSets": 3,
+                "targetReps": 15,
+                "duration": 35,
+                "restDuration": 30
+              },
+              {
+                "id": "e4_5",
+                "name": "Plank laterale",
+                "targetSets": 2,
+                "targetReps": 1,
+                "duration": 45,
+                "restDuration": 30
+              }
+            ]
+          }
+        ]
+      },
+      "_seed_records": {
+        "zh": [
+          {
+            "id": "r1",
+            "planName": "上肢力量训练",
+            "planId": "p1",
+            "date": "2026-06-24",
+            "duration": 48,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "completedSets": 17,
+            "exercises": [
+              {
+                "name": "卧推",
+                "sets": [
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  }
+                ]
+              },
+              {
+                "name": "哑铃飞鸟",
+                "sets": [
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 22
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "planName": "腿部训练",
+            "planId": "p2",
+            "date": "2026-06-23",
+            "duration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "completedSets": 14,
+            "exercises": [
+              {
+                "name": "深蹲",
+                "sets": [
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "planName": "有氧恢复",
+            "planId": "p3",
+            "date": "2026-06-22",
+            "duration": 32,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "completedSets": 3,
+            "exercises": [
+              {
+                "name": "椭圆机",
+                "sets": [
+                  {
+                    "reps": 1,
+                    "weight": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "en": [
+          {
+            "id": "r1",
+            "planName": "Upper Body Strength",
+            "planId": "p1",
+            "date": "2026-06-24",
+            "duration": 48,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "completedSets": 17,
+            "exercises": [
+              {
+                "name": "Bench Press",
+                "sets": [
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  }
+                ]
+              },
+              {
+                "name": "Dumbbell Fly",
+                "sets": [
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 22
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "planName": "Leg Training",
+            "planId": "p2",
+            "date": "2026-06-23",
+            "duration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "completedSets": 14,
+            "exercises": [
+              {
+                "name": "Squat",
+                "sets": [
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "planName": "Cardio Recovery",
+            "planId": "p3",
+            "date": "2026-06-22",
+            "duration": 32,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "completedSets": 3,
+            "exercises": [
+              {
+                "name": "Elliptical",
+                "sets": [
+                  {
+                    "reps": 1,
+                    "weight": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "de": [
+          {
+            "id": "r1",
+            "planName": "Oberkörper-Krafttraining",
+            "planId": "p1",
+            "date": "2026-06-24",
+            "duration": 48,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "completedSets": 17,
+            "exercises": [
+              {
+                "name": "Bankdrücken",
+                "sets": [
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  }
+                ]
+              },
+              {
+                "name": "Kurzhantel-Fliegende",
+                "sets": [
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 22
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "planName": "Beintraining",
+            "planId": "p2",
+            "date": "2026-06-23",
+            "duration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "completedSets": 14,
+            "exercises": [
+              {
+                "name": "Kniebeuge",
+                "sets": [
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "planName": "Cardio-Erholung",
+            "planId": "p3",
+            "date": "2026-06-22",
+            "duration": 32,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "completedSets": 3,
+            "exercises": [
+              {
+                "name": "Crosstrainer",
+                "sets": [
+                  {
+                    "reps": 1,
+                    "weight": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "es": [
+          {
+            "id": "r1",
+            "planName": "Fuerza de tren superior",
+            "planId": "p1",
+            "date": "2026-06-24",
+            "duration": 48,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "completedSets": 17,
+            "exercises": [
+              {
+                "name": "Press de banca",
+                "sets": [
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  }
+                ]
+              },
+              {
+                "name": "Aperturas con mancuernas",
+                "sets": [
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 22
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "planName": "Entrenamiento de piernas",
+            "planId": "p2",
+            "date": "2026-06-23",
+            "duration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "completedSets": 14,
+            "exercises": [
+              {
+                "name": "Sentadilla",
+                "sets": [
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "planName": "Recuperación cardiovascular",
+            "planId": "p3",
+            "date": "2026-06-22",
+            "duration": 32,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "completedSets": 3,
+            "exercises": [
+              {
+                "name": "Elíptica",
+                "sets": [
+                  {
+                    "reps": 1,
+                    "weight": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "fr": [
+          {
+            "id": "r1",
+            "planName": "Force du haut du corps",
+            "planId": "p1",
+            "date": "2026-06-24",
+            "duration": 48,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "completedSets": 17,
+            "exercises": [
+              {
+                "name": "Développé couché",
+                "sets": [
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  }
+                ]
+              },
+              {
+                "name": "Écarté haltères",
+                "sets": [
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 22
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "planName": "Entraînement des jambes",
+            "planId": "p2",
+            "date": "2026-06-23",
+            "duration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "completedSets": 14,
+            "exercises": [
+              {
+                "name": "Squat",
+                "sets": [
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "planName": "Récupération cardio",
+            "planId": "p3",
+            "date": "2026-06-22",
+            "duration": 32,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "completedSets": 3,
+            "exercises": [
+              {
+                "name": "Vélo elliptique",
+                "sets": [
+                  {
+                    "reps": 1,
+                    "weight": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "pt": [
+          {
+            "id": "r1",
+            "planName": "Força de membros superiores",
+            "planId": "p1",
+            "date": "2026-06-24",
+            "duration": 48,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "completedSets": 17,
+            "exercises": [
+              {
+                "name": "Supino",
+                "sets": [
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  }
+                ]
+              },
+              {
+                "name": "Crucifixo com halteres",
+                "sets": [
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 22
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "planName": "Treino de pernas",
+            "planId": "p2",
+            "date": "2026-06-23",
+            "duration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "completedSets": 14,
+            "exercises": [
+              {
+                "name": "Agachamento",
+                "sets": [
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "planName": "Recuperação cardio",
+            "planId": "p3",
+            "date": "2026-06-22",
+            "duration": 32,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "completedSets": 3,
+            "exercises": [
+              {
+                "name": "Elíptico",
+                "sets": [
+                  {
+                    "reps": 1,
+                    "weight": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "ca": [
+          {
+            "id": "r1",
+            "planName": "Força del tren superior",
+            "planId": "p1",
+            "date": "2026-06-24",
+            "duration": 48,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "completedSets": 17,
+            "exercises": [
+              {
+                "name": "Press de banca",
+                "sets": [
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  }
+                ]
+              },
+              {
+                "name": "Obertures amb manuelles",
+                "sets": [
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 22
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "planName": "Entrenament de cames",
+            "planId": "p2",
+            "date": "2026-06-23",
+            "duration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "completedSets": 14,
+            "exercises": [
+              {
+                "name": "Esquat",
+                "sets": [
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "planName": "Recuperació cardiovascular",
+            "planId": "p3",
+            "date": "2026-06-22",
+            "duration": 32,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "completedSets": 3,
+            "exercises": [
+              {
+                "name": "El·líptica",
+                "sets": [
+                  {
+                    "reps": 1,
+                    "weight": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "hi": [
+          {
+            "id": "r1",
+            "planName": "ऊपरी शरीर की ताकत",
+            "planId": "p1",
+            "date": "2026-06-24",
+            "duration": 48,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "completedSets": 17,
+            "exercises": [
+              {
+                "name": "बेंच प्रेस",
+                "sets": [
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  }
+                ]
+              },
+              {
+                "name": "डम्बल फ्लाई",
+                "sets": [
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 22
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "planName": "पैर की कसरत",
+            "planId": "p2",
+            "date": "2026-06-23",
+            "duration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "completedSets": 14,
+            "exercises": [
+              {
+                "name": "स्क्वाट",
+                "sets": [
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "planName": "कार्डियो रिकवरी",
+            "planId": "p3",
+            "date": "2026-06-22",
+            "duration": 32,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "completedSets": 3,
+            "exercises": [
+              {
+                "name": "एलिप्टिकल",
+                "sets": [
+                  {
+                    "reps": 1,
+                    "weight": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "ko": [
+          {
+            "id": "r1",
+            "planName": "상체 근력 운동",
+            "planId": "p1",
+            "date": "2026-06-24",
+            "duration": 48,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "completedSets": 17,
+            "exercises": [
+              {
+                "name": "벤치 프레스",
+                "sets": [
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  }
+                ]
+              },
+              {
+                "name": "덤벨 플라이",
+                "sets": [
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 22
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "planName": "하체 운동",
+            "planId": "p2",
+            "date": "2026-06-23",
+            "duration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "completedSets": 14,
+            "exercises": [
+              {
+                "name": "스쿼트",
+                "sets": [
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "planName": "유산소 회복",
+            "planId": "p3",
+            "date": "2026-06-22",
+            "duration": 32,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "completedSets": 3,
+            "exercises": [
+              {
+                "name": "일립티컬",
+                "sets": [
+                  {
+                    "reps": 1,
+                    "weight": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "ja": [
+          {
+            "id": "r1",
+            "planName": "上半身筋力トレーニング",
+            "planId": "p1",
+            "date": "2026-06-24",
+            "duration": 48,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "completedSets": 17,
+            "exercises": [
+              {
+                "name": "ベンチプレス",
+                "sets": [
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  }
+                ]
+              },
+              {
+                "name": "ダンベルフライ",
+                "sets": [
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 22
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "planName": "脚のトレーニング",
+            "planId": "p2",
+            "date": "2026-06-23",
+            "duration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "completedSets": 14,
+            "exercises": [
+              {
+                "name": "スクワット",
+                "sets": [
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "planName": "有酸素リカバリー",
+            "planId": "p3",
+            "date": "2026-06-22",
+            "duration": 32,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "completedSets": 3,
+            "exercises": [
+              {
+                "name": "エリプティカル",
+                "sets": [
+                  {
+                    "reps": 1,
+                    "weight": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "it": [
+          {
+            "id": "r1",
+            "planName": "Forza parte superiore",
+            "planId": "p1",
+            "date": "2026-06-24",
+            "duration": 48,
+            "accent": "#EA580C",
+            "tint": "#FFF1E8",
+            "completedSets": 17,
+            "exercises": [
+              {
+                "name": "Panca piana",
+                "sets": [
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 70
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 75
+                  }
+                ]
+              },
+              {
+                "name": "Croci con manubri",
+                "sets": [
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 12,
+                    "weight": 20
+                  },
+                  {
+                    "reps": 10,
+                    "weight": 22
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r2",
+            "planName": "Allenamento gambe",
+            "planId": "p2",
+            "date": "2026-06-23",
+            "duration": 55,
+            "accent": "#2563EB",
+            "tint": "#EAF1FF",
+            "completedSets": 14,
+            "exercises": [
+              {
+                "name": "Squat",
+                "sets": [
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 8,
+                    "weight": 90
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  },
+                  {
+                    "reps": 6,
+                    "weight": 100
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "r3",
+            "planName": "Recupero cardio",
+            "planId": "p3",
+            "date": "2026-06-22",
+            "duration": 32,
+            "accent": "#059669",
+            "tint": "#E8F7F0",
+            "completedSets": 3,
+            "exercises": [
+              {
+                "name": "Ellittica",
+                "sets": [
+                  {
+                    "reps": 1,
+                    "weight": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
     },
     "functions": {
       "goHome": {
@@ -2782,7 +5998,46 @@
       }
     }
   },
-  "steps": [],
+  "steps": [
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.plans",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_plans.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_plans.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_plans.zh"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.records",
+        "value": {
+          "if": [
+            {
+              "var": "global._seed_records.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_records.{{ global.locale }}"
+            },
+            {
+              "var": "global._seed_records.zh"
+            }
+          ]
+        }
+      }
+    }
+  ],
   "ui": {
     "screens": [
       {

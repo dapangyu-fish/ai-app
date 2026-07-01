@@ -361,6 +361,8 @@
           "usageOverview": "使用概览"
         },
         "profile": {
+          "defaultName": "用户",
+          "defaultBio": "这个人很懒，什么都没写",
           "bioHint": "写一句个性签名...",
           "save": "保存资料",
           "settings": "设置",
@@ -442,6 +444,8 @@
           "usageOverview": "Usage Overview"
         },
         "profile": {
+          "defaultName": "User",
+          "defaultBio": "This person is lazy and wrote nothing",
           "bioHint": "Write a bio...",
           "save": "Save Profile",
           "settings": "Settings",
@@ -523,6 +527,8 @@
           "usageOverview": "Nutzungsübersicht"
         },
         "profile": {
+          "defaultName": "Benutzer",
+          "defaultBio": "Diese Person ist faul und hat nichts geschrieben",
           "bioHint": "Schreib eine Bio...",
           "save": "Profil speichern",
           "settings": "Einstellungen",
@@ -604,6 +610,8 @@
           "usageOverview": "Resumen de uso"
         },
         "profile": {
+          "defaultName": "Usuario",
+          "defaultBio": "Esta persona es perezosa y no escribió nada",
           "bioHint": "Escribe una biografía...",
           "save": "Guardar perfil",
           "settings": "Ajustes",
@@ -685,6 +693,8 @@
           "usageOverview": "Aperçu d'utilisation"
         },
         "profile": {
+          "defaultName": "Utilisateur",
+          "defaultBio": "Cette personne est paresseuse et n'a rien écrit",
           "bioHint": "Écris une bio...",
           "save": "Enregistrer le profil",
           "settings": "Paramètres",
@@ -766,6 +776,8 @@
           "usageOverview": "Visão geral de uso"
         },
         "profile": {
+          "defaultName": "Usuário",
+          "defaultBio": "Esta pessoa é preguiçosa e não escreveu nada",
           "bioHint": "Escreva uma bio...",
           "save": "Salvar perfil",
           "settings": "Configurações",
@@ -847,6 +859,8 @@
           "usageOverview": "Resum d'ús"
         },
         "profile": {
+          "defaultName": "Usuari",
+          "defaultBio": "Aquesta persona és mandrosa i no ha escrit res",
           "bioHint": "Escriu una bio...",
           "save": "Desa el perfil",
           "settings": "Configuració",
@@ -928,6 +942,8 @@
           "usageOverview": "उपयोग अवलोकन"
         },
         "profile": {
+          "defaultName": "उपयोगकर्ता",
+          "defaultBio": "यह व्यक्ति आलसी है और कुछ नहीं लिखा",
           "bioHint": "एक परिचय लिखें...",
           "save": "प्रोफ़ाइल सहेजें",
           "settings": "सेटिंग्स",
@@ -1009,6 +1025,8 @@
           "usageOverview": "사용 개요"
         },
         "profile": {
+          "defaultName": "사용자",
+          "defaultBio": "이 사람은 게을러서 아무것도 쓰지 않았어요",
           "bioHint": "자기소개를 작성하세요...",
           "save": "프로필 저장",
           "settings": "설정",
@@ -1090,6 +1108,8 @@
           "usageOverview": "利用概要"
         },
         "profile": {
+          "defaultName": "ユーザー",
+          "defaultBio": "この人は怠け者で何も書いていません",
           "bioHint": "ひとことプロフィールを書く...",
           "save": "プロフィールを保存",
           "settings": "設定",
@@ -1171,6 +1191,8 @@
           "usageOverview": "Panoramica d'uso"
         },
         "profile": {
+          "defaultName": "Utente",
+          "defaultBio": "Questa persona è pigra e non ha scritto nulla",
           "bioHint": "Scrivi una bio...",
           "save": "Salva profilo",
           "settings": "Impostazioni",
@@ -1194,6 +1216,32 @@
       "call": "@print",
       "args": {
         "value": "五页导航应用已启动"
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.userName",
+        "value": {
+          "if": [
+            { "==": [ { "var": "global.userName" }, "用户" ] },
+            "{{ t('profile.defaultName') }}",
+            { "var": "global.userName" }
+          ]
+        }
+      }
+    },
+    {
+      "call": "@set",
+      "args": {
+        "var": "global.userBio",
+        "value": {
+          "if": [
+            { "==": [ { "var": "global.userBio" }, "这个人很懒，什么都没写" ] },
+            "{{ t('profile.defaultBio') }}",
+            { "var": "global.userBio" }
+          ]
+        }
       }
     }
   ],
