@@ -1963,7 +1963,7 @@ def _code_overlay_export(ref_sha: str) -> Path:
     return export_dir
 
 
-def _enable_code_overlay(ref: str, ref_sha: str, *, apply: bool = True) -> int:
+def _enable_code_overlay(ref: str, ref_sha: str, *, apply: bool = True, auto: bool = False) -> int:
     """导出 + 渲染 override + 写 ctl.json + 重建受影响服务。"""
     cfg = _cfg()
     short = ref_sha[:12]
@@ -1971,7 +1971,8 @@ def _enable_code_overlay(ref: str, ref_sha: str, *, apply: bool = True) -> int:
     version = _git_src("show", f"{ref_sha}:VERSION", check=False) or "unknown"
     compose_file = _render_code_overlay_compose(export_dir, short, version)
     cfg["code_overlay"] = {"enabled": True, "ref": ref, "sha": short,
-                           "dir": str(export_dir), "compose_file": str(compose_file)}
+                           "dir": str(export_dir), "compose_file": str(compose_file),
+                           "auto": bool(auto)}
     _save_json(CONFIG_PATH, cfg, mode=0o644)
     print(f"+ code overlay: {ref} → {short} 导出至 {export_dir}")
     if not apply:
@@ -2001,7 +2002,19 @@ def _maybe_auto_code_overlay(names: list[str], *, dry_run: bool) -> None:
     tag_sha = m.group(1)
     baked = _image_baked_commit("backend")
     if not baked or baked.startswith(tag_sha) or tag_sha.startswith(baked[:len(tag_sha)]):
-        return  # rebuild 型发布（或读不到）：镜像自带正确代码
+        # rebuild 型发布（或读不到）：镜像自带正确代码。若此前 **自动** 启用的 overlay 还
+        # 指着别的 sha（例如从 retag 版本回滚/前滚到 rebuild 版本），必须自动退场，否则
+        # 部署的是"旧 overlay 代码 + 新镜像 tag"的混体；手动 code set 的 overlay 只警告不动。
+        oc = _code_overlay_cfg()
+        if oc.get("enabled") and baked and not str(oc.get("sha") or "").startswith(baked[:12]):
+            if oc.get("auto"):
+                cfg = _cfg()
+                cfg["code_overlay"] = {"enabled": False}
+                _save_json(CONFIG_PATH, cfg, mode=0o644)
+                print(f"+ rebuild 型发布（烘焙 {baked[:12]}）：自动退掉过期的 auto overlay（{oc.get('sha')}）")
+            else:
+                print(f"⚠️ overlay 为手动设置（{oc.get('sha')}）且与本次镜像（烘焙 {baked[:12]}）不一致——保留不动；如需回到镜像代码请 myapp-ctl code off", file=sys.stderr)
+        return
     oc = _code_overlay_cfg()
     if oc.get("enabled") and str(oc.get("sha") or "").startswith(tag_sha[:12]):
         return  # overlay 已指向该发布
@@ -2018,7 +2031,7 @@ def _maybe_auto_code_overlay(names: list[str], *, dry_run: bool) -> None:
             for x in reasons:
                 print(f"   - {x}", file=sys.stderr)
             return
-        _enable_code_overlay(tag_sha, ref_sha, apply=False)  # 随后的 compose up 会带 override 重建
+        _enable_code_overlay(tag_sha, ref_sha, apply=False, auto=True)  # 随后的 compose up 会带 override 重建
     except Exception as exc:
         print(f"自动 code overlay 失败（非阻断，可手动 myapp-ctl code set {tag_sha}）: {exc}", file=sys.stderr)
 
