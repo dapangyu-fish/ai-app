@@ -1707,28 +1707,31 @@ def _ensure_demo_services(jwt: str, *, dry_run: bool = False) -> None:
         fp = _demo_bundle_fingerprint(bundle_dir)
         code, info = _demo_http("GET", f"{base}/api/faas/apps/{quote(sid)}", token=jwt, content_type="")
         mine = code == 200
-        if mine and state.get(sid, {}).get("fingerprint") == fp:
-            print(f"+ demo service {sid}: up-to-date")
-            continue
-        if dry_run:
-            print(f"+ demo service {sid}: would deploy")
-            continue
-        code, resp = _demo_http("POST", f"{base}/api/faas/services", token=jwt,
-                                body=_demo_zip_bundle(bundle_dir), content_type="application/zip", timeout=300)
-        if code != 200 or not resp.get("ok"):
-            hint = "" if mine else "（若该 service_id 已被其他用户占用则不会覆盖）"
-            print(f"demo service {sid} 部署失败 HTTP {code}: {str(resp)[:200]} {hint}", file=sys.stderr)
-            continue
-        _demo_http("POST", f"{base}/api/faas/apps/{quote(sid)}/policy", token=jwt, body={"access_policy": "public"})
+        previously_managed = sid in state  # 有 state 记录 = 本装配器管理，内容仅来自 seed → 重试安全
         entry = dict(state.get(sid) or {})
-        entry["fingerprint"] = fp
+        created = False
+        if mine and entry.get("fingerprint") == fp:
+            print(f"+ demo service {sid}: up-to-date")
+        else:
+            if dry_run:
+                print(f"+ demo service {sid}: would deploy")
+                continue
+            code, resp = _demo_http("POST", f"{base}/api/faas/services", token=jwt,
+                                    body=_demo_zip_bundle(bundle_dir), content_type="application/zip", timeout=300)
+            if code != 200 or not resp.get("ok"):
+                hint = "" if mine else "（若该 service_id 已被其他用户占用则不会覆盖）"
+                print(f"demo service {sid} 部署失败 HTTP {code}: {str(resp)[:200]} {hint}", file=sys.stderr)
+                continue
+            _demo_http("POST", f"{base}/api/faas/apps/{quote(sid)}/policy", token=jwt, body={"access_policy": "public"})
+            entry["fingerprint"] = fp
+            created = not mine
+            status = str((resp.get("service") or {}).get("status") or "?")
+            print(f"+ demo service {sid}: deployed (status={status}, policy=public)")
         seed_file = bundle_dir / "seed.json"
-        # 只在服务首次创建时灌种子（重部署已有服务会重复建板块/帖子）
-        if seed_file.is_file() and not mine and not entry.get("seeded"):
+        # 灌种子：仅「本次新建」或「装配器管理且尚未成功 seed」（避免给收编的存量服务造重复内容；失败可重试）
+        if seed_file.is_file() and not entry.get("seeded") and not dry_run and (created or previously_managed):
             entry["seeded"] = _run_demo_seed(base, jwt, sid, seed_file)
         state[sid] = entry
-        status = str((resp.get("service") or {}).get("status") or "?")
-        print(f"+ demo service {sid}: deployed (status={status}, policy=public)")
     try:
         state_path.parent.mkdir(parents=True, exist_ok=True)
         state_path.write_text(json.dumps(state, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
