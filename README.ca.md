@@ -14,7 +14,7 @@
 
 > Tota la indústria encara discuteix com *escriure codi* amb IA. Nosaltres ens hem saltat el codi.
 >
-> El vibe coding — fins i tot els millors constructors d'apps amb IA (Lovable, Bolt, v0, Replit) — encara et lliura una **base de codi** que has de connectar, allotjar i publicar. MyApp et lliura l'**app en funcionament**: descrius el que vols, l'IA emet un front-end JSON-DSL **i**, quan l'app ho necessita, un backend Python/Flask real amb la seva pròpia base de dades Postgres aïllada — i després renderitza i executa tot el conjunt a l'instant dins d'un runtime multiplataforma precompilat. La *mateixa* frase pot engegar un **joc jugable** o un **fòrum amb backend real, amb inici de sessió, publicacions i respostes en fil** — en marxa a **iOS, Android, Web i escriptori a partir d'una sola descripció**. No hi ha cap projecte per obrir, res per compilar, res per desplegar.
+> El vibe coding — fins i tot els millors constructors d'apps amb IA (Lovable, Bolt, v0, Replit) — encara et lliura una **base de codi web** que has d'allotjar i mantenir. MyApp et lliura la **pròpia app en funcionament, nativa al telèfon en segons**: descrius el que vols, l'IA emet un front-end JSON-DSL **i**, quan l'app ho necessita, un backend Python/Flask real amb la seva pròpia base de dades Postgres aïllada — i després renderitza i executa tot el conjunt a l'instant dins d'un runtime multiplataforma precompilat. La *mateixa* frase pot engegar un **joc jugable** o un **fòrum amb backend real, amb inici de sessió, publicacions i respostes en fil** — en marxa a **iOS, Android, Web i escriptori a partir d'una sola descripció**. No hi ha cap projecte per obrir, res per compilar, res per desplegar.
 
 
 <div align="center">

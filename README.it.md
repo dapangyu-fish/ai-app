@@ -14,7 +14,7 @@
 
 > Tutto il settore sta ancora discutendo su come *scrivere codice* con l'IA. Noi il codice l'abbiamo saltato.
 >
-> Il vibe coding — anche i migliori costruttori di app IA (Lovable, Bolt, v0, Replit) — ti consegna comunque un **codebase** da collegare, ospitare e pubblicare. MyApp ti consegna l'**app in esecuzione**: descrivi ciò che vuoi, l'IA emette un front-end JSON-DSL **e**, quando l'app ne ha bisogno, un vero backend Python/Flask con il proprio database Postgres isolato — poi renderizza ed esegue il tutto immediatamente all'interno di un runtime precompilato e multipiattaforma. La *stessa* frase può dar vita a un **gioco giocabile** o a un **forum con un vero backend con login, post e risposte in thread** — live su **iOS, Android, Web e desktop a partire da una sola descrizione**. Non c'è alcun progetto da aprire, niente da compilare, niente da distribuire.
+> Il vibe coding — anche i migliori costruttori di app IA (Lovable, Bolt, v0, Replit) — ti consegna comunque un **codebase web** da ospitare e mantenere. MyApp ti consegna l'**app in esecuzione vera e propria, nativa sul telefono in pochi secondi**: descrivi ciò che vuoi, l'IA emette un front-end JSON-DSL **e**, quando l'app ne ha bisogno, un vero backend Python/Flask con il proprio database Postgres isolato — poi renderizza ed esegue il tutto immediatamente all'interno di un runtime precompilato e multipiattaforma. La *stessa* frase può dar vita a un **gioco giocabile** o a un **forum con un vero backend con login, post e risposte in thread** — live su **iOS, Android, Web e desktop a partire da una sola descrizione**. Non c'è alcun progetto da aprire, niente da compilare, niente da distribuire.
 
 
 <div align="center">

@@ -63,7 +63,7 @@ const copy = {
     titleA: '别再 vibe coding。',
     titleB: '直接出 vibe app。',
     subtitle:
-      'Vibe coding——哪怕最强的 AI 生成器——给你的还是一份要 build、要托管、要发布的代码。Vibe app 直接就是活的：描述你想要的，AI 一句话生成整条栈——UI + 真正的 Python/Flask 后端 + 独立 Postgres 数据库——在预编译的跨端运行时里即时跑起来。同一句话，能出一个能玩的游戏，也能出一个带真后端、能登录发帖盖楼的论坛。没有代码工程，不用打包，不用部署，不用上架。',
+      'Vibe coding——哪怕最强的 AI 生成器——给你的还是一份要自己托管、维护的 web 代码库。Vibe app 直接就是活的——在你手机上原生、几秒即刻运行：描述你想要的，AI 一句话生成整条栈——UI + 真正的 Python/Flask 后端 + 独立 Postgres 数据库——在预编译的跨端运行时里即时跑起来。同一句话，能出一个能玩的游戏，也能出一个带真后端、能登录发帖盖楼的论坛。没有代码工程，不用打包，不用部署，不用上架。',
     primaryCta: '打开 Web 版',
     secondaryCta: '加入 TestFlight',
     phoneCaption: '一个真在跑的 app，不是一份要你托管的代码。现在就能在 Web 打开，任意一块屏都行。',
@@ -144,7 +144,7 @@ const copy = {
     titleA: 'Stop vibe-coding.',
     titleB: 'Ship vibe-apps.',
     subtitle:
-      'Vibe coding — even the best AI app builders — still hands you a codebase to build, host and deploy. A vibe app is just live: describe what you want, and AI generates the whole stack — UI + a real Python/Flask backend + its own Postgres database — running instantly inside a precompiled, cross-platform runtime. The same sentence can spin up a playable game or a forum with a real backend. No codebase. No build. No deploy. No app store.',
+      'Vibe coding — even the best AI app builders — still gives you a web codebase to host and maintain. A vibe app is just live — native on your phone in seconds: describe what you want, and AI generates the whole stack — UI + a real Python/Flask backend + its own Postgres database — running instantly inside a precompiled, cross-platform runtime. The same sentence can spin up a playable game or a forum with a real backend. No codebase. No build. No deploy. No app store.',
     primaryCta: 'Open Web app',
     secondaryCta: 'Join TestFlight',
     phoneCaption: 'A real, running app — not a codebase you have to host. Open it on Web now, on any screen.',
@@ -225,7 +225,7 @@ const copy = {
     titleA: 'Schluss mit vibe-coding.',
     titleB: 'Her mit vibe-apps.',
     subtitle:
-      'Vibe coding — selbst die besten KI-App-Builder — gibt dir am Ende immer noch eine Codebasis zum Bauen, Hosten und Ausliefern. Eine vibe app ist einfach live: Beschreibe, was du willst, und die KI erzeugt den ganzen Stack — UI + ein echtes Python/Flask-Backend + eine eigene Postgres-Datenbank — sofort lauffähig in einer vorkompilierten, plattformübergreifenden Laufzeitumgebung. Derselbe Satz bringt ein spielbares Spiel hervor oder ein Forum mit echtem Backend. Keine Codebasis. Kein Build. Kein Deploy. Kein App Store.',
+      'Vibe coding — selbst die besten KI-App-Builder — gibt dir am Ende immer noch eine Web-Codebasis zum Hosten und Warten. Eine vibe app ist einfach live — nativ auf deinem Handy in Sekunden: Beschreibe, was du willst, und die KI erzeugt den ganzen Stack — UI + ein echtes Python/Flask-Backend + eine eigene Postgres-Datenbank — sofort lauffähig in einer vorkompilierten, plattformübergreifenden Laufzeitumgebung. Derselbe Satz bringt ein spielbares Spiel hervor oder ein Forum mit echtem Backend. Keine Codebasis. Kein Build. Kein Deploy. Kein App Store.',
     primaryCta: 'Live-Demo öffnen',
     secondaryCta: 'Deployment ansehen',
     phoneCaption: 'Eine echte, laufende App — keine Codebasis, die du hosten musst. Jetzt im Web öffnen, auf jedem Bildschirm.',
@@ -306,7 +306,7 @@ const copy = {
     titleA: 'Deja el vibe-coding.',
     titleB: 'Lanza vibe-apps.',
     subtitle:
-      'El vibe coding —incluso los mejores constructores de apps con IA— sigue entregándote una base de código que compilar, alojar y desplegar. Una vibe app simplemente está viva: describe lo que quieres y la IA genera todo el stack — UI + un backend real de Python/Flask + su propia base de datos Postgres — en marcha al instante dentro de un runtime multiplataforma precompilado. La misma frase puede poner en marcha un juego jugable o un foro con un backend real. Sin base de código. Sin compilación. Sin despliegue. Sin tienda de apps.',
+      'El vibe coding —incluso los mejores constructores de apps con IA— sigue entregándote una base de código web que alojar y mantener. Una vibe app simplemente está viva — nativa en tu teléfono en segundos: describe lo que quieres y la IA genera todo el stack — UI + un backend real de Python/Flask + su propia base de datos Postgres — en marcha al instante dentro de un runtime multiplataforma precompilado. La misma frase puede poner en marcha un juego jugable o un foro con un backend real. Sin base de código. Sin compilación. Sin despliegue. Sin tienda de apps.',
     primaryCta: 'Abrir demo',
     secondaryCta: 'Ver despliegue',
     phoneCaption: 'Una app real en ejecución, no una base de código que tengas que alojar. Ábrela en la Web ahora, en cualquier pantalla.',
@@ -387,7 +387,7 @@ const copy = {
     titleA: 'Arrêtez le vibe-coding.',
     titleB: 'Livrez des vibe-apps.',
     subtitle:
-      'Le vibe coding — même les meilleurs générateurs d\'applications par IA — vous remet toujours une base de code à builder, héberger et déployer. Une vibe app est simplement live : décrivez ce que vous voulez, et l\'IA génère toute la stack — UI + un vrai backend Python/Flask + sa propre base de données Postgres — exécutée instantanément dans un runtime précompilé et multiplateforme. La même phrase peut faire surgir un jeu jouable ou un forum doté d\'un vrai backend. Pas de base de code. Pas de build. Pas de déploiement. Pas d\'app store.',
+      'Le vibe coding — même les meilleurs générateurs d\'applications par IA — vous remet toujours une base de code web à héberger et maintenir. Une vibe app est simplement live — native sur votre téléphone en quelques secondes : décrivez ce que vous voulez, et l\'IA génère toute la stack — UI + un vrai backend Python/Flask + sa propre base de données Postgres — exécutée instantanément dans un runtime précompilé et multiplateforme. La même phrase peut faire surgir un jeu jouable ou un forum doté d\'un vrai backend. Pas de base de code. Pas de build. Pas de déploiement. Pas d\'app store.',
     primaryCta: 'Ouvrir la Web app',
     secondaryCta: 'Rejoindre TestFlight',
     phoneCaption: 'Une vraie app qui tourne, pas une base de code à héberger. Ouvrez-la sur le Web dès maintenant, sur n\'importe quel écran.',
@@ -468,7 +468,7 @@ const copy = {
     titleA: 'Chega de vibe-coding.',
     titleB: 'Lance vibe-apps.',
     subtitle:
-      'O vibe coding — mesmo os melhores construtores de apps de IA — continua a entregar-te uma codebase para compilar, alojar e publicar. Uma vibe app está simplesmente viva: descreve o que queres e a IA gera toda a stack — UI + um backend Python/Flask real + a sua própria base de dados Postgres — a correr de imediato dentro de um runtime pré-compilado e multiplataforma. A mesma frase pode criar um jogo jogável ou um fórum com um backend real. Sem codebase. Sem build. Sem deploy. Sem app store.',
+      'O vibe coding — mesmo os melhores construtores de apps de IA — continua a entregar-te uma web codebase para alojar e manter. Uma vibe app está simplesmente viva — nativa no teu telemóvel em segundos: descreve o que queres e a IA gera toda a stack — UI + um backend Python/Flask real + a sua própria base de dados Postgres — a correr de imediato dentro de um runtime pré-compilado e multiplataforma. A mesma frase pode criar um jogo jogável ou um fórum com um backend real. Sem codebase. Sem build. Sem deploy. Sem app store.',
     primaryCta: 'Abrir a Web app',
     secondaryCta: 'Aderir ao TestFlight',
     phoneCaption: 'Uma app real a correr, não uma codebase que tens de alojar. Abre-a na Web agora, em qualquer ecrã.',
@@ -549,7 +549,7 @@ const copy = {
     titleA: 'Prou de vibe-coding.',
     titleB: 'Llança vibe-apps.',
     subtitle:
-      'El vibe coding — fins i tot els millors constructors d\'apps amb IA — encara et lliura una base de codi per compilar, allotjar i desplegar. Una vibe app simplement està viva: descriu el que vols i la IA genera tota la stack — UI + un backend real de Python/Flask + la seva pròpia base de dades Postgres — en marxa a l\'instant dins d\'un runtime multiplataforma precompilat. La mateixa frase pot engegar un joc jugable o un fòrum amb backend real. Sense base de codi. Sense compilació. Sense desplegament. Sense app store.',
+      'El vibe coding — fins i tot els millors constructors d\'apps amb IA — encara et lliura una base de codi web per allotjar i mantenir. Una vibe app simplement està viva — nativa al teu telèfon en segons: descriu el que vols i la IA genera tota la stack — UI + un backend real de Python/Flask + la seva pròpia base de dades Postgres — en marxa a l\'instant dins d\'un runtime multiplataforma precompilat. La mateixa frase pot engegar un joc jugable o un fòrum amb backend real. Sense base de codi. Sense compilació. Sense desplegament. Sense app store.',
     primaryCta: 'Obre la Web app',
     secondaryCta: 'Uneix-te a TestFlight',
     phoneCaption: 'Una app real en funcionament, no una base de codi que has d\'allotjar. Obre-la al Web ara, a qualsevol pantalla.',
@@ -630,7 +630,7 @@ const copy = {
     titleA: 'vibe-coding बंद करें।',
     titleB: 'vibe-apps शिप करें।',
     subtitle:
-      'Vibe coding — बेहतरीन AI ऐप बिल्डर तक — आपको फिर भी एक codebase थमाता है जिसे build, host और deploy करना पड़ता है। एक vibe app बस लाइव होता है: आप जो चाहते हैं उसे बताइए, और AI पूरा स्टैक बना देता है — UI + एक असली Python/Flask बैकएंड + अपना खुद का Postgres डेटाबेस — जो एक पूर्व-संकलित, क्रॉस-प्लेटफ़ॉर्म रनटाइम में तुरंत चलता है। वही एक वाक्य एक खेलने योग्य गेम या असली बैकएंड वाला एक फ़ोरम खड़ा कर सकता है। न codebase। न build। न deploy। न ऐप स्टोर।',
+      'Vibe coding — बेहतरीन AI ऐप बिल्डर तक — आपको फिर भी एक web codebase थमाता है जिसे host और maintain करना पड़ता है। एक vibe app बस लाइव होता है — सेकंडों में आपके फ़ोन पर नेटिव: आप जो चाहते हैं उसे बताइए, और AI पूरा स्टैक बना देता है — UI + एक असली Python/Flask बैकएंड + अपना खुद का Postgres डेटाबेस — जो एक पूर्व-संकलित, क्रॉस-प्लेटफ़ॉर्म रनटाइम में तुरंत चलता है। वही एक वाक्य एक खेलने योग्य गेम या असली बैकएंड वाला एक फ़ोरम खड़ा कर सकता है। न codebase। न build। न deploy। न ऐप स्टोर।',
     primaryCta: 'Web ऐप खोलें',
     secondaryCta: 'TestFlight से जुड़ें',
     phoneCaption: 'एक असली, चलता हुआ ऐप — कोई codebase नहीं जिसे आपको होस्ट करना पड़े। अभी Web पर खोलिए, किसी भी स्क्रीन पर।',
@@ -711,7 +711,7 @@ const copy = {
     titleA: 'Vibe coding은 그만.',
     titleB: 'Vibe app을 출시하세요.',
     subtitle:
-      'Vibe coding은 — 최고의 AI 앱 빌더조차도 — 여전히 빌드하고, 호스팅하고, 배포해야 하는 코드베이스를 건네줍니다. Vibe app은 그냥 살아 있습니다: 원하는 것을 설명하면 AI가 전체 스택을 생성합니다 — UI + 실제 Python/Flask 백엔드 + 자체 Postgres 데이터베이스 — 사전 컴파일된 크로스플랫폼 런타임 안에서 즉시 실행됩니다. 똑같은 한 문장이 플레이 가능한 게임이나 실제 백엔드를 갖춘 포럼을 띄울 수 있습니다. 코드베이스 없음. 빌드 없음. 배포 없음. 앱스토어 없음.',
+      'Vibe coding은 — 최고의 AI 앱 빌더조차도 — 여전히 호스팅하고 유지보수해야 하는 웹 코드베이스를 건네줍니다. Vibe app은 그냥 살아 있습니다 — 몇 초 만에 폰에서 네이티브로: 원하는 것을 설명하면 AI가 전체 스택을 생성합니다 — UI + 실제 Python/Flask 백엔드 + 자체 Postgres 데이터베이스 — 사전 컴파일된 크로스플랫폼 런타임 안에서 즉시 실행됩니다. 똑같은 한 문장이 플레이 가능한 게임이나 실제 백엔드를 갖춘 포럼을 띄울 수 있습니다. 코드베이스 없음. 빌드 없음. 배포 없음. 앱스토어 없음.',
     primaryCta: 'Web 앱 열기',
     secondaryCta: 'TestFlight 참여',
     phoneCaption: '직접 호스팅할 코드베이스가 아니라, 실제로 실행 중인 앱. 지금 어떤 화면에서든 Web에서 바로 열어보세요.',
@@ -792,7 +792,7 @@ const copy = {
     titleA: 'vibe-coding はもう終わり。',
     titleB: 'vibe-app を出荷しよう。',
     subtitle:
-      'vibe coding は——最高の AI アプリビルダーでさえ——ビルドし、ホスティングし、デプロイすべきコードベースを渡してくるだけです。vibe app はただ動いています：望むものを伝えれば、AI がスタック全体を生成します——UI + 本物の Python/Flask バックエンド + 独自の Postgres データベース——事前にコンパイルされたクロスプラットフォームのランタイムの中で即座に動き出します。同じ一文から、プレイ可能なゲームも、本物のバックエンド付きフォーラムも立ち上がります。コードベースなし。ビルドなし。デプロイなし。アプリストアなし。',
+      'vibe coding は——最高の AI アプリビルダーでさえ——ホスティングし、メンテナンスすべき Web コードベースを渡してくるだけです。vibe app はただ動いています——スマホ上で数秒でネイティブに起動します：望むものを伝えれば、AI がスタック全体を生成します——UI + 本物の Python/Flask バックエンド + 独自の Postgres データベース——事前にコンパイルされたクロスプラットフォームのランタイムの中で即座に動き出します。同じ一文から、プレイ可能なゲームも、本物のバックエンド付きフォーラムも立ち上がります。コードベースなし。ビルドなし。デプロイなし。アプリストアなし。',
     primaryCta: 'Web アプリを開く',
     secondaryCta: 'TestFlight に参加',
     phoneCaption: '自分でホスティングするコードベースではなく、実際に動いているアプリ。いますぐ、どんな画面でも Web で開けます。',
@@ -873,7 +873,7 @@ const copy = {
     titleA: 'Basta vibe-coding.',
     titleB: 'Lancia vibe-app.',
     subtitle:
-      'Il vibe coding — anche i migliori costruttori di app IA — ti consegna comunque un codebase da compilare, ospitare e distribuire. Una vibe app è semplicemente live: descrivi ciò che vuoi e l\'IA genera l\'intero stack — UI + un vero backend Python/Flask + il proprio database Postgres — in esecuzione all\'istante dentro un runtime precompilato e multipiattaforma. La stessa frase può dar vita a un gioco giocabile o a un forum con un vero backend. Niente codebase. Niente build. Niente deploy. Niente app store.',
+      'Il vibe coding — anche i migliori costruttori di app IA — ti consegna comunque un codebase web da ospitare e mantenere. Una vibe app è semplicemente live — nativa sul tuo telefono in pochi secondi: descrivi ciò che vuoi e l\'IA genera l\'intero stack — UI + un vero backend Python/Flask + il proprio database Postgres — in esecuzione all\'istante dentro un runtime precompilato e multipiattaforma. La stessa frase può dar vita a un gioco giocabile o a un forum con un vero backend. Niente codebase. Niente build. Niente deploy. Niente app store.',
     primaryCta: 'Apri la Web app',
     secondaryCta: 'Unisciti a TestFlight',
     phoneCaption: 'Un\'app vera in esecuzione, non un codebase da ospitare. Aprila sul Web ora, su qualsiasi schermo.',
