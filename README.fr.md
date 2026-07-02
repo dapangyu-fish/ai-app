@@ -120,13 +120,23 @@ La plupart des applications JSON-DSL fonctionnent sur toutes les plateformes. Le
 
 ## Pourquoi est-ce intéressant ?
 
-- **Full-stack en une seule fois — l'élément différenciateur.** La plupart des générateurs d'applications par IA (v0, Lovable, Bolt, …) génèrent du code *front-end* que vous devez encore câbler à un backend et déployer vous-même. MyApp génère le front-end **et** un véritable backend FaaS Python/Flask — chacun avec sa propre base de données Postgres isolée, un modèle de permissions par application et une isolation des données par appelant — puis exécute le tout instantanément. Aucun projet backend séparé, aucune étape de déploiement, aucune soumission à un store.
+- **Full-stack en une seule fois — l'élément différenciateur.** La plupart des générateurs d'applications par IA (v0, Lovable, Bolt, …) vous donnent une *base de code web* que vous devez encore héberger et maintenir. MyApp génère le front-end **et** un véritable backend FaaS Python/Flask — chacun avec sa propre base de données Postgres isolée, un modèle de permissions par application et une isolation des données par appelant — puis exécute le tout instantanément. Aucun projet backend séparé, aucune étape de déploiement, aucune soumission à un store.
 - **Aucun artefact de code.** Le livrable est une config JSON qui s'exécute dans un client précompilé, pas une base de code. Rien à héberger, rien à maintenir, rien qui casse à la prochaine montée de version d'une dépendance. Mettez à jour une application en décrivant le changement ; elle est en ligne partout dès le prochain chargement.
 - **Véritablement multiplateforme.** Le *même* JSON-DSL se rend sur iOS, Android, Web (testé en production), macOS (expérimental), Linux et Windows. La plupart des outils « d'applications par IA » vous donnent une application web ; celui-ci vous donne du natif, partout, à partir d'une seule description.
 - **Piloté par le serveur** — diffusez l'UI et le comportement sous forme de données à travers une frontière de runtime précompilée et fixe. Voir les [notes de conformité avec les app stores](docs/APP_STORE_COMPLIANCE.md). <sub>(ces notes datent un peu et ne sont peut-être plus à 100 % à jour ; je ferai de mon mieux pour la publier sur les stores)</sub>
 - **Pensé pour l'IA** — le DSL est conçu pour être convivial pour les LLM. Le chat IA inclus exécute plusieurs fournisseurs (DeepSeek, MiniMax, l'agrégateur Volcengine avec GLM / Kimi) à travers trois runtimes d'agents enfichables (Claude Code, Codex, OpenCode), avec des playbooks de génération et une passe d'auto-révision visuelle en cours d'exécution pour que la sortie reste exécutable.
-- **Tout inclus** — messagerie instantanée avec notifications push, proxy IA, registre de paquets, espaces de noms, mise en miroir, centre utilisateur, changement d'environnement — tout est câblé ensemble. Pas « encore un énième framework low-code qui esquive l'authentification ».
+- **Tout inclus** — messagerie instantanée avec notifications push, proxy IA, registre de paquets, espaces de noms, mise en miroir, changement d'environnement — tout est câblé ensemble. Pas « encore un énième framework low-code qui esquive l'authentification ».
 - **Auto-hébergeable** — `myapp-ctl deploy` gère la pile backend, le runtime d'agents, le registre, le centre de configuration et les secrets de service depuis une CLI unique au niveau de l'hôte.
+
+---
+
+## Pourquoi ce projet existe — un mot de l'auteur
+
+Pour être honnête, je n'aime pas la hype actuelle autour de l'IA — les discussions sans fin, le marketing sans fin. Mais que ça me plaise ou non, cette vague n'est pas près de retomber.
+
+Alors si on doit embrasser l'AI coding, autant aller jusqu'au bout plutôt que de faire les choses à moitié. Ironiquement, c'est exactement pour ça que ce projet existe. Le but n'a jamais été de courir après la tendance — c'était de pousser l'idée jusqu'à sa conclusion logique et de poser la question : **si l'IA est vraiment l'avenir du développement, à quoi ressemblerait un workflow véritablement AI-first ?**
+
+Ce projet, c'est ma réponse à ce jour.
 
 ---
 
@@ -216,7 +226,7 @@ myapp-ctl deploy --build
 Cela démarre la pile backend MyApp localement / sur un VPS :
 - Postgres de l'application JSON + Redis des sessions IA + App MinIO
 - Agent node + runtime d'agent Ubuntu isolé
-- Backend de l'application + worker IA + Registry + centre de configuration + centre utilisateur
+- Backend de l'application + worker IA + Registry + centre de configuration
 
 Après le déploiement, le **sélecteur d'environnement** intégré au client (appuyez 7 fois sur la marque sur la page de connexion) vous permet de pointer vers votre propre pile.
 
@@ -293,7 +303,7 @@ flowchart TB
 
   Client --> Config["Config Center<br/>/api/v1/public"]
   Client --> Auth["Backend Auth -> Supabase Auth"]
-  UserCenter["User Center"] --> Supabase["Supabase Admin API"]
+  Config --> Supabase["Supabase Admin API"]
 ```
 
 | Composant | Emplacement | Description |

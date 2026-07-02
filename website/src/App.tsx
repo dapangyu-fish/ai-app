@@ -75,6 +75,13 @@ const copy = {
       '→ Web · iOS · Android · 桌面 即开',
     ],
     proofPoints: ['没有代码工程 · 不打包 · 不部署', '全栈：UI + 后端 + 数据库', '一句话 → iOS · Android · Web · 桌面'],
+    authorNoteEyebrow: '来自作者',
+    authorNoteTitle: '为什么会有这个项目',
+    authorNoteBody: [
+      '说实话，我很反感当下的 AI 狂热——没完没了的讨论、没完没了的营销。但无论我喜不喜欢，这股浪潮都不会退去。',
+      '既然要拥抱 AI Coding，那就干脆做到底，而不是做一半。讽刺的是，这恰恰就是这个项目存在的原因。我的目标从来不是追风口，而是把这个想法推到逻辑的终点，然后问一句：如果 AI 真的是开发的未来，一个真正 AI-first 的工作流应该是什么样子？',
+      '这个项目，就是我目前为止的答案。',
+    ],
     trustTitle: '产品可信边界',
     trustPoints: [
       ['声明式 JSON', 'AI 不下发原生代码或二进制'],
@@ -117,7 +124,7 @@ const copy = {
     complianceTitle: '审核友好的边界',
     complianceBody: 'AI 为客户端生成的是声明式 JSON 配置：只组合已编译的控件和动作，不下发 Dart、Swift、Kotlin、插件或二进制。需要后端时，生成的 FaaS 服务运行在隔离的自研容器化 FaaS 运行时（服务端），同样不会向客户端下发可执行代码。',
     features: [
-      ['全栈生成（核心差异化）', '别的 AI 生成器只给你前端代码，还得自己接后端、自己部署；MyApp 一句话同时生成 JSON 前端和配套的、经校验的 Python/Flask 后端，部署到隔离的自研容器化 FaaS 运行时（无函数数量上限、自动 scale-to-zero、冷唤醒与扩缩容）并立即运行。每个应用还自带隔离的 Postgres 数据库与应用级权限模型（所有者 / 维护者 / 消费者）——消费者数据由平台按调用者强制隔离，函数代码拿不到数据库连接。'],
+      ['全栈生成（核心差异化）', '别的 AI 生成器给你的还是一份要自己托管、维护的 web 代码库；MyApp 一句话同时生成 JSON 前端和配套的、经校验的 Python/Flask 后端，部署到隔离的自研容器化 FaaS 运行时（无函数数量上限、自动 scale-to-zero、冷唤醒与扩缩容）并立即运行。每个应用还自带隔离的 Postgres 数据库与应用级权限模型（所有者 / 维护者 / 消费者）——消费者数据由平台按调用者强制隔离，函数代码拿不到数据库连接。'],
       ['AI 原生 DSL', '为大模型生成而设计，并渲染成真正的原生 UI，而不只是手写配置。'],
       ['Flame 游戏', '真正的 2D 游戏引擎——精灵、物理、Tiled 地图——在 Web、iOS、Android 上运行，而不只是小玩具。'],
       ['内置 IM', '好友、群聊、消息同步和 Web OpenIM 兼容层。'],
@@ -156,6 +163,13 @@ const copy = {
       '→ live on Web · iOS · Android · desktop',
     ],
     proofPoints: ['No codebase · no build · no deploy', 'Full-stack: UI + backend + database', 'One prompt → iOS · Android · Web · desktop'],
+    authorNoteEyebrow: 'From the author',
+    authorNoteTitle: 'Why this exists',
+    authorNoteBody: [
+      'To be honest, I dislike today\'s AI hype — the endless discussion, the endless marketing. But whether I like it or not, this wave isn\'t going away.',
+      'So if we\'re going to embrace AI coding, we might as well take it all the way instead of doing it halfway. Ironically, that\'s exactly why this project exists. The goal was never to chase the trend — it was to push the idea to its logical conclusion and ask: if AI really is the future of development, what would a truly AI-first workflow look like?',
+      'This project is my answer so far.',
+    ],
     trustTitle: 'Trust boundary',
     trustPoints: [
       ['Declarative JSON', 'AI does not ship native code or binaries'],
@@ -198,7 +212,7 @@ const copy = {
     complianceTitle: 'Review-friendly boundary',
     complianceBody: 'AI produces declarative JSON for the client: it composes only compiled widgets and actions, never Dart, Swift, Kotlin, plugins or binaries. When an app needs a backend, the generated FaaS services run server-side in an isolated self-managed containerized FaaS runtime, so no executable code is shipped to the client.',
     features: [
-      ['Full-stack generation (the differentiator)', 'Other AI builders only give you front-end code to wire up and deploy yourself. MyApp generates the JSON app and a matching validated Python/Flask backend from one prompt, deployed to an isolated self-managed containerized FaaS runtime (no function-count cap, automatic scale-to-zero, cold-wake and autoscaling), and runs it instantly. Each app also gets an isolated Postgres database and an application-level permission model (owner / maintainer / consumer) — consumer data is isolated per-caller by the platform, and function code never holds a database connection.'],
+      ['Full-stack generation (the differentiator)', 'Other AI builders give you a web codebase to host and maintain. MyApp generates the JSON app and a matching validated Python/Flask backend from one prompt, deployed to an isolated self-managed containerized FaaS runtime (no function-count cap, automatic scale-to-zero, cold-wake and autoscaling), and runs it instantly. Each app also gets an isolated Postgres database and an application-level permission model (owner / maintainer / consumer) — consumer data is isolated per-caller by the platform, and function code never holds a database connection.'],
       ['AI-native DSL', 'Structured for LLM generation and rendered to real native UI, not just hand-written config.'],
       ['Flame games', 'A real 2D game engine — sprites, physics and tiled maps — running on Web, iOS and Android, not just toys.'],
       ['Built-in IM', 'Friends, groups, sync and the OpenIM compatibility layer for Web.'],
@@ -237,6 +251,13 @@ const copy = {
       '→ live auf Web · iOS · Android · Desktop',
     ],
     proofPoints: ['Keine Codebasis · kein Build · kein Deploy', 'Full-Stack: UI + Backend + Datenbank', 'Ein Prompt → iOS · Android · Web · Desktop'],
+    authorNoteEyebrow: 'Vom Autor',
+    authorNoteTitle: 'Warum es dieses Projekt gibt',
+    authorNoteBody: [
+      'Ganz ehrlich: Ich mag den heutigen KI-Hype nicht — die endlosen Diskussionen, das endlose Marketing. Aber ob es mir gefällt oder nicht, diese Welle geht nicht wieder weg.',
+      'Wenn wir uns also schon auf KI-Coding einlassen, dann können wir es genauso gut ganz durchziehen, statt es nur halb zu machen. Ironischerweise ist genau das der Grund, warum es dieses Projekt gibt. Das Ziel war nie, dem Trend hinterherzulaufen — sondern die Idee bis zu ihrem logischen Ende zu treiben und zu fragen: Wenn KI tatsächlich die Zukunft der Softwareentwicklung ist, wie sähe dann ein Workflow aus, der wirklich AI-first ist?',
+      'Dieses Projekt ist meine bisherige Antwort.',
+    ],
     trustTitle: 'Vertrauensgrenze',
     trustPoints: [
       ['Deklaratives JSON', 'Die KI liefert keinen nativen Code und keine Binaries.'],
@@ -279,7 +300,7 @@ const copy = {
     complianceTitle: 'Review-freundliche Grenze',
     complianceBody: 'Die KI erzeugt deklarative JSON-Konfiguration für den Client: nur kompilierte Widgets und Actions, kein Dart-, Swift-, Kotlin-, Plugin- oder Binärcode. Braucht eine App ein Backend, laufen die generierten FaaS-Services serverseitig in einer isolierten selbstverwalteten containerisierten FaaS-Runtime; es wird kein ausführbarer Code an den Client ausgeliefert.',
     features: [
-      ['Full-Stack-Generierung (das Alleinstellungsmerkmal)', 'Andere KI-Builder liefern nur Frontend-Code, den du selbst anbinden und deployen musst. MyApp erzeugt aus einem Prompt die JSON App und ein passendes validiertes Python/Flask-Backend in isolierter selbstverwalteter containerisierter FaaS-Runtime (keine Funktionsanzahl-Grenze, automatisches Scale-to-Zero, Cold-Wake und Autoscaling) und führt sie sofort aus. Jede App erhält außerdem eine isolierte Postgres-Datenbank und ein Berechtigungsmodell auf App-Ebene (Owner / Maintainer / Consumer) — Consumer-Daten werden von der Plattform pro Aufrufer isoliert, und Funktionscode erhält nie eine Datenbankverbindung.'],
+      ['Full-Stack-Generierung (das Alleinstellungsmerkmal)', 'Andere KI-Builder liefern dir eine Web-Codebasis, die du selbst hosten und warten musst. MyApp erzeugt aus einem Prompt die JSON App und ein passendes validiertes Python/Flask-Backend in isolierter selbstverwalteter containerisierter FaaS-Runtime (keine Funktionsanzahl-Grenze, automatisches Scale-to-Zero, Cold-Wake und Autoscaling) und führt sie sofort aus. Jede App erhält außerdem eine isolierte Postgres-Datenbank und ein Berechtigungsmodell auf App-Ebene (Owner / Maintainer / Consumer) — Consumer-Daten werden von der Plattform pro Aufrufer isoliert, und Funktionscode erhält nie eine Datenbankverbindung.'],
       ['AI-native DSL', 'Für LLM-Generierung gebaut und in echtes natives UI gerendert, nicht nur manuelle Konfiguration.'],
       ['Flame Games', 'Eine echte 2D-Game-Engine – Sprites, Physik und Tiled-Maps – auf Web, iOS und Android, nicht nur Spielzeug.'],
       ['Integriertes IM', 'Freunde, Gruppen, Sync und OpenIM-Kompatibilität für Web.'],
@@ -318,6 +339,13 @@ const copy = {
       '→ en vivo en Web · iOS · Android · escritorio',
     ],
     proofPoints: ['Sin base de código · sin compilación · sin despliegue', 'Full-stack: UI + backend + base de datos', 'Un prompt → iOS · Android · Web · escritorio'],
+    authorNoteEyebrow: 'Del autor',
+    authorNoteTitle: 'Por qué existe esto',
+    authorNoteBody: [
+      'Si soy sincero, me desagrada el hype actual de la IA: las discusiones interminables, el marketing interminable. Pero, me guste o no, esta ola no va a desaparecer.',
+      'Así que, puestos a abrazar el AI coding, más vale llegar hasta el final en lugar de quedarse a medias. Irónicamente, esa es exactamente la razón por la que existe este proyecto. El objetivo nunca fue perseguir la moda, sino llevar la idea hasta su conclusión lógica y preguntar: si la IA es de verdad el futuro del desarrollo, ¿cómo sería un flujo de trabajo verdaderamente AI-first?',
+      'Este proyecto es mi respuesta hasta ahora.',
+    ],
     trustTitle: 'Límite de confianza',
     trustPoints: [
       ['JSON declarativo', 'La IA no envía código nativo ni binarios.'],
@@ -360,7 +388,7 @@ const copy = {
     complianceTitle: 'Límite claro para revisión',
     complianceBody: 'La IA produce configuración JSON declarativa para el cliente: solo compone widgets y acciones ya compilados, nunca Dart, Swift, Kotlin, plugins ni binarios. Cuando una app necesita backend, los servicios FaaS generados corren en el servidor dentro de un runtime FaaS contenedorizado propio y aislado; nunca se envía código ejecutable al cliente.',
     features: [
-      ['Generación full-stack (el diferenciador)', 'Otros generadores de IA solo te dan código front-end para conectar y desplegar tú mismo. MyApp genera de un solo prompt la app JSON y un backend Python/Flask validado a juego en un runtime FaaS contenedorizado propio y aislado (sin límite de número de funciones, scale-to-zero automático, cold-wake y autoescalado), y lo ejecuta al instante. Cada app obtiene además una base de datos Postgres aislada y un modelo de permisos a nivel de aplicación (propietario / mantenedor / consumidor): los datos de cada consumidor quedan aislados por llamante en la plataforma, y el código de la función nunca tiene una conexión a la base de datos.'],
+      ['Generación full-stack (el diferenciador)', 'Otros generadores de IA te dan una base de código web que debes alojar y mantener. MyApp genera de un solo prompt la app JSON y un backend Python/Flask validado a juego en un runtime FaaS contenedorizado propio y aislado (sin límite de número de funciones, scale-to-zero automático, cold-wake y autoescalado), y lo ejecuta al instante. Cada app obtiene además una base de datos Postgres aislada y un modelo de permisos a nivel de aplicación (propietario / mantenedor / consumidor): los datos de cada consumidor quedan aislados por llamante en la plataforma, y el código de la función nunca tiene una conexión a la base de datos.'],
       ['DSL nativa para IA', 'Pensada para LLMs y renderizada como UI nativa real, no solo configuración manual.'],
       ['Juegos con Flame', 'Un motor 2D real —sprites, física y mapas Tiled— en Web, iOS y Android, no solo juguetes.'],
       ['IM integrado', 'Amigos, grupos, sincronización y compatibilidad OpenIM para Web.'],
@@ -399,6 +427,13 @@ const copy = {
       '→ en ligne sur Web · iOS · Android · desktop',
     ],
     proofPoints: ['Pas de base de code · pas de build · pas de déploiement', 'Full-stack : UI + backend + base de données', 'Un prompt → iOS · Android · Web · desktop'],
+    authorNoteEyebrow: 'Un mot de l\'auteur',
+    authorNoteTitle: 'Pourquoi ce projet existe',
+    authorNoteBody: [
+      'Pour être honnête, je n\'aime pas la hype actuelle autour de l\'IA — les discussions sans fin, le marketing sans fin. Mais que ça me plaise ou non, cette vague n\'est pas près de retomber.',
+      'Alors si on doit embrasser l\'AI coding, autant aller jusqu\'au bout plutôt que de faire les choses à moitié. Ironiquement, c\'est exactement pour ça que ce projet existe. Le but n\'a jamais été de courir après la tendance — c\'était de pousser l\'idée jusqu\'à sa conclusion logique et de poser la question : si l\'IA est vraiment l\'avenir du développement, à quoi ressemblerait un workflow véritablement AI-first ?',
+      'Ce projet, c\'est ma réponse à ce jour.',
+    ],
     trustTitle: 'Frontière de confiance',
     trustPoints: [
       ['JSON déclaratif', 'L\'IA ne livre aucun code natif ni binaire'],
@@ -441,7 +476,7 @@ const copy = {
     complianceTitle: 'Frontière adaptée à la revue',
     complianceBody: 'L\'IA produit du JSON déclaratif pour le client : il ne compose que des widgets et des actions compilés, jamais de Dart, Swift, Kotlin, plugins ou binaires. Lorsqu\'une application a besoin d\'un backend, les services FaaS générés s\'exécutent côté serveur dans un runtime FaaS conteneurisé autogéré et isolé, donc aucun code exécutable n\'est livré au client.',
     features: [
-      ['Génération full-stack (le facteur différenciant)', 'Les autres générateurs IA ne vous donnent que du code front-end à câbler et déployer vous-même. MyApp génère l\'application JSON et un backend Python/Flask validé assorti à partir d\'un seul prompt, déployé sur un runtime FaaS conteneurisé autogéré et isolé (sans limite de nombre de fonctions, mise à zéro automatique, réveil à froid et autoscaling), et l\'exécute instantanément. Chaque application reçoit aussi une base de données Postgres isolée et un modèle de permissions au niveau application (owner / maintainer / consumer) — les données du consommateur sont isolées par appelant par la plateforme, et le code des fonctions ne détient jamais de connexion à la base de données.'],
+      ['Génération full-stack (le facteur différenciant)', 'Les autres générateurs IA vous donnent une base de code web à héberger et à maintenir. MyApp génère l\'application JSON et un backend Python/Flask validé assorti à partir d\'un seul prompt, déployé sur un runtime FaaS conteneurisé autogéré et isolé (sans limite de nombre de fonctions, mise à zéro automatique, réveil à froid et autoscaling), et l\'exécute instantanément. Chaque application reçoit aussi une base de données Postgres isolée et un modèle de permissions au niveau application (owner / maintainer / consumer) — les données du consommateur sont isolées par appelant par la plateforme, et le code des fonctions ne détient jamais de connexion à la base de données.'],
       ['DSL natif pour l\'IA', 'Structuré pour la génération par LLM et rendu en véritable UI native, pas seulement une config écrite à la main.'],
       ['Jeux Flame', 'Un vrai moteur de jeu 2D — sprites, physique et cartes tuilées — fonctionnant sur Web, iOS et Android, pas juste des jouets.'],
       ['IM intégrée', 'Amis, groupes, synchronisation et la couche de compatibilité OpenIM pour le Web.'],
@@ -480,6 +515,13 @@ const copy = {
       '→ a correr em Web · iOS · Android · desktop',
     ],
     proofPoints: ['Sem codebase · sem build · sem deploy', 'Full-stack: UI + backend + base de dados', 'Um prompt → iOS · Android · Web · desktop'],
+    authorNoteEyebrow: 'Do autor',
+    authorNoteTitle: 'Porque é que isto existe',
+    authorNoteBody: [
+      'Para ser honesto, não gosto do hype atual à volta da IA — a discussão interminável, o marketing interminável. Mas, quer eu goste quer não, esta onda não vai desaparecer.',
+      'Por isso, já que vamos abraçar o AI coding, mais vale ir até ao fim em vez de ficar a meio caminho. Ironicamente, é exatamente por isso que este projeto existe. O objetivo nunca foi correr atrás da moda — foi levar a ideia até à sua conclusão lógica e perguntar: se a IA é mesmo o futuro do desenvolvimento, como seria um workflow verdadeiramente AI-first?',
+      'Este projeto é a minha resposta até agora.',
+    ],
     trustTitle: 'Fronteira de confiança',
     trustPoints: [
       ['JSON declarativo', 'A IA não distribui código nativo nem binários'],
@@ -522,7 +564,7 @@ const copy = {
     complianceTitle: 'Fronteira amigável à revisão',
     complianceBody: 'A IA produz JSON declarativo para o cliente: compõe apenas widgets e ações compilados, nunca Dart, Swift, Kotlin, plugins ou binários. Quando uma aplicação precisa de um backend, os serviços FaaS gerados executam-se do lado do servidor num runtime FaaS conteinerizado autogerido e isolado, pelo que nenhum código executável é entregue ao cliente.',
     features: [
-      ['Geração full-stack (o fator diferenciador)', 'Outros geradores de IA dão-lhe apenas código front-end para ligar e implementar por conta própria. A MyApp gera a aplicação JSON e um backend Python/Flask validado correspondente a partir de um único prompt, implementado num runtime FaaS conteinerizado autogerido e isolado (sem limite do número de funções, redução a zero automática, despertar a frio e autoscaling), e executa-o instantaneamente. Cada aplicação recebe também uma base de dados Postgres isolada e um modelo de permissões ao nível da aplicação (owner / maintainer / consumer) — os dados do consumidor são isolados por chamador pela plataforma, e o código das funções nunca detém uma ligação à base de dados.'],
+      ['Geração full-stack (o fator diferenciador)', 'Outros geradores de IA dão-lhe uma base de código web para alojar e manter por conta própria. A MyApp gera a aplicação JSON e um backend Python/Flask validado correspondente a partir de um único prompt, implementado num runtime FaaS conteinerizado autogerido e isolado (sem limite do número de funções, redução a zero automática, despertar a frio e autoscaling), e executa-o instantaneamente. Cada aplicação recebe também uma base de dados Postgres isolada e um modelo de permissões ao nível da aplicação (owner / maintainer / consumer) — os dados do consumidor são isolados por chamador pela plataforma, e o código das funções nunca detém uma ligação à base de dados.'],
       ['DSL nativo de IA', 'Estruturado para geração por LLM e renderizado em UI nativa real, não apenas configuração escrita à mão.'],
       ['Jogos Flame', 'Um verdadeiro motor de jogos 2D — sprites, física e mapas em mosaico — a correr em Web, iOS e Android, não apenas brinquedos.'],
       ['IM integrado', 'Amigos, grupos, sincronização e a camada de compatibilidade OpenIM para a Web.'],
@@ -561,6 +603,13 @@ const copy = {
       '→ en marxa a Web · iOS · Android · escriptori',
     ],
     proofPoints: ['Sense base de codi · sense compilació · sense desplegament', 'Full-stack: UI + backend + base de dades', 'Un prompt → iOS · Android · Web · escriptori'],
+    authorNoteEyebrow: 'De l\'autor',
+    authorNoteTitle: 'Per què existeix això',
+    authorNoteBody: [
+      'Si he de ser sincer, no m\'agrada gens el hype actual al voltant de la IA — la discussió interminable, el màrqueting interminable. Però, m\'agradi o no, aquesta onada no desapareixerà.',
+      'Així que, si hem d\'abraçar l\'AI coding, més val anar fins al final que quedar-se a mitges. Irònicament, és exactament per això que existeix aquest projecte. L\'objectiu mai no ha estat perseguir la moda — era portar la idea fins a la seva conclusió lògica i preguntar: si la IA és realment el futur del desenvolupament, com seria un flux de treball genuïnament AI-first?',
+      'Aquest projecte és la meva resposta fins ara.',
+    ],
     trustTitle: 'Frontera de confiança',
     trustPoints: [
       ['JSON declaratiu', 'La IA no distribueix codi natiu ni binaris'],
@@ -603,7 +652,7 @@ const copy = {
     complianceTitle: 'Frontera amigable per a la revisió',
     complianceBody: 'La IA produeix JSON declaratiu per al client: només composa widgets i accions compilats, mai Dart, Swift, Kotlin, plugins o binaris. Quan una aplicació necessita un backend, els serveis FaaS generats s\'executen al costat del servidor en un runtime FaaS contenidoritzat autogestionat i aïllat, de manera que cap codi executable no s\'entrega al client.',
     features: [
-      ['Generació full-stack (el factor diferenciador)', 'Altres generadors d\'IA només et donen codi front-end perquè el connectis i el despleguis tu mateix. MyApp genera l\'aplicació JSON i un backend Python/Flask validat corresponent a partir d\'un sol prompt, desplegat en un runtime FaaS contenidoritzat autogestionat i aïllat (sense límit del nombre de funcions, reducció a zero automàtica, despertar en fred i autoscaling), i l\'executa a l\'instant. Cada aplicació també rep una base de dades Postgres aïllada i un model de permisos a nivell d\'aplicació (owner / maintainer / consumer) — les dades del consumidor estan aïllades per cridador per la plataforma, i el codi de les funcions mai no té una connexió a la base de dades.'],
+      ['Generació full-stack (el factor diferenciador)', 'Altres generadors d\'IA et donen una base de codi web que has d\'allotjar i mantenir. MyApp genera l\'aplicació JSON i un backend Python/Flask validat corresponent a partir d\'un sol prompt, desplegat en un runtime FaaS contenidoritzat autogestionat i aïllat (sense límit del nombre de funcions, reducció a zero automàtica, despertar en fred i autoscaling), i l\'executa a l\'instant. Cada aplicació també rep una base de dades Postgres aïllada i un model de permisos a nivell d\'aplicació (owner / maintainer / consumer) — les dades del consumidor estan aïllades per cridador per la plataforma, i el codi de les funcions mai no té una connexió a la base de dades.'],
       ['DSL natiu d\'IA', 'Estructurat per a la generació per LLM i renderitzat en UI nativa real, no només configuració escrita a mà.'],
       ['Jocs Flame', 'Un veritable motor de jocs 2D — sprites, física i mapes de mosaic — funcionant a Web, iOS i Android, no només joguines.'],
       ['IM integrat', 'Amics, grups, sincronització i la capa de compatibilitat OpenIM per al Web.'],
@@ -642,6 +691,13 @@ const copy = {
       '→ Web · iOS · Android · डेस्कटॉप पर लाइव',
     ],
     proofPoints: ['कोई codebase नहीं · न build · न deploy', 'फुल-स्टैक: UI + बैकएंड + डेटाबेस', 'एक प्रॉम्प्ट → iOS · Android · Web · डेस्कटॉप'],
+    authorNoteEyebrow: 'लेखक की ओर से',
+    authorNoteTitle: 'यह प्रोजेक्ट क्यों मौजूद है',
+    authorNoteBody: [
+      'सच कहूँ तो, मुझे आज की AI हाइप से चिढ़ है — न ख़त्म होने वाली बहसें, न ख़त्म होने वाली मार्केटिंग। लेकिन मुझे पसंद हो या न हो, यह लहर थमने वाली नहीं है।',
+      'तो जब AI coding को अपनाना ही है, तो आधा-अधूरा करने के बजाय बात को आख़िर तक ले जाया जाए। विडंबना यह है कि ठीक यही इस प्रोजेक्ट के होने की वजह है। मक़सद कभी ट्रेंड के पीछे भागना नहीं था — मक़सद था इस विचार को उसके तार्किक अंजाम तक ले जाना और यह पूछना: अगर AI सचमुच डेवलपमेंट का भविष्य है, तो एक सच्चा AI-first वर्कफ़्लो कैसा दिखेगा?',
+      'यह प्रोजेक्ट, अब तक का मेरा जवाब है।',
+    ],
     trustTitle: 'विश्वास सीमा',
     trustPoints: [
       ['घोषणात्मक JSON', 'AI कोई नेटिव कोड या बाइनरी नहीं भेजता'],
@@ -684,7 +740,7 @@ const copy = {
     complianceTitle: 'समीक्षा-अनुकूल सीमा',
     complianceBody: 'AI क्लाइंट के लिए घोषणात्मक JSON बनाता है: यह केवल संकलित विजेट और क्रियाएँ संयोजित करता है, कभी Dart, Swift, Kotlin, प्लगइन या बाइनरी नहीं। जब किसी ऐप को बैकएंड की आवश्यकता होती है, तो जनित FaaS सेवाएँ एक पृथक स्व-प्रबंधित कंटेनरीकृत FaaS रनटाइम में सर्वर-साइड चलती हैं, इसलिए कोई निष्पादन योग्य कोड क्लाइंट को नहीं भेजा जाता।',
     features: [
-      ['फुल-स्टैक जनरेशन (विभेदक)', 'अन्य AI बिल्डर आपको केवल फ्रंट-एंड कोड देते हैं जिसे आपको खुद जोड़ना और डिप्लॉय करना पड़ता है। MyApp एक ही प्रॉम्प्ट से JSON ऐप और उससे मेल खाता सत्यापित Python/Flask बैकएंड जनित करता है, जो एक पृथक स्व-प्रबंधित कंटेनरीकृत FaaS रनटाइम (फ़ंक्शन-संख्या की कोई सीमा नहीं, स्वचालित scale-to-zero, cold-wake और autoscaling) पर डिप्लॉय होता है, और इसे तुरंत चलाता है। प्रत्येक ऐप को एक पृथक Postgres डेटाबेस और एक एप्लिकेशन-स्तरीय अनुमति मॉडल (owner / maintainer / consumer) भी मिलता है — उपभोक्ता डेटा प्लेटफ़ॉर्म द्वारा प्रति-कॉलर पृथक रहता है, और फ़ंक्शन कोड कभी डेटाबेस कनेक्शन नहीं रखता।'],
+      ['फुल-स्टैक जनरेशन (विभेदक)', 'अन्य AI बिल्डर आपको एक वेब कोडबेस देते हैं जिसे आपको खुद होस्ट और मेंटेन करना पड़ता है। MyApp एक ही प्रॉम्प्ट से JSON ऐप और उससे मेल खाता सत्यापित Python/Flask बैकएंड जनित करता है, जो एक पृथक स्व-प्रबंधित कंटेनरीकृत FaaS रनटाइम (फ़ंक्शन-संख्या की कोई सीमा नहीं, स्वचालित scale-to-zero, cold-wake और autoscaling) पर डिप्लॉय होता है, और इसे तुरंत चलाता है। प्रत्येक ऐप को एक पृथक Postgres डेटाबेस और एक एप्लिकेशन-स्तरीय अनुमति मॉडल (owner / maintainer / consumer) भी मिलता है — उपभोक्ता डेटा प्लेटफ़ॉर्म द्वारा प्रति-कॉलर पृथक रहता है, और फ़ंक्शन कोड कभी डेटाबेस कनेक्शन नहीं रखता।'],
       ['AI-नेटिव DSL', 'LLM जनरेशन के लिए संरचित और वास्तविक नेटिव UI में रेंडर किया गया, केवल हाथ से लिखी कॉन्फ़िग नहीं।'],
       ['Flame गेम', 'एक वास्तविक 2D गेम इंजन — स्प्राइट, भौतिकी और टाइल्ड मानचित्र — Web, iOS और Android पर चलता है, केवल खिलौने नहीं।'],
       ['अंतर्निहित IM', 'मित्र, समूह, सिंक और Web के लिए OpenIM संगतता परत।'],
@@ -723,6 +779,13 @@ const copy = {
       '→ Web · iOS · Android · 데스크톱에서 바로 실행',
     ],
     proofPoints: ['코드베이스 없음 · 빌드 없음 · 배포 없음', '풀스택: UI + 백엔드 + 데이터베이스', '한 번의 프롬프트 → iOS · Android · Web · 데스크톱'],
+    authorNoteEyebrow: '만든이의 말',
+    authorNoteTitle: '이 프로젝트가 존재하는 이유',
+    authorNoteBody: [
+      '솔직히 말하면, 저는 요즘의 AI 광풍이 싫습니다 — 끝없는 논의, 끝없는 마케팅. 하지만 제가 좋아하든 아니든, 이 물결은 물러가지 않을 겁니다.',
+      '그러니 어차피 AI coding을 받아들일 거라면, 어중간하게 하느니 아예 끝까지 가 보는 편이 낫습니다. 아이러니하게도, 바로 그것이 이 프로젝트가 존재하는 이유입니다. 목표는 결코 유행을 좇는 것이 아니었습니다 — 이 생각을 논리적인 끝까지 밀어붙이고 이렇게 묻는 것이었습니다: AI가 정말 개발의 미래라면, 진정한 AI-first 워크플로우는 어떤 모습이어야 할까?',
+      '이 프로젝트가 지금까지의 제 답입니다.',
+    ],
     trustTitle: '신뢰 경계',
     trustPoints: [
       ['선언적 JSON', 'AI는 네이티브 코드나 바이너리를 배포하지 않습니다'],
@@ -765,7 +828,7 @@ const copy = {
     complianceTitle: '검토 친화적 경계',
     complianceBody: 'AI는 클라이언트를 위한 선언적 JSON을 생성합니다: 컴파일된 위젯과 액션만 구성하며, Dart, Swift, Kotlin, 플러그인, 바이너리는 절대 사용하지 않습니다. 앱에 백엔드가 필요할 때 생성된 FaaS 서비스는 격리된 자체 관리형 컨테이너화 FaaS 런타임에서 서버 측으로 실행되므로 실행 가능한 코드가 클라이언트에 전달되지 않습니다.',
     features: [
-      ['풀스택 생성 (차별화 요소)', '다른 AI 빌더는 직접 연결하고 배포해야 하는 프런트엔드 코드만 제공합니다. MyApp은 하나의 프롬프트로 JSON 앱과 이에 맞는 검증된 Python/Flask 백엔드를 생성하여 격리된 자체 관리형 컨테이너화 FaaS 런타임(함수 개수 제한 없음, 자동 scale-to-zero, cold-wake, autoscaling)에 배포하고 즉시 실행합니다. 각 앱은 또한 격리된 Postgres 데이터베이스와 애플리케이션 수준 권한 모델(owner / maintainer / consumer)을 받습니다 — 소비자 데이터는 플랫폼에 의해 호출자별로 격리되며, 함수 코드는 절대 데이터베이스 연결을 보유하지 않습니다.'],
+      ['풀스택 생성 (차별화 요소)', '다른 AI 빌더는 직접 호스팅하고 유지 관리해야 하는 웹 코드베이스를 제공합니다. MyApp은 하나의 프롬프트로 JSON 앱과 이에 맞는 검증된 Python/Flask 백엔드를 생성하여 격리된 자체 관리형 컨테이너화 FaaS 런타임(함수 개수 제한 없음, 자동 scale-to-zero, cold-wake, autoscaling)에 배포하고 즉시 실행합니다. 각 앱은 또한 격리된 Postgres 데이터베이스와 애플리케이션 수준 권한 모델(owner / maintainer / consumer)을 받습니다 — 소비자 데이터는 플랫폼에 의해 호출자별로 격리되며, 함수 코드는 절대 데이터베이스 연결을 보유하지 않습니다.'],
       ['AI 네이티브 DSL', 'LLM 생성에 맞게 구조화되고 손으로 작성한 구성이 아닌 실제 네이티브 UI로 렌더링됩니다.'],
       ['Flame 게임', '실제 2D 게임 엔진 — 스프라이트, 물리, 타일 맵 — 이 Web, iOS, Android에서 실행되며, 단순한 장난감이 아닙니다.'],
       ['내장 IM', '친구, 그룹, 동기화, Web을 위한 OpenIM 호환성 계층.'],
@@ -804,6 +867,13 @@ const copy = {
       '→ Web · iOS · Android · デスクトップで稼働',
     ],
     proofPoints: ['コードベースなし · ビルドなし · デプロイなし', 'フルスタック：UI + バックエンド + データベース', '1 つのプロンプト → iOS · Android · Web · デスクトップ'],
+    authorNoteEyebrow: '作者より',
+    authorNoteTitle: 'なぜこのプロジェクトが存在するのか',
+    authorNoteBody: [
+      '正直に言うと、私は昨今の AI をめぐる熱狂が嫌いです——終わりのない議論、終わりのないマーケティング。しかし、私が好もうと好むまいと、この波が引くことはありません。',
+      'だから、どうせ AI coding を受け入れるのなら、中途半端にやるのではなく、とことんまでやり切ったほうがいい。皮肉なことに、それこそがこのプロジェクトが存在する理由です。目標は流行を追いかけることでは決してなく、この発想を論理の行き着くところまで押し進めて、こう問うことでした——もし AI が本当に開発の未来なら、真に AI-first なワークフローとはどんな姿になるのか？',
+      'このプロジェクトが、今のところの私の答えです。',
+    ],
     trustTitle: '信頼境界',
     trustPoints: [
       ['宣言的 JSON', 'AI はネイティブコードやバイナリを配布しません'],
@@ -846,7 +916,7 @@ const copy = {
     complianceTitle: 'レビューに適した境界',
     complianceBody: 'AI はクライアント向けに宣言的 JSON を生成します：コンパイル済みのウィジェットとアクションのみを構成し、Dart、Swift、Kotlin、プラグイン、バイナリは一切使用しません。アプリにバックエンドが必要な場合、生成された FaaS サービスは分離された自己管理型のコンテナ化された FaaS ランタイムでサーバーサイドで実行されるため、実行可能なコードがクライアントに配布されることはありません。',
     features: [
-      ['フルスタック生成（差別化要因）', '他の AI ビルダーは、自分で配線してデプロイするフロントエンドのコードしか提供しません。MyApp は一つのプロンプトから JSON アプリと、それに対応する検証済みの Python/Flask バックエンドを生成し、分離された自己管理型のコンテナ化された FaaS ランタイム（関数数の上限なし、自動 scale-to-zero、cold-wake、autoscaling）にデプロイして即座に実行します。各アプリには、分離された Postgres データベースとアプリケーションレベルの権限モデル（owner / maintainer / consumer）も付与されます — 消費者データはプラットフォームによって呼び出し元ごとに分離され、関数コードがデータベース接続を保持することは決してありません。'],
+      ['フルスタック生成（差別化要因）', '他の AI ビルダーが提供するのは、自分でホスティングして保守する web コードベースです。MyApp は一つのプロンプトから JSON アプリと、それに対応する検証済みの Python/Flask バックエンドを生成し、分離された自己管理型のコンテナ化された FaaS ランタイム（関数数の上限なし、自動 scale-to-zero、cold-wake、autoscaling）にデプロイして即座に実行します。各アプリには、分離された Postgres データベースとアプリケーションレベルの権限モデル（owner / maintainer / consumer）も付与されます — 消費者データはプラットフォームによって呼び出し元ごとに分離され、関数コードがデータベース接続を保持することは決してありません。'],
       ['AI ネイティブ DSL', 'LLM 生成向けに構造化され、手書きの設定ではなく実際のネイティブ UI にレンダリングされます。'],
       ['Flame ゲーム', '実際の 2D ゲームエンジン — スプライト、物理、タイルマップ — が Web、iOS、Android で動作し、単なるおもちゃではありません。'],
       ['組み込み IM', '友達、グループ、同期、Web 向けの OpenIM 互換レイヤー。'],
@@ -885,6 +955,13 @@ const copy = {
       '→ live su Web · iOS · Android · desktop',
     ],
     proofPoints: ['Niente codebase · niente build · niente deploy', 'Full-stack: UI + backend + database', 'Un prompt → iOS · Android · Web · desktop'],
+    authorNoteEyebrow: 'Una nota dell\'autore',
+    authorNoteTitle: 'Perché esiste questo progetto',
+    authorNoteBody: [
+      'Ad essere onesto, l\'hype odierno intorno all\'IA mi dà fastidio — le discussioni senza fine, il marketing senza fine. Ma che mi piaccia o no, questa ondata non se ne andrà.',
+      'Quindi, se dobbiamo abbracciare l\'AI coding, tanto vale farlo fino in fondo invece che a metà. Ironia della sorte, è esattamente per questo che esiste questo progetto. L\'obiettivo non è mai stato inseguire il trend — era spingere l\'idea fino alla sua conclusione logica e chiedersi: se l\'IA è davvero il futuro dello sviluppo, che aspetto avrebbe un workflow veramente AI-first?',
+      'Questo progetto è la mia risposta, finora.',
+    ],
     trustTitle: 'Confine di fiducia',
     trustPoints: [
       ['JSON dichiarativo', 'L\'IA non distribuisce codice nativo né binari'],
@@ -927,7 +1004,7 @@ const copy = {
     complianceTitle: 'Confine adatto alla revisione',
     complianceBody: 'L\'IA produce JSON dichiarativo per il client: compone solo widget e azioni compilati, mai Dart, Swift, Kotlin, plugin o binari. Quando un\'app ha bisogno di un backend, i servizi FaaS generati vengono eseguiti lato server in un runtime FaaS containerizzato autogestito e isolato, quindi nessun codice eseguibile viene distribuito al client.',
     features: [
-      ['Generazione full-stack (il fattore differenziante)', 'Altri generatori IA ti danno solo codice front-end da collegare e distribuire da solo. MyApp genera l\'app JSON e un backend Python/Flask validato corrispondente da un solo prompt, distribuito su un runtime FaaS containerizzato autogestito e isolato (nessun limite al numero di funzioni, scale-to-zero automatico, cold-wake e autoscaling), e lo esegue istantaneamente. Ogni app riceve anche un database Postgres isolato e un modello di permessi a livello di applicazione (owner / maintainer / consumer) — i dati del consumatore sono isolati per chiamante dalla piattaforma, e il codice delle funzioni non detiene mai una connessione al database.'],
+      ['Generazione full-stack (il fattore differenziante)', 'Altri generatori IA ti danno una codebase web da ospitare e mantenere. MyApp genera l\'app JSON e un backend Python/Flask validato corrispondente da un solo prompt, distribuito su un runtime FaaS containerizzato autogestito e isolato (nessun limite al numero di funzioni, scale-to-zero automatico, cold-wake e autoscaling), e lo esegue istantaneamente. Ogni app riceve anche un database Postgres isolato e un modello di permessi a livello di applicazione (owner / maintainer / consumer) — i dati del consumatore sono isolati per chiamante dalla piattaforma, e il codice delle funzioni non detiene mai una connessione al database.'],
       ['DSL nativo per l\'IA', 'Strutturato per la generazione tramite LLM e renderizzato in vera UI nativa, non solo configurazione scritta a mano.'],
       ['Giochi Flame', 'Un vero motore di gioco 2D — sprite, fisica e mappe a tasselli — in esecuzione su Web, iOS e Android, non solo giocattoli.'],
       ['IM integrato', 'Amici, gruppi, sincronizzazione e il livello di compatibilità OpenIM per il Web.'],
@@ -2467,6 +2544,18 @@ function App() {
                 </article>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      <section className="authorNoteSection" id="why">
+        <div className="shell">
+          <div className="authorNotePanel">
+            <p className="eyebrow">{t.authorNoteEyebrow}</p>
+            <h2>{t.authorNoteTitle}</h2>
+            {t.authorNoteBody.map((para) => (
+              <p key={para}>{para}</p>
+            ))}
           </div>
         </div>
       </section>

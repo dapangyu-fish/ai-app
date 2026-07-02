@@ -2225,3 +2225,31 @@ section {
     grid-template-columns: 1fr;
   }
 }
+
+.authorNoteSection {
+  border-top: 1px solid var(--line);
+}
+
+.authorNotePanel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(70, 215, 200, 0.08), transparent 48%),
+    color-mix(in srgb, var(--panel2) 86%, transparent);
+  padding: 24px;
+  max-width: 820px;
+}
+
+.authorNotePanel h2 {
+  margin: 8px 0 0;
+  font-size: clamp(22px, 3vw, 30px);
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.authorNotePanel p:not(.eyebrow) {
+  margin: 14px 0 0;
+  color: var(--muted);
+  line-height: 1.75;
+  max-width: 680px;
+}

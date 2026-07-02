@@ -120,13 +120,23 @@ La mayoría de las apps JSON-DSL funcionan en todas las plataformas. Las funcion
 
 ## ¿Por qué es interesante?
 
-- **Full-stack de una sola vez: el factor diferenciador.** La mayoría de los constructores de apps con IA (v0, Lovable, Bolt, …) generan código de *front-end* que aún tienes que cablear a un backend y desplegar tú mismo. MyApp genera el front-end **y** un backend FaaS real de Python/Flask, cada uno con su propia base de datos Postgres aislada, un modelo de permisos por app y aislamiento de datos por cada llamador, para luego ejecutarlo todo al instante. Sin proyecto de backend separado, sin paso de despliegue, sin envío a la tienda.
+- **Full-stack de una sola vez: el factor diferenciador.** La mayoría de los constructores de apps con IA (v0, Lovable, Bolt, …) te dan una *base de código web* que aún tienes que alojar y mantener tú mismo. MyApp genera el front-end **y** un backend FaaS real de Python/Flask, cada uno con su propia base de datos Postgres aislada, un modelo de permisos por app y aislamiento de datos por cada llamador, para luego ejecutarlo todo al instante. Sin proyecto de backend separado, sin paso de despliegue, sin envío a la tienda.
 - **Sin artefacto de código.** El entregable es una configuración JSON ejecutándose en un cliente precompilado, no una base de código. Nada que alojar, nada que mantener, nada que se rompa con la siguiente subida de versión de una dependencia. Actualiza una app describiendo el cambio; estará en vivo en todas partes la próxima vez que se cargue.
 - **Genuinamente multiplataforma.** El *mismo* JSON-DSL se renderiza en iOS, Android, Web (probado en producción), macOS (experimental), Linux y Windows. La mayoría de las herramientas de «apps con IA» te dan una app web; esto te da algo nativo, en todas partes, a partir de una sola descripción.
 - **Dirigido por servidor** — entrega la UI y el comportamiento como datos a través de un límite de runtime fijo y precompilado. Consulta las [notas de cumplimiento de App Store](docs/APP_STORE_COMPLIANCE.md). <sub>(estas notas se escribieron hace tiempo y puede que no estén 100 % actualizadas; haré lo posible por publicarla en las tiendas)</sub>
 - **Nativo de IA** — el DSL está diseñado para ser amigable con los LLM. El chat de IA incluido ejecuta múltiples proveedores (DeepSeek, MiniMax, el agregador Volcengine con GLM / Kimi) a través de tres runtimes de agente conectables (Claude Code, Codex, OpenCode), con playbooks de generación y una pasada de autorrevisión visual durante la ejecución para mantener la salida ejecutable.
-- **Con todo incluido** — IM con push, proxy de IA, registro de paquetes, espacios de nombres, replicación (mirroring), centro de usuarios, cambio de entornos: todo cableado entre sí. No es «otro framework low-code más que delega la autenticación».
+- **Con todo incluido** — IM con push, proxy de IA, registro de paquetes, espacios de nombres, replicación (mirroring), cambio de entornos: todo cableado entre sí. No es «otro framework low-code más que delega la autenticación».
 - **Autoalojable** — `myapp-ctl deploy` gestiona la pila del backend, el runtime de agentes, el registro, el centro de configuración y los secretos de los servicios desde una única CLI a nivel de host.
+
+---
+
+## Por qué existe esto — una nota del autor
+
+Si soy sincero, me desagrada el hype actual de la IA: las discusiones interminables, el marketing interminable. Pero, me guste o no, esta ola no va a desaparecer.
+
+Así que, puestos a abrazar el AI coding, más vale llegar hasta el final en lugar de quedarse a medias. Irónicamente, esa es exactamente la razón por la que existe este proyecto. El objetivo nunca fue perseguir la moda, sino llevar la idea hasta su conclusión lógica y preguntar: **si la IA es de verdad el futuro del desarrollo, ¿cómo sería un flujo de trabajo verdaderamente AI-first?**
+
+Este proyecto es mi respuesta hasta ahora.
 
 ---
 
@@ -216,7 +226,7 @@ myapp-ctl deploy --build
 Esto arranca la pila del backend de MyApp localmente / en un VPS:
 - Postgres de las JSON apps + Redis de sesiones de IA + App MinIO
 - Agent node + runtime de agente Ubuntu aislado
-- Backend de la app + AI worker + Registry + Config center + User center
+- Backend de la app + AI worker + Registry + Config center
 
 Tras el despliegue, el **Conmutador de entornos** integrado del cliente (toca la marca 7 veces en la página de inicio de sesión) te permite apuntar a tu propia pila.
 
@@ -293,7 +303,7 @@ flowchart TB
 
   Client --> Config["Config Center<br/>/api/v1/public"]
   Client --> Auth["Backend Auth -> Supabase Auth"]
-  UserCenter["User Center"] --> Supabase["Supabase Admin API"]
+  Config --> Supabase["Supabase Admin API"]
 ```
 
 | Componente | Dónde | Qué |

@@ -120,13 +120,23 @@ Most JSON-DSL apps work across all platforms. Platform-specific features gracefu
 
 ## Why is this interesting?
 
-- **Full-stack in one shot — the differentiator.** Most AI app builders (v0, Lovable, Bolt, …) generate *front-end* code that you still have to wire to a backend and deploy yourself. MyApp generates the front-end **and** a real Python/Flask FaaS backend — each with its own isolated Postgres database, per-app permission model, and per-caller data isolation — then runs the whole thing instantly. No separate backend project, no deploy step, no store submission.
+- **Full-stack in one shot — the differentiator.** Most AI app builders (v0, Lovable, Bolt, …) give you a *web codebase* that you still have to host and maintain. MyApp generates the front-end **and** a real Python/Flask FaaS backend — each with its own isolated Postgres database, per-app permission model, and per-caller data isolation — then runs the whole thing instantly. No separate backend project, no deploy step, no store submission.
 - **No code artifact.** The deliverable is a JSON config running in a precompiled client, not a codebase. Nothing to host, nothing to maintain, nothing to break on the next dependency bump. Update an app by describing the change; it's live everywhere the next time it loads.
 - **Genuinely cross-platform.** The *same* JSON-DSL renders on iOS, Android, Web (production-tested), macOS (experimental), Linux, and Windows. Most "AI app" tools give you a web app; this gives you native, everywhere, from one description.
 - **Server-driven** — ship UI and behavior data through a fixed, precompiled runtime boundary. See [App Store compliance notes](docs/APP_STORE_COMPLIANCE.md). <sub>(these notes were written a while ago and may not be 100% up to date; I’ll do my best to get it listed on the app stores)</sub>
 - **AI-native** — the DSL is designed to be LLM-friendly. The included AI chat runs multiple providers (DeepSeek, MiniMax, Volcengine aggregator with GLM / Kimi) through three pluggable agent runtimes (Claude Code, Codex, OpenCode), with generation playbooks and an in-run visual self-review pass to keep output runnable.
-- **Batteries included** — IM with push, AI proxy, package registry, namespaces, mirroring, user center, environment switching — all wired together. Not "yet another low-code framework that punts on auth".
+- **Batteries included** — IM with push, AI proxy, package registry, namespaces, mirroring, environment switching — all wired together. Not "yet another low-code framework that punts on auth".
 - **Self-hostable** — `myapp-ctl deploy` manages the backend stack, agent runtime, registry, config center, and service secrets from one host-level CLI.
+
+---
+
+## Why this exists — a note from the author
+
+To be honest, I dislike today's AI hype — the endless discussion, the endless marketing. But whether I like it or not, this wave isn't going away.
+
+So if we're going to embrace AI coding, we might as well take it all the way instead of doing it halfway. Ironically, that's exactly why this project exists. The goal was never to chase the trend — it was to push the idea to its logical conclusion and ask: **if AI really is the future of development, what would a truly AI-first workflow look like?**
+
+This project is my answer so far.
 
 ---
 
@@ -216,7 +226,7 @@ myapp-ctl deploy --build
 This boots the MyApp backend stack locally / on a VPS:
 - JSON app Postgres + AI session Redis + App MinIO
 - Agent node + isolated Ubuntu agent runtime
-- App backend + AI worker + Registry + Config center + User center
+- App backend + AI worker + Registry + Config center
 
 After deploy, the client's built-in **Environment Switcher** (tap brand 7 times on login page) lets you point to your own stack.
 
@@ -293,7 +303,7 @@ flowchart TB
 
   Client --> Config["Config Center<br/>/api/v1/public"]
   Client --> Auth["Backend Auth -> Supabase Auth"]
-  UserCenter["User Center"] --> Supabase["Supabase Admin API"]
+  Config --> Supabase["Supabase Admin API"]
 ```
 
 | Component | Where | What |

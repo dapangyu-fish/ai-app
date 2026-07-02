@@ -120,13 +120,23 @@ MyApp 使用 Flutter 构建，支持多个平台，功能完整度各有不同�
 
 ## 为什么有意思？
 
-- **一步到位的全栈——这正是差异化所在。** 大多数 AI 应用构建工具（v0、Lovable、Bolt 等）生成的是*前端*代码，你仍然需要自己将其接线到后端并部署。MyApp 生成前端**以及**一个真实的 Python/Flask FaaS 后端——每个都拥有独立的 Postgres 数据库、按应用划分的权限模型和按调用方划分的数据隔离——然后即刻运行整套系统。没有独立的后端项目，没有部署步骤，没有商店提交。
+- **一步到位的全栈——这正是差异化所在。** 大多数 AI 应用构建工具（v0、Lovable、Bolt 等）给你的是一个仍需自己托管、维护的 *web 代码库*。MyApp 生成前端**以及**一个真实的 Python/Flask FaaS 后端——每个都拥有独立的 Postgres 数据库、按应用划分的权限模型和按调用方划分的数据隔离——然后即刻运行整套系统。没有独立的后端项目，没有部署步骤，没有商店提交。
 - **没有代码产物。** 交付物是一份运行在预编译客户端里的 JSON 配置，而不是一个代码库。没有东西要托管，没有东西要维护，也不会在下一次依赖升级时崩掉。描述一下改动就能更新应用；它下次加载时就已经在所有地方生效了。
 - **真正的跨平台。** *同一份* JSON-DSL 可在 iOS、Android、Web（已生产验证）、macOS（实验性）、Linux 和 Windows 上渲染。大多数"AI 应用"工具给你的是一个 Web 应用；这个给你的是原生的、无处不在的应用，只需一句描述。
 - **服务端驱动** —— 通过固定的、预编译的运行时边界下发 UI 和行为数据。参见 [App Store 合规说明](docs/APP_STORE_COMPLIANCE.md)。 <sub>(这份说明是很久以前写的，不确定现在是否 100% 合规；我会尽力尝试上架应用市场)</sub>
 - **AI 原生** —— DSL 设计得对 LLM 友好。内置的 AI 聊天通过三种可插拔的 agent 运行时（Claude Code、Codex、OpenCode）运行多个提供方（DeepSeek、MiniMax、带 GLM / Kimi 的 Volcengine 聚合器），并配有生成 playbook 和运行中的可视化自审环节，以保证产出可运行。
-- **开箱即用** —— 带推送的 IM、AI 代理、包注册表、命名空间、镜像、用户中心、环境切换——全部已接线在一起。不是"又一个把认证扔给你自己解决的低代码框架"。
+- **开箱即用** —— 带推送的 IM、AI 代理、包注册表、命名空间、镜像、环境切换——全部已接线在一起。不是"又一个把认证扔给你自己解决的低代码框架"。
 - **可自托管** —— `myapp-ctl deploy` 从一个主机级 CLI 管理后端技术栈、agent 运行时、注册表、配置中心和服务密钥。
+
+---
+
+## 为什么会有这个项目——作者的话
+
+说实话，我很反感当下的 AI 狂热——没完没了的讨论、没完没了的营销。但无论我喜不喜欢，这股浪潮都不会退去。
+
+既然要拥抱 AI Coding，那就干脆做到底，而不是做一半。讽刺的是，这恰恰就是这个项目存在的原因。我的目标从来不是追风口，而是把这个想法推到逻辑的终点，然后问一句：**如果 AI 真的是开发的未来，一个真正 AI-first 的工作流应该是什么样子？**
+
+这个项目，就是我目前为止的答案。
 
 ---
 
@@ -215,7 +225,7 @@ myapp-ctl deploy --build
 这会在本地 / VPS 上启动 MyApp 后端技术栈：
 - JSON app Postgres + AI session Redis + App MinIO
 - Agent node + 隔离的 Ubuntu agent 运行时
-- App 后端 + AI worker + Registry + Config center + User center
+- App 后端 + AI worker + Registry + Config center
 
 部署后，客户端内置的**环境切换器**（在登录页点击品牌标识 7 次）可让你指向自己的技术栈。
 
@@ -290,7 +300,7 @@ flowchart TB
 
   Client --> Config["Config Center<br/>/api/v1/public"]
   Client --> Auth["Backend Auth -> Supabase Auth"]
-  UserCenter["User Center"] --> Supabase["Supabase Admin API"]
+  Config --> Supabase["Supabase Admin API"]
 ```
 
 | 组件 | 位置 | 内容 |

@@ -120,13 +120,23 @@ La majoria d'apps JSON-DSL funcionen a totes les plataformes. Les funcions espec
 
 ## Per què és interessant?
 
-- **Full-stack d'un sol cop — el factor diferencial.** La majoria de constructors d'apps amb IA (v0, Lovable, Bolt, …) generen codi de *front-end* que encara has de connectar a un backend i desplegar tu mateix. MyApp genera el front-end **i** un backend FaaS Python/Flask real — cadascun amb la seva pròpia base de dades Postgres aïllada, model de permisos per app i aïllament de dades per cada qui crida — i després executa tot el conjunt a l'instant. Sense projecte de backend separat, sense pas de desplegament, sense enviament a l'store.
+- **Full-stack d'un sol cop — el factor diferencial.** La majoria de constructors d'apps amb IA (v0, Lovable, Bolt, …) et donen una *base de codi web* que encara has d'allotjar i mantenir. MyApp genera el front-end **i** un backend FaaS Python/Flask real — cadascun amb la seva pròpia base de dades Postgres aïllada, model de permisos per app i aïllament de dades per cada qui crida — i després executa tot el conjunt a l'instant. Sense projecte de backend separat, sense pas de desplegament, sense enviament a l'store.
 - **Sense artefacte de codi.** El que es lliura és una configuració JSON que s'executa en un client precompilat, no una base de codi. Res per allotjar, res per mantenir, res que es trenqui a la pròxima actualització de dependències. Actualitza una app descrivint el canvi; estarà en marxa a tot arreu el pròxim cop que es carregui.
 - **Genuïnament multiplataforma.** El *mateix* JSON-DSL es renderitza a iOS, Android, Web (provat en producció), macOS (experimental), Linux i Windows. La majoria d'eines d'«apps amb IA» et donen una app web; això et dóna nativa, a tot arreu, a partir d'una sola descripció.
 - **Dirigida pel servidor** — lliura UI i comportament com a dades a través d'una frontera de runtime fixa i precompilada. Vegeu les [notes de compliment de l'App Store](docs/APP_STORE_COMPLIANCE.md). <sub>(aquestes notes es van escriure fa temps i potser no estan 100% actualitzades; faré tot el possible per publicar-la a les botigues)</sub>
 - **Nativa d'IA** — el DSL està dissenyat per ser amigable amb els LLM. El xat amb IA inclòs executa múltiples proveïdors (DeepSeek, MiniMax, l'agregador Volcengine amb GLM / Kimi) a través de tres runtimes d'agent intercanviables (Claude Code, Codex, OpenCode), amb playbooks de generació i una passada d'auto-revisió visual durant l'execució per mantenir la sortida executable.
-- **Tot inclòs** — IM amb push, proxy d'IA, registre de paquets, espais de noms, replicació, centre d'usuaris, canvi d'entorn — tot connectat entre si. No «un altre framework low-code que defuig l'autenticació».
+- **Tot inclòs** — IM amb push, proxy d'IA, registre de paquets, espais de noms, replicació, canvi d'entorn — tot connectat entre si. No «un altre framework low-code que defuig l'autenticació».
 - **Auto-allotjable** — `myapp-ctl deploy` gestiona la pila de backend, el runtime d'agent, el registre, el centre de configuració i els secrets de servei des d'una sola CLI a nivell de host.
+
+---
+
+## Per què existeix això — una nota de l'autor
+
+Si he de ser sincer, no m'agrada gens el hype actual al voltant de la IA — la discussió interminable, el màrqueting interminable. Però, m'agradi o no, aquesta onada no desapareixerà.
+
+Així que, si hem d'abraçar l'AI coding, més val anar fins al final que quedar-se a mitges. Irònicament, és exactament per això que existeix aquest projecte. L'objectiu mai no ha estat perseguir la moda — era portar la idea fins a la seva conclusió lògica i preguntar: **si la IA és realment el futur del desenvolupament, com seria un flux de treball genuïnament AI-first?**
+
+Aquest projecte és la meva resposta fins ara.
 
 ---
 
@@ -216,7 +226,7 @@ myapp-ctl deploy --build
 Això arrenca la pila de backend de MyApp localment / en un VPS:
 - Postgres de les JSON apps + Redis de sessions d'IA + App MinIO
 - Agent node + runtime d'agent Ubuntu aïllat
-- Backend de l'app + AI worker + Registre + Centre de configuració + Centre d'usuaris
+- Backend de l'app + AI worker + Registre + Centre de configuració
 
 Després del desplegament, el **Commutador d'entorn** integrat del client (toca la marca 7 vegades a la pàgina d'inici de sessió) et permet apuntar a la teva pròpia pila.
 
@@ -293,7 +303,7 @@ flowchart TB
 
   Client --> Config["Config Center<br/>/api/v1/public"]
   Client --> Auth["Backend Auth -> Supabase Auth"]
-  UserCenter["User Center"] --> Supabase["Supabase Admin API"]
+  Config --> Supabase["Supabase Admin API"]
 ```
 
 | Component | On | Què |

@@ -120,13 +120,23 @@ A maioria das apps JSON-DSL funciona em todas as plataformas. As funcionalidades
 
 ## Porque é que isto é interessante?
 
-- **Full-stack de uma só vez — o diferenciador.** A maioria dos construtores de apps de IA (v0, Lovable, Bolt, …) gera código *front-end* que ainda tem de ligar a um backend e implementar você próprio. O MyApp gera o front-end **e** um backend FaaS Python/Flask real — cada um com a sua própria base de dados Postgres isolada, modelo de permissões por app e isolamento de dados por chamador — e depois executa tudo instantaneamente. Sem projeto de backend separado, sem etapa de implementação, sem submissão à store.
+- **Full-stack de uma só vez — o diferenciador.** A maioria dos construtores de apps de IA (v0, Lovable, Bolt, …) dá-lhe uma *base de código web* que ainda tem de alojar e manter você próprio. O MyApp gera o front-end **e** um backend FaaS Python/Flask real — cada um com a sua própria base de dados Postgres isolada, modelo de permissões por app e isolamento de dados por chamador — e depois executa tudo instantaneamente. Sem projeto de backend separado, sem etapa de implementação, sem submissão à store.
 - **Sem artefacto de código.** O entregável é uma configuração JSON a correr num cliente pré-compilado, não uma codebase. Nada para alojar, nada para manter, nada que se parta na próxima atualização de dependências. Atualize uma app descrevendo a alteração; fica a correr em todo o lado da próxima vez que carregar.
 - **Genuinamente multiplataforma.** O *mesmo* JSON-DSL renderiza em iOS, Android, Web (testado em produção), macOS (experimental), Linux e Windows. A maioria das ferramentas de «apps de IA» dá-lhe uma app web; isto dá-lhe nativo, em todo o lado, a partir de uma única descrição.
 - **Orientado por servidor** — entregue UI e dados de comportamento através de uma fronteira de runtime fixa e pré-compilada. Veja as [notas de conformidade com a App Store](docs/APP_STORE_COMPLIANCE.md). <sub>(estas notas foram escritas há algum tempo e podem não estar 100% atualizadas; farei o possível para publicá-la nas lojas)</sub>
 - **Nativo de IA** — o DSL foi concebido para ser amigável a LLMs. O chat de IA incluído executa vários fornecedores (DeepSeek, MiniMax, agregador Volcengine com GLM / Kimi) através de três runtimes de agente plugáveis (Claude Code, Codex, OpenCode), com playbooks de geração e uma passagem de auto-revisão visual em execução para manter o output executável.
-- **Tudo incluído** — IM com push, proxy de IA, registo de pacotes, namespaces, espelhamento, centro de utilizadores, troca de ambientes — tudo interligado. Não é «mais uma framework low-code que despacha a autenticação».
+- **Tudo incluído** — IM com push, proxy de IA, registo de pacotes, namespaces, espelhamento, troca de ambientes — tudo interligado. Não é «mais uma framework low-code que despacha a autenticação».
 - **Auto-hospedável** — `myapp-ctl deploy` gere a stack de backend, o runtime de agente, o registo, o centro de configuração e os segredos de serviço a partir de uma única CLI de nível de host.
+
+---
+
+## Porque é que isto existe — uma nota do autor
+
+Para ser honesto, não gosto do hype atual à volta da IA — a discussão interminável, o marketing interminável. Mas, quer eu goste quer não, esta onda não vai desaparecer.
+
+Por isso, já que vamos abraçar o AI coding, mais vale ir até ao fim em vez de ficar a meio caminho. Ironicamente, é exatamente por isso que este projeto existe. O objetivo nunca foi correr atrás da moda — foi levar a ideia até à sua conclusão lógica e perguntar: **se a IA é mesmo o futuro do desenvolvimento, como seria um workflow verdadeiramente AI-first?**
+
+Este projeto é a minha resposta até agora.
 
 ---
 
@@ -216,7 +226,7 @@ myapp-ctl deploy --build
 Isto arranca a stack de backend do MyApp localmente / num VPS:
 - Postgres da JSON app + Redis de sessões de IA + App MinIO
 - Agent node + runtime de agente Ubuntu isolado
-- Backend da app + worker de IA + Registry + centro de configuração + centro de utilizadores
+- Backend da app + worker de IA + Registry + centro de configuração
 
 Após a implementação, o **Trocador de Ambientes** integrado no cliente (toque na marca 7 vezes na página de login) permite-lhe apontar para a sua própria stack.
 
@@ -293,7 +303,7 @@ flowchart TB
 
   Client --> Config["Config Center<br/>/api/v1/public"]
   Client --> Auth["Backend Auth -> Supabase Auth"]
-  UserCenter["User Center"] --> Supabase["Supabase Admin API"]
+  Config --> Supabase["Supabase Admin API"]
 ```
 
 | Componente | Onde | O quê |

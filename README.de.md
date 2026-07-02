@@ -120,13 +120,23 @@ Die meisten JSON-DSL-Apps funktionieren plattformübergreifend. Plattformspezifi
 
 ## Warum ist das interessant?
 
-- **Full-Stack in einem Schritt — der entscheidende Unterschied.** Die meisten KI-App-Builder (v0, Lovable, Bolt, …) generieren *Frontend*-Code, den du immer noch an ein Backend anbinden und selbst deployen musst. MyApp generiert das Frontend **und** ein echtes Python/Flask-FaaS-Backend — jeweils mit einer eigenen isolierten Postgres-Datenbank, einem App-spezifischen Berechtigungsmodell und Datenisolierung pro Aufrufer — und führt dann das Ganze sofort aus. Kein separates Backend-Projekt, kein Deploy-Schritt, keine Store-Einreichung.
+- **Full-Stack in einem Schritt — der entscheidende Unterschied.** Die meisten KI-App-Builder (v0, Lovable, Bolt, …) geben dir eine *Web-Codebasis*, die du immer noch selbst hosten und warten musst. MyApp generiert das Frontend **und** ein echtes Python/Flask-FaaS-Backend — jeweils mit einer eigenen isolierten Postgres-Datenbank, einem App-spezifischen Berechtigungsmodell und Datenisolierung pro Aufrufer — und führt dann das Ganze sofort aus. Kein separates Backend-Projekt, kein Deploy-Schritt, keine Store-Einreichung.
 - **Kein Code-Artefakt.** Das Lieferergebnis ist eine JSON-Konfiguration, die in einem vorkompilierten Client läuft, keine Codebasis. Nichts zu hosten, nichts zu warten, nichts, das beim nächsten Dependency-Update kaputtgeht. Aktualisiere eine App, indem du die Änderung beschreibst; sie ist beim nächsten Laden überall live.
 - **Echt plattformübergreifend.** *Dasselbe* JSON-DSL rendert auf iOS, Android, Web (produktionserprobt), macOS (experimentell), Linux und Windows. Die meisten „KI-App"-Tools geben dir eine Web-App; dies gibt dir nativ, überall, aus einer einzigen Beschreibung.
 - **Server-driven** — liefere UI und Verhalten als Daten durch eine feste, vorkompilierte Laufzeitgrenze. Siehe [Hinweise zur App-Store-Konformität](docs/APP_STORE_COMPLIANCE.md). <sub>(diese Hinweise sind schon älter und womöglich nicht mehr zu 100 % aktuell; ich gebe mein Bestes, die App in die Stores zu bringen)</sub>
 - **KI-nativ** — die DSL ist darauf ausgelegt, LLM-freundlich zu sein. Der enthaltene KI-Chat betreibt mehrere Anbieter (DeepSeek, MiniMax, Volcengine-Aggregator mit GLM / Kimi) über drei austauschbare Agent-Laufzeitumgebungen (Claude Code, Codex, OpenCode) — mit Generierungs-Playbooks und einer visuellen Selbstüberprüfung während des Laufs, damit die Ausgabe lauffähig bleibt.
-- **Batteries included** — IM mit Push, KI-Proxy, Paket-Registry, Namespaces, Spiegelung, Nutzerzentrum, Umgebungswechsel — alles miteinander verdrahtet. Nicht „noch ein Low-Code-Framework, das sich um Auth herumdrückt".
+- **Batteries included** — IM mit Push, KI-Proxy, Paket-Registry, Namespaces, Spiegelung, Umgebungswechsel — alles miteinander verdrahtet. Nicht „noch ein Low-Code-Framework, das sich um Auth herumdrückt".
 - **Selbst hostbar** — `myapp-ctl deploy` verwaltet den Backend-Stack, die Agent-Laufzeitumgebung, die Registry, das Config-Center und die Service-Secrets über eine einzige CLI auf Host-Ebene.
+
+---
+
+## Warum es dieses Projekt gibt — ein Wort des Autors
+
+Ganz ehrlich: Ich mag den heutigen KI-Hype nicht — die endlosen Diskussionen, das endlose Marketing. Aber ob es mir gefällt oder nicht, diese Welle geht nicht wieder weg.
+
+Wenn wir uns also schon auf KI-Coding einlassen, dann können wir es genauso gut ganz durchziehen, statt es nur halb zu machen. Ironischerweise ist genau das der Grund, warum es dieses Projekt gibt. Das Ziel war nie, dem Trend hinterherzulaufen — sondern die Idee bis zu ihrem logischen Ende zu treiben und zu fragen: **Wenn KI tatsächlich die Zukunft der Softwareentwicklung ist, wie sähe dann ein Workflow aus, der wirklich AI-first ist?**
+
+Dieses Projekt ist meine bisherige Antwort.
 
 ---
 
@@ -216,7 +226,7 @@ myapp-ctl deploy --build
 Dies startet den MyApp-Backend-Stack lokal / auf einem VPS:
 - JSON-App-Postgres + KI-Session-Redis + App-MinIO
 - Agent-Node + isolierte Ubuntu-Agent-Laufzeitumgebung
-- App-Backend + KI-Worker + Registry + Config-Center + User-Center
+- App-Backend + KI-Worker + Registry + Config-Center
 
 Nach dem Deploy lässt dich der eingebaute **Umgebungswechsler** des Clients (7-mal auf das Markenlogo auf der Login-Seite tippen) auf deinen eigenen Stack zeigen.
 
@@ -293,7 +303,7 @@ flowchart TB
 
   Client --> Config["Config Center<br/>/api/v1/public"]
   Client --> Auth["Backend Auth -> Supabase Auth"]
-  UserCenter["User Center"] --> Supabase["Supabase Admin API"]
+  Config --> Supabase["Supabase Admin API"]
 ```
 
 | Komponente | Wo | Was |
