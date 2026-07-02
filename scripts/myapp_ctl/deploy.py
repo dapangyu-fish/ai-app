@@ -1597,44 +1597,6 @@ def _demo_jwt(email: str, password: str) -> str:
         return ""
 
 
-def _ensure_demo_templates() -> None:
-    """把仓库 templates/*.json 幂等发布进本机 registry（demo 依赖 common-ui 等库包；市场非空）。"""
-    src = Path(str(_cfg().get("paths", {}).get("source") or "")) / "templates"
-    token = _parse_env(_secret_path("backend")).get("REGISTRY_ADMIN_TOKEN") or ""
-    if not src.is_dir() or not token:
-        print("demo 装配：templates 目录或 REGISTRY_ADMIN_TOKEN 缺失，跳过模板种子", file=sys.stderr)
-        return
-    base = _demo_registry_base()
-    deadline = time.time() + 60
-    while time.time() < deadline:
-        code, _ = _demo_http("GET", f"{base}/health", content_type="")
-        if code == 200:
-            break
-        time.sleep(2)
-    else:
-        print("demo 装配：registry 未就绪，跳过模板种子", file=sys.stderr)
-        return
-    published = existed = skipped = 0
-    # rglob：templates/ 子目录也算（如 gsy_flutter_demo/ 的 126 个页面包——launcher 的 lazy 依赖）
-    for f in sorted(src.rglob("*.json")):
-        try:
-            content = json.loads(f.read_text(encoding="utf-8"))
-        except ValueError:
-            skipped += 1
-            continue
-        if not isinstance(content, dict) or not (content.get("meta") or {}).get("name"):
-            skipped += 1
-            continue
-        code, _resp = _demo_http("POST", f"{base}/publish", token=token, body={"json_content": content})
-        if code == 200:
-            published += 1
-        elif code == 409:
-            existed += 1
-        else:
-            skipped += 1
-    print(f"+ registry templates: {published} published, {existed} existing, {skipped} skipped")
-
-
 def _demo_bundle_fingerprint(bundle_dir: Path) -> str:
     h = hashlib.sha256()
     for f in sorted(p for p in bundle_dir.iterdir() if p.is_file() and p.name != "seed.json"):
@@ -1760,7 +1722,7 @@ def _check_demo_image_consistency() -> None:
 
 
 def _ensure_demo_stack(names: list[str], *, dry_run: bool = False, skip: bool = False) -> int:
-    """非阻断：demo 账号 + registry 模板 + demo FaaS 服务组随部署自动就绪（开箱即用 demo）。"""
+    """非阻断：demo 账号 + demo FaaS 服务组随部署自动就绪（模板由运维手动发布，见 backend/migrate_templates.py）。"""
     if skip:
         print("+ demo 装配已跳过（--no-demo）")
         return 0
@@ -1771,10 +1733,9 @@ def _ensure_demo_stack(names: list[str], *, dry_run: bool = False, skip: bool = 
     try:
         email, password = _ensure_demo_account_secrets(dry_run=dry_run)
         if dry_run:
-            print("+ demo stack: would ensure account / registry templates / FaaS service groups")
+            print("+ demo stack: would ensure account / FaaS service groups")
             return 0
         uid = _ensure_demo_account(email, password)
-        _ensure_demo_templates()
         if uid:
             jwt = _demo_jwt(email, password)
             if jwt:
@@ -1793,7 +1754,6 @@ def cmd_demo(args) -> int:
     if action == "provision":
         email, password = _ensure_demo_account_secrets(dry_run=False)
         uid = _ensure_demo_account(email, password)
-        _ensure_demo_templates()
         if uid:
             jwt = _demo_jwt(email, password)
             if jwt:
