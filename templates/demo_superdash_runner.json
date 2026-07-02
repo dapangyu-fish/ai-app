@@ -582,11 +582,6 @@
                       "step_time": 0.042,
                       "loop": false
                     }
-                  },
-                  "render": {
-                    "shape": "rect",
-                    "color": "#FFFFFF33",
-                    "radius": 8
                   }
                 }
               },

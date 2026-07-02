@@ -794,7 +794,7 @@
             "type": "input",
             "placeholder": "请输入公司名称",
             "bind": "global.newCompany",
-            "prefixIcon": "business",
+            "prefixIcon": "people",
             "style": {
               "borderRadius": 10,
               "fontSize": 16

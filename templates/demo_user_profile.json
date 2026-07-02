@@ -332,7 +332,7 @@
                     "type": "button",
                     "label": "拍照",
                     "variant": "text",
-                    "icon": "camera_alt",
+                    "icon": "camera",
                     "action": {
                       "type": "call",
                       "call": "@global.takeAvatar",
@@ -343,7 +343,7 @@
                     "type": "button",
                     "label": "相册",
                     "variant": "text",
-                    "icon": "photo_library",
+                    "icon": "photo",
                     "action": {
                       "type": "call",
                       "call": "@global.changeAvatar",

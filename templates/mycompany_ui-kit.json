@@ -1,4 +1,5 @@
 {
+  "dsl": "3.3",
   "meta": {
     "name": "mycompany/ui-kit",
     "version": "1.0.0",

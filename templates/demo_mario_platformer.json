@@ -4948,66 +4948,10 @@
                             },
                             "then": [
                               {
-                                "call": "@debug.log",
+                                "call": "@set",
                                 "args": {
-                                  "tag": "MARIO_KOOPA",
-                                  "message": "koopa_presence",
-                                  "data": {
-                                    "exists": {
-                                      "call": "@entity.exists",
-                                      "args": {
-                                        "id": "enemy_98"
-                                      }
-                                    },
-                                    "playerX": {
-                                      "var": "entities.player.x"
-                                    },
-                                    "activationX": {
-                                      "+": [
-                                        {
-                                          "var": "entities.player.x"
-                                        },
-                                        {
-                                          "var": "vars.enemy_activation_ahead"
-                                        }
-                                      ]
-                                    },
-                                    "x": {
-                                      "call": "@entity.get",
-                                      "args": {
-                                        "id": "enemy_98",
-                                        "field": "x"
-                                      }
-                                    },
-                                    "y": {
-                                      "call": "@entity.get",
-                                      "args": {
-                                        "id": "enemy_98",
-                                        "field": "y"
-                                      }
-                                    },
-                                    "vx": {
-                                      "call": "@entity.get",
-                                      "args": {
-                                        "id": "enemy_98",
-                                        "field": "vx"
-                                      }
-                                    },
-                                    "vy": {
-                                      "call": "@entity.get",
-                                      "args": {
-                                        "id": "enemy_98",
-                                        "field": "vy"
-                                      }
-                                    },
-                                    "kind": {
-                                      "call": "@entity.get",
-                                      "args": {
-                                        "id": "enemy_98",
-                                        "field": "state.kind"
-                                      }
-                                    }
-                                  }
+                                  "key": "global._dbg",
+                                  "value": ""
                                 }
                               }
                             ]
@@ -5288,43 +5232,10 @@
                                   },
                                   "then": [
                                     {
-                                      "call": "@debug.log",
+                                      "call": "@set",
                                       "args": {
-                                        "tag": "MARIO_ACTORS",
-                                        "message": "enemy_step",
-                                        "data": {
-                                          "id": "{{ vars._enemy_id }}",
-                                          "step": "{{ vars._enemy_step_ok }}",
-                                          "x": {
-                                            "call": "@entity.get",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "x"
-                                            }
-                                          },
-                                          "y": {
-                                            "call": "@entity.get",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "y"
-                                            }
-                                          },
-                                          "vx": {
-                                            "call": "@entity.get",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "vx"
-                                            }
-                                          },
-                                          "vy": {
-                                            "call": "@entity.get",
-                                            "args": {
-                                              "id": "{{ vars._enemy_id }}",
-                                              "field": "vy"
-                                            }
-                                          },
-                                          "dir": "{{ vars._enemy_dir }}"
-                                        }
+                                        "key": "global._dbg",
+                                        "value": ""
                                       }
                                     }
                                   ]
@@ -6201,27 +6112,6 @@
                                 "assign": "vars._qblock_content"
                               },
                               {
-                                "call": "@debug.log",
-                                "args": {
-                                  "enabled": "{{ vars.debug_powerup }}",
-                                  "tag": "MARIO_POWERUP",
-                                  "message": "qblock_hit",
-                                  "data": {
-                                    "objectId": "{{ entities.player.yCollision.objectId }}",
-                                    "collisionType": "{{ entities.player.yCollision.type }}",
-                                    "content": "{{ vars._qblock_content }}",
-                                    "hitX": "{{ entities.player.yCollision.x }}",
-                                    "hitY": "{{ entities.player.yCollision.y }}",
-                                    "powerupExists": {
-                                      "call": "@entity.exists",
-                                      "args": {
-                                        "id": "powerup_{{ entities.player.yCollision.objectId }}"
-                                      }
-                                    }
-                                  }
-                                }
-                              },
-                              {
                                 "call": "@if",
                                 "args": {
                                   "cond": {
@@ -6457,65 +6347,6 @@
                                         "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                         "field": "state.opacity",
                                         "value": 1
-                                      }
-                                    },
-                                    {
-                                      "call": "@debug.log",
-                                      "args": {
-                                        "enabled": "{{ vars.debug_powerup }}",
-                                        "tag": "MARIO_POWERUP",
-                                        "message": "red_powerup_activated",
-                                        "data": {
-                                          "id": "powerup_{{ entities.player.yCollision.objectId }}",
-                                          "exists": {
-                                            "call": "@entity.exists",
-                                            "args": {
-                                              "id": "powerup_{{ entities.player.yCollision.objectId }}"
-                                            }
-                                          },
-                                          "x": {
-                                            "call": "@entity.get",
-                                            "args": {
-                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
-                                              "field": "x"
-                                            }
-                                          },
-                                          "y": {
-                                            "call": "@entity.get",
-                                            "args": {
-                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
-                                              "field": "y"
-                                            }
-                                          },
-                                          "powerupKind": {
-                                            "call": "@entity.get",
-                                            "args": {
-                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
-                                              "field": "state.kind"
-                                            }
-                                          },
-                                          "revealing": {
-                                            "call": "@entity.get",
-                                            "args": {
-                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
-                                              "field": "state.revealing"
-                                            }
-                                          },
-                                          "targetY": {
-                                            "call": "@entity.get",
-                                            "args": {
-                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
-                                              "field": "state.targetY"
-                                            }
-                                          },
-                                          "opacity": {
-                                            "call": "@entity.get",
-                                            "args": {
-                                              "id": "powerup_{{ entities.player.yCollision.objectId }}",
-                                              "field": "state.opacity"
-                                            }
-                                          }
-                                        }
                                       }
                                     },
                                     {
@@ -7317,16 +7148,10 @@
                                         },
                                         "then": [
                                           {
-                                            "call": "@debug.log",
+                                            "call": "@set",
                                             "args": {
-                                              "tag": "MARIO_POWERUP",
-                                              "message": "powerup_tick",
-                                              "data": {
-                                                "id": "{{ vars._powerup_id }}",
-                                                "y": "{{ vars._powerup_live_y }}",
-                                                "targetY": "{{ vars._powerup_target_y }}",
-                                                "revealTime": "{{ vars._powerup_reveal_time }}"
-                                              }
+                                              "key": "global._dbg",
+                                              "value": ""
                                             }
                                           }
                                         ]
@@ -7387,33 +7212,6 @@
                                               "id": "{{ vars._powerup_id }}",
                                               "field": "priority",
                                               "value": 35
-                                            }
-                                          },
-                                          {
-                                            "call": "@debug.log",
-                                            "args": {
-                                              "enabled": "{{ vars.debug_powerup }}",
-                                              "tag": "MARIO_POWERUP",
-                                              "message": "powerup_revealed",
-                                              "data": {
-                                                "id": "{{ vars._powerup_id }}",
-                                                "powerupKind": "{{ vars._powerup_kind }}",
-                                                "x": {
-                                                  "call": "@entity.get",
-                                                  "args": {
-                                                    "id": "{{ vars._powerup_id }}",
-                                                    "field": "x"
-                                                  }
-                                                },
-                                                "y": {
-                                                  "call": "@entity.get",
-                                                  "args": {
-                                                    "id": "{{ vars._powerup_id }}",
-                                                    "field": "y"
-                                                  }
-                                                },
-                                                "targetY": "{{ vars._powerup_target_y }}"
-                                              }
                                             }
                                           },
                                           {
@@ -7664,44 +7462,10 @@
                                               },
                                               "then": [
                                                 {
-                                                  "call": "@debug.log",
+                                                  "call": "@set",
                                                   "args": {
-                                                    "tag": "MARIO_ACTORS",
-                                                    "message": "powerup_step",
-                                                    "data": {
-                                                      "id": "{{ vars._powerup_id }}",
-                                                      "step": "{{ vars._powerup_step_ok }}",
-                                                      "kind": "{{ vars._powerup_kind }}",
-                                                      "x": {
-                                                        "call": "@entity.get",
-                                                        "args": {
-                                                          "id": "{{ vars._powerup_id }}",
-                                                          "field": "x"
-                                                        }
-                                                      },
-                                                      "y": {
-                                                        "call": "@entity.get",
-                                                        "args": {
-                                                          "id": "{{ vars._powerup_id }}",
-                                                          "field": "y"
-                                                        }
-                                                      },
-                                                      "vx": {
-                                                        "call": "@entity.get",
-                                                        "args": {
-                                                          "id": "{{ vars._powerup_id }}",
-                                                          "field": "vx"
-                                                        }
-                                                      },
-                                                      "vy": {
-                                                        "call": "@entity.get",
-                                                        "args": {
-                                                          "id": "{{ vars._powerup_id }}",
-                                                          "field": "vy"
-                                                        }
-                                                      },
-                                                      "dir": "{{ vars._powerup_dir }}"
-                                                    }
+                                                    "key": "global._dbg",
+                                                    "value": ""
                                                   }
                                                 }
                                               ]

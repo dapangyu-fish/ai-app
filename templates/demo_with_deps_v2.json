@@ -110,7 +110,7 @@
             "type": "button",
             "label": "打招呼",
             "variant": "filled",
-            "icon": "waving_hand",
+            "icon": "emoji",
             "action": {
               "type": "call",
               "call": "@global.greet"
@@ -128,7 +128,7 @@
             "type": "button",
             "label": "生成随机数",
             "variant": "outlined",
-            "icon": "casino",
+            "icon": "auto_awesome",
             "action": {
               "type": "call",
               "call": "@global.generateRandom"

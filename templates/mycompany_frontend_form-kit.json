@@ -1,6 +1,7 @@
 {
+  "dsl": "3.3",
   "meta": {
-    "name": "mycompany/frontend/form-kit",
+    "name": "mycompany/form-kit",
     "version": "1.0.0",
     "type": "library",
     "description": "Form Components Kit",

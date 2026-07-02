@@ -1,6 +1,6 @@
 {
   "dsl": "3.3",
-  "appid": "push-puzzle-sokoban-2026",
+  "appid": "83cbe156-a3e8-5e93-b70e-61129ffa4b6e",
   "meta": {
     "name": "push-puzzle",
     "displayName": "Push Puzzle (Sokoban)",
@@ -16,14 +16,35 @@
     "variables": {
       "currentLevel": 0,
       "moves": 0,
-      "bestMoves": [999, 999, 999, 999, 999, 999, 999, 999, 999, 999, 999],
+      "bestMoves": [
+        999,
+        999,
+        999,
+        999,
+        999,
+        999,
+        999,
+        999,
+        999,
+        999,
+        999
+      ],
       "_choice": null
     },
     "functions": {
       "resetLevel": {
         "logic": [
-          {"call": "@set", "args": {"var": "global.moves", "value": 0}},
-          {"call": "@flame_game_reset", "args": {}}
+          {
+            "call": "@set",
+            "args": {
+              "var": "global.moves",
+              "value": 0
+            }
+          },
+          {
+            "call": "@flame_game_reset",
+            "args": {}
+          }
         ]
       },
       "nextLevel": {
@@ -31,17 +52,67 @@
           {
             "call": "@if",
             "args": {
-              "condition": {"<": [{"var": "global.currentLevel"}, 10]},
+              "condition": {
+                "<": [
+                  {
+                    "var": "global.currentLevel"
+                  },
+                  10
+                ]
+              },
               "then": [
-                {"call": "@set", "args": {"var": "global.currentLevel", "value": {"+": [{"var": "global.currentLevel"}, 1]}}},
-                {"call": "@set", "args": {"var": "global.moves", "value": 0}},
-                {"call": "@flame_game_reset", "args": {}}
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.currentLevel",
+                    "value": {
+                      "+": [
+                        {
+                          "var": "global.currentLevel"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.moves",
+                    "value": 0
+                  }
+                },
+                {
+                  "call": "@flame_game_reset",
+                  "args": {}
+                }
               ],
               "else": [
-                {"call": "@show_dialog", "args": {"title": "🎉 All Levels Complete!", "message": "Congratulations! You've mastered all 11 levels!"}},
-                {"call": "@set", "args": {"var": "global.currentLevel", "value": 0}},
-                {"call": "@set", "args": {"var": "global.moves", "value": 0}},
-                {"call": "@flame_game_reset", "args": {}}
+                {
+                  "call": "@show_dialog",
+                  "args": {
+                    "title": "🎉 All Levels Complete!",
+                    "message": "Congratulations! You've mastered all 11 levels!"
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.currentLevel",
+                    "value": 0
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.moves",
+                    "value": 0
+                  }
+                },
+                {
+                  "call": "@flame_game_reset",
+                  "args": {}
+                }
               ]
             }
           }
@@ -52,11 +123,40 @@
           {
             "call": "@if",
             "args": {
-              "condition": {">": [{"var": "global.currentLevel"}, 0]},
+              "condition": {
+                ">": [
+                  {
+                    "var": "global.currentLevel"
+                  },
+                  0
+                ]
+              },
               "then": [
-                {"call": "@set", "args": {"var": "global.currentLevel", "value": {"-": [{"var": "global.currentLevel"}, 1]}}},
-                {"call": "@set", "args": {"var": "global.moves", "value": 0}},
-                {"call": "@flame_game_reset", "args": {}}
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.currentLevel",
+                    "value": {
+                      "-": [
+                        {
+                          "var": "global.currentLevel"
+                        },
+                        1
+                      ]
+                    }
+                  }
+                },
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": "global.moves",
+                    "value": 0
+                  }
+                },
+                {
+                  "call": "@flame_game_reset",
+                  "args": {}
+                }
               ]
             }
           }
@@ -67,9 +167,40 @@
           {
             "call": "@if",
             "args": {
-              "condition": {"<": [{"var": "global.moves"}, {"at": [{"var": "global.bestMoves"}, {"var": "global.currentLevel"}]}]},
+              "condition": {
+                "<": [
+                  {
+                    "var": "global.moves"
+                  },
+                  {
+                    "at": [
+                      {
+                        "var": "global.bestMoves"
+                      },
+                      {
+                        "var": "global.currentLevel"
+                      }
+                    ]
+                  }
+                ]
+              },
               "then": [
-                {"call": "@set", "args": {"var": {"cat": ["global.bestMoves.", {"to_string": {"var": "global.currentLevel"}}]}, "value": "{{ global.moves }}"}}
+                {
+                  "call": "@set",
+                  "args": {
+                    "var": {
+                      "cat": [
+                        "global.bestMoves.",
+                        {
+                          "to_string": {
+                            "var": "global.currentLevel"
+                          }
+                        }
+                      ]
+                    },
+                    "value": "{{ global.moves }}"
+                  }
+                }
               ]
             }
           },
@@ -79,8 +210,16 @@
               "title": "🎯 Level Complete!",
               "message": "Moves: {{ global.moves }}\nBest: {{ global.bestMoves[global.currentLevel] }}",
               "buttons": [
-                {"label": "Next Level", "value": "next", "style": "primary"},
-                {"label": "Restart", "value": "restart", "style": "text"}
+                {
+                  "label": "Next Level",
+                  "value": "next",
+                  "style": "primary"
+                },
+                {
+                  "label": "Restart",
+                  "value": "restart",
+                  "style": "text"
+                }
               ]
             },
             "assign": "global._choice"
@@ -88,10 +227,40 @@
           {
             "call": "@if",
             "args": {
-              "condition": {"==": [{"var": "global._choice"}, "next"]},
-              "then": [{"call": "@global.nextLevel", "args": {}}],
+              "condition": {
+                "==": [
+                  {
+                    "var": "global._choice"
+                  },
+                  "next"
+                ]
+              },
+              "then": [
+                {
+                  "call": "@global.nextLevel",
+                  "args": {}
+                }
+              ],
               "else": [
-                {"call": "@if", "args": {"condition": {"==": [{"var": "global._choice"}, "restart"]}, "then": [{"call": "@global.resetLevel", "args": {}}]}}
+                {
+                  "call": "@if",
+                  "args": {
+                    "condition": {
+                      "==": [
+                        {
+                          "var": "global._choice"
+                        },
+                        "restart"
+                      ]
+                    },
+                    "then": [
+                      {
+                        "call": "@global.resetLevel",
+                        "args": {}
+                      }
+                    ]
+                  }
+                }
               ]
             }
           }
@@ -109,7 +278,16 @@
           "centerTitle": true,
           "backgroundColor": "#2C3E50",
           "color": "#FFFFFF",
-          "actions": [{"icon": "replay", "action": {"type": "call", "call": "@global.resetLevel", "args": {}}}]
+          "actions": [
+            {
+              "icon": "replay",
+              "action": {
+                "type": "call",
+                "call": "@global.resetLevel",
+                "args": {}
+              }
+            }
+          ]
         },
         "layout": "column",
         "padding": 0,
@@ -121,34 +299,163 @@
             "layout": "row",
             "crossAxisAlignment": "center",
             "children": [
-              {"type": "text", "value": "Level {{ global.currentLevel + 1 }}/11", "style": {"fontSize": 16, "color": "#FFFFFF", "fontWeight": "bold"}},
-              {"type": "spacer", "position": {"type": "flex", "flex": 1}},
-              {"type": "text", "value": "Moves: {{ global.moves }}", "style": {"fontSize": 16, "color": "#FFFFFF"}},
-              {"type": "spacer", "width": 16},
-              {"type": "text", "value": "Best: {{ global.bestMoves[global.currentLevel] }}", "style": {"fontSize": 14, "color": "#F1C40F"}, "visible": {"<": [{"at": [{"var": "global.bestMoves"}, {"var": "global.currentLevel"}]}, 999]}}
+              {
+                "type": "text",
+                "value": "Level {{ global.currentLevel + 1 }}/11",
+                "style": {
+                  "fontSize": 16,
+                  "color": "#FFFFFF",
+                  "fontWeight": "bold"
+                }
+              },
+              {
+                "type": "spacer",
+                "position": {
+                  "type": "flex",
+                  "flex": 1
+                }
+              },
+              {
+                "type": "text",
+                "value": "Moves: {{ global.moves }}",
+                "style": {
+                  "fontSize": 16,
+                  "color": "#FFFFFF"
+                }
+              },
+              {
+                "type": "spacer",
+                "width": 16
+              },
+              {
+                "type": "text",
+                "value": "Best: {{ global.bestMoves[global.currentLevel] }}",
+                "style": {
+                  "fontSize": 14,
+                  "color": "#F1C40F"
+                },
+                "visible": {
+                  "<": [
+                    {
+                      "at": [
+                        {
+                          "var": "global.bestMoves"
+                        },
+                        {
+                          "var": "global.currentLevel"
+                        }
+                      ]
+                    },
+                    999
+                  ]
+                }
+              }
             ]
           },
           {
             "type": "expanded",
             "child": {
               "type": "flame_game",
-              "world": {"kind": "pixel", "bg": "#7A8A8C"},
-              "viewport": {"width": 800, "height": 600, "fit": "contain"},
-              "overlay": {"game_over": false},
+              "world": {
+                "kind": "pixel",
+                "bg": "#7A8A8C"
+              },
+              "viewport": {
+                "width": 800,
+                "height": 600,
+                "fit": "contain"
+              },
+              "overlay": {
+                "game_over": false
+              },
               "vars": {
                 "cellSize": 64,
                 "levelData": [
-                  ["########", "# .. p #", "# oo   #", "#      #", "########"],
-                  ["#####    ", "#   #####", "#    op.#", "#########"],
-                  ["########", "#   #  #", "# p    #", " # ###.#", " # o   #", " #   ###", " #####"],
-                  ["#####   ", "#.  ##  ", "#    ## ", "##    ##", " ##  o #", "  ##  p#", "   #####"],
-                  ["#####", "# p.#", "# o # ", "#.o #", "#####"],
-                  ["#####   ", "#.. ##  ", "#    ## ", "##    ##", " ## oo #", "  ##  p#", "   #####"],
-                  ["############", "#     ## p #", "#   o .. o #", "############"],
-                  [" ####  ", "##  ## ", "#po  ##", "# o  .#", "###   #", "  ## .#", "   ####"],
-                  ["#####  ", "#   ## ", "#  o ##", "# .op.#", "#######"],
-                  ["#####  ", "#   ## ", "#  o ##", "##.op.#", " ######"],
-                  ["#######################################", "#   p                       o.        #", "#      #### #  ##  #    #    #        #", "#      #    #  # # #   # #   #        #", "#      ###  #  #  ##  #####  #        #", "#      #    #  #   # #     # #####    #", "#######################################"]
+                  [
+                    "########",
+                    "# .. p #",
+                    "# oo   #",
+                    "#      #",
+                    "########"
+                  ],
+                  [
+                    "#####    ",
+                    "#   #####",
+                    "#    op.#",
+                    "#########"
+                  ],
+                  [
+                    "########",
+                    "#   #  #",
+                    "# p    #",
+                    " # ###.#",
+                    " # o   #",
+                    " #   ###",
+                    " #####"
+                  ],
+                  [
+                    "#####   ",
+                    "#.  ##  ",
+                    "#    ## ",
+                    "##    ##",
+                    " ##  o #",
+                    "  ##  p#",
+                    "   #####"
+                  ],
+                  [
+                    "#####",
+                    "# p.#",
+                    "# o # ",
+                    "#.o #",
+                    "#####"
+                  ],
+                  [
+                    "#####   ",
+                    "#.. ##  ",
+                    "#    ## ",
+                    "##    ##",
+                    " ## oo #",
+                    "  ##  p#",
+                    "   #####"
+                  ],
+                  [
+                    "############",
+                    "#     ## p #",
+                    "#   o .. o #",
+                    "############"
+                  ],
+                  [
+                    " ####  ",
+                    "##  ## ",
+                    "#po  ##",
+                    "# o  .#",
+                    "###   #",
+                    "  ## .#",
+                    "   ####"
+                  ],
+                  [
+                    "#####  ",
+                    "#   ## ",
+                    "#  o ##",
+                    "# .op.#",
+                    "#######"
+                  ],
+                  [
+                    "#####  ",
+                    "#   ## ",
+                    "#  o ##",
+                    "##.op.#",
+                    " ######"
+                  ],
+                  [
+                    "#######################################",
+                    "#   p                       o.        #",
+                    "#      #### #  ##  #    #    #        #",
+                    "#      #    #  # # #   # #   #        #",
+                    "#      ###  #  #  ##  #####  #        #",
+                    "#      #    #  #   # #     # #####    #",
+                    "#######################################"
+                  ]
                 ],
                 "playerX": 0,
                 "playerY": 0,
@@ -162,29 +469,77 @@
               },
               "init": {
                 "logic": [
-                  {"call": "@set", "args": {"var": "vars.boxes", "value": []}},
-                  {"call": "@set", "args": {"var": "vars.goals", "value": []}},
-                  {"call": "@set", "args": {"var": "vars.walls", "value": []}},
-                  {"call": "@emit", "args": {"event": "parse_level", "data": {}}}
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.boxes",
+                      "value": []
+                    }
+                  },
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.goals",
+                      "value": []
+                    }
+                  },
+                  {
+                    "call": "@set",
+                    "args": {
+                      "var": "vars.walls",
+                      "value": []
+                    }
+                  },
+                  {
+                    "call": "@emit",
+                    "args": {
+                      "event": "parse_level",
+                      "data": {}
+                    }
+                  }
                 ]
               },
               "frame": {
-                "logic": [{"call": "@noop"}]
+                "logic": [
+                  {
+                    "call": "@noop"
+                  }
+                ]
               },
               "input": {
                 "swipe": [
-                  {"call": "@emit", "args": {"event": "player_move", "data": {"direction": "{{ event.direction }}"}}}
+                  {
+                    "call": "@emit",
+                    "args": {
+                      "event": "player_move",
+                      "data": {
+                        "direction": "{{ event.direction }}"
+                      }
+                    }
+                  }
                 ]
               },
               "on_parse_level": {
                 "type": "call",
                 "call": "@print",
-                "args": {"value": "Level parsed successfully"}
+                "args": {
+                  "value": "Level parsed successfully"
+                }
               },
               "on_player_move": {
                 "type": "call",
                 "call": "@set",
-                "args": {"var": "global.moves", "value": {"+": [{"var": "global.moves"}, 1]}}
+                "args": {
+                  "var": "global.moves",
+                  "value": {
+                    "+": [
+                      {
+                        "var": "global.moves"
+                      },
+                      1
+                    ]
+                  }
+                }
               },
               "on_win": {
                 "type": "call",
@@ -203,15 +558,91 @@
                 "type": "container",
                 "layout": "row",
                 "children": [
-                  {"type": "button", "label": "◀ Prev", "variant": "outlined", "style": {"textColor": "#FFFFFF", "borderRadius": 8}, "disabled": {"<=": [{"var": "global.currentLevel"}, 0]}, "action": {"type": "call", "call": "@global.prevLevel", "args": {}}},
-                  {"type": "spacer", "width": 8},
-                  {"type": "button", "label": "🔄 Reset", "variant": "outlined", "style": {"textColor": "#FFFFFF", "borderRadius": 8}, "action": {"type": "call", "call": "@global.resetLevel", "args": {}}},
-                  {"type": "spacer", "position": {"type": "flex", "flex": 1}},
-                  {"type": "button", "label": "Next ▶", "variant": "filled", "style": {"backgroundColor": "#27AE60", "textColor": "#FFFFFF", "borderRadius": 8}, "disabled": {">=": [{"var": "global.currentLevel"}, 10]}, "action": {"type": "call", "call": "@global.nextLevel", "args": {}}}
+                  {
+                    "type": "button",
+                    "label": "◀ Prev",
+                    "variant": "outlined",
+                    "style": {
+                      "textColor": "#FFFFFF",
+                      "borderRadius": 8
+                    },
+                    "disabled": {
+                      "<=": [
+                        {
+                          "var": "global.currentLevel"
+                        },
+                        0
+                      ]
+                    },
+                    "action": {
+                      "type": "call",
+                      "call": "@global.prevLevel",
+                      "args": {}
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "width": 8
+                  },
+                  {
+                    "type": "button",
+                    "label": "🔄 Reset",
+                    "variant": "outlined",
+                    "style": {
+                      "textColor": "#FFFFFF",
+                      "borderRadius": 8
+                    },
+                    "action": {
+                      "type": "call",
+                      "call": "@global.resetLevel",
+                      "args": {}
+                    }
+                  },
+                  {
+                    "type": "spacer",
+                    "position": {
+                      "type": "flex",
+                      "flex": 1
+                    }
+                  },
+                  {
+                    "type": "button",
+                    "label": "Next ▶",
+                    "variant": "filled",
+                    "style": {
+                      "backgroundColor": "#27AE60",
+                      "textColor": "#FFFFFF",
+                      "borderRadius": 8
+                    },
+                    "disabled": {
+                      ">=": [
+                        {
+                          "var": "global.currentLevel"
+                        },
+                        10
+                      ]
+                    },
+                    "action": {
+                      "type": "call",
+                      "call": "@global.nextLevel",
+                      "args": {}
+                    }
+                  }
                 ]
               },
-              {"type": "spacer", "height": 8},
-              {"type": "text", "value": "💡 Swipe to move • Push 📦 to 🎯 • # = wall, p = player, o = box, . = goal", "style": {"color": "#95A5A6", "fontSize": 12, "textAlign": "center"}}
+              {
+                "type": "spacer",
+                "height": 8
+              },
+              {
+                "type": "text",
+                "value": "💡 Swipe to move • Push 📦 to 🎯 • # = wall, p = player, o = box, . = goal",
+                "style": {
+                  "color": "#95A5A6",
+                  "fontSize": 12,
+                  "textAlign": "center"
+                }
+              }
             ]
           }
         ]

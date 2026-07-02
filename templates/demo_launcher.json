@@ -21,13 +21,11 @@
     "description": "用 launcher 组件库拼出来的三 tab 启动器 demo —— 本地 / 市场 / 设置。设成默认启动 App 就完全替代了原生主页。",
     "author": "fish"
   },
-
   "dependencies": {
     "launcher-my-apps": "^1.1.0",
     "launcher-market": "^1.1.0",
     "launcher-settings": "^1.1.0"
   },
-
   "global": {
     "variables": {},
     "i18n": {
@@ -561,13 +559,20 @@
       }
     }
   },
-
   "steps": [
-    { "call": "@launcher-my-apps.init", "args": {} },
-    { "call": "@launcher-market.init", "args": {} },
-    { "call": "@launcher-settings.init", "args": {} }
+    {
+      "call": "@launcher-my-apps.init",
+      "args": {}
+    },
+    {
+      "call": "@launcher-market.init",
+      "args": {}
+    },
+    {
+      "call": "@launcher-settings.init",
+      "args": {}
+    }
   ],
-
   "ui": {
     "screens": [
       {
@@ -576,7 +581,7 @@
         "tabs": [
           {
             "label": "{{ t('tabs.local') }}",
-            "icon": "apps",
+            "icon": "widgets",
             "title": "{{ t('tabs.local_title') }}",
             "children": [
               {
@@ -591,7 +596,7 @@
           },
           {
             "label": "{{ t('tabs.market') }}",
-            "icon": "store",
+            "icon": "shopping_cart",
             "title": "{{ t('tabs.market_title') }}",
             "children": [
               {

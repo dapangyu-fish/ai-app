@@ -659,7 +659,7 @@
             "type": "button",
             "label": "返回",
             "variant": "outlined",
-            "icon": "arrow_back",
+            "icon": "back",
             "action": {
               "type": "navigate",
               "screen": "home"

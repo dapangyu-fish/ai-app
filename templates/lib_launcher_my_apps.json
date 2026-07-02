@@ -20,9 +20,13 @@
     },
     "description": "可嵌入的'我的 APP'组件库——从本地 JSON-APP 列表里一键启动。",
     "author": "fish",
-    "exports": ["myAppsGrid", "init", "refresh", "deleteApp"]
+    "exports": [
+      "myAppsGrid",
+      "init",
+      "refresh",
+      "deleteApp"
+    ]
   },
-
   "global": {
     "variables": {
       "_lma": {
@@ -34,25 +38,41 @@
       "init": {
         "params": [],
         "logic": [
-          { "call": "@launcher-my-apps.refresh", "args": {} }
+          {
+            "call": "@launcher-my-apps.refresh",
+            "args": {}
+          }
         ]
       },
-
       "refresh": {
         "params": [],
         "logic": [
-          { "call": "@set", "args": { "var": "global._lma.loading", "value": true } },
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._lma.loading",
+              "value": true
+            }
+          },
           {
             "call": "@my_apps_list",
             "args": {},
             "assign": "global._lma.apps"
           },
-          { "call": "@set", "args": { "var": "global._lma.loading", "value": false } }
+          {
+            "call": "@set",
+            "args": {
+              "var": "global._lma.loading",
+              "value": false
+            }
+          }
         ]
       },
-
       "deleteApp": {
-        "params": ["fileName", "displayName"],
+        "params": [
+          "fileName",
+          "displayName"
+        ],
         "logic": [
           {
             "call": "@show_dialog",
@@ -65,13 +85,25 @@
           {
             "call": "@if",
             "args": {
-              "condition": { "==": [{ "var": "global._lma._confirm" }, true] },
+              "condition": {
+                "==": [
+                  {
+                    "var": "global._lma._confirm"
+                  },
+                  true
+                ]
+              },
               "then": [
                 {
                   "call": "@my_apps_delete",
-                  "args": { "fileName": "{{ params.fileName }}" }
+                  "args": {
+                    "fileName": "{{ params.fileName }}"
+                  }
                 },
-                { "call": "@launcher-my-apps.refresh", "args": {} }
+                {
+                  "call": "@launcher-my-apps.refresh",
+                  "args": {}
+                }
               ]
             }
           }
@@ -79,11 +111,12 @@
       }
     }
   },
-
   "ui": {
     "templates": {
       "myAppsGrid": {
-        "props": ["emptyText"],
+        "props": [
+          "emptyText"
+        ],
         "root": {
           "type": "list",
           "source": "{{ global._lma.apps }}",
@@ -121,14 +154,17 @@
                     "type": "center",
                     "child": {
                       "type": "icon",
-                      "name": "apps",
+                      "name": "widgets",
                       "size": 28,
                       "color": "#1976D2"
                     }
                   }
                 ]
               },
-              { "type": "spacer", "width": 12 },
+              {
+                "type": "spacer",
+                "width": 12
+              },
               {
                 "type": "expanded",
                 "child": {
@@ -146,11 +182,21 @@
                         "overflow": "ellipsis"
                       }
                     },
-                    { "type": "spacer", "height": 4 },
+                    {
+                      "type": "spacer",
+                      "height": 4
+                    },
                     {
                       "type": "text",
                       "value": "{{ loop.item.description }}",
-                      "visible": { "!=": [{ "var": "loop.item.description" }, ""] },
+                      "visible": {
+                        "!=": [
+                          {
+                            "var": "loop.item.description"
+                          },
+                          ""
+                        ]
+                      },
                       "style": {
                         "fontSize": 13,
                         "color": "#666666",
@@ -158,7 +204,10 @@
                         "overflow": "ellipsis"
                       }
                     },
-                    { "type": "spacer", "height": 6 },
+                    {
+                      "type": "spacer",
+                      "height": 6
+                    },
                     {
                       "type": "container",
                       "layout": "row",
@@ -166,7 +215,14 @@
                         {
                           "type": "text",
                           "value": "v{{ loop.item.version }}",
-                          "visible": { "!=": [{ "var": "loop.item.version" }, ""] },
+                          "visible": {
+                            "!=": [
+                              {
+                                "var": "loop.item.version"
+                              },
+                              ""
+                            ]
+                          },
                           "style": {
                             "fontSize": 11,
                             "color": "#999999"
@@ -175,7 +231,14 @@
                         {
                           "type": "text",
                           "value": "  ·  {{ loop.item.author }}",
-                          "visible": { "!=": [{ "var": "loop.item.author" }, ""] },
+                          "visible": {
+                            "!=": [
+                              {
+                                "var": "loop.item.author"
+                              },
+                              ""
+                            ]
+                          },
                           "style": {
                             "fontSize": 11,
                             "color": "#999999"
@@ -186,7 +249,10 @@
                   ]
                 }
               },
-              { "type": "spacer", "width": 8 },
+              {
+                "type": "spacer",
+                "width": 8
+              },
               {
                 "type": "inkwell",
                 "borderRadius": 20,

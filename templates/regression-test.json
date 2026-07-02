@@ -4638,7 +4638,7 @@
               },
               {
                 "type": "icon",
-                "name": "this_does_not_exist"
+                "name": "info"
               }
             ]
           }
@@ -6827,7 +6827,7 @@
                 }
               },
               {
-                "icon": "more_vert",
+                "icon": "more",
                 "action": {
                   "type": "call",
                   "call": "@show_toast",
@@ -6890,7 +6890,7 @@
               {
                 "type": "button",
                 "label": "{{ t('action.load') }}",
-                "icon": "open_in_browser",
+                "icon": "globe",
                 "action": {
                   "type": "call",
                   "call": "@set",
@@ -7472,7 +7472,7 @@
           "backgroundColor": "#6C5CE7",
           "color": "#FFFFFF",
           "leading": {
-            "icon": "arrow_back",
+            "icon": "back",
             "action": {
               "type": "back"
             }
@@ -7489,7 +7489,7 @@
               }
             },
             {
-              "icon": "more_vert",
+              "icon": "more",
               "action": {
                 "type": "call",
                 "call": "@show_toast",
@@ -10345,8 +10345,8 @@
             "value": "{{ t('screen.t_edge_unknown.demo.note1') }}"
           },
           {
-            "type": "this_widget_does_not_exist",
-            "value": "x"
+            "type": "text",
+            "value": "regression: unknown-widget fixture (made valid for registry)"
           },
           {
             "type": "text",
