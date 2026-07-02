@@ -91,6 +91,10 @@ DEPLOY_ORDER = [
     "agent-runtime",
     "faas-runtime",
     "jsonapp-postgres",
+    # pgbouncer 两个池紧随 jsonapp-postgres（depends_on 它 healthy）；必须在 backend 家族之前起。
+    # 缺了它们 → 全量 `deploy`(all) 会漏掉 pgbouncer（bug2 根因）→ faas-push-worker 连不上崩。
+    "pgbouncer-platform",
+    "pgbouncer-faas",
     "ai-session-redis",
     "app-minio",
     "supabase-db",
