@@ -791,7 +791,10 @@ def _ensure_pgbouncer_db(names: list[str], *, dry_run: bool) -> int:
         "GRANT EXECUTE ON FUNCTION pgbouncer.user_lookup(text) TO pgbouncer_auth;"
     )
     for db in ("jsonapp", "userdata"):
-        fr = _psql(db, func_sql)
+        # 显式 GRANT CONNECT：faas_userdb 首个服务建库时会 REVOKE CONNECT ... FROM PUBLIC，
+        # pgbouncer_auth 若只靠 PUBLIC 隐式权限，第一个 FaaS 服务部署后 auth_query 即断
+        # （FATAL permission denied for database "userdata"）。显式授权不受该 REVOKE 影响。
+        fr = _psql(db, f'GRANT CONNECT ON DATABASE "{db}" TO pgbouncer_auth; ' + func_sql)
         if fr.returncode == 0:
             print(f"+ pgbouncer.user_lookup ready in {db}")
         else:
