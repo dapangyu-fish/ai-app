@@ -65,7 +65,7 @@ URLs through `myapp-ctl domain set ...` or by generating the correct
   [../../docs/faas-backend-generation.md](../../docs/faas-backend-generation.md))
 
 The backend image is shared by `backend`, `ai-worker`, `registry`,
-`config-center`, and `user-center`. Agent execution is split into:
+and `config-center` (user management lives in the config-center dashboard). Agent execution is split into:
 
 - `myapp-agent-node`: host service that owns Docker and starts runtime containers
 - `myapp-agent-runtime`: Ubuntu 24.04 image used for Claude/Codex/OpenCode runs
@@ -170,8 +170,6 @@ myapp-ctl secret ls
 Reveal one value only when operating on the host:
 
 ```bash
-myapp-ctl secret get user-center USER_CENTER_ADMIN_USERNAME --show
-myapp-ctl secret get user-center USER_CENTER_ADMIN_PASSWORD --show
 ```
 
 ## Full Deploy
@@ -270,7 +268,6 @@ myapp-ctl ingress setup --yes \
   --oss-console-domain myapp-oss-console.example.com \
   --registry-domain myapp-registry.example.com \
   --config-center-domain myapp-config.example.com \
-  --user-center-domain myapp-user.example.com \
   --openim-domain myapp-im.example.com \
   --crt /etc/ssl/myapp/fullchain.pem \
   --key /etc/ssl/myapp/privkey.pem
@@ -667,7 +664,6 @@ Expected MyApp state:
 - `ai-worker`: running
 - `registry`: running, health `healthy`
 - `config-center`: running, health `ok`
-- `user-center`: running
 - `agent-node`: running, health `ok`
 - `agent-runtime`: image present
 - `faas-control`: running, health `ok`

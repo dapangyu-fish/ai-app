@@ -50,7 +50,6 @@ DATA_ROOT_DIRS = [
     "ai-worker",
     "registry",
     "config-center/data",
-    "user-center",
     "agent-runtime",
     "agent-node/state",
     "agent-node/workspaces",
@@ -123,7 +122,6 @@ DEPLOY_ORDER = [
     "ai-worker",
     "faas-push-worker",
     "config-center",
-    "user-center",
     "edge-nginx",
 ]
 IMAGE_TARGETS = {
@@ -138,7 +136,7 @@ IMAGE_BASE_TARGETS = {
     "agent-node": ("agent_node_base", "deploy/production/Dockerfile.agent-node-base"),
     "backend": ("backend_base", "deploy/production/Dockerfile.backend-base"),
 }
-BACKEND_IMAGE_SERVICES = {"backend", "ai-worker", "registry", "config-center", "user-center", "faas-control", "faas-worker", "faas-push-worker"}
+BACKEND_IMAGE_SERVICES = {"backend", "ai-worker", "registry", "config-center", "faas-control", "faas-worker", "faas-push-worker"}
 FAAS_IMAGE_SERVICES = {"faas-control", "faas-worker", "faas-runtime"}
 DEFAULT_NETWORKS = ["myapp_default", "myapp_agent_runtime"]
 COMPOSE_ENV_FILE_NAMES = [
@@ -151,7 +149,6 @@ COMPOSE_ENV_FILE_NAMES = [
     "agent.env",
     "push.env",
     "config-center.env",
-    "user-center.env",
 ]
 _SETUP_SECRET_FILE_CONTAINER_ROOT = "/etc/myapp/secret-files"
 _SETUP_SECRET_FILE_HOST_DIR = "files"
@@ -164,7 +161,6 @@ EDGE_ROUTE_SPECS = [
     {"key": "oss_console", "label": "MinIO console", "kind": "proxy", "upstream": "http://app-minio:9090"},
     {"key": "registry", "label": "App registry", "kind": "proxy", "upstream": "http://registry:3254"},
     {"key": "config_center", "label": "Config Center", "kind": "proxy", "upstream": "http://config-center:5000"},
-    {"key": "user_center", "label": "User Center", "kind": "proxy", "upstream": "http://user-center:5567"},
     {
         "key": "openim",
         "label": "OpenIM",
@@ -2521,12 +2517,6 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "CONFIG_CENTER_ADMIN_PASSWORD": _rand_token(24),
         "CONFIG_CENTER_SESSION_SECRET": _rand_hex(32),
     }
-    user_center_defaults = {
-        "USER_CENTER_ADMIN_USERNAME": "admin",
-        "USER_CENTER_ADMIN_PASSWORD": _rand_token(24),
-        "USER_CENTER_SESSION_SECRET": _rand_hex(32),
-        "USER_CENTER_COOKIE_SECURE": "false",
-    }
     edge_defaults = {
         "MYAPP_DATA_ROOT": str(data_root),
         "EDGE_NGINX_HTTP_PORT": "80",
@@ -2577,7 +2567,6 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "edge": _merge_env_group("edge", edge_defaults, force=force),
         "faas": _merge_env_group("faas", faas_defaults, force=force),
         "config-center": _merge_env_group("config-center", config_center_defaults, force=force),
-        "user-center": _merge_env_group("user-center", user_center_defaults, force=force),
     }
     if not quiet:
         rows = [{"group": group, "keys": len(keys)} for group, keys in changed.items()]
@@ -3066,8 +3055,6 @@ def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
         "SITE_URL": urls["webapp"],
         "ADDITIONAL_REDIRECT_URLS": ",".join(sorted({urls["website"], urls["webapp"]})),
     }
-    # cookie Secure 跟随**对外** scheme（浏览器看到的），而非 edge 自身 TLS
-    user_center_values = {"USER_CENTER_COOKIE_SECURE": "true" if public_tls else "false"}
     openim_values = {"HOST_IP": hosts.get("openim", config["default_host"])}
     faas_values = {
         "FAAS_PUBLIC_BASE_URL": urls["backend"],
@@ -3088,7 +3075,6 @@ def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
             ("backend", backend_values),
             ("supabase", supabase_values),
             ("openim", openim_values),
-            ("user-center", user_center_values),
             ("faas", faas_values),
             ("edge", edge_values),
         ):
@@ -3097,7 +3083,6 @@ def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
     _merge_env_group("backend", backend_values, force=True)
     _merge_env_group("supabase", supabase_values, force=True)
     _merge_env_group("openim", openim_values, force=True)
-    _merge_env_group("user-center", user_center_values, force=True)
     _merge_env_group("faas", faas_values, force=True)
     _merge_env_group("edge", edge_values, force=True)
 

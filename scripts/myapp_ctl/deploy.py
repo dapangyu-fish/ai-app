@@ -504,7 +504,20 @@ def _prepare_openim_config(spec: dict, *, dry_run: bool) -> int:
     return 0
 
 
+def _remove_legacy_user_center(*, dry_run: bool) -> None:
+    """user-center 已并入 config-center dashboard（/admin/dashboard 用户 Tab，功能超集）并从
+    部署清单移除；存量主机上仍在跑的旧容器在部署时顺手拆掉（幂等、非阻断）。"""
+    if not _docker_inspect("myapp-user-center"):
+        return
+    if dry_run:
+        print("+ docker rm -f myapp-user-center  # legacy, merged into config-center dashboard")
+        return
+    if _run(["docker", "rm", "-f", "myapp-user-center"], capture=True).returncode == 0:
+        print("+ removed legacy myapp-user-center (merged into config-center dashboard)")
+
+
 def _prepare_deploy(names: list[str], *, dry_run: bool) -> int:
+    _remove_legacy_user_center(dry_run=dry_run)
     if _pgbouncer_in_names(names):
         # bug2: compose up 前先备好 pgbouncer userlist（否则 bind mount 建成目录、池起不来）
         rc = _ensure_pgbouncer_userlist(dry_run=dry_run)
@@ -646,12 +659,12 @@ _SUPABASE_INTERNAL_NET = "supabase_default"
 # 避免用公网 URL 从容器内 hairpin 回边缘 nginx 得 404（bug1）。
 _SUPABASE_NET_CLIENTS = [
     "myapp-backend", "myapp-ai-worker", "myapp-faas-push-worker",
-    "myapp-registry", "myapp-config-center", "myapp-user-center",
+    "myapp-registry", "myapp-config-center",
 ]
 
 
 _SUPABASE_NET_CLIENT_SERVICES = (
-    "backend", "ai-worker", "faas-push-worker", "registry", "config-center", "user-center",
+    "backend", "ai-worker", "faas-push-worker", "registry", "config-center",
 )
 
 

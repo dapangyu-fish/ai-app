@@ -44,15 +44,6 @@
       "container": "myapp-config-center",
       "health": {"type": "http", "url": "http://127.0.0.1:5000/api/v1/public"}
     },
-    "user-center": {
-      "group": "core",
-      "kind": "compose",
-      "project_dir": "/opt/myapp/deploy/production",
-      "compose_files": ["docker-compose.core.yml"],
-      "compose_service": "user-center",
-      "container": "myapp-user-center",
-      "health": {"type": "http", "url": "http://127.0.0.1:5567/healthz"}
-    },
     "faas-control": {
       "group": "faas",
       "kind": "compose",
