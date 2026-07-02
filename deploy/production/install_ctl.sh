@@ -85,8 +85,11 @@ default_services = load_json(default_services_path, {"services": {}})
 existing_services = load_json(services_path, {"services": {}})
 merged_services = dict(default_services)
 merged_service_rows = dict(default_services.get("services") or {})
+# 已从产品中移除的服务不再从存量 services.json 带回（user-center 已并入 config-center
+# dashboard）；用户自定义服务仍保留。
+removed_services = {"user-center"}
 for name, spec in (existing_services.get("services") or {}).items():
-    if name not in merged_service_rows:
+    if name not in merged_service_rows and name not in removed_services:
         merged_service_rows[name] = spec
 merged_services["services"] = merged_service_rows
 services_path.write_text(json.dumps(merged_services, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
