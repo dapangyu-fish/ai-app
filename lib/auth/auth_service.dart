@@ -147,7 +147,6 @@ class AuthService {
     _user = null;
     _guestMode = false;
     _demoMode = false;
-    AppConfig.demoModeActive = false; // 退出 demo → backendUrl 回到用户配置的后端
     await prefs.remove(_guestKey);
     await prefs.remove(_demoKey);
     authNotifier.value = false;
@@ -158,11 +157,11 @@ class AuthService {
   /// 绕过 _commitOrStashAuth（不触发切账号确认、不写 _lastEmailKey），标记为 demo 会话。
   /// 退出登录（signOut）或冷启动（restoreSession）都会自动退出 demo。
   static Future<void> enterDemoMode() async {
-    // demo 登录显式打到固定的 demo 后端（此刻 demoModeActive 还是 false，backendUrl
-    // 仍是用户配置的后端，所以这里不能用 _baseUrl）。
+    // demo 登录打到当前 active 环境的后端——demo 随集群走，每个集群自带 demo 装配
+    // （demo 账号/公共 FaaS 组/预录回放）。未装配的集群返回 DEMO_NOT_CONFIGURED。
     final resp = await http
         .post(
-          Uri.parse('${AppConfig.demoBackendUrl}/api/auth/demo'),
+          Uri.parse('${AppConfig.backendUrl}/api/auth/demo'),
           headers: {'Content-Type': 'application/json'},
         )
         .timeout(const Duration(seconds: 15));
@@ -181,9 +180,6 @@ class AuthService {
     _refreshToken = data['refresh_token'];
     _user = data['user'];
     _demoMode = true;
-    // 激活后，backendUrl / registryUrl 全部走 demo 后端 → demo 的回放/FaaS/依赖
-    // 都打到预置好 demo 的环境，与用户配置的后端无关，保证 demo 永远可用。
-    AppConfig.demoModeActive = true;
     await _saveLocal(); // 持久化 token/refresh/user + 翻 authNotifier=true
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_demoKey, true);

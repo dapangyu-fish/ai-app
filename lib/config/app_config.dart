@@ -51,26 +51,14 @@ class AppConfig {
     defaultValue: 'https://config.dapangyu.work',
   );
 
-  // ==================== Demo 模式专用后端 ====================
+  // ==================== Demo 模式 ====================
   //
-  // Demo 是一个自包含的免登录体验：进入 demo 后，无论用户当前配置的是哪个后端，
-  // demo 的全部流量（/api/auth/demo、AI 回放、FaaS 调用、依赖解析）都走这个固定的
-  // demo 环境——demo 后端预置了 demo 账号、公共 FaaS 组和预录回放，保证 demo 永远可用。
-  // 用户自己的真实 App/数据仍走其配置的后端，二者互不影响。可用 --dart-define 覆盖。
-
-  static const String demoBackendUrl = String.fromEnvironment(
-    'DEMO_BACKEND_URL',
-    defaultValue: 'https://myapp-pre-de-backend.dapangyu.work',
-  );
-
-  static const String demoRegistryUrl = String.fromEnvironment(
-    'DEMO_REGISTRY_URL',
-    defaultValue: 'https://myapp-pre-de-registry.dapangyu.work',
-  );
-
-  /// demo 模式是否激活。由 AuthService.enterDemoMode 置 true、退出 demo 时置 false。
-  /// 为 true 时 backendUrl / registryUrl 返回 demo 专用环境。
-  static bool demoModeActive = false;
+  // Demo 是免登录体验，但**不再有固定的 demo 专用后端**：demo 的全部流量
+  // （/api/auth/demo、AI 回放、FaaS 调用、依赖解析）都走当前 active 环境——
+  // 每个集群都应自带 demo 装配（demo 账号 + 公共 FaaS 组 + 预录回放，部署
+  // runbook 已覆盖）。集群未装配 demo 时后端返回 DEMO_NOT_CONFIGURED，客户端
+  // 给出可读提示。（历史设计曾把 demo 钉在固定集群 myapp-pre-de；该集群已
+  // 退役，钉死 URL 反而让 demo 全网 404，故改为随环境走。）
 
   // ==================== 运行时 getter — 走 EnvironmentService active 环境 ====================
   //
@@ -81,10 +69,9 @@ class AppConfig {
   static String _pick(String? custom, String fallback) =>
       (custom == null || custom.isEmpty) ? fallback : custom;
 
-  /// 后端API服务器地址。demo 模式下走固定 demo 后端（与用户配置无关）。
-  static String get backendUrl => demoModeActive
-      ? demoBackendUrl
-      : _pick(EnvironmentService.instance.active.backendUrl, _defaultBackendUrl);
+  /// 后端API服务器地址（demo 模式同样走 active 环境）。
+  static String get backendUrl =>
+      _pick(EnvironmentService.instance.active.backendUrl, _defaultBackendUrl);
 
   /// Supabase 认证服务器地址
   static String get supabaseUrl => _pick(
@@ -96,13 +83,11 @@ class AppConfig {
   static String get minioUrl =>
       _pick(EnvironmentService.instance.active.minioUrl, _defaultMinioUrl);
 
-  /// 组件注册中心地址。demo 模式下走 demo 注册中心（解析 demo app 的依赖）。
-  static String get registryUrl => demoModeActive
-      ? demoRegistryUrl
-      : _pick(
-          EnvironmentService.instance.active.registryUrl,
-          _defaultRegistryUrl,
-        );
+  /// 组件注册中心地址（demo 模式同样走 active 环境，解析 demo app 的依赖）。
+  static String get registryUrl => _pick(
+    EnvironmentService.instance.active.registryUrl,
+    _defaultRegistryUrl,
+  );
 
   /// OpenIM HTTP API 地址（fallback；正常由后端 /api/im/token 下发覆盖）
   static String get imApiUrl =>
