@@ -68,6 +68,32 @@ Web），走 `scripts/flutter.sh` 包装器代替裸 `flutter`——它给任意
 仅作兜底（请与 pubspec 一致）。裸 `flutter build` / IDE（Xcode/Android Studio）不经
 包装器，需自行加这两个 `--dart-define`，否则只显示兜底版本号、commit 行留空。
 
+## Releases & Docker Images (rebuild vs retag)
+
+Tagging `vX.Y.Z` triggers `.github/workflows/images-app.yml`, which decides **per image**
+whether to rebuild or to retag the previous release image (registry-side manifest copy,
+seconds, no layers moved). The rule lives in **`scripts/release_gate.py`** — the single
+source of truth, also used by `myapp-ctl code set` as its safety gate. Do not fork the rule.
+
+| Change | Result |
+|---|---|
+| `backend/requirements.{txt,lock}`, `deploy/production/requirements/*-base.{txt,lock}` | **rebuild** (and run `images-base` first — the decide job hard-fails until you do, or add a `Release-Image: base-ok` trailer) |
+| `deploy/production/Dockerfile.*-base` (any line), `images-base.yml` | **rebuild** (same base guard) |
+| `deploy/production/Dockerfile.<img>` non-`COPY` lines (`RUN`/`FROM`/`ENV`/`ARG`) | **rebuild** of that image |
+| Everything else — all Python/Dart code, `templates/`, `docs/`, playbooks, assets, ctl, client, website | **retag** (code-only release) |
+
+Manual overrides via trailers in the tagged commit message: `Release-Image: rebuild`,
+`Release-Image: rebuild=backend,agent-runtime`, `Release-Image: base-ok`. There is no
+"force retag" — a wrong retag ships a broken runtime.
+
+**How retagged releases get their code**: images stay frozen; `myapp-ctl` overlays a
+host-side `git archive` of the pinned ref as read-only bind mounts over every image's
+COPY set (backend family + agent-node via compose override; agent-runtime / faas-runtime
+child containers via their spawners reading `MYAPP_CODE_OVERLAY_DIR`). `myapp-ctl deploy
+--image-version X.Y.Z-<sha>` detects a retagged image (baked `MYAPP_BUILD_COMMIT` ≠ tag
+sha) and enables the overlay automatically; `myapp-ctl code set|status|off` is the manual
+control. `MYAPP_BUILD_COMMIT` inside a running container reports `<sha>-overlay`.
+
 ## Architecture
 
 ### Data Flow
