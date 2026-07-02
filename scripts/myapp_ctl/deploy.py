@@ -1074,6 +1074,8 @@ def cmd_deploy(args) -> int:
     rc = _guard_active_ai_runs_for_deploy(args, names)
     if rc != 0:
         return rc
+    # retag 型发布（镜像烘焙 commit ≠ tag sha）自动启用 code overlay，防止静默跑旧代码
+    _maybe_auto_code_overlay(names, dry_run=args.dry_run)
     rc = _deploy_compose_services(names, dry_run=args.dry_run)
     if rc != 0:
         return rc
@@ -1809,21 +1811,36 @@ def cmd_demo(args) -> int:
 
 # ---------- code overlay：纯代码发布免重建镜像 ----------
 #
-# 机制：宿主侧从源码 checkout 按钉死 ref `git archive` 导出镜像烘焙的那几个代码路径
-# （见 Dockerfile.backend 的 COPY 集合）到 /mnt/myapp/code/<sha>/，再用生成的 compose
-# override 以 **只读 bind mount** 盖在镜像内代码之上——效果等同"容器里 git pull"，
-# 但确定性（钉 ref）、可回滚（code off / 换 ref）、容器内无 git 无网络依赖。
-# 安全闸：目标 ref 相对镜像烘焙 commit 若改了 requirements.txt / backend-base / Dockerfile
-# 的 RUN/FROM/ENV 行（=运行环境变了），拒绝纯代码发布，要求走镜像重建。
+# 机制：宿主侧从源码 checkout 按钉死 ref `git archive` 全仓库导出到 /mnt/myapp/code/<sha>/，
+# 以 **只读 bind mount** 按各镜像 Dockerfile 的 COPY 映射盖在镜像内代码之上：
+#   - backend 镜像族 5 服务 + agent-node：compose override（本文件生成）
+#   - agent-runtime / faas-runtime 子容器：由 spawner（agent_node_service._docker_cmd /
+#     faas_store 本地 docker 启动）读取 env MYAPP_CODE_OVERLAY_DIR 自行追加挂载
+# 效果等同"容器里 git pull"，但确定性（钉 ref）、可回滚（code off / 换 ref）、容器内无
+# git 无网络依赖。安全闸 = scripts/release_gate.py（与 GitHub Actions 共用的单一真相源）：
+# 目标 ref 相对镜像烘焙 commit 改了运行环境（依赖 lock / base / Dockerfile 非 COPY 行）
+# → 拒绝纯代码发布，要求走镜像重建。
 
 _CODE_OVERLAY_SERVICES = ("backend", "ai-worker", "faas-push-worker", "registry", "config-center")
-# 与 deploy/production/Dockerfile.backend 的 COPY 集合保持一致
-_CODE_OVERLAY_PATHS = (
-    "backend",
-    "config_center",
-    "lib/json_ui/widgets/icon_registry.dart",
-    "lib/json_ui/widget_builder.dart",
+# 与 deploy/production/Dockerfile.backend 的 COPY 集合一致（容器内路径 ← 导出目录相对路径）
+_CODE_OVERLAY_BACKEND_MOUNTS = (
+    ("/app/backend", "backend"),
+    ("/app/config_center", "config_center"),
+    ("/app/lib/json_ui/widgets/icon_registry.dart", "lib/json_ui/widgets/icon_registry.dart"),
+    ("/app/lib/json_ui/widget_builder.dart", "lib/json_ui/widget_builder.dart"),
 )
+# 与 Dockerfile.agent-node 的 COPY 集合一致
+_CODE_OVERLAY_AGENT_NODE_MOUNTS = (
+    ("/app/backend/agent_node_service.py", "backend/agent_node_service.py"),
+    ("/app/backend/providers", "backend/providers"),
+)
+# 需要 code overlay 感知的全部 app 镜像（ctl.json images 键名 → release_gate.py 镜像名）
+_CODE_OVERLAY_IMAGE_KEYS = {
+    "backend": "backend",
+    "agent_node": "agent-node",
+    "agent_runtime": "agent-runtime",
+    "faas_runtime": "faas-runtime",
+}
 
 
 def _code_overlay_cfg() -> dict:
@@ -1852,45 +1869,63 @@ def _git_src(*args: str, check: bool = True) -> str:
     return (r.stdout or "").strip()
 
 
-def _image_baked_commit() -> str:
-    """从 ctl.json 钉死的 backend 镜像 tag 提取烘焙 commit（{ver}-{sha} 约定）。"""
-    tag = str(_cfg().get("images", {}).get("backend") or "")
+def _image_baked_commit(image_key: str = "backend") -> str:
+    """镜像烘焙的代码 commit：优先读本地镜像的 MYAPP_BUILD_COMMIT env（retag 不改它，
+    是真实基线）；镜像不在本地时回退解析 {ver}-{sha} tag 后缀。"""
+    tag = str(_cfg().get("images", {}).get(image_key) or "")
+    if tag:
+        r = _run(["docker", "image", "inspect", tag, "--format",
+                  "{{range .Config.Env}}{{println .}}{{end}}"], capture=True)
+        if r.returncode == 0:
+            for line in (r.stdout or "").split("\n"):
+                if line.startswith("MYAPP_BUILD_COMMIT="):
+                    val = line.split("=", 1)[1].strip()
+                    if val and val != "unknown":
+                        return val
     m = re.search(r":[0-9][^-]*-([0-9a-f]{7,40})$", tag)
     return m.group(1) if m else ""
 
 
-def _code_overlay_gate(image_sha: str, ref_sha: str) -> list[str]:
-    """返回阻断原因列表（空 = 允许纯代码发布）。"""
+def _code_overlay_gate(ref_sha: str) -> list[str]:
+    """调 scripts/release_gate.py 判定目标代码能否跑在当前 4 个镜像上。返回阻断原因（空=放行）。"""
+    gate = _source_dir() / "scripts" / "release_gate.py"
+    if not gate.is_file():
+        return [f"release gate script missing: {gate}"]
     reasons: list[str] = []
-    diff = _git_src("diff", "--name-only", f"{image_sha}..{ref_sha}", "--",
-                    "backend/requirements.txt", "deploy/production/Dockerfile.backend-base",
-                    check=False)
-    if diff:
-        reasons.append(f"运行环境定义有变更: {diff.replace(chr(10), ', ')}")
-    dockerfile_diff = _git_src("diff", f"{image_sha}..{ref_sha}", "--",
-                               "deploy/production/Dockerfile.backend", check=False)
-    for line in dockerfile_diff.split("\n"):
-        if len(line) > 1 and line[0] in "+-" and not line.startswith(("+++", "---")):
-            body = line[1:].strip()
-            if body and not body.startswith(("#", "COPY")):
-                reasons.append(f"Dockerfile.backend 非 COPY 行变更: {line.strip()[:120]}")
+    for image_key, gate_name in _CODE_OVERLAY_IMAGE_KEYS.items():
+        baked = _image_baked_commit(image_key)
+        if not baked:
+            reasons.append(f"{gate_name}: 镜像烘焙 commit 不可知（tag 非 {{ver}}-{{sha}} 且本地无镜像）")
+            continue
+        r = _run([sys.executable, str(gate), "--repo", str(_source_dir()),
+                  "--base", baked, "--target", ref_sha, "--image", gate_name, "--json"], capture=True)
+        if r.returncode != 0:
+            reasons.append(f"{gate_name}: gate 执行失败: {(r.stderr or '').strip()[:160]}")
+            continue
+        try:
+            verdict = json.loads(r.stdout or "{}")
+        except ValueError:
+            reasons.append(f"{gate_name}: gate 输出不可解析")
+            continue
+        if verdict.get("decision") == "rebuild":
+            for why in verdict.get("reasons") or []:
+                reasons.append(f"{gate_name}: {why}")
     return reasons
 
 
 def _render_code_overlay_compose(export_dir: Path, short_sha: str, version: str) -> Path:
-    mounts = []
-    for rel in _CODE_OVERLAY_PATHS:
-        mounts.append(f"      - {export_dir}/{rel}:/app/{rel}:ro")
-    block = "\n".join(mounts)
-    services = []
-    for svc in _CODE_OVERLAY_SERVICES:
-        services.append(
-            f"  {svc}:\n"
-            f"    volumes:\n{block}\n"
+    def block(mounts) -> str:
+        vols = "\n".join(f"      - {export_dir}/{src}:{dst}:ro" for dst, src in mounts)
+        return (
+            f"    volumes:\n{vols}\n"
             f"    environment:\n"
             f"      MYAPP_BUILD_COMMIT: \"{short_sha}-overlay\"\n"
             f"      MYAPP_VERSION: \"{version}\"\n"
+            f"      MYAPP_CODE_OVERLAY_DIR: \"{export_dir}\"\n"
+            f"      MYAPP_CODE_OVERLAY_SHA: \"{short_sha}\"\n"
         )
+    services = [f"  {svc}:\n{block(_CODE_OVERLAY_BACKEND_MOUNTS)}" for svc in _CODE_OVERLAY_SERVICES]
+    services.append(f"  agent-node:\n{block(_CODE_OVERLAY_AGENT_NODE_MOUNTS)}")
     body = "# generated by myapp-ctl code set — do not edit\nservices:\n" + "\n".join(services)
     out = Path(str(_cfg().get("paths", {}).get("state") or "/mnt/myapp/state")) / "docker-compose.code-overlay.yml"
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -1898,7 +1933,7 @@ def _render_code_overlay_compose(export_dir: Path, short_sha: str, version: str)
     return out
 
 
-def _code_overlay_apply(names: tuple[str, ...] = _CODE_OVERLAY_SERVICES) -> int:
+def _code_overlay_apply(names: tuple[str, ...] = _CODE_OVERLAY_SERVICES + ("agent-node",)) -> int:
     """重建受 overlay 影响的 compose 服务（compose 检测到 mounts/env 变化会自动 recreate）。"""
     services = _services()
     rc = 0
@@ -1913,6 +1948,81 @@ def _code_overlay_apply(names: tuple[str, ...] = _CODE_OVERLAY_SERVICES) -> int:
     return rc
 
 
+def _code_overlay_export(ref_sha: str) -> Path:
+    """全仓库 git archive 到 /mnt/myapp/code/<short>/（幂等：同 sha 目录存在即复用）。"""
+    short = ref_sha[:12]
+    export_dir = _code_overlay_dir_root() / short
+    if not export_dir.is_dir():
+        export_dir.mkdir(parents=True, exist_ok=True)
+        tar = _run(["sh", "-c",
+                    f"git -C {shlex.quote(str(_source_dir()))} archive {shlex.quote(ref_sha)}"
+                    f" | tar -x -C {shlex.quote(str(export_dir))}"], capture=True)
+        if tar.returncode != 0:
+            shutil.rmtree(export_dir, ignore_errors=True)
+            raise RuntimeError(f"代码导出失败: {(tar.stderr or '').strip()[:200]}")
+    return export_dir
+
+
+def _enable_code_overlay(ref: str, ref_sha: str, *, apply: bool = True) -> int:
+    """导出 + 渲染 override + 写 ctl.json + 重建受影响服务。"""
+    cfg = _cfg()
+    short = ref_sha[:12]
+    export_dir = _code_overlay_export(ref_sha)
+    version = _git_src("show", f"{ref_sha}:VERSION", check=False) or "unknown"
+    compose_file = _render_code_overlay_compose(export_dir, short, version)
+    cfg["code_overlay"] = {"enabled": True, "ref": ref, "sha": short,
+                           "dir": str(export_dir), "compose_file": str(compose_file)}
+    _save_json(CONFIG_PATH, cfg, mode=0o644)
+    print(f"+ code overlay: {ref} → {short} 导出至 {export_dir}")
+    if not apply:
+        return 0
+    rc = _code_overlay_apply()
+    if rc == 0:
+        print(f"+ 已重建 {', '.join(_CODE_OVERLAY_SERVICES + ('agent-node',))}（运行代码 = {short}，镜像不变）")
+        exports = sorted((p for p in _code_overlay_dir_root().iterdir() if p.is_dir()),
+                         key=lambda p: p.stat().st_mtime, reverse=True)
+        for old in exports[3:]:
+            shutil.rmtree(old, ignore_errors=True)
+    else:
+        print("部分服务重建失败，检查 docker compose 输出", file=sys.stderr)
+    return rc
+
+
+def _maybe_auto_code_overlay(names: list[str], *, dry_run: bool) -> None:
+    """deploy 时自动识别 retag 发布：镜像 tag 的 {sha} ≠ 镜像烘焙 MYAPP_BUILD_COMMIT
+    → 该镜像是重打 tag 的纯代码发布，代码必须由 overlay 挂载补齐（否则静默跑旧代码）。
+    非阻断；显式 code off 后如仍部署 retag 镜像会重新启用（这是正确性要求，非偏好）。"""
+    if not any(name in names for name in _CODE_OVERLAY_SERVICES):
+        return
+    tag = str(_cfg().get("images", {}).get("backend") or "")
+    m = re.search(r":[0-9][^-]*-([0-9a-f]{7,40})$", tag)
+    if not m:
+        return  # 非不可变 tag（如 :edge），无从判定
+    tag_sha = m.group(1)
+    baked = _image_baked_commit("backend")
+    if not baked or baked.startswith(tag_sha) or tag_sha.startswith(baked[:len(tag_sha)]):
+        return  # rebuild 型发布（或读不到）：镜像自带正确代码
+    oc = _code_overlay_cfg()
+    if oc.get("enabled") and str(oc.get("sha") or "").startswith(tag_sha[:12]):
+        return  # overlay 已指向该发布
+    if dry_run:
+        print(f"+ [dry-run] retag 发布检测：镜像 {tag} 烘焙 {baked[:12]} ≠ tag {tag_sha} → 会自动启用 code overlay")
+        return
+    print(f"+ retag 发布检测：镜像烘焙 {baked[:12]} ≠ tag {tag_sha} → 自动启用 code overlay")
+    try:
+        _git_src("fetch", "--tags", "origin", check=False)
+        ref_sha = _git_src("rev-parse", tag_sha)
+        reasons = _code_overlay_gate(ref_sha)
+        if reasons:
+            print("⚠️ 自动 overlay 被安全闸拒绝（发布判定与镜像不符，请检查发版流程）：", file=sys.stderr)
+            for x in reasons:
+                print(f"   - {x}", file=sys.stderr)
+            return
+        _enable_code_overlay(tag_sha, ref_sha, apply=False)  # 随后的 compose up 会带 override 重建
+    except Exception as exc:
+        print(f"自动 code overlay 失败（非阻断，可手动 myapp-ctl code set {tag_sha}）: {exc}", file=sys.stderr)
+
+
 def cmd_code(args) -> int:
     """myapp-ctl code set <ref> | status | off —— 纯代码发布（免重建镜像）。"""
     action = getattr(args, "code_cmd", None) or "status"
@@ -1924,6 +2034,9 @@ def cmd_code(args) -> int:
             print("code overlay: off（容器运行镜像烘焙代码）")
         else:
             print(f"code overlay: ON ref={oc.get('ref')} sha={oc.get('sha')} dir={oc.get('dir')}")
+        for image_key, gate_name in _CODE_OVERLAY_IMAGE_KEYS.items():
+            baked = _image_baked_commit(image_key)
+            print(f"  {gate_name}: baked={baked[:12] if baked else '?'} tag={_cfg().get('images', {}).get(image_key, '?')}")
         r = _run(["docker", "exec", "myapp-backend", "sh", "-c", "printenv MYAPP_BUILD_COMMIT"], capture=True)
         if r.returncode == 0:
             print(f"backend 容器 MYAPP_BUILD_COMMIT: {(r.stdout or '').strip()}")
@@ -1937,7 +2050,7 @@ def cmd_code(args) -> int:
         cfg["code_overlay"] = {"enabled": False}
         _save_json(CONFIG_PATH, cfg, mode=0o644)
         rc = _code_overlay_apply()
-        print("code overlay 已关闭，服务已回到镜像烘焙代码" if rc == 0 else "overlay 已关闭，但部分服务重建失败", )
+        print("code overlay 已关闭，服务已回到镜像烘焙代码" if rc == 0 else "overlay 已关闭，但部分服务重建失败")
         return rc
 
     if action != "set":
@@ -1948,55 +2061,18 @@ def cmd_code(args) -> int:
     if not ref:
         print("用法: myapp-ctl code set <ref>（如 origin/main / v1.2.12 / <sha>）", file=sys.stderr)
         return 2
-    # 解析 ref（先 fetch，保证 origin/xxx 与 tag 可用；仓库已公开，无需凭据）
     _git_src("fetch", "--tags", "origin", check=False)
     ref_sha = _git_src("rev-parse", ref)
-    short = ref_sha[:12]
-    image_sha = _image_baked_commit()
-    if not image_sha:
-        print("⚠️ backend 镜像 tag 不含烘焙 commit（非 {ver}-{sha} 形式），无法做环境漂移检查", file=sys.stderr)
+    reasons = _code_overlay_gate(ref_sha)
+    if reasons:
+        print(f"❌ 纯代码发布被拒（代码 {ref_sha[:12]} 需要重建镜像）：", file=sys.stderr)
+        for x in reasons:
+            print(f"   - {x}", file=sys.stderr)
         if not getattr(args, "force", False):
-            print("加 --force 跳过检查后继续", file=sys.stderr)
+            print("确认无碍可 --force 强推", file=sys.stderr)
             return 1
-    else:
-        reasons = _code_overlay_gate(image_sha, ref_sha)
-        if reasons:
-            print(f"❌ 纯代码发布被拒（镜像 {image_sha} → 代码 {short}）：", file=sys.stderr)
-            for x in reasons:
-                print(f"   - {x}", file=sys.stderr)
-            if not getattr(args, "force", False):
-                print("该发布需要重建镜像；确认无碍可 --force 强推", file=sys.stderr)
-                return 1
-            print("--force：已跳过环境漂移检查", file=sys.stderr)
-    # 导出（幂等：同 sha 目录存在即复用）
-    export_dir = _code_overlay_dir_root() / short
-    if not export_dir.is_dir():
-        export_dir.mkdir(parents=True, exist_ok=True)
-        tar = _run(["sh", "-c",
-                    f"git -C {shlex.quote(str(_source_dir()))} archive {shlex.quote(ref_sha)} "
-                    + " ".join(shlex.quote(p) for p in _CODE_OVERLAY_PATHS)
-                    + f" | tar -x -C {shlex.quote(str(export_dir))}"], capture=True)
-        if tar.returncode != 0:
-            shutil.rmtree(export_dir, ignore_errors=True)
-            print(f"代码导出失败: {(tar.stderr or '').strip()[:200]}", file=sys.stderr)
-            return 1
-    version = _git_src("show", f"{ref_sha}:VERSION", check=False) or "unknown"
-    compose_file = _render_code_overlay_compose(export_dir, short, version)
-    cfg["code_overlay"] = {"enabled": True, "ref": ref, "sha": short,
-                           "dir": str(export_dir), "compose_file": str(compose_file)}
-    _save_json(CONFIG_PATH, cfg, mode=0o644)
-    print(f"+ code overlay: {ref} → {short} 导出至 {export_dir}")
-    rc = _code_overlay_apply()
-    if rc == 0:
-        print(f"+ 已重建 {', '.join(_CODE_OVERLAY_SERVICES)}（运行代码 = {short}，镜像不变）")
-        # 保留最近 3 份导出，其余清理
-        exports = sorted((p for p in _code_overlay_dir_root().iterdir() if p.is_dir()),
-                         key=lambda p: p.stat().st_mtime, reverse=True)
-        for old in exports[3:]:
-            shutil.rmtree(old, ignore_errors=True)
-    else:
-        print("部分服务重建失败，检查 docker compose 输出", file=sys.stderr)
-    return rc
+        print("--force：已跳过环境漂移检查", file=sys.stderr)
+    return _enable_code_overlay(ref, ref_sha)
 
 
 def _restore_data_root_config_if_needed(data_root: Path, *, force: bool = False) -> bool:

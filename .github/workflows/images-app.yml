@@ -1,18 +1,125 @@
 name: images-app
 
-# 构建并推送 4 个 app 镜像到 Docker Hub。
-# 触发：打 v* tag（发版）或手动 dispatch。base 镜像见 images-base.yml（仅手动）。
-# 凭据：DOCKERHUB_USERNAME（variable）+ DOCKERHUB_TOKEN（secret）。
-#   ⚠️ 若这两个挂在某个命名 Environment 下（而非 repo 级），给下面的 job 加一行
-#      `environment: <你的环境名>`，否则读不到。详见 docs/planning/version-management.md §3.9。
+# 双轨发布：打 v* tag 时逐镜像自动判定 —— 运行环境变了 → rebuild（重建+推送）；
+# 纯代码变更 → retag（registry 侧 manifest 复制，秒级，零层传输；部署侧由
+# myapp-ctl 的 code overlay 挂载新代码，deploy 会自动识别 retag 发布）。
+# 判定规则单一真相源 = scripts/release_gate.py（myapp-ctl code set 的安全闸调同一脚本）。
+# 基线 = 上一 release 镜像 config 里的 MYAPP_BUILD_COMMIT（retag 不改它，永远指向镜像真实代码）。
+# 人工覆盖（打 tag 的 commit message 加 trailer）：
+#   Release-Image: rebuild                        → 全部强制重建
+#   Release-Image: rebuild=backend,agent-runtime  → 指定镜像强制重建
+#   Release-Image: base-ok                        → 我确认 base 镜像已重建（解除 base 守卫）
+# base 守卫：环境文件（requirements/lock、Dockerfile.*-base）有变更时 decide 硬失败，
+# 提示先手动跑 images-base 再重推 tag（或加 base-ok trailer 确认已跑过）。
+# 凭据：DOCKERHUB_USERNAME（variable）+ DOCKERHUB_TOKEN（secret），挂在 DOCKERHUB Environment。
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'decide only — print the plan, publish nothing'
+        type: boolean
+        default: false
 
 jobs:
-  build:
+  decide:
+    runs-on: ubuntu-latest
+    outputs:
+      plan: ${{ steps.plan.outputs.plan }}
+      version: ${{ steps.plan.outputs.version }}
+      immutable: ${{ steps.plan.outputs.immutable }}
+      prev_immutable: ${{ steps.plan.outputs.prev_immutable }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide rebuild vs retag per image
+        id: plan
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then VER="${GITHUB_REF_NAME#v}"; else VER="$(cat VERSION)"; fi
+          SHA7="${GITHUB_SHA::7}"
+          IMMUTABLE="${VER}-${SHA7}"
+          PREV_TAG="$(git describe --tags --abbrev=0 "${GITHUB_SHA}^" 2>/dev/null || true)"
+          PREV_IMMUTABLE=""
+          if [ -n "$PREV_TAG" ]; then
+            PREV_IMMUTABLE="${PREV_TAG#v}-$(git rev-parse --short=7 "$PREV_TAG")"
+          fi
+          BODY="$(git log -1 --format=%B "${GITHUB_SHA}")"
+          FORCE_ALL=false
+          if echo "$BODY" | grep -qiE '^Release-Image:[[:space:]]*rebuild[[:space:]]*$'; then FORCE_ALL=true; fi
+          FORCE_LIST="$(echo "$BODY" | grep -ioE '^Release-Image:[[:space:]]*rebuild=[a-z0-9,-]+' | sed 's/.*rebuild=//' | tr ',' ' ' || true)"
+          BASE_OK=false
+          if echo "$BODY" | grep -qiE '^Release-Image:[[:space:]]*base-ok[[:space:]]*$'; then BASE_OK=true; fi
+
+          # 每镜像独立解析基线 tag：优先 {prev}-{prev-tag-sha}；不存在（历史上镜像
+          # 曾在别的 commit 手工构建）则回退 Docker Hub API 找该版本前缀最新的不可变 tag。
+          resolve_baseline() { # $1=image  → stdout: baseline tag（空=找不到）
+            local img="$1"
+            if [ -n "$PREV_IMMUTABLE" ] && docker run --rm gcr.io/go-containerregistry/crane:latest \
+                 manifest "docker.io/dapangyu/myapp-${img}:${PREV_IMMUTABLE}" >/dev/null 2>&1; then
+              echo "$PREV_IMMUTABLE"; return
+            fi
+            if [ -n "$PREV_TAG" ]; then
+              curl -fsSL "https://hub.docker.com/v2/repositories/dapangyu/myapp-${img}/tags?page_size=100&name=${PREV_TAG#v}-" 2>/dev/null \
+                | jq -r '.results[].name' | grep -E "^${PREV_TAG#v}-[0-9a-f]{7,40}$" | head -1 || true
+            fi
+          }
+
+          PLAN="{"
+          FIRST=1
+          BASE_GUARD_HITS=""
+          for IMG in backend agent-node agent-runtime faas-runtime; do
+            DECISION="rebuild"; REASON="no previous release tag"; SRC=""
+            SRC="$(resolve_baseline "$IMG")"
+            if [ -n "$SRC" ]; then
+              BAKED="$(docker run --rm gcr.io/go-containerregistry/crane:latest config \
+                        "docker.io/dapangyu/myapp-${IMG}:${SRC}" 2>/dev/null \
+                       | jq -r '[.config.Env[]|select(startswith("MYAPP_BUILD_COMMIT="))][0] // ""' \
+                       | sed 's/^MYAPP_BUILD_COMMIT=//')"
+              if [ -n "$BAKED" ] && [ "$BAKED" != "unknown" ]; then
+                GATE_JSON="$(python3 scripts/release_gate.py --repo . --base "$BAKED" --target "$GITHUB_SHA" --image "$IMG" --json)"
+                DECISION="$(echo "$GATE_JSON" | jq -r '.decision')"
+                REASON="$(echo "$GATE_JSON" | jq -r --arg baked "$BAKED" 'if (.reasons|length)>0 then .reasons|join("; ") else "code-only change vs baked \($baked)" end')"
+                if echo "$GATE_JSON" | jq -e '[.reasons[]|select(startswith("environment file changed"))]|length>0' >/dev/null; then
+                  BASE_GUARD_HITS="${BASE_GUARD_HITS} ${IMG}"
+                fi
+              else
+                REASON="baseline image ${SRC} env unreadable (safe default)"
+              fi
+            else
+              REASON="no baseline image found on Docker Hub (safe default)"
+            fi
+            if [ "$FORCE_ALL" = "true" ]; then DECISION="rebuild"; REASON="forced by Release-Image trailer"; fi
+            for F in $FORCE_LIST; do
+              if [ "$F" = "$IMG" ]; then DECISION="rebuild"; REASON="forced by Release-Image trailer"; fi
+            done
+            [ $FIRST -eq 1 ] || PLAN="${PLAN},"
+            FIRST=0
+            PLAN="${PLAN}\"${IMG}\":{\"decision\":\"${DECISION}\",\"src\":\"${SRC}\",\"reason\":$(echo "$REASON" | jq -Rs .)}"
+            echo "::notice::${IMG}: ${DECISION} src=${SRC} (${REASON})"
+          done
+          PLAN="${PLAN}}"
+
+          if [ -n "$BASE_GUARD_HITS" ] && [ "$BASE_OK" != "true" ]; then
+            echo "::error::环境文件（requirements/lock 或 Dockerfile.*-base）有变更，涉及:${BASE_GUARD_HITS}。"
+            echo "::error::请先手动运行 images-base workflow 重建 base 镜像，再重推 tag；若确认 base 已重建，给 tag 的 commit message 加一行 'Release-Image: base-ok'。"
+            exit 1
+          fi
+
+          {
+            echo "plan=${PLAN}"
+            echo "version=${VER}"
+            echo "immutable=${IMMUTABLE}"
+            echo "prev_immutable=${PREV_IMMUTABLE}"
+          } >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: decide
+    if: ${{ github.event_name == 'push' || inputs.dry_run != true }}
     runs-on: ubuntu-latest
     environment: DOCKERHUB   # 凭据挂在名为 DOCKERHUB 的 Environment（secret DOCKERHUB_TOKEN + variable DOCKERHUB_USERNAME）
     strategy:
@@ -30,14 +137,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Resolve version + sha
-        id: meta
-        run: |
-          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then VER="${GITHUB_REF_NAME#v}"; else VER="$(cat VERSION)"; fi
-          SHA="${GITHUB_SHA::7}"
-          echo "version=$VER" >> "$GITHUB_OUTPUT"
-          echo "immutable=${VER}-${SHA}" >> "$GITHUB_OUTPUT"
-
       - uses: docker/setup-buildx-action@v3
 
       - uses: docker/login-action@v3
@@ -45,7 +144,8 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build & push ${{ matrix.image }}
+      - name: Rebuild & push ${{ matrix.image }}
+        if: ${{ fromJSON(needs.decide.outputs.plan)[matrix.image].decision == 'rebuild' }}
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -54,9 +154,44 @@ jobs:
           build-args: |
             BASE_IMAGE=dapangyu/myapp-${{ matrix.image }}-base:edge
             MYAPP_BUILD_COMMIT=${{ github.sha }}
-            MYAPP_BUILD_VERSION=${{ steps.meta.outputs.immutable }}
-            MYAPP_VERSION=${{ steps.meta.outputs.version }}
+            MYAPP_BUILD_VERSION=${{ needs.decide.outputs.immutable }}
+            MYAPP_VERSION=${{ needs.decide.outputs.version }}
           tags: |
-            dapangyu/myapp-${{ matrix.image }}:${{ steps.meta.outputs.immutable }}
-            dapangyu/myapp-${{ matrix.image }}:${{ steps.meta.outputs.version }}
+            dapangyu/myapp-${{ matrix.image }}:${{ needs.decide.outputs.immutable }}
+            dapangyu/myapp-${{ matrix.image }}:${{ needs.decide.outputs.version }}
             dapangyu/myapp-${{ matrix.image }}:edge
+
+      - name: Retag ${{ matrix.image }} (code-only release)
+        if: ${{ fromJSON(needs.decide.outputs.plan)[matrix.image].decision == 'retag' }}
+        run: |
+          set -euo pipefail
+          SRC="dapangyu/myapp-${{ matrix.image }}:${{ fromJSON(needs.decide.outputs.plan)[matrix.image].src }}"
+          docker buildx imagetools create \
+            -t "dapangyu/myapp-${{ matrix.image }}:${{ needs.decide.outputs.immutable }}" \
+            -t "dapangyu/myapp-${{ matrix.image }}:${{ needs.decide.outputs.version }}" \
+            -t "dapangyu/myapp-${{ matrix.image }}:edge" \
+            "$SRC"
+          echo "retagged $SRC → ${{ needs.decide.outputs.immutable }} (registry-side manifest copy, no layers moved)"
+
+  summary:
+    needs: [decide, release]
+    if: ${{ always() && needs.decide.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write release summary
+        env:
+          PLAN: ${{ needs.decide.outputs.plan }}
+        run: |
+          {
+            echo "## Release ${{ needs.decide.outputs.immutable }}"
+            echo ""
+            echo "| image | decision | reason |"
+            echo "|---|---|---|"
+            for IMG in backend agent-node agent-runtime faas-runtime; do
+              D=$(echo "$PLAN" | jq -r --arg i "$IMG" '.[$i].decision')
+              R=$(echo "$PLAN" | jq -r --arg i "$IMG" '.[$i].reason' | tr '\n' ' ' | head -c 220)
+              echo "| $IMG | $D | $R |"
+            done
+            echo ""
+            echo "retag 发布的镜像内代码为旧 commit（MYAPP_BUILD_COMMIT 不变）——部署侧 \`myapp-ctl deploy\` 会自动识别并启用 code overlay 挂载本发布的代码。"
+          } >> "$GITHUB_STEP_SUMMARY"

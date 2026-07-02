@@ -810,6 +810,19 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
         "-e",
         f"AI_APP_PROJECT_ROOT={PROJECT_ROOT}",
     ]
+    # code overlay（纯代码发布）：本服务以 retag 镜像运行时，compose override 注入
+    # MYAPP_CODE_OVERLAY_DIR（宿主全仓库导出目录）；运行时子容器按
+    # Dockerfile.agent-runtime 的 COPY 映射以 ro 盖上新代码。无 overlay 时零改动。
+    overlay_dir = (os.environ.get("MYAPP_CODE_OVERLAY_DIR") or "").strip()
+    if overlay_dir:
+        for sub in ("backend", "lib", "assets", "test", "templates", "docs", "scripts"):
+            cmd.extend(["-v", f"{overlay_dir}/{sub}:/app/{sub}:ro"])
+        for fname in ("JSON-DSL.md", "pubspec.yaml", "pubspec.lock", "analysis_options.yaml"):
+            cmd.extend(["-v", f"{overlay_dir}/{fname}:/app/{fname}:ro"])
+        cmd.extend(["-v", f"{overlay_dir}/deploy/production/agent_runner.py:/opt/myapp/agent_runner.py:ro"])
+        overlay_sha = (os.environ.get("MYAPP_CODE_OVERLAY_SHA") or "").strip()
+        if overlay_sha:
+            runtime_env["MYAPP_BUILD_COMMIT"] = f"{overlay_sha}-overlay"
     cmd.extend(extra_mount_args)
     if ALLOW_HOST_GATEWAY:
         cmd.extend(["--add-host", "host.docker.internal:host-gateway"])

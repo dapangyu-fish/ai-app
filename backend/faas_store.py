@@ -1894,7 +1894,8 @@ def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: s
                 str(host_code_root): {
                     "bind": FAAS_LOCAL_DOCKER_CONTAINER_CODE_ROOT,
                     "mode": "ro",
-                }
+                },
+                **_code_overlay_volumes(),
             },
             restart_policy={"Name": "unless-stopped"},
         )
@@ -1903,6 +1904,25 @@ def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: s
     _wait_local_docker_runtime(function_name, replica)
     touch_service_activity(service_id)
     return f"local-docker container={name} upstream={_replica_upstream(function_name, replica)}"
+
+
+# code overlay（纯代码发布）：backend 以 retag 镜像运行时，compose override 注入
+# MYAPP_CODE_OVERLAY_DIR（宿主全仓库导出目录）；FaaS 运行时容器的 4 个 helper 文件
+# 据此以 ro 挂载补齐（映射与 Dockerfile.faas-runtime 的 COPY/重命名一致）。
+# 无 overlay 时返回空 dict，行为与既往完全一致。
+_CODE_OVERLAY_RUNTIME_FILES = (
+    ("backend/faas_runtime_server.py", "/app/backend/faas_runtime_server.py"),
+    ("backend/faas_runtime_db.py", "/app/backend/myapp_db.py"),
+    ("backend/faas_runtime_auth.py", "/app/backend/myapp_auth.py"),
+    ("backend/faas_runtime_data.py", "/app/backend/myapp_data.py"),
+)
+
+
+def _code_overlay_volumes() -> dict:
+    base = (os.environ.get("MYAPP_CODE_OVERLAY_DIR") or "").strip()
+    if not base:
+        return {}
+    return {f"{base}/{src}": {"bind": dst, "mode": "ro"} for src, dst in _CODE_OVERLAY_RUNTIME_FILES}
 
 
 def local_docker_upstream_for_service(service: dict[str, Any]) -> str:
