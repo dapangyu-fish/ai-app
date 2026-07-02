@@ -12,6 +12,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | **后端需求** | Python Flask 服务、AI 队列、agent-node、Registry、部署控制面等需求 | `backend/`, `deploy/production/`, `scripts/myapp_ctl/` |
 | **JSON-APP 需求** | 基于 JSON-DSL 框架开发的、通过 JSON 配置下发的应用 | `templates/*.json`, `JSON-DSL.md` |
 
+## Working Rules
+
+- **Minimal diff.** Change only what the task requires. No unrequested refactors, renames, or extra mechanisms; report incidental findings and wait for confirmation instead of fixing them (unless production is actively broken).
+- **i18n sync is mandatory.** Any user-facing copy change ships in ALL languages at once: README ×11 (`README.md` + `README.<lang>.md`), the 11 locale tables in `lib/i18n/framework_strings.dart`, and the website (`tl()` / `docsI18n` in `website/src/App.tsx`).
+- Machine topology / deployment facts live in the private `myapp-deploy-deployment-manual` repo — consult it before host operations.
+
 ## Project Overview
 
 A Flutter **Server-Driven UI** platform that renders UI and executes business logic from JSON configuration files (DSL v3.3). Users can run published JSON Apps, load local JSON for debugging, or ask AI to generate JSON Apps that run inside the precompiled client capability boundary. The backend stack provides auth, IM, Registry, object storage, AI generation, resumable SSE, and isolated agent-node execution. Targets iOS, Android, Web, macOS, Linux, and Windows.
