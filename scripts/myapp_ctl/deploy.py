@@ -776,11 +776,15 @@ def _ensure_pgbouncer_db(names: list[str], *, dry_run: bool) -> int:
             print(f"+ pgbouncer.user_lookup ready in {db}")
         else:
             print(f"pgbouncer schema/func 在 {db} 失败: {(fr.stderr or '').strip()[:160]}", file=sys.stderr)
-    # 4) 重启两个池，让其带着有效 userlist + 现存函数重新鉴权
+    # 4) 重启两个池（清 server_login_retry 缓存——池在角色/函数建好前起过、缓存了鉴权失败），
+    #    再顺带重启依赖 pgbouncer 的 worker，避免新部署后它们在自己的退避窗口里 crash-loop 十几秒才自愈。
     for c in ("myapp-pgbouncer-platform", "myapp-pgbouncer-faas"):
         if _docker_inspect(c):
             _run(["docker", "restart", c], capture=True)
-    print("+ pgbouncer pools 已配置并重启")
+    for c in ("myapp-faas-push-worker", "myapp-ai-worker"):
+        if _docker_inspect(c):
+            _run(["docker", "restart", c], capture=True)
+    print("+ pgbouncer pools 已配置并重启（含依赖 worker）")
     return 0
 
 
