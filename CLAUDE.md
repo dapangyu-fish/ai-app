@@ -239,7 +239,8 @@ python3 backend/publish_script.py lib_user.json --token <admin_token>
 
 #### 2. 用户包发布
 
-用户包必须带命名空间（如 `mycompany/app-name` 或 `mycompany/frontend/ui-kit`）。
+用户包必须带命名空间（如 `mycompany/app-name`）。**只支持一级命名空间**
+（`registry_server.py` 强制校验，二级会被 400 拒绝）。
 
 **首次发布前，创建命名空间**：
 ```bash
@@ -247,8 +248,7 @@ curl -X POST https://myapp-registry.dapangyu.work/namespace/create \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <user_token>" \
   -d '{
-    "namespace": "mycompany",
-    "sub_namespace": "frontend"
+    "namespace": "mycompany"
   }'
 ```
 
@@ -258,7 +258,7 @@ curl -X POST https://myapp-registry.dapangyu.work/publish \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <user_token>" \
   -d '{
-    "namespace": "mycompany/frontend",
+    "namespace": "mycompany",
     "name": "ui-kit",
     "appid": "08ad186c-0000-4000-8000-000000000000",
     "version": "1.0.0",
@@ -268,7 +268,7 @@ curl -X POST https://myapp-registry.dapangyu.work/publish \
       "dsl": "3.3",
       "appid": "08ad186c-0000-4000-8000-000000000000",
       "meta": {
-        "name": "mycompany/frontend/ui-kit",
+        "name": "mycompany/ui-kit",
         "version": "1.0.0",
         "type": "library"
       },
@@ -282,8 +282,7 @@ curl -X POST https://myapp-registry.dapangyu.work/publish \
 | 类型 | 格式 | 示例 | 权限 |
 |------|------|------|------|
 | 官方包 | 无 `/` | `common-ui`, `data-utils` | admin 专属 |
-| 用户包（一级） | `namespace/app` | `mycompany/app-name` | 命名空间所有者 |
-| 用户包（二级） | `namespace/sub/app` | `mycompany/frontend/ui-kit` | 命名空间所有者 |
+| 用户包 | `namespace/app`（仅一级） | `mycompany/app-name` | 命名空间所有者 |
 
 ### 依赖声明（简化格式）
 
@@ -293,7 +292,7 @@ curl -X POST https://myapp-registry.dapangyu.work/publish \
 {
   "dependencies": {
     "common-ui": "^1.0.0",
-    "mycompany/frontend/ui-kit": "~1.0.0"
+    "mycompany/ui-kit": "~1.0.0"
   }
 }
 ```

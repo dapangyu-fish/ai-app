@@ -35,11 +35,10 @@
 - 权限: 只有 admin 可发布
 - 路径: `common-ui/common-ui-1.0.0.json`
 
-**用户包（1-2 级 `/`）**:
-- 一级: `mycompany/app-name`
-- 二级: `mycompany/frontend/ui-kit`
+**用户包（一级 `/`，仅此一级）**:
+- 格式: `mycompany/app-name`（二级已收敛掉，registry 400 拒绝）
 - 权限: 命名空间所有者
-- 路径: `mycompany/frontend/ui-kit/ui-kit-1.0.0.json`
+- 路径: `mycompany/app-name/app-name-1.0.0.json`
 
 ### 2. 简化依赖声明
 
@@ -58,7 +57,7 @@
 "dependencies": {
   "common-ui": "^1.0.0",
   "data-utils": "~1.2.0",
-  "mycompany/frontend/ui-kit": ">=1.0.0"
+  "mycompany/ui-kit": ">=1.0.0"
 }
 ```
 

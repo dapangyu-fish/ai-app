@@ -20,11 +20,10 @@
 - 权限: 只有 **admin** 角色可以发布
 - 路径: `common-ui/common-ui-1.0.0.json`
 
-### 用户包（1-2 级 `/`）
-- 一级: `mycompany/app-name`
-- 二级: `mycompany/frontend/ui-kit`
+### 用户包（一级 `/`，仅此一级）
+- 格式: `mycompany/app-name`（二级如 `a/b/c` 会被 400 拒绝）
 - 权限: 用户只能发布自己命名空间下的包
-- 路径: `mycompany/frontend/ui-kit/ui-kit-1.0.0.json`
+- 路径: `mycompany/app-name/app-name-1.0.0.json`
 
 ## 本地开发 / 手工调试
 
@@ -121,7 +120,7 @@ GET /resolve_appid?appid=<uuid>
 
 ```bash
 GET /package/common-ui
-GET /package/mycompany/frontend/ui-kit
+GET /package/mycompany/app-name
 ```
 
 响应:
@@ -161,8 +160,7 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "namespace": "mycompany",
-  "sub_namespace": "frontend"  // 可选
+  "namespace": "mycompany"
 }
 ```
 
@@ -193,7 +191,7 @@ Content-Type: application/json
     "dsl": "3.3",
     "appid": "08ad186c-0000-4000-8000-000000000000",
     "meta": {
-      "name": "mycompany/frontend/ui-kit",
+      "name": "mycompany/ui-kit",
       "version": "1.0.0",
       "type": "library"
     },
@@ -206,9 +204,9 @@ Content-Type: application/json
 ```json
 {
   "message": "发布成功",
-  "name": "mycompany/frontend/ui-kit",
+  "name": "mycompany/ui-kit",
   "version": "1.0.0",
-  "download_url": "https://myapp-oss-endpoint.dapangyu.work/json-component/mycompany/frontend/ui-kit/ui-kit-1.0.0.json"
+  "download_url": "https://myapp-oss-endpoint.dapangyu.work/json-component/mycompany/ui-kit/ui-kit-1.0.0.json"
 }
 ```
 
@@ -226,7 +224,7 @@ Content-Type: application/json
   "dependencies": {
     "common-ui": "^1.0.0",
     "data-utils": "~1.2.0",
-    "mycompany/frontend/ui-kit": ">=1.0.0"
+    "mycompany/ui-kit": ">=1.0.0"
   }
 }
 ```
@@ -284,11 +282,11 @@ curl http://localhost:3254/package/common-ui
       "author": "admin",
       "displayName": "Common UI"
     },
-    "mycompany/frontend/ui-kit": {
+    "mycompany/ui-kit": {
       "type": "user",
       "latest": "1.0.0",
       "versions": ["1.0.0"],
-      "path": "mycompany/frontend/ui-kit",
+      "path": "mycompany/ui-kit",
       "author_id": "uuid-yyy",
       "appid": "08ad186c-1111-4000-8000-000000000000",
       "created_at": "2026-04-21T11:00:00Z",
