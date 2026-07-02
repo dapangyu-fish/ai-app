@@ -1340,7 +1340,8 @@ def _find_supabase_user_by_email(base_url: str, service_key: str, email: str) ->
     return None
 
 
-def _create_or_update_supabase_test_user(*, email: str, username: str, password: str) -> tuple[str, dict]:
+def _create_or_update_supabase_test_user(*, email: str, username: str, password: str, role: str | None = None) -> tuple[str, dict]:
+    # role=None 保持历史行为（新建=user、已存在不动其角色）；显式传 "admin"/"user" 则强制设置。
     supabase_env = _parse_env(_secret_path("supabase"))
     service_key = supabase_env.get("SERVICE_ROLE_KEY")
     if not service_key:
@@ -1352,7 +1353,10 @@ def _create_or_update_supabase_test_user(*, email: str, username: str, password:
         user_metadata = dict(existing.get("user_metadata") or {})
         user_metadata["username"] = username
         app_metadata = dict(existing.get("app_metadata") or {})
-        app_metadata.setdefault("role", "user")
+        if role:
+            app_metadata["role"] = role
+        else:
+            app_metadata.setdefault("role", "user")
         status, data, text = _supabase_admin_request(
             method="PUT",
             base_url=base_url,
@@ -1378,7 +1382,7 @@ def _create_or_update_supabase_test_user(*, email: str, username: str, password:
             "password": password,
             "email_confirm": True,
             "user_metadata": {"username": username},
-            "app_metadata": {"role": "user"},
+            "app_metadata": {"role": role or "user"},
         },
     )
     if status >= 400:
@@ -1417,6 +1421,36 @@ def _maybe_seed_test_user(args) -> int:
         return 1
     try:
         action, _ = _create_or_update_supabase_test_user(email=email, username=username, password=password)
+    except Exception as exc:
+        print(f"test user setup failed: {exc}", file=sys.stderr)
+        return 1
+    if action == "created":
+        print(_t("test_user_created", email=email))
+    else:
+        print(_t("test_user_updated", email=email))
+    return 0
+
+
+def cmd_test_user(args) -> int:
+    """myapp-ctl test-user —— 全交互创建/更新测试用户：用户名 → 邮箱 → 密码（隐藏输入）→ 是否 admin。"""
+    if not sys.stdin.isatty():
+        print(_t("test_user_skipped_noninteractive"), file=sys.stderr)
+        return 1
+    username = _prompt_line(_t("test_user_username_prompt"), default="test")
+    email = _prompt_line(_t("test_user_email_prompt"), default="test@example.com")
+    password = _prompt_password_twice(
+        _t("test_user_password_prompt"),
+        _t("test_user_password_confirm_prompt"),
+        min_len=6,
+    )
+    is_admin = _prompt_bool(_t("test_user_admin_prompt"), default=False)
+    try:
+        action, _ = _create_or_update_supabase_test_user(
+            email=email,
+            username=username,
+            password=password,
+            role="admin" if is_admin else "user",
+        )
     except Exception as exc:
         print(f"test user setup failed: {exc}", file=sys.stderr)
         return 1
@@ -1708,6 +1742,7 @@ __all__ = [
     '_find_supabase_user_by_email',
     '_create_or_update_supabase_test_user',
     '_maybe_seed_test_user',
+    'cmd_test_user',
     '_restore_data_root_config_if_needed',
     '_emit_client_env_summary',
     '_local_agent_node_register_command',
