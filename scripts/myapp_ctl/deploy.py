@@ -1615,7 +1615,8 @@ def _ensure_demo_templates() -> None:
         print("demo 装配：registry 未就绪，跳过模板种子", file=sys.stderr)
         return
     published = existed = skipped = 0
-    for f in sorted(src.glob("*.json")):
+    # rglob：templates/ 子目录也算（如 gsy_flutter_demo/ 的 126 个页面包——launcher 的 lazy 依赖）
+    for f in sorted(src.rglob("*.json")):
         try:
             content = json.loads(f.read_text(encoding="utf-8"))
         except ValueError:
