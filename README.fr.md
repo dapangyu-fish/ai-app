@@ -71,7 +71,7 @@ Ce n'est pas un slogan en l'air. Continuez à lire — les chiffres du moteur so
 Trois choses dans un seul dépôt :
 
 1. **Un moteur Flutter Server-Driven UI** (`lib/`) — interprète une configuration JSON-DSL en une application réelle, native et multiplateforme à l'exécution. **91 types de widgets, plus de 100 fonctions intégrées, un moteur d'expressions à 28 opérateurs et un moteur de jeu 2D complet** — le tout précompilé dans le client.
-2. **Un générateur full-stack par IA** (`backend/`, `user_center/`, `config_center/`) — l'IA génère le front-end JSON **et un backend FaaS correspondant + une base de données Postgres isolée** lorsque l'application en a besoin, par-dessus l'authentification (Supabase), la messagerie instantanée (OpenIM), les notifications push (APNs + FCM), le proxy de chat IA, le registre de paquets et l'administration des utilisateurs.
+2. **Un générateur full-stack par IA** (`backend/`, `config_center/`) — l'IA génère le front-end JSON **et un backend FaaS correspondant + une base de données Postgres isolée** lorsque l'application en a besoin, par-dessus l'authentification (Supabase), la messagerie instantanée (OpenIM), les notifications push (APNs + FCM), le proxy de chat IA, le registre de paquets et l'administration des utilisateurs.
 3. **Un écosystème de paquets** (`templates/`) — plus de 70 exemples de JSON-Apps et de bibliothèques réutilisables (messagerie, jeux, profil utilisateur, calculatrice, tableaux de bord…) que vous pouvez installer par-dessus le runtime.
 
 Le nom **MyApp** est intentionnel : chaque utilisateur peut créer, installer et exploiter « mon application » par-dessus le runtime partagé.
@@ -309,7 +309,6 @@ flowchart TB
 | OpenIM | `backend/openim/` | Pont backend de messagerie instantanée. Les clients natifs utilisent le SDK Flutter/natif OpenIM ; le Web utilise le pont du SDK WASM |
 | Supabase | `deploy/production/supabase/` | Services auto-hébergés d'authentification, de base de données et compatibles stockage, configurés via des secrets locaux à l'hôte |
 | Centre de configuration | `config_center/` | Drapeaux de configuration distante et configuration client spécifique à l'environnement |
-| Centre utilisateur | `user_center/` | UI d'administration pour les rôles d'utilisateurs, les bannissements, les flux de réinitialisation et les opérations de compte |
 | Templates / Bibliothèques | `templates/` | Exemples d'applications publiées et bibliothèques JSON réutilisables : messagerie, lanceur, chat OpenAI, jeux, contrôles, profil, utilitaires |
 | Site web | `website/` | Site marketing et de démo TS/Vite, y compris l'aperçu intégré du client web |
 | Control plane | `deploy/production/`, `scripts/myapp_ctl/` | Gestion `myapp-ctl` du statut/des logs/des secrets/du domaine/des images/du déploiement pour les hôtes de test et de production |

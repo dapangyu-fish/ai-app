@@ -71,7 +71,7 @@ Això no és un eslògan que no puguem sostenir. Continua llegint — les xifres
 Tres coses en un sol repositori:
 
 1. **Un motor de UI dirigida pel servidor amb Flutter** (`lib/`) — interpreta una configuració JSON-DSL i la converteix en una app real, nativa i multiplataforma en temps d'execució. **91 tipus de widget, més de 100 funcions integrades, un motor d'expressions de 28 operadors i un motor de jocs 2D complet** — tot precompilat al client.
-2. **Un generador full-stack amb IA** (`backend/`, `user_center/`, `config_center/`) — l'IA genera el front-end JSON **i un backend FaaS associat + una base de dades Postgres aïllada** quan l'app ho necessita, a sobre d'autenticació (Supabase), IM (OpenIM), notificacions push (APNs + FCM), proxy de xat amb IA, registre de paquets i administració d'usuaris.
+2. **Un generador full-stack amb IA** (`backend/`, `config_center/`) — l'IA genera el front-end JSON **i un backend FaaS associat + una base de dades Postgres aïllada** quan l'app ho necessita, a sobre d'autenticació (Supabase), IM (OpenIM), notificacions push (APNs + FCM), proxy de xat amb IA, registre de paquets i administració d'usuaris.
 3. **Un ecosistema de paquets** (`templates/`) — més de 70 JSON-Apps d'exemple i llibreries reutilitzables (IM, jocs, perfil d'usuari, calculadora, taulers…) que pots instal·lar a sobre del runtime.
 
 El nom **MyApp** és intencionat: cada usuari pot crear, instal·lar i operar «la meva app» a sobre del runtime compartit.
@@ -309,7 +309,6 @@ flowchart TB
 | OpenIM | `backend/openim/` | Pont de backend d'IM. Els clients natius usen el SDK Flutter/natiu d'OpenIM; el Web usa el pont del SDK WASM |
 | Supabase | `deploy/production/supabase/` | Serveis auto-allotjats d'autenticació, base de dades i compatibles amb emmagatzematge configurats a través de secrets locals del host |
 | Centre de configuració | `config_center/` | Indicadors de configuració remota i configuració del client específica de l'entorn |
-| Centre d'usuaris | `user_center/` | UI d'administració per a rols d'usuari, bans, fluxos de reinici i operacions de comptes |
 | Plantilles / Llibreries | `templates/` | Apps d'exemple publicades i llibreries JSON reutilitzables: IM, launcher, xat OpenAI, jocs, controls, perfil, utilitats |
 | Lloc web | `website/` | Lloc de màrqueting i demo amb TS/Vite, incloent la previsualització del client web incrustat |
 | Pla de control | `deploy/production/`, `scripts/myapp_ctl/` | Gestió de `myapp-ctl` status/log/secret/domain/image/deploy per a hosts de prova i de producció |

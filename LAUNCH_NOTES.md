@@ -27,7 +27,7 @@
 | - `backend/registry_server.py` | 1,050 | 包注册中心（命名空间/版本/mirror） |
 | - `backend/im.py` | 775 | OpenIM webhook / push dispatch / token 管理 |
 | - `backend/push/*` | 通道无关 dispatcher | APNs + FCM provider，新通道一行 import |
-| Other services | | `user_center/` / `config_center/` / `backend/video_server.py` |
+| Other services | | `config_center/` / `backend/video_server.py` |
 | Templates | 31,578 JSON | 30+ 个示例 JSON-APP |
 | - `regression-test.json` | 10,367 | 单文件 10k 行回归测试 app（很多功能验证） |
 | - `match3-pixel.json` | 3,008 | 像素消除游戏，纯 DSL 写的 |

@@ -71,7 +71,7 @@ You end up arguing with the AI either way — so drop the toolchain and argue st
 하나의 저장소에 담긴 세 가지:
 
 1. **Flutter Server-Driven UI 엔진** (`lib/`) — JSON-DSL 설정을 런타임에 실제 네이티브 크로스플랫폼 앱으로 해석합니다. **91종의 위젯 타입, 100개 이상의 내장 함수, 28개 연산자 표현식 엔진, 그리고 완전한 2D 게임 엔진** — 모두 클라이언트에 사전 컴파일되어 있습니다.
-2. **풀스택 AI 생성기** (`backend/`, `user_center/`, `config_center/`) — 인증(Supabase), IM(OpenIM), 푸시(APNs + FCM), AI 채팅 프록시, 패키지 레지스트리, 사용자 관리 위에서, AI가 JSON 프런트엔드를, **그리고 앱에 필요할 경우 그에 맞는 FaaS 백엔드 + 격리된 Postgres 데이터베이스까지** 생성합니다.
+2. **풀스택 AI 생성기** (`backend/`, `config_center/`) — 인증(Supabase), IM(OpenIM), 푸시(APNs + FCM), AI 채팅 프록시, 패키지 레지스트리, 사용자 관리 위에서, AI가 JSON 프런트엔드를, **그리고 앱에 필요할 경우 그에 맞는 FaaS 백엔드 + 격리된 Postgres 데이터베이스까지** 생성합니다.
 3. **패키지 생태계** (`templates/`) — 런타임 위에 설치할 수 있는 70개 이상의 예제 JSON-App과 재사용 가능한 라이브러리(IM, 게임, 사용자 프로필, 계산기, 대시보드 등).
 
 **MyApp**이라는 이름은 의도적입니다: 각 사용자는 공유 런타임 위에서 "나의 앱(my app)"을 만들고, 설치하고, 운영할 수 있습니다.
@@ -308,7 +308,6 @@ flowchart TB
 | OpenIM | `backend/openim/` | IM 백엔드 브리지. 네이티브 클라이언트는 OpenIM Flutter/네이티브 SDK 사용; Web은 WASM SDK 브리지 사용 |
 | Supabase | `deploy/production/supabase/` | 호스트 로컬 시크릿으로 설정되는 셀프 호스팅 인증, 데이터베이스, 스토리지 호환 서비스 |
 | Config Center | `config_center/` | 원격 설정 플래그 및 환경별 클라이언트 설정 |
-| User Center | `user_center/` | 사용자 역할, 차단, 재설정 흐름, 계정 작업을 위한 관리 UI |
 | Templates / Libraries | `templates/` | 게시된 예제 앱 및 재사용 가능한 JSON 라이브러리: IM, 런처, OpenAI 채팅, 게임, 컨트롤, 프로필, 유틸리티 |
 | Website | `website/` | 임베디드 웹 클라이언트 미리보기를 포함한 TS/Vite 마케팅 및 데모 사이트 |
 | Control Plane | `deploy/production/`, `scripts/myapp_ctl/` | 테스트 및 프로덕션 호스트를 위한 `myapp-ctl` status/log/secret/domain/image/deploy 관리 |

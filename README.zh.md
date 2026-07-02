@@ -71,7 +71,7 @@ Vibe 编程——哪怕最好的 AI 应用生成器——仍然把你困在循�
 一个仓库里包含三样东西：
 
 1. **一个 Flutter 服务端驱动 UI 引擎**（`lib/`）——在运行时将 JSON-DSL 配置解释为真实的、原生的、跨平台的应用。**91 种控件类型、100+ 内置函数、一个 28 运算符的表达式引擎，以及一整套 2D 游戏引擎**——全部预编译进客户端。
-2. **一个全栈 AI 生成器**（`backend/`、`user_center/`、`config_center/`）——AI 生成 JSON 前端，**并在应用需要时生成匹配的 FaaS 后端 + 独立 Postgres 数据库**，构建于认证（Supabase）、IM（OpenIM）、推送（APNs + FCM）、AI 聊天代理、包注册表和用户管理之上。
+2. **一个全栈 AI 生成器**（`backend/`、`config_center/`）——AI 生成 JSON 前端，**并在应用需要时生成匹配的 FaaS 后端 + 独立 Postgres 数据库**，构建于认证（Supabase）、IM（OpenIM）、推送（APNs + FCM）、AI 聊天代理、包注册表和用户管理之上。
 3. **一个包生态系统**（`templates/`）——70+ 个示例 JSON-App 和可复用库（IM、游戏、用户资料、计算器、仪表盘……），你可以安装在运行时之上。
 
 **MyApp** 这个名字是有意为之的：每个用户都可以在共享运行时之上创建、安装和运营"我的应用"。
@@ -306,7 +306,6 @@ flowchart TB
 | OpenIM | `backend/openim/` | IM 后端桥接。原生客户端使用 OpenIM Flutter/native SDK；Web 使用 WASM SDK 桥接 |
 | Supabase | `deploy/production/supabase/` | 自托管的认证、数据库和存储兼容服务，通过主机本地密钥配置 |
 | Config Center | `config_center/` | 远程配置开关和环境特定的客户端配置 |
-| User Center | `user_center/` | 用于用户角色、封禁、重置流程和账户操作的管理 UI |
 | 模板 / 库 | `templates/` | 已发布的示例应用和可复用 JSON 库：IM、launcher、OpenAI 聊天、游戏、控件、资料、工具 |
 | 网站 | `website/` | TS/Vite 营销和演示站点，包括嵌入的 Web 客户端预览 |
 | 控制面 | `deploy/production/`、`scripts/myapp_ctl/` | `myapp-ctl` 的 status/log/secret/domain/image/deploy 管理，用于测试和生产主机 |

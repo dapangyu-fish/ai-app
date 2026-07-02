@@ -1,6 +1,0 @@
-__pycache__/
-*.pyc
-.env
-audit.db
-audit.db-wal
-audit.db-shm

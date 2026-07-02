@@ -44,7 +44,7 @@ agent-node provider proxy
 DeepSeek / MiniMax / custom provider
 ```
 
-`backend`, `ai-worker`, `registry`, `config-center`, and `user-center` share the
+`backend`, `ai-worker`, `registry`, and `config-center` share the
 backend image. `agent-node` and `agent-runtime` are separate images so AI
 execution can be updated independently from the HTTP API.
 
@@ -56,7 +56,6 @@ execution can be updated independently from the HTTP API.
 | AI worker | `myapp-ai-worker` | Moves accepted chat jobs into the agent pull queue and reconciles failed/finished states |
 | Registry | `myapp-registry` | JSON-APP/component publish, resolve, search, namespace, mirror, appid lookup |
 | Config Center | `myapp-config-center` | Public client config, APK upload/config links, remote flags |
-| User Center | `myapp-user-center` | Admin UI/API for user operations |
 | Agent node | `myapp-agent-node` plus optional `myapp-agent-node-<node>` | Pulls jobs, starts runtime containers, proxies provider calls, streams run events back |
 | Agent runtime | image only | Ubuntu 24.04 runtime with Claude/Codex/OpenCode tooling and a source snapshot under `/app` |
 | Infra | `jsonapp-postgres`, `ai-session-redis`, `app-minio` | Data, queue/session state, object storage |

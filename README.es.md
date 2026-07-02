@@ -71,7 +71,7 @@ Esto no es un eslogan que no podamos respaldar. Sigue leyendo: las cifras del mo
 Tres cosas en un solo repositorio:
 
 1. **Un motor de UI dirigida por servidor (Server-Driven UI) en Flutter** (`lib/`) — interpreta una configuración JSON-DSL en una app real, nativa y multiplataforma en tiempo de ejecución. **91 tipos de widget, más de 100 funciones integradas, un motor de expresiones de 28 operadores y un motor de juegos 2D completo**, todo precompilado en el cliente.
-2. **Un generador full-stack con IA** (`backend/`, `user_center/`, `config_center/`) — la IA genera el front-end JSON **y un backend FaaS correspondiente + una base de datos Postgres aislada** cuando la app lo necesita, sobre autenticación (Supabase), IM (OpenIM), push (APNs + FCM), proxy de chat de IA, registro de paquetes y administración de usuarios.
+2. **Un generador full-stack con IA** (`backend/`, `config_center/`) — la IA genera el front-end JSON **y un backend FaaS correspondiente + una base de datos Postgres aislada** cuando la app lo necesita, sobre autenticación (Supabase), IM (OpenIM), push (APNs + FCM), proxy de chat de IA, registro de paquetes y administración de usuarios.
 3. **Un ecosistema de paquetes** (`templates/`) — más de 70 JSON-Apps de ejemplo y bibliotecas reutilizables (IM, juegos, perfil de usuario, calculadora, paneles…) que puedes instalar sobre el runtime.
 
 El nombre **MyApp** es intencional: cada usuario puede crear, instalar y operar «mi app» sobre el runtime compartido.
@@ -309,7 +309,6 @@ flowchart TB
 | OpenIM | `backend/openim/` | Puente del backend de IM. Los clientes nativos usan el SDK Flutter/nativo de OpenIM; la Web usa el puente del SDK WASM |
 | Supabase | `deploy/production/supabase/` | Servicios autoalojados de autenticación, base de datos y compatibles con almacenamiento, configurados mediante secretos locales del host |
 | Config Center | `config_center/` | Banderas de configuración remota y configuración del cliente específica del entorno |
-| User Center | `user_center/` | UI de administración para roles de usuario, baneos, flujos de restablecimiento y operaciones de cuenta |
 | Plantillas / Bibliotecas | `templates/` | Apps de ejemplo publicadas y bibliotecas JSON reutilizables: IM, lanzador, chat de OpenAI, juegos, controles, perfil, utilidades |
 | Sitio web | `website/` | Sitio de marketing y demo en TS/Vite, incluida la vista previa integrada del cliente web |
 | Plano de control | `deploy/production/`, `scripts/myapp_ctl/` | Gestión de `myapp-ctl` para status/log/secret/domain/image/deploy en hosts de prueba y producción |

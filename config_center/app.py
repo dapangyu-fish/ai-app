@@ -37,7 +37,7 @@ from flask import (
 from flask_caching import Cache
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
-import requests  # present in the shared backend image (user_center uses it too)
+import requests
 
 import dashboard_helpers as _dash  # pure, unit-tested data-shaping helpers
 

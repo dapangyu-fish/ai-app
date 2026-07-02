@@ -71,7 +71,7 @@ This is not a slogan we can't back up. Keep reading — the engine numbers are b
 Three things in one repo:
 
 1. **A Flutter Server-Driven UI engine** (`lib/`) — interprets a JSON-DSL config into a real, native, cross-platform app at runtime. **91 widget types, 100+ built-in functions, a 28-operator expression engine, and a full 2D game engine** — all precompiled into the client.
-2. **A full-stack AI generator** (`backend/`, `user_center/`, `config_center/`) — AI generates the JSON front-end **and a matching FaaS backend + isolated Postgres database** when the app needs one, on top of auth (Supabase), IM (OpenIM), push (APNs + FCM), AI chat proxy, package registry, and user admin.
+2. **A full-stack AI generator** (`backend/`, `config_center/`) — AI generates the JSON front-end **and a matching FaaS backend + isolated Postgres database** when the app needs one, on top of auth (Supabase), IM (OpenIM), push (APNs + FCM), AI chat proxy, package registry, and user admin.
 3. **A package ecosystem** (`templates/`) — 70+ example JSON-Apps and reusable libraries (IM, games, user profile, calculator, dashboards…) you can install on top of the runtime.
 
 The name **MyApp** is intentional: each user can create, install, and operate "my app" on top of the shared runtime.
@@ -309,7 +309,6 @@ flowchart TB
 | OpenIM | `backend/openim/` | IM backend bridge. Native clients use OpenIM Flutter/native SDK; Web uses the WASM SDK bridge |
 | Supabase | `deploy/production/supabase/` | Self-hosted auth, database, and storage-compatible services configured through host-local secrets |
 | Config Center | `config_center/` | Remote config flags and environment-specific client configuration |
-| User Center | `user_center/` | Admin UI for user roles, bans, reset flows, and account operations |
 | Templates / Libraries | `templates/` | Published example apps and reusable JSON libraries: IM, launcher, OpenAI chat, games, controls, profile, utilities |
 | Website | `website/` | TS/Vite marketing and demo site, including the embedded web client preview |
 | Control Plane | `deploy/production/`, `scripts/myapp_ctl/` | `myapp-ctl` status/log/secret/domain/image/deploy management for test and production hosts |

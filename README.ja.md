@@ -71,7 +71,7 @@ You end up arguing with the AI either way — so drop the toolchain and argue st
 1 つのリポジトリに 3 つのもの:
 
 1. **Flutter サーバー駆動型 UI エンジン**（`lib/`）— JSON-DSL 設定を実行時に本物のネイティブなクロスプラットフォームアプリに解釈します。**91 種類のウィジェット、100 以上の組み込み関数、28 演算子の式エンジン、そして完全な 2D ゲームエンジン**——すべてがクライアントに事前コンパイルされています。
-2. **フルスタック AI ジェネレーター**（`backend/`, `user_center/`, `config_center/`）— AI が JSON フロントエンドを生成し、**アプリが必要とする場合には、それに対応する FaaS バックエンド + 独立した Postgres データベースも**、認証（Supabase）、IM（OpenIM）、プッシュ（APNs + FCM）、AI チャットプロキシ、パッケージレジストリ、ユーザー管理の上に生成します。
+2. **フルスタック AI ジェネレーター**（`backend/`, `config_center/`）— AI が JSON フロントエンドを生成し、**アプリが必要とする場合には、それに対応する FaaS バックエンド + 独立した Postgres データベースも**、認証（Supabase）、IM（OpenIM）、プッシュ（APNs + FCM）、AI チャットプロキシ、パッケージレジストリ、ユーザー管理の上に生成します。
 3. **パッケージエコシステム**（`templates/`）— ランタイムの上にインストールできる、70 以上の JSON-App の例と再利用可能なライブラリ（IM、ゲーム、ユーザープロフィール、計算機、ダッシュボード…）。
 
 **MyApp** という名前は意図的なものです。各ユーザーは、共有ランタイムの上に「自分のアプリ（my app）」を作成、インストール、運用できます。
@@ -287,7 +287,6 @@ flowchart TB
 | OpenIM | `backend/openim/` | IM バックエンドブリッジ。ネイティブクライアントは OpenIM Flutter/ネイティブ SDK を使用し、Web は WASM SDK ブリッジを使用します |
 | Supabase | `deploy/production/supabase/` | ホストローカルのシークレットを通じて設定される、セルフホスト型の認証、データベース、ストレージ互換サービス |
 | Config Center | `config_center/` | リモート設定フラグと環境固有のクライアント設定 |
-| User Center | `user_center/` | ユーザーロール、BAN、リセットフロー、アカウント操作のための管理 UI |
 | Templates / Libraries | `templates/` | 公開されたサンプルアプリと再利用可能な JSON ライブラリ: IM、ランチャー、OpenAI チャット、ゲーム、コントロール、プロフィール、ユーティリティ |
 | Website | `website/` | 埋め込み Web クライアントプレビューを含む、TS/Vite のマーケティング & デモサイト |
 | Control Plane | `deploy/production/`, `scripts/myapp_ctl/` | テストおよび本番ホスト向けの `myapp-ctl` status/log/secret/domain/image/deploy 管理 |

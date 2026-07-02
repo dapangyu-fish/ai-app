@@ -71,7 +71,7 @@ Das ist kein Slogan, den wir nicht belegen können. Lies weiter — die Engine-Z
 Drei Dinge in einem Repository:
 
 1. **Eine Flutter Server-Driven-UI-Engine** (`lib/`) — interpretiert eine JSON-DSL-Konfiguration zur Laufzeit in eine echte, native, plattformübergreifende App. **91 Widget-Typen, über 100 eingebaute Funktionen, eine Ausdrucksengine mit 28 Operatoren und eine vollständige 2D-Spiel-Engine** — alles in den Client vorkompiliert.
-2. **Ein Full-Stack-KI-Generator** (`backend/`, `user_center/`, `config_center/`) — die KI generiert das JSON-Frontend **und ein passendes FaaS-Backend + eine isolierte Postgres-Datenbank**, wenn die App eines benötigt, auf Basis von Auth (Supabase), IM (OpenIM), Push (APNs + FCM), KI-Chat-Proxy, Paket-Registry und Nutzerverwaltung.
+2. **Ein Full-Stack-KI-Generator** (`backend/`, `config_center/`) — die KI generiert das JSON-Frontend **und ein passendes FaaS-Backend + eine isolierte Postgres-Datenbank**, wenn die App eines benötigt, auf Basis von Auth (Supabase), IM (OpenIM), Push (APNs + FCM), KI-Chat-Proxy, Paket-Registry und Nutzerverwaltung.
 3. **Ein Paket-Ökosystem** (`templates/`) — über 70 Beispiel-JSON-Apps und wiederverwendbare Bibliotheken (IM, Spiele, Nutzerprofil, Taschenrechner, Dashboards …), die du auf der Laufzeitumgebung installieren kannst.
 
 Der Name **MyApp** ist Absicht: Jeder Nutzer kann auf der gemeinsam genutzten Laufzeitumgebung „meine App" erstellen, installieren und betreiben.
@@ -309,7 +309,6 @@ flowchart TB
 | OpenIM | `backend/openim/` | IM-Backend-Bridge. Native Clients nutzen das OpenIM-Flutter-/Native-SDK; Web nutzt die WASM-SDK-Bridge |
 | Supabase | `deploy/production/supabase/` | Selbst gehostete Auth-, Datenbank- und speicherkompatible Dienste, konfiguriert über host-lokale Secrets |
 | Config Center | `config_center/` | Remote-Konfigurations-Flags und umgebungsspezifische Client-Konfiguration |
-| User Center | `user_center/` | Admin-UI für Nutzerrollen, Sperren, Reset-Abläufe und Kontooperationen |
 | Templates / Libraries | `templates/` | Veröffentlichte Beispiel-Apps und wiederverwendbare JSON-Bibliotheken: IM, Launcher, OpenAI-Chat, Spiele, Steuerelemente, Profil, Hilfsprogramme |
 | Website | `website/` | TS/Vite-Marketing- und Demo-Site, inklusive der eingebetteten Web-Client-Vorschau |
 | Control Plane | `deploy/production/`, `scripts/myapp_ctl/` | `myapp-ctl` status/log/secret/domain/image/deploy-Verwaltung für Test- und Produktions-Hosts |
