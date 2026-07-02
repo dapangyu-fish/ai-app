@@ -99,7 +99,7 @@ jobs:
             done
             [ $FIRST -eq 1 ] || PLAN="${PLAN},"
             FIRST=0
-            PLAN="${PLAN}\"${IMG}\":{\"decision\":\"${DECISION}\",\"src\":\"${SRC}\",\"reason\":$(echo "$REASON" | jq -Rs .)}"
+            PLAN="${PLAN}\"${IMG}\":{\"decision\":\"${DECISION}\",\"src\":\"${SRC}\",\"reason\":$(printf %s "$REASON" | jq -Rs .)}"
             echo "::notice::${IMG}: ${DECISION} src=${SRC} (${REASON})"
           done
           PLAN="${PLAN}}"
