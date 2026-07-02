@@ -505,6 +505,11 @@ def _prepare_openim_config(spec: dict, *, dry_run: bool) -> int:
 
 
 def _prepare_deploy(names: list[str], *, dry_run: bool) -> int:
+    if _pgbouncer_in_names(names):
+        # bug2: compose up 前先备好 pgbouncer userlist（否则 bind mount 建成目录、池起不来）
+        rc = _ensure_pgbouncer_userlist(dry_run=dry_run)
+        if rc != 0:
+            return rc
     if _group_in_names(names, "supabase"):
         rc = _seed_supabase_postgres_custom_config(dry_run=dry_run)
         if rc != 0:
@@ -633,6 +638,150 @@ def _run_platform_migrations(*, dry_run: bool) -> int:
         print(f"❌ 平台 schema 迁移失败（rc={rc}）；中止部署——请检查上面的 migrate 输出后重试",
               file=sys.stderr)
     return rc
+
+
+_SUPABASE_INTERNAL_NET = "supabase_default"
+# backend 家族（跑 backend 镜像、会做服务端 Supabase 调用的服务）：接入 supabase 网络后
+# 才能用内网 SUPABASE_INTERNAL_URL=http://supabase-kong:8000 调 Supabase（admin/storage/建桶），
+# 避免用公网 URL 从容器内 hairpin 回边缘 nginx 得 404（bug1）。
+_SUPABASE_NET_CLIENTS = [
+    "myapp-backend", "myapp-ai-worker", "myapp-faas-push-worker",
+    "myapp-registry", "myapp-config-center", "myapp-user-center",
+]
+
+
+def _ensure_supabase_internal_net(names: list[str], *, dry_run: bool) -> int:
+    """把 backend 家族容器接入 supabase 网络，使其能用内网 kong 调 Supabase（bug1 修复）。
+    幂等；容器未跑/已接入则跳过；supabase 网络不存在（未部署 supabase）则跳过。非阻断。"""
+    if "backend" not in names:
+        return 0
+    if dry_run:
+        print(f"+ docker network connect {_SUPABASE_INTERNAL_NET} <backend 家族容器>")
+        return 0
+    if _run(["docker", "network", "inspect", _SUPABASE_INTERNAL_NET], capture=True).returncode != 0:
+        print(f"网络 {_SUPABASE_INTERNAL_NET} 不存在（supabase 未部署？）；跳过内网接入", file=sys.stderr)
+        return 0
+    for c in _SUPABASE_NET_CLIENTS:
+        info = _docker_inspect(c)
+        if not info or info.get("State", {}).get("Status") != "running":
+            continue
+        nets = (info.get("NetworkSettings", {}) or {}).get("Networks", {}) or {}
+        if _SUPABASE_INTERNAL_NET in nets:
+            continue
+        r = _run(["docker", "network", "connect", _SUPABASE_INTERNAL_NET, c], capture=True)
+        if r.returncode == 0:
+            print(f"+ docker network connect {_SUPABASE_INTERNAL_NET} {c}")
+        else:
+            print(f"接入 {_SUPABASE_INTERNAL_NET} 失败 {c}: {(r.stderr or '').strip()[:140]}", file=sys.stderr)
+    return 0
+
+
+def _pgbouncer_in_names(names: list[str]) -> bool:
+    return any(n in names for n in ("pgbouncer-platform", "pgbouncer-faas"))
+
+
+def _ensure_pgbouncer_userlist(*, dry_run: bool) -> int:
+    """compose up 前生成 pgbouncer auth 密钥 + userlist.txt（bug2）。必须先存在，否则 docker 把
+    不存在的 bind-mount 源建成目录、pgbouncer 起不来。密钥持久化在 secrets.d/pgbouncer.env（幂等复用）。
+    userlist 用明文口令（pgbouncer scram-sha-256 auth_type 支持明文；见 pgbouncer-jsonapp-postgres.md）。"""
+    data_root = _data_root_from_cfg()
+    secrets_dir = data_root / "secrets.d"
+    pw_file = secrets_dir / "pgbouncer.env"
+    userlist = secrets_dir / "pgbouncer-userlist.txt"
+    if dry_run:
+        print(f"+ ensure {userlist} (pgbouncer_auth)")
+        return 0
+    secrets_dir.mkdir(parents=True, exist_ok=True)
+    pw = ""
+    if pw_file.exists():
+        for line in pw_file.read_text(encoding="utf-8").splitlines():
+            if line.startswith("PGB_AUTH_PW="):
+                pw = line.split("=", 1)[1].strip()
+    if not pw:
+        pw = py_secrets.token_hex(24)
+        pw_file.write_text(f"PGB_AUTH_PW={pw}\n", encoding="utf-8")
+        try:
+            pw_file.chmod(0o600)
+        except OSError:
+            pass
+    if not userlist.exists():
+        userlist.write_text(f'"pgbouncer_auth" "{pw}"\n', encoding="utf-8")
+        try:
+            userlist.chmod(0o644)
+        except OSError:
+            pass
+        print(f"+ generated {userlist}")
+    return 0
+
+
+def _ensure_pgbouncer_db(names: list[str], *, dry_run: bool) -> int:
+    """建 pgbouncer 的 DB 侧鉴权（bug2）：pgbouncer_auth 角色（口令取 userlist）+ 每个库
+    (jsonapp/userdata) 的 pgbouncer schema + user_lookup(SECURITY DEFINER 读 pg_authid) + grants，
+    然后重启两个池让其重新鉴权。幂等。跑在 jsonapp-postgres healthy 之后。非阻断（失败仅告警）。
+    见 docs/planning/pgbouncer-jsonapp-postgres.md。"""
+    if not _pgbouncer_in_names(names):
+        return 0
+    if dry_run:
+        print("+ setup pgbouncer_auth role + pgbouncer.user_lookup in jsonapp/userdata + restart pools")
+        return 0
+    userlist = _data_root_from_cfg() / "secrets.d" / "pgbouncer-userlist.txt"
+    pw = ""
+    if userlist.exists():
+        m = re.search(r'"pgbouncer_auth"\s+"([^"]+)"', userlist.read_text(encoding="utf-8"))
+        if m:
+            pw = m.group(1)
+    if not pw:
+        print("pgbouncer userlist 缺失/无口令；跳过 DB 侧设置", file=sys.stderr)
+        return 0
+    pg = _docker_inspect("myapp-jsonapp-postgres")
+    if not pg or pg.get("State", {}).get("Status") != "running":
+        print("jsonapp-postgres 未运行；跳过 pgbouncer DB 设置", file=sys.stderr)
+        return 0
+
+    def _psql(db: str, sql: str):
+        return _run(["docker", "exec", "myapp-jsonapp-postgres", "psql",
+                     "-v", "ON_ERROR_STOP=1", "-U", "jsonapp", "-d", db, "-c", sql], capture=True)
+
+    # 1) 角色（token_hex 口令仅 hex，安全内嵌；幂等：无则建、有则对齐口令）
+    role_sql = (
+        "DO $$ BEGIN "
+        "IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='pgbouncer_auth') THEN "
+        f"CREATE ROLE pgbouncer_auth LOGIN PASSWORD '{pw}' "
+        "NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION; "
+        f"ELSE ALTER ROLE pgbouncer_auth LOGIN PASSWORD '{pw}'; END IF; END $$;"
+    )
+    r = _psql("jsonapp", role_sql)
+    if r.returncode != 0:
+        print(f"pgbouncer 角色创建失败: {(r.stderr or '').strip()[:200]}", file=sys.stderr)
+        return 0
+    # 2) userdata 库（FaaS 租户数据；pgbouncer-faas 的 auth_dbname）——不存在则建（CREATE DATABASE 不能在事务/DO 内）
+    chk = _psql("jsonapp", "SELECT 1 FROM pg_database WHERE datname='userdata'")
+    if "1" not in (chk.stdout or ""):
+        cr = _psql("jsonapp", "CREATE DATABASE userdata OWNER jsonapp")
+        if cr.returncode == 0:
+            print("+ created database userdata")
+    # 3) 每个库：schema + user_lookup 函数 + grants
+    func_sql = (
+        "CREATE SCHEMA IF NOT EXISTS pgbouncer AUTHORIZATION jsonapp; "
+        "CREATE OR REPLACE FUNCTION pgbouncer.user_lookup(IN i_username text, OUT uname text, OUT phash text) "
+        "RETURNS record LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog AS "
+        "$fn$ SELECT rolname::text, rolpassword::text FROM pg_catalog.pg_authid WHERE rolname=i_username; $fn$; "
+        "REVOKE ALL ON FUNCTION pgbouncer.user_lookup(text) FROM public; "
+        "GRANT USAGE ON SCHEMA pgbouncer TO pgbouncer_auth; "
+        "GRANT EXECUTE ON FUNCTION pgbouncer.user_lookup(text) TO pgbouncer_auth;"
+    )
+    for db in ("jsonapp", "userdata"):
+        fr = _psql(db, func_sql)
+        if fr.returncode == 0:
+            print(f"+ pgbouncer.user_lookup ready in {db}")
+        else:
+            print(f"pgbouncer schema/func 在 {db} 失败: {(fr.stderr or '').strip()[:160]}", file=sys.stderr)
+    # 4) 重启两个池，让其带着有效 userlist + 现存函数重新鉴权
+    for c in ("myapp-pgbouncer-platform", "myapp-pgbouncer-faas"):
+        if _docker_inspect(c):
+            _run(["docker", "restart", c], capture=True)
+    print("+ pgbouncer pools 已配置并重启")
+    return 0
 
 
 def _deploy_should_ensure_demo_assets(names: list[str]) -> bool:
@@ -887,6 +1036,10 @@ def cmd_deploy(args) -> int:
     rc = _deploy_compose_services(names, dry_run=args.dry_run)
     if rc != 0:
         return rc
+    # bug1: 把 backend 家族接入 supabase 内网，使服务端 Supabase 调用走内网 kong（非阻断）
+    _ensure_supabase_internal_net(names, dry_run=args.dry_run)
+    # bug2: 建 pgbouncer DB 侧鉴权 + 重启池（userlist 已在 _prepare_deploy 生成；非阻断）
+    _ensure_pgbouncer_db(names, dry_run=args.dry_run)
     if "agent-node" in names:
         rc = _ensure_local_agent_node_registration_timer(dry_run=args.dry_run)
         if rc != 0:

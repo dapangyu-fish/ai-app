@@ -33,7 +33,7 @@ from config import (
     OPENIM_SECRET,
     OPENIM_PLATFORM_WEB,
     OPENIM_WEBHOOK_SECRET,
-    SUPABASE_URL,
+    SUPABASE_INTERNAL_URL,
 )
 from database import db_execute, db_query
 import push
@@ -412,7 +412,7 @@ def _list_supabase_users(force_refresh: bool = False):
 
     # Supabase Admin API 默认 50 条 / 页，per_page 最大 1000
     resp = requests.get(
-        f"{SUPABASE_URL}/auth/v1/admin/users",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users",
         headers=_service_headers(),
         params={"per_page": 1000},
         timeout=10,

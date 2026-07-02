@@ -10,7 +10,7 @@ import requests
 from functools import wraps
 from flask import request, jsonify
 from config import (
-    SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY,
+    SUPABASE_URL, SUPABASE_INTERNAL_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_KEY,
     ROLE_QUOTAS
 )
 from database import get_quota_info
@@ -41,7 +41,7 @@ def ensure_avatar_bucket():
     **部署期**（myapp-ctl deploy）与**上传遇 404 时**都会调用，二者均幂等。返回 True=已就绪。"""
     try:
         resp = requests.post(
-            f"{SUPABASE_URL}/storage/v1/bucket",
+            f"{SUPABASE_INTERNAL_URL}/storage/v1/bucket",
             headers=_service_headers(),
             json={"id": "avatars", "name": "avatars", "public": True},
             timeout=10,
@@ -85,7 +85,7 @@ def find_user_by_email(email):
     try:
         # 使用 Supabase Admin API 列出用户
         resp = requests.get(
-            f"{SUPABASE_URL}/auth/v1/admin/users",
+            f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users",
             headers=_service_headers(),
             timeout=10,
         )
@@ -121,7 +121,7 @@ def find_user_by_phone(phone):
     try:
         # 使用 Supabase Admin API 列出用户
         resp = requests.get(
-            f"{SUPABASE_URL}/auth/v1/admin/users",
+            f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users",
             headers=_service_headers(),
             timeout=10,
         )
@@ -167,7 +167,7 @@ def verify_access_token(token):
     if not token:
         return None
     resp = requests.get(
-        f"{SUPABASE_URL}/auth/v1/user",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/user",
         headers=_supabase_headers(token),
         timeout=10,
     )
@@ -188,7 +188,7 @@ def require_auth_socketio(f):
             return
 
         resp = requests.get(
-            f"{SUPABASE_URL}/auth/v1/user",
+            f"{SUPABASE_INTERNAL_URL}/auth/v1/user",
             headers=_supabase_headers(token),
             timeout=10,
         )
@@ -229,7 +229,7 @@ def register():
         return jsonify({"error": "密码至少 6 位"}), 400
 
     resp = requests.post(
-        f"{SUPABASE_URL}/auth/v1/signup",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/signup",
         headers=_supabase_headers(),
         json={"email": email, "password": password,
               "data": {"username": username or email.split("@")[0]}},
@@ -265,7 +265,7 @@ def verify_otp():
         return jsonify({"error": "邮箱和验证码不能为空"}), 400
 
     resp = requests.post(
-        f"{SUPABASE_URL}/auth/v1/verify",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/verify",
         headers=_supabase_headers(),
         json={"type": "signup", "email": email, "token": token},
         timeout=15,
@@ -294,7 +294,7 @@ def resend_verification():
     if not email:
         return jsonify({"error": "邮箱不能为空"}), 400
     resp = requests.post(
-        f"{SUPABASE_URL}/auth/v1/resend",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/resend",
         headers=_supabase_headers(),
         json={"type": "signup", "email": email},
         timeout=15,
@@ -313,7 +313,7 @@ def login():
         return jsonify({"error": "邮箱和密码不能为空"}), 400
 
     resp = requests.post(
-        f"{SUPABASE_URL}/auth/v1/token?grant_type=password",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/token?grant_type=password",
         headers=_supabase_headers(),
         json={"email": email, "password": password},
         timeout=15,
@@ -344,7 +344,7 @@ def refresh_token():
         return jsonify({"error": "refresh_token 不能为空"}), 400
 
     resp = requests.post(
-        f"{SUPABASE_URL}/auth/v1/token?grant_type=refresh_token",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/token?grant_type=refresh_token",
         headers=_supabase_headers(),
         json={"refresh_token": rt},
         timeout=15,
@@ -373,7 +373,7 @@ def demo_login():
         return jsonify({"error": "demo 模式未配置", "code": "DEMO_NOT_CONFIGURED"}), 503
     try:
         resp = requests.post(
-            f"{SUPABASE_URL}/auth/v1/token?grant_type=password",
+            f"{SUPABASE_INTERNAL_URL}/auth/v1/token?grant_type=password",
             headers=_supabase_headers(),
             json={"email": email, "password": password},
             timeout=15,
@@ -396,7 +396,7 @@ def demo_login():
 @require_auth
 def logout():
     """用户登出"""
-    requests.post(f"{SUPABASE_URL}/auth/v1/logout",
+    requests.post(f"{SUPABASE_INTERNAL_URL}/auth/v1/logout",
                   headers=_supabase_headers(request.supabase_token), timeout=10)
     return jsonify({"message": "已登出"})
 
@@ -417,7 +417,7 @@ def update_user():
     if not update_data:
         return jsonify({"error": "没有要更新的字段"}), 400
 
-    resp = requests.put(f"{SUPABASE_URL}/auth/v1/user",
+    resp = requests.put(f"{SUPABASE_INTERNAL_URL}/auth/v1/user",
                         headers=_supabase_headers(request.supabase_token),
                         json={"data": update_data}, timeout=10)
     data = resp.json()
@@ -445,7 +445,7 @@ def upload_avatar():
 
     def _do_upload():
         return requests.post(
-            f"{SUPABASE_URL}/storage/v1/object/avatars/{file_name}",
+            f"{SUPABASE_INTERNAL_URL}/storage/v1/object/avatars/{file_name}",
             headers={"apikey": SUPABASE_SERVICE_KEY,
                      "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
                      "Content-Type": "image/png", "x-upsert": "true"},
@@ -461,7 +461,7 @@ def upload_avatar():
         return jsonify({"error": f"存储上传失败: {upload_resp.text}"}), 502
 
     public_url = f"{SUPABASE_URL}/storage/v1/object/public/avatars/{file_name}?t={int(time.time())}"
-    meta_resp = requests.put(f"{SUPABASE_URL}/auth/v1/user",
+    meta_resp = requests.put(f"{SUPABASE_INTERNAL_URL}/auth/v1/user",
                  headers=_supabase_headers(request.supabase_token),
                  json={"data": {"avatar_url": public_url}}, timeout=10)
     if meta_resp.status_code >= 400:

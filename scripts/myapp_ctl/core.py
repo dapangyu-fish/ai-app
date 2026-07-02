@@ -2359,6 +2359,11 @@ def _init_stack_secrets(*, host: str | None = None, force: bool = False, quiet: 
         "APP_MINIO_PORT": "9000",
         "APP_MINIO_CONSOLE_PORT": "9090",
         "SUPABASE_URL": f"http://{public_host}:18000",
+        # 服务端→Supabase 的内部调用走**内网 kong**（同 docker 网络内的 supabase-kong:8000），
+        # 避免用公网 SUPABASE_URL 从容器内 hairpin 回边缘 nginx 得 404。backend/config-center/registry
+        # 家族由 deploy 的 _ensure_supabase_internal_net() 接入 supabase 网络后即可解析。恒定值、不随
+        # ingress/host 变化。
+        "SUPABASE_INTERNAL_URL": "http://supabase-kong:8000",
         "SUPABASE_ANON_KEY": anon_key,
         "SUPABASE_SERVICE_KEY": service_role_key,
         # Local HS256 verification of caller JWTs on the FaaS invoke hot path

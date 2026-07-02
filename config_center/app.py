@@ -95,6 +95,9 @@ APK_UPLOAD_TMP_DIR = os.environ.get(
 # ── 统一管理后台 dashboard glue：上游服务地址/凭证（经 env_file backend.env 注入）──
 # 仅用于 dashboard 只读聚合 + 用户管理代理；凭证只在服务端使用，不下发浏览器。
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+# 服务端用户管理代理走内网 kong（http://supabase-kong:8000），避免用公网 SUPABASE_URL
+# 从容器内 hairpin 回边缘 nginx 得 404；未设时回落 SUPABASE_URL（向后兼容）。
+SUPABASE_INTERNAL_URL = (os.environ.get("SUPABASE_INTERNAL_URL") or SUPABASE_URL).rstrip("/")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 BACKEND_URL = os.environ.get(
     "BACKEND_URL", os.environ.get("CONFIG_CENTER_BACKEND_URL", "http://backend:5566")
@@ -1047,7 +1050,7 @@ def _sb_ready() -> bool:
 
 def _sb_get_user(user_id: str):
     r = requests.get(
-        f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users/{user_id}",
         headers=_sb_headers(), timeout=DASH_HTTP_TIMEOUT,
     )
     if r.status_code == 404:
@@ -1105,7 +1108,7 @@ def dash_users():
     per = request.args.get("per_page", "100")
     try:
         r = requests.get(
-            f"{SUPABASE_URL}/auth/v1/admin/users", headers=_sb_headers(),
+            f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users", headers=_sb_headers(),
             params={"page": page, "per_page": per}, timeout=DASH_HTTP_TIMEOUT)
         r.raise_for_status()
     except requests.RequestException as e:
@@ -1132,7 +1135,7 @@ def dash_users_create():
     if username:
         body["user_metadata"] = {"username": username}
     try:
-        r = requests.post(f"{SUPABASE_URL}/auth/v1/admin/users", headers=_sb_headers(),
+        r = requests.post(f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users", headers=_sb_headers(),
                           json=body, timeout=DASH_HTTP_TIMEOUT)
         r.raise_for_status()
     except requests.RequestException as e:
@@ -1153,7 +1156,7 @@ def dash_users_role(user_id: str):
         if not u:
             return _dash_err("用户不存在", 404)
         new_meta = {**(u.get("app_metadata") or {}), "role": role}
-        r = requests.put(f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        r = requests.put(f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users/{user_id}",
                          headers=_sb_headers(), json={"app_metadata": new_meta},
                          timeout=DASH_HTTP_TIMEOUT)
         r.raise_for_status()
@@ -1169,7 +1172,7 @@ def dash_users_ban(user_id: str):
         return _dash_err("用户管理未配置", 503)
     ban = bool((request.get_json(silent=True) or {}).get("ban"))
     try:
-        r = requests.put(f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        r = requests.put(f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users/{user_id}",
                          headers=_sb_headers(),
                          json={"ban_duration": "876000h" if ban else "none"},
                          timeout=DASH_HTTP_TIMEOUT)
@@ -1185,7 +1188,7 @@ def dash_users_confirm(user_id: str):
     if not _sb_ready():
         return _dash_err("用户管理未配置", 503)
     try:
-        r = requests.put(f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        r = requests.put(f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users/{user_id}",
                          headers=_sb_headers(), json={"email_confirm": True},
                          timeout=DASH_HTTP_TIMEOUT)
         r.raise_for_status()
@@ -1203,7 +1206,7 @@ def dash_users_recovery(user_id: str):
         u = _sb_get_user(user_id)
         if not u or not u.get("email"):
             return _dash_err("用户不存在或无邮箱", 404)
-        r = requests.post(f"{SUPABASE_URL}/auth/v1/admin/generate_link",
+        r = requests.post(f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/generate_link",
                           headers=_sb_headers(),
                           json={"type": "recovery", "email": u["email"]},
                           timeout=DASH_HTTP_TIMEOUT)
@@ -1228,7 +1231,7 @@ def dash_users_quota(user_id: str):
             meta.pop("quota_limit_override", None)
         else:
             meta["quota_limit_override"] = int(raw)
-        r = requests.put(f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        r = requests.put(f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users/{user_id}",
                          headers=_sb_headers(), json={"app_metadata": meta},
                          timeout=DASH_HTTP_TIMEOUT)
         r.raise_for_status()
@@ -1246,7 +1249,7 @@ def dash_users_delete(user_id: str):
         u = _sb_get_user(user_id)
         if not u:
             return _dash_err("用户不存在", 404)
-        r = requests.delete(f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        r = requests.delete(f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users/{user_id}",
                             headers=_sb_headers(), timeout=DASH_HTTP_TIMEOUT)
         r.raise_for_status()
     except requests.RequestException as e:

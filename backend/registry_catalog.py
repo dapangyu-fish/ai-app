@@ -20,7 +20,7 @@ from typing import Optional
 
 from config import (
     DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD,
-    SUPABASE_URL, SUPABASE_SERVICE_KEY,
+    SUPABASE_INTERNAL_URL, SUPABASE_SERVICE_KEY,
 )
 
 # summary prompt 版本 —— 改了 enrich 的 prompt / schema 就 +1，全量自动重排
@@ -487,7 +487,7 @@ def resolve_author(author_id: Optional[str], fallback_name: Optional[str] = None
     info = {"nickname": "", "avatar_url": ""}
     try:
         resp = requests.get(
-            f"{SUPABASE_URL}/auth/v1/admin/users/{author_id}",
+            f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users/{author_id}",
             headers={"apikey": SUPABASE_SERVICE_KEY,
                      "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}"},
             timeout=8,

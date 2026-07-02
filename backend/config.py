@@ -41,6 +41,12 @@ for _p in _env_candidates:
 
 # Supabase 配置
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://myapp-auth.dapangyu.work")
+# 服务端→Supabase 的**内部**调用（建桶 / admin API / storage）应走内网 kong，避免用公网
+# SUPABASE_URL 从容器内 hairpin 回 CF/边缘 nginx 导致 404。部署工具会设
+# SUPABASE_INTERNAL_URL=http://supabase-kong:8000 并把 backend 家族接入 supabase 网络；
+# 未设时回落到 SUPABASE_URL（向后兼容单机/旧部署）。客户端可见的值（token/redirect/公共读 URL）
+# 仍必须用公网 SUPABASE_URL。
+SUPABASE_INTERNAL_URL = os.environ.get("SUPABASE_INTERNAL_URL") or SUPABASE_URL
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 # B1-G2: GoTrue HS256 JWT secret for LOCAL token verification on the FaaS invoke
