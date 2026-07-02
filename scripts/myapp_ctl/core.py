@@ -2149,6 +2149,7 @@ def _run_setup_wizard(
         ingress_args.http_port = None
         ingress_args.https_port = None
         ingress_args.http_only = False
+        ingress_args.public_scheme = None
         ingress_args.client_max_body_size = None
         ingress_args.yes = False
         rc = _setup_ingress_from_args(ingress_args, interactive=sys.stdin.isatty())
@@ -2792,12 +2793,12 @@ def _netloc_from_url_or_host(value: str) -> str:
     return parsed.netloc or text.split("://")[-1].split("/", 1)[0]
 
 
-def _edge_url(host: str, *, tls: bool) -> str:
-    return f"{'https' if tls else 'http'}://{host}"
+def _edge_url(host: str, *, tls: bool, port_suffix: str = "") -> str:
+    return f"{'https' if tls else 'http'}://{host}{port_suffix}"
 
 
-def _edge_ws_url(host: str, *, tls: bool) -> str:
-    return f"{'wss' if tls else 'ws'}://{host}/ws"
+def _edge_ws_url(host: str, *, tls: bool, port_suffix: str = "") -> str:
+    return f"{'wss' if tls else 'ws'}://{host}{port_suffix}/ws"
 
 
 def _edge_paths() -> dict[str, Path]:
@@ -2847,6 +2848,7 @@ def _edge_effective_config() -> dict:
         "default_host": default_host,
         "hosts": hosts,
         "tls_enabled": tls_enabled,
+        "public_scheme": str(ingress.get("public_scheme") or "auto"),
         "cert_source": str(ingress.get("cert_source") or ""),
         "key_source": str(ingress.get("key_source") or ""),
         "http_port": str(ingress.get("http_port") or edge_env.get("EDGE_NGINX_HTTP_PORT") or "80"),
@@ -3025,8 +3027,23 @@ def _render_edge_server_blocks(config: dict) -> str:
 
 def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
     tls = bool(config.get("tls_enabled"))
+    # 对外 URL 的 scheme 与「edge 自身是否终止 TLS」解耦（ingress setup --public-scheme）：
+    #   auto（默认，兼容旧行为）= 跟随 edge 自身 TLS；且当 edge 直连于非标准端口时给 URL 补
+    #     :port —— 覆盖“无 SSL 证书、裸 IP+端口访问”的场景（如 --http-only --http-port 8080
+    #     直连 → http://IP:8080；默认 80/443 则不带端口，与历史行为一致）。
+    #   https / http = TLS 在上游（宿主 nginx / CDN / CF）终止，edge 只是内部上游 →
+    #     对外走标准端口、URL 不带 :port（否则会把 edge 的内部端口泄进公网 URL）。
+    scheme_mode = str(config.get("public_scheme") or "auto").strip().lower()
+    if scheme_mode in {"https", "http"}:
+        public_tls = scheme_mode == "https"
+        port_suffix = ""
+    else:
+        public_tls = tls
+        port = str(config.get("https_port" if tls else "http_port") or "").strip()
+        default_port = "443" if tls else "80"
+        port_suffix = f":{port}" if port and port != default_port else ""
     hosts: dict[str, str] = config["hosts"]
-    urls = {key: _edge_url(host, tls=tls) for key, host in hosts.items()}
+    urls = {key: _edge_url(host, tls=public_tls, port_suffix=port_suffix) for key, host in hosts.items()}
     cfg = _cfg()
     domains = cfg.setdefault("domains", {})
     domains.update(urls)
@@ -3037,7 +3054,7 @@ def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
         "BACKEND_PUBLIC_URL": urls["backend"],
         "SUPABASE_URL": urls["auth"],
         "OPENIM_API_URL": urls["openim"],
-        "OPENIM_WS_URL": _edge_ws_url(hosts["openim"], tls=tls),
+        "OPENIM_WS_URL": _edge_ws_url(hosts["openim"], tls=public_tls, port_suffix=port_suffix),
         "APP_MINIO_PUBLIC_URL": urls["oss"],
         "APP_MINIO_CONSOLE_PUBLIC_URL": urls["oss_console"],
         "REGISTRY_PUBLIC_URL": urls["registry"],
@@ -3049,7 +3066,8 @@ def _apply_edge_public_urls(config: dict, *, dry_run: bool) -> None:
         "SITE_URL": urls["webapp"],
         "ADDITIONAL_REDIRECT_URLS": ",".join(sorted({urls["website"], urls["webapp"]})),
     }
-    user_center_values = {"USER_CENTER_COOKIE_SECURE": "true" if tls else "false"}
+    # cookie Secure 跟随**对外** scheme（浏览器看到的），而非 edge 自身 TLS
+    user_center_values = {"USER_CENTER_COOKIE_SECURE": "true" if public_tls else "false"}
     openim_values = {"HOST_IP": hosts.get("openim", config["default_host"])}
     faas_values = {
         "FAAS_PUBLIC_BASE_URL": urls["backend"],
@@ -3162,6 +3180,10 @@ def _setup_ingress_from_args(args, *, interactive: bool) -> int:
         else:
             cert_source = ""
             key_source = ""
+    public_scheme = str(getattr(args, "public_scheme", None) or existing.get("public_scheme") or "auto").strip().lower()
+    if public_scheme not in {"auto", "https", "http"}:
+        print(f"invalid --public-scheme {public_scheme!r}; use auto|https|http", file=sys.stderr)
+        return 1
     config = {
         "enabled": True,
         "default_host": _hostname_from_url_or_host(default_host),
@@ -3169,6 +3191,7 @@ def _setup_ingress_from_args(args, *, interactive: bool) -> int:
         "http_port": str(http_port),
         "https_port": str(https_port),
         "tls_enabled": bool(tls_enabled),
+        "public_scheme": public_scheme,
         "cert_source": cert_source,
         "key_source": key_source,
         "client_max_body_size": str(getattr(args, "client_max_body_size", None) or existing.get("client_max_body_size") or "2g"),

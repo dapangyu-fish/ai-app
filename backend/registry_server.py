@@ -25,7 +25,7 @@ from minio import Minio
 # ═══════════════════════════════════════════════════════════
 
 from config import (
-    SUPABASE_URL, SUPABASE_ANON_KEY,
+    SUPABASE_INTERNAL_URL, SUPABASE_ANON_KEY,
     MINIO_ENDPOINT, MINIO_ACCESS_KEY, MINIO_SECRET_KEY, MINIO_PUBLIC_URL, MINIO_SECURE,
     REGISTRY_BASE_URL, REGISTRY_UPSTREAM, REGISTRY_MIRROR_SYNC_INTERVAL_SEC,
 )
@@ -156,7 +156,7 @@ def require_auth(f):
             return f(*args, **kwargs)
 
         resp = requests.get(
-            f"{SUPABASE_URL}/auth/v1/user",
+            f"{SUPABASE_INTERNAL_URL}/auth/v1/user",
             headers=_supabase_headers(token),
             timeout=10,
         )
@@ -184,7 +184,7 @@ def _optional_bearer_user_id():
 
     try:
         resp = requests.get(
-            f"{SUPABASE_URL}/auth/v1/user",
+            f"{SUPABASE_INTERNAL_URL}/auth/v1/user",
             headers=_supabase_headers(token),
             timeout=8,
         )
@@ -1390,7 +1390,7 @@ def package_detail(name):
         auth = request.headers.get("Authorization", "")
         if auth.startswith("Bearer "):
             try:
-                r = requests.get(f"{SUPABASE_URL}/auth/v1/user",
+                r = requests.get(f"{SUPABASE_INTERNAL_URL}/auth/v1/user",
                                  headers=_supabase_headers(auth[7:]), timeout=8)
                 if r.status_code == 200:
                     viewer = r.json().get("id")

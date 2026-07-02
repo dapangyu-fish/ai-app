@@ -650,10 +650,17 @@ _SUPABASE_NET_CLIENTS = [
 ]
 
 
+_SUPABASE_NET_CLIENT_SERVICES = (
+    "backend", "ai-worker", "faas-push-worker", "registry", "config-center", "user-center",
+)
+
+
 def _ensure_supabase_internal_net(names: list[str], *, dry_run: bool) -> int:
     """把 backend 家族容器接入 supabase 网络，使其能用内网 kong 调 Supabase（bug1 修复）。
-    幂等；容器未跑/已接入则跳过；supabase 网络不存在（未部署 supabase）则跳过。非阻断。"""
-    if "backend" not in names:
+    幂等；容器未跑/已接入则跳过；supabase 网络不存在（未部署 supabase）则跳过。非阻断。
+    门槛=任一 client 服务在本轮部署里（compose recreate 会丢 network connect，单独
+    `deploy config-center` 这类部署也必须重接，不能只认 backend）。"""
+    if not any(n in names for n in _SUPABASE_NET_CLIENT_SERVICES):
         return 0
     if dry_run:
         print(f"+ docker network connect {_SUPABASE_INTERNAL_NET} <backend 家族容器>")
@@ -776,15 +783,20 @@ def _ensure_pgbouncer_db(names: list[str], *, dry_run: bool) -> int:
             print(f"+ pgbouncer.user_lookup ready in {db}")
         else:
             print(f"pgbouncer schema/func 在 {db} 失败: {(fr.stderr or '').strip()[:160]}", file=sys.stderr)
-    # 4) 重启两个池（清 server_login_retry 缓存——池在角色/函数建好前起过、缓存了鉴权失败），
-    #    再顺带重启依赖 pgbouncer 的 worker，避免新部署后它们在自己的退避窗口里 crash-loop 十几秒才自愈。
+    # 4) 重启两个池（清 server_login_retry 缓存——池在角色/函数建好前起过、缓存了鉴权失败）。
     for c in ("myapp-pgbouncer-platform", "myapp-pgbouncer-faas"):
         if _docker_inspect(c):
             _run(["docker", "restart", c], capture=True)
-    for c in ("myapp-faas-push-worker", "myapp-ai-worker"):
-        if _docker_inspect(c):
-            _run(["docker", "restart", c], capture=True)
-    print("+ pgbouncer pools 已配置并重启（含依赖 worker）")
+    # 依赖 pgbouncer 的 worker：只重启「本轮部署过的」或「确实处于崩溃态的」——健康运行中的
+    # 不动，避免 `deploy --group infra` 这类不含 worker 的部署绕过活跃 AI 任务守卫误杀进行中的生成。
+    for svc, cont in (("faas-push-worker", "myapp-faas-push-worker"), ("ai-worker", "myapp-ai-worker")):
+        info = _docker_inspect(cont)
+        if not info:
+            continue
+        state = str((info.get("State", {}) or {}).get("Status") or "")
+        if svc in names or state in {"restarting", "exited"}:
+            _run(["docker", "restart", cont], capture=True)
+    print("+ pgbouncer pools 已配置并重启")
     return 0
 
 

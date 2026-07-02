@@ -43,6 +43,9 @@ LISTEN_HOST = os.environ.get("LISTEN_HOST", "127.0.0.1")
 LISTEN_PORT = int(os.environ.get("LISTEN_PORT", "8089"))
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+# 服务端 GoTrue admin 调用走内网 kong（http://supabase-kong:8000），避免公网 URL 从容器内
+# hairpin 回边缘 nginx 404；未设时回落 SUPABASE_URL（向后兼容，纯 IP+端口部署不受影响）。
+SUPABASE_INTERNAL_URL = (os.environ.get("SUPABASE_INTERNAL_URL") or SUPABASE_URL).rstrip("/")
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
 
 if not ADMIN_PASSWORD:
@@ -128,7 +131,7 @@ def _sb_headers() -> dict:
 def sb_list_users(page: int = 1, per_page: int = 50) -> dict:
     """返回 {"users": [...], "total_pages": int}"""
     r = requests.get(
-        f"{SUPABASE_URL}/auth/v1/admin/users",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users",
         headers=_sb_headers(),
         params={"page": page, "per_page": per_page},
         timeout=10,
@@ -144,7 +147,7 @@ def sb_list_users(page: int = 1, per_page: int = 50) -> dict:
 
 def sb_get_user(user_id: str) -> dict | None:
     r = requests.get(
-        f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users/{user_id}",
         headers=_sb_headers(), timeout=10,
     )
     if r.status_code == 404:
@@ -160,7 +163,7 @@ def sb_update_app_metadata(user_id: str, patch: dict) -> dict:
         raise ValueError(f"user {user_id} not found")
     new_meta = {**user.get("app_metadata", {}), **patch}
     r = requests.put(
-        f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users/{user_id}",
         headers=_sb_headers(),
         json={"app_metadata": new_meta},
         timeout=10,
@@ -173,7 +176,7 @@ def sb_set_banned(user_id: str, ban: bool) -> dict:
     """ban=True 设 100 年；ban=False 用 'none'（GoTrue 文档约定的解禁值）"""
     body = {"ban_duration": "876000h" if ban else "none"}
     r = requests.put(
-        f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users/{user_id}",
         headers=_sb_headers(),
         json=body,
         timeout=10,
@@ -185,7 +188,7 @@ def sb_set_banned(user_id: str, ban: bool) -> dict:
 def sb_send_recovery(email: str) -> dict:
     """让 GoTrue 给该邮箱发密码重置链接"""
     r = requests.post(
-        f"{SUPABASE_URL}/auth/v1/admin/generate_link",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/generate_link",
         headers=_sb_headers(),
         json={"type": "recovery", "email": email},
         timeout=10,
@@ -197,7 +200,7 @@ def sb_send_recovery(email: str) -> dict:
 def sb_force_email_confirm(user_id: str) -> dict:
     """手动把 email 标为已验证（绕过验证邮件）。用于"邮件没收到"的客服兜底场景。"""
     r = requests.put(
-        f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users/{user_id}",
         headers=_sb_headers(),
         json={"email_confirm": True},
         timeout=10,
@@ -223,7 +226,7 @@ def sb_create_user(email: str, password: str, role: str,
     if username:
         body["user_metadata"] = {"username": username}
     r = requests.post(
-        f"{SUPABASE_URL}/auth/v1/admin/users",
+        f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users",
         headers=_sb_headers(),
         json=body,
         timeout=15,
@@ -538,7 +541,7 @@ def set_quota_override(user_id):
             current = before.get("app_metadata") or {}
             new_meta = {k: v for k, v in current.items() if k != "quota_limit_override"}
             r = requests.put(
-                f"{SUPABASE_URL}/auth/v1/admin/users/{user_id}",
+                f"{SUPABASE_INTERNAL_URL}/auth/v1/admin/users/{user_id}",
                 headers=_sb_headers(),
                 json={"app_metadata": new_meta},
                 timeout=10,
