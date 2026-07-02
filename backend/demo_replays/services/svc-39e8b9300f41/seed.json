@@ -1,0 +1,5 @@
+[
+  {"route": "/me", "method": "POST", "body": {"nickname": "Demo"}},
+  {"route": "/boards", "method": "POST", "body": {"name": "广场", "intro": "随便聊聊 / General"}},
+  {"route": "/threads", "method": "POST", "body": {"board_id": "$prev.board.id", "title": "欢迎来到广场 / Welcome", "body": "这是一个由 AI 一句话生成的全栈论坛，随便发帖试试！This whole forum was generated from one sentence — try posting!"}}
+]

@@ -1,0 +1,117 @@
+{
+  "service_id": "demo-forum",
+  "slug": "demo-forum",
+  "runtime": "python-flask",
+  "routes": [
+    {
+      "path": "/whoami",
+      "methods": [
+        "GET"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/me",
+      "methods": [
+        "POST"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/boards",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/board",
+      "methods": [
+        "GET"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/feed",
+      "methods": [
+        "GET"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/threads",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/thread",
+      "methods": [
+        "GET"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/posts",
+      "methods": [
+        "POST",
+        "DELETE"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/user",
+      "methods": [
+        "GET"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/friends",
+      "methods": [
+        "GET"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/friends/requests",
+      "methods": [
+        "GET"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/friends/request",
+      "methods": [
+        "POST"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/friends/accept",
+      "methods": [
+        "POST"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/friends/reject",
+      "methods": [
+        "POST"
+      ],
+      "description": ""
+    },
+    {
+      "path": "/dm",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "description": ""
+    }
+  ],
+  "updated_at_ms": 1782989471326
+}

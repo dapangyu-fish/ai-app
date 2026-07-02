@@ -7,6 +7,7 @@ import base64
 import getpass
 import hashlib
 import hmac
+import io
 import json
 import os
 import re
@@ -19,6 +20,7 @@ import subprocess
 import sys
 import threading
 import time
+import zipfile
 from pathlib import Path
 from urllib.parse import quote, urlencode, urlparse
 from urllib.error import HTTPError, URLError
@@ -1036,6 +1038,9 @@ def cmd_deploy(args) -> int:
     if rc != 0:
         return rc
     if not args.dry_run:
+        # demo 账号凭据须在 runtime secrets 同步/容器创建前就位（env 才能进 backend 容器）
+        if not getattr(args, "no_demo", False) and _deploy_should_ensure_demo_assets(names):
+            _ensure_demo_account_secrets()
         _sync_runtime_secrets_from_host_config(data_root)
     if args.build:
         rc = _deploy_images(image_targets, action="build", dry_run=args.dry_run, include_base=bool(getattr(args, "base", False)))
@@ -1089,6 +1094,8 @@ def cmd_deploy(args) -> int:
         _ensure_demo_bucket_assets(dry_run=args.dry_run)
         # 非阻断：确保 Supabase Storage avatars 桶就绪（头像上传依赖，否则 404 Bucket not found）
         _ensure_avatar_bucket(dry_run=args.dry_run)
+    # 非阻断：demo 全家桶（账号/registry 模板/demo FaaS 服务组）随部署自动就绪 → 开箱即用 demo
+    _ensure_demo_stack(names, dry_run=args.dry_run, skip=bool(getattr(args, "no_demo", False)))
     if not args.dry_run and not args.no_test_user and _deploy_can_seed_test_user(names):
         rc = _maybe_seed_test_user(args)
         if rc != 0:
@@ -1461,6 +1468,377 @@ def cmd_test_user(args) -> int:
     return 0
 
 
+# ---------- demo 全家桶装配：账号 / registry 模板 / demo FaaS 服务组随集群初始化自动就绪 ----------
+#
+# 单一真相源 = 仓库 backend/demo_replays/：回放与 app.json 随 backend 镜像分发；
+# 依赖的 FaaS 服务组 bundle 在 services/<service_id>/ 随源码 checkout 分发，由本装配器
+# 在每次 deploy 时幂等部署（demo 账号持有 + access_policy=public + 可选 seed.json）。
+# 新增 demo 只改仓库；集群侧零手工步骤。设计详见 backend/demo_replays/README.md。
+
+_DEMO_DEFAULT_EMAIL = "demo@example.com"
+
+
+def _demo_replays_dir() -> Path:
+    src = str(_cfg().get("paths", {}).get("source") or "").strip() or "/opt/myapp/current"
+    return Path(src) / "backend" / "demo_replays"
+
+
+def _demo_backend_base() -> str:
+    env = _parse_env(_secret_path("backend"))
+    return f"http://127.0.0.1:{env.get('BACKEND_PORT') or '5566'}"
+
+
+def _demo_registry_base() -> str:
+    env = _parse_env(_secret_path("backend"))
+    return f"http://127.0.0.1:{env.get('REGISTRY_PORT') or '3254'}"
+
+
+def _demo_http(method: str, url: str, *, token: str = "", body=None,
+               content_type: str = "application/json", timeout: float = 60.0) -> tuple[int, dict]:
+    headers: dict[str, str] = {}
+    if content_type:
+        headers["Content-Type"] = content_type
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    data = None
+    if body is not None:
+        data = body if isinstance(body, (bytes, bytearray)) else json.dumps(body, ensure_ascii=False).encode("utf-8")
+    req = Request(url, data=data, headers=headers, method=method)
+    try:
+        with urlopen(req, timeout=timeout) as resp:
+            raw = resp.read()
+            code = int(resp.getcode() or 0)
+    except HTTPError as exc:
+        raw = exc.read()
+        code = int(exc.code)
+    except (URLError, OSError, TimeoutError) as exc:
+        return 0, {"error": str(exc)}
+    try:
+        parsed = json.loads(raw.decode("utf-8", errors="replace") or "{}")
+        if not isinstance(parsed, dict):
+            parsed = {"data": parsed}
+    except ValueError:
+        parsed = {"raw": raw[:200].decode("utf-8", errors="replace")}
+    return code, parsed
+
+
+def _ensure_demo_account_secrets(*, dry_run: bool = False) -> tuple[str, str]:
+    """确保 backend.env 有 DEMO_ACCOUNT_EMAIL/PASSWORD（缺失则生成随机口令并持久化）。
+    必须在 runtime secrets 同步/backend 容器创建之前调用，env 才能进容器。"""
+    path = _secret_path("backend")
+    data = _parse_env(path)
+    email = (data.get("DEMO_ACCOUNT_EMAIL") or "").strip()
+    password = (data.get("DEMO_ACCOUNT_PASSWORD") or "").strip()
+    changed = False
+    if not email:
+        email = _DEMO_DEFAULT_EMAIL
+        data["DEMO_ACCOUNT_EMAIL"] = email
+        changed = True
+    if not password:
+        password = py_secrets.token_urlsafe(18)
+        data["DEMO_ACCOUNT_PASSWORD"] = password
+        changed = True
+    if changed and not dry_run:
+        _write_env(path, data)
+        print("+ demo account credentials ensured in backend.env")
+    return email, password
+
+
+def _ensure_demo_account(email: str, password: str) -> str:
+    """确保 demo Supabase 账号存在且口令与 secrets 一致（幂等重置，防手工漂移）。返回 uid（失败空串）。"""
+    supabase_env = _parse_env(_secret_path("supabase"))
+    service_key = supabase_env.get("SERVICE_ROLE_KEY") or ""
+    if not service_key:
+        print("demo 装配：缺 SERVICE_ROLE_KEY，跳过账号创建", file=sys.stderr)
+        return ""
+    base_url = _supabase_admin_base_url(supabase_env)
+    if not _wait_supabase_auth(base_url, api_key=service_key):
+        print("demo 装配：supabase auth 未就绪，跳过账号创建", file=sys.stderr)
+        return ""
+    existing = _find_supabase_user_by_email(base_url, service_key, email)
+    if existing:
+        status, _data, text = _supabase_admin_request(
+            method="PUT", base_url=base_url, service_key=service_key,
+            path=f"/auth/v1/admin/users/{existing.get('id')}",
+            body={"password": password, "email_confirm": True},
+        )
+        if status >= 400:
+            print(f"demo 账号口令同步失败 HTTP {status}: {text[:160]}", file=sys.stderr)
+        return str(existing.get("id") or "")
+    status, data, text = _supabase_admin_request(
+        method="POST", base_url=base_url, service_key=service_key,
+        path="/auth/v1/admin/users",
+        body={"email": email, "password": password, "email_confirm": True,
+              "user_metadata": {"username": "demo"}, "app_metadata": {"role": "user"}},
+    )
+    if status >= 400:
+        print(f"demo 账号创建失败 HTTP {status}: {text[:160]}", file=sys.stderr)
+        return ""
+    print(f"+ demo account created: {email}")
+    return str((data or {}).get("id") or "")
+
+
+def _demo_jwt(email: str, password: str) -> str:
+    supabase_env = _parse_env(_secret_path("supabase"))
+    anon = supabase_env.get("ANON_KEY") or ""
+    base_url = _supabase_admin_base_url(supabase_env)
+    req = Request(
+        f"{base_url}/auth/v1/token?grant_type=password",
+        data=json.dumps({"email": email, "password": password}).encode("utf-8"),
+        headers={"Content-Type": "application/json", "apikey": anon},
+        method="POST",
+    )
+    try:
+        with urlopen(req, timeout=20) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        return str(data.get("access_token") or "")
+    except (HTTPError, URLError, OSError, ValueError) as exc:
+        print(f"demo 账号登录失败: {exc}", file=sys.stderr)
+        return ""
+
+
+def _ensure_demo_templates() -> None:
+    """把仓库 templates/*.json 幂等发布进本机 registry（demo 依赖 common-ui 等库包；市场非空）。"""
+    src = Path(str(_cfg().get("paths", {}).get("source") or "")) / "templates"
+    token = _parse_env(_secret_path("backend")).get("REGISTRY_ADMIN_TOKEN") or ""
+    if not src.is_dir() or not token:
+        print("demo 装配：templates 目录或 REGISTRY_ADMIN_TOKEN 缺失，跳过模板种子", file=sys.stderr)
+        return
+    base = _demo_registry_base()
+    deadline = time.time() + 60
+    while time.time() < deadline:
+        code, _ = _demo_http("GET", f"{base}/health", content_type="")
+        if code == 200:
+            break
+        time.sleep(2)
+    else:
+        print("demo 装配：registry 未就绪，跳过模板种子", file=sys.stderr)
+        return
+    published = existed = skipped = 0
+    for f in sorted(src.glob("*.json")):
+        try:
+            content = json.loads(f.read_text(encoding="utf-8"))
+        except ValueError:
+            skipped += 1
+            continue
+        if not isinstance(content, dict) or not (content.get("meta") or {}).get("name"):
+            skipped += 1
+            continue
+        code, _resp = _demo_http("POST", f"{base}/publish", token=token, body={"json_content": content})
+        if code == 200:
+            published += 1
+        elif code == 409:
+            existed += 1
+        else:
+            skipped += 1
+    print(f"+ registry templates: {published} published, {existed} existing, {skipped} skipped")
+
+
+def _demo_bundle_fingerprint(bundle_dir: Path) -> str:
+    h = hashlib.sha256()
+    for f in sorted(p for p in bundle_dir.iterdir() if p.is_file() and p.name != "seed.json"):
+        h.update(f.name.encode("utf-8"))
+        h.update(b"\0")
+        h.update(f.read_bytes())
+    return h.hexdigest()
+
+
+def _demo_zip_bundle(bundle_dir: Path) -> bytes:
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for f in sorted(p for p in bundle_dir.iterdir() if p.is_file() and p.name != "seed.json"):
+            zf.writestr(f.name, f.read_bytes())
+    return buf.getvalue()
+
+
+def _demo_subst_prev(obj, prev: dict):
+    if isinstance(obj, dict):
+        return {k: _demo_subst_prev(v, prev) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_demo_subst_prev(v, prev) for v in obj]
+    if isinstance(obj, str) and obj.startswith("$prev."):
+        cur = prev
+        for part in obj[len("$prev."):].split("."):
+            cur = cur.get(part) if isinstance(cur, dict) else None
+        return cur
+    return obj
+
+
+def _run_demo_seed(base: str, jwt: str, service_id: str, seed_file: Path) -> bool:
+    try:
+        steps = json.loads(seed_file.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        print(f"demo service {service_id}: seed.json 解析失败: {exc}", file=sys.stderr)
+        return False
+    prev: dict = {}
+    for step in steps:
+        route = str(step.get("route") or "")
+        method = str(step.get("method") or "POST").upper()
+        body = _demo_subst_prev(step.get("body") or {}, prev)
+        code, resp = _demo_http(method, f"{base}/api/faas/invoke/{quote(service_id)}{route}", token=jwt, body=body)
+        if code != 200:
+            print(f"demo service {service_id}: seed {method} {route} → HTTP {code} {str(resp)[:120]}", file=sys.stderr)
+            return False
+        prev = resp
+    print(f"+ demo service {service_id}: seeded ({len(steps)} steps)")
+    return True
+
+
+def _ensure_demo_services(jwt: str, *, dry_run: bool = False) -> None:
+    sdir = _demo_replays_dir() / "services"
+    if not sdir.is_dir():
+        return
+    checker = _demo_replays_dir() / "check_demo_services.py"
+    if checker.is_file():
+        r = _run([sys.executable, str(checker)], capture=True)
+        if r.returncode != 0:
+            print(f"demo 装配：一致性自检失败，跳过服务组部署\n{(r.stderr or r.stdout or '').strip()[:400]}", file=sys.stderr)
+            return
+    state_path = Path(str(_cfg().get("paths", {}).get("state") or "/mnt/myapp/state")) / "demo-services.json"
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
+    except ValueError:
+        state = {}
+    base = _demo_backend_base()
+    for bundle_dir in sorted(p for p in sdir.iterdir() if p.is_dir()):
+        sid = bundle_dir.name
+        if not (bundle_dir / "service.json").is_file():
+            continue
+        fp = _demo_bundle_fingerprint(bundle_dir)
+        code, info = _demo_http("GET", f"{base}/api/faas/apps/{quote(sid)}", token=jwt, content_type="")
+        mine = code == 200
+        if mine and state.get(sid, {}).get("fingerprint") == fp:
+            print(f"+ demo service {sid}: up-to-date")
+            continue
+        if dry_run:
+            print(f"+ demo service {sid}: would deploy")
+            continue
+        code, resp = _demo_http("POST", f"{base}/api/faas/services", token=jwt,
+                                body=_demo_zip_bundle(bundle_dir), content_type="application/zip", timeout=300)
+        if code != 200 or not resp.get("ok"):
+            hint = "" if mine else "（若该 service_id 已被其他用户占用则不会覆盖）"
+            print(f"demo service {sid} 部署失败 HTTP {code}: {str(resp)[:200]} {hint}", file=sys.stderr)
+            continue
+        _demo_http("POST", f"{base}/api/faas/apps/{quote(sid)}/policy", token=jwt, body={"access_policy": "public"})
+        entry = dict(state.get(sid) or {})
+        entry["fingerprint"] = fp
+        seed_file = bundle_dir / "seed.json"
+        # 只在服务首次创建时灌种子（重部署已有服务会重复建板块/帖子）
+        if seed_file.is_file() and not mine and not entry.get("seeded"):
+            entry["seeded"] = _run_demo_seed(base, jwt, sid, seed_file)
+        state[sid] = entry
+        status = str((resp.get("service") or {}).get("status") or "?")
+        print(f"+ demo service {sid}: deployed (status={status}, policy=public)")
+    try:
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state_path.write_text(json.dumps(state, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    except OSError as exc:
+        print(f"demo 装配：状态文件写入失败: {exc}", file=sys.stderr)
+
+
+def _check_demo_image_consistency() -> None:
+    """护栏：checkout 里的 demo 若不在 pin 的 backend 镜像里，回放/列表不会出现——当场告警。"""
+    checkout = {p.name for p in _demo_replays_dir().glob("*.app.json")}
+    if not checkout:
+        return
+    r = _run(["docker", "exec", "myapp-backend", "sh", "-c",
+              "ls /app/backend/demo_replays/*.app.json 2>/dev/null"], capture=True)
+    if r.returncode != 0:
+        return
+    image = {line.rsplit("/", 1)[-1] for line in (r.stdout or "").split() if line.strip()}
+    missing = sorted(checkout - image)
+    if missing:
+        print(
+            f"⚠️ demo 镜像滞后：{len(missing)} 个 demo 在源码里但不在 pin 的 backend 镜像里"
+            f"（{', '.join(missing[:5])}{'…' if len(missing) > 5 else ''}）→ 请发新版镜像并升级 --image-version",
+            file=sys.stderr,
+        )
+
+
+def _ensure_demo_stack(names: list[str], *, dry_run: bool = False, skip: bool = False) -> int:
+    """非阻断：demo 账号 + registry 模板 + demo FaaS 服务组随部署自动就绪（开箱即用 demo）。"""
+    if skip:
+        print("+ demo 装配已跳过（--no-demo）")
+        return 0
+    if not _deploy_should_ensure_demo_assets(names):
+        return 0
+    if not _demo_replays_dir().is_dir():
+        return 0
+    try:
+        email, password = _ensure_demo_account_secrets(dry_run=dry_run)
+        if dry_run:
+            print("+ demo stack: would ensure account / registry templates / FaaS service groups")
+            return 0
+        uid = _ensure_demo_account(email, password)
+        _ensure_demo_templates()
+        if uid:
+            jwt = _demo_jwt(email, password)
+            if jwt:
+                _ensure_demo_services(jwt)
+            else:
+                print("demo 装配：拿不到 demo JWT，跳过服务组部署", file=sys.stderr)
+        _check_demo_image_consistency()
+    except Exception as exc:  # 非阻断：demo 装配失败不拖垮部署
+        print(f"demo 装配失败（非阻断，可用 myapp-ctl demo provision 重试）: {exc}", file=sys.stderr)
+    return 0
+
+
+def cmd_demo(args) -> int:
+    """myapp-ctl demo provision|status —— 手动装配 / 检查开箱即用 demo 全家桶。"""
+    action = getattr(args, "demo_cmd", None) or "status"
+    if action == "provision":
+        email, password = _ensure_demo_account_secrets(dry_run=False)
+        uid = _ensure_demo_account(email, password)
+        _ensure_demo_templates()
+        if uid:
+            jwt = _demo_jwt(email, password)
+            if jwt:
+                _ensure_demo_services(jwt)
+            else:
+                print("demo provision：拿不到 demo JWT，服务组未处理", file=sys.stderr)
+                return 1
+        else:
+            return 1
+        _check_demo_image_consistency()
+        r = _run(["docker", "exec", "myapp-backend", "sh", "-c", "env | grep -c ^DEMO_ACCOUNT_EMAIL="], capture=True)
+        if (r.stdout or "").strip() == "0":
+            print("⚠️ 运行中的 backend 容器缺 DEMO_ACCOUNT_* env（demo 登录端点需要）→ 跑一次 `myapp-ctl deploy backend` 重建容器", file=sys.stderr)
+        return 0
+    # status
+    backend_env = _parse_env(_secret_path("backend"))
+    email = backend_env.get("DEMO_ACCOUNT_EMAIL") or ""
+    password = backend_env.get("DEMO_ACCOUNT_PASSWORD") or ""
+    print(f"secrets:  {'✓' if email and password else '✗'} DEMO_ACCOUNT_EMAIL/PASSWORD in backend.env")
+    r = _run(["docker", "exec", "myapp-backend", "sh", "-c", "env | grep -c ^DEMO_ACCOUNT_EMAIL="], capture=True)
+    print(f"backend:  {'✓' if (r.stdout or '').strip() not in ('', '0') else '✗'} container has DEMO_ACCOUNT_* env")
+    uid = ""
+    if email:
+        supabase_env = _parse_env(_secret_path("supabase"))
+        service_key = supabase_env.get("SERVICE_ROLE_KEY") or ""
+        if service_key:
+            user = _find_supabase_user_by_email(_supabase_admin_base_url(supabase_env), service_key, email)
+            uid = str((user or {}).get("id") or "")
+    print(f"account:  {'✓ ' + uid if uid else '✗ ' + (email or '(no email)')}")
+    code, _ = _demo_http("GET", f"{_demo_registry_base()}/resolve?name=calculator", content_type="")
+    print(f"registry: {'✓' if code == 200 else '✗'} resolve calculator → HTTP {code}")
+    sdir = _demo_replays_dir() / "services"
+    jwt = _demo_jwt(email, password) if email and password else ""
+    if sdir.is_dir():
+        for bundle_dir in sorted(p for p in sdir.iterdir() if p.is_dir()):
+            sid = bundle_dir.name
+            if not jwt:
+                print(f"service:  ? {sid} (no demo JWT)")
+                continue
+            code, info = _demo_http("GET", f"{_demo_backend_base()}/api/faas/apps/{quote(sid)}", token=jwt, content_type="")
+            if code == 200:
+                app_info = info.get("application") or info
+                policy = str(app_info.get("access_policy") or "?")
+                print(f"service:  ✓ {sid} (policy={policy})")
+            else:
+                print(f"service:  ✗ {sid} → HTTP {code}")
+    return 0
+
+
 def _restore_data_root_config_if_needed(data_root: Path, *, force: bool = False) -> bool:
     bundle_path = data_root / "myapp-config.json"
     if not bundle_path.exists():
@@ -1743,6 +2121,9 @@ __all__ = [
     '_create_or_update_supabase_test_user',
     '_maybe_seed_test_user',
     'cmd_test_user',
+    '_ensure_demo_stack',
+    '_ensure_demo_account_secrets',
+    'cmd_demo',
     '_restore_data_root_config_if_needed',
     '_emit_client_env_summary',
     '_local_agent_node_register_command',
