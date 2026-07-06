@@ -92,7 +92,7 @@ COPY set (backend family + agent-node via compose override; agent-runtime / faas
 child containers via their spawners reading `MYAPP_CODE_OVERLAY_DIR`). `myapp-ctl deploy
 --image-version X.Y.Z-<sha>` detects a retagged image (baked `MYAPP_BUILD_COMMIT` ≠ tag
 sha) and enables the overlay automatically; `myapp-ctl code set|status|off` is the manual
-control. `MYAPP_BUILD_COMMIT` inside a running container reports `<sha>-overlay`.
+control. `MYAPP_BUILD_COMMIT` inside a running container reports `<sha>-overlay`. The per-image mount map is parsed from each `Dockerfile.<img>`'s COPY lines into `.overlay-manifest.json` at export time (single source of truth — no hand-copied lists); `scripts/test_release_overlay.py` regression-tests the parser and the per-image retag detection.
 
 ## Architecture
 
