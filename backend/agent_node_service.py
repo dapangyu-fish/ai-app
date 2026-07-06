@@ -811,15 +811,25 @@ def _docker_cmd(run_id: str, payload: dict, payload_path: Path, paths: dict[str,
         f"AI_APP_PROJECT_ROOT={PROJECT_ROOT}",
     ]
     # code overlay（纯代码发布）：本服务以 retag 镜像运行时，compose override 注入
-    # MYAPP_CODE_OVERLAY_DIR（宿主全仓库导出目录）；运行时子容器按
-    # Dockerfile.agent-runtime 的 COPY 映射以 ro 盖上新代码。无 overlay 时零改动。
+    # MYAPP_CODE_OVERLAY_DIR（宿主全仓库导出目录）；运行时子容器的挂载映射从导出目录里的
+    # .overlay-manifest.json 读取（由 myapp-ctl 从该 ref 的 Dockerfile.agent-runtime 解析生成
+    # ——单一真相源，COPY 变更自动跟随）。旧导出无 manifest 时回退内置映射。无 overlay 零改动。
     overlay_dir = (os.environ.get("MYAPP_CODE_OVERLAY_DIR") or "").strip()
     if overlay_dir:
-        for sub in ("backend", "lib", "assets", "test", "templates", "docs", "scripts"):
-            cmd.extend(["-v", f"{overlay_dir}/{sub}:/app/{sub}:ro"])
-        for fname in ("JSON-DSL.md", "pubspec.yaml", "pubspec.lock", "analysis_options.yaml"):
-            cmd.extend(["-v", f"{overlay_dir}/{fname}:/app/{fname}:ro"])
-        cmd.extend(["-v", f"{overlay_dir}/deploy/production/agent_runner.py:/opt/myapp/agent_runner.py:ro"])
+        mounts: list[list[str]] = []
+        try:
+            manifest = json.loads(Path(overlay_dir, ".overlay-manifest.json").read_text(encoding="utf-8"))
+            mounts = list(manifest.get("images", {}).get("agent_runtime") or [])
+        except (OSError, ValueError):
+            mounts = []
+        if not mounts:  # 兼容旧导出（无 manifest）——与 Dockerfile.agent-runtime 同步的静态映射
+            mounts = [[sub, f"/app/{sub}"] for sub in
+                      ("backend", "lib", "assets", "test", "templates", "docs", "scripts")]
+            mounts += [[f, f"/app/{f}"] for f in
+                       ("JSON-DSL.md", "pubspec.yaml", "pubspec.lock", "analysis_options.yaml")]
+            mounts.append(["deploy/production/agent_runner.py", "/opt/myapp/agent_runner.py"])
+        for src, dst in mounts:
+            cmd.extend(["-v", f"{overlay_dir}/{src}:{dst}:ro"])
         overlay_sha = (os.environ.get("MYAPP_CODE_OVERLAY_SHA") or "").strip()
         if overlay_sha:
             runtime_env["MYAPP_BUILD_COMMIT"] = f"{overlay_sha}-overlay"

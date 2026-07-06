@@ -1910,6 +1910,7 @@ def _start_local_docker_runtime(root: Path, *, function_name: str, service_id: s
 # MYAPP_CODE_OVERLAY_DIR（宿主全仓库导出目录）；FaaS 运行时容器的 4 个 helper 文件
 # 据此以 ro 挂载补齐（映射与 Dockerfile.faas-runtime 的 COPY/重命名一致）。
 # 无 overlay 时返回空 dict，行为与既往完全一致。
+# 旧导出（无 manifest）的兼容回退——与 Dockerfile.faas-runtime 的 COPY/重命名同步
 _CODE_OVERLAY_RUNTIME_FILES = (
     ("backend/faas_runtime_server.py", "/app/backend/faas_runtime_server.py"),
     ("backend/faas_runtime_db.py", "/app/backend/myapp_db.py"),
@@ -1922,7 +1923,17 @@ def _code_overlay_volumes() -> dict:
     base = (os.environ.get("MYAPP_CODE_OVERLAY_DIR") or "").strip()
     if not base:
         return {}
-    return {f"{base}/{src}": {"bind": dst, "mode": "ro"} for src, dst in _CODE_OVERLAY_RUNTIME_FILES}
+    # 挂载映射优先读导出目录的 .overlay-manifest.json（myapp-ctl 从该 ref 的
+    # Dockerfile.faas-runtime 解析生成——单一真相源，COPY/重命名变更自动跟随）
+    mounts: list = []
+    try:
+        with open(os.path.join(base, ".overlay-manifest.json"), encoding="utf-8") as fh:
+            mounts = list((json.load(fh).get("images") or {}).get("faas_runtime") or [])
+    except (OSError, ValueError):
+        mounts = []
+    if not mounts:
+        mounts = [list(x) for x in _CODE_OVERLAY_RUNTIME_FILES]
+    return {f"{base}/{src}": {"bind": dst, "mode": "ro"} for src, dst in mounts}
 
 
 def local_docker_upstream_for_service(service: dict[str, Any]) -> str:
