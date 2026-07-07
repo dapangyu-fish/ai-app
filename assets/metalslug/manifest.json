@@ -1,0 +1,1053 @@
+{
+ "groups": {
+  "marco_top": {
+   "cell": [
+    69,
+    79
+   ],
+   "anchor": [
+    35.2,
+    56.1
+   ],
+   "anims": {
+    "p_idle": {
+     "file": "marco_top_p_idle.png",
+     "frames": 4,
+     "fps": 8.0,
+     "loop": true
+    },
+    "p_idle_l": {
+     "file": "marco_top_p_idle_l.png",
+     "frames": 4,
+     "fps": 8.0,
+     "loop": true
+    },
+    "p_walk": {
+     "file": "marco_top_p_walk.png",
+     "frames": 12,
+     "fps": 8.0,
+     "loop": true
+    },
+    "p_walk_l": {
+     "file": "marco_top_p_walk_l.png",
+     "frames": 12,
+     "fps": 8.0,
+     "loop": true
+    },
+    "p_fire": {
+     "file": "marco_top_p_fire.png",
+     "frames": 3,
+     "fps": 12.0,
+     "loop": true
+    },
+    "p_fire_l": {
+     "file": "marco_top_p_fire_l.png",
+     "frames": 3,
+     "fps": 12.0,
+     "loop": true
+    },
+    "p_up": {
+     "file": "marco_top_p_up.png",
+     "frames": 4,
+     "fps": 12.0,
+     "loop": false
+    },
+    "p_up_l": {
+     "file": "marco_top_p_up_l.png",
+     "frames": 4,
+     "fps": 12.0,
+     "loop": false
+    },
+    "p_fire_up": {
+     "file": "marco_top_p_fire_up.png",
+     "frames": 7,
+     "fps": 15.0,
+     "loop": true
+    },
+    "p_fire_up_l": {
+     "file": "marco_top_p_fire_up_l.png",
+     "frames": 7,
+     "fps": 15.0,
+     "loop": true
+    },
+    "p_jump_up": {
+     "file": "marco_top_p_jump_up.png",
+     "frames": 2,
+     "fps": 8.0,
+     "loop": false
+    },
+    "p_jump_up_l": {
+     "file": "marco_top_p_jump_up_l.png",
+     "frames": 2,
+     "fps": 8.0,
+     "loop": false
+    },
+    "p_jump_down": {
+     "file": "marco_top_p_jump_down.png",
+     "frames": 4,
+     "fps": 8.0,
+     "loop": false
+    },
+    "p_jump_down_l": {
+     "file": "marco_top_p_jump_down_l.png",
+     "frames": 4,
+     "fps": 8.0,
+     "loop": false
+    },
+    "melee": {
+     "file": "marco_top_melee.png",
+     "frames": 6,
+     "fps": 8.0,
+     "loop": true
+    },
+    "melee_l": {
+     "file": "marco_top_melee_l.png",
+     "frames": 6,
+     "fps": 8.0,
+     "loop": true
+    },
+    "throw": {
+     "file": "marco_top_throw.png",
+     "frames": 5,
+     "fps": 8.0,
+     "loop": true
+    },
+    "throw_l": {
+     "file": "marco_top_throw_l.png",
+     "frames": 5,
+     "fps": 8.0,
+     "loop": true
+    },
+    "m_idle": {
+     "file": "marco_top_m_idle.png",
+     "frames": 4,
+     "fps": 8.0,
+     "loop": false
+    },
+    "m_idle_l": {
+     "file": "marco_top_m_idle_l.png",
+     "frames": 4,
+     "fps": 8.0,
+     "loop": false
+    },
+    "m_fire": {
+     "file": "marco_top_m_fire.png",
+     "frames": 4,
+     "fps": 12.0,
+     "loop": true
+    },
+    "m_fire_l": {
+     "file": "marco_top_m_fire_l.png",
+     "frames": 4,
+     "fps": 12.0,
+     "loop": true
+    },
+    "m_melee": {
+     "file": "marco_top_m_melee.png",
+     "frames": 6,
+     "fps": 12.0,
+     "loop": false
+    },
+    "m_melee_l": {
+     "file": "marco_top_m_melee_l.png",
+     "frames": 6,
+     "fps": 12.0,
+     "loop": false
+    },
+    "m_throw": {
+     "file": "marco_top_m_throw.png",
+     "frames": 5,
+     "fps": 12.0,
+     "loop": false
+    },
+    "m_throw_l": {
+     "file": "marco_top_m_throw_l.png",
+     "frames": 5,
+     "fps": 12.0,
+     "loop": false
+    }
+   }
+  },
+  "marco_body": {
+   "cell": [
+    66,
+    50
+   ],
+   "anchor": [
+    22.0,
+    30.8
+   ],
+   "anims": {
+    "idle": {
+     "file": "marco_body_idle.png",
+     "frames": 5,
+     "fps": 8.0,
+     "loop": true
+    },
+    "idle_l": {
+     "file": "marco_body_idle_l.png",
+     "frames": 5,
+     "fps": 8.0,
+     "loop": true
+    },
+    "walk": {
+     "file": "marco_body_walk.png",
+     "frames": 7,
+     "fps": 8.0,
+     "loop": true
+    },
+    "walk_l": {
+     "file": "marco_body_walk_l.png",
+     "frames": 7,
+     "fps": 8.0,
+     "loop": true
+    },
+    "jump": {
+     "file": "marco_body_jump.png",
+     "frames": 8,
+     "fps": 8.0,
+     "loop": false
+    },
+    "jump_l": {
+     "file": "marco_body_jump_l.png",
+     "frames": 8,
+     "fps": 8.0,
+     "loop": false
+    },
+    "jump_walk": {
+     "file": "marco_body_jump_walk.png",
+     "frames": 6,
+     "fps": 10.0,
+     "loop": false
+    },
+    "jump_walk_l": {
+     "file": "marco_body_jump_walk_l.png",
+     "frames": 6,
+     "fps": 10.0,
+     "loop": false
+    },
+    "death": {
+     "file": "marco_body_death.png",
+     "frames": 19,
+     "fps": 8.0,
+     "loop": false
+    },
+    "death_l": {
+     "file": "marco_body_death_l.png",
+     "frames": 19,
+     "fps": 8.0,
+     "loop": false
+    },
+    "c_idle": {
+     "file": "marco_body_c_idle.png",
+     "frames": 4,
+     "fps": 8.0,
+     "loop": true
+    },
+    "c_idle_l": {
+     "file": "marco_body_c_idle_l.png",
+     "frames": 4,
+     "fps": 8.0,
+     "loop": true
+    },
+    "c_walk": {
+     "file": "marco_body_c_walk.png",
+     "frames": 7,
+     "fps": 8.0,
+     "loop": true
+    },
+    "c_walk_l": {
+     "file": "marco_body_c_walk_l.png",
+     "frames": 7,
+     "fps": 8.0,
+     "loop": true
+    },
+    "c_fire": {
+     "file": "marco_body_c_fire.png",
+     "frames": 8,
+     "fps": 15.0,
+     "loop": true
+    },
+    "c_fire_l": {
+     "file": "marco_body_c_fire_l.png",
+     "frames": 8,
+     "fps": 15.0,
+     "loop": true
+    },
+    "c_melee": {
+     "file": "marco_body_c_melee.png",
+     "frames": 5,
+     "fps": 8.0,
+     "loop": true
+    },
+    "c_melee_l": {
+     "file": "marco_body_c_melee_l.png",
+     "frames": 5,
+     "fps": 8.0,
+     "loop": true
+    },
+    "c_throw": {
+     "file": "marco_body_c_throw.png",
+     "frames": 5,
+     "fps": 8.0,
+     "loop": true
+    },
+    "c_throw_l": {
+     "file": "marco_body_c_throw_l.png",
+     "frames": 5,
+     "fps": 8.0,
+     "loop": true
+    }
+   }
+  },
+  "soldier": {
+   "cell": [
+    53,
+    44
+   ],
+   "anchor": [
+    26.0,
+    21.5
+   ],
+   "anims": {
+    "idle": {
+     "file": "soldier_idle.png",
+     "frames": 3,
+     "fps": 8.0,
+     "loop": true
+    },
+    "idle_l": {
+     "file": "soldier_idle_l.png",
+     "frames": 3,
+     "fps": 8.0,
+     "loop": true
+    },
+    "walk": {
+     "file": "soldier_walk.png",
+     "frames": 12,
+     "fps": 12.0,
+     "loop": true
+    },
+    "walk_l": {
+     "file": "soldier_walk_l.png",
+     "frames": 12,
+     "fps": 12.0,
+     "loop": true
+    },
+    "knife": {
+     "file": "soldier_knife.png",
+     "frames": 6,
+     "fps": 12.0,
+     "loop": true
+    },
+    "knife_l": {
+     "file": "soldier_knife_l.png",
+     "frames": 6,
+     "fps": 12.0,
+     "loop": true
+    },
+    "throw": {
+     "file": "soldier_throw.png",
+     "frames": 14,
+     "fps": 10.0,
+     "loop": true
+    },
+    "throw_l": {
+     "file": "soldier_throw_l.png",
+     "frames": 14,
+     "fps": 10.0,
+     "loop": true
+    },
+    "die": {
+     "file": "soldier_die.png",
+     "frames": 6,
+     "fps": 12.0,
+     "loop": false
+    },
+    "die_l": {
+     "file": "soldier_die_l.png",
+     "frames": 6,
+     "fps": 12.0,
+     "loop": false
+    }
+   }
+  },
+  "crab": {
+   "cell": [
+    78,
+    53
+   ],
+   "anchor": [
+    45.0,
+    28.6
+   ],
+   "anims": {
+    "idle": {
+     "file": "crab_idle.png",
+     "frames": 24,
+     "fps": 8.0,
+     "loop": true
+    },
+    "idle_l": {
+     "file": "crab_idle_l.png",
+     "frames": 24,
+     "fps": 8.0,
+     "loop": true
+    },
+    "walk": {
+     "file": "crab_walk.png",
+     "frames": 14,
+     "fps": 8.0,
+     "loop": true
+    },
+    "walk_l": {
+     "file": "crab_walk_l.png",
+     "frames": 14,
+     "fps": 8.0,
+     "loop": true
+    },
+    "attack": {
+     "file": "crab_attack.png",
+     "frames": 12,
+     "fps": 12.0,
+     "loop": true
+    },
+    "attack_l": {
+     "file": "crab_attack_l.png",
+     "frames": 12,
+     "fps": 12.0,
+     "loop": true
+    },
+    "die": {
+     "file": "crab_die.png",
+     "frames": 18,
+     "fps": 12.0,
+     "loop": false
+    },
+    "die_l": {
+     "file": "crab_die_l.png",
+     "frames": 18,
+     "fps": 12.0,
+     "loop": false
+    }
+   }
+  },
+  "van": {
+   "cell": [
+    140,
+    175
+   ],
+   "anchor": [
+    75.9,
+    108.4
+   ],
+   "anims": {
+    "idle": {
+     "file": "van_idle.png",
+     "frames": 3,
+     "fps": 12.0,
+     "loop": true
+    },
+    "fire": {
+     "file": "van_fire.png",
+     "frames": 12,
+     "fps": 12.0,
+     "loop": true
+    },
+    "die": {
+     "file": "van_die.png",
+     "frames": 27,
+     "fps": 10.0,
+     "loop": true
+    }
+   }
+  },
+  "vanbomb": {
+   "cell": [
+    42,
+    59
+   ],
+   "anchor": [
+    20.5,
+    29.0
+   ],
+   "anims": {
+    "fly": {
+     "file": "vanbomb_fly.png",
+     "frames": 8,
+     "fps": 8.0,
+     "loop": true
+    },
+    "boom": {
+     "file": "vanbomb_boom.png",
+     "frames": 5,
+     "fps": 8.0,
+     "loop": true
+    }
+   }
+  },
+  "boss1": {
+   "cell": [
+    231,
+    208
+   ],
+   "anchor": [
+    115.0,
+    103.5
+   ],
+   "anims": {
+    "walk": {
+     "file": "boss1_walk.png",
+     "frames": 11,
+     "fps": 12.0,
+     "loop": true
+    },
+    "walk_weapon": {
+     "file": "boss1_walk_weapon.png",
+     "frames": 12,
+     "fps": 12.0,
+     "loop": true
+    },
+    "open_weapon": {
+     "file": "boss1_open_weapon.png",
+     "frames": 12,
+     "fps": 12.0,
+     "loop": false
+    },
+    "die": {
+     "file": "boss1_die.png",
+     "frames": 12,
+     "fps": 12.0,
+     "loop": false
+    },
+    "spawn": {
+     "file": "boss1_spawn.png",
+     "frames": 26,
+     "fps": 18.0,
+     "loop": true
+    }
+   }
+  },
+  "bossbomb": {
+   "cell": [
+    73,
+    91
+   ],
+   "anchor": [
+    36.0,
+    45.0
+   ],
+   "anims": {
+    "fly": {
+     "file": "bossbomb_fly.png",
+     "frames": 4,
+     "fps": 6.0,
+     "loop": true
+    },
+    "boom": {
+     "file": "bossbomb_boom.png",
+     "frames": 18,
+     "fps": 10.0,
+     "loop": true
+    },
+    "heavy_fly": {
+     "file": "bossbomb_heavy_fly.png",
+     "frames": 10,
+     "fps": 6.0,
+     "loop": true
+    },
+    "heavy_boom": {
+     "file": "bossbomb_heavy_boom.png",
+     "frames": 7,
+     "fps": 10.0,
+     "loop": true
+    }
+   }
+  },
+  "grenade": {
+   "cell": [
+    59,
+    120
+   ],
+   "anchor": [
+    29.0,
+    106.0
+   ],
+   "anims": {
+    "fly": {
+     "file": "grenade_fly.png",
+     "frames": 6,
+     "fps": 8.0,
+     "loop": true
+    },
+    "boom": {
+     "file": "grenade_boom.png",
+     "frames": 21,
+     "fps": 12.0,
+     "loop": true
+    }
+   }
+  },
+  "sgrenade": {
+   "cell": [
+    33,
+    42
+   ],
+   "anchor": [
+    16.0,
+    20.5
+   ],
+   "anims": {
+    "fly": {
+     "file": "sgrenade_fly.png",
+     "frames": 5,
+     "fps": 12.0,
+     "loop": true
+    },
+    "boom": {
+     "file": "sgrenade_boom.png",
+     "frames": 25,
+     "fps": 12.0,
+     "loop": true
+    }
+   }
+  },
+  "fx_huge": {
+   "cell": [
+    113,
+    120
+   ],
+   "anchor": [
+    56.0,
+    59.5
+   ],
+   "anims": {
+    "boom": {
+     "file": "fx_huge_boom.png",
+     "frames": 21,
+     "fps": 12.0,
+     "loop": true
+    }
+   }
+  },
+  "fx_boat": {
+   "cell": [
+    49,
+    50
+   ],
+   "anchor": [
+    24.0,
+    24.5
+   ],
+   "anims": {
+    "boom": {
+     "file": "fx_boat_boom.png",
+     "frames": 26,
+     "fps": 10.0,
+     "loop": true
+    }
+   }
+  },
+  "fx_bridge": {
+   "cell": [
+    81,
+    93
+   ],
+   "anchor": [
+    40.0,
+    46.0
+   ],
+   "anims": {
+    "boom": {
+     "file": "fx_bridge_boom.png",
+     "frames": 15,
+     "fps": 12.0,
+     "loop": true
+    }
+   }
+  },
+  "marcoboat": {
+   "cell": [
+    215,
+    108
+   ],
+   "anchor": [
+    107.0,
+    53.5
+   ],
+   "anims": {
+    "sail": {
+     "file": "marcoboat_sail.png",
+     "frames": 8,
+     "fps": 8.0,
+     "loop": true
+    },
+    "die": {
+     "file": "marcoboat_die.png",
+     "frames": 23,
+     "fps": 5.0,
+     "loop": true
+    }
+   }
+  },
+  "seawaves": {
+   "cell": [
+    566,
+    66
+   ],
+   "anchor": [
+    282.5,
+    32.5
+   ],
+   "anims": {
+    "wave": {
+     "file": "seawaves_wave.png",
+     "frames": 8,
+     "fps": 8.0,
+     "loop": true
+    }
+   }
+  }
+ },
+ "atlas": {
+  "file": "foreground.png",
+  "h": 1685,
+  "slices": {
+   "foreground_0": [
+    0,
+    1197,
+    1610,
+    221
+   ],
+   "foreground_2": [
+    1614,
+    859,
+    3411,
+    227
+   ],
+   "foreground_2_end": [
+    5026,
+    1054,
+    144,
+    32
+   ],
+   "foreground_tower_1": [
+    3597,
+    0,
+    264,
+    211
+   ],
+   "foreground_tower_single": [
+    3862,
+    1,
+    118,
+    137
+   ],
+   "foreground_boat": [
+    2290,
+    607,
+    279,
+    181
+   ],
+   "foreground_boat_1": [
+    569,
+    884,
+    194,
+    224
+   ],
+   "foreground_door_1": [
+    569,
+    801,
+    87,
+    72
+   ],
+   "foreground_sea_orange": [
+    3396,
+    1419,
+    493,
+    16
+   ],
+   "foreground_dead_fish": [
+    2958,
+    36,
+    84,
+    43
+   ],
+   "foreground_sea": [
+    3091,
+    1419,
+    304,
+    32
+   ],
+   "foreground_sea_end_0": [
+    3890,
+    1419,
+    128,
+    16
+   ],
+   "boat_1": [
+    709,
+    291,
+    210,
+    98
+   ],
+   "foreground_1": [
+    1613,
+    1152,
+    1290,
+    131
+   ],
+   "foreground_cloud_forest": [
+    0,
+    0,
+    2375,
+    277
+   ],
+   "sea_waves_1": [
+    1,
+    669,
+    565,
+    65
+   ],
+   "fid_21300166": [
+    3456,
+    1245,
+    32,
+    36
+   ],
+   "fid_21300072": [
+    3424,
+    1245,
+    32,
+    36
+   ],
+   "fid_21300084": [
+    3751,
+    1163,
+    47,
+    36
+   ],
+   "fid_21300076": [
+    2879,
+    1087,
+    204,
+    80
+   ],
+   "fid_21300088": [
+    3116,
+    1139,
+    124,
+    48
+   ],
+   "fid_21300092": [
+    3277,
+    1113,
+    113,
+    53
+   ],
+   "fid_21300074": [
+    2377,
+    82,
+    512,
+    192
+   ],
+   "fid_21300110": [
+    3890,
+    1419,
+    128,
+    16
+   ],
+   "fid_21300126": [
+    5026,
+    1054,
+    144,
+    32
+   ],
+   "fid_21300026": [
+    4401,
+    0,
+    304,
+    168
+   ]
+  }
+ },
+ "bridge_objects": [
+  {
+   "seg": 0,
+   "oid": 249,
+   "xu": 46.3
+  },
+  {
+   "seg": 1,
+   "oid": 250,
+   "xu": 46.6
+  },
+  {
+   "seg": 2,
+   "oid": 251,
+   "xu": 46.9
+  },
+  {
+   "seg": 3,
+   "oid": 252,
+   "xu": 47.2
+  },
+  {
+   "seg": 4,
+   "oid": 253,
+   "xu": 47.5
+  },
+  {
+   "seg": 5,
+   "oid": 254,
+   "xu": 47.8
+  },
+  {
+   "seg": 6,
+   "oid": 255,
+   "xu": 48.1
+  },
+  {
+   "seg": 7,
+   "oid": 256,
+   "xu": 48.4
+  },
+  {
+   "seg": 8,
+   "oid": 257,
+   "xu": 48.7
+  },
+  {
+   "seg": 9,
+   "oid": 258,
+   "xu": 49.0
+  },
+  {
+   "seg": 10,
+   "oid": 259,
+   "xu": 49.3
+  },
+  {
+   "seg": 11,
+   "oid": 260,
+   "xu": 49.6
+  },
+  {
+   "seg": 12,
+   "oid": 261,
+   "xu": 49.9
+  },
+  {
+   "seg": 13,
+   "oid": 262,
+   "xu": 50.2
+  },
+  {
+   "seg": 14,
+   "oid": 263,
+   "xu": 50.5
+  },
+  {
+   "seg": 15,
+   "oid": 264,
+   "xu": 50.8
+  },
+  {
+   "seg": 16,
+   "oid": 265,
+   "xu": 51.1
+  },
+  {
+   "seg": 17,
+   "oid": 266,
+   "xu": 51.4
+  },
+  {
+   "seg": 18,
+   "oid": 267,
+   "xu": 51.7
+  },
+  {
+   "seg": 19,
+   "oid": 268,
+   "xu": 52.0
+  },
+  {
+   "seg": 20,
+   "oid": 269,
+   "xu": 52.3
+  }
+ ],
+ "audio": {
+  "m1_bgm.mp3": 4148416,
+  "boss_bgm.mp3": 3674142,
+  "shot.mp3": 22986,
+  "heavy_shot.mp3": 43910,
+  "shot_hit.mp3": 14627,
+  "melee_hit.mp3": 32391,
+  "grenade_hit.mp3": 32391,
+  "grab.mp3": 27192,
+  "equip.mp3": 31372,
+  "destroy1.mp3": 44955,
+  "destroy2.mp3": 68988,
+  "destroy3.mp3": 64808,
+  "marco_death.mp3": 65827,
+  "soldier_death.mp3": 24057,
+  "crab_voice.mp3": 33435,
+  "mission1_start.wav": 1097644,
+  "mission_complete.wav": 976044,
+  "hmg_voice.wav": 873644,
+  "okay.wav": 819244
+ },
+ "statics": {
+  "bullet": {
+   "file": "st_bullet.png",
+   "size": [
+    10,
+    6
+   ]
+  },
+  "grenade_icon": {
+   "file": "st_grenade_icon.png",
+   "size": [
+    19,
+    22
+   ]
+  },
+  "hmg": {
+   "file": "st_hmg.png",
+   "size": [
+    22,
+    20
+   ]
+  },
+  "ammo": {
+   "file": "st_ammo.png",
+   "size": [
+    32,
+    28
+   ]
+  },
+  "medkit": {
+   "file": "st_medkit.png",
+   "size": [
+    26,
+    17
+   ]
+  },
+  "lifebar": {
+   "file": "st_lifebar.png",
+   "size": [
+    110,
+    10
+   ]
+  },
+  "lifebar_border": {
+   "file": "st_lifebar_border.png",
+   "size": [
+    110,
+    10
+   ]
+  }
+ }
+}

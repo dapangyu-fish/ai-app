@@ -450,6 +450,7 @@ Apache License 2.0 — [LICENSE](LICENSE) 및 [NOTICE](NOTICE)를 참조하세�
 - [JsonLogic](https://jsonlogic.com) — 표현식 엔진
 - [mx0c/super-mario-python](https://github.com/mx0c/super-mario-python) — Super Mario level data (Mario demo apps); Nintendo SMB IP is used for demo/educational purposes only
 - [hanessn1/Contra](https://github.com/hanessn1/Contra) — MIT-licensed pygame game, fully ported as the Contra demo app (code re-implemented in JSON-DSL, assets from the repo); "Contra" is a Konami trademark — demo/educational use only
+- [giacoballoccu/MetalSlugClone](https://github.com/giacoballoccu/MetalSlugClone) — Unity fan remake, Mission 1 gameplay logic re-implemented in JSON-DSL (Metal Slug demo app); Metal Slug is SNK IP — demo/educational use only, not for redistribution
 
 ---
 
