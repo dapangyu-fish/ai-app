@@ -449,6 +449,7 @@ Los paquetes del mercado, los recursos subidos y las apps JSON creadas por los u
 - [Anthropic Claude Code CLI](https://docs.claude.com/en/docs/claude-code) — runtime de generación con IA
 - [JsonLogic](https://jsonlogic.com) — motor de expresiones
 - [mx0c/super-mario-python](https://github.com/mx0c/super-mario-python) — Super Mario level data (Mario demo apps); Nintendo SMB IP is used for demo/educational purposes only
+- [hanessn1/Contra](https://github.com/hanessn1/Contra) — MIT-licensed pygame game, fully ported as the Contra demo app (code re-implemented in JSON-DSL, assets from the repo); "Contra" is a Konami trademark — demo/educational use only
 
 ---
 

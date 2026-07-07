@@ -1,0 +1,3378 @@
+{
+ "dsl": "3.3",
+ "appid": "32fcd09e-dacd-559f-be67-905968e4d3a2",
+ "meta": {
+  "name": "demo-contra",
+  "version": "1.0.0",
+  "type": "app",
+  "displayName": {
+   "zh": "魂斗罗（开源移植）",
+   "en": "Contra (open-source port)"
+  },
+  "description": "hanessn1/Contra（MIT 开源 pygame 游戏）的完整 JSON-DSL 移植：跑打跳蹲、持枪扫射、移动平台、视差卷轴。Complete JSON-DSL port of the MIT-licensed pygame Contra.",
+  "attribution": {
+   "source": "https://github.com/hanessn1/Contra",
+   "license": "MIT (c) 2023 Sagnik Barman",
+   "note": "Game code & assets from the MIT-licensed repo; 'Contra' is a Konami trademark — this is a fan/educational demo."
+  }
+ },
+ "global": {
+  "variables": {
+   "_pad": 0
+  },
+  "functions": {}
+ },
+ "ui": {
+  "screens": [
+   {
+    "id": "game",
+    "title": "Contra",
+    "backgroundColor": "#000000",
+    "appBar": false,
+    "layout": "column",
+    "padding": 0,
+    "children": [
+     {
+      "type": "expanded",
+      "child": {
+       "type": "flame_game",
+       "world": {
+        "kind": "pixel",
+        "bg": "#F98367"
+       },
+       "viewport": {
+        "width": 1280,
+        "height": 720,
+        "fit": "contain"
+       },
+       "physics": {
+        "engine": "leap_platformer",
+        "fallback": "aabb_platformer"
+       },
+       "camera": {
+        "follow": "player",
+        "map": "map",
+        "offset_x": 0,
+        "offset_y": 0,
+        "deadzone_y": 0,
+        "smooth_y": 1
+       },
+       "overlay": {
+        "score": false,
+        "game_over": true,
+        "asset_loading": true,
+        "asset_loading_text": "Loading Contra assets..."
+       },
+       "vars": {
+        "state": "title",
+        "hp": 20,
+        "move_axis": 0,
+        "facing": 1,
+        "duck": false,
+        "was_duck": false,
+        "jump_pressed": false,
+        "fire_held": false,
+        "fire_cd": 0,
+        "bseq": 0,
+        "grounded": false,
+        "on_platform": false,
+        "invul": 0,
+        "hit_eb": null,
+        "_noop": 0,
+        "_anim": "right_idle",
+        "_eid": "",
+        "_ex": 0,
+        "_ey": 0,
+        "_efacing": 1,
+        "_bid": "",
+        "_bwall": false,
+        "_bhit": null,
+        "_sky_mx": 0,
+        "_sky_my": 0,
+        "_skyf_mx": 0,
+        "_skyf_my": 0
+       },
+       "entities": {
+        "sky_bg_0": {
+         "kind": "sprite",
+         "priority": -60,
+         "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sky/bg_sky.png",
+         "position": [
+          -4000,
+          800
+         ],
+         "size": [
+          1984,
+          1088
+         ],
+         "fixed_to_screen": true,
+         "auto_update": false,
+         "state": {
+          "assetLoadingOverlay": false
+         }
+        },
+        "sky_bg_1": {
+         "kind": "sprite",
+         "priority": -60,
+         "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sky/bg_sky.png",
+         "position": [
+          -4000,
+          800
+         ],
+         "size": [
+          1984,
+          1088
+         ],
+         "fixed_to_screen": true,
+         "auto_update": false,
+         "state": {
+          "assetLoadingOverlay": false
+         }
+        },
+        "sky_bg_2": {
+         "kind": "sprite",
+         "priority": -60,
+         "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sky/bg_sky.png",
+         "position": [
+          -4000,
+          800
+         ],
+         "size": [
+          1984,
+          1088
+         ],
+         "fixed_to_screen": true,
+         "auto_update": false,
+         "state": {
+          "assetLoadingOverlay": false
+         }
+        },
+        "sky_fg_0": {
+         "kind": "sprite",
+         "priority": -55,
+         "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sky/fg_sky.png",
+         "position": [
+          -4000,
+          800
+         ],
+         "size": [
+          1984,
+          1088
+         ],
+         "fixed_to_screen": true,
+         "auto_update": false,
+         "state": {
+          "assetLoadingOverlay": false
+         }
+        },
+        "sky_fg_1": {
+         "kind": "sprite",
+         "priority": -55,
+         "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sky/fg_sky.png",
+         "position": [
+          -4000,
+          800
+         ],
+         "size": [
+          1984,
+          1088
+         ],
+         "fixed_to_screen": true,
+         "auto_update": false,
+         "state": {
+          "assetLoadingOverlay": false
+         }
+        },
+        "sky_fg_2": {
+         "kind": "sprite",
+         "priority": -55,
+         "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sky/fg_sky.png",
+         "position": [
+          -4000,
+          800
+         ],
+         "size": [
+          1984,
+          1088
+         ],
+         "fixed_to_screen": true,
+         "auto_update": false,
+         "state": {
+          "assetLoadingOverlay": false
+         }
+        },
+        "map": {
+         "kind": "tiled_map",
+         "priority": -40,
+         "source": "tiles/contra.tmx",
+         "base_url": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/",
+         "scale": 1,
+         "include_layers": [
+          "BG",
+          "BG Detail",
+          "Level"
+         ],
+         "solid_layers": [
+          "Level"
+         ],
+         "collidable": true,
+         "render": {
+          "shape": "text",
+          "value": "Loading map",
+          "color": "#FFFFFF"
+         }
+        },
+        "map_fg": {
+         "kind": "tiled_map",
+         "priority": 80,
+         "source": "tiles/contra.tmx",
+         "base_url": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/",
+         "scale": 1,
+         "include_layers": [
+          "FG Detail Bottom",
+          "FG Detail Top"
+         ],
+         "solid_layers": [],
+         "collidable": false
+        },
+        "plat_w": {
+         "kind": "sprite",
+         "priority": -10,
+         "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/p2.png",
+         "position": [
+          1517,
+          2060
+         ],
+         "size": [
+          94,
+          56
+         ],
+         "auto_update": false,
+         "state": {
+          "dir": -1,
+          "top_min": 1408.7,
+          "top_max": 2060.3,
+          "assetLoadingOverlay": false
+         }
+        },
+        "plat_e": {
+         "kind": "sprite",
+         "priority": -10,
+         "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/p1.png",
+         "position": [
+          4067,
+          2312
+         ],
+         "size": [
+          192,
+          56
+         ],
+         "auto_update": false,
+         "state": {
+          "dir": -1,
+          "top_min": 1003.3,
+          "top_max": 2312.7,
+          "assetLoadingOverlay": false
+         }
+        },
+        "player": {
+         "kind": "animated_sprite",
+         "priority": 40,
+         "position": [
+          687,
+          2255
+         ],
+         "size": [
+          64,
+          120
+         ],
+         "velocity": [
+          0,
+          0
+         ],
+         "auto_update": false,
+         "animation": "right_idle",
+         "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/player_right_idle.png",
+         "frame_size": [
+          92,
+          124
+         ],
+         "frames": 6,
+         "frames_per_row": 6,
+         "step_time": 0.143,
+         "animations": {
+          "right_run": {
+           "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/player_right.png",
+           "frame_size": [
+            92,
+            124
+           ],
+           "frames": 8,
+           "frames_per_row": 8,
+           "step_time": 0.143
+          },
+          "left_run": {
+           "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/player_left.png",
+           "frame_size": [
+            92,
+            124
+           ],
+           "frames": 8,
+           "frames_per_row": 8,
+           "step_time": 0.143
+          },
+          "right_idle": {
+           "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/player_right_idle.png",
+           "frame_size": [
+            92,
+            124
+           ],
+           "frames": 6,
+           "frames_per_row": 6,
+           "step_time": 0.143
+          },
+          "left_idle": {
+           "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/player_left_idle.png",
+           "frame_size": [
+            92,
+            124
+           ],
+           "frames": 6,
+           "frames_per_row": 6,
+           "step_time": 0.143
+          },
+          "right_jump": {
+           "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/player_right_jump.png",
+           "frame_size": [
+            92,
+            124
+           ],
+           "frames": 1,
+           "frames_per_row": 1,
+           "step_time": 0.143
+          },
+          "left_jump": {
+           "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/player_left_jump.png",
+           "frame_size": [
+            92,
+            124
+           ],
+           "frames": 1,
+           "frames_per_row": 1,
+           "step_time": 0.143
+          },
+          "right_duck": {
+           "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/player_right_duck.png",
+           "frame_size": [
+            92,
+            124
+           ],
+           "frames": 1,
+           "frames_per_row": 1,
+           "step_time": 0.143
+          },
+          "left_duck": {
+           "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/player_left_duck.png",
+           "frame_size": [
+            92,
+            124
+           ],
+           "frames": 1,
+           "frames_per_row": 1,
+           "step_time": 0.143
+          }
+         },
+         "state": {
+          "spriteW": 92,
+          "spriteH": 124,
+          "spriteOffsetX": -14,
+          "spriteOffsetY": -4,
+          "assetLoadingOverlay": false
+         }
+        },
+        "hud_hp_icon": {
+         "kind": "sprite",
+         "priority": 220,
+         "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/health.png",
+         "position": [
+          16,
+          12
+         ],
+         "size": [
+          16,
+          32
+         ],
+         "fixed_to_screen": true,
+         "auto_update": false,
+         "state": {
+          "assetLoadingOverlay": false
+         }
+        },
+        "hud_hp_text": {
+         "kind": "pixel",
+         "priority": 220,
+         "position": [
+          42,
+          18
+         ],
+         "size": [
+          1,
+          1
+         ],
+         "fixed_to_screen": true,
+         "auto_update": false,
+         "render": {
+          "shape": "text",
+          "value": "x 20",
+          "color": "#FFFFFF",
+          "fontSize": 22
+         }
+        },
+        "title_bg": {
+         "kind": "pixel",
+         "priority": 200,
+         "position": [
+          0,
+          0
+         ],
+         "size": [
+          1280,
+          720
+         ],
+         "fixed_to_screen": true,
+         "auto_update": false,
+         "render": {
+          "shape": "rect",
+          "color": "#101018"
+         }
+        },
+        "title_text": {
+         "kind": "pixel",
+         "priority": 201,
+         "position": [
+          420,
+          240
+         ],
+         "size": [
+          1,
+          1
+         ],
+         "fixed_to_screen": true,
+         "auto_update": false,
+         "render": {
+          "shape": "text",
+          "value": "C O N T R A",
+          "color": "#FF4040",
+          "fontSize": 72
+         }
+        },
+        "title_sub": {
+         "kind": "pixel",
+         "priority": 201,
+         "position": [
+          455,
+          400
+         ],
+         "size": [
+          1,
+          1
+         ],
+         "fixed_to_screen": true,
+         "auto_update": false,
+         "render": {
+          "shape": "text",
+          "value": "TAP OR PRESS TO START",
+          "color": "#FFFFFF",
+          "fontSize": 26
+         }
+        },
+        "title_credit": {
+         "kind": "pixel",
+         "priority": 201,
+         "position": [
+          340,
+          640
+         ],
+         "size": [
+          1,
+          1
+         ],
+         "fixed_to_screen": true,
+         "auto_update": false,
+         "render": {
+          "shape": "text",
+          "value": "port of github.com/hanessn1/Contra (MIT)",
+          "color": "#8899AA",
+          "fontSize": 18
+         }
+        }
+       },
+       "input": {
+        "move_axis": [
+         {
+          "call": "@if",
+          "args": {
+           "cond": {
+            "==": [
+             {
+              "var": "vars.state"
+             },
+             "title"
+            ]
+           },
+           "then": [
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.state",
+              "value": "loading"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_bg"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_text"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_sub"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_credit"
+             }
+            },
+            {
+             "call": "@audio.play",
+             "args": {
+              "id": "music",
+              "loop": true,
+              "restart": true
+             }
+            }
+           ]
+          }
+         },
+         {
+          "call": "@set",
+          "args": {
+           "var": "vars.move_axis",
+           "value": {
+            "var": "event.x"
+           }
+          }
+         },
+         {
+          "call": "@if",
+          "args": {
+           "cond": {
+            ">": [
+             {
+              "var": "event.x"
+             },
+             0.08
+            ]
+           },
+           "then": [
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.facing",
+              "value": 1
+             }
+            }
+           ]
+          }
+         },
+         {
+          "call": "@if",
+          "args": {
+           "cond": {
+            "<": [
+             {
+              "var": "event.x"
+             },
+             -0.08
+            ]
+           },
+           "then": [
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.facing",
+              "value": -1
+             }
+            }
+           ]
+          }
+         },
+         {
+          "call": "@set",
+          "args": {
+           "var": "vars.duck",
+           "value": {
+            ">": [
+             {
+              "var": "event.y"
+             },
+             0.5
+            ]
+           }
+          }
+         },
+         {
+          "call": "@if",
+          "args": {
+           "cond": {
+            "<": [
+             {
+              "var": "event.y"
+             },
+             -0.6
+            ]
+           },
+           "then": [
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.jump_pressed",
+              "value": true
+             }
+            }
+           ]
+          }
+         }
+        ],
+        "jump": [
+         {
+          "call": "@if",
+          "args": {
+           "cond": {
+            "==": [
+             {
+              "var": "vars.state"
+             },
+             "title"
+            ]
+           },
+           "then": [
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.state",
+              "value": "loading"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_bg"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_text"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_sub"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_credit"
+             }
+            },
+            {
+             "call": "@audio.play",
+             "args": {
+              "id": "music",
+              "loop": true,
+              "restart": true
+             }
+            }
+           ],
+           "else": [
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.jump_pressed",
+              "value": true
+             }
+            }
+           ]
+          }
+         }
+        ],
+        "jump_end": [
+         {
+          "call": "@set",
+          "args": {
+           "var": "vars._noop",
+           "value": 0
+          }
+         }
+        ],
+        "attack": [
+         {
+          "call": "@if",
+          "args": {
+           "cond": {
+            "==": [
+             {
+              "var": "vars.state"
+             },
+             "title"
+            ]
+           },
+           "then": [
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.state",
+              "value": "loading"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_bg"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_text"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_sub"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_credit"
+             }
+            },
+            {
+             "call": "@audio.play",
+             "args": {
+              "id": "music",
+              "loop": true,
+              "restart": true
+             }
+            }
+           ],
+           "else": [
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.fire_held",
+              "value": true
+             }
+            }
+           ]
+          }
+         }
+        ],
+        "attack_end": [
+         {
+          "call": "@set",
+          "args": {
+           "var": "vars.fire_held",
+           "value": false
+          }
+         }
+        ],
+        "tap": [
+         {
+          "call": "@if",
+          "args": {
+           "cond": {
+            "==": [
+             {
+              "var": "vars.state"
+             },
+             "title"
+            ]
+           },
+           "then": [
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.state",
+              "value": "loading"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_bg"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_text"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_sub"
+             }
+            },
+            {
+             "call": "@despawn",
+             "args": {
+              "id": "title_credit"
+             }
+            },
+            {
+             "call": "@audio.play",
+             "args": {
+              "id": "music",
+              "loop": true,
+              "restart": true
+             }
+            }
+           ]
+          }
+         }
+        ]
+       },
+       "frame": {
+        "logic": [
+         {
+          "call": "@if",
+          "args": {
+           "cond": {
+            "==": [
+             {
+              "var": "vars.state"
+             },
+             "loading"
+            ]
+           },
+           "then": [
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               "call": "@tiled.loaded",
+               "args": {
+                "map": "map"
+               }
+              },
+              "then": [
+               {
+                "call": "@tiled.spawn_objects",
+                "args": {
+                 "map": "map",
+                 "layer": "Entities",
+                 "debug": true,
+                 "templates": {
+                  "Enemy": {
+                   "id_prefix": "enemy_",
+                   "kind": "animated_sprite",
+                   "priority": 30,
+                   "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/enemy_left.png",
+                   "frame_size": [
+                    96,
+                    112
+                   ],
+                   "frames": 3,
+                   "frames_per_row": 3,
+                   "step_time": 0.143,
+                   "position": [
+                    "{{ object.x }}",
+                    "{{ object.y }}"
+                   ],
+                   "size": [
+                    96,
+                    112
+                   ],
+                   "velocity": [
+                    0,
+                    0
+                   ],
+                   "auto_update": false,
+                   "animation": "left",
+                   "animations": {
+                    "right": {
+                     "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/enemy_right.png",
+                     "frame_size": [
+                      96,
+                      112
+                     ],
+                     "frames": 3,
+                     "frames_per_row": 3,
+                     "step_time": 0.143
+                    },
+                    "left": {
+                     "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/enemy_left.png",
+                     "frame_size": [
+                      96,
+                      112
+                     ],
+                     "frames": 3,
+                     "frames_per_row": 3,
+                     "step_time": 0.143
+                    }
+                   },
+                   "state": {
+                    "hp": 3,
+                    "cd": 0.8,
+                    "assetLoadingOverlay": false
+                   }
+                  }
+                 }
+                }
+               },
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars.state",
+                 "value": "running"
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         {
+          "call": "@if",
+          "args": {
+           "cond": {
+            "==": [
+             {
+              "var": "vars.state"
+             },
+             "running"
+            ]
+           },
+           "then": [
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.fire_cd",
+              "value": {
+               "max": [
+                0,
+                {
+                 "-": [
+                  {
+                   "var": "vars.fire_cd"
+                  },
+                  {
+                   "var": "event.dt"
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            },
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.invul",
+              "value": {
+               "max": [
+                0,
+                {
+                 "-": [
+                  {
+                   "var": "vars.invul"
+                  },
+                  {
+                   "var": "event.dt"
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            },
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.on_platform",
+              "value": false
+             }
+            },
+            {
+             "call": "@entity.set",
+             "args": {
+              "id": "player",
+              "field": "vx",
+              "value": {
+               "if": [
+                {
+                 "and": [
+                  {
+                   "var": "vars.duck"
+                  },
+                  {
+                   "or": [
+                    {
+                     "var": "vars.grounded"
+                    },
+                    {
+                     "var": "vars.on_platform"
+                    }
+                   ]
+                  }
+                 ]
+                },
+                0,
+                {
+                 "if": [
+                  {
+                   ">": [
+                    {
+                     "var": "vars.move_axis"
+                    },
+                    0.08
+                   ]
+                  },
+                  500,
+                  {
+                   "if": [
+                    {
+                     "<": [
+                      {
+                       "var": "vars.move_axis"
+                      },
+                      -0.08
+                     ]
+                    },
+                    -500,
+                    0
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            },
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               "and": [
+                {
+                 "var": "vars.jump_pressed"
+                },
+                {
+                 "or": [
+                  {
+                   "var": "vars.grounded"
+                  },
+                  {
+                   "var": "vars.on_platform"
+                  }
+                 ]
+                }
+               ]
+              },
+              "then": [
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "player",
+                 "field": "vy",
+                 "value": -1100
+                }
+               },
+               {
+                "call": "@entity.add",
+                "args": {
+                 "id": "player",
+                 "field": "y",
+                 "by": -4
+                }
+               },
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars.on_platform",
+                 "value": false
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.jump_pressed",
+              "value": false
+             }
+            },
+            {
+             "call": "@platformer.step",
+             "args": {
+              "id": "player",
+              "map": "map",
+              "dt": "{{ event.dt }}",
+              "gravity": 2400,
+              "max_fall": 1500,
+              "one_way_types": []
+             }
+            },
+            {
+             "call": "@entity.add",
+             "args": {
+              "id": "plat_w",
+              "field": "y",
+              "by": {
+               "*": [
+                {
+                 "var": "entities.plat_w.dir"
+                },
+                {
+                 "*": [
+                  200,
+                  {
+                   "var": "event.dt"
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            },
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               "<=": [
+                {
+                 "var": "entities.plat_w.y"
+                },
+                1408.7
+               ]
+              },
+              "then": [
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "plat_w",
+                 "field": "y",
+                 "value": 1408.7
+                }
+               },
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "plat_w",
+                 "field": "state.dir",
+                 "value": 1
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               ">=": [
+                {
+                 "var": "entities.plat_w.y"
+                },
+                2060.3
+               ]
+              },
+              "then": [
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "plat_w",
+                 "field": "y",
+                 "value": 2060.3
+                }
+               },
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "plat_w",
+                 "field": "state.dir",
+                 "value": -1
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@entity.add",
+             "args": {
+              "id": "plat_e",
+              "field": "y",
+              "by": {
+               "*": [
+                {
+                 "var": "entities.plat_e.dir"
+                },
+                {
+                 "*": [
+                  200,
+                  {
+                   "var": "event.dt"
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            },
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               "<=": [
+                {
+                 "var": "entities.plat_e.y"
+                },
+                1003.3
+               ]
+              },
+              "then": [
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "plat_e",
+                 "field": "y",
+                 "value": 1003.3
+                }
+               },
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "plat_e",
+                 "field": "state.dir",
+                 "value": 1
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               ">=": [
+                {
+                 "var": "entities.plat_e.y"
+                },
+                2312.7
+               ]
+              },
+              "then": [
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "plat_e",
+                 "field": "y",
+                 "value": 2312.7
+                }
+               },
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "plat_e",
+                 "field": "state.dir",
+                 "value": -1
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               "and": [
+                {
+                 ">": [
+                  {
+                   "+": [
+                    {
+                     "var": "entities.player.x"
+                    },
+                    64
+                   ]
+                  },
+                  {
+                   "var": "entities.plat_w.x"
+                  }
+                 ]
+                },
+                {
+                 "<": [
+                  {
+                   "var": "entities.player.x"
+                  },
+                  {
+                   "+": [
+                    {
+                     "var": "entities.plat_w.x"
+                    },
+                    94
+                   ]
+                  }
+                 ]
+                },
+                {
+                 ">=": [
+                  {
+                   "+": [
+                    {
+                     "var": "entities.player.y"
+                    },
+                    120
+                   ]
+                  },
+                  {
+                   "-": [
+                    {
+                     "var": "entities.plat_w.y"
+                    },
+                    12
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "<=": [
+                  {
+                   "+": [
+                    {
+                     "var": "entities.player.y"
+                    },
+                    120
+                   ]
+                  },
+                  {
+                   "+": [
+                    {
+                     "var": "entities.plat_w.y"
+                    },
+                    26
+                   ]
+                  }
+                 ]
+                },
+                {
+                 ">=": [
+                  {
+                   "var": "entities.player.vy"
+                  },
+                  0
+                 ]
+                }
+               ]
+              },
+              "then": [
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "player",
+                 "field": "y",
+                 "value": {
+                  "-": [
+                   {
+                    "var": "entities.plat_w.y"
+                   },
+                   120
+                  ]
+                 }
+                }
+               },
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "player",
+                 "field": "vy",
+                 "value": 0
+                }
+               },
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars.on_platform",
+                 "value": true
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               "and": [
+                {
+                 ">": [
+                  {
+                   "+": [
+                    {
+                     "var": "entities.player.x"
+                    },
+                    64
+                   ]
+                  },
+                  {
+                   "var": "entities.plat_e.x"
+                  }
+                 ]
+                },
+                {
+                 "<": [
+                  {
+                   "var": "entities.player.x"
+                  },
+                  {
+                   "+": [
+                    {
+                     "var": "entities.plat_e.x"
+                    },
+                    192
+                   ]
+                  }
+                 ]
+                },
+                {
+                 ">=": [
+                  {
+                   "+": [
+                    {
+                     "var": "entities.player.y"
+                    },
+                    120
+                   ]
+                  },
+                  {
+                   "-": [
+                    {
+                     "var": "entities.plat_e.y"
+                    },
+                    12
+                   ]
+                  }
+                 ]
+                },
+                {
+                 "<=": [
+                  {
+                   "+": [
+                    {
+                     "var": "entities.player.y"
+                    },
+                    120
+                   ]
+                  },
+                  {
+                   "+": [
+                    {
+                     "var": "entities.plat_e.y"
+                    },
+                    26
+                   ]
+                  }
+                 ]
+                },
+                {
+                 ">=": [
+                  {
+                   "var": "entities.player.vy"
+                  },
+                  0
+                 ]
+                }
+               ]
+              },
+              "then": [
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "player",
+                 "field": "y",
+                 "value": {
+                  "-": [
+                   {
+                    "var": "entities.plat_e.y"
+                   },
+                   120
+                  ]
+                 }
+                }
+               },
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "player",
+                 "field": "vy",
+                 "value": 0
+                }
+               },
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars.on_platform",
+                 "value": true
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars.grounded",
+              "value": {
+               "var": "entities.player.onGround"
+              }
+             }
+            },
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               "and": [
+                {
+                 "var": "vars.duck"
+                },
+                {
+                 "or": [
+                  {
+                   "var": "vars.grounded"
+                  },
+                  {
+                   "var": "vars.on_platform"
+                  }
+                 ]
+                },
+                {
+                 "!": {
+                  "var": "vars.was_duck"
+                 }
+                }
+               ]
+              },
+              "then": [
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "player",
+                 "field": "h",
+                 "value": 70
+                }
+               },
+               {
+                "call": "@entity.add",
+                "args": {
+                 "id": "player",
+                 "field": "y",
+                 "by": 50
+                }
+               },
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "player",
+                 "field": "state.spriteOffsetY",
+                 "value": -54
+                }
+               },
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars.was_duck",
+                 "value": true
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               "and": [
+                {
+                 "!": {
+                  "var": "vars.duck"
+                 }
+                },
+                {
+                 "var": "vars.was_duck"
+                }
+               ]
+              },
+              "then": [
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "player",
+                 "field": "h",
+                 "value": 120
+                }
+               },
+               {
+                "call": "@entity.add",
+                "args": {
+                 "id": "player",
+                 "field": "y",
+                 "by": -50
+                }
+               },
+               {
+                "call": "@entity.set",
+                "args": {
+                 "id": "player",
+                 "field": "state.spriteOffsetY",
+                 "value": -4
+                }
+               },
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars.was_duck",
+                 "value": false
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               "and": [
+                {
+                 "var": "vars.fire_held"
+                },
+                {
+                 "<=": [
+                  {
+                   "var": "vars.fire_cd"
+                  },
+                  0
+                 ]
+                }
+               ]
+              },
+              "then": [
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars.bseq",
+                 "value": {
+                  "+": [
+                   {
+                    "var": "vars.bseq"
+                   },
+                   1
+                  ]
+                 }
+                }
+               },
+               {
+                "call": "@spawn",
+                "args": {
+                 "id": "pb_{{ vars.bseq }}",
+                 "kind": "sprite",
+                 "priority": 45,
+                 "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/bullet.png",
+                 "size": [
+                  20,
+                  12
+                 ],
+                 "flip_x": {
+                  "<": [
+                   {
+                    "var": "vars.facing"
+                   },
+                   0
+                  ]
+                 },
+                 "position": [
+                  {
+                   "+": [
+                    {
+                     "+": [
+                      {
+                       "var": "entities.player.x"
+                      },
+                      32
+                     ]
+                    },
+                    {
+                     "-": [
+                      {
+                       "*": [
+                        {
+                         "var": "vars.facing"
+                        },
+                        80
+                       ]
+                      },
+                      10
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "+": [
+                    {
+                     "+": [
+                      {
+                       "var": "entities.player.y"
+                      },
+                      60
+                     ]
+                    },
+                    {
+                     "-": [
+                      {
+                       "if": [
+                        {
+                         "var": "vars.duck"
+                        },
+                        10,
+                        -16
+                       ]
+                      },
+                      6
+                     ]
+                    }
+                   ]
+                  }
+                 ],
+                 "velocity": [
+                  {
+                   "*": [
+                    {
+                     "var": "vars.facing"
+                    },
+                    2000
+                   ]
+                  },
+                  0
+                 ],
+                 "auto_update": true,
+                 "state": {
+                  "ttl": 1.0,
+                  "assetLoadingOverlay": false
+                 }
+                }
+               },
+               {
+                "call": "@spawn",
+                "args": {
+                 "id": "fx_{{ vars.bseq }}",
+                 "kind": "animated_sprite",
+                 "priority": 46,
+                 "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/fire_right.png",
+                 "frame_size": [
+                  31,
+                  20
+                 ],
+                 "frames": 2,
+                 "frames_per_row": 2,
+                 "step_time": 0.066,
+                 "loop": false,
+                 "animations": {
+                  "flash_r": {
+                   "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/fire_right.png",
+                   "frame_size": [
+                    31,
+                    20
+                   ],
+                   "frames": 2,
+                   "frames_per_row": 2,
+                   "step_time": 0.066,
+                   "loop": false
+                  },
+                  "flash_l": {
+                   "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/fire_left.png",
+                   "frame_size": [
+                    31,
+                    20
+                   ],
+                   "frames": 2,
+                   "frames_per_row": 2,
+                   "step_time": 0.066,
+                   "loop": false
+                  }
+                 },
+                 "animation": {
+                  "if": [
+                   {
+                    "<": [
+                     {
+                      "var": "vars.facing"
+                     },
+                     0
+                    ]
+                   },
+                   "flash_l",
+                   "flash_r"
+                  ]
+                 },
+                 "position": [
+                  {
+                   "+": [
+                    {
+                     "+": [
+                      {
+                       "var": "entities.player.x"
+                      },
+                      32
+                     ]
+                    },
+                    {
+                     "-": [
+                      {
+                       "*": [
+                        {
+                         "var": "vars.facing"
+                        },
+                        60
+                       ]
+                      },
+                      15
+                     ]
+                    }
+                   ]
+                  },
+                  {
+                   "+": [
+                    {
+                     "+": [
+                      {
+                       "var": "entities.player.y"
+                      },
+                      60
+                     ]
+                    },
+                    {
+                     "-": [
+                      {
+                       "if": [
+                        {
+                         "var": "vars.duck"
+                        },
+                        10,
+                        -16
+                       ]
+                      },
+                      10
+                     ]
+                    }
+                   ]
+                  }
+                 ],
+                 "size": [
+                  31,
+                  20
+                 ],
+                 "auto_update": true,
+                 "state": {
+                  "removeOnFinish": true,
+                  "assetLoadingOverlay": false
+                 }
+                }
+               },
+               {
+                "call": "@audio.play",
+                "args": {
+                 "id": "bullet"
+                }
+               },
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars.fire_cd",
+                 "value": 0.2
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@for_each_entity",
+             "args": {
+              "where_prefix": "enemy_",
+              "do": [
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars._eid",
+                 "value": "{{ loop.id }}"
+                }
+               },
+               {
+                "call": "@entity.add",
+                "args": {
+                 "id": "{{ vars._eid }}",
+                 "field": "state.cd",
+                 "by": {
+                  "*": [
+                   -1,
+                   {
+                    "var": "event.dt"
+                   }
+                  ]
+                 },
+                 "min": 0
+                }
+               },
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars._ex",
+                 "value": {
+                  "call": "@entity.get",
+                  "args": {
+                   "id": "{{ vars._eid }}",
+                   "field": "x"
+                  }
+                 }
+                }
+               },
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars._ey",
+                 "value": {
+                  "call": "@entity.get",
+                  "args": {
+                   "id": "{{ vars._eid }}",
+                   "field": "y"
+                  }
+                 }
+                }
+               },
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars._efacing",
+                 "value": {
+                  "if": [
+                   {
+                    "<": [
+                     {
+                      "+": [
+                       {
+                        "var": "entities.player.x"
+                       },
+                       32
+                      ]
+                     },
+                     {
+                      "+": [
+                       {
+                        "var": "vars._ex"
+                       },
+                       48
+                      ]
+                     }
+                    ]
+                   },
+                   -1,
+                   1
+                  ]
+                 }
+                }
+               },
+               {
+                "call": "@animated_sprite.set_animation",
+                "args": {
+                 "id": "{{ vars._eid }}",
+                 "animation": {
+                  "if": [
+                   {
+                    "==": [
+                     {
+                      "var": "vars._efacing"
+                     },
+                     1
+                    ]
+                   },
+                   "right",
+                   "left"
+                  ]
+                 }
+                }
+               },
+               {
+                "call": "@if",
+                "args": {
+                 "cond": {
+                  "and": [
+                   {
+                    "<": [
+                     {
+                      "max": [
+                       {
+                        "-": [
+                         {
+                          "+": [
+                           {
+                            "var": "entities.player.x"
+                           },
+                           32
+                          ]
+                         },
+                         {
+                          "+": [
+                           {
+                            "var": "vars._ex"
+                           },
+                           48
+                          ]
+                         }
+                        ]
+                       },
+                       {
+                        "-": [
+                         {
+                          "+": [
+                           {
+                            "var": "vars._ex"
+                           },
+                           48
+                          ]
+                         },
+                         {
+                          "+": [
+                           {
+                            "var": "entities.player.x"
+                           },
+                           32
+                          ]
+                         }
+                        ]
+                       }
+                      ]
+                     },
+                     600
+                    ]
+                   },
+                   {
+                    ">": [
+                     {
+                      "+": [
+                       {
+                        "var": "entities.player.y"
+                       },
+                       60
+                      ]
+                     },
+                     {
+                      "-": [
+                       {
+                        "var": "vars._ey"
+                       },
+                       20
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "<": [
+                     {
+                      "+": [
+                       {
+                        "var": "entities.player.y"
+                       },
+                       60
+                      ]
+                     },
+                     {
+                      "+": [
+                       {
+                        "var": "vars._ey"
+                       },
+                       132
+                      ]
+                     }
+                    ]
+                   },
+                   {
+                    "<=": [
+                     {
+                      "call": "@entity.get",
+                      "args": {
+                       "id": "{{ vars._eid }}",
+                       "field": "state.cd"
+                      }
+                     },
+                     0
+                    ]
+                   }
+                  ]
+                 },
+                 "then": [
+                  {
+                   "call": "@set",
+                   "args": {
+                    "var": "vars.bseq",
+                    "value": {
+                     "+": [
+                      {
+                       "var": "vars.bseq"
+                      },
+                      1
+                     ]
+                    }
+                   }
+                  },
+                  {
+                   "call": "@spawn",
+                   "args": {
+                    "id": "eb_{{ vars.bseq }}",
+                    "kind": "sprite",
+                    "priority": 45,
+                    "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/bullet.png",
+                    "size": [
+                     20,
+                     12
+                    ],
+                    "flip_x": {
+                     "<": [
+                      {
+                       "var": "vars._efacing"
+                      },
+                      0
+                     ]
+                    },
+                    "position": [
+                     {
+                      "+": [
+                       {
+                        "+": [
+                         {
+                          "var": "vars._ex"
+                         },
+                         48
+                        ]
+                       },
+                       {
+                        "-": [
+                         {
+                          "*": [
+                           {
+                            "var": "vars._efacing"
+                           },
+                           80
+                          ]
+                         },
+                         10
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "+": [
+                       {
+                        "+": [
+                         {
+                          "var": "vars._ey"
+                         },
+                         56
+                        ]
+                       },
+                       {
+                        "-": [
+                         -16,
+                         6
+                        ]
+                       }
+                      ]
+                     }
+                    ],
+                    "velocity": [
+                     {
+                      "*": [
+                       {
+                        "var": "vars._efacing"
+                       },
+                       2000
+                      ]
+                     },
+                     0
+                    ],
+                    "auto_update": true,
+                    "state": {
+                     "ttl": 1.0,
+                     "assetLoadingOverlay": false
+                    }
+                   }
+                  },
+                  {
+                   "call": "@spawn",
+                   "args": {
+                    "id": "fx_{{ vars.bseq }}",
+                    "kind": "animated_sprite",
+                    "priority": 46,
+                    "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/fire_right.png",
+                    "frame_size": [
+                     31,
+                     20
+                    ],
+                    "frames": 2,
+                    "frames_per_row": 2,
+                    "step_time": 0.066,
+                    "loop": false,
+                    "animations": {
+                     "flash_r": {
+                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/fire_right.png",
+                      "frame_size": [
+                       31,
+                       20
+                      ],
+                      "frames": 2,
+                      "frames_per_row": 2,
+                      "step_time": 0.066,
+                      "loop": false
+                     },
+                     "flash_l": {
+                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/sprites/fire_left.png",
+                      "frame_size": [
+                       31,
+                       20
+                      ],
+                      "frames": 2,
+                      "frames_per_row": 2,
+                      "step_time": 0.066,
+                      "loop": false
+                     }
+                    },
+                    "animation": {
+                     "if": [
+                      {
+                       "<": [
+                        {
+                         "var": "vars._efacing"
+                        },
+                        0
+                       ]
+                      },
+                      "flash_l",
+                      "flash_r"
+                     ]
+                    },
+                    "position": [
+                     {
+                      "+": [
+                       {
+                        "+": [
+                         {
+                          "var": "vars._ex"
+                         },
+                         48
+                        ]
+                       },
+                       {
+                        "-": [
+                         {
+                          "*": [
+                           {
+                            "var": "vars._efacing"
+                           },
+                           60
+                          ]
+                         },
+                         15
+                        ]
+                       }
+                      ]
+                     },
+                     {
+                      "+": [
+                       {
+                        "+": [
+                         {
+                          "var": "vars._ey"
+                         },
+                         56
+                        ]
+                       },
+                       {
+                        "-": [
+                         -16,
+                         10
+                        ]
+                       }
+                      ]
+                     }
+                    ],
+                    "size": [
+                     31,
+                     20
+                    ],
+                    "auto_update": true,
+                    "state": {
+                     "removeOnFinish": true,
+                     "assetLoadingOverlay": false
+                    }
+                   }
+                  },
+                  {
+                   "call": "@audio.play",
+                   "args": {
+                    "id": "bullet"
+                   }
+                  },
+                  {
+                   "call": "@entity.set",
+                   "args": {
+                    "id": "{{ vars._eid }}",
+                    "field": "state.cd",
+                    "value": 0.8
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@for_each_entity",
+             "args": {
+              "where_prefix": "pb_",
+              "do": [
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars._bid",
+                 "value": "{{ loop.id }}"
+                }
+               },
+               {
+                "call": "@entity.add",
+                "args": {
+                 "id": "{{ vars._bid }}",
+                 "field": "state.ttl",
+                 "by": {
+                  "*": [
+                   -1,
+                   {
+                    "var": "event.dt"
+                   }
+                  ]
+                 }
+                }
+               },
+               {
+                "call": "@if",
+                "args": {
+                 "cond": {
+                  "<=": [
+                   {
+                    "call": "@entity.get",
+                    "args": {
+                     "id": "{{ vars._bid }}",
+                     "field": "state.ttl"
+                    }
+                   },
+                   0
+                  ]
+                 },
+                 "then": [
+                  {
+                   "call": "@despawn",
+                   "args": {
+                    "id": "{{ vars._bid }}"
+                   }
+                  }
+                 ],
+                 "else": [
+                  {
+                   "call": "@tiled.has_collision_type",
+                   "args": {
+                    "map": "map",
+                    "entity": "{{ vars._bid }}",
+                    "type": "platform"
+                   },
+                   "assign": "vars._bwall"
+                  },
+                  {
+                   "call": "@if",
+                   "args": {
+                    "cond": {
+                     "var": "vars._bwall"
+                    },
+                    "then": [
+                     {
+                      "call": "@despawn",
+                      "args": {
+                       "id": "{{ vars._bid }}"
+                      }
+                     }
+                    ],
+                    "else": [
+                     {
+                      "call": "@collision.first",
+                      "args": {
+                       "a": "{{ vars._bid }}",
+                       "where_prefix": "enemy_"
+                      },
+                      "assign": "vars._bhit"
+                     },
+                     {
+                      "call": "@if",
+                      "args": {
+                       "cond": {
+                        "!=": [
+                         {
+                          "var": "vars._bhit"
+                         },
+                         null
+                        ]
+                       },
+                       "then": [
+                        {
+                         "call": "@despawn",
+                         "args": {
+                          "id": "{{ vars._bid }}"
+                         }
+                        },
+                        {
+                         "call": "@entity.add",
+                         "args": {
+                          "id": "{{ vars._bhit }}",
+                          "field": "state.hp",
+                          "by": -1
+                         }
+                        },
+                        {
+                         "call": "@audio.play",
+                         "args": {
+                          "id": "hit"
+                         }
+                        },
+                        {
+                         "call": "@if",
+                         "args": {
+                          "cond": {
+                           "<=": [
+                            {
+                             "call": "@entity.get",
+                             "args": {
+                              "id": "{{ vars._bhit }}",
+                              "field": "state.hp"
+                             }
+                            },
+                            0
+                           ]
+                          },
+                          "then": [
+                           {
+                            "call": "@despawn",
+                            "args": {
+                             "id": "{{ vars._bhit }}"
+                            }
+                           }
+                          ]
+                         }
+                        },
+                        {
+                         "call": "@set",
+                         "args": {
+                          "var": "vars._bhit",
+                          "value": null
+                         }
+                        }
+                       ]
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@for_each_entity",
+             "args": {
+              "where_prefix": "eb_",
+              "do": [
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars._bid",
+                 "value": "{{ loop.id }}"
+                }
+               },
+               {
+                "call": "@entity.add",
+                "args": {
+                 "id": "{{ vars._bid }}",
+                 "field": "state.ttl",
+                 "by": {
+                  "*": [
+                   -1,
+                   {
+                    "var": "event.dt"
+                   }
+                  ]
+                 }
+                }
+               },
+               {
+                "call": "@if",
+                "args": {
+                 "cond": {
+                  "<=": [
+                   {
+                    "call": "@entity.get",
+                    "args": {
+                     "id": "{{ vars._bid }}",
+                     "field": "state.ttl"
+                    }
+                   },
+                   0
+                  ]
+                 },
+                 "then": [
+                  {
+                   "call": "@despawn",
+                   "args": {
+                    "id": "{{ vars._bid }}"
+                   }
+                  }
+                 ],
+                 "else": [
+                  {
+                   "call": "@tiled.has_collision_type",
+                   "args": {
+                    "map": "map",
+                    "entity": "{{ vars._bid }}",
+                    "type": "platform"
+                   },
+                   "assign": "vars._bwall"
+                  },
+                  {
+                   "call": "@if",
+                   "args": {
+                    "cond": {
+                     "var": "vars._bwall"
+                    },
+                    "then": [
+                     {
+                      "call": "@despawn",
+                      "args": {
+                       "id": "{{ vars._bid }}"
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@collision.first",
+             "args": {
+              "a": "player",
+              "where_prefix": "eb_"
+             },
+             "assign": "vars.hit_eb"
+            },
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               "!=": [
+                {
+                 "var": "vars.hit_eb"
+                },
+                null
+               ]
+              },
+              "then": [
+               {
+                "call": "@despawn",
+                "args": {
+                 "id": "{{ vars.hit_eb }}"
+                }
+               },
+               {
+                "call": "@if",
+                "args": {
+                 "cond": {
+                  "<=": [
+                   {
+                    "var": "vars.invul"
+                   },
+                   0
+                  ]
+                 },
+                 "then": [
+                  {
+                   "call": "@set",
+                   "args": {
+                    "var": "vars.hp",
+                    "value": {
+                     "-": [
+                      {
+                       "var": "vars.hp"
+                      },
+                      1
+                     ]
+                    }
+                   }
+                  },
+                  {
+                   "call": "@set",
+                   "args": {
+                    "var": "vars.invul",
+                    "value": 0.2
+                   }
+                  },
+                  {
+                   "call": "@audio.play",
+                   "args": {
+                    "id": "hit"
+                   }
+                  },
+                  {
+                   "call": "@entity.set",
+                   "args": {
+                    "id": "hud_hp_text",
+                    "field": "render.value",
+                    "value": {
+                     "cat": [
+                      "x ",
+                      {
+                       "var": "vars.hp"
+                      }
+                     ]
+                    }
+                   }
+                  }
+                 ]
+                }
+               },
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars.hit_eb",
+                 "value": null
+                }
+               }
+              ]
+             }
+            },
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               "or": [
+                {
+                 "<=": [
+                  {
+                   "var": "vars.hp"
+                  },
+                  0
+                 ]
+                },
+                {
+                 ">": [
+                  {
+                   "var": "entities.player.y"
+                  },
+                  3300
+                 ]
+                }
+               ]
+              },
+              "then": [
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars.state",
+                 "value": "over"
+                }
+               },
+               {
+                "call": "@audio.stop",
+                "args": {
+                 "id": "music"
+                }
+               },
+               {
+                "call": "@game_over",
+                "args": {}
+               }
+              ]
+             }
+            },
+            {
+             "call": "@if",
+             "args": {
+              "cond": {
+               ">": [
+                {
+                 "var": "entities.player.x"
+                },
+                5000
+               ]
+              },
+              "then": [
+               {
+                "call": "@set",
+                "args": {
+                 "var": "vars.state",
+                 "value": "over"
+                }
+               },
+               {
+                "call": "@audio.stop",
+                "args": {
+                 "id": "music"
+                }
+               },
+               {
+                "call": "@spawn",
+                "args": {
+                 "id": "win_text",
+                 "kind": "pixel",
+                 "priority": 230,
+                 "position": [
+                  340,
+                  300
+                 ],
+                 "size": [
+                  1,
+                  1
+                 ],
+                 "fixed_to_screen": true,
+                 "render": {
+                  "shape": "text",
+                  "value": "MISSION COMPLETE",
+                  "color": "#FFD24A",
+                  "fontSize": 52
+                 }
+                }
+               },
+               {
+                "call": "@game_over",
+                "args": {}
+               }
+              ]
+             }
+            },
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars._anim",
+              "value": {
+               "cat": [
+                {
+                 "if": [
+                  {
+                   "==": [
+                    {
+                     "var": "vars.facing"
+                    },
+                    1
+                   ]
+                  },
+                  "right",
+                  "left"
+                 ]
+                },
+                {
+                 "if": [
+                  {
+                   "!": {
+                    "or": [
+                     {
+                      "var": "vars.grounded"
+                     },
+                     {
+                      "var": "vars.on_platform"
+                     }
+                    ]
+                   }
+                  },
+                  "_jump",
+                  {
+                   "if": [
+                    {
+                     "and": [
+                      {
+                       "var": "vars.duck"
+                      },
+                      {
+                       "or": [
+                        {
+                         "var": "vars.grounded"
+                        },
+                        {
+                         "var": "vars.on_platform"
+                        }
+                       ]
+                      }
+                     ]
+                    },
+                    "_duck",
+                    {
+                     "if": [
+                      {
+                       "!=": [
+                        {
+                         "var": "entities.player.vx"
+                        },
+                        0
+                       ]
+                      },
+                      "_run",
+                      "_idle"
+                     ]
+                    }
+                   ]
+                  }
+                 ]
+                }
+               ]
+              }
+             }
+            },
+            {
+             "call": "@animated_sprite.set_animation",
+             "args": {
+              "id": "player",
+              "animation": "{{ vars._anim }}"
+             }
+            },
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars._sky_mx",
+              "value": {
+               "%": [
+                {
+                 "-": [
+                  -640,
+                  {
+                   "/": [
+                    {
+                     "min": [
+                      {
+                       "max": [
+                        {
+                         "-": [
+                          {
+                           "+": [
+                            {
+                             "var": "entities.player.x"
+                            },
+                            32
+                           ]
+                          },
+                          640
+                         ]
+                        },
+                        0
+                       ]
+                      },
+                      3840
+                     ]
+                    },
+                    2.5
+                   ]
+                  }
+                 ]
+                },
+                1984
+               ]
+              }
+             }
+            },
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars._sky_my",
+              "value": {
+               "-": [
+                800,
+                {
+                 "/": [
+                  {
+                   "min": [
+                    {
+                     "max": [
+                      {
+                       "-": [
+                        {
+                         "+": [
+                          {
+                           "var": "entities.player.y"
+                          },
+                          60
+                         ]
+                        },
+                        360
+                       ]
+                      },
+                      0
+                     ]
+                    },
+                    2480
+                   ]
+                  },
+                  2.5
+                 ]
+                }
+               ]
+              }
+             }
+            },
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars._skyf_mx",
+              "value": {
+               "%": [
+                {
+                 "-": [
+                  -640,
+                  {
+                   "/": [
+                    {
+                     "min": [
+                      {
+                       "max": [
+                        {
+                         "-": [
+                          {
+                           "+": [
+                            {
+                             "var": "entities.player.x"
+                            },
+                            32
+                           ]
+                          },
+                          640
+                         ]
+                        },
+                        0
+                       ]
+                      },
+                      3840
+                     ]
+                    },
+                    2
+                   ]
+                  }
+                 ]
+                },
+                1984
+               ]
+              }
+             }
+            },
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars._skyf_my",
+              "value": {
+               "-": [
+                800,
+                {
+                 "/": [
+                  {
+                   "min": [
+                    {
+                     "max": [
+                      {
+                       "-": [
+                        {
+                         "+": [
+                          {
+                           "var": "entities.player.y"
+                          },
+                          60
+                         ]
+                        },
+                        360
+                       ]
+                      },
+                      0
+                     ]
+                    },
+                    2480
+                   ]
+                  },
+                  2
+                 ]
+                }
+               ]
+              }
+             }
+            },
+            {
+             "call": "@entity.set",
+             "args": {
+              "id": "sky_bg_0",
+              "field": "x",
+              "value": {
+               "+": [
+                {
+                 "var": "vars._sky_mx"
+                },
+                -1984
+               ]
+              }
+             }
+            },
+            {
+             "call": "@entity.set",
+             "args": {
+              "id": "sky_bg_0",
+              "field": "y",
+              "value": {
+               "var": "vars._sky_my"
+              }
+             }
+            },
+            {
+             "call": "@entity.set",
+             "args": {
+              "id": "sky_fg_0",
+              "field": "x",
+              "value": {
+               "+": [
+                {
+                 "var": "vars._skyf_mx"
+                },
+                -1984
+               ]
+              }
+             }
+            },
+            {
+             "call": "@entity.set",
+             "args": {
+              "id": "sky_fg_0",
+              "field": "y",
+              "value": {
+               "var": "vars._skyf_my"
+              }
+             }
+            },
+            {
+             "call": "@entity.set",
+             "args": {
+              "id": "sky_bg_1",
+              "field": "x",
+              "value": {
+               "+": [
+                {
+                 "var": "vars._sky_mx"
+                },
+                0
+               ]
+              }
+             }
+            },
+            {
+             "call": "@entity.set",
+             "args": {
+              "id": "sky_bg_1",
+              "field": "y",
+              "value": {
+               "var": "vars._sky_my"
+              }
+             }
+            },
+            {
+             "call": "@entity.set",
+             "args": {
+              "id": "sky_fg_1",
+              "field": "x",
+              "value": {
+               "+": [
+                {
+                 "var": "vars._skyf_mx"
+                },
+                0
+               ]
+              }
+             }
+            },
+            {
+             "call": "@entity.set",
+             "args": {
+              "id": "sky_fg_1",
+              "field": "y",
+              "value": {
+               "var": "vars._skyf_my"
+              }
+             }
+            },
+            {
+             "call": "@entity.set",
+             "args": {
+              "id": "sky_bg_2",
+              "field": "x",
+              "value": {
+               "+": [
+                {
+                 "var": "vars._sky_mx"
+                },
+                1984
+               ]
+              }
+             }
+            },
+            {
+             "call": "@entity.set",
+             "args": {
+              "id": "sky_bg_2",
+              "field": "y",
+              "value": {
+               "var": "vars._sky_my"
+              }
+             }
+            },
+            {
+             "call": "@entity.set",
+             "args": {
+              "id": "sky_fg_2",
+              "field": "x",
+              "value": {
+               "+": [
+                {
+                 "var": "vars._skyf_mx"
+                },
+                1984
+               ]
+              }
+             }
+            },
+            {
+             "call": "@entity.set",
+             "args": {
+              "id": "sky_fg_2",
+              "field": "y",
+              "value": {
+               "var": "vars._skyf_my"
+              }
+             }
+            }
+           ]
+          }
+         }
+        ]
+       },
+       "audio": {
+        "base_url": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-contra/1.0.0/audio/",
+        "tracks": {
+         "music": {
+          "src": "music.wav",
+          "loop": true,
+          "volume": 0.45
+         }
+        },
+        "sounds": {
+         "bullet": {
+          "src": "bullet.wav",
+          "volume": 0.5
+         },
+         "hit": {
+          "src": "hit.wav",
+          "volume": 0.5
+         }
+        }
+       }
+      }
+     },
+     {
+      "type": "container",
+      "height": 190,
+      "color": "#141C2E",
+      "layout": "row",
+      "padding": 12,
+      "children": [
+       {
+        "type": "container",
+        "layout": "row",
+        "alignment": "center",
+        "position": {
+         "type": "flex",
+         "flex": 5
+        },
+        "children": [
+         {
+          "type": "container",
+          "width": 150,
+          "height": 150,
+          "children": [
+           {
+            "type": "analog_stick",
+            "backgroundColor": "#0B1020",
+            "knobColor": "#4A6CFF",
+            "deadZone": 0.08,
+            "onChange": {
+             "call": "@flame_game_input",
+             "args": {
+              "input": "move_axis",
+              "data": {
+               "x": "{{ event.x }}",
+               "y": "{{ event.y }}",
+               "strength": "{{ event.strength }}",
+               "angle": "{{ event.angle }}",
+               "direction": "{{ event.direction }}"
+              }
+             }
+            },
+            "onEnd": {
+             "call": "@flame_game_input",
+             "args": {
+              "input": "move_axis",
+              "data": {
+               "x": 0,
+               "y": 0,
+               "strength": 0,
+               "angle": 0,
+               "direction": "center"
+              }
+             }
+            }
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "container",
+        "layout": "row",
+        "alignment": "center",
+        "mainAxisAlignment": "spaceBetween",
+        "position": {
+         "type": "flex",
+         "flex": 6
+        },
+        "children": [
+         {
+          "type": "container",
+          "width": 24
+         },
+         {
+          "type": "gesture_detector",
+          "onTapDown": {
+           "call": "@flame_game_input",
+           "args": {
+            "input": "attack"
+           }
+          },
+          "onTapUp": {
+           "call": "@flame_game_input",
+           "args": {
+            "input": "attack_end"
+           }
+          },
+          "child": {
+           "type": "container",
+           "width": 92,
+           "height": 92,
+           "borderRadius": 46,
+           "color": "#C0392B",
+           "alignment": "center",
+           "children": [
+            {
+             "type": "text",
+             "value": "FIRE",
+             "style": {
+              "fontSize": 20,
+              "fontWeight": "bold",
+              "color": "#FFFFFF",
+              "textAlign": "center"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "type": "gesture_detector",
+          "onTapDown": {
+           "call": "@flame_game_input",
+           "args": {
+            "input": "jump"
+           }
+          },
+          "onTapUp": {
+           "call": "@flame_game_input",
+           "args": {
+            "input": "jump_end"
+           }
+          },
+          "child": {
+           "type": "container",
+           "width": 92,
+           "height": 92,
+           "borderRadius": 46,
+           "color": "#2471A3",
+           "alignment": "center",
+           "children": [
+            {
+             "type": "text",
+             "value": "JUMP",
+             "style": {
+              "fontSize": 20,
+              "fontWeight": "bold",
+              "color": "#FFFFFF",
+              "textAlign": "center"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "type": "container",
+          "width": 8
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

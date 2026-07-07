@@ -450,6 +450,7 @@ licensed by their authors unless they explicitly say otherwise.
 - [Anthropic Claude Code CLI](https://docs.claude.com/en/docs/claude-code) — AI generation runtime
 - [JsonLogic](https://jsonlogic.com) — expression engine
 - [mx0c/super-mario-python](https://github.com/mx0c/super-mario-python) — Super Mario level data (Mario demo apps); Nintendo SMB IP is used for demo/educational purposes only
+- [hanessn1/Contra](https://github.com/hanessn1/Contra) — MIT-licensed pygame game, fully ported as the Contra demo app (code re-implemented in JSON-DSL, assets from the repo); "Contra" is a Konami trademark — demo/educational use only
 
 ---
 
