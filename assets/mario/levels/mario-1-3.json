@@ -1,0 +1,39 @@
+{
+  "id": "1-3",
+  "_comment": "WORLD 1-3 — athletic overworld: islands and gaps, helper platforms, stair towers. Built by scripts/mario_level_build.py; format in docs/mario-levels.md.",
+  "length": 150,
+  "palette": "overworld",
+  "decor": [
+    ["hill_big", 2], ["bush", 6, 2], ["cloud", 10, 1, 2],
+    ["cloud", 25, 2, 1], ["hill_small", 30], ["cloud", 44, 1, 3],
+    ["bush", 52, 1], ["hill_big", 60], ["cloud", 70, 2, 2],
+    ["hill_small", 90], ["cloud", 95, 1, 1], ["bush", 110, 3],
+    ["hill_big", 120], ["cloud", 125, 2, 3], ["hill_small", 140]
+  ],
+  "ground": [[0, 18], [21, 38], [41, 45], [48, 66], [69, 73], [76, 94], [97, 101], [104, 150]],
+  "platforms": [[19, 8, 2], [39, 8, 2], [67, 8, 2], [95, 8, 2]],
+  "stairs": [
+    [13, 2, "up"], [33, 3, "up"], [57, 4, "up"], [61, 4, "down"],
+    [85, 3, "up"], [89, 3, "down"], [124, 4, "up"], [128, 4, "down"]
+  ],
+  "blocks": {
+    "question": [
+      [8, 8, "red mushroom"], [27, 8, "coin"], [28, 8, "coin"],
+      [50, 8, "coin"], [53, 4, "mushroom flower"], [80, 8, "coin"],
+      [82, 8, "coin"], [112, 8, "coin"], [115, 4, "green mushroom"]
+    ],
+    "brick": [
+      [7, 8], [9, 8], [26, 8], [29, 8], [49, 8], [51, 8],
+      [79, 8], [83, 8], [111, 8], [113, 8]
+    ]
+  },
+  "enemies": {
+    "goomba": [
+      [16, 11], [31, 11], [43, 11], [51, 11], [63, 11],
+      [79, 11], [81, 11], [99, 11], [108, 11], [110, 11]
+    ],
+    "koopa": [[55], [92], [120]]
+  },
+  "flag": 138,
+  "castle": 142
+}

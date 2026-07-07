@@ -3,7 +3,7 @@
   "appid": "542bb1e0-4cc1-5b69-ab2d-781ba9bf33de",
   "meta": {
     "name": "demo-mario-full",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "type": "app",
     "description": "多关卡马里奥：关卡选择器 + 数据驱动关卡注册表 + 动态 tiled 关卡加载。基于开源关卡数据移植。",
     "author": "fish",
@@ -56,19 +56,19 @@
           "id": "1-2",
           "name": "WORLD 1-2",
           "source": "tiles/mario-1-2.tmx",
-          "unlocked": false
+          "unlocked": true
         },
         {
           "id": "1-3",
           "name": "WORLD 1-3",
           "source": "tiles/mario-1-3.tmx",
-          "unlocked": false
+          "unlocked": true
         },
         {
           "id": "1-4",
           "name": "WORLD 1-4",
           "source": "tiles/mario-1-4.tmx",
-          "unlocked": false
+          "unlocked": true
         }
       ]
     },

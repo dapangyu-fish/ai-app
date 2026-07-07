@@ -1,0 +1,33 @@
+{
+  "id": "1-2",
+  "_comment": "WORLD 1-2 — underground. Layout inspired by SMB 1-2 within our mechanics (no warp pipes). Built by scripts/mario_level_build.py; level data format documented in docs/mario-levels.md. Level-data approach after mx0c/super-mario-python.",
+  "length": 160,
+  "sky": [0, 0, 0],
+  "palette": "underground",
+  "ceiling": [[0, 148]],
+  "ground": [[0, 45], [48, 75], [78, 110], [113, 160]],
+  "stairs": [[34, 3, "up"], [41, 3, "down"], [120, 4, "up"], [138, 4, "down"]],
+  "platforms": [[50, 8, 4], [56, 8, 4]],
+  "pipes": [[98, 10], [104, 9]],
+  "blocks": {
+    "question": [
+      [10, 8, "red mushroom"], [17, 8, "coin"], [18, 8, "coin"],
+      [26, 8, "coin"], [63, 8, "coin"], [65, 8, "coin"], [87, 8, "coin"],
+      [130, 8, "star"], [132, 4, "green mushroom"]
+    ],
+    "brick": [
+      [9, 8], [11, 8], [12, 8], [13, 8], [14, 8], [15, 8], [16, 8],
+      [25, 8], [27, 8], [62, 8], [64, 8], [66, 8], [86, 8], [88, 8],
+      [129, 8], [131, 8], [133, 8]
+    ]
+  },
+  "enemies": {
+    "goomba": [
+      [14, 11], [16, 11], [24, 11], [52, 7], [58, 7], [70, 11],
+      [82, 11], [84, 11], [86, 11], [102, 11], [126, 11]
+    ],
+    "koopa": [[30], [90], [118]]
+  },
+  "flag": 150,
+  "castle": 154
+}
