@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
+import '../json_ui/asset_cache.dart';
 import '../json_ui/asset_manager.dart';
 
 class GameAudioController {
@@ -12,6 +13,11 @@ class GameAudioController {
   final Map<String, _AudioSpec> _catalog = {};
   final Map<String, AudioPlayer> _loopingPlayers = {};
   final Set<AudioPlayer> _oneShotPlayers = {};
+  // remote url -> 本地缓存文件路径。音频不能每次播放都联网流式拉取：SFX 一次
+  // 跨区 HTTPS 拉取就是数秒延迟甚至静音。configure() 时经 AssetCache 预取一次，
+  // 之后全部走本地文件。
+  final Map<String, String> _localPaths = {};
+  final Set<String> _fetching = {};
   bool _disposed = false;
 
   void configure(dynamic raw) {
@@ -21,6 +27,34 @@ class GameAudioController {
     final baseUrl = raw['base_url']?.toString();
     _readGroup(raw['tracks'], baseUrl: baseUrl, defaultLoop: true);
     _readGroup(raw['sounds'], baseUrl: baseUrl, defaultLoop: false);
+    for (final spec in _catalog.values) {
+      _prefetch(spec.source);
+    }
+  }
+
+  bool _isRemote(String source) {
+    final uri = Uri.tryParse(source);
+    return uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+  }
+
+  void _prefetch(String source) {
+    if (!_isRemote(source)) return;
+    if (_localPaths.containsKey(source) || _fetching.contains(source)) return;
+    _fetching.add(source);
+    unawaited(() async {
+      try {
+        final cached = await AssetCache.instance.getBytes(
+          source,
+          namespace: assetManager.namespace,
+        );
+        final path = cached.path;
+        if (path != null && !_disposed) _localPaths[source] = path;
+      } catch (e) {
+        debugPrint('[game_audio] prefetch failed: $source $e');
+      } finally {
+        _fetching.remove(source);
+      }
+    }());
   }
 
   bool play(
@@ -36,11 +70,19 @@ class GameAudioController {
     final effectiveVolume = (volume ?? spec.volume).clamp(0, 1).toDouble();
 
     if (shouldLoop) {
+      // BGM：本地未就绪时允许 UrlSource 流式起播（只拉一次，晚几秒可接受）
+      _prefetch(spec.source);
       final player = _loopingPlayers.putIfAbsent(idOrSource, AudioPlayer.new);
       unawaited(_playLooping(player, spec.source, effectiveVolume, restart));
       return true;
     }
 
+    // 一次性音效：只从本地缓存播。未就绪就触发预取并跳过本次 ——
+    // 迟到几秒的枪声比静音更糟；预取完成后（通常在开局数秒内）恢复即时播放。
+    if (_isRemote(spec.source) && !_localPaths.containsKey(spec.source)) {
+      _prefetch(spec.source);
+      return false;
+    }
     final player = AudioPlayer();
     _oneShotPlayers.add(player);
     player.onPlayerComplete.listen((_) {
@@ -185,6 +227,8 @@ class GameAudioController {
   Source _sourceFor(String source) {
     final uri = Uri.tryParse(source);
     if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+      final local = _localPaths[source];
+      if (local != null) return DeviceFileSource(local);
       return UrlSource(source);
     }
     if (source.startsWith('assets/')) {
