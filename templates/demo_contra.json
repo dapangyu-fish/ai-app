@@ -3,7 +3,7 @@
  "appid": "32fcd09e-dacd-559f-be67-905968e4d3a2",
  "meta": {
   "name": "demo-contra",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "app",
   "displayName": {
    "zh": "魂斗罗（开源移植）",
@@ -87,6 +87,8 @@
         "_bid": "",
         "_bwall": false,
         "_bhit": null,
+        "_cam_x": 0,
+        "_cam_y": 0,
         "_sky_mx": 0,
         "_sky_my": 0,
         "_skyf_mx": 0,
@@ -105,7 +107,6 @@
           1984,
           1088
          ],
-         "fixed_to_screen": true,
          "auto_update": false,
          "state": {
           "assetLoadingOverlay": false
@@ -123,7 +124,6 @@
           1984,
           1088
          ],
-         "fixed_to_screen": true,
          "auto_update": false,
          "state": {
           "assetLoadingOverlay": false
@@ -141,7 +141,6 @@
           1984,
           1088
          ],
-         "fixed_to_screen": true,
          "auto_update": false,
          "state": {
           "assetLoadingOverlay": false
@@ -159,7 +158,6 @@
           1984,
           1088
          ],
-         "fixed_to_screen": true,
          "auto_update": false,
          "state": {
           "assetLoadingOverlay": false
@@ -177,7 +175,6 @@
           1984,
           1088
          ],
-         "fixed_to_screen": true,
          "auto_update": false,
          "state": {
           "assetLoadingOverlay": false
@@ -195,7 +192,6 @@
           1984,
           1088
          ],
-         "fixed_to_screen": true,
          "auto_update": false,
          "state": {
           "assetLoadingOverlay": false
@@ -2882,43 +2878,88 @@
             {
              "call": "@set",
              "args": {
-              "var": "vars._sky_mx",
+              "var": "vars._cam_x",
               "value": {
-               "%": [
+               "min": [
                 {
-                 "-": [
-                  -640,
+                 "max": [
                   {
-                   "/": [
+                   "-": [
                     {
-                     "min": [
+                     "+": [
                       {
-                       "max": [
-                        {
-                         "-": [
-                          {
-                           "+": [
-                            {
-                             "var": "entities.player.x"
-                            },
-                            32
-                           ]
-                          },
-                          640
-                         ]
-                        },
-                        0
-                       ]
+                       "var": "entities.player.x"
                       },
-                      3840
+                      32
                      ]
                     },
-                    2.5
+                    640
                    ]
-                  }
+                  },
+                  0
                  ]
                 },
-                1984
+                3840
+               ]
+              }
+             }
+            },
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars._cam_y",
+              "value": {
+               "min": [
+                {
+                 "max": [
+                  {
+                   "-": [
+                    {
+                     "+": [
+                      {
+                       "var": "entities.player.y"
+                      },
+                      60
+                     ]
+                    },
+                    360
+                   ]
+                  },
+                  0
+                 ]
+                },
+                2480
+               ]
+              }
+             }
+            },
+            {
+             "call": "@set",
+             "args": {
+              "var": "vars._sky_mx",
+              "value": {
+               "+": [
+                {
+                 "var": "vars._cam_x"
+                },
+                {
+                 "%": [
+                  {
+                   "-": [
+                    -640,
+                    {
+                     "/": [
+                      {
+                       "var": "vars._cam_x"
+                      },
+                      2.5
+                     ]
+                    }
+                   ]
+                  },
+                  1984
+                 ]
+                }
                ]
               }
              }
@@ -2928,34 +2969,21 @@
              "args": {
               "var": "vars._sky_my",
               "value": {
-               "-": [
-                800,
+               "+": [
                 {
-                 "/": [
+                 "var": "vars._cam_y"
+                },
+                {
+                 "-": [
+                  800,
                   {
-                   "min": [
+                   "/": [
                     {
-                     "max": [
-                      {
-                       "-": [
-                        {
-                         "+": [
-                          {
-                           "var": "entities.player.y"
-                          },
-                          60
-                         ]
-                        },
-                        360
-                       ]
-                      },
-                      0
-                     ]
+                     "var": "vars._cam_y"
                     },
-                    2480
+                    2.5
                    ]
-                  },
-                  2.5
+                  }
                  ]
                 }
                ]
@@ -2967,41 +2995,28 @@
              "args": {
               "var": "vars._skyf_mx",
               "value": {
-               "%": [
+               "+": [
                 {
-                 "-": [
-                  -640,
-                  {
-                   "/": [
-                    {
-                     "min": [
-                      {
-                       "max": [
-                        {
-                         "-": [
-                          {
-                           "+": [
-                            {
-                             "var": "entities.player.x"
-                            },
-                            32
-                           ]
-                          },
-                          640
-                         ]
-                        },
-                        0
-                       ]
-                      },
-                      3840
-                     ]
-                    },
-                    2
-                   ]
-                  }
-                 ]
+                 "var": "vars._cam_x"
                 },
-                1984
+                {
+                 "%": [
+                  {
+                   "-": [
+                    -640,
+                    {
+                     "/": [
+                      {
+                       "var": "vars._cam_x"
+                      },
+                      2
+                     ]
+                    }
+                   ]
+                  },
+                  1984
+                 ]
+                }
                ]
               }
              }
@@ -3011,34 +3026,21 @@
              "args": {
               "var": "vars._skyf_my",
               "value": {
-               "-": [
-                800,
+               "+": [
                 {
-                 "/": [
+                 "var": "vars._cam_y"
+                },
+                {
+                 "-": [
+                  800,
                   {
-                   "min": [
+                   "/": [
                     {
-                     "max": [
-                      {
-                       "-": [
-                        {
-                         "+": [
-                          {
-                           "var": "entities.player.y"
-                          },
-                          60
-                         ]
-                        },
-                        360
-                       ]
-                      },
-                      0
-                     ]
+                     "var": "vars._cam_y"
                     },
-                    2480
+                    2
                    ]
-                  },
-                  2
+                  }
                  ]
                 }
                ]

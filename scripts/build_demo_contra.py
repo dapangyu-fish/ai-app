@@ -87,7 +87,7 @@ def sky(i, layer):
         "kind": "sprite", "priority": -60 if layer == "bg" else -55,
         "asset": BASE + f"sky/{layer}_sky.png",
         "position": [-4000, 800], "size": [1984, 1088],
-        "fixed_to_screen": True, "auto_update": False,
+        "auto_update": False,
         "state": {"assetLoadingOverlay": False},
     }
 
@@ -448,10 +448,16 @@ MAIN += [
 CAM_X = {"min": [{"max": [{"-": [P_CX, 640]}, 0]}, 3840]}
 CAM_Y = {"min": [{"max": [{"-": [P_CY, 360]}, 0]}, 2480]}
 MAIN += [
-    vset("vars._sky_mx", {"%": [{"-": [-640, {"/": [CAM_X, 2.5]}]}, 1984]}),
-    vset("vars._sky_my", {"-": [800, {"/": [CAM_Y, 2.5]}]}),
-    vset("vars._skyf_mx", {"%": [{"-": [-640, {"/": [CAM_X, 2]}]}, 1984]}),
-    vset("vars._skyf_my", {"-": [800, {"/": [CAM_Y, 2]}]}),
+    vset("vars._cam_x", CAM_X),
+    vset("vars._cam_y", CAM_Y),
+    vset("vars._sky_mx", {"+": [V("vars._cam_x"),
+        {"%": [{"-": [-640, {"/": [V("vars._cam_x"), 2.5]}]}, 1984]}]}),
+    vset("vars._sky_my", {"+": [V("vars._cam_y"),
+        {"-": [800, {"/": [V("vars._cam_y"), 2.5]}]}]}),
+    vset("vars._skyf_mx", {"+": [V("vars._cam_x"),
+        {"%": [{"-": [-640, {"/": [V("vars._cam_x"), 2]}]}, 1984]}]}),
+    vset("vars._skyf_my", {"+": [V("vars._cam_y"),
+        {"-": [800, {"/": [V("vars._cam_y"), 2]}]}]}),
 ]
 for i in range(3):
     off = (i - 1) * 1984
@@ -491,6 +497,7 @@ game = {
         "hit_eb": None, "_noop": 0, "_anim": "right_idle",
         "_eid": "", "_ex": 0, "_ey": 0, "_efacing": 1,
         "_bid": "", "_bwall": False, "_bhit": None,
+        "_cam_x": 0, "_cam_y": 0,
         "_sky_mx": 0, "_sky_my": 0, "_skyf_mx": 0, "_skyf_my": 0,
     },
     "entities": entities,
@@ -559,7 +566,7 @@ app = {
     "dsl": "3.3",
     "appid": APPID,
     "meta": {
-        "name": "demo-contra", "version": "1.0.0", "type": "app",
+        "name": "demo-contra", "version": "1.0.1", "type": "app",
         "displayName": {"zh": "魂斗罗（开源移植）", "en": "Contra (open-source port)"},
         "description": "hanessn1/Contra（MIT 开源 pygame 游戏）的完整 JSON-DSL 移植：跑打跳蹲、持枪扫射、移动平台、视差卷轴。Complete JSON-DSL port of the MIT-licensed pygame Contra.",
         "attribution": {
