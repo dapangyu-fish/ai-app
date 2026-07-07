@@ -3,7 +3,7 @@
   "appid": "5b871359-b8e7-4f09-96a0-9b62ccafcdd1",
   "meta": {
     "name": "demo-mario-platformer",
-    "version": "1.0.39",
+    "version": "1.0.40",
     "type": "app",
     "description": "Landscape platformer inspired by the flutter_game Mario demo. Gameplay is implemented in JSON; assets are hosted in json-app-assets.",
     "author": "fish"
@@ -4946,15 +4946,7 @@
                                 }
                               ]
                             },
-                            "then": [
-                              {
-                                "call": "@set",
-                                "args": {
-                                  "key": "global._dbg",
-                                  "value": ""
-                                }
-                              }
-                            ]
+                            "then": []
                           }
                         },
                         {
@@ -5230,15 +5222,7 @@
                                       }
                                     ]
                                   },
-                                  "then": [
-                                    {
-                                      "call": "@set",
-                                      "args": {
-                                        "key": "global._dbg",
-                                        "value": ""
-                                      }
-                                    }
-                                  ]
+                                  "then": []
                                 }
                               }
                             ]
@@ -7146,15 +7130,7 @@
                                             }
                                           ]
                                         },
-                                        "then": [
-                                          {
-                                            "call": "@set",
-                                            "args": {
-                                              "key": "global._dbg",
-                                              "value": ""
-                                            }
-                                          }
-                                        ]
+                                        "then": []
                                       }
                                     },
                                     {
@@ -7460,15 +7436,7 @@
                                               "cond": {
                                                 "var": "vars.debug_actor_tick"
                                               },
-                                              "then": [
-                                                {
-                                                  "call": "@set",
-                                                  "args": {
-                                                    "key": "global._dbg",
-                                                    "value": ""
-                                                  }
-                                                }
-                                              ]
+                                              "then": []
                                             }
                                           }
                                         ]
