@@ -15,7 +15,7 @@
   "assets": {
     "bundles": {
       "flutter_game_mario": {
-        "baseUrl": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/",
+        "baseUrl": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/",
         "manifest": "manifest.json",
         "entry": "tiles/mario.tmx",
         "startupDownload": true,
@@ -315,7 +315,7 @@
                 "background": {
                   "kind": "sprite",
                   "priority": -50,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/level_1.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/level_1.png",
                   "position": [
                     0,
                     0
@@ -329,7 +329,7 @@
                 "preload_item_objects": {
                   "kind": "sprite",
                   "priority": -100,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
                   "position": [
                     -64,
                     -64
@@ -352,7 +352,7 @@
                 "powerup_3": {
                   "kind": "sprite",
                   "priority": 24,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
                   "position": [
                     -9999,
                     -9999
@@ -385,7 +385,7 @@
                 "preload_enemy_sheet": {
                   "kind": "sprite",
                   "priority": -100,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
                   "position": [
                     -64,
                     -64
@@ -409,7 +409,7 @@
                   "kind": "tiled_map",
                   "priority": -40,
                   "source": "tiles/mario.tmx",
-                  "base_url": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/",
+                  "base_url": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/",
                   "scale": 2,
                   "solid_layers": [
                     "grounds",
@@ -427,7 +427,7 @@
                 "player": {
                   "kind": "animated_sprite",
                   "priority": 40,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
                   "animation": "idle",
                   "position": [
                     64,
@@ -460,7 +460,7 @@
                   "frames": 1,
                   "animations": {
                     "idle": {
-                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
                       "src_origin": [
                         178,
                         32
@@ -474,7 +474,7 @@
                       "step_time": 0.12
                     },
                     "run": {
-                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
                       "src_origin": [
                         80,
                         32
@@ -488,7 +488,7 @@
                       "step_time": 0.08
                     },
                     "jump": {
-                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
                       "src_origin": [
                         144,
                         32
@@ -502,7 +502,7 @@
                       "step_time": 0.12
                     },
                     "dead": {
-                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
                       "src_origin": [
                         160,
                         32
@@ -516,7 +516,7 @@
                       "step_time": 0.12
                     },
                     "big_idle": {
-                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
                       "src_origin": [
                         176,
                         0
@@ -530,7 +530,7 @@
                       "step_time": 0.12
                     },
                     "big_run": {
-                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
                       "src_origin": [
                         81,
                         0
@@ -544,7 +544,7 @@
                       "step_time": 0.08
                     },
                     "big_jump": {
-                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
                       "src_origin": [
                         144,
                         0
@@ -558,7 +558,7 @@
                       "step_time": 0.12
                     },
                     "fire_idle": {
-                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
                       "src_origin": [
                         176,
                         48
@@ -572,7 +572,7 @@
                       "step_time": 0.12
                     },
                     "fire_run": {
-                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
                       "src_origin": [
                         81,
                         48
@@ -586,7 +586,7 @@
                       "step_time": 0.08
                     },
                     "fire_jump": {
-                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
                       "src_origin": [
                         144,
                         48
@@ -600,7 +600,7 @@
                       "step_time": 0.12
                     },
                     "fire_throw": {
-                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
+                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/mario_bros.png",
                       "src_origin": [
                         336,
                         48
@@ -636,7 +636,7 @@
                 "title_title_logo": {
                   "kind": "sprite",
                   "priority": 230,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/title_screen.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/title_screen.png",
                   "src": [
                     1,
                     60,
@@ -660,7 +660,7 @@
                 "title_selector_mushroom": {
                   "kind": "sprite",
                   "priority": 235,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/title_screen.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/title_screen.png",
                   "src": [
                     3,
                     155,
@@ -684,7 +684,7 @@
                 "title_hud_mario_00": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     51,
                     238,
@@ -708,7 +708,7 @@
                 "title_hud_mario_01": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     83,
                     230,
@@ -732,7 +732,7 @@
                 "title_hud_mario_02": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     91,
                     238,
@@ -756,7 +756,7 @@
                 "title_hud_mario_03": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     20,
                     238,
@@ -780,7 +780,7 @@
                 "title_hud_mario_04": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     67,
                     238,
@@ -804,7 +804,7 @@
                 "title_hud_world_00": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     3,
                     246,
@@ -828,7 +828,7 @@
                 "title_hud_world_01": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     67,
                     238,
@@ -852,7 +852,7 @@
                 "title_hud_world_02": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     91,
                     238,
@@ -876,7 +876,7 @@
                 "title_hud_world_03": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     43.5,
                     238,
@@ -900,7 +900,7 @@
                 "title_hud_world_04": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     107,
                     230,
@@ -924,7 +924,7 @@
                 "title_hud_time_00": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     107.7,
                     238,
@@ -948,7 +948,7 @@
                 "title_hud_time_01": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     20,
                     238,
@@ -972,7 +972,7 @@
                 "title_hud_time_02": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     51,
                     238,
@@ -996,7 +996,7 @@
                 "title_hud_time_03": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     115,
                     230,
@@ -1020,7 +1020,7 @@
                 "title_hud_world_no_00": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     11.5,
                     230,
@@ -1044,7 +1044,7 @@
                 "title_hud_world_no_01": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     67.5,
                     246.5,
@@ -1068,7 +1068,7 @@
                 "title_hud_world_no_02": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     11.5,
                     230,
@@ -1092,7 +1092,7 @@
                 "title_menu_one_00": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     11.5,
                     230,
@@ -1116,7 +1116,7 @@
                 "title_menu_one_01": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     48,
                     248,
@@ -1140,7 +1140,7 @@
                 "title_menu_one_02": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     75,
                     238,
@@ -1164,7 +1164,7 @@
                 "title_menu_one_03": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     43.5,
                     238,
@@ -1188,7 +1188,7 @@
                 "title_menu_one_04": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     83,
                     230,
@@ -1212,7 +1212,7 @@
                 "title_menu_one_05": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     20,
                     246,
@@ -1236,7 +1236,7 @@
                 "title_menu_one_06": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     115,
                     230,
@@ -1260,7 +1260,7 @@
                 "title_menu_one_07": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     91,
                     238,
@@ -1284,7 +1284,7 @@
                 "title_menu_one_08": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     48,
                     248,
@@ -1308,7 +1308,7 @@
                 "title_menu_one_09": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     3,
                     238,
@@ -1332,7 +1332,7 @@
                 "title_menu_one_10": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     83,
                     230,
@@ -1356,7 +1356,7 @@
                 "title_menu_one_11": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     51,
                     238,
@@ -1380,7 +1380,7 @@
                 "title_menu_one_12": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     115,
                     230,
@@ -1404,7 +1404,7 @@
                 "title_menu_two_00": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     19,
                     230,
@@ -1428,7 +1428,7 @@
                 "title_menu_two_01": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     48,
                     248,
@@ -1452,7 +1452,7 @@
                 "title_menu_two_02": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     75,
                     238,
@@ -1476,7 +1476,7 @@
                 "title_menu_two_03": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     43.5,
                     238,
@@ -1500,7 +1500,7 @@
                 "title_menu_two_04": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     83,
                     230,
@@ -1524,7 +1524,7 @@
                 "title_menu_two_05": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     20,
                     246,
@@ -1548,7 +1548,7 @@
                 "title_menu_two_06": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     115,
                     230,
@@ -1572,7 +1572,7 @@
                 "title_menu_two_07": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     91,
                     238,
@@ -1596,7 +1596,7 @@
                 "title_menu_two_08": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     48,
                     248,
@@ -1620,7 +1620,7 @@
                 "title_menu_two_09": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     3,
                     238,
@@ -1644,7 +1644,7 @@
                 "title_menu_two_10": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     83,
                     230,
@@ -1668,7 +1668,7 @@
                 "title_menu_two_11": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     51,
                     238,
@@ -1692,7 +1692,7 @@
                 "title_menu_two_12": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     115,
                     230,
@@ -1716,7 +1716,7 @@
                 "title_menu_two_13": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     48,
                     248,
@@ -1740,7 +1740,7 @@
                 "title_menu_two_14": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     67.5,
                     246.5,
@@ -1764,7 +1764,7 @@
                 "title_menu_two_15": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     48,
                     248,
@@ -1788,7 +1788,7 @@
                 "title_menu_two_16": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     99,
                     230,
@@ -1812,7 +1812,7 @@
                 "title_menu_two_17": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     67,
                     238,
@@ -1836,7 +1836,7 @@
                 "title_menu_two_18": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     51,
                     238,
@@ -1860,7 +1860,7 @@
                 "title_menu_two_19": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     20,
                     238,
@@ -1884,7 +1884,7 @@
                 "title_menu_two_20": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     59,
                     238,
@@ -1908,7 +1908,7 @@
                 "title_menu_two_21": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     3,
                     238,
@@ -1932,7 +1932,7 @@
                 "title_menu_two_22": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     48,
                     248,
@@ -1956,7 +1956,7 @@
                 "title_menu_two_23": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     99,
                     238,
@@ -1980,7 +1980,7 @@
                 "title_menu_two_24": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     67,
                     238,
@@ -2004,7 +2004,7 @@
                 "title_menu_two_25": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     67,
                     238,
@@ -2028,7 +2028,7 @@
                 "title_menu_two_26": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     59,
                     238,
@@ -2052,7 +2052,7 @@
                 "title_menu_top_00": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     107.7,
                     238,
@@ -2076,7 +2076,7 @@
                 "title_menu_top_01": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     67,
                     238,
@@ -2100,7 +2100,7 @@
                 "title_menu_top_02": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     75,
                     238,
@@ -2124,7 +2124,7 @@
                 "title_menu_top_03": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     48,
                     248,
@@ -2148,7 +2148,7 @@
                 "title_menu_top_04": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     67.5,
                     246.5,
@@ -2172,7 +2172,7 @@
                 "title_menu_top_05": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     48,
                     248,
@@ -2196,7 +2196,7 @@
                 "title_menu_top_06": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     3,
                     230,
@@ -2220,7 +2220,7 @@
                 "title_menu_top_07": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     3,
                     230,
@@ -2244,7 +2244,7 @@
                 "title_menu_top_08": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     3,
                     230,
@@ -2268,7 +2268,7 @@
                 "title_menu_top_09": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     3,
                     230,
@@ -2292,7 +2292,7 @@
                 "title_menu_top_10": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     3,
                     230,
@@ -2316,7 +2316,7 @@
                 "title_menu_top_11": {
                   "kind": "sprite",
                   "priority": 220,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/text_images.png",
                   "src": [
                     3,
                     230,
@@ -2384,7 +2384,7 @@
                   "kind": "animated_sprite",
                   "priority": 226,
                   "fixed_to_screen": true,
-                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                   "src_origin": [
                     387,
                     18
@@ -3444,7 +3444,7 @@
                                   "id": "fireball",
                                   "kind": "animated_sprite",
                                   "priority": 45,
-                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
                                   "src_origin": [
                                     96,
                                     144
@@ -4066,7 +4066,7 @@
                                       "id_prefix": "qblock_",
                                       "kind": "animated_sprite",
                                       "priority": 25,
-                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                       "src_origin": [
                                         384,
                                         0
@@ -4093,7 +4093,7 @@
                                       "auto_update": false,
                                       "animations": {
                                         "twinkle": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             384,
                                             0
@@ -4111,7 +4111,7 @@
                                           "step_time": 0.22
                                         },
                                         "used": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             432,
                                             0
@@ -4135,7 +4135,7 @@
                                       "id_prefix": "qblock_",
                                       "kind": "animated_sprite",
                                       "priority": 25,
-                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                       "src_origin": [
                                         384,
                                         0
@@ -4162,7 +4162,7 @@
                                       "auto_update": false,
                                       "animations": {
                                         "twinkle": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             384,
                                             0
@@ -4180,7 +4180,7 @@
                                           "step_time": 0.22
                                         },
                                         "used": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             432,
                                             0
@@ -4204,7 +4204,7 @@
                                       "id_prefix": "qblock_",
                                       "kind": "animated_sprite",
                                       "priority": 25,
-                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                       "src_origin": [
                                         384,
                                         0
@@ -4231,7 +4231,7 @@
                                       "auto_update": false,
                                       "animations": {
                                         "twinkle": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             384,
                                             0
@@ -4249,7 +4249,7 @@
                                           "step_time": 0.22
                                         },
                                         "used": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             432,
                                             0
@@ -4273,7 +4273,7 @@
                                       "id_prefix": "qblock_",
                                       "kind": "animated_sprite",
                                       "priority": 25,
-                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                       "src_origin": [
                                         384,
                                         0
@@ -4300,7 +4300,7 @@
                                       "auto_update": false,
                                       "animations": {
                                         "twinkle": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             384,
                                             0
@@ -4318,7 +4318,7 @@
                                           "step_time": 0.22
                                         },
                                         "used": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             432,
                                             0
@@ -4342,7 +4342,7 @@
                                       "id_prefix": "qblock_",
                                       "kind": "animated_sprite",
                                       "priority": 25,
-                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                       "src_origin": [
                                         384,
                                         0
@@ -4369,7 +4369,7 @@
                                       "auto_update": false,
                                       "animations": {
                                         "twinkle": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             384,
                                             0
@@ -4387,7 +4387,7 @@
                                           "step_time": 0.22
                                         },
                                         "used": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             432,
                                             0
@@ -4411,7 +4411,7 @@
                                       "id_prefix": "qblock_",
                                       "kind": "animated_sprite",
                                       "priority": 25,
-                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                       "src_origin": [
                                         384,
                                         0
@@ -4438,7 +4438,7 @@
                                       "auto_update": false,
                                       "animations": {
                                         "twinkle": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             384,
                                             0
@@ -4456,7 +4456,7 @@
                                           "step_time": 0.22
                                         },
                                         "used": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             432,
                                             0
@@ -4480,7 +4480,7 @@
                                       "id_prefix": "qblock_",
                                       "kind": "animated_sprite",
                                       "priority": 25,
-                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                       "src_origin": [
                                         384,
                                         0
@@ -4507,7 +4507,7 @@
                                       "auto_update": false,
                                       "animations": {
                                         "twinkle": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             384,
                                             0
@@ -4525,7 +4525,7 @@
                                           "step_time": 0.22
                                         },
                                         "used": {
-                                          "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                          "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                           "src_origin": [
                                             432,
                                             0
@@ -4559,7 +4559,7 @@
                                       "id_prefix": "brick_",
                                       "kind": "sprite",
                                       "priority": 24,
-                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                       "src": [
                                         16,
                                         0,
@@ -4592,7 +4592,7 @@
                                       "id_prefix": "flagpole_",
                                       "kind": "sprite",
                                       "priority": 26,
-                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                       "src": [
                                         263,
                                         144,
@@ -4615,7 +4615,7 @@
                                       "id_prefix": "flagpole_",
                                       "kind": "sprite",
                                       "priority": 27,
-                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                       "src": [
                                         228,
                                         120,
@@ -4638,7 +4638,7 @@
                                       "id_prefix": "flagpole_",
                                       "kind": "sprite",
                                       "priority": 28,
-                                      "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                      "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
                                       "src": [
                                         128,
                                         32,
@@ -4781,7 +4781,7 @@
                                 "id_prefix": "enemy_",
                                 "kind": "animated_sprite",
                                 "priority": 30,
-                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                                "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
                                 "src_origin": [
                                   0,
                                   4
@@ -4818,7 +4818,7 @@
                                 },
                                 "animations": {
                                   "walk": {
-                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                                    "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
                                     "src_origin": [
                                       0,
                                       4
@@ -4836,7 +4836,7 @@
                                     "step_time": 0.1
                                   },
                                   "squish": {
-                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                                    "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
                                     "src_origin": [
                                       60,
                                       8
@@ -4855,7 +4855,7 @@
                                 "id_prefix": "enemy_",
                                 "kind": "animated_sprite",
                                 "priority": 31,
-                                "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                                "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
                                 "src_origin": [
                                   150,
                                   0
@@ -4897,7 +4897,7 @@
                                 },
                                 "animations": {
                                   "walk": {
-                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                                    "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
                                     "src_origin": [
                                       150,
                                       0
@@ -4915,7 +4915,7 @@
                                     "step_time": 0.2
                                   },
                                   "shell": {
-                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                                    "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
                                     "src_origin": [
                                       360,
                                       5
@@ -5813,7 +5813,7 @@
                                   "kind": "animated_sprite",
                                   "id": "brick_piece_{{ entities.player.yCollision.objectId }}_a",
                                   "priority": 34,
-                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                   "src_origin": [
                                     16,
                                     0
@@ -5868,7 +5868,7 @@
                                   "kind": "animated_sprite",
                                   "id": "brick_piece_{{ entities.player.yCollision.objectId }}_b",
                                   "priority": 34,
-                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                   "src_origin": [
                                     24,
                                     0
@@ -5923,7 +5923,7 @@
                                   "kind": "animated_sprite",
                                   "id": "brick_piece_{{ entities.player.yCollision.objectId }}_c",
                                   "priority": 34,
-                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                   "src_origin": [
                                     16,
                                     8
@@ -5978,7 +5978,7 @@
                                   "kind": "animated_sprite",
                                   "id": "brick_piece_{{ entities.player.yCollision.objectId }}_d",
                                   "priority": 34,
-                                  "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                  "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                   "src_origin": [
                                     24,
                                     8
@@ -6141,7 +6141,7 @@
                                         "id": "coin_{{ entities.player.yCollision.objectId }}",
                                         "kind": "animated_sprite",
                                         "priority": 60,
-                                        "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
+                                        "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/tile_set.png",
                                         "src_origin": [
                                           387,
                                           18
@@ -6398,7 +6398,7 @@
                                             "call": "@spawn",
                                             "args": {
                                               "kind": "sprite",
-                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                              "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
                                               "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                               "priority": 24,
                                               "position": [
@@ -6453,7 +6453,7 @@
                                             "call": "@spawn",
                                             "args": {
                                               "kind": "sprite",
-                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                              "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
                                               "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                               "priority": 24,
                                               "position": [
@@ -6548,7 +6548,7 @@
                                             "call": "@spawn",
                                             "args": {
                                               "kind": "sprite",
-                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                              "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
                                               "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                               "priority": 24,
                                               "position": [
@@ -6603,7 +6603,7 @@
                                             "call": "@spawn",
                                             "args": {
                                               "kind": "sprite",
-                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                              "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
                                               "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                               "priority": 24,
                                               "position": [
@@ -6698,7 +6698,7 @@
                                             "call": "@spawn",
                                             "args": {
                                               "kind": "sprite",
-                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                              "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
                                               "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                               "priority": 24,
                                               "position": [
@@ -6753,7 +6753,7 @@
                                             "call": "@spawn",
                                             "args": {
                                               "kind": "sprite",
-                                              "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                              "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
                                               "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                               "priority": 24,
                                               "position": [
@@ -6836,7 +6836,7 @@
                                       "call": "@spawn",
                                       "args": {
                                         "kind": "sprite",
-                                        "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
+                                        "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/item_objects.png",
                                         "id": "powerup_{{ entities.player.yCollision.objectId }}",
                                         "priority": 24,
                                         "position": [
@@ -7851,7 +7851,7 @@
                                                     "kind": "sprite",
                                                     "id": "shell_{{ vars._hit_enemy_object_id }}",
                                                     "priority": 31,
-                                                    "asset": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
+                                                    "asset": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/images/mario/smb_enemies_sheet.png",
                                                     "position": [
                                                       {
                                                         "var": "vars._hit_enemy_x"
@@ -8539,7 +8539,7 @@
                 "args": {}
               },
               "audio": {
-                "base_url": "https://myapp-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/audio/mario/",
+                "base_url": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/audio/mario/",
                 "tracks": {
                   "main_theme": {
                     "src": "main_theme.ogg",
