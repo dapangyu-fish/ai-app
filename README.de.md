@@ -449,6 +449,7 @@ werden von diesen lizenziert, sofern nicht ausdrücklich anders angegeben.
 - [OpenIM](https://github.com/openimsdk) — IM-SDK + Server
 - [Anthropic Claude Code CLI](https://docs.claude.com/en/docs/claude-code) — KI-Generierungs-Laufzeitumgebung
 - [JsonLogic](https://jsonlogic.com) — Ausdrucksengine
+- [mx0c/super-mario-python](https://github.com/mx0c/super-mario-python) — Super Mario level data (Mario demo apps); Nintendo SMB IP is used for demo/educational purposes only
 
 ---
 

@@ -448,6 +448,7 @@ Els paquets del mercat, els actius pujats i les apps JSON creades pels usuaris s
 - [OpenIM](https://github.com/openimsdk) — SDK + servidor d'IM
 - [Anthropic Claude Code CLI](https://docs.claude.com/en/docs/claude-code) — runtime de generació amb IA
 - [JsonLogic](https://jsonlogic.com) — motor d'expressions
+- [mx0c/super-mario-python](https://github.com/mx0c/super-mario-python) — Super Mario level data (Mario demo apps); Nintendo SMB IP is used for demo/educational purposes only
 
 ---
 

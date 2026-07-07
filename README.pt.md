@@ -448,6 +448,7 @@ Os pacotes do marketplace, os ativos carregados e as apps JSON criadas por utili
 - [OpenIM](https://github.com/openimsdk) — SDK + servidor de IM
 - [Anthropic Claude Code CLI](https://docs.claude.com/en/docs/claude-code) — runtime de geração de IA
 - [JsonLogic](https://jsonlogic.com) — motor de expressões
+- [mx0c/super-mario-python](https://github.com/mx0c/super-mario-python) — Super Mario level data (Mario demo apps); Nintendo SMB IP is used for demo/educational purposes only
 
 ---
 

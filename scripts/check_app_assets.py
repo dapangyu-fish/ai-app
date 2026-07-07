@@ -63,7 +63,7 @@ def find_flame_games(o, out):
 def collect(doc: dict) -> tuple[set[str], list[str]]:
     """Return (asset_urls, notes)."""
     text = json.dumps(doc, ensure_ascii=False)
-    urls = {u for u in URL_RE.findall(text) if not u.endswith('/')}  # skip base_url prefixes
+    urls = {u for u in URL_RE.findall(text) if not u.endswith('/') and '{{' not in u}  # skip base_url prefixes + runtime templates
     notes = []
     games = []
     find_flame_games(doc, games)
@@ -82,6 +82,11 @@ def collect(doc: dict) -> tuple[set[str], list[str]]:
                 if o.get("kind") == "tiled_map" and o.get("source"):
                     tb = o.get("base_url", "")
                     tmx = join(tb, o["source"]) if tb else o["source"]
+                    if "{{" in tmx:
+                        notes.append(f"tiled_map source is runtime-templated ({o['source']}) — verified per-level via registry, skipped here")
+                        for v in o.values():
+                            walk(v)
+                        return
                     urls.add(tmx)
                     notes.append(f"tiled_map → {tmx}")
                     # fetch tmx, resolve inner <image source=..> / <tileset source=..>

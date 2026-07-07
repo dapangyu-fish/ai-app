@@ -445,6 +445,7 @@ Apache License 2.0 —— 见 [LICENSE](LICENSE) 和 [NOTICE](NOTICE)。
 - [OpenIM](https://github.com/openimsdk) —— IM SDK + 服务端
 - [Anthropic Claude Code CLI](https://docs.claude.com/en/docs/claude-code) —— AI 生成运行时
 - [JsonLogic](https://jsonlogic.com) —— 表达式引擎
+- [mx0c/super-mario-python](https://github.com/mx0c/super-mario-python) — Super Mario level data (Mario demo apps); Nintendo SMB IP is used for demo/educational purposes only
 
 ---
 
