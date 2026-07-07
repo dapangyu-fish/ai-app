@@ -1031,6 +1031,10 @@ class JsonFlameGame extends FlameGame {
   }
 
   bool get _assetsLoading {
+    // 音频与贴图同门：目录里还有远程音源没预取完就继续显示加载罩 ——
+    // 游戏在全部音频下载完成前不开始（每个音源只 pending 一次，成功或失败
+    // 都会退出 pending，不会永久卡门）。
+    if (!_initialAssetLoadingComplete && audio.prefetching) return true;
     var imageLoading = false;
     for (final entity in entities.values) {
       if (entity is TiledMapEntity && !entity.loaded && entity.error == null) {

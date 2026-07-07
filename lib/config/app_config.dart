@@ -121,7 +121,7 @@ class AppConfig {
   /// `flutter build` / IDE 构建的兜底默认（请与 pubspec 保持一致）。主页底部那个 v
   /// 标签读的就是它。（与平台 VERSION=1.2.x 是两条独立线，互不影响。）
   static const String appVersion =
-      String.fromEnvironment('APP_VERSION', defaultValue: '1.2.1+2');
+      String.fromEnvironment('APP_VERSION', defaultValue: '1.2.2+3');
 
   /// 构建时注入的 Git commit。默认空字符串，避免把具体 commit 写死进代码。
   static const String gitCommit = String.fromEnvironment('APP_GIT_COMMIT');

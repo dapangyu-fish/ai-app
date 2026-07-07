@@ -1814,7 +1814,7 @@ JsonLogic；`event.*` / `loop.*` / `global.*` 仍在实际事件或运行时逻�
 | `world` | ✅ | 坐标系 |
 | `vars` | ❌ | 游戏内变量初始值（每次 reset 重置） |
 | `entities` | ❌ | 实体声明（id → spec） |
-| `audio` | ❌ | 游戏音频目录。`tracks` 适合 BGM/循环音，`sounds` 适合跳跃、拾取、命中等短音效；资源由 JSON 以 URL/相对路径声明。远程 URL 在游戏装载时经 AssetCache 预取到本地并从本地文件播放（不逐次联网流式拉取）；预取未完成时 BGM 允许流式起播，一次性短音效则跳过本次播放而不是迟到 |
+| `audio` | ❌ | 游戏音频目录。`tracks` 适合 BGM/循环音，`sounds` 适合跳跃、拾取、命中等短音效；资源由 JSON 以 URL/相对路径声明。远程 URL 在游戏装载时经 AssetCache 预取到本地并从本地文件播放（不逐次联网流式拉取），且预取纳入资产加载罩——游戏在全部音频下载完成前不开始（单个音源失败即放行不卡门）；本地不可用的兜底为流式播放。注意 iOS/macOS 的 AVPlayer 不支持 Ogg/Vorbis，音源请用 m4a/mp3/wav |
 | `input.tap` | ❌ | 点击事件 logic（event 含 `x`, `y`） |
 | `input.swipe` | ❌ | **离散** swipe：一次手势结束才触发一次（按累积位移决定方向）。event 含 `direction`（up/down/left/right）+ 累积 `dx`/`dy`。适合 2048、贪吃蛇、卡牌这类"一次手势 = 一次事件"的游戏 |
 | `input.pan` | ❌ | **连续** pan：onPanUpdate 每帧（~16ms）触发一次，event 只含本帧增量 `dx`/`dy`（不含 direction）。适合划线、轨迹、拖动、连续蓄力这类需要逐帧位移的游戏 |

@@ -20,6 +20,11 @@ class GameAudioController {
   final Set<String> _fetching = {};
   bool _disposed = false;
 
+  /// 音频目录仍有远程音源未预取完成。游戏引擎把它并入资产加载门 ——
+  /// 「游戏在全部音频下载完成前不应开始」。预取每个音源只会 pending 一次
+  /// （成功或失败都会退出集合），不会造成永久卡门。
+  bool get prefetching => _fetching.isNotEmpty;
+
   void configure(dynamic raw) {
     if (_disposed) return;
     _catalog.clear();
@@ -77,11 +82,10 @@ class GameAudioController {
       return true;
     }
 
-    // 一次性音效：只从本地缓存播。未就绪就触发预取并跳过本次 ——
-    // 迟到几秒的枪声比静音更糟；预取完成后（通常在开局数秒内）恢复即时播放。
+    // 一次性音效：优先本地缓存（引擎加载门已保证开局前预取完成）。本地不可用
+    // 时（web 无文件系统 / 个别预取失败）回退 UrlSource —— 有声但可能慢，比静音好。
     if (_isRemote(spec.source) && !_localPaths.containsKey(spec.source)) {
       _prefetch(spec.source);
-      return false;
     }
     final player = AudioPlayer();
     _oneShotPlayers.add(player);

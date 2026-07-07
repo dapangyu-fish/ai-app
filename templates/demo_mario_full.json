@@ -3,7 +3,7 @@
  "appid": "542bb1e0-4cc1-5b69-ab2d-781ba9bf33de",
  "meta": {
   "name": "demo-mario-full",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "type": "app",
   "description": "多关卡马里奥：关卡选择器 + 数据驱动关卡注册表 + 动态 tiled 关卡加载。基于开源关卡数据移植。",
   "author": "fish",
@@ -8669,48 +8669,48 @@
         "base_url": "https://myapp-demo-de-oss-endpoint.dapangyu.work/json-app-assets/demo-mario-platformer/1.0.0/audio/mario/",
         "tracks": {
          "main_theme": {
-          "src": "main_theme.ogg",
+          "src": "main_theme.m4a",
           "loop": true,
           "volume": 0.3
          },
          "main_theme_fast": {
-          "src": "main_theme_sped_up.ogg",
+          "src": "main_theme_sped_up.m4a",
           "loop": true,
           "volume": 0.3
          },
          "invincible": {
-          "src": "invincible.ogg",
+          "src": "invincible.m4a",
           "loop": true,
           "volume": 0.34
          }
         },
         "sounds": {
          "small_jump": {
-          "src": "small_jump.ogg",
+          "src": "small_jump.m4a",
           "volume": 0.85
          },
          "big_jump": {
-          "src": "big_jump.ogg",
+          "src": "big_jump.m4a",
           "volume": 0.85
          },
          "bump": {
-          "src": "bump.ogg",
+          "src": "bump.m4a",
           "volume": 0.8
          },
          "brick_smash": {
-          "src": "brick_smash.ogg",
+          "src": "brick_smash.m4a",
           "volume": 0.8
          },
          "coin": {
-          "src": "coin.ogg",
+          "src": "coin.m4a",
           "volume": 0.85
          },
          "fireball": {
-          "src": "fireball.ogg",
+          "src": "fireball.m4a",
           "volume": 0.75
          },
          "game_over": {
-          "src": "game_over.ogg",
+          "src": "game_over.m4a",
           "volume": 0.9
          },
          "death": {
@@ -8718,19 +8718,19 @@
           "volume": 0.9
          },
          "kick": {
-          "src": "kick.ogg",
+          "src": "kick.m4a",
           "volume": 0.85
          },
          "one_up": {
-          "src": "one_up.ogg",
+          "src": "one_up.m4a",
           "volume": 0.9
          },
          "powerup": {
-          "src": "powerup.ogg",
+          "src": "powerup.m4a",
           "volume": 0.9
          },
          "powerup_appears": {
-          "src": "powerup_appears.ogg",
+          "src": "powerup_appears.m4a",
           "volume": 0.9
          },
          "stage_clear": {
@@ -8738,7 +8738,7 @@
           "volume": 0.9
          },
          "stomp": {
-          "src": "stomp.ogg",
+          "src": "stomp.m4a",
           "volume": 0.85
          }
         }

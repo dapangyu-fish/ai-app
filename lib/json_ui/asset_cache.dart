@@ -78,7 +78,17 @@ class AssetCache {
     final memKey = '$namespace\n$url';
     final memoryHit = _memory[memKey];
     if (memoryHit != null) {
-      return CachedAsset(url: url, bytes: memoryHit, fromCache: true);
+      // 内存命中也带上磁盘路径（若文件确实在）：音频等需要「本地文件」而非
+      // 字节的消费方靠 path 零延迟播放；此前这里恒为 null，同会话内第二次
+      // configure（如游戏重开）就永远拿不到本地路径了。
+      final memPath = _filePath(namespace, url);
+      final onDisk = memPath != null && await NativeFs.existsAbs(memPath);
+      return CachedAsset(
+        url: url,
+        bytes: memoryHit,
+        fromCache: true,
+        path: onDisk ? memPath : null,
+      );
     }
 
     final absPath = _filePath(namespace, url);
@@ -103,10 +113,17 @@ class AssetCache {
     }
     final bytes = Uint8List.fromList(resp.bodyBytes);
     _remember(memKey, bytes);
+    var wrote = false;
     if (absPath != null) {
-      await NativeFs.writeBytesAbs(absPath, bytes);
+      wrote = await NativeFs.writeBytesAbs(absPath, bytes);
     }
-    return CachedAsset(url: url, bytes: bytes, fromCache: false, path: absPath);
+    // path 只在文件真正落盘后返回 —— 消费方（音频本地播放）拿到 path 即可信。
+    return CachedAsset(
+      url: url,
+      bytes: bytes,
+      fromCache: false,
+      path: wrote ? absPath : null,
+    );
   }
 
   Future<void> clearNamespace(String namespace) async {
