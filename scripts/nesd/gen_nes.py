@@ -264,8 +264,8 @@ def render_sprite_over():
                 setL("dx", ["-", L("sx"), L("ox")]),
                 gif(["and", [">=", L("dy"), 0], ["<", L("dy"), L("h")]], [
                     setL("nvis", ADD(L("nvis"), 1)),
-                    gif([">", L("nvis"), 8],                # 9th in-range: overflow + not in secondary OAM
-                        [setp(STATUS, OR(p(STATUS), 0x20)), setL("done", 1)],
+                    gif([">", L("nvis"), 8],                # 9th in-range: not in secondary OAM (overflow set in eval pass)
+                        [setL("done", 1)],
                     [gif(["and", [">=", L("dx"), 0], ["<", L("dx"), 8]], [
                     # V flip (over full sprite height), then H flip
                     gif(["==", AND(SHR(L("oa"), 7), 1), 1], [setL("dy", ["-", ["-", L("h"), 1], L("dy")])]),
@@ -294,6 +294,22 @@ def render_sprite_over():
         ]),
     ]
 
+def spr_overflow_eval_fn():
+    # count sprites in range on this scanline (Y+1 delay); set overflow flag (bit5)
+    # if >8. runs whenever rendering is active (bg OR sprites) — independent of display.
+    return {"params": [], "body": [
+        setL("i", 0), setL("n", 0),
+        setL("h", ["?:", ["==", AND(SHR(p(CTRL), 5), 1), 1], 16, 8]),
+        ["while", ["and", ["<", L("i"), 64], ["<", L("n"), 9]], [
+            setL("dy", ["-", ["-", p(SCAN), ["u8", "oam", SHL(L("i"), 2)]], 1]),
+            gif(["and", [">=", L("dy"), 0], ["<", L("dy"), L("h")]],
+                [setL("n", ADD(L("n"), 1))]),
+            setL("i", ADD(L("i"), 1)),
+        ]],
+        gif([">", L("n"), 8], [setp(STATUS, OR(p(STATUS), 0x20))]),
+        ["ret", 0],
+    ]}
+
 def ppu_step_fn():
     # one PPU dot. scanline in p[SCAN], cycle in p[CYC].
     body = [
@@ -310,6 +326,8 @@ def ppu_step_fn():
                 gif(["==", L("c"), 256], [ppu_incy()]),
                 gif(["==", L("c"), 257], [ppu_copyh()]),
             ]),
+            # sprite overflow eval runs only when rendering active (bg or sprites)
+            gif(["and", ["==", L("c"), 256], ["==", L("active"), 1]], [call("spr_overflow_eval")]),
         ]),
         # pre-render line 261
         gif(["==", L("s"), 261], [
@@ -634,6 +652,7 @@ def build():
     funcs["m3_write"] = m3_write_fn()
     funcs["m3_clock_irq"] = m3_clock_irq_fn()
     funcs["a12_clock"] = a12_clock_fn()
+    funcs["spr_overflow_eval"] = spr_overflow_eval_fn()
     funcs["simple_write"] = simple_write_fn()
 
     # NMI service: push PC + P, set I, jump to NMI vector
