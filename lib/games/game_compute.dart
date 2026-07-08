@@ -8,12 +8,14 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 
 import '../json_ui/asset_manager.dart';
 import '../json_ui/compute/compute_kernel.dart';
+import 'pcm_sink.dart';
 
 /// Holds a compiled [ComputeProgram] for a flame_game plus helpers to load
 /// binary blobs into buffers and present a palette-indexed buffer as an image.
@@ -133,6 +135,32 @@ class GameCompute {
 
   static final Int16List _emptyI16 = Int16List(0);
 
+  PcmSink? _audioSink;
+  bool _audioInit = false;
+
+  /// Drain the APU's accumulated samples and stream them to the platform PCM
+  /// sink for playback (web: Web Audio; native: no-op until a player is wired).
+  /// Call once per emulated frame. Safe no-op if the program has no [drainFn].
+  void streamAudio({
+    String drainFn = 'apu_drain',
+    String samplesBuffer = 'samples',
+    int sampleRate = 48000,
+  }) {
+    if (!_audioInit) {
+      _audioInit = true;
+      if (program.hasFunction(drainFn)) {
+        _audioSink = createPcmSink(sampleRate: sampleRate);
+      }
+    }
+    final sink = _audioSink;
+    if (sink == null) return;
+    final samples = drainAudio(drainFn: drainFn, samplesBuffer: samplesBuffer);
+    if (samples.isNotEmpty) sink.feed(samples);
+  }
+
+  /// Resume the audio context after a user gesture (browsers require this).
+  void resumeAudio() => _audioSink?.resume();
+
   /// Convert a palette-indexed byte buffer (w×h, values 0..len(palette)) to
   /// RGBA and decode to a [ui.Image] asynchronously; the cached image is drawn
   /// by the framebuffer entity (≤1 frame latency, matching a texture stream).
@@ -163,5 +191,7 @@ class GameCompute {
   void dispose() {
     _frameImage?.dispose();
     _frameImage = null;
+    _audioSink?.dispose();
+    _audioSink = null;
   }
 }

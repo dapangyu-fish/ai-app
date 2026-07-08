@@ -111,6 +111,21 @@ class GameActions {
           );
           return null;
         }
+      case '@compute.audio':
+        {
+          // Drain APU samples and stream to the platform PCM sink (once/frame).
+          game.compute?.streamAudio(
+            drainFn: args['drain']?.toString() ?? 'apu_drain',
+            samplesBuffer: args['buffer']?.toString() ?? 'samples',
+            sampleRate: (args['rate'] as num?)?.toInt() ?? 48000,
+          );
+          return null;
+        }
+      case '@compute.resume_audio':
+        {
+          game.compute?.resumeAudio(); // call from a tap handler (browsers gate audio)
+          return null;
+        }
       // ---------- 分数 / 状态 ----------
       case '@score.add':
         {
