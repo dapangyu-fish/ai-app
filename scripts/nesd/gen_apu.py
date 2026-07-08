@@ -19,7 +19,7 @@ EN1 DUTY1 DIDX1 TMR1 TP1 CV1 VOL1 E1V E1P E1T E1S E1L L1H L1V S1E S1P S1V S1SH S
 EN2 DUTY2 DIDX2 TMR2 TP2 CV2 VOL2 E2V E2P E2T E2S E2L L2H L2V S2E S2P S2V S2SH S2N S2R S2M
 ENT DIDXT TMRT TPT LIN LINP LINREL CTRLT LTH LTV
 ENN TMRN TPN CVN VOLN ENV ENP ENT2 ENS ENL LNH LNV SHN MODEN
-FCCOUNT FCMODE FCINH APUCYC SACC SIDX DMCLVL FCIRQ DMCIRQ
+FCCOUNT FCMODE FCINH APUCYC SACC SIDX DMCLVL FCIRQ DMCIRQ FCRESET
 DMC_EN DMC_IRQEN DMC_LOOP DMC_SIL DMC_BUF DMC_RATE DMC_BITS DMC_SHIFT DMC_TMR
 DMC_SADDR DMC_SLEN DMC_ADDR DMC_LEN DMC_LOADED
 """.split()
@@ -175,19 +175,26 @@ def build_apu():
       + [["ret", 0]]}
 
     funcs["ap_frame_step"] = {"params": [], "body": [
+        # pending $4017-reset delay (3-4 CPU cycles): hold sequencer in reset
+        gif([">", a("FCRESET"), 0], [
+            seta("FCRESET", SUB(a("FCRESET"), 1)),
+            gif(["==", a("FCRESET"), 0], [seta("FCCOUNT", 0)]),
+            ["ret", 0]]),
+        # cycle-exact frame sequencer: FCCOUNT counts CPU cycles (clocked every cycle)
         setL("c", a("FCCOUNT")),
-        gif(["==", a("FCMODE"), 0], [  # 4-step
-            gif(["==", L("c"), 3728], [["call", "ap_quarter", []]]),
-            gif(["==", L("c"), 7456], [["call", "ap_quarter", []], ["call", "ap_half", []]]),
-            gif(["==", L("c"), 11185], [["call", "ap_quarter", []]]),
-            gif(["==", L("c"), 14914], [["call", "ap_quarter", []], ["call", "ap_half", []],
+        gif(["==", a("FCMODE"), 0], [  # 4-step, sequence = 29830 CPU cycles
+            gif(["==", L("c"), 7457], [["call", "ap_quarter", []]]),
+            gif(["==", L("c"), 14913], [["call", "ap_quarter", []], ["call", "ap_half", []]]),
+            gif(["==", L("c"), 22371], [["call", "ap_quarter", []]]),
+            gif(["==", L("c"), 29828], [gif(["==", a("FCINH"), 0], [seta("FCIRQ", 1)])]),
+            gif(["==", L("c"), 29829], [["call", "ap_quarter", []], ["call", "ap_half", []],
                                         gif(["==", a("FCINH"), 0], [seta("FCIRQ", 1)]),
                                         seta("FCCOUNT", -1)]),
-        ], [  # 5-step
-            gif(["==", L("c"), 3728], [["call", "ap_quarter", []]]),
-            gif(["==", L("c"), 7456], [["call", "ap_quarter", []], ["call", "ap_half", []]]),
-            gif(["==", L("c"), 11185], [["call", "ap_quarter", []]]),
-            gif(["==", L("c"), 18640], [["call", "ap_quarter", []], ["call", "ap_half", []],
+        ], [  # 5-step, sequence = 37282 CPU cycles, no IRQ
+            gif(["==", L("c"), 7457], [["call", "ap_quarter", []]]),
+            gif(["==", L("c"), 14913], [["call", "ap_quarter", []], ["call", "ap_half", []]]),
+            gif(["==", L("c"), 22371], [["call", "ap_quarter", []]]),
+            gif(["==", L("c"), 37281], [["call", "ap_quarter", []], ["call", "ap_half", []],
                                         seta("FCCOUNT", -1)]),
         ]),
         seta("FCCOUNT", ADD(a("FCCOUNT"), 1)),
@@ -227,11 +234,11 @@ def build_apu():
     funcs["apu_step"] = {"params": [], "body": [
         ["call", "ap_tri_step", []],
         ["call", "ap_dmc_step", []],
+        ["call", "ap_frame_step", []],                # frame sequencer: every CPU cycle
         gif(["==", AND(a("APUCYC"), 1), 0], [
             ["call", "ap_pulse_step", [1]],
             ["call", "ap_pulse_step", [2]],
-            ["call", "ap_noise_step", []],
-            ["call", "ap_frame_step", []]]),
+            ["call", "ap_noise_step", []]]),
         # sample accumulator -> emit int16 when >= CPU_FREQ
         seta("SACC", ADD(a("SACC"), APU_RATE)),
         gif([">=", a("SACC"), CPU_FREQ], [
@@ -332,7 +339,7 @@ def build_apu():
         # $4017 frame counter
         gif(["==", L("r"), 0x17], [
             seta("FCMODE", bit(L("v"), 7)), seta("FCINH", bit(L("v"), 6)),
-            seta("FCCOUNT", 0),
+            seta("FCRESET", ["?:", ["==", AND(a("APUCYC"), 1), 0], 2, 3]),   # reset jitter (apu_step already ran this cyc)
             gif(["==", bit(L("v"), 6), 1], [seta("FCIRQ", 0)]),   # inhibit clears frame IRQ flag
             gif(["==", bit(L("v"), 7), 1], [["call", "ap_quarter", []], ["call", "ap_half", []]])]),
         ["ret", 0]]}
