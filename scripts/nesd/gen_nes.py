@@ -361,6 +361,10 @@ def bus_wr_fn():
             [call("m1_write", [L("aa"), L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 4]],
             [call("m3_write", [L("aa"), L("v")]), ["ret", 0]]),
+        gif(["and", [">=", L("aa"), 0x8000],
+                    ["or", ["or", ["==", p(MAPPER), 2], ["==", p(MAPPER), 3]],
+                           ["or", ["==", p(MAPPER), 7], ["==", p(MAPPER), 66]]]],
+            [call("simple_write", [L("aa"), L("v")]), ["ret", 0]]),
         ["ret", 0],
     ]}
 
@@ -531,6 +535,37 @@ def m3_clock_irq_fn():
         gif(["and", ["==", p(M3_IRQCOUNT), 0], ["==", p(M3_IRQEN), 1]], [setp(IRQPEND, 1)]),
         setp(M3_IRQRELOAD, 0), ["ret", 0]]}
 
+
+def simple_write_fn():
+    return {"params": ["a", "v"], "body": [
+        # UNROM (2): 16K switchable @ $8000, fixed last @ $C000; CHR-RAM
+        gif(["==", p(MAPPER), 2], [
+            setL("b", ["*", AND(L("v"), 0x0F), 16384]),
+            setp(PB0, L("b")), setp(PB1, ADD(L("b"), 8192)),
+            setp(PB2, ["*", SUB(p(PRGBANKS), 1), 16384]),
+            setp(PB3, ADD(["*", SUB(p(PRGBANKS), 1), 16384], 8192)), ["ret", 0]]),
+        # CNROM (3): 8K CHR bank switch; PRG fixed
+        gif(["==", p(MAPPER), 3], [
+            setL("cb", ["*", AND(L("v"), 3), 8192])] +
+            [setp([CB0,CB1,CB2,CB3,CB4,CB5,CB6,CB7][i], ADD(L("cb"), i*1024)) for i in range(8)] +
+            [["ret", 0]]),
+        # AxROM (7): 32K PRG bank + single-screen select
+        gif(["==", p(MAPPER), 7], [
+            setL("pb", ["*", AND(L("v"), 7), 32768]),
+            setp(PB0, L("pb")), setp(PB1, ADD(L("pb"), 8192)),
+            setp(PB2, ADD(L("pb"), 16384)), setp(PB3, ADD(L("pb"), 24576)),
+            setp(MIRROR, ["?:", ["==", AND(SHR(L("v"), 4), 1), 1], 3, 2]), ["ret", 0]]),
+        # GxROM (66): PRG 32K bank (bits4-5) + CHR 8K bank (bits0-1)
+        gif(["==", p(MAPPER), 66], [
+            setL("pb", ["*", AND(SHR(L("v"), 4), 3), 32768]),
+            setp(PB0, L("pb")), setp(PB1, ADD(L("pb"), 8192)),
+            setp(PB2, ADD(L("pb"), 16384)), setp(PB3, ADD(L("pb"), 24576)),
+            setL("cb", ["*", AND(L("v"), 3), 8192])] +
+            [setp([CB0,CB1,CB2,CB3,CB4,CB5,CB6,CB7][i], ADD(L("cb"), i*1024)) for i in range(8)] +
+            [["ret", 0]]),
+        ["ret", 0],
+    ]}
+
 def build():
     C_prog = C.build()
     funcs = dict(C_prog["functions"])
@@ -555,6 +590,7 @@ def build():
     funcs["m3_update"] = m3_update_fn()
     funcs["m3_write"] = m3_write_fn()
     funcs["m3_clock_irq"] = m3_clock_irq_fn()
+    funcs["simple_write"] = simple_write_fn()
 
     # NMI service: push PC + P, set I, jump to NMI vector
     funcs["irq"] = {"params": [], "body":
@@ -596,6 +632,9 @@ def build():
         setp(IRQPEND, 0), setp(M3_IRQEN, 0),
         gif(["==", L("mapper"), 1], [call("m1_update")]),
         gif(["==", L("mapper"), 4], [call("m3_update")]),
+        gif(["==", L("mapper"), 2], [
+            setp(PB2, ["*", SUB(p(PRGBANKS), 1), 16384]),
+            setp(PB3, ADD(["*", SUB(p(PRGBANKS), 1), 16384], 8192))]),
         C.setreg(C.A, 0), C.setreg(C.X, 0), C.setreg(C.Y, 0), C.setreg(C.SP, 0xFD),
         C.setreg(C.P, 0x24), C.setreg(C.CYC, 0), C.setreg(C.HALT, 0),
         setp(MIRROR, L("mirror")), setp(SCAN, 0), setp(CYC, 0), setp(FRAMES, 0),
