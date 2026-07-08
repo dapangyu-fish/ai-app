@@ -126,8 +126,14 @@ def ppu_reg_write_fn():
         setL("r", AND(L("a"), 7)),
         setp(STATUS, OR(AND(p(STATUS), 0xE0), AND(L("v"), 0x1F))),  # bus latch bits (approx)
         gif(["==", L("r"), 0], [   # PPUCTRL
+            setL("oldnmi", p(NMIEN)),
             setp(CTRL, L("v")),
             setp(NMIEN, AND(SHR(L("v"), 7), 1)),
+            # NMI line edge: enabling NMI while vblank set fires NMI, but recognized
+            # after the NEXT instruction (SCRATCH1 = 1-instruction delay, promoted in run_frame)
+            gif(["and", ["and", ["==", AND(SHR(L("v"), 7), 1), 1], ["==", L("oldnmi"), 0]],
+                        ["==", AND(SHR(p(STATUS), 7), 1), 1]],
+                [setp(SCRATCH1, 1)]),
             setp(VINC, ["?:", AND(SHR(L("v"), 2), 1), 32, 1]),
             setp(BGBASE, SHL(AND(SHR(L("v"), 4), 1), 12)),
             setp(SPRBASE, SHL(AND(SHR(L("v"), 3), 1), 12)),
@@ -678,6 +684,7 @@ def build():
         setL("i", 0),
         ["while", ["and", ["==", p(FRAMES), L("f0")], ["<", L("i"), L("maxInstr")]], [
             gif(["==", p(NMIPEND), 1], [setp(NMIPEND, 0), call("nmi")]),
+            gif(["==", p(SCRATCH1), 1], [setp(SCRATCH1, 0), setp(NMIPEND, 1)]),  # delayed NMI (enable-in-vblank): fires after next instr
             gif(["and", ["or", ["==", p(IRQPEND), 1], ["==", call("apu_irq"), 1]], ["==", C.getflag(C.IF_), 0]],
                 [setp(IRQPEND, 0), call("irq")]),
             call("step"),
