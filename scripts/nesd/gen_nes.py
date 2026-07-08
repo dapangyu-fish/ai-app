@@ -32,7 +32,9 @@ import gen_apu as APU
  M5_MULCAND, M5_MULER, M5_IRQTARGET, M5_IRQEN, M5_IRQPEND, M5_NT,
  M5_EXMODE, M5_EXBANK, M5_EXPAL, M5_FILLTILE, M5_FILLCOLOR,
  M5_CHR8, M5_CHR9, M5_CHR10, M5_CHR11,
- SPRCB0, SPRCB1, SPRCB2, SPRCB3, SPRCB4, SPRCB5, SPRCB6, SPRCB7) = range(125)
+ SPRCB0, SPRCB1, SPRCB2, SPRCB3, SPRCB4, SPRCB5, SPRCB6, SPRCB7,
+ M5_SPLITEN, M5_SPLITSIDE, M5_SPLITTILE, M5_SPLITSCROLL, M5_SPLITBANK,
+ M5_SPLITADDR, M5_SPLITACTIVE) = range(132)
 
 def p(i): return ["i32", "p", i]
 def setp(i, v): return ["seti32", "p", i, v]
@@ -224,7 +226,20 @@ def ppu_copyv():
 def ppu_fetch_cycle():
     # subcycle = cycle & 7
     return [setL("sc", AND(p(CYC), 7)),
-        gif(["==", L("sc"), 1], [setp(NTLATCH, call("ppu_read", [OR(0x2000, AND(p(PV), 0xFFF))])),
+        gif(["and", ["==", p(MAPPER), 5], ["and", ["==", p(M5_SPLITEN), 1], ["<", p(SCAN), 240]]], [
+            gif(["==", L("sc"), 1], [
+                setL("cx", v_coarseX()),
+                setL("ins", ["?:", ["==", p(M5_SPLITSIDE), 0],
+                             ["<", L("cx"), p(M5_SPLITTILE)], [">=", L("cx"), p(M5_SPLITTILE)]]),
+                gif(["==", L("ins"), 1], [
+                    setp(M5_SPLITACTIVE, 1),
+                    setL("scr", ADD(p(SCAN), p(M5_SPLITSCROLL))),
+                    gif([">=", L("scr"), 240], [setL("scr", ["-", L("scr"), 240])]),
+                    setp(M5_SPLITADDR, OR(SHL(AND(L("scr"), 0xF8), 2), L("cx"))),
+                    setp(NTLATCH, ["u8", "exram", p(M5_SPLITADDR)])],
+                    [setp(M5_SPLITACTIVE, 0)])])]),
+        gif(["==", L("sc"), 1], [gif(["or", ["!=", p(MAPPER), 5], ["==", p(M5_SPLITACTIVE), 0]],
+            [setp(NTLATCH, call("ppu_read", [OR(0x2000, AND(p(PV), 0xFFF))]))]),
             gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]], [
                 setL("ex", ["u8", "exram", AND(p(PV), 0x3FF)]),
                 setp(M5_EXBANK, AND(L("ex"), 0x3F)), setp(M5_EXPAL, AND(SHR(L("ex"), 6), 3))])]),
@@ -234,15 +249,24 @@ def ppu_fetch_cycle():
                                             SHR(AND(p(PV), 0x1C), 2))])),
             setL("shift", OR(AND(SHR(p(PV), 4), 4), AND(p(PV), 2))),
             setp(ATLATCH, AND(SHR(L("at"), L("shift")), 3)),
-            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]], [setp(ATLATCH, p(M5_EXPAL))])]),
+            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]], [setp(ATLATCH, p(M5_EXPAL))]),
+            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_SPLITACTIVE), 1]], [
+                setL("ab", ["u8", "exram", ADD(0x3C0, OR(AND(SHR(p(M5_SPLITADDR), 4), 0x38), AND(SHR(p(M5_SPLITADDR), 2), 7)))]),
+                setp(ATLATCH, AND(SHR(L("ab"), L("shift")), 3))])]),
         gif(["==", L("sc"), 5], [
-            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]],
-                [setp(PTL, ["u8", "chr", AND(OR(OR(SHL(p(M5_EXBANK), 12), SHL(p(NTLATCH), 4)), v_fineY()), 0x1FFFF)])],
-                [setp(PTL, call("ppu_read", [OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY())]))])]),
+            setL("sfy", AND(ADD(p(SCAN), p(M5_SPLITSCROLL)), 7)),
+            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_SPLITACTIVE), 1]],
+                [setp(PTL, ["u8", "chr", AND(OR(OR(SHL(p(M5_SPLITBANK), 12), SHL(p(NTLATCH), 4)), L("sfy")), 0x1FFFF)])],
+                [gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]],
+                    [setp(PTL, ["u8", "chr", AND(OR(OR(SHL(p(M5_EXBANK), 12), SHL(p(NTLATCH), 4)), v_fineY()), 0x1FFFF)])],
+                    [setp(PTL, call("ppu_read", [OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY())]))])])]),
         gif(["==", L("sc"), 7], [
-            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]],
-                [setp(PTH, ["u8", "chr", AND(OR(OR(OR(SHL(p(M5_EXBANK), 12), SHL(p(NTLATCH), 4)), v_fineY()), 8), 0x1FFFF)])],
-                [setp(PTH, call("ppu_read", [OR(OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY()), 8)]))])]),
+            setL("sfy", AND(ADD(p(SCAN), p(M5_SPLITSCROLL)), 7)),
+            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_SPLITACTIVE), 1]],
+                [setp(PTH, ["u8", "chr", AND(OR(OR(OR(SHL(p(M5_SPLITBANK), 12), SHL(p(NTLATCH), 4)), L("sfy")), 8), 0x1FFFF)])],
+                [gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]],
+                    [setp(PTH, ["u8", "chr", AND(OR(OR(OR(SHL(p(M5_EXBANK), 12), SHL(p(NTLATCH), 4)), v_fineY()), 8), 0x1FFFF)])],
+                    [setp(PTH, call("ppu_read", [OR(OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY()), 8)]))])])]),
         gif(["==", L("sc"), 0], [
             # load shift regs
             setp(PTLSHIFT, OR(AND(p(PTLSHIFT), 0xFF00), p(PTL))),
@@ -854,6 +878,10 @@ def mmc5_write_fn():
         gif(["==", L("a"), 0x5104], [setp(M5_EXMODE, AND(L("v"), 3)), ["ret", 0]]),
         gif(["==", L("a"), 0x5106], [setp(M5_FILLTILE, L("v")), ["ret", 0]]),
         gif(["==", L("a"), 0x5107], [setp(M5_FILLCOLOR, AND(L("v"), 3)), ["ret", 0]]),
+        gif(["==", L("a"), 0x5200], [setp(M5_SPLITEN, AND(SHR(L("v"), 7), 1)),
+            setp(M5_SPLITSIDE, AND(SHR(L("v"), 6), 1)), setp(M5_SPLITTILE, AND(L("v"), 0x1F)), ["ret", 0]]),
+        gif(["==", L("a"), 0x5201], [setp(M5_SPLITSCROLL, L("v")), ["ret", 0]]),
+        gif(["==", L("a"), 0x5202], [setp(M5_SPLITBANK, AND(L("v"), 0x3F)), ["ret", 0]]),
         gif(["and", [">=", L("a"), 0x5C00], ["<=", L("a"), 0x5FFF]],
             [["setu8", "exram", ["-", L("a"), 0x5C00], L("v")], ["ret", 0]]),
         gif(["==", L("a"), 0x5105], [setp(M5_NT, L("v")),
@@ -1044,7 +1072,7 @@ def build():
     buffers.update(apu["buffers"])
     for name, tbl in apu["u8tables"].items():
         buffers[name] = len(tbl)
-    i32 = {"reg": 8, "p": 128}
+    i32 = {"reg": 8, "p": 144}
     i32.update(apu["i32bufs"])
     init = {}
     init.update(apu["u8tables"])
