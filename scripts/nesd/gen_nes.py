@@ -29,7 +29,8 @@ import gen_apu as APU
  A12LOW, CPUCYC, NT0, NT1, NT2, NT3,
  M5_PRGMODE, M5_CHRMODE, M5_PRG0, M5_PRG1, M5_PRG2, M5_PRG3, M5_PRG4,
  M5_CHR0, M5_CHR1, M5_CHR2, M5_CHR3, M5_CHR4, M5_CHR5, M5_CHR6, M5_CHR7,
- M5_MULCAND, M5_MULER, M5_IRQTARGET, M5_IRQEN, M5_IRQPEND, M5_NT) = range(108)
+ M5_MULCAND, M5_MULER, M5_IRQTARGET, M5_IRQEN, M5_IRQPEND, M5_NT,
+ M5_EXMODE, M5_EXBANK, M5_EXPAL) = range(111)
 
 def p(i): return ["i32", "p", i]
 def setp(i, v): return ["seti32", "p", i, v]
@@ -203,17 +204,25 @@ def ppu_copyv():
 def ppu_fetch_cycle():
     # subcycle = cycle & 7
     return [setL("sc", AND(p(CYC), 7)),
-        gif(["==", L("sc"), 1], [setp(NTLATCH, call("ppu_read", [OR(0x2000, AND(p(PV), 0xFFF))]))]),
+        gif(["==", L("sc"), 1], [setp(NTLATCH, call("ppu_read", [OR(0x2000, AND(p(PV), 0xFFF))])),
+            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]], [
+                setL("ex", ["u8", "exram", AND(p(PV), 0x3FF)]),
+                setp(M5_EXBANK, AND(L("ex"), 0x3F)), setp(M5_EXPAL, AND(SHR(L("ex"), 6), 3))])]),
         gif(["==", L("sc"), 3], [   # attribute
             setL("at", call("ppu_read", [OR(OR(OR(0x23C0, SHL(AND(SHR(p(PV), 10), 3), 10)),
                                                SHL(AND(SHR(p(PV), 5), 0x1C), 1)),
                                             SHR(AND(p(PV), 0x1C), 2))])),
             setL("shift", OR(AND(SHR(p(PV), 4), 4), AND(p(PV), 2))),
-            setp(ATLATCH, AND(SHR(L("at"), L("shift")), 3))]),
+            setp(ATLATCH, AND(SHR(L("at"), L("shift")), 3)),
+            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]], [setp(ATLATCH, p(M5_EXPAL))])]),
         gif(["==", L("sc"), 5], [
-            setp(PTL, call("ppu_read", [OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY())]))]),
+            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]],
+                [setp(PTL, ["u8", "chr", AND(OR(OR(SHL(p(M5_EXBANK), 12), SHL(p(NTLATCH), 4)), v_fineY()), 0x1FFFF)])],
+                [setp(PTL, call("ppu_read", [OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY())]))])]),
         gif(["==", L("sc"), 7], [
-            setp(PTH, call("ppu_read", [OR(OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY()), 8)]))]),
+            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]],
+                [setp(PTH, ["u8", "chr", AND(OR(OR(OR(SHL(p(M5_EXBANK), 12), SHL(p(NTLATCH), 4)), v_fineY()), 8), 0x1FFFF)])],
+                [setp(PTH, call("ppu_read", [OR(OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY()), 8)]))])]),
         gif(["==", L("sc"), 0], [
             # load shift regs
             setp(PTLSHIFT, OR(AND(p(PTLSHIFT), 0xFF00), p(PTL))),
@@ -792,6 +801,9 @@ def mmc5_write_fn():
     return {"params": ["a", "v"], "body": [
         gif(["==", L("a"), 0x5100], [setp(M5_PRGMODE, AND(L("v"), 3)), call("m5_update_prg"), ["ret", 0]]),
         gif(["==", L("a"), 0x5101], [setp(M5_CHRMODE, AND(L("v"), 3)), call("m5_update_chr"), ["ret", 0]]),
+        gif(["==", L("a"), 0x5104], [setp(M5_EXMODE, AND(L("v"), 3)), ["ret", 0]]),
+        gif(["and", [">=", L("a"), 0x5C00], ["<=", L("a"), 0x5FFF]],
+            [["setu8", "exram", ["-", L("a"), 0x5C00], L("v")], ["ret", 0]]),
         gif(["==", L("a"), 0x5105], [setp(M5_NT, L("v")),
             setp(MIRROR, ["?:", ["==", AND(L("v"), 3), 0], 2, ["?:", ["==", AND(L("v"), 3), 1], 3, 1]]), ["ret", 0]]),
         gif(["==", L("a"), 0x5114], [setp(M5_PRG0, L("v")), call("m5_update_prg"), ["ret", 0]]),
@@ -947,7 +959,7 @@ def build():
         gif(["==", L("mapper"), 5], [
             setp(M5_PRGMODE, 3), setp(M5_CHRMODE, 3), setp(M5_IRQEN, 0),
             setp(M5_PRG1, 0), setp(M5_PRG2, 1), setp(M5_PRG3, SUB(p(PRG8), 2)),
-            setp(M5_PRG4, SUB(p(PRG8), 1)), setp(M5_CHR7, 7),
+            setp(M5_PRG4, SUB(p(PRG8), 1)), setp(M5_CHR7, 7), setp(M5_EXMODE, 0),
             call("m5_update_prg"), call("m5_update_chr")]),
         gif(["==", L("mapper"), 206], [setp(M3_R7, 1), call("n108_update")]),
         gif(["==", L("mapper"), 9], [
@@ -969,7 +981,7 @@ def build():
     apu = APU.build_apu()
     funcs.update(apu["funcs"])
     buffers = {"ram": 2048, "prg": 524288, "chr": 131072, "vram": 2048,
-               "pal": 32, "oam": 256, "oam2": 32, "fb": 61440, "prgram": 8192}
+               "pal": 32, "oam": 256, "oam2": 32, "fb": 61440, "prgram": 8192, "exram": 1024}
     buffers.update(apu["buffers"])
     for name, tbl in apu["u8tables"].items():
         buffers[name] = len(tbl)
