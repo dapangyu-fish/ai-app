@@ -21,7 +21,9 @@ import gen_apu as APU
  PTLSHIFT, PTHSHIFT, ATLSHIFT, ATHSHIFT, ATTR, SHOWBG, SHOWSP,
  SHOWBGL, SHOWSPL, SPRCOUNT, S0LINE, S0NEXT, VINC, PIXBASE,
  MIRROR, ODDFRAME, NMIED_PREV, SPR0HIT_ARMED, SCRATCH1, SCRATCH2,
- CTRL_STROBE, CTRL_SH0, CTRL_SH1, CTRL_LATCH0, CTRL_LATCH1) = range(45)
+ CTRL_STROBE, CTRL_SH0, CTRL_SH1, CTRL_LATCH0, CTRL_LATCH1,
+ MAPPER, PRGBANKS, M1_SHIFT, M1_CTRL, M1_CHR0, M1_CHR1, M1_PRG,
+ M1_P0B, M1_P1B, M1_C0B, M1_C1B) = range(56)
 
 def p(i): return ["i32", "p", i]
 def setp(i, v): return ["seti32", "p", i, v]
@@ -32,6 +34,7 @@ def XOR(a, b): return ["^", a, b]
 def SHL(a, b): return ["<<", a, b]
 def SHR(a, b): return [">>", a, b]
 def ADD(a, b): return ["+", a, b]
+def SUB(a, b): return ["-", a, b]
 def IF(c, t, e=None):
     a = {"cond": c, "then": t}
     if e:
@@ -59,7 +62,7 @@ def nt_index(addrL):
 def ppu_read_fn():
     return {"params": ["a"], "body": [
         setL("a", AND(L("a"), 0x3FFF)),
-        gif(["<", L("a"), 0x2000], [["ret", ["u8", "chr", L("a")]]]),
+        gif(["<", L("a"), 0x2000], [["ret", ["u8", "chr", call("chr_addr", [L("a")])]]]),
         gif(["<", L("a"), 0x3F00], [["ret", ["u8", "vram", nt_index(L("a"))]]]),
         # palette
         setL("pi", AND(L("a"), 0x1F)),
@@ -70,7 +73,7 @@ def ppu_read_fn():
 def ppu_write_fn():
     return {"params": ["a", "v"], "body": [
         setL("a", AND(L("a"), 0x3FFF)),
-        gif(["<", L("a"), 0x2000], [["setu8", "chr", L("a"), L("v")], ["ret", 0]]),
+        gif(["<", L("a"), 0x2000], [["setu8", "chr", call("chr_addr", [L("a")]), L("v")], ["ret", 0]]),
         gif(["<", L("a"), 0x3F00], [["setu8", "vram", nt_index(L("a")), L("v")], ["ret", 0]]),
         setL("pi", AND(L("a"), 0x1F)),
         gif(["==", AND(L("pi"), 0x13), 0x10], [setL("pi", ["-", L("pi"), 0x10])]),
@@ -335,7 +338,7 @@ def bus_rd_fn():
         gif(["==", L("aa"), 0x4016], [["ret", call("ctrl_read", [0])]]),
         gif(["==", L("aa"), 0x4017], [["ret", call("ctrl_read", [1])]]),
         gif(["<", L("aa"), 0x8000], [["ret", 0]]),
-        ["ret", ["u8", "prg", AND(["-", L("aa"), 0x8000], 0x7FFF)]],
+        ["ret", ["u8", "prg", call("prg_addr", [L("aa")])]],
     ]}
 
 def bus_wr_fn():
@@ -349,6 +352,8 @@ def bus_wr_fn():
         gif(["==", L("aa"), 0x4016], [call("ctrl_strobe", [L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x4000], ["<", L("aa"), 0x4018]],
             [call("apu_write", [AND(L("aa"), 0x1F), L("v")]), ["ret", 0]]),
+        gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 1]],
+            [call("m1_write", [L("aa"), L("v")]), ["ret", 0]]),
         ["ret", 0],
     ]}
 
@@ -368,7 +373,7 @@ def rd_nodma_fn():  # read without ticking (used inside DMA which ticks itself)
     return {"params": ["a"], "body": [
         setL("aa", AND(L("a"), 0xFFFF)),
         gif(["<", L("aa"), 0x2000], [["ret", ["u8", "ram", AND(L("aa"), 0x7FF)]]]),
-        gif([">=", L("aa"), 0x8000], [["ret", ["u8", "prg", AND(["-", L("aa"), 0x8000], 0x7FFF)]]]),
+        gif([">=", L("aa"), 0x8000], [["ret", ["u8", "prg", call("prg_addr", [L("aa")])]]]),
         ["ret", 0],
     ]}
 
@@ -399,6 +404,69 @@ def ctrl_strobe_fn():
         ["ret", 0],
     ]}
 
+
+def prg_addr_fn():
+    return {"params": ["a"], "body": [
+        gif(["==", p(MAPPER), 1], [
+            gif(["<", L("a"), 0xC000],
+                [["ret", AND(ADD(p(M1_P0B), SUB(L("a"), 0x8000)), 0x7FFFF)]],
+                [["ret", AND(ADD(p(M1_P1B), SUB(L("a"), 0xC000)), 0x7FFFF)]])]),
+        ["ret", AND(SUB(L("a"), 0x8000), 0x7FFF)],
+    ]}
+
+def chr_addr_fn():
+    return {"params": ["a"], "body": [
+        gif(["==", p(MAPPER), 1], [
+            gif(["<", L("a"), 0x1000],
+                [["ret", AND(ADD(p(M1_C0B), L("a")), 0x1FFFF)]],
+                [["ret", AND(ADD(p(M1_C1B), SUB(L("a"), 0x1000)), 0x1FFFF)]])]),
+        ["ret", AND(L("a"), 0x1FFF)],
+    ]}
+
+def m1_update_fn():
+    # recompute PRG/CHR base offsets + mirror from control/bank regs
+    return {"params": [], "body": [
+        setL("pm", AND(SHR(p(M1_CTRL), 2), 3)),
+        setL("pb", AND(p(M1_PRG), 0x0F)),
+        gif(["<", L("pm"), 2], [
+            setp(M1_P0B, ["*", AND(L("pb"), 0x0E), 16384]),
+            setp(M1_P1B, ["*", OR(AND(L("pb"), 0x0E), 1), 16384])]),
+        gif(["==", L("pm"), 2], [
+            setp(M1_P0B, 0), setp(M1_P1B, ["*", L("pb"), 16384])]),
+        gif(["==", L("pm"), 3], [
+            setp(M1_P0B, ["*", L("pb"), 16384]),
+            setp(M1_P1B, ["*", SUB(p(PRGBANKS), 1), 16384])]),
+        setL("cm", AND(SHR(p(M1_CTRL), 4), 1)),
+        gif(["==", L("cm"), 0], [
+            setp(M1_C0B, ["*", AND(p(M1_CHR0), 0x1E), 4096]),
+            setp(M1_C1B, ["*", OR(AND(p(M1_CHR0), 0x1E), 1), 4096])],
+            [setp(M1_C0B, ["*", p(M1_CHR0), 4096]),
+             setp(M1_C1B, ["*", p(M1_CHR1), 4096])]),
+        setL("mm", AND(p(M1_CTRL), 3)),
+        setp(MIRROR, ["?:", ["==", L("mm"), 0], 2,
+              ["?:", ["==", L("mm"), 1], 3,
+              ["?:", ["==", L("mm"), 2], 0, 1]]]),
+        ["ret", 0],
+    ]}
+
+def m1_write_fn():
+    return {"params": ["a", "v"], "body": [
+        gif(["==", AND(SHR(L("v"), 7), 1), 1], [
+            setp(M1_SHIFT, 0x10), setp(M1_CTRL, OR(p(M1_CTRL), 0x0C)),
+            call("m1_update"), ["ret", 0]]),
+        gif(["==", AND(p(M1_SHIFT), 1), 1], [
+            setL("reg", AND(SHR(L("a"), 13), 3)),
+            setL("rv", OR(SHL(AND(L("v"), 1), 4), AND(SHR(p(M1_SHIFT), 1), 0x0F))),
+            setp(M1_SHIFT, 0x10),
+            gif(["==", L("reg"), 0], [setp(M1_CTRL, L("rv"))]),
+            gif(["==", L("reg"), 1], [setp(M1_CHR0, L("rv"))]),
+            gif(["==", L("reg"), 2], [setp(M1_CHR1, L("rv"))]),
+            gif(["==", L("reg"), 3], [setp(M1_PRG, L("rv"))]),
+            call("m1_update"), ["ret", 0]]),
+        setp(M1_SHIFT, OR(SHR(p(M1_SHIFT), 1), SHL(AND(L("v"), 1), 4))),
+        ["ret", 0],
+    ]}
+
 def build():
     C_prog = C.build()
     funcs = dict(C_prog["functions"])
@@ -416,6 +484,10 @@ def build():
     funcs["oam_dma"] = oam_dma_fn()
     funcs["ctrl_read"] = ctrl_read_fn()
     funcs["ctrl_strobe"] = ctrl_strobe_fn()
+    funcs["prg_addr"] = prg_addr_fn()
+    funcs["chr_addr"] = chr_addr_fn()
+    funcs["m1_update"] = m1_update_fn()
+    funcs["m1_write"] = m1_write_fn()
 
     # NMI service: push PC + P, set I, jump to NMI vector
     funcs["nmi"] = {"params": [], "body":
@@ -435,7 +507,10 @@ def build():
     ]}
 
     # reset also needs to read reset vector
-    funcs["power_on"] = {"params": ["mirror"], "body": [
+    funcs["power_on"] = {"params": ["mapper", "prgbanks", "mirror"], "body": [
+        setp(MAPPER, L("mapper")), setp(PRGBANKS, L("prgbanks")),
+        setp(M1_SHIFT, 0x10), setp(M1_CTRL, 0x0C), setp(M1_CHR0, 0), setp(M1_CHR1, 1),
+        setp(M1_PRG, 0), call("m1_update"),
         C.setreg(C.A, 0), C.setreg(C.X, 0), C.setreg(C.Y, 0), C.setreg(C.SP, 0xFD),
         C.setreg(C.P, 0x24), C.setreg(C.CYC, 0), C.setreg(C.HALT, 0),
         setp(MIRROR, L("mirror")), setp(SCAN, 0), setp(CYC, 0), setp(FRAMES, 0),
@@ -447,7 +522,7 @@ def build():
 
     apu = APU.build_apu()
     funcs.update(apu["funcs"])
-    buffers = {"ram": 2048, "prg": 32768, "chr": 8192, "vram": 2048,
+    buffers = {"ram": 2048, "prg": 524288, "chr": 131072, "vram": 2048,
                "pal": 32, "oam": 256, "oam2": 32, "fb": 61440}
     buffers.update(apu["buffers"])
     for name, tbl in apu["u8tables"].items():
