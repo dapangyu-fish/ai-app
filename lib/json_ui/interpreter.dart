@@ -10,6 +10,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jsonlogic/jsonlogic.dart';
+import 'jsonlogic_bit_ops.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -391,6 +392,8 @@ class JsonInterpreter extends ChangeNotifier {
     });
     jl.add('pi', (applier, data, params) => pi);
 
+    registerBitOps(jl);
+
     return jl;
   }
 
@@ -535,6 +538,7 @@ class JsonInterpreter extends ChangeNotifier {
     'to_string', 'to_int', 'to_double',
     'abs', 'sin', 'cos', 'tan', 'atan2', 'sqrt', 'pow', 'clamp', 'lerp',
     'seed', 'pi',
+    'bit_and', 'bit_or', 'bit_xor', 'bit_not', 'shl', 'shr', 'idiv',
   };
 
   /// 求值为布尔

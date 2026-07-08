@@ -271,7 +271,7 @@ Agent 一个中立关卡节奏骨架：安全开场、首次接敌、掩体交�
 
 **op 集合**（写新 key 名前请确认不撞；以 `interpreter.dart` 的 `_knownJsonLogicOps` 为权威依据）：
 `var / missing / missing_some / if / ?: / and / or / ! / !! / == / != / === / !== / < / <= / > / >= / + / - / * / / / % / min / max / cat / substr / in / map / filter / reduce / all / some / none / merge / method / log` ＋ 框架自定义（28 个，经 `jl.add()` 注册）：
-`str_len / str_upper / str_lower / str_trim / str_contains / str_replace / str_replace_first / str_split / str_join / length / at / slice / sort / reverse / to_string / to_int / to_double / abs / sin / cos / tan / atan2 / sqrt / pow / clamp / lerp / seed / pi`
+`str_len / str_upper / str_lower / str_trim / str_contains / str_replace / str_replace_first / str_split / str_join / length / at / slice / sort / reverse / to_string / to_int / to_double / abs / sin / cos / tan / atan2 / sqrt / pow / clamp / lerp / seed / pi / bit_and / bit_or / bit_xor / bit_not / shl / shr / idiv`（位运算与整除 7 个为主解释器与游戏逻辑引擎共同注册，见 `lib/json_ui/jsonlogic_bit_ops.dart`；`bit_not`/`shl`/`shr` 结果按 32 位掩码保证非负，`bit_not` 可传第二参指定位宽，`idiv` 除零返回 0）
 
 > 历史背景：3.3 之前所有 Map 都被无脑送进 jsonlogic，导致 `@list_add args.item={"id":..., "display":...}` 这种正常数据对象也会抛 `JsonlogicException: operator id not defined`。修复后数据 Map 安全可用，详见 `templates/bacsase/anti_patterns_and_pitfalls.md` §6。
 

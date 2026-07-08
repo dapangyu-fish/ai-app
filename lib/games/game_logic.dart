@@ -17,6 +17,7 @@
 // - 把 game-specific @action 委派给 GameActions（cell_path.* / scroll_list.* 等）
 
 import 'package:jsonlogic/jsonlogic.dart';
+import '../json_ui/jsonlogic_bit_ops.dart';
 
 import 'flame_game_engine.dart';
 import 'game_actions.dart';
@@ -309,11 +310,25 @@ class GameLogicEngine {
     'some',
     'none',
     'method',
+    // 位运算/整除（feat/nesd-primitives，见 docs/nesd-port-feasibility.md）
+    'bit_and',
+    'bit_or',
+    'bit_xor',
+    'bit_not',
+    'shl',
+    'shr',
+    'idiv',
   };
 
   bool _looksLikeJsonLogic(String k) => _jsonLogicOps.contains(k);
 
-  static final Jsonlogic _jsonlogic = Jsonlogic();
+  static final Jsonlogic _jsonlogic = _buildJsonlogic();
+
+  static Jsonlogic _buildJsonlogic() {
+    final jl = Jsonlogic();
+    registerBitOps(jl);
+    return jl;
+  }
 
   dynamic _evalJsonLogic(Map<String, dynamic> rule) {
     try {
