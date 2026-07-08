@@ -1,7 +1,7 @@
 // Standalone kernel validation + throughput benchmark.
 // Run:  dart run kernel_test.dart
 import 'dart:typed_data';
-import 'package:myapp/json_ui/compute/compute_kernel.dart';
+import 'package:flutter_application_1/json_ui/compute/compute_kernel.dart';
 
 int _pass = 0, _fail = 0;
 void expect(dynamic got, dynamic want, String label) {
