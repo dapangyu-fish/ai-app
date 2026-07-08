@@ -21,7 +21,7 @@ void main() {
   for (var i = 0; i < 16384; i++) { prg[i] = rom[16 + i]; prg[16384 + i] = rom[16 + i]; }
   for (var i = 0; i < 8192; i++) { chr[i] = rom[16 + 16384 + i]; }
   final mirror = rom[6] & 1; // 0=horizontal,1=vertical
-  nes.call('power_on', args: [mirror == 0 ? 0 : 1]);
+  nes.call('power_on', args: [0, 1, mirror]);
 
   for (var f = 0; f < 4; f++) {
     nes.call('run_frame', args: [80000], budget: 400000000);

@@ -7,7 +7,7 @@ void main() {
   final rom = File('scripts/nesd/apu_test.nes').readAsBytesSync();
   final prg = nes.buffer('prg');
   for (var i = 0; i < 16384; i++) { prg[i] = rom[16 + i]; prg[16384 + i] = rom[16 + i]; }
-  nes.call('power_on', args: [0]);
+  nes.call('power_on', args: [0, 1, 0]);
   for (var f = 0; f < 3; f++) { nes.call('run_frame', args: [80000], budget: 400000000); }
   final samples = nes.buffer('samples');
   final ap = nes.words('a');

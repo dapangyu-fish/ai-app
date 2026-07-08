@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """APU (audio) as compute-kernel AST — 1:1 port of NESd nes/apu (pulse1/2,
 triangle, noise, envelope/sweep/length/linear units, frame counter, integer
-mixer). DMC output stubbed to 0 for now (its DMA unit is a separate follow-up).
+mixer + DMC 通道). DMC 经 rd_nodma 同步取样字节(mapper 感知)。
 
 Emits int16 samples into a `samples` buffer via NESd's integer sample-rate
 accumulator (emit when accumulator >= cpuFrequency; 48kHz over NTSC 1.789773MHz).
@@ -20,6 +20,8 @@ EN2 DUTY2 DIDX2 TMR2 TP2 CV2 VOL2 E2V E2P E2T E2S E2L L2H L2V S2E S2P S2V S2SH S
 ENT DIDXT TMRT TPT LIN LINP LINREL CTRLT LTH LTV
 ENN TMRN TPN CVN VOLN ENV ENP ENT2 ENS ENL LNH LNV SHN MODEN
 FCCOUNT FCMODE FCINH APUCYC SACC SIDX DMCLVL
+DMC_EN DMC_IRQEN DMC_LOOP DMC_SIL DMC_BUF DMC_RATE DMC_BITS DMC_SHIFT DMC_TMR
+DMC_SADDR DMC_SLEN DMC_ADDR DMC_LEN DMC_LOADED
 """.split()
 IDX = {n: i for i, n in enumerate(_names)}
 A_SIZE = len(_names)
@@ -49,6 +51,8 @@ DUTY_SEQ = [0x01, 0x03, 0x0F, 0xFC]
 TRIANGLE_TABLE = list(range(15, -1, -1)) + list(range(0, 16))  # 15..0,0..15
 NOISE_TABLE = [4, 8, 16, 32, 64, 96, 128, 160, 202, 254, 380, 508, 762, 1016,
                2034, 4068]
+DMC_RATE_TABLE = [428, 380, 340, 320, 286, 254, 226, 214, 190, 160, 142, 128,
+                  106, 84, 72, 54]
 
 def _pulse_table():
     t = [0]
@@ -188,10 +192,40 @@ def build_apu():
         seta("FCCOUNT", ADD(a("FCCOUNT"), 1)),
         ["ret", 0]]}
 
+
+    # DMC: 1:1 port; DMA byte fetched synchronously via rd_nodma (mapper-aware)
+    funcs["ap_dmc_step"] = {"params": [], "body": [
+        gif([">", a("DMC_TMR"), 0], [seta("DMC_TMR", SUB(a("DMC_TMR"), 1)), ["ret", 0]]),
+        seta("DMC_TMR", a("DMC_RATE")),
+        gif(["==", a("DMC_SIL"), 0], [
+            setL("diff", ["?:", ["==", bit(a("DMC_SHIFT"), 0), 1], 2, -2]),
+            setL("nl", ADD(a("DMCLVL"), L("diff"))),
+            seta("DMCLVL", ["max", 0, ["min", 127, L("nl")]]),
+            seta("DMC_SHIFT", SHR(a("DMC_SHIFT"), 1))]),
+        seta("DMC_BITS", SUB(a("DMC_BITS"), 1)),
+        gif(["==", a("DMC_BITS"), 0], [
+            seta("DMC_BITS", 8),
+            gif(["==", a("DMC_LOADED"), 0], [seta("DMC_SIL", 1)],
+                [seta("DMC_SIL", 0), seta("DMC_SHIFT", a("DMC_BUF")),
+                 seta("DMC_LOADED", 0), ["call", "ap_dmc_dma", []]])]),
+        ["ret", 0]]}
+
+    funcs["ap_dmc_dma"] = {"params": [], "body": [
+        gif(["==", a("DMC_LEN"), 0], [["ret", 0]]),
+        seta("DMC_BUF", ["call", "rd_nodma", [a("DMC_ADDR")]]),
+        seta("DMC_LOADED", 1),
+        seta("DMC_ADDR", OR(0x8000, AND(ADD(a("DMC_ADDR"), 1), 0x7FFF))),
+        seta("DMC_LEN", SUB(a("DMC_LEN"), 1)),
+        gif(["==", a("DMC_LEN"), 0], [
+            gif(["==", a("DMC_LOOP"), 1],
+                [seta("DMC_ADDR", a("DMC_SADDR")), seta("DMC_LEN", a("DMC_SLEN"))],
+                [gif(["==", a("DMC_IRQEN"), 1], [seta("DMC_EN", a("DMC_EN"))])])]),
+        ["ret", 0]]}
+
     # --- main APU step (one CPU cycle) + sampling ---
     funcs["apu_step"] = {"params": [], "body": [
         ["call", "ap_tri_step", []],
-        # DMC step: stubbed
+        ["call", "ap_dmc_step", []],
         gif(["==", AND(a("APUCYC"), 1), 0], [
             ["call", "ap_pulse_step", [1]],
             ["call", "ap_pulse_step", [2]],
@@ -271,6 +305,13 @@ def build_apu():
         gif(["==", L("r"), 0x0F], [
             seta("ENS", 1),
             gif(["==", a("ENN"), 1], [seta("LNV", ["u8", "lentbl", SHR(L("v"), 3)])])]),
+        # $4010-$4013 DMC
+        gif(["==", L("r"), 0x10], [
+            seta("DMC_IRQEN", bit(L("v"), 7)), seta("DMC_LOOP", bit(L("v"), 6)),
+            seta("DMC_RATE", ["i32", "dmctbl", AND(L("v"), 0x0F)])]),
+        gif(["==", L("r"), 0x11], [seta("DMCLVL", AND(L("v"), 0x7F))]),
+        gif(["==", L("r"), 0x12], [seta("DMC_SADDR", OR(0xC000, SHL(L("v"), 6)))]),
+        gif(["==", L("r"), 0x13], [seta("DMC_SLEN", ADD(SHL(L("v"), 4), 1))]),
         # $4015 status (enable channels)
         gif(["==", L("r"), 0x15], [
             seta("EN1", bit(L("v"), 0)), seta("EN2", bit(L("v"), 1)),
@@ -278,7 +319,13 @@ def build_apu():
             gif(["==", bit(L("v"), 0), 0], [seta("L1V", 0)]),
             gif(["==", bit(L("v"), 1), 0], [seta("L2V", 0)]),
             gif(["==", bit(L("v"), 2), 0], [seta("LTV", 0)]),
-            gif(["==", bit(L("v"), 3), 0], [seta("LNV", 0)])]),
+            gif(["==", bit(L("v"), 3), 0], [seta("LNV", 0)]),
+            seta("DMC_EN", bit(L("v"), 4)),
+            gif(["==", bit(L("v"), 4), 1], [
+                gif(["==", a("DMC_LEN"), 0], [
+                    seta("DMC_ADDR", a("DMC_SADDR")), seta("DMC_LEN", a("DMC_SLEN")),
+                    ["call", "ap_dmc_dma", []]])],
+                [seta("DMC_LEN", 0)])]),
         # $4017 frame counter
         gif(["==", L("r"), 0x17], [
             seta("FCMODE", bit(L("v"), 7)), seta("FCINH", bit(L("v"), 6)),
@@ -300,13 +347,14 @@ def build_apu():
 
     buffers = {"samples": 192000}  # 96000 int16 (~2s @48k)
     i32bufs = {"a": A_SIZE, "ptbl": len(PULSE_TABLE), "tndtbl": len(TND_TABLE),
-               "noistbl": len(NOISE_TABLE)}
+               "noistbl": len(NOISE_TABLE), "dmctbl": len(DMC_RATE_TABLE)}
     u8bufs_tables = {"lentbl": LENGTH_TABLE, "dutyseq": DUTY_SEQ,
                      "trisq": TRIANGLE_TABLE}
     return {
         "funcs": funcs, "buffers": buffers, "i32bufs": i32bufs,
         "u8tables": u8bufs_tables,
-        "i32tables": {"ptbl": PULSE_TABLE, "tndtbl": TND_TABLE, "noistbl": NOISE_TABLE},
+        "i32tables": {"ptbl": PULSE_TABLE, "tndtbl": TND_TABLE, "noistbl": NOISE_TABLE,
+                      "dmctbl": DMC_RATE_TABLE},
     }
 
 
