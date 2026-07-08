@@ -184,16 +184,18 @@ absx/absy/izy/RMW/分支/栈操作）使每指令总线访问数=真实周期数
 x=255 裁剪；PRG-RAM($6000-$7FFF 存档/工作 RAM)；APU 帧计数器周期精确 + $4017 复位
 抖动 + 帧/DMC IRQ 标志与 CPU 接线；DMC 输出单元初始化修复。**原三项缺陷全消除**。
 
-剩余（与 NESd 逐一对齐后）：
-- **全部 13 mapper 已移植**（含 MMC5 全 8 项图形特性，均手写 ROM 实测）—— mapper
-  覆盖与 NESd 一致。
-- **音频输出**：`pcm_sink.dart` 抽象 + `apu_drain`/`drainAudio` 抽取(WAV 实测) +
-  Web Audio 无缝流 sink + `@compute.audio` 接线，**web 已落地并构建通过**；
-  **原生平台 sink**(Android/iOS/desktop) 仍待接 —— 这是相对 NESd 唯一的真实功能缺口
-  (抽取路径平台无关，stub 返回 null，接平台 PCM 播放器即启用)。
+三项原缺陷已全部对齐 NESd：
+- **全部 13 mapper 已移植**（含 MMC5 全 8 项图形特性，均手写 ROM 实测）—— 与 NESd 一致。
+- **音频输出跨平台已落地**：`pcm_sink.dart` 抽象 + `apu_drain`/`drainAudio` 抽取(WAV 实测)
+  + `@compute.audio` 接线；**web** 用 Web Audio(`package:web`) 无缝流(构建通过)、
+  **原生**(Android/iOS/macOS/Windows) 用 `flutter_pcm_sound`(analyze 通过、不破坏 web 构建)；
+  插件不支持的平台(Linux desktop) 优雅静音回退。
 - **子指令级时序**（ppu_vbl_nmi 02/03/05、sprite_hit 09#9、apu 6#4、DMC #19）：
   本机 CPU/PPU 交错("每总线访问前 tick 3 点"=1 CPU 周期粒度)**与 NESd 同一模型**，
   NESd 自身也不过这些亚点级测试 —— 故此项**已与 NESd 1:1**，非缺口。
+
+余下仅 Linux desktop 音频(flutter_pcm_sound 不支持该平台，静音回退)——NES 模拟器最边缘的
+平台组合，且不影响 web 展示与四大原生平台。
 
 
 ## 9. 端到端整机验证（capstone）—— NES 作为 JSON app 在真实浏览器运行
