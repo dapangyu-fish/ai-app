@@ -11,4 +11,4 @@
 /// convention (see lib/platform/*_html.dart / *_stub.dart).
 library;
 
-export 'pcm_sink_stub.dart' if (dart.library.html) 'pcm_sink_html.dart';
+export 'pcm_sink_native.dart' if (dart.library.html) 'pcm_sink_html.dart';

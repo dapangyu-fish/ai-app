@@ -2193,5 +2193,6 @@ templates/                         # JSON DSL 示例配置
 entity 新增 `framebuffer`：`{"kind":"framebuffer","position":[x,y],"size":[w,h]}` —
 按 size 最近邻绘制 `@compute.present` 生成的当前帧图像（≤1 帧延迟，等价原生纹理流）。
 
-音频输出为平台相关：web 用 Web Audio(`package:web`) 无缝调度 AudioBuffer 流；原生平台
-（`pcm_sink_stub`）暂返回 null——抽取路径平台无关，接原生 PCM 播放器即可启用。
+音频输出跨平台：web 用 Web Audio(`package:web`) 无缝调度 AudioBuffer 流；原生平台
+(Android/iOS/macOS/Windows) 用 `flutter_pcm_sound`（低缓冲回调补静音防欠载）；
+插件不支持的平台(如 Linux desktop) setup 抛错→createPcmSink 返回 null，优雅静音回退。
