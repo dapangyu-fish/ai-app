@@ -445,6 +445,9 @@ def op_body(mnem, mode):
         stmts += _shift(mode == "acc", mnem)
     else:
         stmts += INSTR[mnem]()
+    # unofficial NOP with a memory/imm operand still reads it (dummy) — 1:1 NESd Nop.read
+    if mnem == "NOP" and mode not in ("imp", "acc"):
+        stmts += [DR(L("ea"))]
     return stmts
 
 def build():
