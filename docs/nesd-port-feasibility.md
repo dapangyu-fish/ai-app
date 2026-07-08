@@ -142,3 +142,22 @@ jsonlogic 自定义算子 + 游戏逻辑白名单。收益：位运算步成本�
   **形式正确性已证明，纯粹是吞吐不可行**。
 - 复现：loopback CORS 服务 + headless Chrome（工作流见团队记忆
   jsonapp-headless-probe），N×2 按钮加压至掉帧读 sps。
+
+## 8. 移植进度（feat/nesd-primitives 分支，实测里程碑）
+
+结论已从"不可行"翻转为"**在补齐 T1/T2/T3/T7 原语后可行且已大幅实现**"：
+
+| 层 | 状态 | 验证 |
+|---|---|---|
+| T7 计算内核 | ✅ | 70M 操作/s(~1100× jsonlogic)；纯 Dart 单测 7/7 |
+| T1 位运算原语 | ✅ | 两引擎共享注册 |
+| 6502 CPU(256 opcode) | ✅ 1:1 | trace 与 nestest 金标准日志逐字节吻合；自检 $02=$03=0 |
+| PPU + 总线 + NROM | ✅ | 手写 ROM 逐像素 703/703 |
+| APU(脉冲/三角/噪声+帧计数+混音) | ✅ | 实测 440.7Hz 方波(DMC 待补) |
+| T2/T3 框架接线 | ✅ | compute 块 + @compute.* + framebuffer entity，analyze 过 |
+| 手柄输入 | ✅ | 移位寄存器协议 |
+| **真实软件端到端** | ✅ | cpu_timing_test6(NROM) 启动并渲染出可读文字 UI(CPU+PPU+CHR-RAM+字库) |
+
+剩余：**周期级精确交错**(cpu_timing 报 "BASIC TIMING WRONG"——指令级交错所致，
+CPU 本身经 nestest 证明 bit-exact，仅亚指令时序为近似)、DMC 通道、T4 PCM 音频
+输出原语、更多 mapper(MMC1/MMC3…)、shell UI、从分支构建 web 客户端做整机验证。
