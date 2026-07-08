@@ -234,6 +234,8 @@ def render_pixel():
         gif(["==", p(SHOWBG), 0],
             [setL("bgc", 0)],               # background off → backdrop (no bg pixel, no sprite-0 hit)
             bg_pixel()),
+        # left-edge clip: hide background in leftmost 8 px when SHOWBGL off
+        gif(["and", ["<", ["-", p(CYC), 1], 8], ["==", p(SHOWBGL), 0]], [setL("bgc", 0)]),
     ] + render_sprite_over() + [
         setL("palidx", call("ppu_read", [OR(0x3F00, L("bgc"))])),
         ["setu8", "fb", ADD(p(PIXBASE), ["-", p(CYC), 1]), AND(L("palidx"), 0x3F)],
@@ -252,6 +254,7 @@ def render_sprite_over():
             setL("si", 0),
             setL("done", 0),
             setL("nvis", 0),                               # in-range sprite count this scanline
+            gif(["or", [">=", L("sx"), 8], ["==", p(SHOWSPL), 1]], [   # left-edge sprite clip
             ["while", ["and", ["<", L("si"), 64], ["==", L("done"), 0]], [
                 setL("oy", ["u8", "oam", SHL(L("si"), 2)]),
                 setL("ot", ["u8", "oam", ADD(SHL(L("si"), 2), 1)]),
@@ -277,8 +280,8 @@ def render_sprite_over():
                     setL("phi", AND(SHR(call("ppu_read", [ADD(L("pa"), 8)]), ["-", 7, L("dx")]), 1)),
                     setL("spx", OR(SHL(L("phi"), 1), L("plo"))),
                     gif(["!=", L("spx"), 0], [
-                        # sprite0 hit
-                        gif(["and", ["==", L("si"), 0], ["!=", L("bgc"), 0]],
+                        # sprite0 hit (never at x=255)
+                        gif(["and", ["and", ["==", L("si"), 0], ["!=", L("bgc"), 0]], ["<", L("sx"), 255]],
                             [setp(STATUS, OR(p(STATUS), 0x40))]),
                         # priority: if front OR bg transparent, sprite wins
                         gif(["or", ["==", AND(SHR(L("oa"), 5), 1), 0], ["==", L("bgc"), 0]],
@@ -287,7 +290,7 @@ def render_sprite_over():
                     ])]),
                 ]),
                 setL("si", ADD(L("si"), 1)),
-            ]],
+            ]]]),
         ]),
     ]
 
