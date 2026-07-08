@@ -240,27 +240,39 @@ def render_pixel():
     ]
 
 def render_sprite_over():
-    # simple per-pixel sprite scan of OAM (8x8, no 8x16 yet), sets bgc if sprite opaque
-    # and handles sprite0 hit flag; priority bit respected.
+    # per-pixel sprite scan of OAM. 8x8 and 8x16 (PPUCTRL bit5). first-opaque wins
+    # (OAM order = priority). limits to 8 in-range sprites/scanline + sets overflow
+    # flag; sprite0 hit + front/back priority respected.
     return [
         gif(["==", p(SHOWSP), 1], [
             setL("sx", ["-", p(CYC), 1]),
             setL("sy", p(SCAN)),
+            setL("big", AND(SHR(p(CTRL), 5), 1)),          # 8x16 sprites?
+            setL("h", ["?:", ["==", L("big"), 1], 16, 8]),
             setL("si", 0),
             setL("done", 0),
+            setL("nvis", 0),                               # in-range sprite count this scanline
             ["while", ["and", ["<", L("si"), 64], ["==", L("done"), 0]], [
                 setL("oy", ["u8", "oam", SHL(L("si"), 2)]),
                 setL("ot", ["u8", "oam", ADD(SHL(L("si"), 2), 1)]),
                 setL("oa", ["u8", "oam", ADD(SHL(L("si"), 2), 2)]),
                 setL("ox", ["u8", "oam", ADD(SHL(L("si"), 2), 3)]),
-                setL("dy", ["-", L("sy"), L("oy")]),
+                setL("dy", ["-", ["-", L("sy"), L("oy")], 1]),   # sprites delayed 1 scanline (OAM Y = screen Y - 1)
                 setL("dx", ["-", L("sx"), L("ox")]),
-                gif(["and", ["and", [">=", L("dy"), 0], ["<", L("dy"), 8]],
-                            ["and", [">=", L("dx"), 0], ["<", L("dx"), 8]]], [
-                    # flip
-                    gif(["==", AND(SHR(L("oa"), 7), 1), 1], [setL("dy", ["-", 7, L("dy")])]),
+                gif(["and", [">=", L("dy"), 0], ["<", L("dy"), L("h")]], [
+                    setL("nvis", ADD(L("nvis"), 1)),
+                    gif([">", L("nvis"), 8],                # 9th in-range: overflow + not in secondary OAM
+                        [setp(STATUS, OR(p(STATUS), 0x20)), setL("done", 1)],
+                    [gif(["and", [">=", L("dx"), 0], ["<", L("dx"), 8]], [
+                    # V flip (over full sprite height), then H flip
+                    gif(["==", AND(SHR(L("oa"), 7), 1), 1], [setL("dy", ["-", ["-", L("h"), 1], L("dy")])]),
                     gif(["==", AND(SHR(L("oa"), 6), 1), 1], [setL("dx", ["-", 7, L("dx")])]),
-                    setL("pa", OR(OR(p(SPRBASE), SHL(L("ot"), 4)), L("dy"))),
+                    # pattern address (8x16 selects table via tile bit0, splits top/bottom tile)
+                    gif(["==", L("big"), 1], [
+                        setL("tl", AND(L("ot"), 0xFE)),
+                        gif([">=", L("dy"), 8], [setL("tl", ADD(L("tl"), 1)), setL("dy", ["-", L("dy"), 8])]),
+                        setL("pa", OR(OR(SHL(AND(L("ot"), 1), 12), SHL(L("tl"), 4)), L("dy")))],
+                        [setL("pa", OR(OR(p(SPRBASE), SHL(L("ot"), 4)), L("dy")))]),
                     setL("plo", AND(SHR(call("ppu_read", [L("pa")]), ["-", 7, L("dx")]), 1)),
                     setL("phi", AND(SHR(call("ppu_read", [ADD(L("pa"), 8)]), ["-", 7, L("dx")]), 1)),
                     setL("spx", OR(SHL(L("phi"), 1), L("plo"))),
@@ -272,6 +284,7 @@ def render_sprite_over():
                         gif(["or", ["==", AND(SHR(L("oa"), 5), 1), 0], ["==", L("bgc"), 0]],
                             [setL("bgc", OR(0x10, OR(SHL(AND(L("oa"), 3), 2), L("spx"))))]),
                         setL("done", 1)]),
+                    ])]),
                 ]),
                 setL("si", ADD(L("si"), 1)),
             ]],
