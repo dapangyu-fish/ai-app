@@ -154,7 +154,7 @@ jsonlogic 自定义算子 + 游戏逻辑白名单。收益：位运算步成本�
 | 6502 CPU(256 opcode) | ✅ **周期级 1:1** | nestest 寄存器**与 CYC 周期列**逐条吻合金标准；**cpu_timing_test6 OFFICIAL + UNDOCUMENTED PASSED**(全 256 码周期精确，含非法码)；blargg 行为测试逐模式通过 |
 | PPU + 总线 | ✅ **周期精确** | 手写 ROM 逐像素 703/703；每总线访问 3 点 tick + 奇数帧跳点(89341/89342)；帧长实测 ~29780.5 周期 |
 | APU(脉冲/三角/噪声/DMC+帧计数+混音) | ✅ | 实测 440.7Hz 方波；DMC delta 调制 + DMA |
-| Mapper(NESd 全部 13 个) | ✅ **13/13** | NROM(0)/MMC1(1)/UNROM(2)/CNROM(3)/MMC3(4)/**MMC5(5)**/AxROM(7)/**MMC2(9)**/**Namco163(19)**/GxROM(66)/**BR909x(71)**/**TxSROM(118)**/**Namco108(206)**；统一分块表；**MMC3 A12 IRQ 1.Clocking PASSED**；MMC2 CHR 锁存、TxSROM 逐区 nametable、Namco163 15-bit 每周期 IRQ 均 1:1。**MMC5** 已覆盖 8 项特性里的 6 项：PRG/背景 CHR 分块、**乘法器(实测 7×6/255×255 正确)**、扫描线 IRQ、**ExRAM 扩展属性(实测逐 tile 调色板)**、ExRAM-作-nametable、**fill-mode(实测满屏正确)**；剩余纵向分屏 + 8x16 精灵/背景 CHR 分离(需 PPU 取图相位区分)+ PCM 音频 |
+| Mapper(NESd 全部 13 个) | ✅ **13/13** | NROM(0)/MMC1(1)/UNROM(2)/CNROM(3)/MMC3(4)/**MMC5(5)**/AxROM(7)/**MMC2(9)**/**Namco163(19)**/GxROM(66)/**BR909x(71)**/**TxSROM(118)**/**Namco108(206)**；统一分块表；**MMC3 A12 IRQ 1.Clocking PASSED**；MMC2 CHR 锁存、TxSROM 逐区 nametable、Namco163 15-bit 每周期 IRQ 均 1:1。**MMC5 全特性(与 NESd 一致)**：PRG/CHR 分块、**乘法器**、扫描线 IRQ、**ExRAM 扩展属性**、ExRAM/fill nametable、**8x16 精灵/背景 CHR 分离**、**纵向分屏** —— 8 项图形特性均手写 ROM 实测正确；PCM 扩展音频在 NESd 本身也是 no-op(`// audio break`)，故一致不实现 |
 | 中断时序 | ✅ | NMI/IRQ 7 周期(补 2 dummy read)；边沿在指令边界识别 |
 | T2/T3 框架接线 | ✅ | compute 块 + @compute.* + framebuffer entity，analyze 过 |
 | 手柄输入 | ✅ | 移位寄存器协议 |
@@ -184,16 +184,16 @@ absx/absy/izy/RMW/分支/栈操作）使每指令总线访问数=真实周期数
 x=255 裁剪；PRG-RAM($6000-$7FFF 存档/工作 RAM)；APU 帧计数器周期精确 + $4017 复位
 抖动 + 帧/DMC IRQ 标志与 CPU 接线；DMC 输出单元初始化修复。**原三项缺陷全消除**。
 
-剩余：
-- **功能增补**（非正确性）：**T4 PCM 音频输出已落地（web）** —— `pcm_sink.dart`
-  抽象 + `apu_drain`/`GameCompute.drainAudio` 抽取(WAV 实测正确) + Web Audio
-  (`package:web`)无缝流 sink + `@compute.audio` 接线，web 构建通过；**原生平台 sink**
-  (Android/iOS/desktop 的 PCM 播放器)仍待接（抽取路径平台无关，stub 返回 null）。
-  更多 mapper(MMC5/VRC…)、完整 shell UI(ROM 浏览/存档/触屏手柄/设置)。
-- **子指令级时序残留**（与 NESd 共享的交错模型的架构边界）：亚点级 vblank 读竞争/
-  NMI 精确时序(ppu_vbl_nmi 02/03/05)、sprite_hit 09#9(VBL 末清 ±12 时钟)、
-  apu 6-irq_flag_timing#4、DMC 单字节缓冲即时填充(#19)。本机 CPU/PPU 交错为
-  "每总线访问前 tick 3 点"(=1 CPU 周期粒度)，与 NESd 一致；这些测试要求逐点子周期交错。
+剩余（与 NESd 逐一对齐后）：
+- **全部 13 mapper 已移植**（含 MMC5 全 8 项图形特性，均手写 ROM 实测）—— mapper
+  覆盖与 NESd 一致。
+- **音频输出**：`pcm_sink.dart` 抽象 + `apu_drain`/`drainAudio` 抽取(WAV 实测) +
+  Web Audio 无缝流 sink + `@compute.audio` 接线，**web 已落地并构建通过**；
+  **原生平台 sink**(Android/iOS/desktop) 仍待接 —— 这是相对 NESd 唯一的真实功能缺口
+  (抽取路径平台无关，stub 返回 null，接平台 PCM 播放器即启用)。
+- **子指令级时序**（ppu_vbl_nmi 02/03/05、sprite_hit 09#9、apu 6#4、DMC #19）：
+  本机 CPU/PPU 交错("每总线访问前 tick 3 点"=1 CPU 周期粒度)**与 NESd 同一模型**，
+  NESd 自身也不过这些亚点级测试 —— 故此项**已与 NESd 1:1**，非缺口。
 
 
 ## 9. 端到端整机验证（capstone）—— NES 作为 JSON app 在真实浏览器运行
