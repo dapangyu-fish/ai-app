@@ -26,7 +26,7 @@ import gen_apu as APU
  PB0, PB1, PB2, PB3, CB0, CB1, CB2, CB3, CB4, CB5, CB6, CB7,
  M3_REG, M3_PRGMODE, M3_CHRMODE, M3_R0, M3_R1, M3_R2, M3_R3, M3_R4, M3_R5, M3_R6, M3_R7,
  M3_IRQLATCH, M3_IRQCOUNT, M3_IRQRELOAD, M3_IRQEN, IRQPEND, PRG8,
- A12LOW, CPUCYC) = range(83)
+ A12LOW, CPUCYC, NT0, NT1, NT2, NT3) = range(87)
 
 def p(i): return ["i32", "p", i]
 def setp(i, v): return ["seti32", "p", i, v]
@@ -99,6 +99,11 @@ def nt_map_fn():
         gif(["==", p(MIRROR), 1], [   # vertical: tbl 0,2->0 ; 1,3->1
             ["ret", OR(SHL(AND(L("tbl"), 1), 10), L("off"))]]),
         gif(["==", p(MIRROR), 2], [["ret", L("off")]]),        # single screen 0
+        gif(["==", p(MIRROR), 4], [                             # per-region (TxSROM)
+            gif(["==", L("tbl"), 0], [["ret", OR(SHL(p(NT0), 10), L("off"))]]),
+            gif(["==", L("tbl"), 1], [["ret", OR(SHL(p(NT1), 10), L("off"))]]),
+            gif(["==", L("tbl"), 2], [["ret", OR(SHL(p(NT2), 10), L("off"))]]),
+            ["ret", OR(SHL(p(NT3), 10), L("off"))]]),
         ["ret", OR(0x400, L("off"))],                          # single screen 1
     ]}
 
@@ -423,6 +428,8 @@ def bus_wr_fn():
             [call("n108_write", [L("aa"), L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 9]],
             [call("m9_write", [L("aa"), L("v")]), ["ret", 0]]),
+        gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 118]],
+            [call("m118_write", [L("aa"), L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x8000],
                     ["or", ["or", ["==", p(MAPPER), 2], ["==", p(MAPPER), 3]],
                            ["or", ["or", ["==", p(MAPPER), 7], ["==", p(MAPPER), 66]],
@@ -597,7 +604,7 @@ def a12_clock_fn():
     return {"params": ["addr"], "body": [
         gif(["==", AND(SHR(L("addr"), 12), 1), 1], [
             gif(["and", [">", p(A12LOW), 0], [">=", SUB(p(CPUCYC), p(A12LOW)), 3]],
-                [gif(["==", p(MAPPER), 4], [call("m3_clock_irq")])]),
+                [gif(["or", ["==", p(MAPPER), 4], ["==", p(MAPPER), 118]], [call("m3_clock_irq")])]),
             setp(A12LOW, 0),
         ], [
             gif(["==", p(A12LOW), 0], [setp(A12LOW, p(CPUCYC))]),
@@ -671,6 +678,22 @@ def m9_latch_fn():
         gif(["and", [">=", L("addr"), 0x1FE8], ["<=", L("addr"), 0x1FEF]], [setp(M3_R6, 1), call("m9_update_chr")]),
         ["ret", 0]]}
 
+
+def m118_write_fn():
+    return {"params": ["a", "v"], "body": [
+        setL("k", AND(L("a"), 0xE001)),
+        gif(["==", L("k"), 0x8001], [
+            setL("nt", AND(SHR(L("v"), 7), 1)),
+            gif(["and", ["==", p(M3_REG), 0], ["==", p(M3_CHRMODE), 0]], [setp(NT0, L("nt")), setp(NT1, L("nt"))]),
+            gif(["and", ["==", p(M3_REG), 1], ["==", p(M3_CHRMODE), 0]], [setp(NT2, L("nt")), setp(NT3, L("nt"))]),
+            gif(["and", ["==", p(M3_REG), 2], ["==", p(M3_CHRMODE), 1]], [setp(NT0, L("nt"))]),
+            gif(["and", ["==", p(M3_REG), 3], ["==", p(M3_CHRMODE), 1]], [setp(NT1, L("nt"))]),
+            gif(["and", ["==", p(M3_REG), 4], ["==", p(M3_CHRMODE), 1]], [setp(NT2, L("nt"))]),
+            gif(["and", ["==", p(M3_REG), 5], ["==", p(M3_CHRMODE), 1]], [setp(NT3, L("nt"))]),
+            call("m3_write", [L("a"), AND(L("v"), 0x7F)]), ["ret", 0]]),
+        gif(["==", L("k"), 0xA000], [["ret", 0]]),   # TxSROM ignores mirroring writes
+        call("m3_write", [L("a"), L("v")]), ["ret", 0]]}
+
 def simple_write_fn():
     return {"params": ["a", "v"], "body": [
         # UNROM (2): 16K switchable @ $8000, fixed last @ $C000; CHR-RAM
@@ -735,6 +758,7 @@ def build():
     funcs["spr_overflow_eval"] = spr_overflow_eval_fn()
     funcs["n108_update"] = n108_update_fn()
     funcs["n108_write"] = n108_write_fn()
+    funcs["m118_write"] = m118_write_fn()
     funcs["m9_update_chr"] = m9_update_chr_fn()
     funcs["m9_write"] = m9_write_fn()
     funcs["m9_latch"] = m9_latch_fn()
@@ -783,6 +807,7 @@ def build():
         setp(IRQPEND, 0), setp(M3_IRQEN, 0),
         gif(["==", L("mapper"), 1], [call("m1_update")]),
         gif(["==", L("mapper"), 4], [call("m3_update")]),
+        gif(["==", L("mapper"), 118], [setp(MIRROR, 4), call("m3_update")]),
         gif(["==", L("mapper"), 206], [setp(M3_R7, 1), call("n108_update")]),
         gif(["==", L("mapper"), 9], [
             setp(PB1, ["*", SUB(p(PRG8), 3), 8192]),
