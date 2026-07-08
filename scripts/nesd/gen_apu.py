@@ -19,7 +19,7 @@ EN1 DUTY1 DIDX1 TMR1 TP1 CV1 VOL1 E1V E1P E1T E1S E1L L1H L1V S1E S1P S1V S1SH S
 EN2 DUTY2 DIDX2 TMR2 TP2 CV2 VOL2 E2V E2P E2T E2S E2L L2H L2V S2E S2P S2V S2SH S2N S2R S2M
 ENT DIDXT TMRT TPT LIN LINP LINREL CTRLT LTH LTV
 ENN TMRN TPN CVN VOLN ENV ENP ENT2 ENS ENL LNH LNV SHN MODEN
-FCCOUNT FCMODE FCINH APUCYC SACC SIDX DMCLVL
+FCCOUNT FCMODE FCINH APUCYC SACC SIDX DMCLVL FCIRQ DMCIRQ
 DMC_EN DMC_IRQEN DMC_LOOP DMC_SIL DMC_BUF DMC_RATE DMC_BITS DMC_SHIFT DMC_TMR
 DMC_SADDR DMC_SLEN DMC_ADDR DMC_LEN DMC_LOADED
 """.split()
@@ -181,6 +181,7 @@ def build_apu():
             gif(["==", L("c"), 7456], [["call", "ap_quarter", []], ["call", "ap_half", []]]),
             gif(["==", L("c"), 11185], [["call", "ap_quarter", []]]),
             gif(["==", L("c"), 14914], [["call", "ap_quarter", []], ["call", "ap_half", []],
+                                        gif(["==", a("FCINH"), 0], [seta("FCIRQ", 1)]),
                                         seta("FCCOUNT", -1)]),
         ], [  # 5-step
             gif(["==", L("c"), 3728], [["call", "ap_quarter", []]]),
@@ -330,6 +331,7 @@ def build_apu():
         gif(["==", L("r"), 0x17], [
             seta("FCMODE", bit(L("v"), 7)), seta("FCINH", bit(L("v"), 6)),
             seta("FCCOUNT", 0),
+            gif(["==", bit(L("v"), 6), 1], [seta("FCIRQ", 0)]),   # inhibit clears frame IRQ flag
             gif(["==", bit(L("v"), 7), 1], [["call", "ap_quarter", []], ["call", "ap_half", []]])]),
         ["ret", 0]]}
 
@@ -339,7 +341,15 @@ def build_apu():
         gif([">", a("L2V"), 0], [setL("s", OR(L("s"), 2))]),
         gif([">", a("LTV"), 0], [setL("s", OR(L("s"), 4))]),
         gif([">", a("LNV"), 0], [setL("s", OR(L("s"), 8))]),
+        gif([">", a("DMC_LEN"), 0], [setL("s", OR(L("s"), 0x10))]),
+        gif(["==", a("FCIRQ"), 1], [setL("s", OR(L("s"), 0x40))]),
+        gif(["==", a("DMCIRQ"), 1], [setL("s", OR(L("s"), 0x80))]),
+        seta("FCIRQ", 0),                 # reading $4015 clears frame IRQ flag
         ["ret", L("s")]]}
+
+    # frame/DMC IRQ line asserted to CPU (polled by run_frame)
+    funcs["apu_irq"] = {"params": [], "body": [
+        ["ret", ["?:", ["or", ["==", a("FCIRQ"), 1], ["==", a("DMCIRQ"), 1]], 1, 0]]]}
 
     funcs["apu_reset_state"] = {"params": [], "body": [
         seta("SHN", 1),  # noise shift register starts at 1

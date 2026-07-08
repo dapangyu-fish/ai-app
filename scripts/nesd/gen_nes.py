@@ -678,7 +678,7 @@ def build():
         setL("i", 0),
         ["while", ["and", ["==", p(FRAMES), L("f0")], ["<", L("i"), L("maxInstr")]], [
             gif(["==", p(NMIPEND), 1], [setp(NMIPEND, 0), call("nmi")]),
-            gif(["and", ["==", p(IRQPEND), 1], ["==", C.getflag(C.IF_), 0]],
+            gif(["and", ["or", ["==", p(IRQPEND), 1], ["==", call("apu_irq"), 1]], ["==", C.getflag(C.IF_), 0]],
                 [setp(IRQPEND, 0), call("irq")]),
             call("step"),
             setL("i", ADD(L("i"), 1))]],
