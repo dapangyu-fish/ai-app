@@ -231,8 +231,8 @@ def bg_pixel():
 def render_pixel():
     # writes fb[PIXBASE + currentX] = palette index (0..63) from ppu_read(0x3F00+bgc)
     return [
-        gif(["and", ["==", p(SHOWBG), 0], ["==", p(SHOWSP), 0]],
-            [setL("bgc", 0)],
+        gif(["==", p(SHOWBG), 0],
+            [setL("bgc", 0)],               # background off → backdrop (no bg pixel, no sprite-0 hit)
             bg_pixel()),
     ] + render_sprite_over() + [
         setL("palidx", call("ppu_read", [OR(0x3F00, L("bgc"))])),
