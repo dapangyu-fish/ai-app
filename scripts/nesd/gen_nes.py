@@ -388,6 +388,8 @@ def bus_rd_fn():
         gif(["==", L("aa"), 0x4015], [["ret", call("apu_status")]]),
         gif(["==", L("aa"), 0x4016], [["ret", call("ctrl_read", [0])]]),
         gif(["==", L("aa"), 0x4017], [["ret", call("ctrl_read", [1])]]),
+        gif(["and", [">=", L("aa"), 0x6000], ["<", L("aa"), 0x8000]],
+            [["ret", ["u8", "prgram", ["-", L("aa"), 0x6000]]]]),
         gif(["<", L("aa"), 0x8000], [["ret", 0]]),
         ["ret", ["u8", "prg", call("prg_addr", [L("aa")])]],
     ]}
@@ -404,6 +406,8 @@ def bus_wr_fn():
         gif(["==", L("aa"), 0x4016], [call("ctrl_strobe", [L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x4000], ["<", L("aa"), 0x4018]],
             [call("apu_write", [AND(L("aa"), 0x1F), L("v")]), ["ret", 0]]),
+        gif(["and", [">=", L("aa"), 0x6000], ["<", L("aa"), 0x8000]],
+            [["setu8", "prgram", ["-", L("aa"), 0x6000], L("v")], ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 1]],
             [call("m1_write", [L("aa"), L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 4]],
@@ -712,7 +716,7 @@ def build():
     apu = APU.build_apu()
     funcs.update(apu["funcs"])
     buffers = {"ram": 2048, "prg": 524288, "chr": 131072, "vram": 2048,
-               "pal": 32, "oam": 256, "oam2": 32, "fb": 61440}
+               "pal": 32, "oam": 256, "oam2": 32, "fb": 61440, "prgram": 8192}
     buffers.update(apu["buffers"])
     for name, tbl in apu["u8tables"].items():
         buffers[name] = len(tbl)
