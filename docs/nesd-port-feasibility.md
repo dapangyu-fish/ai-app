@@ -160,11 +160,29 @@ jsonlogic 自定义算子 + 游戏逻辑白名单。收益：位运算步成本�
 | 手柄输入 | ✅ | 移位寄存器协议 |
 | **真实软件端到端** | ✅ | cpu_timing_test6/blargg CPU/MMC3 IRQ ROM 全在 JSON 内核跑通并渲出可读 UI |
 
-**周期级精确交错已完成**（本轮重点）：逐行移植 NESd 的 dummy read/write（隐式/
-zpx/zpy/izx/absx/absy/izy/RMW/分支/栈操作）使每指令总线访问数=真实周期数；修复
-两处影响全局时序的真实 bug —— ①分支误标 imp 模式致每条分支 +1 周期；②非法 NOP
-漏读操作数 -1 周期。加真实 A12 追踪（滤 ≥3 CPU 周期低电平）+ 奇数帧跳点 + 7 周期
-中断。**三项原始缺陷全部消除**：cpu_timing(BASIC + 全码)、MMC3 1.Clocking、周期计数。
+**周期级精确交错已完成**：逐行移植 NESd 的 dummy read/write（隐式/zpx/zpy/izx/
+absx/absy/izy/RMW/分支/栈操作）使每指令总线访问数=真实周期数；修复两处影响全局
+时序的真实 bug —— ①分支误标 imp 模式致每条分支 +1 周期；②非法 NOP 漏读操作数 -1
+周期。加真实 A12 追踪 + 奇数帧跳点 + 7 周期中断。
+
+**blargg/nes-test-roms 权威测试套件实测（HK 构建机，逐一渲屏读结果）：**
+
+| 套件 | 结果 |
+|---|---|
+| cpu_timing_test6 | **OFFICIAL + UNDOCUMENTED PASSED**（全 256 码周期精确） |
+| nestest | 寄存器 + CYC 周期列逐条吻合金标准 |
+| sprite_hit_tests (01–11) | **9/10 PASSED**（basics/alignment/corners/flip/double-height/left_clip/right_edge/screen_bottom/timing_order/edge_timing；仅 09#9 VBL 末清标志 ±12 时钟残留） |
+| sprite_overflow (1.Basics) | **PASSED** |
+| ppu_vbl_nmi 01-vbl_basics | **Passed** |
+| ppu_vbl_nmi 09-even_odd_frames | **Passed**（奇数帧跳点） |
+| mmc3_test_2 1.Clocking (A12 IRQ) | **PASSED** |
+| apu_test 1-len_ctr / 2-len_table | **Passed** |
+| apu_test 3-irq_flag / 4-jitter / 5-len_timing | **PASSED** |
+| apu_test 7-dmc_basics | 推进至 #19（基本采样播放 + IRQ 置/清工作） |
+
+**本轮补齐**：8x16 精灵 + 每扫描线 8 精灵上限/溢出标志 + 精灵 Y+1 延迟 + 左8像素/
+x=255 裁剪；PRG-RAM($6000-$7FFF 存档/工作 RAM)；APU 帧计数器周期精确 + $4017 复位
+抖动 + 帧/DMC IRQ 标志与 CPU 接线；DMC 输出单元初始化修复。**原三项缺陷全消除**。
 
 剩余（均为**功能增补**，非正确性）：T4 PCM 音频输出原语（APU samples 缓冲已生成、
 未推扬声器）、更多 mapper(MMC5/VRC…)、完整 shell UI(ROM 浏览/存档/触屏手柄/设置)。
