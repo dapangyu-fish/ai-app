@@ -94,6 +94,9 @@ class ComputeProgram {
     return b;
   }
 
+  /// Whether a callable function [name] is defined in this program.
+  bool hasFunction(String name) => _funcs.containsKey(name);
+
   /// Invoke function [name] with [args]; returns its `ret` value (0 if none).
   /// [budget] caps executed loop iterations + calls; exceeding it throws
   /// [ComputeBudgetExceeded].

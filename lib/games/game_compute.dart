@@ -110,6 +110,29 @@ class GameCompute {
     if (i >= 0 && i < inputs.length) inputs[i] = v;
   }
 
+  /// Drain accumulated audio samples produced since the last drain. The compute
+  /// program must expose a `drainFn` returning the sample count (and resetting
+  /// its write index) and store int16 PCM as little-endian byte pairs in
+  /// [samplesBuffer]. Returns the samples (mono, signed 16-bit) for a PCM sink.
+  Int16List drainAudio({
+    String drainFn = 'apu_drain',
+    String samplesBuffer = 'samples',
+  }) {
+    if (!program.hasFunction(drainFn)) return _emptyI16;
+    final n = call(drainFn, const []);
+    final bytes = program.u8[samplesBuffer];
+    if (bytes == null || n <= 0) return _emptyI16;
+    final count = n * 2 <= bytes.length ? n : bytes.length ~/ 2;
+    final out = Int16List(count);
+    for (var i = 0; i < count; i++) {
+      final v = bytes[i * 2] | (bytes[i * 2 + 1] << 8);
+      out[i] = v >= 0x8000 ? v - 0x10000 : v;
+    }
+    return out;
+  }
+
+  static final Int16List _emptyI16 = Int16List(0);
+
   /// Convert a palette-indexed byte buffer (w×h, values 0..len(palette)) to
   /// RGBA and decode to a [ui.Image] asynchronously; the cached image is drawn
   /// by the framebuffer entity (≤1 frame latency, matching a texture stream).

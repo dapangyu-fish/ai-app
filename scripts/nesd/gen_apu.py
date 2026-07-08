@@ -360,6 +360,11 @@ def build_apu():
     funcs["apu_irq"] = {"params": [], "body": [
         ["ret", ["?:", ["or", ["==", a("FCIRQ"), 1], ["==", a("DMCIRQ"), 1]], 1, 0]]]}
 
+    funcs["apu_drain"] = {"params": [], "body": [
+        setL("n", a("SIDX")),
+        seta("SIDX", 0),
+        ["ret", L("n")]]}
+
     funcs["apu_reset_state"] = {"params": [], "body": [
         seta("SHN", 1),  # noise shift register starts at 1
         seta("DMC_BITS", 8), seta("DMC_SIL", 1),         # DMC output unit: 8 bits, silenced
