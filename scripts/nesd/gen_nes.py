@@ -1,0 +1,431 @@
+#!/usr/bin/env python3
+"""Combined NES = CPU + PPU + bus + NROM, emitted as one compute-kernel program.
+1:1 port of NESd (nes/cpu, nes/ppu, nes/bus, nes/cartridge/mapper/nrom).
+
+Interleave: CPU is master; every CPU bus access (=1 CPU cycle) ticks the PPU 3
+dots (NESd's stepUntil model). PPU renders per-dot into fb (256x240 palette
+indices 0..63); RGB conversion happens at dump time via the standard NES palette.
+
+State:
+  buffers: ram2048 prg32768 chr8192 vram2048 pal32 oam256 oam2_32 fb61440
+  i32 reg[8]  : CPU  0=A 1=X 2=Y 3=SP 4=P 5=PC 6=cyc 7=halt
+  i32 p[40]   : PPU  (named indices below)
+"""
+import json
+import gen_cpu as C
+
+# PPU state indices in i32 'p'
+(PV, PT, PX, PW, CTRL, MASK, STATUS, OAMADDR, SCAN, CYC, FRAMES, NMIEN,
+ BGBASE, SPRBASE, RDBUF, NMIPEND, NTLATCH, ATLATCH, PTL, PTH,
+ PTLSHIFT, PTHSHIFT, ATLSHIFT, ATHSHIFT, ATTR, SHOWBG, SHOWSP,
+ SHOWBGL, SHOWSPL, SPRCOUNT, S0LINE, S0NEXT, VINC, PIXBASE,
+ MIRROR, ODDFRAME, NMIED_PREV, SPR0HIT_ARMED, SCRATCH1, SCRATCH2) = range(40)
+
+def p(i): return ["i32", "p", i]
+def setp(i, v): return ["seti32", "p", i, v]
+L = C.L; setL = C.setL
+def AND(a, b): return ["&", a, b]
+def OR(a, b): return ["|", a, b]
+def XOR(a, b): return ["^", a, b]
+def SHL(a, b): return ["<<", a, b]
+def SHR(a, b): return [">>", a, b]
+def ADD(a, b): return ["+", a, b]
+def IF(c, t, e=None):
+    a = {"cond": c, "then": t}
+    if e:
+        a["else"] = e
+    return ["call", "@if", None] if False else ["if", c, t] + ([e] if e else [])
+def gif(c, t, e=None):
+    return ["if", c, t] + ([e] if e is not None else [])
+def PR(fn, args=None): return ["call", fn, args or []]  # proc/expr call
+def call(fn, args=None): return ["call", fn, args or []]
+
+# loopy v decode helpers (v is 15-bit in p[PV])
+def v_coarseX(): return AND(p(PV), 0x1F)
+def v_coarseY(): return AND(SHR(p(PV), 5), 0x1F)
+def v_ntX(): return AND(SHR(p(PV), 10), 1)
+def v_ntY(): return AND(SHR(p(PV), 11), 1)
+def v_fineY(): return AND(SHR(p(PV), 12), 7)
+
+# ---- PPU memory (readPpuMemory / writePpuMemory) ----
+# address 0x0000-0x1FFF: CHR (pattern); 0x2000-0x3EFF: nametable(mirrored);
+# 0x3F00-0x3FFF: palette
+def nt_index(addrL):
+    # map 0x2000-0x2FFF into 2KB vram with mirroring (0=horiz,1=vert,2=single0,3=single1)
+    return ["call", "nt_map", [addrL]]
+
+def ppu_read_fn():
+    return {"params": ["a"], "body": [
+        setL("a", AND(L("a"), 0x3FFF)),
+        gif(["<", L("a"), 0x2000], [["ret", ["u8", "chr", L("a")]]]),
+        gif(["<", L("a"), 0x3F00], [["ret", ["u8", "vram", nt_index(L("a"))]]]),
+        # palette
+        setL("pi", AND(L("a"), 0x1F)),
+        gif(["==", AND(L("pi"), 0x13), 0x10], [setL("pi", ["-", L("pi"), 0x10])]),
+        ["ret", ["u8", "pal", L("pi")]],
+    ]}
+
+def ppu_write_fn():
+    return {"params": ["a", "v"], "body": [
+        setL("a", AND(L("a"), 0x3FFF)),
+        gif(["<", L("a"), 0x2000], [["setu8", "chr", L("a"), L("v")], ["ret", 0]]),
+        gif(["<", L("a"), 0x3F00], [["setu8", "vram", nt_index(L("a")), L("v")], ["ret", 0]]),
+        setL("pi", AND(L("a"), 0x1F)),
+        gif(["==", AND(L("pi"), 0x13), 0x10], [setL("pi", ["-", L("pi"), 0x10])]),
+        ["setu8", "pal", L("pi"), AND(L("v"), 0x3F)],
+        ["ret", 0],
+    ]}
+
+def nt_map_fn():
+    # returns index into 2KB vram given 0x2000-0x2FFF address
+    return {"params": ["a"], "body": [
+        setL("a", AND(L("a"), 0xFFF)),
+        setL("tbl", AND(SHR(L("a"), 10), 3)),   # which nametable 0..3
+        setL("off", AND(L("a"), 0x3FF)),
+        # mirror mode
+        gif(["==", p(MIRROR), 0], [   # horizontal: tbl 0,1->0 ; 2,3->1
+            ["ret", OR(SHL(AND(SHR(L("tbl"), 1), 1), 10), L("off"))]]),
+        gif(["==", p(MIRROR), 1], [   # vertical: tbl 0,2->0 ; 1,3->1
+            ["ret", OR(SHL(AND(L("tbl"), 1), 10), L("off"))]]),
+        gif(["==", p(MIRROR), 2], [["ret", L("off")]]),        # single screen 0
+        ["ret", OR(0x400, L("off"))],                          # single screen 1
+    ]}
+
+# ---- PPU register read/write (CPU side) ----
+def ppu_reg_read_fn():
+    # a = 0x2000..0x3FFF (mirrored to 8); returns value
+    return {"params": ["a"], "body": [
+        setL("r", AND(L("a"), 7)),
+        gif(["==", L("r"), 2], [   # PPUSTATUS
+            setL("val", p(STATUS)),
+            setp(STATUS, AND(p(STATUS), 0x7F)),   # clear vblank
+            setp(PW, 0),
+            ["ret", L("val")]]),
+        gif(["==", L("r"), 4], [["ret", ["u8", "oam", p(OAMADDR)]]]),   # OAMDATA
+        gif(["==", L("r"), 7], [   # PPUDATA (buffered)
+            setL("val", p(RDBUF)),
+            setp(RDBUF, call("ppu_read", [p(PV)])),
+            gif([">=", AND(p(PV), 0x3FFF), 0x3F00], [setL("val", call("ppu_read", [p(PV)]))]),
+            setp(PV, AND(ADD(p(PV), p(VINC)), 0x7FFF)),
+            ["ret", L("val")]]),
+        ["ret", 0],
+    ]}
+
+def ppu_reg_write_fn():
+    return {"params": ["a", "v"], "body": [
+        setL("r", AND(L("a"), 7)),
+        setp(STATUS, OR(AND(p(STATUS), 0xE0), AND(L("v"), 0x1F))),  # bus latch bits (approx)
+        gif(["==", L("r"), 0], [   # PPUCTRL
+            setp(CTRL, L("v")),
+            setp(NMIEN, AND(SHR(L("v"), 7), 1)),
+            setp(VINC, ["?:", AND(SHR(L("v"), 2), 1), 32, 1]),
+            setp(BGBASE, SHL(AND(SHR(L("v"), 4), 1), 12)),
+            setp(SPRBASE, SHL(AND(SHR(L("v"), 3), 1), 12)),
+            setp(PT, OR(AND(p(PT), 0x73FF), SHL(AND(L("v"), 3), 10))),
+            ["ret", 0]]),
+        gif(["==", L("r"), 1], [   # PPUMASK
+            setp(MASK, L("v")),
+            setp(SHOWBGL, AND(SHR(L("v"), 1), 1)),
+            setp(SHOWSPL, AND(SHR(L("v"), 2), 1)),
+            setp(SHOWBG, AND(SHR(L("v"), 3), 1)),
+            setp(SHOWSP, AND(SHR(L("v"), 4), 1)),
+            ["ret", 0]]),
+        gif(["==", L("r"), 3], [setp(OAMADDR, L("v")), ["ret", 0]]),   # OAMADDR
+        gif(["==", L("r"), 4], [   # OAMDATA
+            ["setu8", "oam", p(OAMADDR), L("v")],
+            setp(OAMADDR, AND(ADD(p(OAMADDR), 1), 0xFF)), ["ret", 0]]),
+        gif(["==", L("r"), 5], [   # PPUSCROLL
+            gif(["==", p(PW), 0], [
+                setp(PT, OR(AND(p(PT), 0xFFE0), SHR(L("v"), 3))),
+                setp(PX, AND(L("v"), 7)), setp(PW, 1)],
+                [setp(PT, OR(OR(AND(p(PT), 0xC1F), SHL(AND(L("v"), 0xF8), 2)),
+                             SHL(AND(L("v"), 7), 12))), setp(PW, 0)]),
+            ["ret", 0]]),
+        gif(["==", L("r"), 6], [   # PPUADDR
+            gif(["==", p(PW), 0], [
+                setp(PT, OR(AND(p(PT), 0x00FF), SHL(AND(L("v"), 0x3F), 8))),
+                setp(PW, 1)],
+                [setp(PT, OR(AND(p(PT), 0xFF00), L("v"))),
+                 setp(PV, p(PT)), setp(PW, 0)]),
+            ["ret", 0]]),
+        gif(["==", L("r"), 7], [   # PPUDATA
+            call("ppu_write", [p(PV), L("v")]),
+            setp(PV, AND(ADD(p(PV), p(VINC)), 0x7FFF)), ["ret", 0]]),
+        ["ret", 0],
+    ]}
+
+# ---- PPU dot step (background pipeline, faithful to NESd _step*) ----
+def ppu_incx():
+    return gif(["==", v_coarseX(), 31],
+               [setp(PV, AND(XOR(AND(p(PV), 0x7FE0), 0x400), 0x7FFF))],  # coarseX=0, flip ntX
+               [setp(PV, ADD(p(PV), 1))])
+def ppu_incy():
+    return gif(["<", v_fineY(), 7],
+        [setp(PV, ADD(p(PV), 0x1000))],
+        [setp(PV, AND(p(PV), 0xFFF)),  # fineY=0
+         setL("cy", v_coarseY()),
+         gif(["==", L("cy"), 29],
+             [setp(PV, XOR(AND(p(PV), 0x7C1F), 0x800))],  # coarseY=0, flip ntY
+             [gif(["==", L("cy"), 31],
+                  [setp(PV, AND(p(PV), 0x7C1F))],
+                  [setp(PV, OR(AND(p(PV), 0x7C1F), SHL(ADD(L("cy"), 1), 5)))])])])
+def ppu_copyh():
+    return setp(PV, OR(AND(p(PV), 0x7BE0), AND(p(PT), 0x41F)))
+def ppu_copyv():
+    return setp(PV, OR(AND(p(PV), 0x041F), AND(p(PT), 0x7BE0)))
+
+def ppu_fetch_cycle():
+    # subcycle = cycle & 7
+    return [setL("sc", AND(p(CYC), 7)),
+        gif(["==", L("sc"), 1], [setp(NTLATCH, call("ppu_read", [OR(0x2000, AND(p(PV), 0xFFF))]))]),
+        gif(["==", L("sc"), 3], [   # attribute
+            setL("at", call("ppu_read", [OR(OR(OR(0x23C0, SHL(AND(SHR(p(PV), 10), 3), 10)),
+                                               SHL(AND(SHR(p(PV), 5), 0x1C), 1)),
+                                            SHR(AND(p(PV), 0x1C), 2))])),
+            setL("shift", OR(AND(SHR(p(PV), 4), 4), AND(p(PV), 2))),
+            setp(ATLATCH, AND(SHR(L("at"), L("shift")), 3))]),
+        gif(["==", L("sc"), 5], [
+            setp(PTL, call("ppu_read", [OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY())]))]),
+        gif(["==", L("sc"), 7], [
+            setp(PTH, call("ppu_read", [OR(OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY()), 8)]))]),
+        gif(["==", L("sc"), 0], [
+            # load shift regs
+            setp(PTLSHIFT, OR(AND(p(PTLSHIFT), 0xFF00), p(PTL))),
+            setp(PTHSHIFT, OR(AND(p(PTHSHIFT), 0xFF00), p(PTH))),
+            setp(ATTR, p(ATLATCH)),
+            ppu_incx()]),
+    ]
+
+def ppu_shift():
+    return [setp(PTLSHIFT, AND(SHL(p(PTLSHIFT), 1), 0xFFFF)),
+            setp(PTHSHIFT, AND(SHL(p(PTHSHIFT), 1), 0xFFFF)),
+            setp(ATLSHIFT, OR(SHL(p(ATLSHIFT), 1), AND(p(ATTR), 1))),
+            setp(ATHSHIFT, OR(SHL(p(ATHSHIFT), 1), AND(SHR(p(ATTR), 1), 1)))]
+
+def bg_pixel():
+    # returns 0..15 palette entry for background at fineX using shift regs
+    return [
+        setL("bit", ["-", 15, p(PX)]),
+        setL("lo", AND(SHR(p(PTLSHIFT), L("bit")), 1)),
+        setL("hi", AND(SHR(p(PTHSHIFT), L("bit")), 1)),
+        setL("px", OR(SHL(L("hi"), 1), L("lo"))),
+        setL("abit", ["-", 7, p(PX)]),
+        setL("al", AND(SHR(p(ATLSHIFT), L("abit")), 1)),
+        setL("ah", AND(SHR(p(ATHSHIFT), L("abit")), 1)),
+        setL("at", OR(SHL(L("ah"), 1), L("al"))),
+        gif(["==", L("px"), 0], [setL("bgc", 0)],
+            [setL("bgc", OR(SHL(L("at"), 2), L("px")))]),
+    ]
+
+def render_pixel():
+    # writes fb[PIXBASE + currentX] = palette index (0..63) from ppu_read(0x3F00+bgc)
+    return [
+        gif(["and", ["==", p(SHOWBG), 0], ["==", p(SHOWSP), 0]],
+            [setL("bgc", 0)],
+            bg_pixel()),
+    ] + render_sprite_over() + [
+        setL("palidx", call("ppu_read", [OR(0x3F00, L("bgc"))])),
+        ["setu8", "fb", ADD(p(PIXBASE), ["-", p(CYC), 1]), AND(L("palidx"), 0x3F)],
+    ]
+
+def render_sprite_over():
+    # simple per-pixel sprite scan of OAM (8x8, no 8x16 yet), sets bgc if sprite opaque
+    # and handles sprite0 hit flag; priority bit respected.
+    return [
+        gif(["==", p(SHOWSP), 1], [
+            setL("sx", ["-", p(CYC), 1]),
+            setL("sy", p(SCAN)),
+            setL("si", 0),
+            setL("done", 0),
+            ["while", ["and", ["<", L("si"), 64], ["==", L("done"), 0]], [
+                setL("oy", ["u8", "oam", SHL(L("si"), 2)]),
+                setL("ot", ["u8", "oam", ADD(SHL(L("si"), 2), 1)]),
+                setL("oa", ["u8", "oam", ADD(SHL(L("si"), 2), 2)]),
+                setL("ox", ["u8", "oam", ADD(SHL(L("si"), 2), 3)]),
+                setL("dy", ["-", L("sy"), L("oy")]),
+                setL("dx", ["-", L("sx"), L("ox")]),
+                gif(["and", ["and", [">=", L("dy"), 0], ["<", L("dy"), 8]],
+                            ["and", [">=", L("dx"), 0], ["<", L("dx"), 8]]], [
+                    # flip
+                    gif(["==", AND(SHR(L("oa"), 7), 1), 1], [setL("dy", ["-", 7, L("dy")])]),
+                    gif(["==", AND(SHR(L("oa"), 6), 1), 1], [setL("dx", ["-", 7, L("dx")])]),
+                    setL("pa", OR(OR(p(SPRBASE), SHL(L("ot"), 4)), L("dy"))),
+                    setL("plo", AND(SHR(call("ppu_read", [L("pa")]), ["-", 7, L("dx")]), 1)),
+                    setL("phi", AND(SHR(call("ppu_read", [ADD(L("pa"), 8)]), ["-", 7, L("dx")]), 1)),
+                    setL("spx", OR(SHL(L("phi"), 1), L("plo"))),
+                    gif(["!=", L("spx"), 0], [
+                        # sprite0 hit
+                        gif(["and", ["==", L("si"), 0], ["!=", L("bgc"), 0]],
+                            [setp(STATUS, OR(p(STATUS), 0x40))]),
+                        # priority: if front OR bg transparent, sprite wins
+                        gif(["or", ["==", AND(SHR(L("oa"), 5), 1), 0], ["==", L("bgc"), 0]],
+                            [setL("bgc", OR(0x10, OR(SHL(AND(L("oa"), 3), 2), L("spx"))))]),
+                        setL("done", 1)]),
+                ]),
+                setL("si", ADD(L("si"), 1)),
+            ]],
+        ]),
+    ]
+
+def ppu_step_fn():
+    # one PPU dot. scanline in p[SCAN], cycle in p[CYC].
+    body = [
+        setL("s", p(SCAN)),
+        setL("c", p(CYC)),
+        setL("active", ["or", ["==", p(SHOWBG), 1], ["==", p(SHOWSP), 1]]),
+        # visible scanlines 0..239
+        gif(["<", L("s"), 240], [
+            gif(["==", L("active"), 1], [
+                gif(["and", [">=", L("c"), 1], ["<=", L("c"), 256]],
+                    render_pixel() + ppu_shift() + ppu_fetch_cycle()),
+                gif(["and", [">=", L("c"), 321], ["<=", L("c"), 336]],
+                    ppu_shift() + ppu_fetch_cycle()),
+                gif(["==", L("c"), 256], [ppu_incy()]),
+                gif(["==", L("c"), 257], [ppu_copyh()]),
+            ]),
+        ]),
+        # pre-render line 261
+        gif(["==", L("s"), 261], [
+            gif(["==", L("c"), 1], [setp(STATUS, AND(p(STATUS), 0x3F))]),  # clear vblank+s0
+            gif(["==", L("active"), 1], [
+                gif(["and", [">=", L("c"), 1], ["<=", L("c"), 256]],
+                    ppu_shift() + ppu_fetch_cycle()),
+                gif(["and", [">=", L("c"), 321], ["<=", L("c"), 336]],
+                    ppu_shift() + ppu_fetch_cycle()),
+                gif(["==", L("c"), 256], [ppu_incy()]),
+                gif(["==", L("c"), 257], [ppu_copyh()]),
+                gif(["and", [">=", L("c"), 280], ["<=", L("c"), 304]], [ppu_copyv()]),
+            ]),
+        ]),
+        # vblank start scanline 241 cycle 1
+        gif(["and", ["==", L("s"), 241], ["==", L("c"), 1]], [
+            setp(STATUS, OR(p(STATUS), 0x80)),
+            gif(["==", p(NMIEN), 1], [setp(NMIPEND, 1)]),
+        ]),
+        # advance counters
+        setp(CYC, ADD(L("c"), 1)),
+        gif([">", p(CYC), 340], [
+            setp(CYC, 0),
+            setp(SCAN, ADD(p(SCAN), 1)),
+            gif([">", p(SCAN), 261], [
+                setp(SCAN, 0), setp(FRAMES, ADD(p(FRAMES), 1)),
+                setp(PIXBASE, 0)]),
+            gif(["and", ["<", p(SCAN), 240], [">", p(SCAN), 0]],
+                [setp(PIXBASE, ["*", p(SCAN), 256])]),
+        ]),
+        ["ret", 0],
+    ]
+    return {"params": [], "body": body}
+
+def ppu_tick3_fn():
+    return {"params": [], "body": [
+        call("ppu_step"), call("ppu_step"), call("ppu_step"), ["ret", 0]]}
+
+# ---- Bus: CPU rd/wr with PPU tick + OAM DMA ----
+def bus_rd_fn():
+    return {"params": ["a"], "body": [
+        call("ppu_tick3"),
+        setL("aa", AND(L("a"), 0xFFFF)),
+        gif(["<", L("aa"), 0x2000], [["ret", ["u8", "ram", AND(L("aa"), 0x7FF)]]]),
+        gif(["<", L("aa"), 0x4000], [["ret", call("ppu_reg_read", [OR(0x2000, AND(L("aa"), 7))])]]),
+        gif(["==", L("aa"), 0x4016], [["ret", call("ctrl_read", [0])]]),
+        gif(["==", L("aa"), 0x4017], [["ret", call("ctrl_read", [1])]]),
+        gif(["<", L("aa"), 0x8000], [["ret", 0]]),
+        ["ret", ["u8", "prg", AND(["-", L("aa"), 0x8000], 0x7FFF)]],
+    ]}
+
+def bus_wr_fn():
+    return {"params": ["a", "v"], "body": [
+        call("ppu_tick3"),
+        setL("aa", AND(L("a"), 0xFFFF)),
+        gif(["<", L("aa"), 0x2000], [["setu8", "ram", AND(L("aa"), 0x7FF), L("v")], ["ret", 0]]),
+        gif(["<", L("aa"), 0x4000], [call("ppu_reg_write", [OR(0x2000, AND(L("aa"), 7)), L("v")]), ["ret", 0]]),
+        gif(["==", L("aa"), 0x4014], [call("oam_dma", [L("v")]), ["ret", 0]]),
+        gif(["==", L("aa"), 0x4016], [call("ctrl_strobe", [L("v")]), ["ret", 0]]),
+        ["ret", 0],
+    ]}
+
+def oam_dma_fn():
+    return {"params": ["page"], "body": [
+        setL("base", SHL(L("page"), 8)),
+        setL("i", 0),
+        ["while", ["<", L("i"), 256], [
+            ["setu8", "oam", AND(ADD(p(OAMADDR), L("i")), 0xFF),
+             call("rd_nodma", [ADD(L("base"), L("i"))])],
+            call("ppu_tick3"), call("ppu_tick3"),  # ~2 cycles/byte
+            setL("i", ADD(L("i"), 1))]],
+        ["ret", 0],
+    ]}
+
+def rd_nodma_fn():  # read without ticking (used inside DMA which ticks itself)
+    return {"params": ["a"], "body": [
+        setL("aa", AND(L("a"), 0xFFFF)),
+        gif(["<", L("aa"), 0x2000], [["ret", ["u8", "ram", AND(L("aa"), 0x7FF)]]]),
+        gif([">=", L("aa"), 0x8000], [["ret", ["u8", "prg", AND(["-", L("aa"), 0x8000], 0x7FFF)]]]),
+        ["ret", 0],
+    ]}
+
+def ctrl_read_fn():
+    return {"params": ["n"], "body": [["ret", 0]]}  # controllers via host later
+def ctrl_strobe_fn():
+    return {"params": ["v"], "body": [["ret", 0]]}
+
+def build():
+    C_prog = C.build()
+    funcs = dict(C_prog["functions"])
+    # override CPU bus rd/wr to the ticking bus
+    funcs["rd"] = bus_rd_fn()
+    funcs["wr"] = bus_wr_fn()
+    funcs["rd_nodma"] = rd_nodma_fn()
+    funcs["ppu_read"] = ppu_read_fn()
+    funcs["ppu_write"] = ppu_write_fn()
+    funcs["nt_map"] = nt_map_fn()
+    funcs["ppu_reg_read"] = ppu_reg_read_fn()
+    funcs["ppu_reg_write"] = ppu_reg_write_fn()
+    funcs["ppu_step"] = ppu_step_fn()
+    funcs["ppu_tick3"] = ppu_tick3_fn()
+    funcs["oam_dma"] = oam_dma_fn()
+    funcs["ctrl_read"] = ctrl_read_fn()
+    funcs["ctrl_strobe"] = ctrl_strobe_fn()
+
+    # NMI service: push PC + P, set I, jump to NMI vector
+    funcs["nmi"] = {"params": [], "body":
+        C.push(SHR(C.reg(C.PC), 8)) + C.push(AND(C.reg(C.PC), 0xFF)) +
+        C.push(C.reg(C.P)) + [C.setflag(C.IF_, 1),
+        C.setreg(C.PC, call("rd16", [0xFFFA]))] + [["ret", 0]]}
+
+    # run_frame: step CPU (servicing NMI) until PPU frame counter advances
+    funcs["run_frame"] = {"params": ["maxInstr"], "body": [
+        setL("f0", p(FRAMES)),
+        setL("i", 0),
+        ["while", ["and", ["==", p(FRAMES), L("f0")], ["<", L("i"), L("maxInstr")]], [
+            gif(["==", p(NMIPEND), 1], [setp(NMIPEND, 0), call("nmi")]),
+            call("step"),
+            setL("i", ADD(L("i"), 1))]],
+        ["ret", L("i")],
+    ]}
+
+    # reset also needs to read reset vector
+    funcs["power_on"] = {"params": ["mirror"], "body": [
+        C.setreg(C.A, 0), C.setreg(C.X, 0), C.setreg(C.Y, 0), C.setreg(C.SP, 0xFD),
+        C.setreg(C.P, 0x24), C.setreg(C.CYC, 0), C.setreg(C.HALT, 0),
+        setp(MIRROR, L("mirror")), setp(SCAN, 0), setp(CYC, 0), setp(FRAMES, 0),
+        setp(VINC, 1), setp(STATUS, 0),
+        C.setreg(C.PC, call("rd16", [0xFFFC])),
+        ["ret", 0],
+    ]}
+
+    prog = {
+        "buffers": {"ram": 2048, "prg": 32768, "chr": 8192, "vram": 2048,
+                    "pal": 32, "oam": 256, "oam2": 32, "fb": 61440},
+        "i32": {"reg": 8, "p": 40},
+        "functions": funcs,
+    }
+    return prog
+
+if __name__ == "__main__":
+    import os
+    prog = build()
+    out = os.path.join(os.path.dirname(__file__), "nesd_nes.json")
+    json.dump(prog, open(out, "w"))
+    print("wrote", out, "functions:", len(prog["functions"]))
