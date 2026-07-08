@@ -173,8 +173,8 @@ absx/absy/izy/RMW/分支/栈操作）使每指令总线访问数=真实周期数
 | nestest | 寄存器 + CYC 周期列逐条吻合金标准 |
 | sprite_hit_tests (01–11) | **9/10 PASSED**（basics/alignment/corners/flip/double-height/left_clip/right_edge/screen_bottom/timing_order/edge_timing；仅 09#9 VBL 末清标志 ±12 时钟残留） |
 | sprite_overflow (1.Basics) | **PASSED** |
-| ppu_vbl_nmi 01-vbl_basics | **Passed** |
-| ppu_vbl_nmi 09-even_odd_frames | **Passed**（奇数帧跳点） |
+| ppu_vbl_nmi 01-vbl_basics / 04-nmi_control / 09-even_odd_frames | **Passed** |
+| ppu_vbl_nmi 02/03/05 (亚点级 vblank 读竞争/NMI 时序) | 需子指令逐点 CPU/PPU 交错，超出 NESd「每总线访问前 tick 3 点」模型的周期/3点粒度（本机 1:1 该模型） |
 | mmc3_test_2 1.Clocking (A12 IRQ) | **PASSED** |
 | apu_test 1-len_ctr / 2-len_table | **Passed** |
 | apu_test 3-irq_flag / 4-jitter / 5-len_timing | **PASSED** |
@@ -184,8 +184,14 @@ absx/absy/izy/RMW/分支/栈操作）使每指令总线访问数=真实周期数
 x=255 裁剪；PRG-RAM($6000-$7FFF 存档/工作 RAM)；APU 帧计数器周期精确 + $4017 复位
 抖动 + 帧/DMC IRQ 标志与 CPU 接线；DMC 输出单元初始化修复。**原三项缺陷全消除**。
 
-剩余（均为**功能增补**，非正确性）：T4 PCM 音频输出原语（APU samples 缓冲已生成、
-未推扬声器）、更多 mapper(MMC5/VRC…)、完整 shell UI(ROM 浏览/存档/触屏手柄/设置)。
+剩余：
+- **功能增补**（非正确性）：T4 PCM 音频输出原语（APU samples 缓冲已生成、未推扬声器；
+  低延迟无缝 PCM 流是平台相关的缺失原语——正是任务要求识别的底层能力）、更多 mapper
+  (MMC5/VRC…)、完整 shell UI(ROM 浏览/存档/触屏手柄/设置)。
+- **子指令级时序残留**（与 NESd 共享的交错模型的架构边界）：亚点级 vblank 读竞争/
+  NMI 精确时序(ppu_vbl_nmi 02/03/05)、sprite_hit 09#9(VBL 末清 ±12 时钟)、
+  apu 6-irq_flag_timing#4、DMC 单字节缓冲即时填充(#19)。本机 CPU/PPU 交错为
+  "每总线访问前 tick 3 点"(=1 CPU 周期粒度)，与 NESd 一致；这些测试要求逐点子周期交错。
 
 
 ## 9. 端到端整机验证（capstone）—— NES 作为 JSON app 在真实浏览器运行
