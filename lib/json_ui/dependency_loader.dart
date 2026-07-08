@@ -122,11 +122,17 @@ class DependencyLoader {
   }
 
   /// 解析并加载所有依赖
+  /// Native framework capabilities declared via `dependencies` (so an app opts
+  /// in and the validator accepts the `@cap.*` calls) but provided by the client
+  /// itself — not fetched from the Registry. E.g. `compute` = the T7 kernel.
+  static const _nativeCapabilities = {'compute'};
+
   Future<void> loadDependencies(Map<String, dynamic>? deps) async {
     if (deps == null || deps.isEmpty) return;
 
     final specs = <DependencySpec>[];
     for (final entry in deps.entries) {
+      if (_nativeCapabilities.contains(entry.key)) continue; // provided natively
       specs.add(DependencySpec.fromJson(entry.key, entry.value));
     }
 
