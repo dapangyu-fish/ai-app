@@ -154,7 +154,7 @@ jsonlogic 自定义算子 + 游戏逻辑白名单。收益：位运算步成本�
 | 6502 CPU(256 opcode) | ✅ **周期级 1:1** | nestest 寄存器**与 CYC 周期列**逐条吻合金标准；**cpu_timing_test6 OFFICIAL + UNDOCUMENTED PASSED**(全 256 码周期精确，含非法码)；blargg 行为测试逐模式通过 |
 | PPU + 总线 | ✅ **周期精确** | 手写 ROM 逐像素 703/703；每总线访问 3 点 tick + 奇数帧跳点(89341/89342)；帧长实测 ~29780.5 周期 |
 | APU(脉冲/三角/噪声/DMC+帧计数+混音) | ✅ | 实测 440.7Hz 方波；DMC delta 调制 + DMA |
-| Mapper(NESd 全部 13 个) | ✅ **13/13** | NROM(0)/MMC1(1)/UNROM(2)/CNROM(3)/MMC3(4)/**MMC5(5)**/AxROM(7)/**MMC2(9)**/**Namco163(19)**/GxROM(66)/**BR909x(71)**/**TxSROM(118)**/**Namco108(206)**；统一分块表；**MMC3 A12 IRQ 1.Clocking PASSED**；MMC2 CHR 锁存、TxSROM 逐区 nametable、Namco163 15-bit 每周期 IRQ 均 1:1。**MMC5** CPU 侧核心(PRG/背景 CHR/乘法器实测正确/扫描线 IRQ)已移植；其 PPU 耦合特性(ExRAM 扩展图形/分屏/精灵-背景 CHR 分离/PCM 音频)需 PPU 深度改造，未实现 |
+| Mapper(NESd 全部 13 个) | ✅ **13/13** | NROM(0)/MMC1(1)/UNROM(2)/CNROM(3)/MMC3(4)/**MMC5(5)**/AxROM(7)/**MMC2(9)**/**Namco163(19)**/GxROM(66)/**BR909x(71)**/**TxSROM(118)**/**Namco108(206)**；统一分块表；**MMC3 A12 IRQ 1.Clocking PASSED**；MMC2 CHR 锁存、TxSROM 逐区 nametable、Namco163 15-bit 每周期 IRQ 均 1:1。**MMC5** 已覆盖 8 项特性里的 6 项：PRG/背景 CHR 分块、**乘法器(实测 7×6/255×255 正确)**、扫描线 IRQ、**ExRAM 扩展属性(实测逐 tile 调色板)**、ExRAM-作-nametable、**fill-mode(实测满屏正确)**；剩余纵向分屏 + 8x16 精灵/背景 CHR 分离(需 PPU 取图相位区分)+ PCM 音频 |
 | 中断时序 | ✅ | NMI/IRQ 7 周期(补 2 dummy read)；边沿在指令边界识别 |
 | T2/T3 框架接线 | ✅ | compute 块 + @compute.* + framebuffer entity，analyze 过 |
 | 手柄输入 | ✅ | 移位寄存器协议 |
