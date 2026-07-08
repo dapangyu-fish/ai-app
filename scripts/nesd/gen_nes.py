@@ -66,6 +66,7 @@ def ppu_read_fn():
     return {"params": ["a"], "body": [
         setL("a", AND(L("a"), 0x3FFF)),
         call("a12_clock", [L("a")]),
+        gif(["==", p(MAPPER), 9], [call("m9_latch", [L("a")])]),
         gif(["<", L("a"), 0x2000], [["ret", ["u8", "chr", call("chr_addr", [L("a")])]]]),
         gif(["<", L("a"), 0x3F00], [["ret", ["u8", "vram", nt_index(L("a"))]]]),
         # palette
@@ -418,9 +419,14 @@ def bus_wr_fn():
             [call("m1_write", [L("aa"), L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 4]],
             [call("m3_write", [L("aa"), L("v")]), ["ret", 0]]),
+        gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 206]],
+            [call("n108_write", [L("aa"), L("v")]), ["ret", 0]]),
+        gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 9]],
+            [call("m9_write", [L("aa"), L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x8000],
                     ["or", ["or", ["==", p(MAPPER), 2], ["==", p(MAPPER), 3]],
-                           ["or", ["==", p(MAPPER), 7], ["==", p(MAPPER), 66]]]],
+                           ["or", ["or", ["==", p(MAPPER), 7], ["==", p(MAPPER), 66]],
+                                  ["==", p(MAPPER), 71]]]],
             [call("simple_write", [L("aa"), L("v")]), ["ret", 0]]),
         ["ret", 0],
     ]}
@@ -607,10 +613,74 @@ def m3_clock_irq_fn():
         setp(M3_IRQRELOAD, 0), ["ret", 0]]}
 
 
+
+def n108_update_fn():
+    return {"params": [], "body": [
+        setp(PB0, ["*", p(M3_R6), 8192]), setp(PB1, ["*", p(M3_R7), 8192]),
+        setp(PB2, ["*", SUB(p(PRG8), 2), 8192]), setp(PB3, ["*", SUB(p(PRG8), 1), 8192]),
+        setp(CB0, ["*", p(M3_R0), 1024]), setp(CB1, ["*", ADD(p(M3_R0), 1), 1024]),
+        setp(CB2, ["*", p(M3_R1), 1024]), setp(CB3, ["*", ADD(p(M3_R1), 1), 1024]),
+        setp(CB4, ["*", p(M3_R2), 1024]), setp(CB5, ["*", p(M3_R3), 1024]),
+        setp(CB6, ["*", p(M3_R4), 1024]), setp(CB7, ["*", p(M3_R5), 1024]),
+        ["ret", 0]]}
+
+def n108_write_fn():
+    return {"params": ["a", "v"], "body": [
+        gif(["==", AND(L("a"), 0x9001), 0x8000], [setp(M3_REG, AND(L("v"), 7)), ["ret", 0]]),
+        gif(["==", AND(L("a"), 0x9001), 0x8001], [
+            gif(["==", p(M3_REG), 0], [setp(M3_R0, L("v"))]),
+            gif(["==", p(M3_REG), 1], [setp(M3_R1, L("v"))]),
+            gif(["==", p(M3_REG), 2], [setp(M3_R2, L("v"))]),
+            gif(["==", p(M3_REG), 3], [setp(M3_R3, L("v"))]),
+            gif(["==", p(M3_REG), 4], [setp(M3_R4, L("v"))]),
+            gif(["==", p(M3_REG), 5], [setp(M3_R5, L("v"))]),
+            gif(["==", p(M3_REG), 6], [setp(M3_R6, L("v"))]),
+            gif(["==", p(M3_REG), 7], [setp(M3_R7, L("v"))]),
+            call("n108_update"), ["ret", 0]]),
+        ["ret", 0]]}
+
+
+def m9_update_chr_fn():
+    return {"params": [], "body": [
+        setL("c0", ["*", ["?:", ["==", p(M3_R5), 0], p(M3_R1), p(M3_R2)], 4096]),
+        setL("c1", ["*", ["?:", ["==", p(M3_R6), 0], p(M3_R3), p(M3_R4)], 4096]),
+        setp(CB0, L("c0")), setp(CB1, ADD(L("c0"), 1024)), setp(CB2, ADD(L("c0"), 2048)), setp(CB3, ADD(L("c0"), 3072)),
+        setp(CB4, L("c1")), setp(CB5, ADD(L("c1"), 1024)), setp(CB6, ADD(L("c1"), 2048)), setp(CB7, ADD(L("c1"), 3072)),
+        ["ret", 0]]}
+
+def m9_write_fn():
+    return {"params": ["a", "v"], "body": [
+        setL("r", AND(L("a"), 0xF000)),
+        gif(["==", L("r"), 0xA000], [setp(M3_R0, AND(L("v"), 0xF)),
+            setp(PB0, ["*", AND(L("v"), 0xF), 8192]),
+            setp(PB1, ["*", SUB(p(PRG8), 3), 8192]),
+            setp(PB2, ["*", SUB(p(PRG8), 2), 8192]),
+            setp(PB3, ["*", SUB(p(PRG8), 1), 8192]), ["ret", 0]]),
+        gif(["==", L("r"), 0xB000], [setp(M3_R1, AND(L("v"), 0x1F)), call("m9_update_chr"), ["ret", 0]]),
+        gif(["==", L("r"), 0xC000], [setp(M3_R2, AND(L("v"), 0x1F)), call("m9_update_chr"), ["ret", 0]]),
+        gif(["==", L("r"), 0xD000], [setp(M3_R3, AND(L("v"), 0x1F)), call("m9_update_chr"), ["ret", 0]]),
+        gif(["==", L("r"), 0xE000], [setp(M3_R4, AND(L("v"), 0x1F)), call("m9_update_chr"), ["ret", 0]]),
+        gif(["==", L("r"), 0xF000], [setp(MIRROR, AND(L("v"), 1)), ["ret", 0]]),  # 0=horiz,1=vert (1:1 NESd)
+        ["ret", 0]]}
+
+def m9_latch_fn():
+    return {"params": ["addr"], "body": [
+        gif(["==", L("addr"), 0x0FD8], [setp(M3_R5, 0), call("m9_update_chr")]),
+        gif(["==", L("addr"), 0x0FE8], [setp(M3_R5, 1), call("m9_update_chr")]),
+        gif(["and", [">=", L("addr"), 0x1FD8], ["<=", L("addr"), 0x1FDF]], [setp(M3_R6, 0), call("m9_update_chr")]),
+        gif(["and", [">=", L("addr"), 0x1FE8], ["<=", L("addr"), 0x1FEF]], [setp(M3_R6, 1), call("m9_update_chr")]),
+        ["ret", 0]]}
+
 def simple_write_fn():
     return {"params": ["a", "v"], "body": [
         # UNROM (2): 16K switchable @ $8000, fixed last @ $C000; CHR-RAM
         gif(["==", p(MAPPER), 2], [
+            setL("b", ["*", AND(L("v"), 0x0F), 16384]),
+            setp(PB0, L("b")), setp(PB1, ADD(L("b"), 8192)),
+            setp(PB2, ["*", SUB(p(PRGBANKS), 1), 16384]),
+            setp(PB3, ADD(["*", SUB(p(PRGBANKS), 1), 16384], 8192)), ["ret", 0]]),
+        # BR909x/Camerica (71): same as UNROM — 16K @ $8000, fixed last, CHR-RAM
+        gif(["==", p(MAPPER), 71], [
             setL("b", ["*", AND(L("v"), 0x0F), 16384]),
             setp(PB0, L("b")), setp(PB1, ADD(L("b"), 8192)),
             setp(PB2, ["*", SUB(p(PRGBANKS), 1), 16384]),
@@ -663,6 +733,11 @@ def build():
     funcs["m3_clock_irq"] = m3_clock_irq_fn()
     funcs["a12_clock"] = a12_clock_fn()
     funcs["spr_overflow_eval"] = spr_overflow_eval_fn()
+    funcs["n108_update"] = n108_update_fn()
+    funcs["n108_write"] = n108_write_fn()
+    funcs["m9_update_chr"] = m9_update_chr_fn()
+    funcs["m9_write"] = m9_write_fn()
+    funcs["m9_latch"] = m9_latch_fn()
     funcs["simple_write"] = simple_write_fn()
 
     # NMI service: push PC + P, set I, jump to NMI vector
@@ -708,7 +783,12 @@ def build():
         setp(IRQPEND, 0), setp(M3_IRQEN, 0),
         gif(["==", L("mapper"), 1], [call("m1_update")]),
         gif(["==", L("mapper"), 4], [call("m3_update")]),
-        gif(["==", L("mapper"), 2], [
+        gif(["==", L("mapper"), 206], [setp(M3_R7, 1), call("n108_update")]),
+        gif(["==", L("mapper"), 9], [
+            setp(PB1, ["*", SUB(p(PRG8), 3), 8192]),
+            setp(PB2, ["*", SUB(p(PRG8), 2), 8192]),
+            setp(PB3, ["*", SUB(p(PRG8), 1), 8192]), call("m9_update_chr")]),
+        gif(["or", ["==", L("mapper"), 2], ["==", L("mapper"), 71]], [
             setp(PB2, ["*", SUB(p(PRGBANKS), 1), 16384]),
             setp(PB3, ADD(["*", SUB(p(PRGBANKS), 1), 16384], 8192))]),
         C.setreg(C.A, 0), C.setreg(C.X, 0), C.setreg(C.Y, 0), C.setreg(C.SP, 0xFD),
