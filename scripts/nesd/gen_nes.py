@@ -616,11 +616,13 @@ def build():
 
     # NMI service: push PC + P, set I, jump to NMI vector
     funcs["irq"] = {"params": [], "body":
+        [C.DR(C.reg(C.PC)), C.DR(C.reg(C.PC))] +          # 2 dummy reads (7-cycle sequence)
         C.push(SHR(C.reg(C.PC), 8)) + C.push(AND(C.reg(C.PC), 0xFF)) +
         C.push(AND(C.reg(C.P), 0xEF)) + [C.setflag(C.IF_, 1),
         C.setreg(C.PC, call("rd16", [0xFFFE]))] + [["ret", 0]]}
 
     funcs["nmi"] = {"params": [], "body":
+        [C.DR(C.reg(C.PC)), C.DR(C.reg(C.PC))] +          # 2 dummy reads (7-cycle sequence)
         C.push(SHR(C.reg(C.PC), 8)) + C.push(AND(C.reg(C.PC), 0xFF)) +
         C.push(C.reg(C.P)) + [C.setflag(C.IF_, 1),
         C.setreg(C.PC, call("rd16", [0xFFFA]))] + [["ret", 0]]}
