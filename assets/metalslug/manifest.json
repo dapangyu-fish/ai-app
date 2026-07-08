@@ -612,6 +612,396 @@
     }
    }
   },
+  "zombie1": {
+   "cell": [
+    110,
+    96
+   ],
+   "anchor": [
+    54.5,
+    47.5
+   ],
+   "anims": {
+    "idle": {
+     "file": "zombie1_idle.png",
+     "frames": 9,
+     "fps": 12.0,
+     "loop": true
+    },
+    "walk": {
+     "file": "zombie1_walk.png",
+     "frames": 15,
+     "fps": 12.0,
+     "loop": true
+    },
+    "attack": {
+     "file": "zombie1_attack.png",
+     "frames": 13,
+     "fps": 12.0,
+     "loop": true
+    },
+    "die": {
+     "file": "zombie1_die.png",
+     "frames": 16,
+     "fps": 12.0,
+     "loop": true
+    },
+    "vomit": {
+     "file": "zombie1_vomit.png",
+     "frames": 13,
+     "fps": 12.0,
+     "loop": false
+    }
+   }
+  },
+  "zombie2": {
+   "cell": [
+    110,
+    96
+   ],
+   "anchor": [
+    54.5,
+    47.5
+   ],
+   "anims": {
+    "idle": {
+     "file": "zombie2_idle.png",
+     "frames": 9,
+     "fps": 12.0,
+     "loop": true
+    },
+    "walk": {
+     "file": "zombie2_walk.png",
+     "frames": 14,
+     "fps": 12.0,
+     "loop": true
+    },
+    "attack": {
+     "file": "zombie2_attack.png",
+     "frames": 26,
+     "fps": 12.0,
+     "loop": true
+    },
+    "die": {
+     "file": "zombie2_die.png",
+     "frames": 16,
+     "fps": 12.0,
+     "loop": true
+    },
+    "vomit": {
+     "file": "zombie2_vomit.png",
+     "frames": 13,
+     "fps": 12.0,
+     "loop": false
+    }
+   }
+  },
+  "zombie3": {
+   "cell": [
+    110,
+    96
+   ],
+   "anchor": [
+    54.5,
+    47.5
+   ],
+   "anims": {
+    "idle": {
+     "file": "zombie3_idle.png",
+     "frames": 10,
+     "fps": 12.0,
+     "loop": true
+    },
+    "walk": {
+     "file": "zombie3_walk.png",
+     "frames": 11,
+     "fps": 12.0,
+     "loop": true
+    },
+    "attack": {
+     "file": "zombie3_attack.png",
+     "frames": 26,
+     "fps": 12.0,
+     "loop": true
+    },
+    "die": {
+     "file": "zombie3_die.png",
+     "frames": 16,
+     "fps": 12.0,
+     "loop": true
+    },
+    "vomit": {
+     "file": "zombie3_vomit.png",
+     "frames": 13,
+     "fps": 12.0,
+     "loop": false
+    }
+   }
+  },
+  "heli": {
+   "cell": [
+    83,
+    74
+   ],
+   "anchor": [
+    45.5,
+    36.5
+   ],
+   "anims": {
+    "idle": {
+     "file": "heli_idle.png",
+     "frames": 6,
+     "fps": 22.0,
+     "loop": true
+    },
+    "fire": {
+     "file": "heli_fire.png",
+     "frames": 6,
+     "fps": 20.0,
+     "loop": true
+    }
+   }
+  },
+  "maggot": {
+   "cell": [
+    45,
+    22
+   ],
+   "anchor": [
+    22.0,
+    10.5
+   ],
+   "anims": {
+    "idle": {
+     "file": "maggot_idle.png",
+     "frames": 8,
+     "fps": 12.0,
+     "loop": true
+    },
+    "walk": {
+     "file": "maggot_walk.png",
+     "frames": 8,
+     "fps": 12.0,
+     "loop": true
+    },
+    "die": {
+     "file": "maggot_die.png",
+     "frames": 7,
+     "fps": 12.0,
+     "loop": false
+    }
+   }
+  },
+  "caterpillar": {
+   "cell": [
+    192,
+    83
+   ],
+   "anchor": [
+    95.5,
+    40.0
+   ],
+   "anims": {
+    "idle": {
+     "file": "caterpillar_idle.png",
+     "frames": 16,
+     "fps": 12.0,
+     "loop": true
+    },
+    "walk": {
+     "file": "caterpillar_walk.png",
+     "frames": 7,
+     "fps": 12.0,
+     "loop": true
+    },
+    "attack": {
+     "file": "caterpillar_attack.png",
+     "frames": 16,
+     "fps": 12.0,
+     "loop": true
+    },
+    "die": {
+     "file": "caterpillar_die.png",
+     "frames": 18,
+     "fps": 12.0,
+     "loop": false
+    }
+   }
+  },
+  "rebelvan": {
+   "cell": [
+    84,
+    67
+   ],
+   "anchor": [
+    41.5,
+    33.0
+   ],
+   "anims": {
+    "spawn": {
+     "file": "rebelvan_spawn.png",
+     "frames": 7,
+     "fps": 8.0,
+     "loop": true
+    },
+    "spawn_soldier": {
+     "file": "rebelvan_spawn_soldier.png",
+     "frames": 9,
+     "fps": 7.0,
+     "loop": true
+    },
+    "damaged": {
+     "file": "rebelvan_damaged.png",
+     "frames": 1,
+     "fps": 10.0,
+     "loop": true
+    },
+    "die": {
+     "file": "rebelvan_die.png",
+     "frames": 26,
+     "fps": 12.0,
+     "loop": true
+    }
+   }
+  },
+  "boss2": {
+   "cell": [
+    187,
+    142
+   ],
+   "anchor": [
+    93.0,
+    86.1
+   ],
+   "anims": {
+    "attack": {
+     "file": "boss2_attack.png",
+     "frames": 6,
+     "fps": 12.0,
+     "loop": true
+    },
+    "circle": {
+     "file": "boss2_circle.png",
+     "frames": 6,
+     "fps": 12.0,
+     "loop": true
+    },
+    "dead": {
+     "file": "boss2_dead.png",
+     "frames": 1,
+     "fps": 60.0,
+     "loop": true
+    }
+   }
+  },
+  "boss2rock": {
+   "cell": [
+    67,
+    147
+   ],
+   "anchor": [
+    33.0,
+    72.0
+   ],
+   "anims": {
+    "fall": {
+     "file": "boss2rock_fall.png",
+     "frames": 33,
+     "fps": 10.0,
+     "loop": false
+    }
+   }
+  },
+  "boss3": {
+   "cell": [
+    233,
+    220
+   ],
+   "anchor": [
+    116.0,
+    84.5
+   ],
+   "anims": {
+    "attack1": {
+     "file": "boss3_attack1.png",
+     "frames": 27,
+     "fps": 20.0,
+     "loop": false
+    },
+    "firing1": {
+     "file": "boss3_firing1.png",
+     "frames": 3,
+     "fps": 12.0,
+     "loop": true
+    },
+    "end1": {
+     "file": "boss3_end1.png",
+     "frames": 10,
+     "fps": 12.0,
+     "loop": false
+    },
+    "attack2": {
+     "file": "boss3_attack2.png",
+     "frames": 24,
+     "fps": 15.0,
+     "loop": false
+    },
+    "firing2": {
+     "file": "boss3_firing2.png",
+     "frames": 16,
+     "fps": 12.0,
+     "loop": true
+    },
+    "end2": {
+     "file": "boss3_end2.png",
+     "frames": 16,
+     "fps": 12.0,
+     "loop": false
+    },
+    "die": {
+     "file": "boss3_die.png",
+     "frames": 6,
+     "fps": 10.0,
+     "loop": false
+    }
+   }
+  },
+  "m2light": {
+   "cell": [
+    305,
+    225
+   ],
+   "anchor": [
+    152.0,
+    112.6
+   ],
+   "anims": {
+    "flash": {
+     "file": "m2light_flash.png",
+     "frames": 4,
+     "fps": 8.0,
+     "loop": false
+    }
+   }
+  },
+  "m3lightning": {
+   "cell": [
+    305,
+    265
+   ],
+   "anchor": [
+    152.0,
+    132.0
+   ],
+   "anims": {
+    "bolt": {
+     "file": "m3lightning_bolt.png",
+     "frames": 9,
+     "fps": 8.0,
+     "loop": false
+    }
+   }
+  },
   "fx_huge": {
    "cell": [
     113,
@@ -708,6 +1098,65 @@
     }
    }
   }
+ },
+ "m2_atlas": {
+  "file": "m2_foreground.png",
+  "h": 999,
+  "slices": {
+   "background_1": [
+    2742,
+    0,
+    435,
+    337
+   ],
+   "background _2": [
+    3177,
+    0,
+    1101,
+    338
+   ],
+   "foreground_0": [
+    0,
+    147,
+    2114,
+    270
+   ],
+   "foreground_1": [
+    2114,
+    338,
+    2833,
+    554
+   ],
+   "foreground_2": [
+    4947,
+    668,
+    536,
+    224
+   ],
+   "foreground_3": [
+    838,
+    703,
+    229,
+    123
+   ],
+   "foreground_4": [
+    1166,
+    705,
+    306,
+    121
+   ],
+   "lights_out_1": [
+    5182,
+    426,
+    304,
+    223
+   ]
+  }
+ },
+ "m3_strip": {
+  "file": "m3_strip.png",
+  "w": 6350,
+  "h": 224
  },
  "atlas": {
   "file": "foreground.png",
@@ -874,107 +1323,107 @@
  "bridge_objects": [
   {
    "seg": 0,
-   "oid": 249,
+   "oid": 87,
    "xu": 46.3
   },
   {
    "seg": 1,
-   "oid": 250,
+   "oid": 88,
    "xu": 46.6
   },
   {
    "seg": 2,
-   "oid": 251,
+   "oid": 89,
    "xu": 46.9
   },
   {
    "seg": 3,
-   "oid": 252,
+   "oid": 90,
    "xu": 47.2
   },
   {
    "seg": 4,
-   "oid": 253,
+   "oid": 91,
    "xu": 47.5
   },
   {
    "seg": 5,
-   "oid": 254,
+   "oid": 92,
    "xu": 47.8
   },
   {
    "seg": 6,
-   "oid": 255,
+   "oid": 93,
    "xu": 48.1
   },
   {
    "seg": 7,
-   "oid": 256,
+   "oid": 94,
    "xu": 48.4
   },
   {
    "seg": 8,
-   "oid": 257,
+   "oid": 95,
    "xu": 48.7
   },
   {
    "seg": 9,
-   "oid": 258,
+   "oid": 96,
    "xu": 49.0
   },
   {
    "seg": 10,
-   "oid": 259,
+   "oid": 97,
    "xu": 49.3
   },
   {
    "seg": 11,
-   "oid": 260,
+   "oid": 98,
    "xu": 49.6
   },
   {
    "seg": 12,
-   "oid": 261,
+   "oid": 99,
    "xu": 49.9
   },
   {
    "seg": 13,
-   "oid": 262,
+   "oid": 100,
    "xu": 50.2
   },
   {
    "seg": 14,
-   "oid": 263,
+   "oid": 101,
    "xu": 50.5
   },
   {
    "seg": 15,
-   "oid": 264,
+   "oid": 102,
    "xu": 50.8
   },
   {
    "seg": 16,
-   "oid": 265,
+   "oid": 103,
    "xu": 51.1
   },
   {
    "seg": 17,
-   "oid": 266,
+   "oid": 104,
    "xu": 51.4
   },
   {
    "seg": 18,
-   "oid": 267,
+   "oid": 105,
    "xu": 51.7
   },
   {
    "seg": 19,
-   "oid": 268,
+   "oid": 106,
    "xu": 52.0
   },
   {
    "seg": 20,
-   "oid": 269,
+   "oid": 107,
    "xu": 52.3
   }
  ],
@@ -995,6 +1444,14 @@
   "soldier_death.mp3": 24057,
   "crab_voice.mp3": 33435,
   "mission1_start.wav": 1097644,
+  "m2_bgm.mp3": 4098680,
+  "m3_bgm.mp3": 3460849,
+  "mission2_start.wav": 1097644,
+  "mission3_start.wav": 1097644,
+  "zombie_attack.mp3": 41821,
+  "zombie_vomit.mp3": 17788,
+  "thunder.mp3": 51225,
+  "missile_out.mp3": 38660,
   "mission_complete.wav": 976044,
   "hmg_voice.wav": 873644,
   "okay.wav": 819244
@@ -1033,6 +1490,34 @@
    "size": [
     26,
     17
+   ]
+  },
+  "b2line": {
+   "file": "st_b2line.png",
+   "size": [
+    3,
+    40
+   ]
+  },
+  "b2circle": {
+   "file": "st_b2circle.png",
+   "size": [
+    18,
+    8
+   ]
+  },
+  "b3tower": {
+   "file": "st_b3tower.png",
+   "size": [
+    254,
+    121
+   ]
+  },
+  "b3tower_near": {
+   "file": "st_b3tower_near.png",
+   "size": [
+    254,
+    78
    ]
   },
   "lifebar": {

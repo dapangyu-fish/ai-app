@@ -1023,6 +1023,1113 @@ game = {
     },
 }
 
+entities_m1_player = entities["player"]
+entities_m1_torso = entities["torso"]
+
+# ======================= Missions 2 / 3 / 3Boss =======================
+# 共享系统工厂：玩家/武器/HUD/相机 复刻 M1 的成熟块；通用敌人 AI 阶梯
+# （EnemyControl 语义：melee > ranged > chase，全部 state 驱动）覆盖
+# soldier/crab/zombie1-3/maggot/caterpillar。
+
+import math
+
+SGREN = G("sgrenade")
+VOM1 = G("zombie1")  # vomit anim rides the zombie group cells
+
+
+def mk_player(spawn_xu, spawn_yu):
+    ents = {}
+    ents["player"] = json.loads(json.dumps(entities_m1_player))
+    ents["player"]["position"] = [X(spawn_xu) - 10.5, Y(spawn_yu) - 19.5]
+    ents["torso"] = json.loads(json.dumps(entities_m1_torso))
+    return ents
+
+
+def mk_hud_title(mission_label, credit=True):
+    ents = {}
+    for k in ("hud_hpb", "hud_hp", "hud_score", "hud_gicon", "hud_bombs", "hud_ammo"):
+        ents[k] = json.loads(json.dumps(entities[k]))
+    ents["title_bg"] = json.loads(json.dumps(entities["title_bg"]))
+    ents["title_t"] = dict(json.loads(json.dumps(entities["title_t"])),
+                           position=[60, 70])
+    ents["title_t"]["render"] = dict(ents["title_t"]["render"],
+                                     value=f"METAL SLUG — {mission_label}")
+    ents["title_s"] = json.loads(json.dumps(entities["title_s"]))
+    ents["title_c"] = json.loads(json.dumps(entities["title_c"]))
+    return ents
+
+
+def mk_input(bgm_id, voice_id):
+    start = [vset("vars.state", "running"),
+             call("@despawn", {"id": "title_bg"}), call("@despawn", {"id": "title_t"}),
+             call("@despawn", {"id": "title_s"}), call("@despawn", {"id": "title_c"}),
+             call("@audio.play", {"id": bgm_id, "loop": True, "restart": True}),
+             SND(voice_id)]
+    return {
+        "move_axis": [
+            gif(TITLE, start),
+            vset("vars.move", IF({">": [V("event.x"), 0.5]}, 1,
+                                 IF({"<": [V("event.x"), -0.5]}, -1, 0))),
+            gif({">": [V("event.x"), 0.5]}, [vset("vars.facing", 1)]),
+            gif({"<": [V("event.x"), -0.5]}, [vset("vars.facing", -1)]),
+            vset("vars.aimup", {"<": [V("event.y"), -0.5]}),
+            vset("vars.duck", {">": [V("event.y"), 0.5]}),
+        ],
+        "jump": [gif(TITLE, start, [vset("vars.jumpp", True)])],
+        "jump_end": [vset("vars._noop", 0)],
+        "attack": [gif(TITLE, start, [vset("vars.firep", True)])],
+        "attack_end": [vset("vars.firep", False) if False else vset("vars._noop", 0)],
+        "grenade": [gif(TITLE, start, [vset("vars.grenp", True)])],
+        "tap": [gif(TITLE, start)],
+    }
+
+
+def mk_vars(cam0_x, cam0_min, cam0_max, cam0_cy):
+    v = {
+        "state": "title", "hp": HP0, "score": 0, "bombs": BOMBS0, "mg": 0,
+        "move": 0, "aimup": False, "duck": False, "was_duck": False,
+        "jumpp": False, "firep": False, "grenp": False,
+        "fire_cd": 0, "burst": 0, "burst_t": 0, "seq": 0,
+        "grounded": False, "on_plat": False, "facing": 1,
+        "cam_x": cam0_x, "cam_min": cam0_min, "cam_max": cam0_max,
+        "cam_cy": cam0_cy, "zone": 0,
+        "throwT": 0, "meleeT": 0, "topanim": "p_idle", "bodyanim": "idle",
+        "_h": None, "_h2": None, "_eid": "", "_ex": 0, "_ey": 0, "_d": 0,
+        "_d2": 0, "won": False, "dieT": 0, "_noop": 0,
+    }
+    return v
+
+
+def mk_player_main(y_kill_px):
+    """timers + movement + crouch + fire/melee/grenade + torso anim/pin"""
+    M = []
+    M += [vset("vars.fire_cd", {"max": [0, {"-": [V("vars.fire_cd"), V("event.dt")]}]})]
+    M += [
+        eset("player", "vx", IF({"==": [V("vars.state"), "dead"]}, 0,
+            IF({"and": [V("vars.duck"), {"or": [V("vars.grounded"), V("vars.on_plat")]}]},
+               {"*": [V("vars.move"), CSPEED]},
+               {"*": [V("vars.move"), PSPEED]}))),
+        gif({"and": [V("vars.jumpp"), {"or": [V("vars.grounded"), V("vars.on_plat")]},
+                     {"!": V("vars.duck")}, {"!=": [V("vars.state"), "dead"]}]},
+            [eset("player", "vy", JUMP_VY), eadd("player", "y", -3),
+             vset("vars.on_plat", False)]),
+        vset("vars.jumpp", False),
+        call("@platformer.step", {"id": "player", "map": "map", "dt": "{{ event.dt }}",
+                                  "gravity": GRAV, "max_fall": MAXFALL,
+                                  "one_way_types": ["platform"]}),
+        vset("vars.grounded", V("entities.player.onGround")),
+        gif({"and": [V("vars.grounded"), {"!=": [V("vars.move"), 0]},
+                     {"or": [{"!!": V("entities.player.blockedRight")},
+                             {"!!": V("entities.player.blockedLeft")}]}]},
+            [eadd("player", "y", -5)]),
+        vset("vars.on_plat", False),
+    ]
+    M += [
+        gif({"and": [V("vars.duck"), V("vars.grounded"), {"!": V("vars.was_duck")}]},
+            [eset("player", "h", 18), eadd("player", "y", 21), vset("vars.was_duck", True)]),
+        gif({"and": [{"!": V("vars.duck")}, V("vars.was_duck")]},
+            [eset("player", "h", 39), eadd("player", "y", -21), vset("vars.was_duck", False)]),
+    ]
+    # fire / melee / grenade (same shapes as M1)
+    M += [
+        gif({"and": [RUN, V("vars.firep"), {"<=": [V("vars.fire_cd"), 0]}]}, [
+            call("@collision.first", {"a": "player", "where_prefix": "en_"}, assign="vars._h"),
+            gif({"!=": [V("vars._h"), None]},
+                [vset("vars.fire_cd", FIRE_CD),
+                 eadd("{{ vars._h }}", "state.hp", -MELEE_DMG),
+                 vset("vars.score", {"+": [V("vars.score"), MELEE_DMG]}),
+                 SND("melee_hit"), vset("vars.meleeT", 0.5), vset("vars._h", None)],
+                FIRE_STEPS),
+        ]),
+        vset("vars.firep", False),
+        gif({">": [V("vars.burst"), 0]}, [
+            vset("vars.burst_t", {"-": [V("vars.burst_t"), V("event.dt")]}),
+            gif({"<=": [V("vars.burst_t"), 0]}, [
+                vset("vars.seq", {"+": [V("vars.seq"), 1]}),
+                gif(V("vars.aimup"), [spawn_pbullet(1)], [spawn_pbullet(0)]),
+                vset("vars.burst", {"-": [V("vars.burst"), 1]}),
+                vset("vars.burst_t", 0.05)])]),
+        vset("vars.meleeT", {"max": [0, {"-": [V("vars.meleeT"), V("event.dt")]}]}),
+        gif({"and": [RUN, V("vars.grenp"), {"<=": [V("vars.fire_cd"), 0]}, {">": [V("vars.bombs"), 0]}]}, [
+            vset("vars.bombs", {"-": [V("vars.bombs"), 1]}),
+            vset("vars.seq", {"+": [V("vars.seq"), 1]}),
+            call("@spawn", {"id": "pg_{{ vars.seq }}", "kind": "animated_sprite", "priority": 45,
+                            "asset": SPR + GREN_A["file"], "frame_size": G("grenade")["cell"],
+                            "frames": GREN_A["frames"], "frames_per_row": GREN_A["frames"],
+                            "step_time": 0.125, "position": [PCX, {"-": [PCY, 10]}],
+                            "size": [14, 20], "auto_update": True,
+                            "velocity": [{"*": [V("vars.facing"), GREN_V]}, -GREN_V],
+                            "state": {"ttl": 4, "assetLoadingOverlay": False}}),
+            vset("vars.fire_cd", FIRE_CD), vset("vars.throwT", 0.5)]),
+        vset("vars.grenp", False),
+        vset("vars.throwT", {"max": [0, {"-": [V("vars.throwT"), V("event.dt")]}]}),
+    ]
+    # body/torso anims + pin (verbatim M1 shapes)
+    M += [
+        vset("vars.bodyanim", IF({"==": [V("vars.state"), "dead"]}, "death",
+            IF({"and": [V("vars.duck"), GROUNDED]},
+               IF({">": [V("vars.meleeT"), 0]}, "c_melee",
+                  IF({">": [V("vars.throwT"), 0]}, "c_throw",
+                     IF({"!=": [V("entities.player.vx"), 0]}, "c_walk", "c_idle"))),
+               IF({"!": GROUNDED},
+                  IF({"!=": [V("entities.player.vx"), 0]}, "jump_walk", "jump"),
+                  IF({"!=": [V("entities.player.vx"), 0]}, "walk", "idle"))))),
+        vset("vars.bodyanim", IF({"==": [V("vars.facing"), 1]}, V("vars.bodyanim"),
+                                 {"cat": [V("vars.bodyanim"), "_l"]})),
+        call("@animated_sprite.set_animation", {"id": "player", "animation": "{{ vars.bodyanim }}"}),
+        eset("player", "state.spriteOffsetX",
+             IF({"==": [V("vars.facing"), 1]}, round(10.5 - AXB, 1), round(10.5 - (CWB - AXB), 1))),
+        eset("player", "state.spriteOffsetY", round(19.5 - PTYB, 1)),
+        gif({"or": [{"and": [V("vars.duck"), GROUNDED]}, {"==": [V("vars.state"), "dead"]}]},
+            [eset("torso", "state.opacity", 0)],
+            [eset("torso", "state.opacity", 1),
+             vset("vars.topanim",
+                  IF({">": [V("vars.meleeT"), 0]}, IF({">": [V("vars.mg"), 0]}, "m_melee", "melee"),
+                  IF({">": [V("vars.throwT"), 0]}, IF({">": [V("vars.mg"), 0]}, "m_throw", "throw"),
+                  IF(V("vars.aimup"),
+                     IF({">": [V("vars.fire_cd"), FIRE_CD - 0.15]}, "p_fire_up", "p_up"),
+                     IF({"!": GROUNDED},
+                        IF({"<": [V("entities.player.vy"), 0]}, "p_jump_up", "p_jump_down"),
+                        IF({">": [V("vars.fire_cd"), FIRE_CD - 0.15]},
+                           IF({">": [V("vars.mg"), 0]}, "m_fire", "p_fire"),
+                           IF({">": [V("vars.mg"), 0]}, "m_idle",
+                              IF({"!=": [V("entities.player.vx"), 0]}, "p_walk", "p_idle")))))))),
+             vset("vars.topanim", IF({"==": [V("vars.facing"), 1]}, V("vars.topanim"),
+                                     {"cat": [V("vars.topanim"), "_l"]})),
+             call("@animated_sprite.set_animation", {"id": "torso", "animation": "{{ vars.topanim }}"}),
+             eset("torso", "x", IF({"==": [V("vars.facing"), 1]},
+                                   {"+": [PCX, round(13.5 - AXT, 1)]},
+                                   {"+": [PCX, round(-13.5 - (CWT - AXT), 1)]})),
+             eset("torso", "y", {"-": [PCY, round(PTYT, 1) + 6]})]),
+    ]
+    # hazard / fall death (flag + collision-type fallback)
+    M += [
+        call("@tiled.has_collision_type", {"map": "map", "entity": "player", "type": "hazard"},
+             assign="vars._h2"),
+        gif({"or": [V("entities.player.hazard"), {"!!": V("vars._h2")},
+                    {">": [V("entities.player.y"), y_kill_px]}]},
+            [vset("vars.hp", 0)]),
+    ]
+    return M
+
+
+def mk_enemy_loop():
+    """通用 EnemyControl 阶梯（state 驱动）：melee > ranged(vomit/grenade) > chase。
+    state: kind, hp, spd, act, meleeR, atkR, dmg, canMelee, canThrow, throwKind,
+           rangedT, meleeT, dieT, grav, atkAnim"""
+    def eget(f):
+        return {"call": "@entity.get", "args": {"id": "{{ vars._eid }}", "field": f}}
+    throw_vomit = [
+        vset("vars.seq", {"+": [V("vars.seq"), 1]}),
+        call("@spawn", {"id": "eg_{{ vars.seq }}", "kind": "animated_sprite", "priority": 44,
+                        "asset": SPR + VOM1["anims"]["vomit"]["file"], "frame_size": VOM1["cell"],
+                        "frames": VOM1["anims"]["vomit"]["frames"],
+                        "frames_per_row": VOM1["anims"]["vomit"]["frames"],
+                        "step_time": 0.084, "size": [25, 15], "auto_update": True,
+                        "position": [{"+": [V("vars._ex"), 20]}, {"+": [V("vars._ey"), 10]}],
+                        "velocity": [{"*": [IF({"<": [PCX, V("vars._ex")]}, -1, 1), 176.8]}, -176.8],
+                        "state": {"ttl": 3, "dmg": 25, "assetLoadingOverlay": False}}),
+        SND("zombie_vomit"),
+    ]
+    throw_gren = [
+        vset("vars.seq", {"+": [V("vars.seq"), 1]}),
+        call("@spawn", {"id": "eg_{{ vars.seq }}", "kind": "animated_sprite", "priority": 44,
+                        "asset": SPR + SGREN["anims"]["fly"]["file"], "frame_size": SGREN["cell"],
+                        "frames": SGREN["anims"]["fly"]["frames"],
+                        "frames_per_row": SGREN["anims"]["fly"]["frames"],
+                        "step_time": 0.084, "size": [16, 20], "auto_update": True,
+                        "position": [{"+": [V("vars._ex"), 14]}, V("vars._ey")],
+                        "velocity": [{"*": [IF({"<": [PCX, V("vars._ex")]}, -1, 1), 141]}, -141],
+                        "state": {"ttl": 3, "dmg": 10, "assetLoadingOverlay": False}}),
+    ]
+    return [call("@for_each_entity", {"where_prefix": "en_", "do": [
+        vset("vars._eid", "{{ loop.id }}"),
+        call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.kind"}, assign="vars._h2"),
+        gif({"in": [V("vars._h2"), ["soldier", "crab", "zombie1", "zombie2", "zombie3",
+                                    "maggot", "caterpillar"]]}, [
+            call("@entity.get", {"id": "{{ vars._eid }}", "field": "x"}, assign="vars._ex"),
+            call("@entity.get", {"id": "{{ vars._eid }}", "field": "y"}, assign="vars._ey"),
+            call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.hp"}, assign="vars._d"),
+            gif({"<=": [V("vars._d"), 0]}, [
+                call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.dieT"}, assign="vars._d"),
+                gif({"==": [V("vars._d"), 0]}, [
+                    call("@animated_sprite.set_animation", {"id": "{{ vars._eid }}",
+                        "animation": IF({"<": [PCX, V("vars._ex")]}, "die_l", "die")}),
+                    SND("soldier_death")]),
+                eadd("{{ vars._eid }}", "state.dieT", V("event.dt")),
+                eset("{{ vars._eid }}", "vx", 0),
+                call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.dieT"}, assign="vars._d"),
+                gif({">": [V("vars._d"), 1.2]}, [call("@despawn", {"id": "{{ vars._eid }}"})]),
+            ], [
+                call("@platformer.step", {"id": "{{ vars._eid }}", "map": "map",
+                                          "dt": "{{ event.dt }}",
+                                          "gravity": eget("state.grav"),
+                                          "max_fall": MAXFALL,
+                                          "one_way_types": ["platform"]}),
+                gif({"and": [{"!!": eget("onGround")},
+                             {"or": [{"!!": eget("state.blockedRight")},
+                                     {"!!": eget("state.blockedLeft")}]}]},
+                    [eadd("{{ vars._eid }}", "y", -5)]),
+                vset("vars._d", {"-": [V("vars._ex"), PCX]}),
+                vset("vars._d2", {"max": [V("vars._d"), {"*": [-1, V("vars._d")]}]}),
+                gif({"<": [V("vars._d"), eget("state.act")]}, [
+                    gif({"and": [{"!!": eget("state.canMelee")},
+                                 {"<": [V("vars._d2"), eget("state.meleeR")]}]}, [
+                        eset("{{ vars._eid }}", "vx", 0),
+                        call("@animated_sprite.set_animation", {"id": "{{ vars._eid }}",
+                            "animation": {"cat": [eget("state.atkAnim"),
+                                                  IF({"<": [PCX, {"+": [V("vars._ex"), 20]}]}, "_l", "")]}}),
+                        eadd("{{ vars._eid }}", "state.meleeT", V("event.dt")),
+                        gif({">": [eget("state.meleeT"), 0.5]}, [
+                            eset("{{ vars._eid }}", "state.meleeT", 0),
+                            gif({"and": [{"<": [V("vars._d2"), {"+": [eget("state.meleeR"), 10]}]},
+                                         {"!=": [V("vars.state"), "dead"]},
+                                         {">": [eget("state.dmg"), 0]}]},
+                                [vset("vars.hp", {"-": [V("vars.hp"), eget("state.dmg")]}),
+                                 SND("melee_hit")])]),
+                    ], [
+                        gif({"and": [{"!!": eget("state.canThrow")},
+                                     {"<": [V("vars._d2"), eget("state.atkR")]}]}, [
+                            eset("{{ vars._eid }}", "vx", 0),
+                            call("@animated_sprite.set_animation", {"id": "{{ vars._eid }}",
+                                "animation": {"cat": [eget("state.atkAnim"),
+                                                      IF({"<": [PCX, {"+": [V("vars._ex"), 20]}]}, "_l", "")]}}),
+                            eadd("{{ vars._eid }}", "state.rangedT", V("event.dt")),
+                            gif({">": [eget("state.rangedT"), eget("state.rangedD")]}, [
+                                eset("{{ vars._eid }}", "state.rangedT", 0),
+                                gif({"==": [eget("state.throwKind"), "vomit"]},
+                                    throw_vomit, throw_gren)]),
+                        ], [
+                            eset("{{ vars._eid }}", "vx",
+                                 IF({"<": [PCX, V("vars._ex")]},
+                                    {"*": [-1, eget("state.spd")]}, eget("state.spd"))),
+                            call("@animated_sprite.set_animation", {"id": "{{ vars._eid }}",
+                                "animation": IF({"<": [PCX, V("vars._ex")]}, "walk_l", "walk")}),
+                        ]),
+                    ]),
+                ], [eset("{{ vars._eid }}", "vx", 0),
+                    call("@animated_sprite.set_animation", {"id": "{{ vars._eid }}",
+                        "animation": IF({"<": [PCX, V("vars._ex")]}, "idle_l", "idle")})]),
+            ]),
+        ]),
+    ]})]
+
+
+def mk_pb_loop(extra_prefixes=()):
+    """player bullets: ttl/wall/en_ damage (+extra shootable prefixes: 1-hit detonate)"""
+    steps = [
+        vset("vars._eid", "{{ loop.id }}"),
+        eadd("{{ vars._eid }}", "state.ttl", {"*": [-1, V("event.dt")]}),
+        call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.ttl"}, assign="vars._d"),
+        gif({"<=": [V("vars._d"), 0]}, [call("@despawn", {"id": "{{ vars._eid }}"})], [
+            call("@tiled.has_collision_type", {"map": "map", "entity": "{{ vars._eid }}", "type": "solid"}, assign="vars._h"),
+            gif(V("vars._h"), [call("@despawn", {"id": "{{ vars._eid }}"})], [
+                call("@collision.first", {"a": "{{ vars._eid }}", "where_prefix": "en_"}, assign="vars._h"),
+                gif({"!=": [V("vars._h"), None]}, [
+                    eadd("{{ vars._h }}", "state.hp", -BULLET_DMG),
+                    vset("vars.score", {"+": [V("vars.score"), BULLET_DMG]}),
+                    SND("shot_hit"), call("@despawn", {"id": "{{ vars._eid }}"}),
+                    vset("vars._h", None)],
+                    sum([[call("@collision.first", {"a": "{{ vars._eid }}", "where_prefix": p}, assign="vars._h"),
+                          gif({"!=": [V("vars._h"), None]}, [
+                              eadd("{{ vars._h }}", "state.hp", -BULLET_DMG),
+                              call("@despawn", {"id": "{{ vars._eid }}"}),
+                              SND("shot_hit"), vset("vars._h", None)])] for p in extra_prefixes], [])),
+            ]),
+        ]),
+    ]
+    return [call("@for_each_entity", {"where_prefix": "pb_", "do": steps})]
+
+
+def mk_pg_loop(splash=()):
+    """player grenades: arc + contact 300 on en_ + optional named-structure splash"""
+    steps = [
+        vset("vars._eid", "{{ loop.id }}"),
+        eadd("{{ vars._eid }}", "vy", {"*": [GREN_G, V("event.dt")]}),
+        eadd("{{ vars._eid }}", "state.ttl", {"*": [-1, V("event.dt")]}),
+        call("@entity.get", {"id": "{{ vars._eid }}", "field": "x"}, assign="vars._ex"),
+        call("@entity.get", {"id": "{{ vars._eid }}", "field": "y"}, assign="vars._ey"),
+        call("@collision.first", {"a": "{{ vars._eid }}", "where_prefix": "en_"}, assign="vars._h"),
+        call("@tiled.has_collision_type", {"map": "map", "entity": "{{ vars._eid }}", "type": "solid"}, assign="vars._h2"),
+        gif({"!": V("vars._h2")}, [call("@tiled.has_collision_type", {"map": "map", "entity": "{{ vars._eid }}", "type": "platform"}, assign="vars._h2")]),
+        call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.ttl"}, assign="vars._d"),
+        gif({"or": [{"!=": [V("vars._h"), None]}, {"!!": V("vars._h2")}, {"<=": [V("vars._d"), 0]}]}, [
+            gif({"!=": [V("vars._h"), None]}, [
+                eadd("{{ vars._h }}", "state.hp", -GREN_DMG),
+                vset("vars.score", {"+": [V("vars.score"), GREN_DMG]})]),
+            vset("vars.seq", {"+": [V("vars.seq"), 1]}),
+            oneshot("grenade", "boom", [{"-": [V("vars._ex"), 22]}, {"-": [V("vars._ey"), 100]}], 62),
+            SND("grenade_hit"),
+            call("@despawn", {"id": "{{ vars._eid }}"}), vset("vars._h", None)]),
+    ]
+    return [call("@for_each_entity", {"where_prefix": "pg_", "do": steps})]
+
+
+def mk_eg_loop():
+    """enemy throwables (vomit/grenade): arc, damage player by state.dmg"""
+    return [call("@for_each_entity", {"where_prefix": "eg_", "do": [
+        vset("vars._eid", "{{ loop.id }}"),
+        eadd("{{ vars._eid }}", "vy", {"*": [GREN_G, V("event.dt")]}),
+        eadd("{{ vars._eid }}", "state.ttl", {"*": [-1, V("event.dt")]}),
+        call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.ttl"}, assign="vars._d"),
+        call("@collide.rect", {"a": "{{ vars._eid }}", "b": "player"}, assign="vars._h"),
+        call("@tiled.has_collision_type", {"map": "map", "entity": "{{ vars._eid }}", "type": "solid"}, assign="vars._h2"),
+        gif({"!": V("vars._h2")}, [call("@tiled.has_collision_type", {"map": "map", "entity": "{{ vars._eid }}", "type": "platform"}, assign="vars._h2")]),
+        gif({"or": [{"!!": V("vars._h")}, {"!!": V("vars._h2")}, {"<=": [V("vars._d"), 0]}]}, [
+            gif({"and": [{"!!": V("vars._h")}, {"!=": [V("vars.state"), "dead"]}]}, [
+                call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.dmg"}, assign="vars._d2"),
+                vset("vars.hp", {"-": [V("vars.hp"), V("vars._d2")]}), SND("grenade_hit")]),
+            call("@despawn", {"id": "{{ vars._eid }}"}), vset("vars._h", None)]),
+    ]})]
+
+
+def mk_hb_loop():
+    """straight enemy bullets (heli / boss3): dmg state.dmg"""
+    return [call("@for_each_entity", {"where_prefix": "hb_", "do": [
+        vset("vars._eid", "{{ loop.id }}"),
+        eadd("{{ vars._eid }}", "state.ttl", {"*": [-1, V("event.dt")]}),
+        call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.ttl"}, assign="vars._d"),
+        call("@collide.rect", {"a": "{{ vars._eid }}", "b": "player"}, assign="vars._h"),
+        call("@tiled.has_collision_type", {"map": "map", "entity": "{{ vars._eid }}", "type": "solid"}, assign="vars._h2"),
+        gif({"or": [{"!!": V("vars._h")}, {"!!": V("vars._h2")}, {"<=": [V("vars._d"), 0]}]}, [
+            gif({"and": [{"!!": V("vars._h")}, {"!=": [V("vars.state"), "dead"]}]}, [
+                call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.dmg"}, assign="vars._d2"),
+                vset("vars.hp", {"-": [V("vars.hp"), V("vars._d2")]}), SND("shot_hit")]),
+            call("@despawn", {"id": "{{ vars._eid }}"}), vset("vars._h", None)]),
+    ]})]
+
+
+def mk_camera(zones, autoscroll_var=None):
+    steps = [
+        vset("vars._d", {"min": [V("vars.cam_max"), {"max": [V("vars.cam_min"), {"+": [PCX, 117.6]}]}]}),
+        vset("vars.cam_x", {"+": [V("vars.cam_x"),
+             {"*": [{"-": [V("vars._d"), V("vars.cam_x")]}, {"min": [1, {"*": [5, V("event.dt")]}]}]}]}),
+        vset("vars._d2", {"+": [V("vars.cam_cy_t", ) if False else 0, 0]}) if False else vset("vars._noop", 0),
+        # smooth vertical toward zone cy
+        eset("cam", "x", V("vars.cam_x")),
+        eset("cam", "y", {"+": [V("entities.cam.y"),
+             {"*": [{"-": [V("vars.cam_cy"), V("entities.cam.y")]}, {"min": [1, {"*": [4, V("event.dt")]}]}]}]}),
+        gif({"and": [{"<": [PCX, {"-": [V("vars.cam_x"), 184]}]},
+                     {">": [PCX, {"-": [V("vars.cam_x"), 284]}]}]},
+            [eset("player", "x", {"-": [V("vars.cam_x"), 194.5]})]),
+        gif({"and": [{">": [PCX, {"+": [V("vars.cam_x"), 184]}]},
+                     {"<": [PCX, {"+": [V("vars.cam_x"), 284]}]}]},
+            [eset("player", "x", {"+": [V("vars.cam_x"), 173.5]})]),
+    ]
+    return steps
+
+
+def mk_hud_death(win_var="vars.won"):
+    return [
+        eset("hud_hp", "w", {"max": [0, {"*": [1.1, V("vars.hp")]}]}),
+        eset("hud_score", "render.value", V("vars.score")),
+        eset("hud_bombs", "render.value", {"cat": ["x ", V("vars.bombs")]}),
+        eset("hud_ammo", "render.value", IF({">": [V("vars.mg"), 0]}, V("vars.mg"), "oo")),
+        gif({"and": [{"<=": [V("vars.hp"), 0]}, {"!=": [V("vars.state"), "dead"]}, {"!": V(win_var)}]}, [
+            vset("vars.state", "dead"), SND("marco_death"),
+            call("@audio.stop", {}),
+            call("@animated_sprite.set_animation", {"id": "player", "animation": "death"})]),
+    ]
+
+
+DEAD_TAIL = [gif({"==": [V("vars.state"), "dead"]}, [
+    eset("player", "vx", 0),
+    call("@platformer.step", {"id": "player", "map": "map", "dt": "{{ event.dt }}",
+                              "gravity": GRAV, "max_fall": MAXFALL}),
+    vset("vars.dieT", {"+": [V("vars.dieT"), V("event.dt")]}),
+    gif({">": [V("vars.dieT"), 2.4]}, [call("@game_over", {})])])]
+
+
+def mk_zone_events(zones, triggers):
+    """triggers: list of (trigger_x_u, target_zone_idx)"""
+    steps = []
+    for tx, zi in triggers:
+        mn, mx, cy = zones[zi]
+        lo, hi = X(mn) + VW / 2, X(mx) - VW / 2
+        if hi < lo:
+            lo = hi = (lo + hi) / 2
+        steps.append(gif({"and": [{"==": [V("vars.zone"), zi - 1]}, {">": [PCX, X(tx)]}]},
+                         [vset("vars.zone", zi),
+                          vset("vars.cam_min", round(lo, 1)), vset("vars.cam_max", round(hi, 1)),
+                          vset("vars.cam_cy", Y(cy))]))
+    return steps
+
+
+def zone_bounds(zones, i):
+    mn, mx, cy = zones[i]
+    lo, hi = X(mn) + VW / 2, X(mx) - VW / 2
+    if hi < lo:
+        lo = hi = (lo + hi) / 2
+    return round(lo, 1), round(hi, 1), Y(cy)
+
+
+def enemy_ent(group, xu, yu, hitw, hith, spr_off, state):
+    g = G(group)
+    st = {"hp": 300, "spd": 50, "act": 200, "meleeR": 50, "atkR": 0, "dmg": 10,
+          "canMelee": 1, "canThrow": 0, "throwKind": "grenade", "rangedD": 2,
+          "rangedT": 0, "meleeT": 0, "dieT": 0, "grav": GRAV, "atkAnim": "attack",
+          "spriteW": g["cell"][0], "spriteH": g["cell"][1],
+          "spriteOffsetX": spr_off[0], "spriteOffsetY": spr_off[1],
+          "assetLoadingOverlay": False}
+    st.update(state)
+    return {"kind": "animated_sprite", "priority": 30,
+            "asset": SPR + g["anims"]["idle"]["file"], "frame_size": g["cell"],
+            "frames": g["anims"]["idle"]["frames"],
+            "frames_per_row": g["anims"]["idle"]["frames"],
+            "step_time": 0.125, "animation": "idle", "animations": anims_of(group),
+            "position": [X(xu) - hitw / 2, Y(yu) - hith / 2], "size": [hitw, hith],
+            "velocity": [0, 0], "auto_update": False, "state": st}
+
+
+ZOMBIE_STATES = {
+    "zombie1": {"kind": "zombie1", "hp": 500, "spd": 50, "act": 180, "canMelee": 0,
+                "canThrow": 1, "throwKind": "vomit", "atkR": 100, "rangedD": 2, "dmg": 10},
+    "zombie2": {"kind": "zombie2", "hp": 700, "spd": 50, "act": 180, "canMelee": 0,
+                "canThrow": 1, "throwKind": "vomit", "atkR": 80, "rangedD": 2, "dmg": 10},
+    "zombie3": {"kind": "zombie3", "hp": 700, "spd": 50, "act": 180, "canMelee": 0,
+                "canThrow": 1, "throwKind": "vomit", "atkR": 60, "rangedD": 2, "dmg": 10},
+}
+
+
+def mk_game(vars_, ents, input_, frame_logic, bgm_src, extra_audio=None):
+    aud = {"base_url": AUD,
+           "tracks": {"bgm": {"src": bgm_src, "loop": True, "volume": 0.4},
+                      "boss_bgm": {"src": "boss_bgm.mp3", "loop": True, "volume": 0.4}},
+           "sounds": {k: dict(v) for k, v in {
+               "shot": {"src": "shot.mp3", "volume": 0.5},
+               "heavy_shot": {"src": "heavy_shot.mp3", "volume": 0.5},
+               "shot_hit": {"src": "shot_hit.mp3", "volume": 0.45},
+               "melee_hit": {"src": "melee_hit.mp3", "volume": 0.55},
+               "grenade_hit": {"src": "grenade_hit.mp3", "volume": 0.55},
+               "grab": {"src": "grab.mp3", "volume": 0.6},
+               "equip": {"src": "equip.mp3", "volume": 0.6},
+               "destroy1": {"src": "destroy1.mp3", "volume": 0.6},
+               "destroy2": {"src": "destroy2.mp3", "volume": 0.6},
+               "destroy3": {"src": "destroy3.mp3", "volume": 0.6},
+               "marco_death": {"src": "marco_death.mp3", "volume": 0.7},
+               "soldier_death": {"src": "soldier_death.mp3", "volume": 0.5},
+               "zombie_vomit": {"src": "zombie_vomit.mp3", "volume": 0.6},
+               "zombie_attack": {"src": "zombie_attack.mp3", "volume": 0.6},
+               "thunder": {"src": "thunder.mp3", "volume": 0.7},
+               "missile_out": {"src": "missile_out.mp3", "volume": 0.6},
+               "v_complete": {"src": "mission_complete.wav", "volume": 0.8},
+               "v_hmg": {"src": "hmg_voice.wav", "volume": 0.8},
+               "v_okay": {"src": "okay.wav", "volume": 0.8},
+               "v_m2": {"src": "mission2_start.wav", "volume": 0.8},
+               "v_m3": {"src": "mission3_start.wav", "volume": 0.8},
+           }.items()}}
+    if extra_audio:
+        aud["sounds"].update(extra_audio)
+    return {
+        "type": "flame_game",
+        "world": {"kind": "pixel", "bg": "#101018"},
+        "viewport": {"width": VW, "height": VH, "fit": "contain"},
+        "physics": {"engine": "leap_platformer", "fallback": "aabb_platformer"},
+        "camera": {"follow": "cam", "offset_x": 0, "offset_y": 0, "deadzone_y": 0, "smooth_y": 1},
+        "overlay": {"score": False, "game_over": True, "asset_loading": True,
+                    "asset_loading_text": "Loading Metal Slug assets..."},
+        "vars": vars_, "entities": ents, "input": input_,
+        "frame": {"logic": frame_logic}, "audio": aud,
+    }
+
+
+def collectible_steps(items):
+    steps = []
+    for key, cid, effect in items:
+        steps.append(gif(call("@entity.exists", {"id": cid}), [
+            call("@collide.rect", {"a": "player", "b": cid}, assign="vars._h"),
+            gif({"!!": V("vars._h")},
+                [call("@despawn", {"id": cid}),
+                 vset("vars.score", {"+": [V("vars.score"), 1000]})] + effect + [vset("vars._h", None)])]))
+    return steps
+
+
+def col_ent(key, xu, yu):
+    st = MAN["statics"][key]
+    return {"kind": "sprite", "priority": 20, "asset": SPR + st["file"],
+            "position": [X(xu) - st["size"][0] / 2, Y(yu) - st["size"][1] / 2],
+            "size": st["size"], "auto_update": False,
+            "state": {"assetLoadingOverlay": False}}
+
+
+EFFECTS = {
+    "hmg": [vset("vars.mg", {"+": [V("vars.mg"), 120]}), SND("v_hmg"), SND("equip")],
+    "ammo": [vset("vars.bombs", {"+": [V("vars.bombs"), 10]}), SND("grab"), SND("v_okay")],
+    "medkit": [vset("vars.hp", {"min": [HP0, {"+": [V("vars.hp"), 20]}]}), SND("grab")],
+}
+
+# ---------------------- MISSION 2 ----------------------
+M2A = MAN["m2_atlas"]
+
+
+def m2_atlas_ent(sl, xu, yu, prio):
+    r = M2A["slices"][sl]
+    return {"kind": "sprite", "priority": prio, "asset": BASE + "atlas/m2_foreground.png",
+            "src": r, "position": [X(xu) - r[2] / 2, Y(yu) - r[3] / 2],
+            "size": [r[2], r[3]], "auto_update": False,
+            "state": {"assetLoadingOverlay": False}}
+
+
+def build_m2():
+    Z = [  # (vol_min, vol_max, cy) per zone in order
+        (-7.481, -3.892, -0.170), (-2.491, 2.797, -0.170), (3.834, 8.266, 0.210),
+        (10.528, 14.960, -0.207), (14.623, 16.175, -1.575), (14.623, 16.893, -1.575),
+        (20.734, 20.914, -1.805), (24.014, 24.194, -3.225), (23.767, 25.441, -4.535),
+        (25.407, 34.920, -4.535), (36.874, 38.718, -4.995), (39.564, 43.420, -5.175),
+    ]
+    lo, hi, cy = zone_bounds(Z, 0)
+    v = mk_vars(lo, lo, hi, cy)
+    v.update({"b2_on": False, "b2_dead": False, "b2_t": 3.0, "b2_charge": 0,
+              "b2_tx": 0, "h1_on": False, "h1_n": 0, "h1_t": 0, "h1_kills": 0,
+              "h2_on": False, "h2_n": 0, "h2_t": 0, "h2_kills": 0, "_found": False})
+    ents = {}
+    ents["map"] = {"kind": "tiled_map", "priority": -80, "source": "tiles/mission2.tmx",
+                   "base_url": BASE, "scale": 1, "solid_layers": ["collision"],
+                   "collidable": True}
+    # backdrop
+    for i, (sl, xu, yu, pr) in enumerate([
+            ("background_1", -7.379, 0.215, -70), ("background_1", -3.209, 0.304, -70),
+            ("background_1", 0.280, 0.306, -70), ("background _2", 7.960, 0.301, -70),
+            ("foreground_0", 1.127, -0.185, -60), ("foreground_3", 0.827, -0.705, 70),
+            ("foreground_4", 6.628, -0.287, 70), ("foreground_1", 25.857, -3.525, -60),
+            ("foreground_2", 42.697, -5.175, -60)]):
+        ents[f"art_{i}"] = m2_atlas_ent(sl, xu, yu, pr)
+    ents.update(mk_player(-8.616, 0.13))
+    ents.update(mk_hud_title("MISSION 2"))
+    ents["cam"] = {"kind": "pixel", "priority": -100, "position": [lo, Y(-0.17)],
+                   "size": [1, 1], "auto_update": False,
+                   "render": {"shape": "rect", "color": "#000000"}}
+    # zombies / soldiers
+    zpos = {"zombie1": [(-4.530, -0.630), (31.277, -4.959), (36.508, -5.145)],
+            "zombie2": [(-3.340, -0.770), (5.063, 0.105), (9.373, -0.215),
+                        (33.050, -4.898), (37.617, -5.210)],
+            "zombie3": [(-2.730, -0.760), (3.223, -0.425), (6.753, 0.615),
+                        (8.983, -0.355), (34.607, -4.911), (39.025, -5.359)]}
+    n = 0
+    for grp, lst in zpos.items():
+        for xu, yu in lst:
+            ents[f"en_z{n}"] = enemy_ent(grp, xu, yu, 30, 39, (-40, -50), ZOMBIE_STATES[grp])
+            n += 1
+    for i, (xu, yu) in enumerate([(12.810, -0.378), (13.381, -0.503), (14.123, -0.526)]):
+        ents[f"en_s{i}"] = enemy_ent("soldier", xu, yu, 28, 39, (-12, -5),
+                                     {"kind": "soldier", "hp": 300, "spd": 50, "act": 300,
+                                      "canThrow": 1, "atkR": 150, "rangedD": 3,
+                                      "atkAnim": "knife", "throwKind": "grenade"})
+    # rebel vans (en_ prefixed for damage; AI custom)
+    RV = G("rebelvan")
+    for i, (xu, yu) in enumerate([(0.390, -0.710), (16.818, -2.319), (20.603, -3.747),
+                                  (24.627, -5.205), (26.639, -5.187)]):
+        ents[f"en_rv{i}"] = {
+            "kind": "animated_sprite", "priority": 25,
+            "asset": SPR + RV["anims"]["spawn"]["file"], "frame_size": RV["cell"],
+            "frames": RV["anims"]["spawn"]["frames"], "frames_per_row": RV["anims"]["spawn"]["frames"],
+            "step_time": 0.125, "animation": "spawn", "animations": anims_of("rebelvan"),
+            "position": [X(xu) - 37, Y(yu) - 29], "size": [74, 57],
+            "auto_update": False,
+            "state": {"kind": "rvan", "hp": 3000, "left": 8, "fireT": 3.5, "dieT": 0,
+                      "spriteOffsetX": -5, "spriteOffsetY": -5, "assetLoadingOverlay": False}}
+    # boss2
+    B2 = G("boss2")
+    ents["en_boss2"] = {
+        "kind": "animated_sprite", "priority": 35,
+        "asset": SPR + B2["anims"]["attack"]["file"], "frame_size": B2["cell"],
+        "frames": B2["anims"]["attack"]["frames"], "frames_per_row": B2["anims"]["attack"]["frames"],
+        "step_time": 0.084, "animation": "attack", "animations": anims_of("boss2"),
+        "position": [X(43.808) - 64, Y(-4.70) - 32], "size": [128, 64],
+        "auto_update": False,
+        "state": {"kind": "boss2", "hp": 20000, "spriteOffsetX": -30, "spriteOffsetY": -10,
+                  "assetLoadingOverlay": False}}
+    # collectibles
+    cols = []
+    for i, (key, xu, yu) in enumerate([
+            ("ammo", -2.173, -0.796), ("medkit", 7.392, -0.616), ("ammo", 7.395, 0.597),
+            ("hmg", 11.312, -0.599), ("medkit", 15.279, -2.051), ("medkit", 18.986, -3.800),
+            ("hmg", 23.763, -5.300), ("medkit", 25.457, -5.327), ("medkit", 30.166, -5.220),
+            ("medkit", 42.282, -5.858), ("ammo", 44.929, -5.845), ("hmg", 43.839, -5.897)]):
+        cid = f"col_{i}"
+        ents[cid] = col_ent(key, xu, yu)
+        cols.append((key, cid, EFFECTS[key]))
+
+    HELI = G("heli")
+    def heli_system(sid, sx_u, sy_u, trig_x, next_zone):
+        lo2, hi2, cy2 = zone_bounds(Z, next_zone)
+        spawn_one = call("@spawn", {
+            "id": f"en_{sid}h{{{{ vars.{sid}_n }}}}", "kind": "animated_sprite", "priority": 32,
+            "asset": SPR + HELI["anims"]["idle"]["file"], "frame_size": HELI["cell"],
+            "frames": HELI["anims"]["idle"]["frames"], "frames_per_row": HELI["anims"]["idle"]["frames"],
+            "step_time": 0.045, "animation": "idle", "animations": anims_of("heli"),
+            "position": [X(sx_u), Y(sy_u)], "size": [77, 60], "velocity": [0, 0],
+            "auto_update": False,
+            "state": {"kind": "heli", "hp": 600, "dirx": -1, "iy": Y(sy_u), "fireT": 0.5,
+                      "shoot": 0, "dieT": 0, "spriteOffsetX": -3, "spriteOffsetY": -7,
+                      "assetLoadingOverlay": False}})
+        return [
+            gif({"and": [{"!": V(f"vars.{sid}_on")}, {">": [PCX, X(trig_x)]}]},
+                [vset(f"vars.{sid}_on", True), vset(f"vars.{sid}_t", 0.01)]),
+            gif({"and": [V(f"vars.{sid}_on"), {"<": [V(f"vars.{sid}_n"), 5]}]}, [
+                vset(f"vars.{sid}_t", {"-": [V(f"vars.{sid}_t"), V("event.dt")]}),
+                gif({"<=": [V(f"vars.{sid}_t"), 0]},
+                    [spawn_one, vset(f"vars.{sid}_n", {"+": [V(f"vars.{sid}_n"), 1]}),
+                     vset(f"vars.{sid}_t", 1.5)])]),
+            # shooter designation + per-heli AI
+            vset("vars._found", False),
+            call("@for_each_entity", {"where_prefix": f"en_{sid}h", "do": [
+                vset("vars._eid", "{{ loop.id }}"),
+                call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.hp"}, assign="vars._d"),
+                gif({"<=": [V("vars._d"), 0]}, [
+                    eadd("{{ vars._eid }}", "state.dieT", V("event.dt")),
+                    call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.dieT"}, assign="vars._d"),
+                    gif({"<": [V("vars._d"), 0.05]}, [SND("destroy2")]),
+                    eadd("{{ vars._eid }}", "y", {"*": [120, V("event.dt")]}),
+                    gif({">": [V("vars._d"), 1.0]}, [
+                        call("@despawn", {"id": "{{ vars._eid }}"}),
+                        vset(f"vars.{sid}_kills", {"+": [V(f"vars.{sid}_kills"), 1]})]),
+                ], [
+                    eset("{{ vars._eid }}", "state.shoot", IF(V("vars._found"), 0, 1)),
+                    vset("vars._found", True),
+                    call("@entity.get", {"id": "{{ vars._eid }}", "field": "x"}, assign="vars._ex"),
+                    call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.dirx"}, assign="vars._d"),
+                    gif({"and": [{"<": [V("vars._ex"), {"-": [V("vars.cam_x"), 186]}]}, {"<": [V("vars._d"), 0]}]},
+                        [eset("{{ vars._eid }}", "state.dirx", 1)]),
+                    gif({"and": [{">": [V("vars._ex"), {"+": [V("vars.cam_x"), 110]}]}, {">": [V("vars._d"), 0]}]},
+                        [eset("{{ vars._eid }}", "state.dirx", -1)]),
+                    eadd("{{ vars._eid }}", "x", {"*": [{"call": "@entity.get", "args": {"id": "{{ vars._eid }}", "field": "state.dirx"}}, 100, V("event.dt")]}),
+                    # gentle altitude wave toward iy +/- 15
+                    eadd("{{ vars._eid }}", "state.fireT", {"*": [-1, V("event.dt")]}),
+                    gif({"and": [{"!!": {"call": "@entity.get", "args": {"id": "{{ vars._eid }}", "field": "state.shoot"}}},
+                                 {"<=": [{"call": "@entity.get", "args": {"id": "{{ vars._eid }}", "field": "state.fireT"}}, 0]}]}, [
+                        eset("{{ vars._eid }}", "state.fireT", 0.5),
+                        vset("vars.seq", {"+": [V("vars.seq"), 1]}),
+                        call("@entity.get", {"id": "{{ vars._eid }}", "field": "y"}, assign="vars._ey"),
+                        call("@spawn", {"id": "hb_{{ vars.seq }}", "kind": "sprite", "priority": 44,
+                                        "asset": SPR + MAN["statics"]["bullet"]["file"],
+                                        "size": [10, 6], "auto_update": True,
+                                        "position": [{"+": [V("vars._ex"), 34]}, {"+": [V("vars._ey"), 56]}],
+                                        "velocity": [0, 200],
+                                        "state": {"ttl": 5, "dmg": 15, "assetLoadingOverlay": False}}),
+                        SND("shot")]),
+                ]),
+            ]}),
+            gif({"and": [{"==": [V(f"vars.{sid}_kills"), 5]}, {"==": [V("vars.zone"), next_zone - 1]}]},
+                [vset("vars.zone", next_zone),
+                 vset("vars.cam_min", lo2), vset("vars.cam_max", hi2), vset("vars.cam_cy", cy2),
+                 vset(f"vars.{sid}_kills", 6)]),
+        ]
+
+    MAIN = []
+    MAIN += mk_player_main(y_kill_px=790)
+    # zone triggers (progression: idx per Z list)
+    MAIN += mk_zone_events(Z, [(-2.137, 1), (4.023, 2), (10.173, 3), (13.923, 4),
+                               (18.363, 6), (21.253, 7), (23.913, 8),
+                               (35.743, 10), (40.283, 11)])
+    # heli spawners advance zones 5 (1E->2A idx 5) and 9 (2D->2E idx 9)
+    MAIN += heli_system("h1", 17.46, -0.95, 17.14, 5)
+    MAIN += heli_system("h2", 27.2, -3.95, 26.88, 9)
+    MAIN += mk_enemy_loop()
+    # rebel van AI
+    MAIN += [call("@for_each_entity", {"where_prefix": "en_rv", "do": [
+        vset("vars._eid", "{{ loop.id }}"),
+        call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.hp"}, assign="vars._d"),
+        call("@entity.get", {"id": "{{ vars._eid }}", "field": "x"}, assign="vars._ex"),
+        call("@entity.get", {"id": "{{ vars._eid }}", "field": "y"}, assign="vars._ey"),
+        gif({"<=": [V("vars._d"), 0]}, [
+            eadd("{{ vars._eid }}", "state.dieT", V("event.dt")),
+            call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.dieT"}, assign="vars._d"),
+            gif({"<": [V("vars._d"), 0.05]}, [
+                call("@animated_sprite.set_animation", {"id": "{{ vars._eid }}", "animation": "die"}),
+                SND("destroy1")]),
+            gif({">": [V("vars._d"), 2.0]}, [call("@despawn", {"id": "{{ vars._eid }}"})]),
+        ], [
+            gif({"<": [{"-": [V("vars._ex"), PCX]}, 300]}, [
+                eadd("{{ vars._eid }}", "state.fireT", {"*": [-1, V("event.dt")]}),
+                gif({"and": [{"<=": [{"call": "@entity.get", "args": {"id": "{{ vars._eid }}", "field": "state.fireT"}}, 0]},
+                             {">": [{"call": "@entity.get", "args": {"id": "{{ vars._eid }}", "field": "state.left"}}, 0]}]}, [
+                    eset("{{ vars._eid }}", "state.fireT", 4.0),
+                    eadd("{{ vars._eid }}", "state.left", -1),
+                    call("@animated_sprite.set_animation", {"id": "{{ vars._eid }}", "animation": "spawn_soldier"}),
+                    vset("vars.seq", {"+": [V("vars.seq"), 1]}),
+                    call("@spawn", dict(enemy_ent("soldier", 0, 0, 28, 39, (-12, -5),
+                                                  {"kind": "soldier", "hp": 300, "spd": 50, "act": 300,
+                                                   "canThrow": 1, "atkR": 150, "rangedD": 3,
+                                                   "atkAnim": "knife", "throwKind": "grenade"}),
+                                        id="en_sv{{ vars.seq }}",
+                                        position=[{"-": [V("vars._ex"), 22]}, V("vars._ey")])),
+                ]),
+            ]),
+        ]),
+    ]})]
+    # boss2
+    b2 = "en_boss2"
+    B2R = G("boss2rock")
+    MAIN += [
+        gif({"and": [{"!": V("vars.b2_on")}, {">": [PCX, X(44.7) - 70]}]}, [
+            vset("vars.b2_on", True),
+            call("@audio.stop", {"id": "bgm"}),
+            call("@audio.play", {"id": "boss_bgm", "loop": True})]),
+        gif({"!": V("vars.b2_on")}, [eset(b2, "state.hp", 20000)]),  # immortal until active
+        gif({"and": [V("vars.b2_on"), {"!": V("vars.b2_dead")}]}, [
+            gif({"<=": [{"call": "@entity.get", "args": {"id": b2, "field": "state.hp"}}, 0]}, [
+                vset("vars.b2_dead", True), vset("vars.won", True),
+                call("@animated_sprite.set_animation", {"id": b2, "animation": "dead"}),
+                call("@audio.stop", {"id": "boss_bgm"}), SND("destroy3"), SND("v_complete"),
+                call("@spawn", {"id": "win_t", "kind": "pixel", "priority": 232,
+                                "position": [92, 90], "size": [1, 1], "fixed_to_screen": True,
+                                "render": {"shape": "text", "value": "MISSION COMPLETE",
+                                           "color": "#FFD24A", "fontSize": 22}}),
+                call("@game_over", {})], [
+                vset("vars.b2_t", {"-": [V("vars.b2_t"), V("event.dt")]}),
+                gif({"<=": [V("vars.b2_t"), 0]}, [
+                    # telegraph at player x, rock after charge (enrage by hp)
+                    vset("vars.b2_tx", PCX),
+                    vset("vars.b2_charge",
+                         IF({"<=": [{"call": "@entity.get", "args": {"id": b2, "field": "state.hp"}}, 5000]}, 0.5,
+                         IF({"<=": [{"call": "@entity.get", "args": {"id": b2, "field": "state.hp"}}, 6666]}, 0.75,
+                         IF({"<=": [{"call": "@entity.get", "args": {"id": b2, "field": "state.hp"}}, 10000]}, 1.0, 1.25)))),
+                    vset("vars.b2_t", 3.0),
+                    call("@animated_sprite.set_animation", {"id": b2, "animation": "attack"}),
+                    vset("vars.seq", {"+": [V("vars.seq"), 1]}),
+                    call("@spawn", {"id": "tele_{{ vars.seq }}", "kind": "sprite", "priority": 42,
+                                    "asset": SPR + MAN["statics"]["b2line"]["file"],
+                                    "position": [{"-": [V("vars.b2_tx"), 1]}, Y(-4.5)],
+                                    "size": [3, 160], "auto_update": True,
+                                    "state": {"ttl": 2, "assetLoadingOverlay": False}}),
+                    SND("missile_out")]),
+                # telegraph ttl + rock spawn at charge end
+                call("@for_each_entity", {"where_prefix": "tele_", "do": [
+                    vset("vars._eid", "{{ loop.id }}"),
+                    eadd("{{ vars._eid }}", "state.ttl", {"*": [-1, V("event.dt")]}),
+                    call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.ttl"}, assign="vars._d"),
+                    gif({"and": [{"<": [V("vars._d"), 2 - 0.01]}, {">": [V("vars._d"), 0]},
+                                 {"<": [{"-": [2, V("vars._d")]}, {"+": [V("vars.b2_charge"), 0.03]}]},
+                                 {">": [{"-": [2, V("vars._d")]}, {"-": [V("vars.b2_charge"), 0.03]}]}]}, [
+                        call("@entity.get", {"id": "{{ vars._eid }}", "field": "x"}, assign="vars._ex"),
+                        vset("vars.seq", {"+": [V("vars.seq"), 1]}),
+                        call("@spawn", {"id": "rk_{{ vars.seq }}", "kind": "animated_sprite",
+                                        "priority": 43,
+                                        "asset": SPR + B2R["anims"]["fall"]["file"],
+                                        "frame_size": B2R["cell"],
+                                        "frames": B2R["anims"]["fall"]["frames"],
+                                        "frames_per_row": B2R["anims"]["fall"]["frames"],
+                                        "step_time": 0.1, "loop": False,
+                                        "position": [{"-": [V("vars._ex"), 33]}, Y(-2.2)],
+                                        "size": [66, 116], "velocity": [0, 0], "auto_update": True,
+                                        "state": {"hp": 500, "grounded": 0, "sitT": 0,
+                                                  "assetLoadingOverlay": False}})]),
+                    gif({"<=": [V("vars._d"), 0]}, [call("@despawn", {"id": "{{ vars._eid }}"})]),
+                ]}),
+                # rocks
+                call("@for_each_entity", {"where_prefix": "rk_", "do": [
+                    vset("vars._eid", "{{ loop.id }}"),
+                    call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.grounded"}, assign="vars._d"),
+                    call("@entity.get", {"id": "{{ vars._eid }}", "field": "state.hp"}, assign="vars._d2"),
+                    gif({"<=": [V("vars._d2"), 0]}, [call("@despawn", {"id": "{{ vars._eid }}"})], [
+                        gif({"!!": V("vars._d")}, [
+                            eadd("{{ vars._eid }}", "state.sitT", V("event.dt")),
+                            gif({">": [{"call": "@entity.get", "args": {"id": "{{ vars._eid }}", "field": "state.sitT"}}, 3.2]},
+                                [call("@despawn", {"id": "{{ vars._eid }}"})]),
+                        ], [
+                            eadd("{{ vars._eid }}", "vy", {"*": [GRAV, V("event.dt")]}),
+                            call("@collide.rect", {"a": "{{ vars._eid }}", "b": "player"}, assign="vars._h"),
+                            gif({"and": [{"!!": V("vars._h")}, {"!=": [V("vars.state"), "dead"]}]}, [
+                                vset("vars.hp", {"-": [V("vars.hp"), 15]}), SND("grenade_hit"),
+                                call("@despawn", {"id": "{{ vars._eid }}"}), vset("vars._h", None)]),
+                            call("@tiled.has_collision_type", {"map": "map", "entity": "{{ vars._eid }}", "type": "solid"}, assign="vars._h2"),
+                            gif({"!!": V("vars._h2")}, [
+                                eset("{{ vars._eid }}", "vy", 0),
+                                eset("{{ vars._eid }}", "state.grounded", 1)]),
+                        ]),
+                    ]),
+                ]}),
+            ]),
+        ]),
+    ]
+    MAIN += mk_pb_loop(extra_prefixes=("rk_",))
+    MAIN += mk_pg_loop()
+    MAIN += mk_eg_loop()
+    MAIN += mk_hb_loop()
+    MAIN += collectible_steps(cols)
+    MAIN += mk_camera(Z)
+    # parallax verticals pin (factor 0.5 relative to initial cam)
+    for i, (sl, xu, yu, pr) in enumerate([("background_1", -7.379, 0.215, 0),
+                                          ("background_1", -3.209, 0.304, 0),
+                                          ("background_1", 0.280, 0.306, 0),
+                                          ("background _2", 7.960, 0.301, 0)]):
+        r = M2A["slices"][sl]
+        MAIN += [eset(f"art_{i}", "x", {"+": [X(xu) - r[2] / 2,
+                       {"*": [0.5, {"-": [V("vars.cam_x"), lo]}]}]}),
+                 eset(f"art_{i}", "y", {"+": [Y(yu) - r[3] / 2,
+                       {"*": [0.5, {"-": [V("entities.cam.y"), Y(-0.17)]}]}]})]
+    MAIN += mk_hud_death()
+    logic = [gif({"==": [V("vars.state"), "loading"]}, [vset("vars.state", "running")]),
+             gif(RUN, MAIN)] + DEAD_TAIL
+    return mk_game(v, ents, mk_input("bgm", "v_m2"), logic, "m2_bgm.mp3")
+
+
+# ---------------------- MISSION 3 ----------------------
+def build_m3():
+    ZO = [(-7.127, 52.116, -0.199)]
+    lo, hi, cy = zone_bounds(ZO, 0)
+    v = mk_vars(lo, lo, hi, cy)
+    for hn in range(1, 5):
+        v[f"hole{hn}_on"] = False
+        v[f"hole{hn}_n"] = 0
+        v[f"hole{hn}_t"] = 0
+    v["exited"] = False
+    ents = {}
+    ents["map"] = {"kind": "tiled_map", "priority": -80, "source": "tiles/mission3.tmx",
+                   "base_url": BASE, "scale": 1, "solid_layers": ["collision"],
+                   "collidable": True}
+    ms = MAN["m3_strip"]
+    ents["art_bg"] = {"kind": "sprite", "priority": -60, "asset": BASE + "atlas/m3_strip.png",
+                      "src": [0, 0, ms["w"], ms["h"]],
+                      "position": [X(22.62) - ms["w"] / 2, Y(-0.2) - ms["h"] / 2],
+                      "size": [ms["w"], ms["h"]], "auto_update": False,
+                      "state": {"assetLoadingOverlay": False}}
+    ents.update(mk_player(-8.7, 0.325))
+    ents.update(mk_hud_title("MISSION 3"))
+    ents["cam"] = {"kind": "pixel", "priority": -100, "position": [lo, Y(-0.199)],
+                   "size": [1, 1], "auto_update": False,
+                   "render": {"shape": "rect", "color": "#000000"}}
+    CRABS3 = [(-0.852, -0.681, 5), (0.645, -0.667, 3), (1.371, -0.701, 3), (2.862, -0.727, 3.2),
+              (11.916, -0.727, 3), (12.716, -0.727, 3), (13.028, -0.231, 3), (13.891, 0.237, 3),
+              (14.699, 0.255, 3), (15.544, 0.283, 3), (17.026, -0.663, 3), (17.958, -0.681, 3),
+              (19.116, -0.693, 4), (20.046, -0.713, 4), (20.836, -0.733, 4), (21.82, -0.71, 4),
+              (22.636, -0.233, 4), (23.136, 0.277, 4), (24.52, -0.67, 4), (25.472, -0.67, 4),
+              (26.306, -0.67, 4), (31.826, -0.67, 1.5), (32.476, -0.613, 1.5), (35.036, -0.633, 1.5),
+              (35.666, -0.643, 1.5), (38.086, -0.643, 1.5), (38.736, -0.653, 1.5)]
+    for i, (xu, yu, act) in enumerate(CRABS3):
+        ents[f"en_c{i}"] = enemy_ent("crab", xu, yu, 40, 34, (-19, -19),
+                                     {"kind": "crab", "hp": 300, "spd": 100, "act": act * 100,
+                                      "meleeR": 50, "dmg": 10})
+    for i, (xu, yu) in enumerate([(-6.947, -0.929), (-6.671, -0.918), (-6.433, -0.935),
+                                  (-6.278, -0.802), (-6.167, -0.935), (-5.935, -0.885),
+                                  (-4.818, -0.823), (-4.499, -0.823), (-4.096, -0.375),
+                                  (-3.676, 0.14), (-2.714, -0.792), (-2.228, -0.832),
+                                  (-1.742, -0.832), (-1.276, -0.832), (-6.842, -0.791)]):
+        ents[f"en_m{i}"] = enemy_ent("maggot", xu, yu, 22, 11, (-11, -6),
+                                     {"kind": "maggot", "hp": 100, "spd": 50, "act": 250,
+                                      "meleeR": 50, "dmg": 5, "grav": 196})
+    for i, (xu, yu) in enumerate([(27.996, -0.481), (30.206, -0.523), (33.766, -0.443),
+                                  (36.996, -0.423), (40.036, -0.403)]):
+        ents[f"en_cat{i}"] = enemy_ent("caterpillar", xu, yu, 167, 79, (-12, -2),
+                                       {"kind": "caterpillar", "hp": 1000, "spd": 80,
+                                        "act": 350, "meleeR": 100, "dmg": 20})
+    zp = [("zombie1", 44.065, -0.671), ("zombie1", 46.35, -0.671),
+          ("zombie2", 45.496, -0.656), ("zombie2", 47.546, -0.643),
+          ("zombie3", 48.944, -0.731)]
+    for i, (grp, xu, yu) in enumerate(zp):
+        ents[f"en_z{i}"] = enemy_ent(grp, xu, yu, 30, 39, (-40, -50), ZOMBIE_STATES[grp])
+    cols = []
+    for i, (key, xu, yu) in enumerate([("hmg", 11.342, -0.768), ("medkit", 24.96, -0.78),
+                                       ("ammo", 32.177, -0.635)]):
+        cid = f"col_{i}"
+        ents[cid] = col_ent(key, xu, yu)
+        cols.append((key, cid, EFFECTS[key]))
+
+    MAIN = []
+    MAIN += mk_player_main(y_kill_px=380)
+    # maggot holes
+    for hn, (tx, hx, hy) in enumerate([(0.464, 1.316, 0.827), (3.694, 4.696, 0.827),
+                                       (6.414, 7.736, 0.827), (8.284, 9.416, 0.827)], start=1):
+        spawn = call("@spawn", dict(enemy_ent("maggot", hx, hy, 22, 11, (-11, -6),
+                                              {"kind": "maggot", "hp": 100, "spd": 50, "act": 0,
+                                               "meleeR": 50, "dmg": 5, "grav": 196}),
+                                    id=f"en_hm{hn}_{{{{ vars.hole{hn}_n }}}}"))
+        MAIN += [
+            gif({"and": [{"!": V(f"vars.hole{hn}_on")}, {">": [PCX, X(tx)]}]},
+                [vset(f"vars.hole{hn}_on", True), vset(f"vars.hole{hn}_t", 0.01)]),
+            gif({"and": [V(f"vars.hole{hn}_on"), {"<": [V(f"vars.hole{hn}_n"), 6]}]}, [
+                vset(f"vars.hole{hn}_t", {"-": [V(f"vars.hole{hn}_t"), V("event.dt")]}),
+                gif({"<=": [V(f"vars.hole{hn}_t"), 0]},
+                    [spawn, vset(f"vars.hole{hn}_n", {"+": [V(f"vars.hole{hn}_n"), 1]}),
+                     vset(f"vars.hole{hn}_t", 0.4)])]),
+        ]
+    MAIN += mk_enemy_loop()
+    MAIN += mk_pb_loop()
+    MAIN += mk_pg_loop()
+    MAIN += mk_eg_loop()
+    MAIN += collectible_steps(cols)
+    MAIN += mk_camera(ZO)
+    MAIN += mk_hud_death()
+    # to boss
+    MAIN += [gif({"and": [{"!": V("vars.exited")}, {">": [PCX, X(50.224)]}]}, [
+        vset("vars.exited", True),
+        call("@audio.stop", {}),
+        call("@emit", {"event": "toboss", "data": {"score": "{{ vars.score }}",
+                                                   "bombs": "{{ vars.bombs }}",
+                                                   "mg": "{{ vars.mg }}", "hp": "{{ vars.hp }}"}})])]
+    logic = [gif({"==": [V("vars.state"), "loading"]}, [vset("vars.state", "running")]),
+             gif(RUN, MAIN)] + DEAD_TAIL
+    g = mk_game(v, ents, mk_input("bgm", "v_m3"), logic, "m3_bgm.mp3")
+    g["on_toboss"] = {"type": "call", "call": "@global.gotoM3Boss",
+                      "args": {"score": "{{ event.score }}", "bombs": "{{ event.bombs }}",
+                               "mg": "{{ event.mg }}", "hp": "{{ event.hp }}"}}
+    return g
+
+
+# ---------------------- MISSION 3 BOSS ----------------------
+def build_m3boss():
+    v = mk_vars(X(-7.563), X(-7.563), X(-7.563), Y(0.057))
+    v.update({"score": "{{ global.ms_score }}", "bombs": "{{ global.ms_bombs }}",
+              "mg": "{{ global.ms_mg }}",
+              "b3_a1t": 7.0, "b3_a2t": 1.0, "b3_phase": "idle", "b3_pt": 0,
+              "b3_shots": 0, "b3_hover": 1, "b3_hit": 0, "b3_dead": False})
+    ents = {}
+    ents["map"] = {"kind": "tiled_map", "priority": -80, "source": "tiles/mission3boss.tmx",
+                   "base_url": BASE, "scale": 1, "solid_layers": ["collision"],
+                   "collidable": True}
+    # animated lightning background + tower
+    LG = G("m3lightning")
+    lga = dict({"asset": SPR + LG["anims"]["bolt"]["file"], "frame_size": LG["cell"],
+                "frames": LG["anims"]["bolt"]["frames"],
+                "frames_per_row": LG["anims"]["bolt"]["frames"],
+                "step_time": 0.3, "loop": True})
+    ents["art_bg"] = dict({"kind": "animated_sprite", "priority": -70,
+                           "position": [X(-7.56) - 190, Y(-0.103) - 132],
+                           "size": [380, 264], "auto_update": True,
+                           "state": {"assetLoadingOverlay": False}}, **lga)
+    for k, key, xu, yu, pr in (("art_tw", "b3tower", -7.558, -0.94, -55),
+                               ("art_twn", "b3tower_near", -7.558, -1.15, 70)):
+        st = MAN["statics"][key]
+        ents[k] = {"kind": "sprite", "priority": pr, "asset": SPR + st["file"],
+                   "position": [X(xu) - st["size"][0] / 2, Y(yu) - st["size"][1] / 2],
+                   "size": st["size"], "auto_update": False,
+                   "state": {"assetLoadingOverlay": False}}
+    ents.update(mk_player(-7.48, -0.28))
+    ents.update(mk_hud_title("FINAL BOSS"))
+    ents["cam"] = {"kind": "pixel", "priority": -100, "position": [X(-7.563), Y(0.057)],
+                   "size": [1, 1], "auto_update": False,
+                   "render": {"shape": "rect", "color": "#000000"}}
+    B3 = G("boss3")
+    ents["en_b3"] = {"kind": "animated_sprite", "priority": 35,
+                     "asset": SPR + B3["anims"]["attack1"]["file"], "frame_size": B3["cell"],
+                     "frames": B3["anims"]["attack1"]["frames"],
+                     "frames_per_row": B3["anims"]["attack1"]["frames"],
+                     "step_time": 0.05, "animation": "attack1", "animations": anims_of("boss3"),
+                     "position": [X(-7.49) - 60, Y(0.54) - 60], "size": [120, 120],
+                     "auto_update": False,
+                     "state": {"kind": "boss3", "hp": 12000, "iy": Y(0.54) - 60,
+                               "spriteOffsetX": -56, "spriteOffsetY": -50,
+                               "assetLoadingOverlay": False}}
+    b3 = "en_b3"
+    # precomputed spread velocities: down ± 50°, 11 buckets, speed 200
+    SPREAD = []
+    for k in range(11):
+        phi = math.radians(-50 + 10 * k)
+        SPREAD.append((round(200 * math.sin(phi), 1), round(200 * math.cos(phi), 1)))
+
+    MAIN = []
+    MAIN += mk_player_main(y_kill_px=Y(-1.55))
+    boss_cx = {"+": [V(f"entities.{b3}.x"), 60]}
+    MAIN += [
+        gif({"and": [{"!": V("vars.b3_dead")}, {"!=": [V("vars.state"), "dead"]}]}, [
+            gif({"<=": [{"call": "@entity.get", "args": {"id": b3, "field": "state.hp"}}, 0]}, [
+                vset("vars.b3_dead", True), vset("vars.won", True),
+                call("@animated_sprite.set_animation", {"id": b3, "animation": "die"}),
+                call("@audio.stop", {}), SND("destroy3"), SND("v_complete"),
+                call("@spawn", {"id": "win_t", "kind": "pixel", "priority": 232,
+                                "position": [120, 80], "size": [1, 1], "fixed_to_screen": True,
+                                "render": {"shape": "text", "value": "GAME CLEAR !",
+                                           "color": "#FFD24A", "fontSize": 26}}),
+                call("@spawn", {"id": "win_t2", "kind": "pixel", "priority": 232,
+                                "position": [104, 120], "size": [1, 1], "fixed_to_screen": True,
+                                "render": {"shape": "text",
+                                           "value": {"cat": ["FINAL SCORE ", V("vars.score")]},
+                                           "fontSize": 14, "color": "#FFFFFF"}}),
+                call("@game_over", {})], [
+                # hover (triangle wave) while idle
+                gif({"==": [V("vars.b3_phase"), "idle"]}, [
+                    eadd(b3, "y", {"*": [V("vars.b3_hover"), 10, V("event.dt")]}),
+                    gif({">": [V(f"entities.{b3}.y"), {"+": [{"call": "@entity.get", "args": {"id": b3, "field": "state.iy"}}, 10]}]},
+                        [vset("vars.b3_hover", -1)]),
+                    gif({"<": [V(f"entities.{b3}.y"), {"-": [{"call": "@entity.get", "args": {"id": b3, "field": "state.iy"}}, 10]}]},
+                        [vset("vars.b3_hover", 1)]),
+                    vset("vars.b3_a1t", {"-": [V("vars.b3_a1t"), V("event.dt")]}),
+                    vset("vars.b3_a2t", {"-": [V("vars.b3_a2t"), V("event.dt")]}),
+                    gif({"<=": [V("vars.b3_a2t"), 0]},
+                        [vset("vars.b3_phase", "a2_drift"), vset("vars.b3_a2t", 11.0),
+                         call("@animated_sprite.set_animation", {"id": b3, "animation": "attack2"})],
+                        [gif({"<=": [V("vars.b3_a1t"), 0]},
+                             [vset("vars.b3_phase", "a1_wind"), vset("vars.b3_pt", 2.0),
+                              vset("vars.b3_a1t", 11.0), vset("vars.b3_shots", 10),
+                              call("@animated_sprite.set_animation", {"id": b3, "animation": "attack1"}),
+                              SND("thunder")])]),
+                ]),
+                # attack1: windup then 10 spread shots 0.35s apart
+                gif({"==": [V("vars.b3_phase"), "a1_wind"]}, [
+                    vset("vars.b3_pt", {"-": [V("vars.b3_pt"), V("event.dt")]}),
+                    gif({"<=": [V("vars.b3_pt"), 0]},
+                        [vset("vars.b3_phase", "a1_fire"), vset("vars.b3_pt", 0.01),
+                         call("@animated_sprite.set_animation", {"id": b3, "animation": "firing1"})])]),
+                gif({"==": [V("vars.b3_phase"), "a1_fire"]}, [
+                    vset("vars.b3_pt", {"-": [V("vars.b3_pt"), V("event.dt")]}),
+                    gif({"<=": [V("vars.b3_pt"), 0]}, [
+                        vset("vars.b3_pt", 0.35),
+                        vset("vars.b3_shots", {"-": [V("vars.b3_shots"), 1]}),
+                        vset("vars.seq", {"+": [V("vars.seq"), 1]}),
+                        call("@random_int", {"min": 0, "max": 11}, assign="vars._d"),
+                    ] + [gif({"==": [V("vars._d"), k]}, [
+                            call("@spawn", {"id": "hb_{{ vars.seq }}", "kind": "sprite",
+                                            "priority": 44,
+                                            "asset": SPR + MAN["statics"]["bullet"]["file"],
+                                            "size": [14, 8], "auto_update": True,
+                                            "position": [boss_cx, {"+": [V(f"entities.{b3}.y"), 30]}],
+                                            "velocity": [SPREAD[k][0], SPREAD[k][1]],
+                                            "state": {"ttl": 5, "dmg": 15,
+                                                      "assetLoadingOverlay": False}})])
+                         for k in range(11)] + [
+                        SND("shot"),
+                        gif({"<=": [V("vars.b3_shots"), 0]},
+                            [vset("vars.b3_phase", "idle"),
+                             call("@animated_sprite.set_animation", {"id": b3, "animation": "end1"})]),
+                    ]),
+                ]),
+                # attack2: drift right -> windup -> sweep left w/ ray damage -> return
+                gif({"==": [V("vars.b3_phase"), "a2_drift"]}, [
+                    eadd(b3, "x", {"*": [50, V("event.dt")]}),
+                    gif({">": [boss_cx, X(-6.5)]},
+                        [vset("vars.b3_phase", "a2_wind"), vset("vars.b3_pt", 0.8),
+                         SND("thunder")])]),
+                gif({"==": [V("vars.b3_phase"), "a2_wind"]}, [
+                    vset("vars.b3_pt", {"-": [V("vars.b3_pt"), V("event.dt")]}),
+                    gif({"<=": [V("vars.b3_pt"), 0]},
+                        [vset("vars.b3_phase", "a2_sweep"),
+                         call("@animated_sprite.set_animation", {"id": b3, "animation": "firing2"})])]),
+                gif({"==": [V("vars.b3_phase"), "a2_sweep"]}, [
+                    eadd(b3, "x", {"*": [-50, V("event.dt")]}),
+                    # mouth ray: player under boss within band -> tick damage
+                    gif({"and": [{"<": [{"max": [{"-": [PCX, boss_cx]}, {"-": [boss_cx, PCX]}]}, 20]},
+                                 {"!=": [V("vars.state"), "dead"]}]}, [
+                        vset("vars.b3_hit", {"+": [V("vars.b3_hit"), V("event.dt")]}),
+                        gif({">": [V("vars.b3_hit"), 0.75]},
+                            [vset("vars.b3_hit", 0),
+                             vset("vars.hp", {"-": [V("vars.hp"), 25]}), SND("shot_hit")])]),
+                    gif({"<": [boss_cx, X(-8.28)]},
+                        [vset("vars.b3_phase", "a2_back"),
+                         call("@animated_sprite.set_animation", {"id": b3, "animation": "end2"})])]),
+                gif({"==": [V("vars.b3_phase"), "a2_back"]}, [
+                    eadd(b3, "x", {"*": [50, V("event.dt")]}),
+                    gif({">": [boss_cx, X(-7.49)]},
+                        [vset("vars.b3_phase", "idle"),
+                         call("@animated_sprite.set_animation", {"id": b3, "animation": "attack1"})])]),
+            ]),
+        ]),
+    ]
+    MAIN += mk_pb_loop()
+    MAIN += mk_pg_loop()
+    MAIN += mk_hb_loop()
+    MAIN += [
+        eset("cam", "x", X(-7.563)), eset("cam", "y", Y(0.057)),
+        gif({"<": [V("entities.player.x"), X(-8.72)]}, [eset("player", "x", X(-8.72))]),
+        gif({">": [V("entities.player.x"), X(-6.55)]}, [eset("player", "x", X(-6.55))]),
+    ]
+    MAIN += mk_hud_death()
+    logic = [gif({"==": [V("vars.state"), "loading"]}, [vset("vars.state", "running")]),
+             gif(RUN, MAIN)] + DEAD_TAIL
+    return mk_game(v, ents, mk_input("boss_bgm", "v_complete" if False else "v_m3"),
+                   logic, "m3_bgm.mp3")
+
+
 # ---------- gamepad (stick + JUMP + FIRE + GRENADE) ----------
 def pad_button(label, color, down_input, up_input, size=76):
     return {"type": "gesture_detector",
@@ -1038,6 +2145,12 @@ def pad_button(label, color, down_input, up_input, size=76):
 gamepad = {
     "type": "container", "height": 185, "color": "#12182B", "layout": "row", "padding": 10,
     "children": [
+        {"type": "gesture_detector",
+         "onTapDown": {"call": "@navigate", "args": {"screen": "select"}},
+         "child": {"type": "container", "width": 34, "height": 185, "color": "#0B1020",
+                   "alignment": "center",
+                   "children": [{"type": "text", "value": "≡",
+                                 "style": {"fontSize": 18, "color": "#8899AA"}}]}},
         {"type": "container", "layout": "row", "alignment": "center",
          "position": {"type": "flex", "flex": 5},
          "children": [{"type": "container", "width": 145, "height": 145,
@@ -1065,11 +2178,52 @@ gamepad = {
     ],
 }
 
+m2_game = build_m2()
+m3_game = build_m3()
+m3b_game = build_m3boss()
+
+
+def mission_screen(sid, g):
+    return {"id": sid, "title": "Metal Slug", "backgroundColor": "#000000",
+            "appBar": False, "layout": "column", "padding": 0,
+            "children": [{"type": "expanded", "child": g}, gamepad]}
+
+
+def sel_button(label, screen):
+    return {"type": "container", "layout": "column", "padding": 6, "children": [
+        {"type": "button", "label": label, "variant": "filled",
+         "style": {"backgroundColor": "#B03A2E", "textColor": "#FFFFFF",
+                   "fontSize": 18, "borderRadius": 10, "paddingV": 14},
+         "action": {"type": "navigate", "screen": screen}}]}
+
+
+select_screen = {
+    "id": "select", "title": "Metal Slug", "backgroundColor": "#101018",
+    "appBar": False, "layout": "column", "padding": 24,
+    "children": [
+        {"type": "container", "height": 46},
+        {"type": "text", "value": "METAL SLUG",
+         "style": {"fontSize": 34, "fontWeight": "bold", "color": "#FFB020",
+                   "textAlign": "center"}},
+        {"type": "text", "value": "SELECT MISSION",
+         "style": {"fontSize": 15, "color": "#FFFFFF", "textAlign": "center"}},
+        {"type": "container", "height": 18},
+        sel_button("MISSION 1", "m1"),
+        sel_button("MISSION 2", "m2"),
+        sel_button("MISSION 3", "m3"),
+        sel_button("FINAL BOSS", "m3b"),
+        {"type": "container", "height": 14},
+        {"type": "text",
+         "value": "port of github.com/giacoballoccu/MetalSlugClone (fan project, SNK IP — educational demo)",
+         "style": {"fontSize": 10, "color": "#8899AA", "textAlign": "center"}},
+    ],
+}
+
 app = {
     "dsl": "3.3",
     "appid": APPID,
     "meta": {
-        "name": "demo-metalslug", "version": "1.0.0", "type": "app",
+        "name": "demo-metalslug", "version": "1.1.0", "type": "app",
         "displayName": {"zh": "合金弹头 Mission 1（开源移植）", "en": "Metal Slug M1 (fan port)"},
         "description": "giacoballoccu/MetalSlugClone（Unity 粉丝重制）Mission 1 的 JSON-DSL 移植：跑打跳蹲、手雷、重机枪、蟹群、伞兵、面包车轰炸、Marco 船段与 Boss 追逐战。Fan/educational demo — Metal Slug is SNK IP.",
         "attribution": {
@@ -1077,12 +2231,24 @@ app = {
             "license": "no license file (fan project); Metal Slug assets © SNK",
             "note": "Educational demo port; not for redistribution."},
     },
-    "global": {"variables": {"_pad": 0}, "functions": {}},
-    "ui": {"screens": [{
-        "id": "game", "title": "Metal Slug", "backgroundColor": "#000000",
-        "appBar": False, "layout": "column", "padding": 0,
-        "children": [{"type": "expanded", "child": game}, gamepad],
-    }]},
+    "global": {"variables": {"_pad": 0, "ms_score": 0, "ms_bombs": 10,
+                             "ms_mg": 0, "ms_hp": 100},
+                "functions": {"gotoM3Boss": {
+                    "params": ["score", "bombs", "mg", "hp"],
+                    "logic": [
+                        {"call": "@set", "args": {"var": "global.ms_score", "value": "{{ params.score }}"}},
+                        {"call": "@set", "args": {"var": "global.ms_bombs", "value": "{{ params.bombs }}"}},
+                        {"call": "@set", "args": {"var": "global.ms_mg", "value": "{{ params.mg }}"}},
+                        {"call": "@set", "args": {"var": "global.ms_hp", "value": "{{ params.hp }}"}},
+                        {"call": "@navigate", "args": {"screen": "m3b"}},
+                    ]}}},
+    "ui": {"screens": [
+        select_screen,
+        mission_screen("m1", game),
+        mission_screen("m2", m2_game),
+        mission_screen("m3", m3_game),
+        mission_screen("m3b", m3b_game),
+    ]},
 }
 
 out = os.path.join(HERE, "../templates/demo_metalslug.json")
