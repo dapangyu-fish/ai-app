@@ -394,6 +394,7 @@ def bus_rd_fn():
         setp(CPUCYC, ADD(p(CPUCYC), 1)),
         call("ppu_tick3"),
         call("apu_step"),
+        gif(["==", p(MAPPER), 19], [call("m19_irq_tick")]),
         setL("aa", AND(L("a"), 0xFFFF)),
         gif(["<", L("aa"), 0x2000], [["ret", ["u8", "ram", AND(L("aa"), 0x7FF)]]]),
         gif(["<", L("aa"), 0x4000], [["ret", call("ppu_reg_read", [OR(0x2000, AND(L("aa"), 7))])]]),
@@ -411,6 +412,7 @@ def bus_wr_fn():
         setp(CPUCYC, ADD(p(CPUCYC), 1)),
         call("ppu_tick3"),
         call("apu_step"),
+        gif(["==", p(MAPPER), 19], [call("m19_irq_tick")]),
         setL("aa", AND(L("a"), 0xFFFF)),
         gif(["<", L("aa"), 0x2000], [["setu8", "ram", AND(L("aa"), 0x7FF), L("v")], ["ret", 0]]),
         gif(["<", L("aa"), 0x4000], [call("ppu_reg_write", [OR(0x2000, AND(L("aa"), 7)), L("v")]), ["ret", 0]]),
@@ -418,6 +420,8 @@ def bus_wr_fn():
         gif(["==", L("aa"), 0x4016], [call("ctrl_strobe", [L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x4000], ["<", L("aa"), 0x4018]],
             [call("apu_write", [AND(L("aa"), 0x1F), L("v")]), ["ret", 0]]),
+        gif(["and", ["==", p(MAPPER), 19], ["and", [">=", L("aa"), 0x4800], ["<", L("aa"), 0x6000]]],
+            [call("m19_write", [L("aa"), L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x6000], ["<", L("aa"), 0x8000]],
             [["setu8", "prgram", ["-", L("aa"), 0x6000], L("v")], ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 1]],
@@ -430,6 +434,8 @@ def bus_wr_fn():
             [call("m9_write", [L("aa"), L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 118]],
             [call("m118_write", [L("aa"), L("v")]), ["ret", 0]]),
+        gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 19]],
+            [call("m19_write", [L("aa"), L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x8000],
                     ["or", ["or", ["==", p(MAPPER), 2], ["==", p(MAPPER), 3]],
                            ["or", ["or", ["==", p(MAPPER), 7], ["==", p(MAPPER), 66]],
@@ -694,6 +700,44 @@ def m118_write_fn():
         gif(["==", L("k"), 0xA000], [["ret", 0]]),   # TxSROM ignores mirroring writes
         call("m3_write", [L("a"), L("v")]), ["ret", 0]]}
 
+
+def m19_chr_write(bank_expr, val):
+    # bank 0-7 -> CB[bank]=val*1024 (pattern); 8-11 -> NT[bank-8]=val&1 (internal-RAM nametable)
+    cbs = [CB0, CB1, CB2, CB3, CB4, CB5, CB6, CB7]
+    body = []
+    for b in range(8):
+        body.append(gif(["==", bank_expr, b], [setp(cbs[b], ["*", val, 1024])]))
+    nts = [NT0, NT1, NT2, NT3]
+    for b in range(8, 12):
+        body.append(gif(["==", bank_expr, b], [setp(nts[b-8], AND(val, 1))]))
+    return body
+
+def m19_write_fn():
+    return {"params": ["a", "v"], "body": [
+        setL("k", AND(L("a"), 0xF800)),
+        gif(["==", L("k"), 0x5000], [
+            setp(M3_IRQCOUNT, OR(AND(p(M3_IRQCOUNT), 0xFF00), L("v"))), setp(IRQPEND, 0), ["ret", 0]]),
+        gif(["==", L("k"), 0x5800], [
+            setp(M3_IRQCOUNT, OR(SHL(AND(L("v"), 0x7F), 8), AND(p(M3_IRQCOUNT), 0xFF))),
+            setp(M3_IRQEN, AND(SHR(L("v"), 7), 1)), setp(IRQPEND, 0), ["ret", 0]]),
+        gif(["and", [">=", L("k"), 0x8000], ["<=", L("k"), 0xD800]],
+            [setL("bk", SHR(SUB(L("k"), 0x8000), 11))] + m19_chr_write(L("bk"), L("v")) + [["ret", 0]]),
+        gif(["==", L("k"), 0xE000], [setp(M3_R0, AND(L("v"), 0x3F)),
+            setp(PB0, ["*", AND(L("v"), 0x3F), 8192]), ["ret", 0]]),
+        gif(["==", L("k"), 0xE800], [setp(M3_R1, AND(L("v"), 0x3F)),
+            setp(PB1, ["*", AND(L("v"), 0x3F), 8192]), ["ret", 0]]),
+        gif(["==", L("k"), 0xF000], [setp(M3_R2, AND(L("v"), 0x3F)),
+            setp(PB2, ["*", AND(L("v"), 0x3F), 8192]), ["ret", 0]]),
+        ["ret", 0]]}
+
+def m19_irq_tick_fn():
+    # 15-bit counter increments each CPU cycle; IRQ fires on reaching 0x7FFF when enabled
+    return {"params": [], "body": [
+        gif(["<", p(M3_IRQCOUNT), 0x7FFF], [
+            setp(M3_IRQCOUNT, ADD(p(M3_IRQCOUNT), 1)),
+            gif(["and", ["==", p(M3_IRQCOUNT), 0x7FFF], ["==", p(M3_IRQEN), 1]], [setp(IRQPEND, 1)])]),
+        ["ret", 0]]}
+
 def simple_write_fn():
     return {"params": ["a", "v"], "body": [
         # UNROM (2): 16K switchable @ $8000, fixed last @ $C000; CHR-RAM
@@ -759,6 +803,8 @@ def build():
     funcs["n108_update"] = n108_update_fn()
     funcs["n108_write"] = n108_write_fn()
     funcs["m118_write"] = m118_write_fn()
+    funcs["m19_write"] = m19_write_fn()
+    funcs["m19_irq_tick"] = m19_irq_tick_fn()
     funcs["m9_update_chr"] = m9_update_chr_fn()
     funcs["m9_write"] = m9_write_fn()
     funcs["m9_latch"] = m9_latch_fn()
@@ -808,6 +854,7 @@ def build():
         gif(["==", L("mapper"), 1], [call("m1_update")]),
         gif(["==", L("mapper"), 4], [call("m3_update")]),
         gif(["==", L("mapper"), 118], [setp(MIRROR, 4), call("m3_update")]),
+        gif(["==", L("mapper"), 19], [setp(MIRROR, 4), setp(M3_IRQEN, 0), setp(M3_IRQCOUNT, 0)]),
         gif(["==", L("mapper"), 206], [setp(M3_R7, 1), call("n108_update")]),
         gif(["==", L("mapper"), 9], [
             setp(PB1, ["*", SUB(p(PRG8), 3), 8192]),
