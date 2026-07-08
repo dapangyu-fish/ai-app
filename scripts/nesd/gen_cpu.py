@@ -57,48 +57,68 @@ def pop_to(local):
     ]
 
 # ---- addressing modes: emit statements setting local 'ea'; advance PC ----
+def DR(a): return ["call", "rd", [a]]   # dummy bus read (statement; ticks PPU in NES build)
+STORES = {"STA", "STX", "STY", "AHX", "SHX", "SHY", "TAS"}
+RMW = {"ASL", "LSR", "ROL", "ROR", "INC", "DEC", "SLO", "SRE", "RLA", "RRA", "ISC", "DCP"}
+WRITE_INSTRS = STORES | RMW
+
 def fetch_pc():  # read byte at PC, advance PC
     return RD(reg(PC))  # caller advances PC separately
 
 def adv(n): return setreg(PC, m16(ADDW(reg(PC), n)))
 
-def mode_imm():
+def _idx_dummy(iw, basevar):
+    # indexed read (absx/absy/izy): NESd reads target once on write OR page-cross
+    if iw:
+        return DR(L("ea"))
+    return ["if", ["!=", AND(L(basevar), 0xFF00), AND(L("ea"), 0xFF00)], [DR(L("ea"))]]
+
+def mode_imm(iw=False):
     return [setL("ea", reg(PC)), adv(1)]
-def mode_zp():
+def mode_imp(iw=False):
+    return [DR(reg(PC))]                                   # implied: 1 dummy read
+def mode_acc(iw=False):
+    return [DR(reg(PC))]                                   # accumulator: 1 dummy read
+def mode_zp(iw=False):
     return [setL("ea", RD(reg(PC))), adv(1)]
-def mode_zpx():
-    return [setL("ea", AND(ADDW(RD(reg(PC)), reg(X)), 0xFF)), adv(1)]
-def mode_zpy():
-    return [setL("ea", AND(ADDW(RD(reg(PC)), reg(Y)), 0xFF)), adv(1)]
-def mode_abs():
+def mode_zpx(iw=False):
+    return [setL("z", RD(reg(PC))), adv(1), DR(L("z")),    # dummy read of base zp
+            setL("ea", AND(ADDW(L("z"), reg(X)), 0xFF))]
+def mode_zpy(iw=False):
+    return [setL("z", RD(reg(PC))), adv(1), DR(L("z")),
+            setL("ea", AND(ADDW(L("z"), reg(Y)), 0xFF))]
+def mode_abs(iw=False):
     return [setL("ea", ["call", "rd16", [reg(PC)]]), adv(2)]
-def mode_absx():
-    return [setL("ea", m16(ADDW(["call", "rd16", [reg(PC)]], reg(X)))), adv(2)]
-def mode_absy():
-    return [setL("ea", m16(ADDW(["call", "rd16", [reg(PC)]], reg(Y)))), adv(2)]
-def mode_ind():  # JMP indirect w/ page-boundary bug
+def mode_absx(iw=False):
+    return [setL("b", ["call", "rd16", [reg(PC)]]), adv(2),
+            setL("ea", m16(ADDW(L("b"), reg(X)))), _idx_dummy(iw, "b")]
+def mode_absy(iw=False):
+    return [setL("b", ["call", "rd16", [reg(PC)]]), adv(2),
+            setL("ea", m16(ADDW(L("b"), reg(Y)))), _idx_dummy(iw, "b")]
+def mode_ind(iw=False):  # JMP indirect w/ page-boundary bug
     return [
         setL("ptr", ["call", "rd16", [reg(PC)]]), adv(2),
         setL("ea", OR(RD(L("ptr")),
                       SHL(RD(OR(AND(L("ptr"), 0xFF00), AND(ADDW(L("ptr"), 1), 0xFF))), 8))),
     ]
-def mode_izx():
+def mode_izx(iw=False):
     return [
-        setL("t", AND(ADDW(RD(reg(PC)), reg(X)), 0xFF)), adv(1),
+        setL("z", RD(reg(PC))), adv(1), DR(L("z")),        # dummy read of base zp
+        setL("t", AND(ADDW(L("z"), reg(X)), 0xFF)),
         setL("ea", OR(RD(L("t")), SHL(RD(AND(ADDW(L("t"), 1), 0xFF)), 8))),
     ]
-def mode_izy():
+def mode_izy(iw=False):
     return [
-        setL("t", RD(reg(PC))), adv(1),
-        setL("base", OR(RD(L("t")), SHL(RD(AND(ADDW(L("t"), 1), 0xFF)), 8))),
-        setL("ea", m16(ADDW(L("base"), reg(Y)))),
+        setL("z", RD(reg(PC))), adv(1),
+        setL("base", OR(RD(L("z")), SHL(RD(AND(ADDW(L("z"), 1), 0xFF)), 8))),
+        setL("ea", m16(ADDW(L("base"), reg(Y)))), _idx_dummy(iw, "base"),
     ]
 
 MODES = {
     "imm": mode_imm, "zp": mode_zp, "zpx": mode_zpx, "zpy": mode_zpy,
     "abs": mode_abs, "absx": mode_absx, "absy": mode_absy,
     "ind": mode_ind, "izx": mode_izx, "izy": mode_izy,
-    "acc": lambda: [], "imp": lambda: [],
+    "acc": mode_acc, "imp": mode_imp,
 }
 M = RD(L("ea"))  # operand value from memory
 
@@ -162,9 +182,11 @@ def i_CPX(): return _cmp(X)
 def i_CPY(): return _cmp(Y)
 
 def i_INC():
-    return [setL("m", AND(ADDW(M, 1), 0xFF)), WR(L("ea"), L("m"))] + setzn(L("m"))
+    return [setL("o", M), WR(L("ea"), L("o")),
+            setL("m", AND(ADDW(L("o"), 1), 0xFF)), WR(L("ea"), L("m"))] + setzn(L("m"))
 def i_DEC():
-    return [setL("m", AND(["-", M, 1], 0xFF)), WR(L("ea"), L("m"))] + setzn(L("m"))
+    return [setL("o", M), WR(L("ea"), L("o")),
+            setL("m", AND(["-", L("o"), 1], 0xFF)), WR(L("ea"), L("m"))] + setzn(L("m"))
 def i_INX(): return [setreg(X, AND(ADDW(reg(X), 1), 0xFF))] + setzn(reg(X))
 def i_INY(): return [setreg(Y, AND(ADDW(reg(Y), 1), 0xFF))] + setzn(reg(Y))
 def i_DEX(): return [setreg(X, AND(["-", reg(X), 1], 0xFF))] + setzn(reg(X))
@@ -192,19 +214,21 @@ def _shift(acc, kind):
     if acc:
         body += [setreg(A, AND(L("r"), 0xFF))]
     else:
-        body += [WR(L("ea"), AND(L("r"), 0xFF))]
+        body += [WR(L("ea"), L("m")),                 # RMW dummy write (old value)
+                 WR(L("ea"), AND(L("r"), 0xFF))]
     return body
 
 def i_JMP(): return [setreg(PC, L("ea"))]
 def i_JSR():
     # ea already computed via abs mode (PC advanced by 2). return = PC-1.
-    return [setL("ret", m16(["-", reg(PC), 1]))] + \
+    return [DR(reg(PC)), setL("ret", m16(["-", reg(PC), 1]))] + \
         push(SHR(L("ret"), 8)) + push(AND(L("ret"), 0xFF)) + [setreg(PC, L("ea"))]
 def i_RTS():
     return pop_to("lo") + pop_to("hi") + \
-        [setreg(PC, m16(ADDW(OR(SHL(L("hi"), 8), L("lo")), 1)))]
+        [DR(reg(PC)), DR(reg(PC)),
+         setreg(PC, m16(ADDW(OR(SHL(L("hi"), 8), L("lo")), 1)))]
 def i_RTI():
-    return pop_to("sp") + [setreg(P, AND(OR(L("sp"), 0x20), 0xEF))] + \
+    return [DR(reg(PC))] + pop_to("sp") + [setreg(P, AND(OR(L("sp"), 0x20), 0xEF))] + \
         pop_to("lo") + pop_to("hi") + [setreg(PC, OR(SHL(L("hi"), 8), L("lo")))]
 def i_BRK():
     return [adv(1)] + push(SHR(reg(PC), 8)) + push(AND(reg(PC), 0xFF)) + \
@@ -213,15 +237,19 @@ def i_BRK():
 
 def i_PHA(): return push(reg(A))
 def i_PHP(): return push(OR(reg(P), 0x10))
-def i_PLA(): return pop_to("m") + [setreg(A, L("m"))] + setzn(L("m"))
-def i_PLP(): return pop_to("m") + [setreg(P, AND(OR(L("m"), 0x20), 0xEF))]
+def i_PLA(): return [DR(reg(PC))] + pop_to("m") + [setreg(A, L("m"))] + setzn(L("m"))
+def i_PLP(): return [DR(reg(PC))] + pop_to("m") + [setreg(P, AND(OR(L("m"), 0x20), 0xEF))]
 
 def _branch(bit, want):
     return [
         setL("rel", RD(reg(PC))), adv(1),
         ["if", ["==", getflag(bit), want], [
             ["if", [">", L("rel"), 127], [setL("rel", ["-", L("rel"), 256])]],
-            setreg(PC, m16(ADDW(reg(PC), L("rel")))),
+            DR(reg(PC)),                                  # taken: dummy read
+            setL("tgt", m16(ADDW(reg(PC), L("rel")))),
+            ["if", ["!=", AND(reg(PC), 0xFF00), AND(L("tgt"), 0xFF00)],
+                [DR(reg(PC))]],                           # page-cross: extra dummy read
+            setreg(PC, L("tgt")),
         ]],
     ]
 def i_BPL(): return _branch(NF, 0)
@@ -247,26 +275,28 @@ def i_LAX(): return [setL("m", M), setreg(A, AND(L("m"), 0xFF)),
                      setreg(X, AND(L("m"), 0xFF))] + setzn(L("m"))
 def i_SAX(): return [WR(L("ea"), AND(reg(A), reg(X)))]
 def i_DCP():  # DEC then CMP
-    return [setL("m", AND(["-", M, 1], 0xFF)), WR(L("ea"), L("m")),
+    return [setL("o", M), WR(L("ea"), L("o")),
+            setL("m", AND(["-", L("o"), 1], 0xFF)), WR(L("ea"), L("m")),
             setL("r", ["-", reg(A), L("m")]),
             setflag(CF, ["?:", [">=", reg(A), L("m")], 1, 0])] + setzn(L("r"))
 def i_ISC():  # INC then SBC
-    return [setL("m", AND(ADDW(M, 1), 0xFF)), WR(L("ea"), L("m")),
+    return [setL("o", M), WR(L("ea"), L("o")),
+            setL("m", AND(ADDW(L("o"), 1), 0xFF)), WR(L("ea"), L("m")),
             setL("r", ["-", ["-", reg(A), L("m")], ["-", 1, getflag(CF)]]),
             setflag(CF, ["?:", [">=", L("r"), 0], 1, 0]),
             setflag(VF, ["?:", ["!=", AND(AND(XOR(reg(A), L("r")), XOR(reg(A), L("m"))), 0x80), 0], 1, 0])] + \
         setzn(L("r")) + [setreg(A, AND(L("r"), 0xFF))]
 def i_SLO():  # ASL mem then ORA
-    return [setL("m", M), setflag(CF, AND(SHR(L("m"), 7), 1)),
+    return [setL("m", M), WR(L("ea"), L("m")), setflag(CF, AND(SHR(L("m"), 7), 1)),
             setL("s", AND(SHL(L("m"), 1), 0xFF)), WR(L("ea"), L("s")),
             setreg(A, OR(reg(A), L("s")))] + setzn(reg(A))
 def i_RLA():  # ROL mem then AND
-    return [setL("m", M), setL("oc", getflag(CF)),
+    return [setL("m", M), WR(L("ea"), L("m")), setL("oc", getflag(CF)),
             setflag(CF, AND(SHR(L("m"), 7), 1)),
             setL("s", AND(OR(SHL(L("m"), 1), L("oc")), 0xFF)), WR(L("ea"), L("s")),
             setreg(A, AND(reg(A), L("s")))] + setzn(reg(A))
 def i_SRE():  # LSR mem then EOR
-    return [setL("m", M), setflag(CF, AND(L("m"), 1)),
+    return [setL("m", M), WR(L("ea"), L("m")), setflag(CF, AND(L("m"), 1)),
             setL("s", SHR(L("m"), 1)), WR(L("ea"), L("s")),
             setreg(A, XOR(reg(A), L("s")))] + setzn(reg(A))
 def i_ANC():
@@ -308,7 +338,7 @@ def i_SHX(): return _shstore(X, Y)
 def i_STP(): return [setreg(HALT, 1)]
 
 def i_RRA():  # ROR mem then ADC
-    return [setL("m", M), setL("oc", getflag(CF)),
+    return [setL("m", M), WR(L("ea"), L("m")), setL("oc", getflag(CF)),
             setflag(CF, AND(L("m"), 1)),
             setL("s", OR(SHL(L("oc"), 7), SHR(L("m"), 1))), WR(L("ea"), L("s")),
             setL("r", ADDW(ADDW(reg(A), L("s")), getflag(CF))),
@@ -408,7 +438,7 @@ INSTR = {
 SHIFTS = {"ASL", "LSR", "ROL", "ROR"}
 
 def op_body(mnem, mode):
-    stmts = list(MODES[mode]())
+    stmts = list(MODES[mode](mnem in WRITE_INSTRS))
     if mnem in SHIFTS:
         stmts += _shift(mode == "acc", mnem)
     else:
@@ -424,11 +454,13 @@ def build():
 
     funcs = {
         "rd": {"params": ["a"], "body": [
+            setreg(CYC, ADDW(reg(CYC), 1)),
             ["if", ["<", L("a"), 0x2000], [["ret", ["u8", "ram", AND(L("a"), 0x7FF)]]]],
             ["if", ["<", L("a"), 0x4020], [["ret", 0]]],       # PPU/APU/IO stub
             ["ret", ["u8", "prg", AND(["-", L("a"), 0x8000], 0x7FFF)]],
         ]},
         "wr": {"params": ["a", "v"], "body": [
+            setreg(CYC, ADDW(reg(CYC), 1)),
             ["if", ["<", L("a"), 0x2000], [["setu8", "ram", AND(L("a"), 0x7FF), L("v")], ["ret", 0]]],
             ["ret", 0],
         ]},
@@ -442,7 +474,6 @@ def build():
         "step": {"params": [], "body": [
             setL("op", RD(reg(PC))),
             setreg(PC, m16(ADDW(reg(PC), 1))),
-            setreg(CYC, ADDW(reg(CYC), 1)),
             ["switch", L("op"), cases, default],
             ["ret", reg(PC)],
         ]},
