@@ -313,7 +313,7 @@ def ppu_step_fn():
         ]),
         # pre-render line 261
         gif(["==", L("s"), 261], [
-            gif(["==", L("c"), 1], [setp(STATUS, AND(p(STATUS), 0x3F))]),  # clear vblank+s0
+            gif(["==", L("c"), 1], [setp(STATUS, AND(p(STATUS), 0x1F))]),  # clear vblank+s0+overflow
             gif(["==", L("active"), 1], [
                 gif(["and", [">=", L("c"), 1], ["<=", L("c"), 256]],
                     ppu_shift() + ppu_fetch_cycle()),
