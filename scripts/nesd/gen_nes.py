@@ -23,7 +23,9 @@ import gen_apu as APU
  MIRROR, ODDFRAME, NMIED_PREV, SPR0HIT_ARMED, SCRATCH1, SCRATCH2,
  CTRL_STROBE, CTRL_SH0, CTRL_SH1, CTRL_LATCH0, CTRL_LATCH1,
  MAPPER, PRGBANKS, M1_SHIFT, M1_CTRL, M1_CHR0, M1_CHR1, M1_PRG,
- M1_P0B, M1_P1B, M1_C0B, M1_C1B) = range(56)
+ PB0, PB1, PB2, PB3, CB0, CB1, CB2, CB3, CB4, CB5, CB6, CB7,
+ M3_REG, M3_PRGMODE, M3_CHRMODE, M3_R0, M3_R1, M3_R2, M3_R3, M3_R4, M3_R5, M3_R6, M3_R7,
+ M3_IRQLATCH, M3_IRQCOUNT, M3_IRQRELOAD, M3_IRQEN, IRQPEND, PRG8) = range(81)
 
 def p(i): return ["i32", "p", i]
 def setp(i, v): return ["seti32", "p", i, v]
@@ -303,6 +305,9 @@ def ppu_step_fn():
             ]),
         ]),
         # vblank start scanline 241 cycle 1
+        gif(["and", ["and", ["<", L("s"), 240], ["==", L("c"), 260]],
+                    ["and", ["==", p(MAPPER), 4], ["==", L("active"), 1]]],
+            [call("m3_clock_irq")]),
         gif(["and", ["==", L("s"), 241], ["==", L("c"), 1]], [
             setp(STATUS, OR(p(STATUS), 0x80)),
             gif(["==", p(NMIEN), 1], [setp(NMIPEND, 1)]),
@@ -354,6 +359,8 @@ def bus_wr_fn():
             [call("apu_write", [AND(L("aa"), 0x1F), L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 1]],
             [call("m1_write", [L("aa"), L("v")]), ["ret", 0]]),
+        gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 4]],
+            [call("m3_write", [L("aa"), L("v")]), ["ret", 0]]),
         ["ret", 0],
     ]}
 
@@ -407,45 +414,47 @@ def ctrl_strobe_fn():
 
 def prg_addr_fn():
     return {"params": ["a"], "body": [
-        gif(["==", p(MAPPER), 1], [
-            gif(["<", L("a"), 0xC000],
-                [["ret", AND(ADD(p(M1_P0B), SUB(L("a"), 0x8000)), 0x7FFFF)]],
-                [["ret", AND(ADD(p(M1_P1B), SUB(L("a"), 0xC000)), 0x7FFFF)]])]),
-        ["ret", AND(SUB(L("a"), 0x8000), 0x7FFF)],
+        setL("reg", AND(SHR(L("a"), 13), 3)),
+        setL("off", AND(L("a"), 0x1FFF)),
+        gif(["==", L("reg"), 0], [["ret", ADD(p(PB0), L("off"))]]),
+        gif(["==", L("reg"), 1], [["ret", ADD(p(PB1), L("off"))]]),
+        gif(["==", L("reg"), 2], [["ret", ADD(p(PB2), L("off"))]]),
+        ["ret", ADD(p(PB3), L("off"))],
     ]}
 
 def chr_addr_fn():
     return {"params": ["a"], "body": [
-        gif(["==", p(MAPPER), 1], [
-            gif(["<", L("a"), 0x1000],
-                [["ret", AND(ADD(p(M1_C0B), L("a")), 0x1FFFF)]],
-                [["ret", AND(ADD(p(M1_C1B), SUB(L("a"), 0x1000)), 0x1FFFF)]])]),
-        ["ret", AND(L("a"), 0x1FFF)],
+        setL("reg", AND(SHR(L("a"), 10), 7)),
+        setL("off", AND(L("a"), 0x3FF)),
+        gif(["==", L("reg"), 0], [["ret", ADD(p(CB0), L("off"))]]),
+        gif(["==", L("reg"), 1], [["ret", ADD(p(CB1), L("off"))]]),
+        gif(["==", L("reg"), 2], [["ret", ADD(p(CB2), L("off"))]]),
+        gif(["==", L("reg"), 3], [["ret", ADD(p(CB3), L("off"))]]),
+        gif(["==", L("reg"), 4], [["ret", ADD(p(CB4), L("off"))]]),
+        gif(["==", L("reg"), 5], [["ret", ADD(p(CB5), L("off"))]]),
+        gif(["==", L("reg"), 6], [["ret", ADD(p(CB6), L("off"))]]),
+        ["ret", ADD(p(CB7), L("off"))],
     ]}
 
 def m1_update_fn():
-    # recompute PRG/CHR base offsets + mirror from control/bank regs
     return {"params": [], "body": [
         setL("pm", AND(SHR(p(M1_CTRL), 2), 3)),
         setL("pb", AND(p(M1_PRG), 0x0F)),
-        gif(["<", L("pm"), 2], [
-            setp(M1_P0B, ["*", AND(L("pb"), 0x0E), 16384]),
-            setp(M1_P1B, ["*", OR(AND(L("pb"), 0x0E), 1), 16384])]),
-        gif(["==", L("pm"), 2], [
-            setp(M1_P0B, 0), setp(M1_P1B, ["*", L("pb"), 16384])]),
-        gif(["==", L("pm"), 3], [
-            setp(M1_P0B, ["*", L("pb"), 16384]),
-            setp(M1_P1B, ["*", SUB(p(PRGBANKS), 1), 16384])]),
+        setL("b0", 0), setL("b1", 0),
+        gif(["<", L("pm"), 2], [setL("b0", AND(L("pb"), 0x0E)), setL("b1", OR(AND(L("pb"), 0x0E), 1))]),
+        gif(["==", L("pm"), 2], [setL("b0", 0), setL("b1", L("pb"))]),
+        gif(["==", L("pm"), 3], [setL("b0", L("pb")), setL("b1", SUB(p(PRGBANKS), 1))]),
+        setp(PB0, ["*", L("b0"), 16384]), setp(PB1, ADD(["*", L("b0"), 16384], 8192)),
+        setp(PB2, ["*", L("b1"), 16384]), setp(PB3, ADD(["*", L("b1"), 16384], 8192)),
         setL("cm", AND(SHR(p(M1_CTRL), 4), 1)),
-        gif(["==", L("cm"), 0], [
-            setp(M1_C0B, ["*", AND(p(M1_CHR0), 0x1E), 4096]),
-            setp(M1_C1B, ["*", OR(AND(p(M1_CHR0), 0x1E), 1), 4096])],
-            [setp(M1_C0B, ["*", p(M1_CHR0), 4096]),
-             setp(M1_C1B, ["*", p(M1_CHR1), 4096])]),
+        setL("c0", 0), setL("c1", 0),
+        gif(["==", L("cm"), 0], [setL("c0", AND(p(M1_CHR0), 0x1E)), setL("c1", OR(AND(p(M1_CHR0), 0x1E), 1))],
+            [setL("c0", p(M1_CHR0)), setL("c1", p(M1_CHR1))]),
+    ] + [setp([CB0,CB1,CB2,CB3][i], ADD(["*", L("c0"), 4096], i*1024)) for i in range(4)]
+      + [setp([CB4,CB5,CB6,CB7][i], ADD(["*", L("c1"), 4096], i*1024)) for i in range(4)]
+      + [
         setL("mm", AND(p(M1_CTRL), 3)),
-        setp(MIRROR, ["?:", ["==", L("mm"), 0], 2,
-              ["?:", ["==", L("mm"), 1], 3,
-              ["?:", ["==", L("mm"), 2], 0, 1]]]),
+        setp(MIRROR, ["?:", ["==", L("mm"), 0], 2, ["?:", ["==", L("mm"), 1], 3, ["?:", ["==", L("mm"), 2], 0, 1]]]),
         ["ret", 0],
     ]}
 
@@ -466,6 +475,61 @@ def m1_write_fn():
         setp(M1_SHIFT, OR(SHR(p(M1_SHIFT), 1), SHL(AND(L("v"), 1), 4))),
         ["ret", 0],
     ]}
+
+
+def m3_update_fn():
+    body = [
+        # PRG (8KB banks)
+        gif(["==", p(M3_PRGMODE), 0], [
+            setp(PB0, ["*", p(M3_R6), 8192]), setp(PB1, ["*", p(M3_R7), 8192]),
+            setp(PB2, ["*", SUB(p(PRG8), 2), 8192]), setp(PB3, ["*", SUB(p(PRG8), 1), 8192])],
+            [setp(PB0, ["*", SUB(p(PRG8), 2), 8192]), setp(PB1, ["*", p(M3_R7), 8192]),
+             setp(PB2, ["*", p(M3_R6), 8192]), setp(PB3, ["*", SUB(p(PRG8), 1), 8192])]),
+        # CHR (1KB banks)
+        gif(["==", p(M3_CHRMODE), 0], [
+            setp(CB0, ["*", p(M3_R0), 1024]), setp(CB1, ["*", ADD(p(M3_R0), 1), 1024]),
+            setp(CB2, ["*", p(M3_R1), 1024]), setp(CB3, ["*", ADD(p(M3_R1), 1), 1024]),
+            setp(CB4, ["*", p(M3_R2), 1024]), setp(CB5, ["*", p(M3_R3), 1024]),
+            setp(CB6, ["*", p(M3_R4), 1024]), setp(CB7, ["*", p(M3_R5), 1024])],
+            [setp(CB0, ["*", p(M3_R2), 1024]), setp(CB1, ["*", p(M3_R3), 1024]),
+             setp(CB2, ["*", p(M3_R4), 1024]), setp(CB3, ["*", p(M3_R5), 1024]),
+             setp(CB4, ["*", p(M3_R0), 1024]), setp(CB5, ["*", ADD(p(M3_R0), 1), 1024]),
+             setp(CB6, ["*", p(M3_R1), 1024]), setp(CB7, ["*", ADD(p(M3_R1), 1), 1024])]),
+        ["ret", 0]]
+    return {"params": [], "body": body}
+
+def m3_write_fn():
+    return {"params": ["a", "v"], "body": [
+        setL("k", AND(L("a"), 0xE001)),
+        gif(["==", L("k"), 0x8000], [
+            setp(M3_REG, AND(L("v"), 7)), setp(M3_PRGMODE, AND(SHR(L("v"), 6), 1)),
+            setp(M3_CHRMODE, AND(SHR(L("v"), 7), 1)), call("m3_update"), ["ret", 0]]),
+        gif(["==", L("k"), 0x8001], [
+            setL("r", p(M3_REG)),
+            gif(["==", L("r"), 0], [setp(M3_R0, AND(L("v"), 0xFE))]),
+            gif(["==", L("r"), 1], [setp(M3_R1, AND(L("v"), 0xFE))]),
+            gif(["==", L("r"), 2], [setp(M3_R2, L("v"))]),
+            gif(["==", L("r"), 3], [setp(M3_R3, L("v"))]),
+            gif(["==", L("r"), 4], [setp(M3_R4, L("v"))]),
+            gif(["==", L("r"), 5], [setp(M3_R5, L("v"))]),
+            gif(["==", L("r"), 6], [setp(M3_R6, AND(L("v"), 0x3F))]),
+            gif(["==", L("r"), 7], [setp(M3_R7, AND(L("v"), 0x3F))]),
+            call("m3_update"), ["ret", 0]]),
+        gif(["==", L("k"), 0xA000], [setp(MIRROR, AND(L("v"), 1)), ["ret", 0]]),
+        gif(["==", L("k"), 0xC000], [setp(M3_IRQLATCH, L("v")), ["ret", 0]]),
+        gif(["==", L("k"), 0xC001], [setp(M3_IRQRELOAD, 1), setp(M3_IRQCOUNT, 0), ["ret", 0]]),
+        gif(["==", L("k"), 0xE000], [setp(M3_IRQEN, 0), setp(IRQPEND, 0), ["ret", 0]]),
+        gif(["==", L("k"), 0xE001], [setp(M3_IRQEN, 1), ["ret", 0]]),
+        ["ret", 0],
+    ]}
+
+def m3_clock_irq_fn():
+    return {"params": [], "body": [
+        gif(["or", ["==", p(M3_IRQCOUNT), 0], ["==", p(M3_IRQRELOAD), 1]],
+            [setp(M3_IRQCOUNT, p(M3_IRQLATCH))],
+            [setp(M3_IRQCOUNT, SUB(p(M3_IRQCOUNT), 1))]),
+        gif(["and", ["==", p(M3_IRQCOUNT), 0], ["==", p(M3_IRQEN), 1]], [setp(IRQPEND, 1)]),
+        setp(M3_IRQRELOAD, 0), ["ret", 0]]}
 
 def build():
     C_prog = C.build()
@@ -488,8 +552,16 @@ def build():
     funcs["chr_addr"] = chr_addr_fn()
     funcs["m1_update"] = m1_update_fn()
     funcs["m1_write"] = m1_write_fn()
+    funcs["m3_update"] = m3_update_fn()
+    funcs["m3_write"] = m3_write_fn()
+    funcs["m3_clock_irq"] = m3_clock_irq_fn()
 
     # NMI service: push PC + P, set I, jump to NMI vector
+    funcs["irq"] = {"params": [], "body":
+        C.push(SHR(C.reg(C.PC), 8)) + C.push(AND(C.reg(C.PC), 0xFF)) +
+        C.push(AND(C.reg(C.P), 0xEF)) + [C.setflag(C.IF_, 1),
+        C.setreg(C.PC, call("rd16", [0xFFFE]))] + [["ret", 0]]}
+
     funcs["nmi"] = {"params": [], "body":
         C.push(SHR(C.reg(C.PC), 8)) + C.push(AND(C.reg(C.PC), 0xFF)) +
         C.push(C.reg(C.P)) + [C.setflag(C.IF_, 1),
@@ -501,6 +573,8 @@ def build():
         setL("i", 0),
         ["while", ["and", ["==", p(FRAMES), L("f0")], ["<", L("i"), L("maxInstr")]], [
             gif(["==", p(NMIPEND), 1], [setp(NMIPEND, 0), call("nmi")]),
+            gif(["and", ["==", p(IRQPEND), 1], ["==", C.getflag(C.IF_), 0]],
+                [setp(IRQPEND, 0), call("irq")]),
             call("step"),
             setL("i", ADD(L("i"), 1))]],
         ["ret", L("i")],
@@ -510,7 +584,18 @@ def build():
     funcs["power_on"] = {"params": ["mapper", "prgbanks", "mirror"], "body": [
         setp(MAPPER, L("mapper")), setp(PRGBANKS, L("prgbanks")),
         setp(M1_SHIFT, 0x10), setp(M1_CTRL, 0x0C), setp(M1_CHR0, 0), setp(M1_CHR1, 1),
-        setp(M1_PRG, 0), call("m1_update"),
+        setp(M1_PRG, 0),
+        setp(PRG8, ["*", L("prgbanks"), 2]),
+        # default NROM bank table
+        setp(PB0, 0), setp(PB1, 8192),
+        setp(PB2, ["?:", ["==", L("prgbanks"), 1], 0, 16384]),
+        setp(PB3, ["?:", ["==", L("prgbanks"), 1], 8192, 24576]),
+        setp(CB0, 0), setp(CB1, 1024), setp(CB2, 2048), setp(CB3, 3072),
+        setp(CB4, 4096), setp(CB5, 5120), setp(CB6, 6144), setp(CB7, 7168),
+        setp(M3_R6, 0), setp(M3_R7, 1),
+        setp(IRQPEND, 0), setp(M3_IRQEN, 0),
+        gif(["==", L("mapper"), 1], [call("m1_update")]),
+        gif(["==", L("mapper"), 4], [call("m3_update")]),
         C.setreg(C.A, 0), C.setreg(C.X, 0), C.setreg(C.Y, 0), C.setreg(C.SP, 0xFD),
         C.setreg(C.P, 0x24), C.setreg(C.CYC, 0), C.setreg(C.HALT, 0),
         setp(MIRROR, L("mirror")), setp(SCAN, 0), setp(CYC, 0), setp(FRAMES, 0),
@@ -527,7 +612,7 @@ def build():
     buffers.update(apu["buffers"])
     for name, tbl in apu["u8tables"].items():
         buffers[name] = len(tbl)
-    i32 = {"reg": 8, "p": 48}
+    i32 = {"reg": 8, "p": 96}
     i32.update(apu["i32bufs"])
     init = {}
     init.update(apu["u8tables"])
