@@ -30,7 +30,7 @@ import gen_apu as APU
  M5_PRGMODE, M5_CHRMODE, M5_PRG0, M5_PRG1, M5_PRG2, M5_PRG3, M5_PRG4,
  M5_CHR0, M5_CHR1, M5_CHR2, M5_CHR3, M5_CHR4, M5_CHR5, M5_CHR6, M5_CHR7,
  M5_MULCAND, M5_MULER, M5_IRQTARGET, M5_IRQEN, M5_IRQPEND, M5_NT,
- M5_EXMODE, M5_EXBANK, M5_EXPAL) = range(111)
+ M5_EXMODE, M5_EXBANK, M5_EXPAL, M5_FILLTILE, M5_FILLCOLOR) = range(113)
 
 def p(i): return ["i32", "p", i]
 def setp(i, v): return ["seti32", "p", i, v]
@@ -72,6 +72,16 @@ def ppu_read_fn():
         call("a12_clock", [L("a")]),
         gif(["==", p(MAPPER), 9], [call("m9_latch", [L("a")])]),
         gif(["<", L("a"), 0x2000], [["ret", ["u8", "chr", call("chr_addr", [L("a")])]]]),
+        gif(["and", ["==", p(MAPPER), 5], ["<", L("a"), 0x3F00]], [
+            setL("rg", AND(SHR(L("a"), 10), 3)),
+            setL("nm", AND(SHR(p(M5_NT), ["*", L("rg"), 2]), 3)),
+            setL("off", AND(L("a"), 0x3FF)),
+            gif(["==", L("nm"), 2], [["ret", ["u8", "exram", L("off")]]]),
+            gif(["==", L("nm"), 3], [
+                gif(["<", L("off"), 0x3C0], [["ret", p(M5_FILLTILE)]]),
+                ["ret", OR(OR(SHL(p(M5_FILLCOLOR), 6), SHL(p(M5_FILLCOLOR), 4)),
+                           OR(SHL(p(M5_FILLCOLOR), 2), p(M5_FILLCOLOR)))]]),
+            ["ret", ["u8", "vram", OR(SHL(L("nm"), 10), L("off"))]]]),
         gif(["<", L("a"), 0x3F00], [["ret", ["u8", "vram", nt_index(L("a"))]]]),
         # palette
         setL("pi", AND(L("a"), 0x1F)),
@@ -84,6 +94,13 @@ def ppu_write_fn():
         setL("a", AND(L("a"), 0x3FFF)),
         call("a12_clock", [L("a")]),
         gif(["<", L("a"), 0x2000], [["setu8", "chr", call("chr_addr", [L("a")]), L("v")], ["ret", 0]]),
+        gif(["and", ["==", p(MAPPER), 5], ["<", L("a"), 0x3F00]], [
+            setL("rg", AND(SHR(L("a"), 10), 3)),
+            setL("nm", AND(SHR(p(M5_NT), ["*", L("rg"), 2]), 3)),
+            setL("off", AND(L("a"), 0x3FF)),
+            gif(["==", L("nm"), 2], [["setu8", "exram", L("off"), L("v")], ["ret", 0]]),
+            gif(["<", L("nm"), 2], [["setu8", "vram", OR(SHL(L("nm"), 10), L("off")), L("v")]]),
+            ["ret", 0]]),
         gif(["<", L("a"), 0x3F00], [["setu8", "vram", nt_index(L("a")), L("v")], ["ret", 0]]),
         setL("pi", AND(L("a"), 0x1F)),
         gif(["==", AND(L("pi"), 0x13), 0x10], [setL("pi", ["-", L("pi"), 0x10])]),
@@ -802,6 +819,8 @@ def mmc5_write_fn():
         gif(["==", L("a"), 0x5100], [setp(M5_PRGMODE, AND(L("v"), 3)), call("m5_update_prg"), ["ret", 0]]),
         gif(["==", L("a"), 0x5101], [setp(M5_CHRMODE, AND(L("v"), 3)), call("m5_update_chr"), ["ret", 0]]),
         gif(["==", L("a"), 0x5104], [setp(M5_EXMODE, AND(L("v"), 3)), ["ret", 0]]),
+        gif(["==", L("a"), 0x5106], [setp(M5_FILLTILE, L("v")), ["ret", 0]]),
+        gif(["==", L("a"), 0x5107], [setp(M5_FILLCOLOR, AND(L("v"), 3)), ["ret", 0]]),
         gif(["and", [">=", L("a"), 0x5C00], ["<=", L("a"), 0x5FFF]],
             [["setu8", "exram", ["-", L("a"), 0x5C00], L("v")], ["ret", 0]]),
         gif(["==", L("a"), 0x5105], [setp(M5_NT, L("v")),
