@@ -26,7 +26,10 @@ import gen_apu as APU
  PB0, PB1, PB2, PB3, CB0, CB1, CB2, CB3, CB4, CB5, CB6, CB7,
  M3_REG, M3_PRGMODE, M3_CHRMODE, M3_R0, M3_R1, M3_R2, M3_R3, M3_R4, M3_R5, M3_R6, M3_R7,
  M3_IRQLATCH, M3_IRQCOUNT, M3_IRQRELOAD, M3_IRQEN, IRQPEND, PRG8,
- A12LOW, CPUCYC, NT0, NT1, NT2, NT3) = range(87)
+ A12LOW, CPUCYC, NT0, NT1, NT2, NT3,
+ M5_PRGMODE, M5_CHRMODE, M5_PRG0, M5_PRG1, M5_PRG2, M5_PRG3, M5_PRG4,
+ M5_CHR0, M5_CHR1, M5_CHR2, M5_CHR3, M5_CHR4, M5_CHR5, M5_CHR6, M5_CHR7,
+ M5_MULCAND, M5_MULER, M5_IRQTARGET, M5_IRQEN, M5_IRQPEND, M5_NT) = range(108)
 
 def p(i): return ["i32", "p", i]
 def setp(i, v): return ["seti32", "p", i, v]
@@ -359,6 +362,10 @@ def ppu_step_fn():
         gif(["and", ["and", ["<", L("s"), 240], ["==", L("c"), 260]],
                     ["==", L("active"), 1]],
             [call("ppu_read", [OR(p(SPRBASE), 0xFF0)])]),
+        gif(["and", ["==", p(MAPPER), 5], ["and", ["==", L("c"), 1],
+                    ["and", ["<", L("s"), 240], ["==", L("active"), 1]]]],
+            [gif(["==", L("s"), p(M5_IRQTARGET)],
+                [setp(M5_IRQPEND, 1), gif(["==", p(M5_IRQEN), 1], [setp(IRQPEND, 1)])])]),
         gif(["and", ["==", L("s"), 241], ["==", L("c"), 1]], [
             setp(STATUS, OR(p(STATUS), 0x80)),
             gif(["==", p(NMIEN), 1], [setp(NMIPEND, 1)]),
@@ -401,6 +408,8 @@ def bus_rd_fn():
         gif(["==", L("aa"), 0x4015], [["ret", call("apu_status")]]),
         gif(["==", L("aa"), 0x4016], [["ret", call("ctrl_read", [0])]]),
         gif(["==", L("aa"), 0x4017], [["ret", call("ctrl_read", [1])]]),
+        gif(["and", ["==", p(MAPPER), 5], ["and", [">=", L("aa"), 0x5200], ["<", L("aa"), 0x5210]]],
+            [["ret", call("mmc5_read", [L("aa")])]]),
         gif(["and", [">=", L("aa"), 0x6000], ["<", L("aa"), 0x8000]],
             [["ret", ["u8", "prgram", ["-", L("aa"), 0x6000]]]]),
         gif(["<", L("aa"), 0x8000], [["ret", 0]]),
@@ -422,6 +431,8 @@ def bus_wr_fn():
             [call("apu_write", [AND(L("aa"), 0x1F), L("v")]), ["ret", 0]]),
         gif(["and", ["==", p(MAPPER), 19], ["and", [">=", L("aa"), 0x4800], ["<", L("aa"), 0x6000]]],
             [call("m19_write", [L("aa"), L("v")]), ["ret", 0]]),
+        gif(["and", ["==", p(MAPPER), 5], ["and", [">=", L("aa"), 0x5000], ["<", L("aa"), 0x6000]]],
+            [call("mmc5_write", [L("aa"), L("v")]), ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x6000], ["<", L("aa"), 0x8000]],
             [["setu8", "prgram", ["-", L("aa"), 0x6000], L("v")], ["ret", 0]]),
         gif(["and", [">=", L("aa"), 0x8000], ["==", p(MAPPER), 1]],
@@ -738,6 +749,80 @@ def m19_irq_tick_fn():
             gif(["and", ["==", p(M3_IRQCOUNT), 0x7FFF], ["==", p(M3_IRQEN), 1]], [setp(IRQPEND, 1)])]),
         ["ret", 0]]}
 
+
+def m5_update_prg_fn():
+    m = p(M5_PRGMODE)
+    def mask(slot, kind):
+        v = AND(p(slot), 0x7F)
+        if kind == "r2":
+            return ["?:", ["or", ["==", m, 1], ["==", m, 2]], AND(v, 0x7E), v]
+        if kind == "r4":
+            return ["?:", ["==", m, 0], AND(v, 0x7C), ["?:", ["==", m, 1], AND(v, 0x7E), v]]
+        return v
+    p1 = ["*", AND(p(M5_PRG1), 0x7F), 8192]
+    p2 = ["*", mask(M5_PRG2, "r2"), 8192]
+    p3 = ["*", AND(p(M5_PRG3), 0x7F), 8192]
+    p4 = ["*", mask(M5_PRG4, "r4"), 8192]
+    return {"params": [], "body": [
+        setL("q2", p2), setL("q4", p4),
+        gif(["==", m, 0], [setp(PB0, L("q4")), setp(PB1, ADD(L("q4"), 8192)),
+            setp(PB2, ADD(L("q4"), 16384)), setp(PB3, ADD(L("q4"), 24576))]),
+        gif(["==", m, 1], [setp(PB0, L("q2")), setp(PB1, ADD(L("q2"), 8192)),
+            setp(PB2, L("q4")), setp(PB3, ADD(L("q4"), 8192))]),
+        gif(["==", m, 2], [setp(PB0, L("q2")), setp(PB1, ADD(L("q2"), 8192)), setp(PB2, p3), setp(PB3, L("q4"))]),
+        gif(["==", m, 3], [setp(PB0, p1), setp(PB1, L("q2")), setp(PB2, p3), setp(PB3, L("q4"))]),
+        ["ret", 0]]}
+
+def m5_update_chr_fn():
+    m = p(M5_CHRMODE)
+    cbs = [CB0, CB1, CB2, CB3, CB4, CB5, CB6, CB7]
+    chrs = [M5_CHR0, M5_CHR1, M5_CHR2, M5_CHR3, M5_CHR4, M5_CHR5, M5_CHR6, M5_CHR7]
+    return {"params": [], "body": [
+        gif(["==", m, 0], [setp(cbs[i], ADD(["*", p(M5_CHR7), 8192], i*1024)) for i in range(8)]),
+        gif(["==", m, 1],
+            [setp(cbs[i], ADD(["*", p(M5_CHR3), 4096], i*1024)) for i in range(4)] +
+            [setp(cbs[i], ADD(["*", p(M5_CHR7), 4096], (i-4)*1024)) for i in range(4, 8)]),
+        gif(["==", m, 2],
+            [setp(cbs[2*j],   ["*", p(chrs[2*j+1]), 2048]) for j in range(4)] +
+            [setp(cbs[2*j+1], ADD(["*", p(chrs[2*j+1]), 2048], 1024)) for j in range(4)]),
+        gif(["==", m, 3], [setp(cbs[i], ["*", p(chrs[i]), 1024]) for i in range(8)]),
+        ["ret", 0]]}
+
+def mmc5_write_fn():
+    return {"params": ["a", "v"], "body": [
+        gif(["==", L("a"), 0x5100], [setp(M5_PRGMODE, AND(L("v"), 3)), call("m5_update_prg"), ["ret", 0]]),
+        gif(["==", L("a"), 0x5101], [setp(M5_CHRMODE, AND(L("v"), 3)), call("m5_update_chr"), ["ret", 0]]),
+        gif(["==", L("a"), 0x5105], [setp(M5_NT, L("v")),
+            setp(MIRROR, ["?:", ["==", AND(L("v"), 3), 0], 2, ["?:", ["==", AND(L("v"), 3), 1], 3, 1]]), ["ret", 0]]),
+        gif(["==", L("a"), 0x5114], [setp(M5_PRG0, L("v")), call("m5_update_prg"), ["ret", 0]]),
+        gif(["==", L("a"), 0x5115], [setp(M5_PRG1, L("v")), setp(M5_PRG2, L("v")), call("m5_update_prg"), ["ret", 0]]),
+        gif(["==", L("a"), 0x5116], [setp(M5_PRG3, L("v")), call("m5_update_prg"), ["ret", 0]]),
+        gif(["==", L("a"), 0x5117], [setp(M5_PRG4, L("v")), call("m5_update_prg"), ["ret", 0]]),
+        gif(["and", [">=", L("a"), 0x5120], ["<=", L("a"), 0x5127]], [
+            gif(["==", L("a"), 0x5120], [setp(M5_CHR0, L("v"))]),
+            gif(["==", L("a"), 0x5121], [setp(M5_CHR1, L("v"))]),
+            gif(["==", L("a"), 0x5122], [setp(M5_CHR2, L("v"))]),
+            gif(["==", L("a"), 0x5123], [setp(M5_CHR3, L("v"))]),
+            gif(["==", L("a"), 0x5124], [setp(M5_CHR4, L("v"))]),
+            gif(["==", L("a"), 0x5125], [setp(M5_CHR5, L("v"))]),
+            gif(["==", L("a"), 0x5126], [setp(M5_CHR6, L("v"))]),
+            gif(["==", L("a"), 0x5127], [setp(M5_CHR7, L("v"))]),
+            call("m5_update_chr"), ["ret", 0]]),
+        gif(["==", L("a"), 0x5203], [setp(M5_IRQTARGET, L("v")), ["ret", 0]]),
+        gif(["==", L("a"), 0x5204], [setp(M5_IRQEN, AND(SHR(L("v"), 7), 1)), ["ret", 0]]),
+        gif(["==", L("a"), 0x5205], [setp(M5_MULCAND, L("v")), ["ret", 0]]),
+        gif(["==", L("a"), 0x5206], [setp(M5_MULER, L("v")), ["ret", 0]]),
+        ["ret", 0]]}
+
+def mmc5_read_fn():
+    return {"params": ["a"], "body": [
+        gif(["==", L("a"), 0x5204], [
+            setL("r", OR(["?:", ["==", p(M5_IRQPEND), 1], 0x80, 0], 0)),
+            setp(M5_IRQPEND, 0), ["ret", L("r")]]),
+        gif(["==", L("a"), 0x5205], [["ret", AND(["*", p(M5_MULCAND), p(M5_MULER)], 0xFF)]]),
+        gif(["==", L("a"), 0x5206], [["ret", AND(SHR(["*", p(M5_MULCAND), p(M5_MULER)], 8), 0xFF)]]),
+        ["ret", 0]]}
+
 def simple_write_fn():
     return {"params": ["a", "v"], "body": [
         # UNROM (2): 16K switchable @ $8000, fixed last @ $C000; CHR-RAM
@@ -805,6 +890,10 @@ def build():
     funcs["m118_write"] = m118_write_fn()
     funcs["m19_write"] = m19_write_fn()
     funcs["m19_irq_tick"] = m19_irq_tick_fn()
+    funcs["m5_update_prg"] = m5_update_prg_fn()
+    funcs["m5_update_chr"] = m5_update_chr_fn()
+    funcs["mmc5_write"] = mmc5_write_fn()
+    funcs["mmc5_read"] = mmc5_read_fn()
     funcs["m9_update_chr"] = m9_update_chr_fn()
     funcs["m9_write"] = m9_write_fn()
     funcs["m9_latch"] = m9_latch_fn()
@@ -855,6 +944,11 @@ def build():
         gif(["==", L("mapper"), 4], [call("m3_update")]),
         gif(["==", L("mapper"), 118], [setp(MIRROR, 4), call("m3_update")]),
         gif(["==", L("mapper"), 19], [setp(MIRROR, 4), setp(M3_IRQEN, 0), setp(M3_IRQCOUNT, 0)]),
+        gif(["==", L("mapper"), 5], [
+            setp(M5_PRGMODE, 3), setp(M5_CHRMODE, 3), setp(M5_IRQEN, 0),
+            setp(M5_PRG1, 0), setp(M5_PRG2, 1), setp(M5_PRG3, SUB(p(PRG8), 2)),
+            setp(M5_PRG4, SUB(p(PRG8), 1)), setp(M5_CHR7, 7),
+            call("m5_update_prg"), call("m5_update_chr")]),
         gif(["==", L("mapper"), 206], [setp(M3_R7, 1), call("n108_update")]),
         gif(["==", L("mapper"), 9], [
             setp(PB1, ["*", SUB(p(PRG8), 3), 8192]),
@@ -879,7 +973,7 @@ def build():
     buffers.update(apu["buffers"])
     for name, tbl in apu["u8tables"].items():
         buffers[name] = len(tbl)
-    i32 = {"reg": 8, "p": 96}
+    i32 = {"reg": 8, "p": 128}
     i32.update(apu["i32bufs"])
     init = {}
     init.update(apu["u8tables"])
