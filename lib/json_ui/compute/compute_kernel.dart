@@ -134,6 +134,25 @@ class ComputeProgram {
       i32['$k'] = Int32List((v as num).toInt());
     });
 
+    // Optional buffer pre-initialization (lookup tables, ROM-baked data).
+    final init = (spec['init'] as Map?) ?? const {};
+    init.forEach((k, v) {
+      if (v is! List) return;
+      final ub = u8['$k'];
+      if (ub != null) {
+        for (var i = 0; i < v.length && i < ub.length; i++) {
+          ub[i] = (v[i] as num).toInt();
+        }
+        return;
+      }
+      final ib = i32['$k'];
+      if (ib != null) {
+        for (var i = 0; i < v.length && i < ib.length; i++) {
+          ib[i] = (v[i] as num).toInt();
+        }
+      }
+    });
+
     final funcSpecs = (spec['functions'] as Map?) ?? const {};
     final funcs = <String, _Func>{};
     // First pass: register signatures (so calls can resolve forward refs).

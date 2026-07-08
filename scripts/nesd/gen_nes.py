@@ -13,6 +13,7 @@ State:
 """
 import json
 import gen_cpu as C
+import gen_apu as APU
 
 # PPU state indices in i32 'p'
 (PV, PT, PX, PW, CTRL, MASK, STATUS, OAMADDR, SCAN, CYC, FRAMES, NMIEN,
@@ -326,9 +327,11 @@ def ppu_tick3_fn():
 def bus_rd_fn():
     return {"params": ["a"], "body": [
         call("ppu_tick3"),
+        call("apu_step"),
         setL("aa", AND(L("a"), 0xFFFF)),
         gif(["<", L("aa"), 0x2000], [["ret", ["u8", "ram", AND(L("aa"), 0x7FF)]]]),
         gif(["<", L("aa"), 0x4000], [["ret", call("ppu_reg_read", [OR(0x2000, AND(L("aa"), 7))])]]),
+        gif(["==", L("aa"), 0x4015], [["ret", call("apu_status")]]),
         gif(["==", L("aa"), 0x4016], [["ret", call("ctrl_read", [0])]]),
         gif(["==", L("aa"), 0x4017], [["ret", call("ctrl_read", [1])]]),
         gif(["<", L("aa"), 0x8000], [["ret", 0]]),
@@ -338,11 +341,14 @@ def bus_rd_fn():
 def bus_wr_fn():
     return {"params": ["a", "v"], "body": [
         call("ppu_tick3"),
+        call("apu_step"),
         setL("aa", AND(L("a"), 0xFFFF)),
         gif(["<", L("aa"), 0x2000], [["setu8", "ram", AND(L("aa"), 0x7FF), L("v")], ["ret", 0]]),
         gif(["<", L("aa"), 0x4000], [call("ppu_reg_write", [OR(0x2000, AND(L("aa"), 7)), L("v")]), ["ret", 0]]),
         gif(["==", L("aa"), 0x4014], [call("oam_dma", [L("v")]), ["ret", 0]]),
         gif(["==", L("aa"), 0x4016], [call("ctrl_strobe", [L("v")]), ["ret", 0]]),
+        gif(["and", [">=", L("aa"), 0x4000], ["<", L("aa"), 0x4018]],
+            [call("apu_write", [AND(L("aa"), 0x1F), L("v")]), ["ret", 0]]),
         ["ret", 0],
     ]}
 
@@ -435,15 +441,23 @@ def build():
         setp(MIRROR, L("mirror")), setp(SCAN, 0), setp(CYC, 0), setp(FRAMES, 0),
         setp(VINC, 1), setp(STATUS, 0),
         C.setreg(C.PC, call("rd16", [0xFFFC])),
+        call("apu_reset_state"),
         ["ret", 0],
     ]}
 
-    prog = {
-        "buffers": {"ram": 2048, "prg": 32768, "chr": 8192, "vram": 2048,
-                    "pal": 32, "oam": 256, "oam2": 32, "fb": 61440},
-        "i32": {"reg": 8, "p": 48},
-        "functions": funcs,
-    }
+    apu = APU.build_apu()
+    funcs.update(apu["funcs"])
+    buffers = {"ram": 2048, "prg": 32768, "chr": 8192, "vram": 2048,
+               "pal": 32, "oam": 256, "oam2": 32, "fb": 61440}
+    buffers.update(apu["buffers"])
+    for name, tbl in apu["u8tables"].items():
+        buffers[name] = len(tbl)
+    i32 = {"reg": 8, "p": 48}
+    i32.update(apu["i32bufs"])
+    init = {}
+    init.update(apu["u8tables"])
+    init.update(apu["i32tables"])
+    prog = {"buffers": buffers, "i32": i32, "functions": funcs, "init": init}
     return prog
 
 if __name__ == "__main__":
