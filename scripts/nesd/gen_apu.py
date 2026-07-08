@@ -197,7 +197,7 @@ def build_apu():
     # DMC: 1:1 port; DMA byte fetched synchronously via rd_nodma (mapper-aware)
     funcs["ap_dmc_step"] = {"params": [], "body": [
         gif([">", a("DMC_TMR"), 0], [seta("DMC_TMR", SUB(a("DMC_TMR"), 1)), ["ret", 0]]),
-        seta("DMC_TMR", a("DMC_RATE")),
+        seta("DMC_TMR", SUB(a("DMC_RATE"), 1)),   # reload RATE-1 → exactly RATE cyc/output
         gif(["==", a("DMC_SIL"), 0], [
             setL("diff", ["?:", ["==", bit(a("DMC_SHIFT"), 0), 1], 2, -2]),
             setL("nl", ADD(a("DMCLVL"), L("diff"))),
@@ -220,7 +220,7 @@ def build_apu():
         gif(["==", a("DMC_LEN"), 0], [
             gif(["==", a("DMC_LOOP"), 1],
                 [seta("DMC_ADDR", a("DMC_SADDR")), seta("DMC_LEN", a("DMC_SLEN"))],
-                [gif(["==", a("DMC_IRQEN"), 1], [seta("DMC_EN", a("DMC_EN"))])])]),
+                [gif(["==", a("DMC_IRQEN"), 1], [seta("DMCIRQ", 1)])])]),
         ["ret", 0]]}
 
     # --- main APU step (one CPU cycle) + sampling ---
@@ -309,12 +309,14 @@ def build_apu():
         # $4010-$4013 DMC
         gif(["==", L("r"), 0x10], [
             seta("DMC_IRQEN", bit(L("v"), 7)), seta("DMC_LOOP", bit(L("v"), 6)),
+            gif(["==", bit(L("v"), 7), 0], [seta("DMCIRQ", 0)]),   # IRQ disable clears DMC IRQ flag
             seta("DMC_RATE", ["i32", "dmctbl", AND(L("v"), 0x0F)])]),
         gif(["==", L("r"), 0x11], [seta("DMCLVL", AND(L("v"), 0x7F))]),
         gif(["==", L("r"), 0x12], [seta("DMC_SADDR", OR(0xC000, SHL(L("v"), 6)))]),
         gif(["==", L("r"), 0x13], [seta("DMC_SLEN", ADD(SHL(L("v"), 4), 1))]),
         # $4015 status (enable channels)
         gif(["==", L("r"), 0x15], [
+            seta("DMCIRQ", 0),                            # $4015 write clears DMC IRQ flag
             seta("EN1", bit(L("v"), 0)), seta("EN2", bit(L("v"), 1)),
             seta("ENT", bit(L("v"), 2)), seta("ENN", bit(L("v"), 3)),
             gif(["==", bit(L("v"), 0), 0], [seta("L1V", 0)]),
@@ -353,6 +355,9 @@ def build_apu():
 
     funcs["apu_reset_state"] = {"params": [], "body": [
         seta("SHN", 1),  # noise shift register starts at 1
+        seta("DMC_BITS", 8), seta("DMC_SIL", 1),         # DMC output unit: 8 bits, silenced
+        seta("DMC_RATE", ["i32", "dmctbl", 0]),          # default rate (index 0)
+        seta("DMC_TMR", SUB(["i32", "dmctbl", 0], 1)),
         ["ret", 0]]}
 
     buffers = {"samples": 192000}  # 96000 int16 (~2s @48k)
