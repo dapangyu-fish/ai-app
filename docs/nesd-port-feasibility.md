@@ -151,16 +151,23 @@ jsonlogic 自定义算子 + 游戏逻辑白名单。收益：位运算步成本�
 |---|---|---|
 | T7 计算内核 | ✅ | 70M 操作/s(~1100× jsonlogic)；纯 Dart 单测 7/7 |
 | T1 位运算原语 | ✅ | 两引擎共享注册 |
-| 6502 CPU(256 opcode) | ✅ 1:1 | trace 与 nestest 金标准日志逐字节吻合；自检 $02=$03=0 |
-| PPU + 总线 + NROM | ✅ | 手写 ROM 逐像素 703/703 |
-| APU(脉冲/三角/噪声+帧计数+混音) | ✅ | 实测 440.7Hz 方波(DMC 待补) |
+| 6502 CPU(256 opcode) | ✅ **周期级 1:1** | nestest 寄存器**与 CYC 周期列**逐条吻合金标准；**cpu_timing_test6 OFFICIAL + UNDOCUMENTED PASSED**(全 256 码周期精确，含非法码)；blargg 行为测试逐模式通过 |
+| PPU + 总线 | ✅ **周期精确** | 手写 ROM 逐像素 703/703；每总线访问 3 点 tick + 奇数帧跳点(89341/89342)；帧长实测 ~29780.5 周期 |
+| APU(脉冲/三角/噪声/DMC+帧计数+混音) | ✅ | 实测 440.7Hz 方波；DMC delta 调制 + DMA |
+| Mapper(NROM/MMC1/MMC3/UNROM/CNROM/AxROM/GxROM) | ✅ **7 个** | 统一分块表；**MMC3 真实 A12 上升沿 IRQ —— 1.Clocking PASSED**(原每扫描线近似) |
+| 中断时序 | ✅ | NMI/IRQ 7 周期(补 2 dummy read)；边沿在指令边界识别 |
 | T2/T3 框架接线 | ✅ | compute 块 + @compute.* + framebuffer entity，analyze 过 |
 | 手柄输入 | ✅ | 移位寄存器协议 |
-| **真实软件端到端** | ✅ | cpu_timing_test6(NROM) 启动并渲染出可读文字 UI(CPU+PPU+CHR-RAM+字库) |
+| **真实软件端到端** | ✅ | cpu_timing_test6/blargg CPU/MMC3 IRQ ROM 全在 JSON 内核跑通并渲出可读 UI |
 
-剩余：**周期级精确交错**(cpu_timing 报 "BASIC TIMING WRONG"——指令级交错所致，
-CPU 本身经 nestest 证明 bit-exact，仅亚指令时序为近似)、DMC 通道、T4 PCM 音频
-输出原语、更多 mapper(MMC1/MMC3…)、shell UI、从分支构建 web 客户端做整机验证。
+**周期级精确交错已完成**（本轮重点）：逐行移植 NESd 的 dummy read/write（隐式/
+zpx/zpy/izx/absx/absy/izy/RMW/分支/栈操作）使每指令总线访问数=真实周期数；修复
+两处影响全局时序的真实 bug —— ①分支误标 imp 模式致每条分支 +1 周期；②非法 NOP
+漏读操作数 -1 周期。加真实 A12 追踪（滤 ≥3 CPU 周期低电平）+ 奇数帧跳点 + 7 周期
+中断。**三项原始缺陷全部消除**：cpu_timing(BASIC + 全码)、MMC3 1.Clocking、周期计数。
+
+剩余（均为**功能增补**，非正确性）：T4 PCM 音频输出原语（APU samples 缓冲已生成、
+未推扬声器）、更多 mapper(MMC5/VRC…)、完整 shell UI(ROM 浏览/存档/触屏手柄/设置)。
 
 
 ## 9. 端到端整机验证（capstone）—— NES 作为 JSON app 在真实浏览器运行
@@ -175,6 +182,6 @@ run_frame` 执行 6502 → PPU 渲进帧缓冲 → `@compute.present` 解码 →
 entity 绘制。这就是任务要求的"真正端到端 JSON 架构移植"——非专用桥，通用内核 +
 NES 作为其数据。截图见 docs/nesd-in-browser.png。
 
-剩余(在此已验证的可跑基础上做增补):DMC 通道 + T4 PCM 音频输出(samples 缓冲已
-生成但尚未推扬声器)、MMC3/MMC5 mapper、周期级精确时序、完整 shell UI(ROM 浏览/
-存档/设置)。
+剩余(在此已验证的可跑基础上做增补):T4 PCM 音频输出(DMC/APU samples 缓冲已生成
+但尚未推扬声器)、MMC5/VRC 等更多 mapper、完整 shell UI(ROM 浏览/存档/触屏手柄/设置)。
+（周期级精确时序、MMC3 A12 IRQ、7 mapper 已于本轮完成，见 §8。）
