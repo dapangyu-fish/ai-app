@@ -25,7 +25,8 @@ import gen_apu as APU
  MAPPER, PRGBANKS, M1_SHIFT, M1_CTRL, M1_CHR0, M1_CHR1, M1_PRG,
  PB0, PB1, PB2, PB3, CB0, CB1, CB2, CB3, CB4, CB5, CB6, CB7,
  M3_REG, M3_PRGMODE, M3_CHRMODE, M3_R0, M3_R1, M3_R2, M3_R3, M3_R4, M3_R5, M3_R6, M3_R7,
- M3_IRQLATCH, M3_IRQCOUNT, M3_IRQRELOAD, M3_IRQEN, IRQPEND, PRG8) = range(81)
+ M3_IRQLATCH, M3_IRQCOUNT, M3_IRQRELOAD, M3_IRQEN, IRQPEND, PRG8,
+ A12LOW, CPUCYC) = range(83)
 
 def p(i): return ["i32", "p", i]
 def setp(i, v): return ["seti32", "p", i, v]
@@ -64,6 +65,7 @@ def nt_index(addrL):
 def ppu_read_fn():
     return {"params": ["a"], "body": [
         setL("a", AND(L("a"), 0x3FFF)),
+        call("a12_clock", [L("a")]),
         gif(["<", L("a"), 0x2000], [["ret", ["u8", "chr", call("chr_addr", [L("a")])]]]),
         gif(["<", L("a"), 0x3F00], [["ret", ["u8", "vram", nt_index(L("a"))]]]),
         # palette
@@ -75,6 +77,7 @@ def ppu_read_fn():
 def ppu_write_fn():
     return {"params": ["a", "v"], "body": [
         setL("a", AND(L("a"), 0x3FFF)),
+        call("a12_clock", [L("a")]),
         gif(["<", L("a"), 0x2000], [["setu8", "chr", call("chr_addr", [L("a")]), L("v")], ["ret", 0]]),
         gif(["<", L("a"), 0x3F00], [["setu8", "vram", nt_index(L("a")), L("v")], ["ret", 0]]),
         setL("pi", AND(L("a"), 0x1F)),
@@ -153,7 +156,8 @@ def ppu_reg_write_fn():
                 setp(PT, OR(AND(p(PT), 0x00FF), SHL(AND(L("v"), 0x3F), 8))),
                 setp(PW, 1)],
                 [setp(PT, OR(AND(p(PT), 0xFF00), L("v"))),
-                 setp(PV, p(PT)), setp(PW, 0)]),
+                 setp(PV, p(PT)), setp(PW, 0),
+                 call("a12_clock", [AND(p(PV), 0x3FFF)])]),
             ["ret", 0]]),
         gif(["==", L("r"), 7], [   # PPUDATA
             call("ppu_write", [p(PV), L("v")]),
@@ -305,9 +309,10 @@ def ppu_step_fn():
             ]),
         ]),
         # vblank start scanline 241 cycle 1
+        # sprite pattern fetch phase raises A12 (SPRBASE); drives MMC3 IRQ via a12_clock
         gif(["and", ["and", ["<", L("s"), 240], ["==", L("c"), 260]],
-                    ["and", ["==", p(MAPPER), 4], ["==", L("active"), 1]]],
-            [call("m3_clock_irq")]),
+                    ["==", L("active"), 1]],
+            [call("ppu_read", [OR(p(SPRBASE), 0xFF0)])]),
         gif(["and", ["==", L("s"), 241], ["==", L("c"), 1]], [
             setp(STATUS, OR(p(STATUS), 0x80)),
             gif(["==", p(NMIEN), 1], [setp(NMIPEND, 1)]),
@@ -334,6 +339,7 @@ def ppu_tick3_fn():
 # ---- Bus: CPU rd/wr with PPU tick + OAM DMA ----
 def bus_rd_fn():
     return {"params": ["a"], "body": [
+        setp(CPUCYC, ADD(p(CPUCYC), 1)),
         call("ppu_tick3"),
         call("apu_step"),
         setL("aa", AND(L("a"), 0xFFFF)),
@@ -348,6 +354,7 @@ def bus_rd_fn():
 
 def bus_wr_fn():
     return {"params": ["a", "v"], "body": [
+        setp(CPUCYC, ADD(p(CPUCYC), 1)),
         call("ppu_tick3"),
         call("apu_step"),
         setL("aa", AND(L("a"), 0xFFFF)),
@@ -527,6 +534,20 @@ def m3_write_fn():
         ["ret", 0],
     ]}
 
+
+def a12_clock_fn():
+    # 1:1 NESd mmc3._a12RisingEdgeDetected: rising edge counts only if A12 was
+    # low >= 3 CPU cycles; on such an edge, clock the MMC3 IRQ counter.
+    return {"params": ["addr"], "body": [
+        gif(["==", AND(SHR(L("addr"), 12), 1), 1], [
+            gif(["and", [">", p(A12LOW), 0], [">=", SUB(p(CPUCYC), p(A12LOW)), 3]],
+                [gif(["==", p(MAPPER), 4], [call("m3_clock_irq")])]),
+            setp(A12LOW, 0),
+        ], [
+            gif(["==", p(A12LOW), 0], [setp(A12LOW, p(CPUCYC))]),
+        ]),
+        ["ret", 0]]}
+
 def m3_clock_irq_fn():
     return {"params": [], "body": [
         gif(["or", ["==", p(M3_IRQCOUNT), 0], ["==", p(M3_IRQRELOAD), 1]],
@@ -590,6 +611,7 @@ def build():
     funcs["m3_update"] = m3_update_fn()
     funcs["m3_write"] = m3_write_fn()
     funcs["m3_clock_irq"] = m3_clock_irq_fn()
+    funcs["a12_clock"] = a12_clock_fn()
     funcs["simple_write"] = simple_write_fn()
 
     # NMI service: push PC + P, set I, jump to NMI vector
