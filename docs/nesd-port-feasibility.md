@@ -161,3 +161,20 @@ jsonlogic 自定义算子 + 游戏逻辑白名单。收益：位运算步成本�
 剩余：**周期级精确交错**(cpu_timing 报 "BASIC TIMING WRONG"——指令级交错所致，
 CPU 本身经 nestest 证明 bit-exact，仅亚指令时序为近似)、DMC 通道、T4 PCM 音频
 输出原语、更多 mapper(MMC1/MMC3…)、shell UI、从分支构建 web 客户端做整机验证。
+
+
+## 9. 端到端整机验证（capstone）—— NES 作为 JSON app 在真实浏览器运行
+
+从 `feat/nesd-primitives` 分支构建 web 客户端 → 服务 `templates/demo_nes.json`
+(内嵌生成的 NES 计算内核 nesd_nes.json + 手写 ROM base64) → headless Chrome
+真实加载 → **模拟器逐像素渲出对角线阴影纹(与独立验证的 703/703 完全一致)**。
+
+完整链路全在真实客户端跑通：JSON app 的 flame_game `compute` 块 → 内核(CPU+PPU+
+APU+MMC1)装载期编译为原生闭包 → `@compute.load_base64` 载 ROM → `@compute.call
+run_frame` 执行 6502 → PPU 渲进帧缓冲 → `@compute.present` 解码 → `framebuffer`
+entity 绘制。这就是任务要求的"真正端到端 JSON 架构移植"——非专用桥，通用内核 +
+NES 作为其数据。截图见 docs/nesd-in-browser.png。
+
+剩余(在此已验证的可跑基础上做增补):DMC 通道 + T4 PCM 音频输出(samples 缓冲已
+生成但尚未推扬声器)、MMC3/MMC5 mapper、周期级精确时序、完整 shell UI(ROM 浏览/
+存档/设置)。
