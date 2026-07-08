@@ -15,7 +15,7 @@ const nesPalette = [ // 64-entry NES palette (RGB), standard
 
 void main() {
   final spec = jsonDecode(File('scripts/nesd/nesd_nes.json').readAsStringSync()) as Map<String, dynamic>;
-  final nes = ComputeProgram.compile(spec);
+  final nes = ComputeProgram.compile(spec, hosts: {'input': (a) => 0});
   final rom = File('scripts/nesd/nes_test.nes').readAsBytesSync();
   final prg = nes.buffer('prg'), chr = nes.buffer('chr');
   for (var i = 0; i < 16384; i++) { prg[i] = rom[16 + i]; prg[16384 + i] = rom[16 + i]; }

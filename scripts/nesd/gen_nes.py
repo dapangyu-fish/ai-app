@@ -19,7 +19,8 @@ import gen_cpu as C
  BGBASE, SPRBASE, RDBUF, NMIPEND, NTLATCH, ATLATCH, PTL, PTH,
  PTLSHIFT, PTHSHIFT, ATLSHIFT, ATHSHIFT, ATTR, SHOWBG, SHOWSP,
  SHOWBGL, SHOWSPL, SPRCOUNT, S0LINE, S0NEXT, VINC, PIXBASE,
- MIRROR, ODDFRAME, NMIED_PREV, SPR0HIT_ARMED, SCRATCH1, SCRATCH2) = range(40)
+ MIRROR, ODDFRAME, NMIED_PREV, SPR0HIT_ARMED, SCRATCH1, SCRATCH2,
+ CTRL_STROBE, CTRL_SH0, CTRL_SH1, CTRL_LATCH0, CTRL_LATCH1) = range(45)
 
 def p(i): return ["i32", "p", i]
 def setp(i, v): return ["seti32", "p", i, v]
@@ -365,10 +366,32 @@ def rd_nodma_fn():  # read without ticking (used inside DMA which ticks itself)
         ["ret", 0],
     ]}
 
+# controller state uses p[] slots CTRL_STROBE/SH0/SH1/LATCH0/LATCH1 (see indices)
 def ctrl_read_fn():
-    return {"params": ["n"], "body": [["ret", 0]]}  # controllers via host later
+    # 1:1 port of NESd input/controller.dart: strobe→A repeatedly; else serial
+    # shift of latched status; reads past 8 return 1. Button order a,b,select,
+    # start,up,down,left,right (bit0..7). Host input[n] holds the 8-bit mask.
+    return {"params": ["n"], "body": [
+        gif(["==", p(CTRL_STROBE), 1], [["ret", AND(["host", "input", [L("n")]], 1)]]),
+        gif(["==", L("n"), 0], [
+            setL("sh", p(CTRL_SH0)),
+            setL("bit", ["?:", ["<", L("sh"), 8], AND(SHR(p(CTRL_LATCH0), L("sh")), 1), 1]),
+            gif(["<", L("sh"), 8], [setp(CTRL_SH0, ADD(L("sh"), 1))]),
+            ["ret", L("bit")]]),
+        setL("sh", p(CTRL_SH1)),
+        setL("bit", ["?:", ["<", L("sh"), 8], AND(SHR(p(CTRL_LATCH1), L("sh")), 1), 1]),
+        gif(["<", L("sh"), 8], [setp(CTRL_SH1, ADD(L("sh"), 1))]),
+        ["ret", L("bit")],
+    ]}
 def ctrl_strobe_fn():
-    return {"params": ["v"], "body": [["ret", 0]]}
+    return {"params": ["v"], "body": [
+        setp(CTRL_STROBE, AND(L("v"), 1)),
+        gif(["==", AND(L("v"), 1), 1], [
+            setp(CTRL_LATCH0, ["host", "input", [0]]),
+            setp(CTRL_LATCH1, ["host", "input", [1]]),
+            setp(CTRL_SH0, 0), setp(CTRL_SH1, 0)]),
+        ["ret", 0],
+    ]}
 
 def build():
     C_prog = C.build()
@@ -418,7 +441,7 @@ def build():
     prog = {
         "buffers": {"ram": 2048, "prg": 32768, "chr": 8192, "vram": 2048,
                     "pal": 32, "oam": 256, "oam2": 32, "fb": 61440},
-        "i32": {"reg": 8, "p": 40},
+        "i32": {"reg": 8, "p": 48},
         "functions": funcs,
     }
     return prog
