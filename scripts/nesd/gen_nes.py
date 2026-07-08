@@ -30,7 +30,9 @@ import gen_apu as APU
  M5_PRGMODE, M5_CHRMODE, M5_PRG0, M5_PRG1, M5_PRG2, M5_PRG3, M5_PRG4,
  M5_CHR0, M5_CHR1, M5_CHR2, M5_CHR3, M5_CHR4, M5_CHR5, M5_CHR6, M5_CHR7,
  M5_MULCAND, M5_MULER, M5_IRQTARGET, M5_IRQEN, M5_IRQPEND, M5_NT,
- M5_EXMODE, M5_EXBANK, M5_EXPAL, M5_FILLTILE, M5_FILLCOLOR) = range(113)
+ M5_EXMODE, M5_EXBANK, M5_EXPAL, M5_FILLTILE, M5_FILLCOLOR,
+ M5_CHR8, M5_CHR9, M5_CHR10, M5_CHR11,
+ SPRCB0, SPRCB1, SPRCB2, SPRCB3, SPRCB4, SPRCB5, SPRCB6, SPRCB7) = range(125)
 
 def p(i): return ["i32", "p", i]
 def setp(i, v): return ["seti32", "p", i, v]
@@ -165,6 +167,7 @@ def ppu_reg_write_fn():
             setp(BGBASE, SHL(AND(SHR(L("v"), 4), 1), 12)),
             setp(SPRBASE, SHL(AND(SHR(L("v"), 3), 1), 12)),
             setp(PT, OR(AND(p(PT), 0x73FF), SHL(AND(L("v"), 3), 10))),
+            gif(["==", p(MAPPER), 5], [call("m5_update_chr")]),
             ["ret", 0]]),
         gif(["==", L("r"), 1], [   # PPUMASK
             setp(MASK, L("v")),
@@ -317,8 +320,12 @@ def render_sprite_over():
                         gif([">=", L("dy"), 8], [setL("tl", ADD(L("tl"), 1)), setL("dy", ["-", L("dy"), 8])]),
                         setL("pa", OR(OR(SHL(AND(L("ot"), 1), 12), SHL(L("tl"), 4)), L("dy")))],
                         [setL("pa", OR(OR(p(SPRBASE), SHL(L("ot"), 4)), L("dy")))]),
-                    setL("plo", AND(SHR(call("ppu_read", [L("pa")]), ["-", 7, L("dx")]), 1)),
-                    setL("phi", AND(SHR(call("ppu_read", [ADD(L("pa"), 8)]), ["-", 7, L("dx")]), 1)),
+                    setL("plo", AND(SHR(["?:", ["==", p(MAPPER), 5],
+                        ["u8", "chr", call("spr_chr_addr", [L("pa")])], call("ppu_read", [L("pa")])],
+                        ["-", 7, L("dx")]), 1)),
+                    setL("phi", AND(SHR(["?:", ["==", p(MAPPER), 5],
+                        ["u8", "chr", call("spr_chr_addr", [ADD(L("pa"), 8)])], call("ppu_read", [ADD(L("pa"), 8)])],
+                        ["-", 7, L("dx")]), 1)),
                     setL("spx", OR(SHL(L("phi"), 1), L("plo"))),
                     gif(["!=", L("spx"), 0], [
                         # sprite0 hit (never at x=255)
@@ -537,6 +544,20 @@ def prg_addr_fn():
         gif(["==", L("reg"), 1], [["ret", ADD(p(PB1), L("off"))]]),
         gif(["==", L("reg"), 2], [["ret", ADD(p(PB2), L("off"))]]),
         ["ret", ADD(p(PB3), L("off"))],
+    ]}
+
+def spr_chr_addr_fn():
+    return {"params": ["a"], "body": [
+        setL("reg", AND(SHR(L("a"), 10), 7)),
+        setL("off", AND(L("a"), 0x3FF)),
+        gif(["==", L("reg"), 0], [["ret", ADD(p(SPRCB0), L("off"))]]),
+        gif(["==", L("reg"), 1], [["ret", ADD(p(SPRCB1), L("off"))]]),
+        gif(["==", L("reg"), 2], [["ret", ADD(p(SPRCB2), L("off"))]]),
+        gif(["==", L("reg"), 3], [["ret", ADD(p(SPRCB3), L("off"))]]),
+        gif(["==", L("reg"), 4], [["ret", ADD(p(SPRCB4), L("off"))]]),
+        gif(["==", L("reg"), 5], [["ret", ADD(p(SPRCB5), L("off"))]]),
+        gif(["==", L("reg"), 6], [["ret", ADD(p(SPRCB6), L("off"))]]),
+        ["ret", ADD(p(SPRCB7), L("off"))],
     ]}
 
 def chr_addr_fn():
@@ -799,20 +820,32 @@ def m5_update_prg_fn():
         gif(["==", m, 3], [setp(PB0, p1), setp(PB1, L("q2")), setp(PB2, p3), setp(PB3, L("q4"))]),
         ["ret", 0]]}
 
-def m5_update_chr_fn():
+def _m5_chr_banks(dst, r):
+    # dst: 8 target CB slots; r: 8 register slots (low or high-repeated) for this mode
     m = p(M5_CHRMODE)
-    cbs = [CB0, CB1, CB2, CB3, CB4, CB5, CB6, CB7]
-    chrs = [M5_CHR0, M5_CHR1, M5_CHR2, M5_CHR3, M5_CHR4, M5_CHR5, M5_CHR6, M5_CHR7]
-    return {"params": [], "body": [
-        gif(["==", m, 0], [setp(cbs[i], ADD(["*", p(M5_CHR7), 8192], i*1024)) for i in range(8)]),
+    return [
+        gif(["==", m, 0], [setp(dst[i], ADD(["*", p(r[7]), 8192], i*1024)) for i in range(8)]),
         gif(["==", m, 1],
-            [setp(cbs[i], ADD(["*", p(M5_CHR3), 4096], i*1024)) for i in range(4)] +
-            [setp(cbs[i], ADD(["*", p(M5_CHR7), 4096], (i-4)*1024)) for i in range(4, 8)]),
+            [setp(dst[i], ADD(["*", p(r[3]), 4096], i*1024)) for i in range(4)] +
+            [setp(dst[i], ADD(["*", p(r[7]), 4096], (i-4)*1024)) for i in range(4, 8)]),
         gif(["==", m, 2],
-            [setp(cbs[2*j],   ["*", p(chrs[2*j+1]), 2048]) for j in range(4)] +
-            [setp(cbs[2*j+1], ADD(["*", p(chrs[2*j+1]), 2048], 1024)) for j in range(4)]),
-        gif(["==", m, 3], [setp(cbs[i], ["*", p(chrs[i]), 1024]) for i in range(8)]),
-        ["ret", 0]]}
+            [setp(dst[2*j],   ["*", p(r[2*j+1]), 2048]) for j in range(4)] +
+            [setp(dst[2*j+1], ADD(["*", p(r[2*j+1]), 2048], 1024)) for j in range(4)]),
+        gif(["==", m, 3], [setp(dst[i], ["*", p(r[i]), 1024]) for i in range(8)]),
+    ]
+
+def m5_update_chr_fn():
+    low = [M5_CHR0, M5_CHR1, M5_CHR2, M5_CHR3, M5_CHR4, M5_CHR5, M5_CHR6, M5_CHR7]
+    high = [M5_CHR8, M5_CHR9, M5_CHR10, M5_CHR11, M5_CHR8, M5_CHR9, M5_CHR10, M5_CHR11]
+    sprcb = [SPRCB0, SPRCB1, SPRCB2, SPRCB3, SPRCB4, SPRCB5, SPRCB6, SPRCB7]
+    cb = [CB0, CB1, CB2, CB3, CB4, CB5, CB6, CB7]
+    # sprites always use low registers -> SPRCB
+    body = _m5_chr_banks(sprcb, low)
+    # background: 8x16 sprite mode (PPUCTRL bit5) -> high registers; else low
+    body += [gif(["==", AND(SHR(p(CTRL), 5), 1), 1],
+                 _m5_chr_banks(cb, high),
+                 _m5_chr_banks(cb, low))]
+    return {"params": [], "body": body + [["ret", 0]]}
 
 def mmc5_write_fn():
     return {"params": ["a", "v"], "body": [
@@ -829,6 +862,12 @@ def mmc5_write_fn():
         gif(["==", L("a"), 0x5115], [setp(M5_PRG1, L("v")), setp(M5_PRG2, L("v")), call("m5_update_prg"), ["ret", 0]]),
         gif(["==", L("a"), 0x5116], [setp(M5_PRG3, L("v")), call("m5_update_prg"), ["ret", 0]]),
         gif(["==", L("a"), 0x5117], [setp(M5_PRG4, L("v")), call("m5_update_prg"), ["ret", 0]]),
+        gif(["and", [">=", L("a"), 0x5128], ["<=", L("a"), 0x512B]], [
+            gif(["==", L("a"), 0x5128], [setp(M5_CHR8, L("v"))]),
+            gif(["==", L("a"), 0x5129], [setp(M5_CHR9, L("v"))]),
+            gif(["==", L("a"), 0x512A], [setp(M5_CHR10, L("v"))]),
+            gif(["==", L("a"), 0x512B], [setp(M5_CHR11, L("v"))]),
+            call("m5_update_chr"), ["ret", 0]]),
         gif(["and", [">=", L("a"), 0x5120], ["<=", L("a"), 0x5127]], [
             gif(["==", L("a"), 0x5120], [setp(M5_CHR0, L("v"))]),
             gif(["==", L("a"), 0x5121], [setp(M5_CHR1, L("v"))]),
@@ -909,6 +948,7 @@ def build():
     funcs["ctrl_strobe"] = ctrl_strobe_fn()
     funcs["prg_addr"] = prg_addr_fn()
     funcs["chr_addr"] = chr_addr_fn()
+    funcs["spr_chr_addr"] = spr_chr_addr_fn()
     funcs["m1_update"] = m1_update_fn()
     funcs["m1_write"] = m1_write_fn()
     funcs["m3_update"] = m3_update_fn()
