@@ -319,15 +319,21 @@ def ppu_step_fn():
         ]),
         # advance counters
         setp(CYC, ADD(L("c"), 1)),
-        gif([">", p(CYC), 340], [
-            setp(CYC, 0),
-            setp(SCAN, ADD(p(SCAN), 1)),
-            gif([">", p(SCAN), 261], [
-                setp(SCAN, 0), setp(FRAMES, ADD(p(FRAMES), 1)),
-                setp(PIXBASE, 0)]),
-            gif(["and", ["<", p(SCAN), 240], [">", p(SCAN), 0]],
-                [setp(PIXBASE, ["*", p(SCAN), 256])]),
-        ]),
+        # odd-frame dot skip: pre-render line is 340 dots (not 341) on odd frames
+        # when rendering is enabled (1:1 NESd _updateCounters); shortens frame by 1 dot
+        gif(["and", ["and", ["==", p(SCAN), 261], ["==", p(CYC), 340]],
+                    ["and", ["==", AND(p(FRAMES), 1), 1], ["==", L("active"), 1]]],
+            [setp(CYC, 0), setp(SCAN, 0),
+             setp(FRAMES, ADD(p(FRAMES), 1)), setp(PIXBASE, 0)],
+            [gif([">", p(CYC), 340], [
+                setp(CYC, 0),
+                setp(SCAN, ADD(p(SCAN), 1)),
+                gif([">", p(SCAN), 261], [
+                    setp(SCAN, 0), setp(FRAMES, ADD(p(FRAMES), 1)),
+                    setp(PIXBASE, 0)]),
+                gif(["and", ["<", p(SCAN), 240], [">", p(SCAN), 0]],
+                    [setp(PIXBASE, ["*", p(SCAN), 256])]),
+            ])]),
         ["ret", 0],
     ]
     return {"params": [], "body": body}
