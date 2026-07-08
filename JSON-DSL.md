@@ -2187,6 +2187,11 @@ templates/                         # JSON DSL 示例配置
 | `@compute.get_u8 / set_u8 {buffer, addr, value?}` | 读写字节 |
 | `@compute.set_input {index, value}` | 写 host 输入词（程序内 `host("input",[i])` 读，如手柄状态） |
 | `@compute.present {buffer, width, height, palette:[rgb..]}` | 把调色板索引缓冲转 RGBA 解码为图像，供 framebuffer entity 呈现 |
+| `@compute.audio {drain?, buffer?, rate?}` | 抽取程序累积的 int16 PCM 采样（默认 `drain=apu_drain`、`buffer=samples`、`rate=48000`）流播到平台 PCM sink。每帧调一次。程序需提供返回采样数并清零写索引的 `drain` 函数，且以小端字节对存 int16 于 `buffer` |
+| `@compute.resume_audio {}` | 恢复音频上下文（浏览器在首次用户手势前挂起音频，应在点击处理中调用） |
 
 entity 新增 `framebuffer`：`{"kind":"framebuffer","position":[x,y],"size":[w,h]}` —
 按 size 最近邻绘制 `@compute.present` 生成的当前帧图像（≤1 帧延迟，等价原生纹理流）。
+
+音频输出为平台相关：web 用 Web Audio(`package:web`) 无缝调度 AudioBuffer 流；原生平台
+（`pcm_sink_stub`）暂返回 null——抽取路径平台无关，接原生 PCM 播放器即可启用。

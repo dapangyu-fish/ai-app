@@ -185,9 +185,11 @@ x=255 裁剪；PRG-RAM($6000-$7FFF 存档/工作 RAM)；APU 帧计数器周期�
 抖动 + 帧/DMC IRQ 标志与 CPU 接线；DMC 输出单元初始化修复。**原三项缺陷全消除**。
 
 剩余：
-- **功能增补**（非正确性）：T4 PCM 音频输出原语（APU samples 缓冲已生成、未推扬声器；
-  低延迟无缝 PCM 流是平台相关的缺失原语——正是任务要求识别的底层能力）、更多 mapper
-  (MMC5/VRC…)、完整 shell UI(ROM 浏览/存档/触屏手柄/设置)。
+- **功能增补**（非正确性）：**T4 PCM 音频输出已落地（web）** —— `pcm_sink.dart`
+  抽象 + `apu_drain`/`GameCompute.drainAudio` 抽取(WAV 实测正确) + Web Audio
+  (`package:web`)无缝流 sink + `@compute.audio` 接线，web 构建通过；**原生平台 sink**
+  (Android/iOS/desktop 的 PCM 播放器)仍待接（抽取路径平台无关，stub 返回 null）。
+  更多 mapper(MMC5/VRC…)、完整 shell UI(ROM 浏览/存档/触屏手柄/设置)。
 - **子指令级时序残留**（与 NESd 共享的交错模型的架构边界）：亚点级 vblank 读竞争/
   NMI 精确时序(ppu_vbl_nmi 02/03/05)、sprite_hit 09#9(VBL 末清 ±12 时钟)、
   apu 6-irq_flag_timing#4、DMC 单字节缓冲即时填充(#19)。本机 CPU/PPU 交错为
