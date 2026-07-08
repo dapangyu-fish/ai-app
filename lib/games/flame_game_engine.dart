@@ -14,6 +14,7 @@ import 'dart:ui' as ui;
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
+import 'game_compute.dart';
 import 'game_entity.dart';
 import 'game_logic.dart';
 import 'game_audio.dart';
@@ -53,6 +54,10 @@ class JsonFlameGame extends FlameGame {
   /// 是 camera scene root 的 World 组件，不是我们要的坐标系抽象）
   late final GameWorld gameWorld;
   late final GameAudioController audio;
+
+  /// 可选：通用计算内核(T7)。JSON app 用 `compute` 块声明程序 + 缓冲，经
+  /// `@compute.*` 动作驱动；framebuffer entity 呈现其像素缓冲。见 game_compute.dart。
+  GameCompute? compute;
   final Map<String, GameEntity> entities = {};
   final Map<String, dynamic> vars = {};
 
@@ -120,6 +125,7 @@ class JsonFlameGame extends FlameGame {
     _gameOverHint = T.current.gameRestartHint;
     gameWorld = GameWorld.fromJson(spec['world'] as Map<String, dynamic>?);
     audio = GameAudioController(assetManager: assetManager);
+    compute = GameCompute.fromSpec(spec['compute'], assetManager: assetManager);
     logic = GameLogicEngine(this);
     _setupFromSpec();
   }
@@ -771,6 +777,21 @@ class JsonFlameGame extends FlameGame {
             hazardLayers: _readStringSet(spec['hazard_layers']) ?? const {},
             collidable: spec['collidable'] != false,
             assetManager: assetManager,
+          );
+        }
+      case 'framebuffer':
+        {
+          final pos = (spec['position'] as List?)?.cast<num>();
+          final sz = (spec['size'] as List?)?.cast<num>();
+          return FramebufferEntity(
+            id: id,
+            renderConfig: render,
+            priority: priority,
+            x: (pos != null && pos.isNotEmpty ? pos[0] : 0).toDouble(),
+            y: (pos != null && pos.length > 1 ? pos[1] : 0).toDouble(),
+            w: (sz != null && sz.isNotEmpty ? sz[0] : gameWorld.width).toDouble(),
+            h: (sz != null && sz.length > 1 ? sz[1] : gameWorld.height).toDouble(),
+            imageProvider: () => compute?.framebufferImage,
           );
         }
       case 'scroll_list':

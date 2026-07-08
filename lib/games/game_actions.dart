@@ -13,6 +13,7 @@
 // - @game_over    : 触发结束（顺便 emit gameOver 事件）
 // - @game_reset   : 重置（关卡内重玩）
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'dart:ui' show Rect;
@@ -37,6 +38,79 @@ class GameActions {
     GameLogicEngine logic,
   ) {
     switch (call) {
+      // ---------- 计算内核(T7) ----------
+      case '@compute.call':
+        {
+          final c = game.compute;
+          if (c == null) return 0;
+          final fn = args['fn']?.toString() ?? '';
+          final rawArgs = (args['args'] as List?) ?? const [];
+          final ints = rawArgs
+              .map((e) => (e as num?)?.toInt() ?? 0)
+              .toList(growable: false);
+          final budget = (args['budget'] as num?)?.toInt() ?? 400000000;
+          return c.call(fn, ints, budget: budget);
+        }
+      case '@compute.load_base64':
+        {
+          game.compute?.loadBase64(
+            args['buffer']?.toString() ?? '',
+            args['data']?.toString() ?? '',
+            offset: (args['offset'] as num?)?.toInt() ?? 0,
+            mirror: args['mirror'] == true,
+          );
+          return null;
+        }
+      case '@compute.load_asset':
+        {
+          // async; fire-and-forget — logic polls a buffer/flag for readiness
+          unawaited(game.compute?.loadAsset(
+                args['buffer']?.toString() ?? '',
+                args['url']?.toString() ?? '',
+                offset: (args['offset'] as num?)?.toInt() ?? 0,
+                mirror: args['mirror'] == true,
+                skipHeader: (args['skip_header'] as num?)?.toInt() ?? 0,
+              ) ??
+              Future.value());
+          return null;
+        }
+      case '@compute.get_u8':
+        return game.compute?.getU8(
+              args['buffer']?.toString() ?? '',
+              (args['addr'] as num?)?.toInt() ?? 0,
+            ) ??
+            0;
+      case '@compute.set_u8':
+        {
+          game.compute?.setU8(
+            args['buffer']?.toString() ?? '',
+            (args['addr'] as num?)?.toInt() ?? 0,
+            (args['value'] as num?)?.toInt() ?? 0,
+          );
+          return null;
+        }
+      case '@compute.set_input':
+        {
+          game.compute?.setInput(
+            (args['index'] as num?)?.toInt() ?? 0,
+            (args['value'] as num?)?.toInt() ?? 0,
+          );
+          return null;
+        }
+      case '@compute.present':
+        {
+          final pal = (args['palette'] as List?)
+                  ?.map((e) => (e as num?)?.toInt() ?? 0)
+                  .toList() ??
+              const <int>[];
+          game.compute?.present(
+            args['buffer']?.toString() ?? '',
+            (args['width'] as num?)?.toInt() ?? 0,
+            (args['height'] as num?)?.toInt() ?? 0,
+            pal,
+          );
+          return null;
+        }
       // ---------- 分数 / 状态 ----------
       case '@score.add':
         {

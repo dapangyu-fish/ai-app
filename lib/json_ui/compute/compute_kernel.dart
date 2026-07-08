@@ -221,7 +221,7 @@ class _Compiler {
         final addr = _compileExpr(node[2]);
         final val = _compileExpr(node[3]);
         final mask = buf.length - 1;
-        final pow2 = (buf.length & mask) == 0 && buf.length > 0;
+        final pow2 = buf.isNotEmpty && (buf.length & mask) == 0;
         return pow2
             ? (c) {
                 buf[addr(c) & mask] = val(c);
@@ -372,7 +372,7 @@ class _Compiler {
         final buf = _buf(node[1] as String);
         final addr = _compileExpr(node[2]);
         final mask = buf.length - 1;
-        final pow2 = (buf.length & mask) == 0 && buf.length > 0;
+        final pow2 = buf.isNotEmpty && (buf.length & mask) == 0;
         return pow2
             ? (c) => buf[addr(c) & mask]
             : (c) {

@@ -2154,3 +2154,39 @@ templates/                         # JSON DSL 示例配置
 > - `lib/json_ui/widgets/` 共约 73 个控件文件（上面只列了主要的，其余见 §6.3 / §6.3.1）。
 > - `lib/` 顶层还有 `auth/` `designer/` `im/` `games/` `navigation/` `onboarding/` `platform/` `theme/` `i18n/` `config/` 等框架目录。
 > - `tools/video_server.py`、`templates/test_collector.json` 已删除。
+
+### 6.43 计算内核 compute（T7 通用原语 · 见 docs/nesd-port-feasibility.md）
+
+`flame_game` 可声明一个 **compute** 块：一段 JSON-AST 命令式程序（类型化字节/字
+缓冲 + 函数/循环/分支/switch 派发 + 位运算 + host 回调），装载期编译成原生 Dart
+闭包执行（实测 ~70M 原语操作/s，较 jsonlogic 快约 1100×）。**内容无关的可复用
+能力**——模拟器核心、CHIP-8、DSP、程序化生成皆作为它的数据被"编写"。
+
+```json
+"compute": { "program": {
+  "buffers": { "ram": 2048, "prg": 32768, "fb": 61440 },   // 名称->字节数(Uint8List)
+  "i32":     { "reg": 8, "p": 40 },                          // 名称->int32 词数
+  "functions": { "step": { "params": ["a"], "body": [ ...语句... ] } }
+}}
+```
+
+语句：`["set",name,expr]` `["setu8",buf,addrExpr,valExpr]` `["seti32",buf,idx,val]`
+`["if",cond,[then],[else?]]` `["while",cond,[body]]` `["repeat",countExpr,[body]]`
+`["switch",sel,[[val,[body]],...],[default?]]` `["call",fn,[args]]` `["host",name,[args]]`
+`["ret",expr?]` `["break"]` `["continue"]`。
+表达式：`["var",name]` `["u8",buf,addr]` `["i32",buf,idx]` `["call",fn,[args]]`
+`["host",name,[args]]` + 算术 `+ - * / %`、位运算 `& | ^ ~ << >>`、比较 `== != < <= > >=`、
+`and or not ?: min max`。局部变量编译期定槽；每次循环/调用扣预算防挂起。
+
+动作（`@compute.*`）：
+| 动作 | 说明 |
+|------|------|
+| `@compute.call {fn, args:[..], budget?}` | 调函数，返回其 `ret` |
+| `@compute.load_base64 {buffer, data, offset?, mirror?}` | base64 字节载入缓冲（mirror 用于 NROM 16K→32K 镜像） |
+| `@compute.load_asset {buffer, url, offset?, mirror?, skip_header?}` | 经 AssetCache 载入二进制资产（异步） |
+| `@compute.get_u8 / set_u8 {buffer, addr, value?}` | 读写字节 |
+| `@compute.set_input {index, value}` | 写 host 输入词（程序内 `host("input",[i])` 读，如手柄状态） |
+| `@compute.present {buffer, width, height, palette:[rgb..]}` | 把调色板索引缓冲转 RGBA 解码为图像，供 framebuffer entity 呈现 |
+
+entity 新增 `framebuffer`：`{"kind":"framebuffer","position":[x,y],"size":[w,h]}` —
+按 size 最近邻绘制 `@compute.present` 生成的当前帧图像（≤1 帧延迟，等价原生纹理流）。

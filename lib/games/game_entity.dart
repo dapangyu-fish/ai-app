@@ -941,3 +941,43 @@ void drawShape(
     );
   }
 }
+
+// ---------- framebuffer ----------
+// 呈现一个由计算内核(compute)写入的调色板/像素缓冲。图像由引擎每帧从
+// GameCompute 解码好后经 imageProvider 提供；本 entity 只负责按 size 最近邻
+// 缩放绘制(等价 nesd_texture 的通用化，见 lib/games/game_compute.dart)。
+class FramebufferEntity extends GameEntity {
+  double x;
+  double y;
+  double w;
+  double h;
+  final ui.Image? Function() imageProvider;
+
+  FramebufferEntity({
+    required super.id,
+    required super.renderConfig,
+    super.priority,
+    required this.x,
+    required this.y,
+    required this.w,
+    required this.h,
+    required this.imageProvider,
+  });
+
+  @override
+  void render(Canvas canvas, GameWorld world) {
+    final img = imageProvider();
+    if (img == null) return;
+    final src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
+    final dst = Rect.fromLTWH(x, y, w, h);
+    canvas.drawImageRect(
+      img,
+      src,
+      dst,
+      Paint()..filterQuality = FilterQuality.none,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toMap() => {'id': id, 'x': x, 'y': y, 'w': w, 'h': h};
+}
