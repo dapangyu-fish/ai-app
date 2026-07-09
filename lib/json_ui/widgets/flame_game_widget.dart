@@ -11,6 +11,7 @@
 
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../games/flame_game_engine.dart';
 import '../asset_manager.dart';
@@ -139,6 +140,12 @@ class _FlameGameMountState extends State<_FlameGameMount> {
   // 按住起始时刻 — 给 input.press_end 算 held_ms
   DateTime? _pressDownTime;
 
+  // 键盘映射（可选）：物理按键 → 命名输入基名。按下发 "<base>_down"，
+  // 松开发 "<base>_up"，与屏幕手柄 gesture_detector 走同一套输入名。
+  // 只有 spec 里声明了 keymap 才启用（其它游戏零影响）。
+  final FocusNode _keyboardFocus = FocusNode(debugLabel: 'flame_game_keyboard');
+  late final Map<LogicalKeyboardKey, String> _keyBindings;
+
   late final void Function() _resetter;
   late final void Function(String, Map<String, dynamic>) _inputHandler;
 
@@ -150,6 +157,7 @@ class _FlameGameMountState extends State<_FlameGameMount> {
       assetManager: widget.assetManager,
       onEvent: _dispatchEvent,
     );
+    _keyBindings = _buildKeyBindings(widget.spec['keymap']);
     // 注册到 interpreter，让 @flame_game_reset 这个 action 能找到我们
     _resetter = () => _game.resetGame();
     _inputHandler = (name, data) => _game.handleNamedInput(name, data);
@@ -161,8 +169,65 @@ class _FlameGameMountState extends State<_FlameGameMount> {
   void dispose() {
     widget.interpreter.unregisterFlameGameResetter(_resetter);
     widget.interpreter.unregisterFlameGameInputHandler(_inputHandler);
+    _keyboardFocus.dispose();
     _game.disposeGame();
     super.dispose();
+  }
+
+  /// spec.keymap: { "<按键名>": "<输入基名>" }。按键名支持 up/down/left/right、
+  /// enter/space/shift/ctrl/tab/escape 等，以及单个字母/数字（如 "z" "x" "1"）。
+  static Map<LogicalKeyboardKey, String> _buildKeyBindings(dynamic keymap) {
+    final out = <LogicalKeyboardKey, String>{};
+    if (keymap is Map) {
+      keymap.forEach((k, v) {
+        final key = _lookupKey(k.toString());
+        if (key != null) out[key] = v.toString();
+      });
+    }
+    return out;
+  }
+
+  static const Map<String, LogicalKeyboardKey> _specialKeys = {
+    'up': LogicalKeyboardKey.arrowUp,
+    'down': LogicalKeyboardKey.arrowDown,
+    'left': LogicalKeyboardKey.arrowLeft,
+    'right': LogicalKeyboardKey.arrowRight,
+    'enter': LogicalKeyboardKey.enter,
+    'return': LogicalKeyboardKey.enter,
+    'space': LogicalKeyboardKey.space,
+    'shift': LogicalKeyboardKey.shiftLeft,
+    'shiftright': LogicalKeyboardKey.shiftRight,
+    'ctrl': LogicalKeyboardKey.controlLeft,
+    'alt': LogicalKeyboardKey.altLeft,
+    'tab': LogicalKeyboardKey.tab,
+    'escape': LogicalKeyboardKey.escape,
+    'backspace': LogicalKeyboardKey.backspace,
+  };
+
+  static LogicalKeyboardKey? _lookupKey(String name) {
+    final n = name.trim().toLowerCase();
+    final special = _specialKeys[n];
+    if (special != null) return special;
+    if (n.length == 1) {
+      final c = n.codeUnitAt(0);
+      // a-z (0x61..0x7A) / 0-9 (0x30..0x39) → LogicalKeyboardKey.keyId 与 ASCII 同值
+      if ((c >= 0x61 && c <= 0x7A) || (c >= 0x30 && c <= 0x39)) {
+        return LogicalKeyboardKey(c);
+      }
+    }
+    return null;
+  }
+
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    final base = _keyBindings[event.logicalKey];
+    if (base == null) return KeyEventResult.ignored;
+    if (event is KeyDownEvent) {
+      _game.handleNamedInput('${base}_down', const {});
+    } else if (event is KeyUpEvent) {
+      _game.handleNamedInput('${base}_up', const {});
+    }
+    // KeyRepeatEvent 及已处理的 down/up 都吞掉，避免方向键/空格滚动页面
+    return KeyEventResult.handled;
   }
 
   /// 游戏事件 → JSON-APP 的 on_xxx 回调
@@ -186,6 +251,7 @@ class _FlameGameMountState extends State<_FlameGameMount> {
     final core = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (d) {
+        if (_keyBindings.isNotEmpty) _keyboardFocus.requestFocus();
         _pressDownTime = DateTime.now();
         _game.handleTap(d.localPosition.dx, d.localPosition.dy);
       },
@@ -226,10 +292,19 @@ class _FlameGameMountState extends State<_FlameGameMount> {
       },
       child: GameWidget(game: _game),
     );
+    // 声明了 keymap 才挂键盘监听（桌面/web 用），并抢焦点接收按键。
+    final Widget interactive = _keyBindings.isEmpty
+        ? core
+        : Focus(
+            focusNode: _keyboardFocus,
+            autofocus: true,
+            onKeyEvent: _onKey,
+            child: core,
+          );
     final h = widget.height;
     if (h != null) {
-      return SizedBox(height: h, child: core);
+      return SizedBox(height: h, child: interactive);
     }
-    return core;
+    return interactive;
   }
 }
