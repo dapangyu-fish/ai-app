@@ -125,6 +125,37 @@
   dart2js 上 `SharedArrayBuffer` 有已知 `UnimplementedError`(dart-lang/sdk#49610),
   Worker 与 UI 真·共享同一块可变 RAM 在 dart2js 上可能走不通,或需 dart2wasm / 手写 JS interop。
 
+## 9. 原生(iOS)基线实测 + 已排除的方向(2026-07,分支 perf/nesd-native)
+
+> 「iOS 也卡成狗」→ 先不管 web,针对原生实测。
+
+- **原生基线**(`flutter test`,JIT,测试 ROM):**`run_frame` = 248 ms/帧 → 4 fps**;
+  `present` ≈ 0.01 ms(可忽略)。**这不是渲染/主线程问题,是纯模拟成本**,由 PPU
+  逐点(~89,342 dot/帧)主导。iOS AOT 会比 JIT 快 ~2–4×(≈ 60–125 ms → ~8–16 fps),
+  但离 60fps 仍差一个数量级。
+- **★首先确认 iOS 是 Release(AOT)构建,不是 Debug(JIT)。** Debug 版 Dart 比 Release
+  慢 ~10–50×;若「卡成狗」是 debug 版跑的,`flutter build ios --release` 本身就是最大的一次免费提速。
+- **已排除:内核帧对象池(frame pool)。** 假设「每次函数调用 new Int32List 是热点」→ 做了
+  按大小复用的 frame pool。结果:**正确性通过(阴影纹 7680/7680),但更慢(295ms vs 248ms)**。
+  结论:**分配不是瓶颈**(Dart 类型化数组分配 + 新生代 GC 本就便宜),池化反而增加 map 查找/清零开销。
+  **通用 compute 内核已接近最优**(类型化 locals、编译期捕获缓冲、闭包直调分派)——没有便宜的通用内核提速。
+  (踩坑记录:`f.localCount` 在被调函数体编译后才定稿,不能在闭包外提前 hoist,否则前向引用拿到过小帧。)
+- **真正的速度杠杆只剩「减少 PPU 操作数」**,且都在**数据层(gen_nes.py)**、框架/内核不动:
+  - **逐扫描线精灵求值**:当前 `render_sprite_over` **每个可见像素都重扫 64 条 OAM + 重取 CHR**
+    → SMB 这类有精灵的游戏的额外大头。改为每扫描线求值 ≤8 个在范围内的精灵(缓存 x/属性/
+    图样字节 + sprite0 标志),像素级只查缓存。sprite0 命中仍按像素判定 → 状态栏分割不变。
+    **需要精灵测试用例**(测试 ROM 是纯背景,验证不了精灵)——可用直接调 `ppu_reg_write` 设 MASK +
+    写 OAM 的内核级测试来验证,不依赖真 ROM。
+  - **逐扫描线背景**:批量化固定的「每 8 像素 tile 取 4 次数」→ 数倍提速;但与 sprite0/MMC3 A12 IRQ
+    时序耦合最深,**没有 SMB/mapper 测试 ROM 时风险最高**。
+- **响应性(独立于速度):后台 isolate 卸载。** 原生**有真 isolate**(与 web 不同),把 `run_frame`
+  移到后台 isolate → 主线程只显示最新 framebuffer + 转发输入 → **UI/输入立刻跟手、不再冻结**
+  (哪怕帧率仍受模拟速度限制)。通用管线改动(在 isolate 上跑任意编译好的 ComputeProgram),
+  不含 NES 语义、不动原子控件。
+
+**下一步排序**:①确认 Release 构建(用户,免费,最大即时收益)→ ②逐扫描线精灵求值(可验证的
+数据层提速,SMB 最大头)→ ③后台 isolate 卸载(响应性)→ ④逐扫描线背景(需 mapper 测试 ROM)。
+
 ## 8. 参考资料
 - Flutter Web 并发/渲染器/Wasm:docs.flutter.dev/perf/isolates、
   /platform-integration/web/{faq,renderers,wasm}
