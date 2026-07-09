@@ -1065,10 +1065,48 @@ def build():
         ["ret", 0],
     ]}
 
+    # Load a full iNES (.nes) image sitting in the `ines` buffer: parse the 16-byte
+    # header (PRG/CHR bank counts, mapper, mirroring, trainer), copy PRG-ROM -> prg
+    # and CHR-ROM -> chr, then power_on with the decoded mapper. Returns the mapper
+    # number, or -1 if the header magic ("NES\x1A") is missing. 1:1 with NESd's
+    # cartridge/ines_reader (bytes 4/5 = 16K/8K bank counts; byte6: bit0 mirroring,
+    # bit2 trainer, bit3 four-screen, hi-nibble mapper low; byte7 hi-nibble mapper high).
+    funcs["load_ines"] = {"params": [], "body": [
+        gif(["and", ["==", ["u8", "ines", 0], 0x4E], ["==", ["u8", "ines", 3], 0x1A]], [
+            setL("prgbanks", ["u8", "ines", 4]),
+            setL("chrbanks", ["u8", "ines", 5]),
+            setL("f6", ["u8", "ines", 6]),
+            setL("f7", ["u8", "ines", 7]),
+            setL("mapper", OR(SHR(L("f6"), 4), AND(L("f7"), 0xF0))),
+            setL("mirror", ["?:", ["==", AND(L("f6"), 8), 8], 4, AND(L("f6"), 1)]),
+            setL("prgoff", ADD(16, ["?:", ["==", AND(L("f6"), 4), 4], 512, 0])),
+            setL("prgsize", ["*", L("prgbanks"), 16384]),
+            setL("chroff", ADD(L("prgoff"), L("prgsize"))),
+            setL("chrsize", ["*", L("chrbanks"), 8192]),
+            # PRG-ROM -> prg (clamped to prg buffer capacity, 512KB)
+            setL("n", ["?:", ["<", 524288, L("prgsize")], 524288, L("prgsize")]),
+            setL("i", 0),
+            ["while", ["<", L("i"), L("n")], [
+                ["setu8", "prg", L("i"), ["u8", "ines", ADD(L("prgoff"), L("i"))]],
+                setL("i", ADD(L("i"), 1))]],
+            # CHR-ROM -> chr (clamped to 128KB; chrbanks==0 => CHR-RAM, nothing to copy)
+            setL("cn", ["?:", ["<", 131072, L("chrsize")], 131072, L("chrsize")]),
+            setL("j", 0),
+            ["while", ["<", L("j"), L("cn")], [
+                ["setu8", "chr", L("j"), ["u8", "ines", ADD(L("chroff"), L("j"))]],
+                setL("j", ADD(L("j"), 1))]],
+            call("power_on", [L("mapper"), L("prgbanks"), L("mirror")]),
+            ["ret", L("mapper")]]),
+        ["ret", -1],
+    ]}
+
     apu = APU.build_apu()
     funcs.update(apu["funcs"])
     buffers = {"ram": 2048, "prg": 524288, "chr": 131072, "vram": 2048,
-               "pal": 32, "oam": 256, "oam2": 32, "fb": 61440, "prgram": 8192, "exram": 1024}
+               "pal": 32, "oam": 256, "oam2": 32, "fb": 61440, "prgram": 8192, "exram": 1024,
+               # raw .nes image staging area for load_ines (holds header+PRG+CHR of a
+               # picked ROM: up to 512KB PRG + 128KB CHR + trainer/header, 1MB headroom)
+               "ines": 1048576}
     buffers.update(apu["buffers"])
     for name, tbl in apu["u8tables"].items():
         buffers[name] = len(tbl)

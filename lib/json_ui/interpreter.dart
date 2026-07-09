@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../platform/biometric.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'app_fs.dart';
@@ -2478,6 +2479,36 @@ class JsonInterpreter extends ChangeNotifier {
           debugPrint('[JSON DSL] file_to_base64 失败: $e');
         }
         return null;
+
+      // 挑选任意文件 → base64（跨平台：web 靠 withData 取 bytes，无需路径）。
+      // args: { extensions?: ["nes", ...] 过滤扩展名, bind?: 变量路径 }
+      // 返回文件内容的 base64 字符串；用户取消或失败返回 null。
+      case '@pick_file':
+        final extsRaw = resolvedArgs['extensions'];
+        final exts = extsRaw is List
+            ? extsRaw
+                .map((e) => e.toString().replaceAll('.', '').trim().toLowerCase())
+                .where((e) => e.isNotEmpty)
+                .toList()
+            : const <String>[];
+        try {
+          final result = await FilePicker.platform.pickFiles(
+            type: exts.isNotEmpty ? FileType.custom : FileType.any,
+            allowedExtensions: exts.isNotEmpty ? exts : null,
+            withData: true, // web 无路径，必须靠 bytes 拿内容
+          );
+          final bytes = (result != null && result.files.isNotEmpty)
+              ? result.files.first.bytes
+              : null;
+          if (bytes == null) return null;
+          final b64 = base64Encode(bytes);
+          final bind = resolvedArgs['bind'] as String?;
+          if (bind != null && bind.isNotEmpty) setVariable(bind, b64);
+          return b64;
+        } catch (e) {
+          debugPrint('[JSON DSL] pick_file 失败: $e');
+          return null;
+        }
 
       // ── 用户信息 ──
       case '@get_user_info':
