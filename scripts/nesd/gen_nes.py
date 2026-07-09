@@ -70,10 +70,23 @@ def nt_index(addrL):
     # map 0x2000-0x2FFF into 2KB vram with mirroring (0=horiz,1=vert,2=single0,3=single1)
     return ["call", "nt_map", [addrL]]
 
+def a12_inline(a):
+    # a12_clock_fn body inlined (side effects only, no ret) — ppu_read/ppu_write run
+    # it on every access (~tens of thousands/frame), so the call dispatch is pure
+    # overhead. Behaviour is 1:1 identical for all mappers (m3_clock_irq stays a call,
+    # taken only on mapper 4/118). `a` must already be a bound local expr.
+    return gif(["==", AND(SHR(a, 12), 1), 1], [
+        gif(["and", [">", p(A12LOW), 0], [">=", SUB(p(CPUCYC), p(A12LOW)), 3]],
+            [gif(["or", ["==", p(MAPPER), 4], ["==", p(MAPPER), 118]], [call("m3_clock_irq")])]),
+        setp(A12LOW, 0),
+    ], [
+        gif(["==", p(A12LOW), 0], [setp(A12LOW, p(CPUCYC))]),
+    ])
+
 def ppu_read_fn():
     return {"params": ["a"], "body": [
         setL("a", AND(L("a"), 0x3FFF)),
-        call("a12_clock", [L("a")]),
+        a12_inline(L("a")),
         gif(["==", p(MAPPER), 9], [call("m9_latch", [L("a")])]),
         gif(["<", L("a"), 0x2000], [["ret", ["u8", "chr", call("chr_addr", [L("a")])]]]),
         gif(["and", ["==", p(MAPPER), 5], ["<", L("a"), 0x3F00]], [
@@ -96,7 +109,7 @@ def ppu_read_fn():
 def ppu_write_fn():
     return {"params": ["a", "v"], "body": [
         setL("a", AND(L("a"), 0x3FFF)),
-        call("a12_clock", [L("a")]),
+        a12_inline(L("a")),
         gif(["<", L("a"), 0x2000], [["setu8", "chr", call("chr_addr", [L("a")]), L("v")], ["ret", 0]]),
         gif(["and", ["==", p(MAPPER), 5], ["<", L("a"), 0x3F00]], [
             setL("rg", AND(SHR(L("a"), 10), 3)),
@@ -195,7 +208,7 @@ def ppu_reg_write_fn():
                 setp(PW, 1)],
                 [setp(PT, OR(AND(p(PT), 0xFF00), L("v"))),
                  setp(PV, p(PT)), setp(PW, 0),
-                 call("a12_clock", [AND(p(PV), 0x3FFF)])]),
+                 a12_inline(AND(p(PV), 0x3FFF))]),
             ["ret", 0]]),
         gif(["==", L("r"), 7], [   # PPUDATA
             call("ppu_write", [p(PV), L("v")]),
@@ -305,8 +318,13 @@ def render_pixel():
         # left-edge clip: hide background in leftmost 8 px when SHOWBGL off
         gif(["and", ["<", ["-", p(CYC), 1], 8], ["==", p(SHOWBGL), 0]], [setL("bgc", 0)]),
     ] + render_sprite_over() + [
-        setL("palidx", call("ppu_read", [OR(0x3F00, L("bgc"))])),
-        ["setu8", "fb", ADD(p(PIXBASE), ["-", p(CYC), 1]), AND(L("palidx"), 0x3F)],
+        # Palette lookup, inlined from ppu_read's palette tail (0x3F00|bgc). Palette
+        # RAM is internal to the PPU and drives no CHR/A12 bus line, so a per-pixel
+        # ppu_read()+a12_clock() call pair (~90k calls/frame) is pure overhead here.
+        # bgc is already 0..0x1F, so pi = bgc & 0x1F; $3F10/14/18/1C mirror $3F00...
+        setL("pi", AND(L("bgc"), 0x1F)),
+        gif(["==", AND(L("pi"), 0x13), 0x10], [setL("pi", ["-", L("pi"), 0x10])]),
+        ["setu8", "fb", ADD(p(PIXBASE), ["-", p(CYC), 1]), AND(["u8", "pal", L("pi")], 0x3F)],
     ]
 
 def render_sprite_over():
