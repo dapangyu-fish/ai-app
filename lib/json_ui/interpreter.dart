@@ -2491,15 +2491,31 @@ class JsonInterpreter extends ChangeNotifier {
                 .where((e) => e.isNotEmpty)
                 .toList()
             : const <String>[];
+        // Apple platforms filter the picker by UTI, so a custom extension the
+        // system doesn't recognise (e.g. .nes) makes every file unselectable —
+        // on iOS/macOS (native picker AND iOS/macOS Safari's file input). There
+        // we pick any file and filter by extension ourselves; elsewhere the
+        // native custom-extension filter works, so keep it.
+        final isApple = defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS;
+        final useCustom = exts.isNotEmpty && !isApple;
         try {
           final result = await FilePicker.platform.pickFiles(
-            type: exts.isNotEmpty ? FileType.custom : FileType.any,
-            allowedExtensions: exts.isNotEmpty ? exts : null,
+            type: useCustom ? FileType.custom : FileType.any,
+            allowedExtensions: useCustom ? exts : null,
             withData: true, // web 无路径，必须靠 bytes 拿内容
           );
-          final bytes = (result != null && result.files.isNotEmpty)
-              ? result.files.first.bytes
-              : null;
+          if (result == null || result.files.isEmpty) return null;
+          final file = result.files.first;
+          // Enforce the extension contract when we couldn't filter natively.
+          if (exts.isNotEmpty && !useCustom) {
+            final name = file.name.toLowerCase();
+            if (!exts.any((e) => name.endsWith('.$e'))) {
+              debugPrint('[JSON DSL] pick_file: "${file.name}" not in $exts');
+              return null;
+            }
+          }
+          final bytes = file.bytes;
           if (bytes == null) return null;
           final b64 = base64Encode(bytes);
           final bind = resolvedArgs['bind'] as String?;
