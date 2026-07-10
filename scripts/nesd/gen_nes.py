@@ -456,19 +456,35 @@ def line_step_fn():
             call("spr_overflow_eval"),
             call("spr_line_eval"),
             call("render_line"),
-            # v: end-of-line increment + horizontal restore (dots 256/257)
-            ppu_incy(),
-            ppu_copyh(),
             # MMC3 IRQ: real HW sees exactly one filtered A12 rise per rendered
-            # line (the sprite pattern-fetch phase). In the line-batched model
-            # ALL fetches share one CPUCYC instant, so the "low ≥3 CPU cycles"
-            # filter in a12_clock can never pass — clock the counter directly.
-            gif(["or", ["==", p(MAPPER), 4], ["==", p(MAPPER), 118]],
+            # line (the sprite pattern-fetch phase) — but ONLY when the bg and
+            # sprite pattern tables sit in different halves; when both share a
+            # half, A12 never produces a qualifying edge (per-dot baseline: 0
+            # clocks). In the line-batched model ALL fetches share one CPUCYC
+            # instant, so the a12_clock "low ≥3 CPU cycles" filter can never
+            # pass — clock the counter directly, gated on differing halves.
+            gif(["and", ["or", ["==", p(MAPPER), 4], ["==", p(MAPPER), 118]],
+                      ["!=", SHR(p(BGBASE), 12), SHR(p(SPRBASE), 12)]],
                 [call("m3_clock_irq")]),
             # MMC5 scanline IRQ
             gif(["==", p(MAPPER), 5],
                 [gif(["==", L("s"), p(M5_IRQTARGET)],
                     [setp(M5_IRQPEND, 1), gif(["==", p(M5_IRQEN), 1], [setp(IRQPEND, 1)])])]),
+        ]),
+        ["ret", 0],
+    ]}
+
+def line_v_update_fn():
+    # v register end-of-line update, fired at the dot-257 boundary (run_frame
+    # splits each line's CPU batch there): incy at dot 256, copyh at 257. Kept
+    # OUT of line_step so a $2005/$2000 write in the first ~86 CPU cycles of a
+    # line is picked up by THIS line's copyh and affects the next line, exactly
+    # like hardware (SMB1 writes its post-sprite-0 scroll split mid-line).
+    return {"params": ["line"], "body": [
+        gif(["and", ["<", L("line"), 240],
+                  ["or", ["==", p(SHOWBG), 1], ["==", p(SHOWSP), 1]]], [
+            ppu_incy(),
+            ppu_copyh(),
         ]),
         ["ret", 0],
     ]}
@@ -479,6 +495,10 @@ def bus_rd_fn():
         call("apu_step"),
         gif(["==", p(MAPPER), 19], [call("m19_irq_tick")]),
         setL("aa", AND(L("a"), 0xFFFF)),
+        # hot-path order: PRG (~83% of fetches) first, RAM second — every read
+        # range below 0x8000 is mutually exclusive with this, so behavior is
+        # identical, just without falling through 9 failed range checks
+        gif([">=", L("aa"), 0x8000], [["ret", ["u8", "prg", call("prg_addr", [L("aa")])]]]),
         gif(["<", L("aa"), 0x2000], [["ret", ["u8", "ram", AND(L("aa"), 0x7FF)]]]),
         gif(["<", L("aa"), 0x4000], [["ret", call("ppu_reg_read", [OR(0x2000, AND(L("aa"), 7))])]]),
         gif(["==", L("aa"), 0x4015], [["ret", call("apu_status")]]),
@@ -989,6 +1009,7 @@ def build():
     funcs["ppu_reg_write"] = ppu_reg_write_fn()
     funcs["render_line"] = render_line_fn()
     funcs["line_step"] = line_step_fn()
+    funcs["line_v_update"] = line_v_update_fn()
     funcs["oam_dma"] = oam_dma_fn()
     funcs["ctrl_read"] = ctrl_read_fn()
     funcs["ctrl_strobe"] = ctrl_strobe_fn()
@@ -1060,12 +1081,28 @@ def build():
                       ["and", ["==", AND(p(FRAMES), 1), 1],
                               ["or", ["==", p(SHOWBG), 1], ["==", p(SHOWSP), 1]]]],
                 [setL("dots", 340)]),
-            setL("tot", ADD(p(DOTREM), L("dots"))),
+            # phase 1: CPU up to the dot-257 boundary (86 cycles), so scroll
+            # writes early in the line are seen by THIS line's copyh (HW order)
+            setL("tot", ADD(p(DOTREM), 257)),
             setp(TGTCYC, ADD(p(TGTCYC), ["/", L("tot"), 3])),
             setp(DOTREM, ["%", L("tot"), 3]),
             ["while", ["and", ["<", p(CPUCYC), p(TGTCYC)], ["<", L("i"), L("maxInstr")]], [
                 gif(["==", p(NMIPEND), 1], [setp(NMIPEND, 0), call("nmi")]),
                 gif(["==", p(SCRATCH1), 1], [setp(SCRATCH1, 0), setp(NMIPEND, 1)]),  # delayed NMI (enable-in-vblank)
+                gif(["and", ["or", ["==", p(IRQPEND), 1], ["==", call("apu_irq"), 1]], ["==", C.getflag(C.IF_), 0]],
+                    [setp(IRQPEND, 0), call("irq")]),
+                call("step"),
+                setL("i", ADD(L("i"), 1)),
+            ]],
+            # dots 256/257: incy + copyh (visible lines, rendering active)
+            call("line_v_update", [L("line")]),
+            # phase 2: rest of the line (hblank tail)
+            setL("tot", ADD(p(DOTREM), ["-", L("dots"), 257])),
+            setp(TGTCYC, ADD(p(TGTCYC), ["/", L("tot"), 3])),
+            setp(DOTREM, ["%", L("tot"), 3]),
+            ["while", ["and", ["<", p(CPUCYC), p(TGTCYC)], ["<", L("i"), L("maxInstr")]], [
+                gif(["==", p(NMIPEND), 1], [setp(NMIPEND, 0), call("nmi")]),
+                gif(["==", p(SCRATCH1), 1], [setp(SCRATCH1, 0), setp(NMIPEND, 1)]),
                 gif(["and", ["or", ["==", p(IRQPEND), 1], ["==", call("apu_irq"), 1]], ["==", C.getflag(C.IF_), 0]],
                     [setp(IRQPEND, 0), call("irq")]),
                 call("step"),
