@@ -2174,6 +2174,18 @@ templates/                         # JSON DSL 示例配置
 `["if",cond,[then],[else?]]` `["while",cond,[body]]` `["repeat",countExpr,[body]]`
 `["switch",sel,[[val,[body]],...],[default?]]` `["call",fn,[args]]` `["host",name,[args]]`
 `["ret",expr?]` `["break"]` `["continue"]`。
+
+**通用数组 intrinsic(语句)**——教科书级字节数组算法，一次分派处理一段区间
+（解释循环 → 原生紧循环,热路径提速一个数量级）;buf 名编译期解析,其余参数均为
+表达式;范围**钳制**到缓冲边界——越界部分静默丢弃,不报错、**不回绕**(注意:这与
+`setu8` 对 2 的幂大小缓冲的地址回绕行为不同);预算按钳制后的实际处理长度计:
+
+| op | 形式 | 语义 |
+|---|---|---|
+| `memset` | `["memset",buf,off,len,val]` | 区间填充 `val&0xFF` |
+| `memcpy` | `["memcpy",dst,doff,src,soff,len]` | 字节拷贝(memmove 语义,同缓冲重叠安全) |
+| `memlut` | `["memlut",dst,doff,src,soff,len,lut,loff]` | 查表映射 `dst[i]=lut[loff+src[i]]`;表索引越界→0 |
+| `planar8` | `["planar8",dst,doff,lo,hi,or,flip]` | 2bpp 位平面行解码(NES/GB/SNES 通用):8 像素 `px=((hi>>b&1)<<1)\|(lo>>b&1)`(MSB 在前,flip 反转);**px==0 保持 0(透明约定)**,否则写 `px\|or`;目标越界整行丢弃 |
 表达式：`["var",name]` `["u8",buf,addr]` `["i32",buf,idx]` `["call",fn,[args]]`
 `["host",name,[args]]` + 算术 `+ - * / %`、位运算 `& | ^ ~ << >>`、比较 `== != < <= > >=`、
 `and or not ?: min max`。局部变量编译期定槽；每次循环/调用扣预算防挂起。

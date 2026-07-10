@@ -34,7 +34,11 @@ import gen_apu as APU
  M5_CHR8, M5_CHR9, M5_CHR10, M5_CHR11,
  SPRCB0, SPRCB1, SPRCB2, SPRCB3, SPRCB4, SPRCB5, SPRCB6, SPRCB7,
  M5_SPLITEN, M5_SPLITSIDE, M5_SPLITTILE, M5_SPLITSCROLL, M5_SPLITBANK,
- M5_SPLITADDR, M5_SPLITACTIVE, SL_COUNT) = range(133)
+ M5_SPLITADDR, M5_SPLITACTIVE, SL_COUNT,
+ # scanline-model state: sprite-0 hit promoted lazily by CPU-cycle compare;
+ # absolute CPU-cycle target per line (instruction overshoot carries over);
+ # dot remainder for the 341/3 division; CPU cycle count at current line start
+ S0HITCYC, TGTCYC, DOTREM, LINESTART) = range(137)
 
 def p(i): return ["i32", "p", i]
 def setp(i, v): return ["seti32", "p", i, v]
@@ -122,6 +126,8 @@ def ppu_write_fn():
         setL("pi", AND(L("a"), 0x1F)),
         gif(["==", AND(L("pi"), 0x13), 0x10], [setL("pi", ["-", L("pi"), 0x10])]),
         ["setu8", "pal", L("pi"), AND(L("v"), 0x3F)],
+        # masked shadow for the scanline row→fb memlut (same value, kept in sync)
+        ["setu8", "palsh", L("pi"), AND(L("v"), 0x3F)],
         ["ret", 0],
     ]}
 
@@ -151,6 +157,10 @@ def ppu_reg_read_fn():
     return {"params": ["a"], "body": [
         setL("r", AND(L("a"), 7)),
         gif(["==", L("r"), 2], [   # PPUSTATUS
+            # scanline model: sprite-0 hit is precomputed as an absolute CPU
+            # cycle when the line renders; promote it into STATUS dot-exactly
+            gif(["and", [">", p(S0HITCYC), 0], [">=", p(CPUCYC), p(S0HITCYC)]],
+                [setp(STATUS, OR(p(STATUS), 0x40)), setp(S0HITCYC, 0)]),
             setL("val", p(STATUS)),
             setp(STATUS, AND(p(STATUS), 0x7F)),   # clear vblank
             setp(PW, 0),
@@ -236,96 +246,113 @@ def ppu_copyh():
 def ppu_copyv():
     return setp(PV, OR(AND(p(PV), 0x041F), AND(p(PT), 0x7BE0)))
 
-def ppu_fetch_cycle():
-    # subcycle = cycle & 7
-    return [setL("sc", AND(p(CYC), 7)),
-        gif(["and", ["==", p(MAPPER), 5], ["and", ["==", p(M5_SPLITEN), 1], ["<", p(SCAN), 240]]], [
-            gif(["==", L("sc"), 1], [
-                setL("cx", v_coarseX()),
-                setL("ins", ["?:", ["==", p(M5_SPLITSIDE), 0],
-                             ["<", L("cx"), p(M5_SPLITTILE)], [">=", L("cx"), p(M5_SPLITTILE)]]),
-                gif(["==", L("ins"), 1], [
-                    setp(M5_SPLITACTIVE, 1),
-                    setL("scr", ADD(p(SCAN), p(M5_SPLITSCROLL))),
-                    gif([">=", L("scr"), 240], [setL("scr", ["-", L("scr"), 240])]),
-                    setp(M5_SPLITADDR, OR(SHL(AND(L("scr"), 0xF8), 2), L("cx"))),
-                    setp(NTLATCH, ["u8", "exram", p(M5_SPLITADDR)])],
-                    [setp(M5_SPLITACTIVE, 0)])])]),
-        gif(["==", L("sc"), 1], [gif(["or", ["!=", p(MAPPER), 5], ["==", p(M5_SPLITACTIVE), 0]],
-            [setp(NTLATCH, call("ppu_read", [OR(0x2000, AND(p(PV), 0xFFF))]))]),
-            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]], [
-                setL("ex", ["u8", "exram", AND(p(PV), 0x3FF)]),
-                setp(M5_EXBANK, AND(L("ex"), 0x3F)), setp(M5_EXPAL, AND(SHR(L("ex"), 6), 3))])]),
-        gif(["==", L("sc"), 3], [   # attribute
-            setL("at", call("ppu_read", [OR(OR(OR(0x23C0, SHL(AND(SHR(p(PV), 10), 3), 10)),
-                                               SHL(AND(SHR(p(PV), 5), 0x1C), 1)),
-                                            SHR(AND(p(PV), 0x1C), 2))])),
-            setL("shift", OR(AND(SHR(p(PV), 4), 4), AND(p(PV), 2))),
-            setp(ATLATCH, AND(SHR(L("at"), L("shift")), 3)),
-            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]], [setp(ATLATCH, p(M5_EXPAL))]),
-            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_SPLITACTIVE), 1]], [
-                setL("ab", ["u8", "exram", ADD(0x3C0, OR(AND(SHR(p(M5_SPLITADDR), 4), 0x38), AND(SHR(p(M5_SPLITADDR), 2), 7)))]),
-                setp(ATLATCH, AND(SHR(L("ab"), L("shift")), 3))])]),
-        gif(["==", L("sc"), 5], [
-            setL("sfy", AND(ADD(p(SCAN), p(M5_SPLITSCROLL)), 7)),
-            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_SPLITACTIVE), 1]],
-                [setp(PTL, ["u8", "chr", AND(OR(OR(SHL(p(M5_SPLITBANK), 12), SHL(p(NTLATCH), 4)), L("sfy")), 0x1FFFF)])],
-                [gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]],
-                    [setp(PTL, ["u8", "chr", AND(OR(OR(SHL(p(M5_EXBANK), 12), SHL(p(NTLATCH), 4)), v_fineY()), 0x1FFFF)])],
-                    [setp(PTL, call("ppu_read", [OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY())]))])])]),
-        gif(["==", L("sc"), 7], [
-            setL("sfy", AND(ADD(p(SCAN), p(M5_SPLITSCROLL)), 7)),
-            gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_SPLITACTIVE), 1]],
-                [setp(PTH, ["u8", "chr", AND(OR(OR(OR(SHL(p(M5_SPLITBANK), 12), SHL(p(NTLATCH), 4)), L("sfy")), 8), 0x1FFFF)])],
-                [gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]],
-                    [setp(PTH, ["u8", "chr", AND(OR(OR(OR(SHL(p(M5_EXBANK), 12), SHL(p(NTLATCH), 4)), v_fineY()), 8), 0x1FFFF)])],
-                    [setp(PTH, call("ppu_read", [OR(OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY()), 8)]))])])]),
-        gif(["==", L("sc"), 0], [
-            # load shift regs
-            setp(PTLSHIFT, OR(AND(p(PTLSHIFT), 0xFF00), p(PTL))),
-            setp(PTHSHIFT, OR(AND(p(PTHSHIFT), 0xFF00), p(PTH))),
-            setp(ATTR, p(ATLATCH)),
-            ppu_incx()]),
+def render_line_fn():
+    # Render one full visible scanline in batches (scanline model): 33 bg tiles
+    # -> planar8 into 'row' (264px, fineX picks the 256 window), bg left clip,
+    # <=8 cached line sprites merged interpreted (first-in-OAM-order wins,
+    # front/back priority, sprite-0 recorded as an ABSOLUTE CPU CYCLE), then a
+    # single memlut through the masked palette shadow into fb. v (loopy)
+    # advances exactly like the per-dot pipeline: 33x incx during the fetch,
+    # incy + copyh afterwards (done by line_step). NT/AT/PT go through
+    # ppu_read, preserving mirroring, mapper-9 latches, MMC5 split/ExGrafix
+    # and the per-tile A12 pattern.
+    body = [
+        gif(["==", p(SHOWBG), 1], [
+            setL("t", 0),
+            ["while", ["<", L("t"), 33], [
+                # MMC5 split: per-tile window decision (port of per-dot sc==1)
+                gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_SPLITEN), 1]], [
+                    setL("cx", v_coarseX()),
+                    setL("ins", ["?:", ["==", p(M5_SPLITSIDE), 0],
+                                 ["<", L("cx"), p(M5_SPLITTILE)], [">=", L("cx"), p(M5_SPLITTILE)]]),
+                    gif(["==", L("ins"), 1], [
+                        setp(M5_SPLITACTIVE, 1),
+                        setL("scr", ADD(p(SCAN), p(M5_SPLITSCROLL))),
+                        gif([">=", L("scr"), 240], [setL("scr", ["-", L("scr"), 240])]),
+                        setp(M5_SPLITADDR, OR(SHL(AND(L("scr"), 0xF8), 2), L("cx"))),
+                        setp(NTLATCH, ["u8", "exram", p(M5_SPLITADDR)])],
+                        [setp(M5_SPLITACTIVE, 0)])]),
+                # NT fetch (unless the MMC5 split provided it)
+                gif(["or", ["!=", p(MAPPER), 5], ["==", p(M5_SPLITACTIVE), 0]],
+                    [setp(NTLATCH, call("ppu_read", [OR(0x2000, AND(p(PV), 0xFFF))]))]),
+                gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]], [
+                    setL("ex", ["u8", "exram", AND(p(PV), 0x3FF)]),
+                    setp(M5_EXBANK, AND(L("ex"), 0x3F)), setp(M5_EXPAL, AND(SHR(L("ex"), 6), 3))]),
+                # AT fetch
+                setL("at", call("ppu_read", [OR(OR(OR(0x23C0, SHL(AND(SHR(p(PV), 10), 3), 10)),
+                                                   SHL(AND(SHR(p(PV), 5), 0x1C), 1)),
+                                                SHR(AND(p(PV), 0x1C), 2))])),
+                setL("shift", OR(AND(SHR(p(PV), 4), 4), AND(p(PV), 2))),
+                setL("atb", AND(SHR(L("at"), L("shift")), 3)),
+                gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]], [setL("atb", p(M5_EXPAL))]),
+                gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_SPLITACTIVE), 1]], [
+                    setL("ab", ["u8", "exram", ADD(0x3C0, OR(AND(SHR(p(M5_SPLITADDR), 4), 0x38), AND(SHR(p(M5_SPLITADDR), 2), 7)))]),
+                    setL("atb", AND(SHR(L("ab"), L("shift")), 3))]),
+                # pattern fetch (lo + hi planes)
+                setL("sfy", AND(ADD(p(SCAN), p(M5_SPLITSCROLL)), 7)),
+                gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_SPLITACTIVE), 1]],
+                    [setL("ptl", ["u8", "chr", AND(OR(OR(SHL(p(M5_SPLITBANK), 12), SHL(p(NTLATCH), 4)), L("sfy")), 0x1FFFF)]),
+                     setL("pth", ["u8", "chr", AND(OR(OR(OR(SHL(p(M5_SPLITBANK), 12), SHL(p(NTLATCH), 4)), L("sfy")), 8), 0x1FFFF)])],
+                    [gif(["and", ["==", p(MAPPER), 5], ["==", p(M5_EXMODE), 1]],
+                        [setL("ptl", ["u8", "chr", AND(OR(OR(SHL(p(M5_EXBANK), 12), SHL(p(NTLATCH), 4)), v_fineY()), 0x1FFFF)]),
+                         setL("pth", ["u8", "chr", AND(OR(OR(OR(SHL(p(M5_EXBANK), 12), SHL(p(NTLATCH), 4)), v_fineY()), 8), 0x1FFFF)])],
+                        [setL("ptl", call("ppu_read", [OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY())])),
+                         setL("pth", call("ppu_read", [OR(OR(OR(p(BGBASE), SHL(p(NTLATCH), 4)), v_fineY()), 8)]))])]),
+                ["planar8", "row", SHL(L("t"), 3), L("ptl"), L("pth"), SHL(L("atb"), 2), 0],
+                ppu_incx(),
+                setL("t", ADD(L("t"), 1)),
+            ]],
+        ], [
+            # background disabled -> backdrop row (sprites may still show)
+            ["memset", "row", 0, 264, 0],
+        ]),
+        # left-edge clip: hide bg in visible x 0..7 when SHOWBGL off
+        gif(["==", p(SHOWBGL), 0], [["memset", "row", p(PX), 8, 0]]),
+        # sprites: merge <=8 cached line sprites over the row (<=64 px/line).
+        # sclaim = first-in-OAM-order ownership: a claimed pixel blocks later
+        # sprites even when the claimant sits behind an opaque background.
+        gif(["and", ["==", p(SHOWSP), 1], [">", p(SL_COUNT), 0]], [
+            ["memset", "sclaim", 0, 264, 0],
+            setL("j", 0),
+            ["while", ["<", L("j"), p(SL_COUNT)], [
+                setL("b", ["*", L("j"), 5]),
+                setL("oa", ["i32", "sline", ADD(L("b"), 1)]),
+                ["planar8", "sprscr", 0, ["i32", "sline", ADD(L("b"), 2)],
+                 ["i32", "sline", ADD(L("b"), 3)], 0, AND(SHR(L("oa"), 6), 1)],
+                setL("ox", ["i32", "sline", L("b")]),
+                setL("beh", AND(SHR(L("oa"), 5), 1)),
+                setL("por", OR(0x10, SHL(AND(L("oa"), 3), 2))),
+                setL("s0", ["?:", ["==", ["i32", "sline", ADD(L("b"), 4)], 0], 1, 0]),
+                setL("dx", 0),
+                ["while", ["<", L("dx"), 8], [
+                    setL("x", ADD(L("ox"), L("dx"))),
+                    gif([">=", L("x"), 256], [["break"]]),
+                    setL("spx", ["u8", "sprscr", L("dx")]),
+                    gif(["and", ["!=", L("spx"), 0],
+                              ["or", [">=", L("x"), 8], ["==", p(SHOWSPL), 1]]], [
+                        gif(["==", ["u8", "sclaim", L("x")], 0], [
+                            ["setu8", "sclaim", L("x"), 1],
+                            setL("rx", ADD(p(PX), L("x"))),
+                            # sprite-0 hit (never at x=255): dot = x+1 -> cycle
+                            gif(["and", ["and", ["==", L("s0"), 1], ["<", L("x"), 255]],
+                                      ["and", ["!=", ["u8", "row", L("rx")], 0],
+                                              ["and", ["==", p(S0HITCYC), 0],
+                                                      ["==", AND(p(STATUS), 0x40), 0]]]],
+                                [setp(S0HITCYC, ADD(p(LINESTART), ["/", ADD(L("x"), 3), 3]))]),
+                            gif(["or", ["==", L("beh"), 0], ["==", ["u8", "row", L("rx")], 0]],
+                                [["setu8", "row", L("rx"), OR(L("spx"), L("por"))]]),
+                        ]),
+                    ]),
+                    setL("dx", ADD(L("dx"), 1)),
+                ]],
+                setL("j", ADD(L("j"), 1)),
+            ]],
+        ]),
+        # row -> fb through the masked palette shadow (fineX window shift)
+        ["memlut", "fb", p(PIXBASE), "row", p(PX), 256, "palsh", 0],
+        ["ret", 0],
     ]
-
-def ppu_shift():
-    return [setp(PTLSHIFT, AND(SHL(p(PTLSHIFT), 1), 0xFFFF)),
-            setp(PTHSHIFT, AND(SHL(p(PTHSHIFT), 1), 0xFFFF)),
-            setp(ATLSHIFT, OR(SHL(p(ATLSHIFT), 1), AND(p(ATTR), 1))),
-            setp(ATHSHIFT, OR(SHL(p(ATHSHIFT), 1), AND(SHR(p(ATTR), 1), 1)))]
-
-def bg_pixel():
-    # returns 0..15 palette entry for background at fineX using shift regs
-    return [
-        setL("bit", ["-", 15, p(PX)]),
-        setL("lo", AND(SHR(p(PTLSHIFT), L("bit")), 1)),
-        setL("hi", AND(SHR(p(PTHSHIFT), L("bit")), 1)),
-        setL("px", OR(SHL(L("hi"), 1), L("lo"))),
-        setL("abit", ["-", 7, p(PX)]),
-        setL("al", AND(SHR(p(ATLSHIFT), L("abit")), 1)),
-        setL("ah", AND(SHR(p(ATHSHIFT), L("abit")), 1)),
-        setL("at", OR(SHL(L("ah"), 1), L("al"))),
-        gif(["==", L("px"), 0], [setL("bgc", 0)],
-            [setL("bgc", OR(SHL(L("at"), 2), L("px")))]),
-    ]
-
-def render_pixel():
-    # writes fb[PIXBASE + currentX] = palette index (0..63) from ppu_read(0x3F00+bgc)
-    return [
-        gif(["==", p(SHOWBG), 0],
-            [setL("bgc", 0)],               # background off → backdrop (no bg pixel, no sprite-0 hit)
-            bg_pixel()),
-        # left-edge clip: hide background in leftmost 8 px when SHOWBGL off
-        gif(["and", ["<", ["-", p(CYC), 1], 8], ["==", p(SHOWBGL), 0]], [setL("bgc", 0)]),
-    ] + render_sprite_over() + [
-        # Palette lookup, inlined from ppu_read's palette tail (0x3F00|bgc). Palette
-        # RAM is internal to the PPU and drives no CHR/A12 bus line, so a per-pixel
-        # ppu_read()+a12_clock() call pair (~90k calls/frame) is pure overhead here.
-        # bgc is already 0..0x1F, so pi = bgc & 0x1F; $3F10/14/18/1C mirror $3F00...
-        setL("pi", AND(L("bgc"), 0x1F)),
-        gif(["==", AND(L("pi"), 0x13), 0x10], [setL("pi", ["-", L("pi"), 0x10])]),
-        ["setu8", "fb", ADD(p(PIXBASE), ["-", p(CYC), 1]), AND(["u8", "pal", L("pi")], 0x3F)],
-    ]
+    return {"params": [], "body": body}
 
 def spr_line_eval_fn():
     # Per-SCANLINE sprite evaluation (runs once at dot 1 of each visible line):
@@ -383,42 +410,6 @@ def spr_line_eval_fn():
         ["ret", 0],
     ]}
 
-def render_sprite_over():
-    # per-pixel sprite composite over the ≤8 line-cached sprites (see
-    # spr_line_eval_fn). first-opaque wins (OAM order = priority); sprite0 hit +
-    # front/back priority + left-edge clip semantics unchanged.
-    return [
-        gif(["and", ["==", p(SHOWSP), 1], [">", p(SL_COUNT), 0]], [
-            setL("sx", ["-", p(CYC), 1]),
-            gif(["or", [">=", L("sx"), 8], ["==", p(SHOWSPL), 1]], [   # left-edge sprite clip
-                setL("j", 0),
-                setL("done", 0),
-                ["while", ["and", ["<", L("j"), p(SL_COUNT)], ["==", L("done"), 0]], [
-                    setL("b", ["*", L("j"), 5]),
-                    setL("dx", ["-", L("sx"), ["i32", "sline", L("b")]]),
-                    gif(["and", [">=", L("dx"), 0], ["<", L("dx"), 8]], [
-                        setL("oa", ["i32", "sline", ADD(L("b"), 1)]),
-                        # H flip picks bit order (cached bytes are unflipped)
-                        setL("bit", ["?:", ["==", AND(SHR(L("oa"), 6), 1), 1], L("dx"), ["-", 7, L("dx")]]),
-                        setL("spx", OR(
-                            SHL(AND(SHR(["i32", "sline", ADD(L("b"), 3)], L("bit")), 1), 1),
-                            AND(SHR(["i32", "sline", ADD(L("b"), 2)], L("bit")), 1))),
-                        gif(["!=", L("spx"), 0], [
-                            # sprite0 hit (never at x=255)
-                            gif(["and", ["and", ["==", ["i32", "sline", ADD(L("b"), 4)], 0], ["!=", L("bgc"), 0]],
-                                        ["<", L("sx"), 255]],
-                                [setp(STATUS, OR(p(STATUS), 0x40))]),
-                            # priority: if front OR bg transparent, sprite wins
-                            gif(["or", ["==", AND(SHR(L("oa"), 5), 1), 0], ["==", L("bgc"), 0]],
-                                [setL("bgc", OR(0x10, OR(SHL(AND(L("oa"), 3), 2), L("spx"))))]),
-                            setL("done", 1)]),
-                    ]),
-                    setL("j", ADD(L("j"), 1)),
-                ]],
-            ]),
-        ]),
-    ]
-
 def spr_overflow_eval_fn():
     # count sprites in range on this scanline (Y+1 delay); set overflow flag (bit5)
     # if >8. runs whenever rendering is active (bg OR sprites) — independent of display.
@@ -435,82 +426,56 @@ def spr_overflow_eval_fn():
         ["ret", 0],
     ]}
 
-def ppu_step_fn():
-    # one PPU dot. scanline in p[SCAN], cycle in p[CYC].
-    body = [
-        setL("s", p(SCAN)),
-        setL("c", p(CYC)),
+def line_step_fn():
+    # One scanline boundary, called at line START (before the line's CPU
+    # batch). Events at line granularity; sprite-0 stays dot-exact via
+    # S0HITCYC. Replaces the per-dot ppu_step/ppu_tick3 (89k calls/frame).
+    return {"params": ["line"], "body": [
+        setL("s", L("line")),
+        setp(SCAN, L("s")),
         setL("active", ["or", ["==", p(SHOWBG), 1], ["==", p(SHOWSP), 1]]),
-        # visible scanlines 0..239
-        gif(["<", L("s"), 240], [
-            gif(["==", L("active"), 1], [
-                gif(["==", L("c"), 1], [call("spr_line_eval")]),  # cache ≤8 line sprites
-                gif(["and", [">=", L("c"), 1], ["<=", L("c"), 256]],
-                    render_pixel() + ppu_shift() + ppu_fetch_cycle()),
-                gif(["and", [">=", L("c"), 321], ["<=", L("c"), 336]],
-                    ppu_shift() + ppu_fetch_cycle()),
-                gif(["==", L("c"), 256], [ppu_incy()]),
-                gif(["==", L("c"), 257], [ppu_copyh()]),
-            ]),
-            # sprite overflow eval runs only when rendering active (bg or sprites)
-            gif(["and", ["==", L("c"), 256], ["==", L("active"), 1]], [call("spr_overflow_eval")]),
-        ]),
-        # pre-render line 261
-        gif(["==", L("s"), 261], [
-            gif(["==", L("c"), 1], [setp(STATUS, AND(p(STATUS), 0x1F))]),  # clear vblank+s0+overflow
-            gif(["==", L("active"), 1], [
-                gif(["and", [">=", L("c"), 1], ["<=", L("c"), 256]],
-                    ppu_shift() + ppu_fetch_cycle()),
-                gif(["and", [">=", L("c"), 321], ["<=", L("c"), 336]],
-                    ppu_shift() + ppu_fetch_cycle()),
-                gif(["==", L("c"), 256], [ppu_incy()]),
-                gif(["==", L("c"), 257], [ppu_copyh()]),
-                gif(["and", [">=", L("c"), 280], ["<=", L("c"), 304]], [ppu_copyv()]),
-            ]),
-        ]),
-        # vblank start scanline 241 cycle 1
-        # sprite pattern fetch phase raises A12 (SPRBASE); drives MMC3 IRQ via a12_clock
-        gif(["and", ["and", ["<", L("s"), 240], ["==", L("c"), 260]],
-                    ["==", L("active"), 1]],
-            [call("ppu_read", [OR(p(SPRBASE), 0xFF0)])]),
-        gif(["and", ["==", p(MAPPER), 5], ["and", ["==", L("c"), 1],
-                    ["and", ["<", L("s"), 240], ["==", L("active"), 1]]]],
-            [gif(["==", L("s"), p(M5_IRQTARGET)],
-                [setp(M5_IRQPEND, 1), gif(["==", p(M5_IRQEN), 1], [setp(IRQPEND, 1)])])]),
-        gif(["and", ["==", L("s"), 241], ["==", L("c"), 1]], [
+        # promote a pending sprite-0 hit whose cycle has passed (keeps STATUS
+        # coherent even if the game never reads $2002 at the exact moment)
+        gif(["and", [">", p(S0HITCYC), 0], [">=", p(CPUCYC), p(S0HITCYC)]],
+            [setp(STATUS, OR(p(STATUS), 0x40)), setp(S0HITCYC, 0)]),
+        # vblank start (line 241)
+        gif(["==", L("s"), 241], [
             setp(STATUS, OR(p(STATUS), 0x80)),
-            gif(["==", p(NMIEN), 1], [setp(NMIPEND, 1)]),
+            gif(["==", p(NMIEN), 1], [setp(NMIPEND, 1)])]),
+        # pre-render (261): clear vblank/sprite0/overflow, drop pending s0
+        gif(["==", L("s"), 261], [
+            setp(STATUS, AND(p(STATUS), 0x1F)),
+            setp(S0HITCYC, 0)]),
+        # visible line 0: rendering v receives ALL of t (equivalent of the
+        # pre-render copyh@257 + copyv@280-304, both done by end of 261 on HW)
+        gif(["and", ["==", L("s"), 0], ["==", L("active"), 1]],
+            [setp(PV, p(PT))]),
+        gif(["and", ["<", L("s"), 240], ["==", L("active"), 1]], [
+            setp(PIXBASE, ["*", L("s"), 256]),
+            setp(LINESTART, p(CPUCYC)),
+            call("spr_overflow_eval"),
+            call("spr_line_eval"),
+            call("render_line"),
+            # v: end-of-line increment + horizontal restore (dots 256/257)
+            ppu_incy(),
+            ppu_copyh(),
+            # MMC3 IRQ: real HW sees exactly one filtered A12 rise per rendered
+            # line (the sprite pattern-fetch phase). In the line-batched model
+            # ALL fetches share one CPUCYC instant, so the "low ≥3 CPU cycles"
+            # filter in a12_clock can never pass — clock the counter directly.
+            gif(["or", ["==", p(MAPPER), 4], ["==", p(MAPPER), 118]],
+                [call("m3_clock_irq")]),
+            # MMC5 scanline IRQ
+            gif(["==", p(MAPPER), 5],
+                [gif(["==", L("s"), p(M5_IRQTARGET)],
+                    [setp(M5_IRQPEND, 1), gif(["==", p(M5_IRQEN), 1], [setp(IRQPEND, 1)])])]),
         ]),
-        # advance counters
-        setp(CYC, ADD(L("c"), 1)),
-        # odd-frame dot skip: pre-render line is 340 dots (not 341) on odd frames
-        # when rendering is enabled (1:1 NESd _updateCounters); shortens frame by 1 dot
-        gif(["and", ["and", ["==", p(SCAN), 261], ["==", p(CYC), 340]],
-                    ["and", ["==", AND(p(FRAMES), 1), 1], ["==", L("active"), 1]]],
-            [setp(CYC, 0), setp(SCAN, 0),
-             setp(FRAMES, ADD(p(FRAMES), 1)), setp(PIXBASE, 0)],
-            [gif([">", p(CYC), 340], [
-                setp(CYC, 0),
-                setp(SCAN, ADD(p(SCAN), 1)),
-                gif([">", p(SCAN), 261], [
-                    setp(SCAN, 0), setp(FRAMES, ADD(p(FRAMES), 1)),
-                    setp(PIXBASE, 0)]),
-                gif(["and", ["<", p(SCAN), 240], [">", p(SCAN), 0]],
-                    [setp(PIXBASE, ["*", p(SCAN), 256])]),
-            ])]),
         ["ret", 0],
-    ]
-    return {"params": [], "body": body}
+    ]}
 
-def ppu_tick3_fn():
-    return {"params": [], "body": [
-        call("ppu_step"), call("ppu_step"), call("ppu_step"), ["ret", 0]]}
-
-# ---- Bus: CPU rd/wr with PPU tick + OAM DMA ----
 def bus_rd_fn():
     return {"params": ["a"], "body": [
         setp(CPUCYC, ADD(p(CPUCYC), 1)),
-        call("ppu_tick3"),
         call("apu_step"),
         gif(["==", p(MAPPER), 19], [call("m19_irq_tick")]),
         setL("aa", AND(L("a"), 0xFFFF)),
@@ -530,7 +495,6 @@ def bus_rd_fn():
 def bus_wr_fn():
     return {"params": ["a", "v"], "body": [
         setp(CPUCYC, ADD(p(CPUCYC), 1)),
-        call("ppu_tick3"),
         call("apu_step"),
         gif(["==", p(MAPPER), 19], [call("m19_irq_tick")]),
         setL("aa", AND(L("a"), 0xFFFF)),
@@ -569,11 +533,11 @@ def bus_wr_fn():
 def oam_dma_fn():
     return {"params": ["page"], "body": [
         setL("base", SHL(L("page"), 8)),
+        setp(CPUCYC, ADD(p(CPUCYC), 513)),   # DMA stall (~513 CPU cycles)
         setL("i", 0),
         ["while", ["<", L("i"), 256], [
             ["setu8", "oam", AND(ADD(p(OAMADDR), L("i")), 0xFF),
              call("rd_nodma", [ADD(L("base"), L("i"))])],
-            call("ppu_tick3"), call("ppu_tick3"),  # ~2 cycles/byte
             setL("i", ADD(L("i"), 1))]],
         ["ret", 0],
     ]}
@@ -1023,8 +987,8 @@ def build():
     funcs["nt_map"] = nt_map_fn()
     funcs["ppu_reg_read"] = ppu_reg_read_fn()
     funcs["ppu_reg_write"] = ppu_reg_write_fn()
-    funcs["ppu_step"] = ppu_step_fn()
-    funcs["ppu_tick3"] = ppu_tick3_fn()
+    funcs["render_line"] = render_line_fn()
+    funcs["line_step"] = line_step_fn()
     funcs["oam_dma"] = oam_dma_fn()
     funcs["ctrl_read"] = ctrl_read_fn()
     funcs["ctrl_strobe"] = ctrl_strobe_fn()
@@ -1066,17 +1030,51 @@ def build():
         C.push(C.reg(C.P)) + [C.setflag(C.IF_, 1),
         C.setreg(C.PC, call("rd16", [0xFFFA]))] + [["ret", 0]]}
 
-    # run_frame: step CPU (servicing NMI) until PPU frame counter advances
+    # run_frame (scanline model): per line, fire line events + render at line
+    # start, then batch the CPU up to the line's absolute cycle target
+    # (341 dots / 3; the odd-frame skip makes pre-render 340 when rendering).
+    # Instruction overshoot carries into the next line/frame via TGTCYC.
     funcs["run_frame"] = {"params": ["maxInstr"], "body": [
-        setL("f0", p(FRAMES)),
+        # resync guard: first call / reset paths re-anchor the cycle target
+        gif(["or", ["<", p(TGTCYC), ["-", p(CPUCYC), 400]],
+                  [">", p(TGTCYC), ADD(p(CPUCYC), 400)]],
+            [setp(TGTCYC, p(CPUCYC)), setp(DOTREM, 0)]),
+        # rebase: params live in an Int32List, so an absolute CPUCYC would wrap
+        # at 2^31 (~20 min of play) and freeze every `CPUCYC < TGTCYC` compare.
+        # Shift all CPUCYC-relative state down once per frame; per-frame growth
+        # is ~30k cycles, so values stay bounded forever.
+        gif([">", p(CPUCYC), 0x4000000], [
+            setL("rb", p(CPUCYC)),
+            setp(CPUCYC, 0),
+            setp(TGTCYC, SUB(p(TGTCYC), L("rb"))),
+            setp(LINESTART, 0),
+            gif([">", p(S0HITCYC), 0], [setp(S0HITCYC, 1)]),   # past-due → promote asap
+            gif([">", p(A12LOW), 0], [setp(A12LOW, 1)]),
+        ]),
         setL("i", 0),
-        ["while", ["and", ["==", p(FRAMES), L("f0")], ["<", L("i"), L("maxInstr")]], [
-            gif(["==", p(NMIPEND), 1], [setp(NMIPEND, 0), call("nmi")]),
-            gif(["==", p(SCRATCH1), 1], [setp(SCRATCH1, 0), setp(NMIPEND, 1)]),  # delayed NMI (enable-in-vblank): fires after next instr
-            gif(["and", ["or", ["==", p(IRQPEND), 1], ["==", call("apu_irq"), 1]], ["==", C.getflag(C.IF_), 0]],
-                [setp(IRQPEND, 0), call("irq")]),
-            call("step"),
-            setL("i", ADD(L("i"), 1))]],
+        setL("line", 0),
+        ["while", ["and", ["<", L("line"), 262], ["<", L("i"), L("maxInstr")]], [
+            call("line_step", [L("line")]),
+            setL("dots", 341),
+            gif(["and", ["==", L("line"), 261],
+                      ["and", ["==", AND(p(FRAMES), 1), 1],
+                              ["or", ["==", p(SHOWBG), 1], ["==", p(SHOWSP), 1]]]],
+                [setL("dots", 340)]),
+            setL("tot", ADD(p(DOTREM), L("dots"))),
+            setp(TGTCYC, ADD(p(TGTCYC), ["/", L("tot"), 3])),
+            setp(DOTREM, ["%", L("tot"), 3]),
+            ["while", ["and", ["<", p(CPUCYC), p(TGTCYC)], ["<", L("i"), L("maxInstr")]], [
+                gif(["==", p(NMIPEND), 1], [setp(NMIPEND, 0), call("nmi")]),
+                gif(["==", p(SCRATCH1), 1], [setp(SCRATCH1, 0), setp(NMIPEND, 1)]),  # delayed NMI (enable-in-vblank)
+                gif(["and", ["or", ["==", p(IRQPEND), 1], ["==", call("apu_irq"), 1]], ["==", C.getflag(C.IF_), 0]],
+                    [setp(IRQPEND, 0), call("irq")]),
+                call("step"),
+                setL("i", ADD(L("i"), 1)),
+            ]],
+            setL("line", ADD(L("line"), 1)),
+        ]],
+        setp(FRAMES, ADD(p(FRAMES), 1)),
+        setp(SCAN, 0), setp(PIXBASE, 0),
         ["ret", L("i")],
     ]}
 
@@ -1159,6 +1157,10 @@ def build():
     funcs.update(apu["funcs"])
     buffers = {"ram": 2048, "prg": 524288, "chr": 131072, "vram": 2048,
                "pal": 32, "oam": 256, "oam2": 32, "fb": 61440, "prgram": 8192, "exram": 1024,
+               # scanline-model scratch: 33-tile bg row (264px), sprite claim
+               # mask (first-in-OAM-order wins), 8px sprite decode scratch,
+               # masked palette shadow (pal[i]&0x3F) for the row→fb memlut
+               "row": 264, "sclaim": 264, "sprscr": 8, "palsh": 32,
                # raw .nes image staging area for load_ines (holds header+PRG+CHR of a
                # picked ROM: up to 512KB PRG + 128KB CHR + trainer/header, 1MB headroom)
                "ines": 1048576}

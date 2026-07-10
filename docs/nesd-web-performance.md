@@ -237,6 +237,29 @@ sprite-0、行中 VRAM 写逐点交织,是串行状态链的一部分。
   下一个大头回到背景渲染(逐扫描线背景),现在也有真 ROM 可验(gameplay 状态栏
   分割 = sprite-0/IRQ 的活体测试),留作后续。
 
+### 9.2.7 已落地:通用数组 intrinsic + 逐扫描线模型 —— SMB3 再 2.9×(累计 17.5×)
+
+iOS 实测仍不可玩后,实测了逐点模型的**硬下限:渲染全部剥掉仍 122.9ms/帧**(89k 次
+ppu_step 计数 + 每 CPU 周期 3 次总线分派)——架构必须换。设计见
+`nesd-scanline-design.md`,4 个 lens 对抗评审(workflow)后落地:
+
+- **内核 +4 个通用数组算法 intrinsic**(`memset/memcpy/memlut/planar8`,教科书级、
+  零 NES 语义、按钳制后长度计预算,12 个单元测试);已写入 JSON-DSL.md §6.43。
+- **数据层重写为逐扫描线**:`run_frame` 按 262 线循环(线首事件+整线渲染 → CPU 批跑到
+  该线的绝对周期目标,溢出跨线/跨帧结转);33 tile 逐 planar8 进行缓冲 + ≤8 精灵解释
+  合成(先占先赢/优先级/sprite-0)+ 一次 memlut 出帧;$2002 的 sprite-0 经
+  `S0HITCYC`(绝对 CPU 周期)保持 dot 级精确;NMI/vblank/MMC3-IRQ/MMC5-IRQ 线级。
+- **评审抓到两个真 bug 并已修**:①绝对周期比较在 Int32 参数区 **2³¹ 回绕(约 20 分钟
+  游戏时长)后死锁** → 每帧 rebase 全部 CPUCYC 相对量;②线批模型内 CPUCYC 静止,
+  a12 的「低 ≥3 周期」滤波永假 → **MMC3 IRQ 完全不走**(标题不用 IRQ 所以截图发现
+  不了)→ 渲染线直接打拍 `m3_clock_irq`。
+- **验证**:纯背景 ROM 校验和**逐位不变**(`0xe9bc91c5`);SMB3 走完 标题→按 Start→
+  World 1 地图(**底部 HUD = MMC3 IRQ 分割,干净无撕裂**)→地图寻路,逐帧截图全部
+  像素正确;202 个测试全绿。
+- **结果**:SMB3 **244 → 83ms(2.9×,累计自 1453 起 17.5×)**;测试 ROM 261 → 98ms。
+  剩余分解:APU 逐周期 ~41ms(43%,下一目标:事件化批处理)、渲染 ~25ms、CPU+事件
+  ~28ms。**AOT 预估 ~25-40ms → 25-40fps,叠加 worker 模式 UI 全程 60Hz。**
+
 ### 9.3 已落地:worker 模式(后台 isolate 卸载,通用、数据层可选)
 
 把 §9.2 的结论产品化(commit 于 perf/nesd-native):compute 块可声明

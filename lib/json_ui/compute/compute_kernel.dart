@@ -263,6 +263,125 @@ class _Compiler {
           if (a >= 0 && a < buf.length) buf[a] = val(c);
           return _normal;
         };
+
+      // ---- generic byte-array intrinsics ----
+      // Textbook range algorithms (fill / copy / table-map / planar decode) so
+      // data-authored programs can express per-row work as ONE dispatched op
+      // instead of an interpreted per-element loop. Content-agnostic by design:
+      // nothing here knows about any particular program. Ranges are clamped to
+      // buffer bounds (the setu8 convention: out-of-range work is dropped, not
+      // an error) and each op charges budget proportional to elements touched.
+      case 'memset': // ["memset", buf, off, len, val]
+        final buf = _buf(node[1] as String);
+        final off = _compileExpr(node[2]);
+        final len = _compileExpr(node[3]);
+        final val = _compileExpr(node[4]);
+        return (c) {
+          var o = off(c);
+          var n = len(c);
+          if (o < 0) {
+            n += o;
+            o = 0;
+          }
+          if (n > buf.length - o) n = buf.length - o;
+          if (n <= 0) return _normal;
+          if ((c.budget -= 1 + (n >> 3)) <= 0) throw ComputeBudgetExceeded(0);
+          buf.fillRange(o, o + n, val(c) & 0xFF);
+          return _normal;
+        };
+      case 'memcpy': // ["memcpy", dst, doff, src, soff, len] — memmove semantics
+        final dst = _buf(node[1] as String);
+        final doffE = _compileExpr(node[2]);
+        final src = _buf(node[3] as String);
+        final soffE = _compileExpr(node[4]);
+        final lenE = _compileExpr(node[5]);
+        return (c) {
+          var d = doffE(c);
+          var s = soffE(c);
+          var n = lenE(c);
+          if (d < 0) {
+            n += d;
+            s -= d;
+            d = 0;
+          }
+          if (s < 0) {
+            n += s;
+            d -= s;
+            s = 0;
+          }
+          if (n > dst.length - d) n = dst.length - d;
+          if (n > src.length - s) n = src.length - s;
+          if (n <= 0) return _normal;
+          if ((c.budget -= 1 + (n >> 3)) <= 0) throw ComputeBudgetExceeded(0);
+          dst.setRange(d, d + n, src, s);
+          return _normal;
+        };
+      case 'memlut': // ["memlut", dst, doff, src, soff, len, lut, loff]
+        // dst[doff+i] = lut[loff + src[soff+i]]; out-of-range table index → 0.
+        final dst = _buf(node[1] as String);
+        final doffE = _compileExpr(node[2]);
+        final src = _buf(node[3] as String);
+        final soffE = _compileExpr(node[4]);
+        final lenE = _compileExpr(node[5]);
+        final lut = _buf(node[6] as String);
+        final loffE = _compileExpr(node[7]);
+        return (c) {
+          var d = doffE(c);
+          var s = soffE(c);
+          var n = lenE(c);
+          final lo = loffE(c);
+          if (d < 0) {
+            n += d;
+            s -= d;
+            d = 0;
+          }
+          if (s < 0) {
+            n += s;
+            d -= s;
+            s = 0;
+          }
+          if (n > dst.length - d) n = dst.length - d;
+          if (n > src.length - s) n = src.length - s;
+          if (n <= 0) return _normal;
+          if ((c.budget -= 1 + (n >> 2)) <= 0) throw ComputeBudgetExceeded(0);
+          final lutLen = lut.length;
+          for (var i = 0; i < n; i++) {
+            final t = lo + src[s + i];
+            dst[d + i] = (t >= 0 && t < lutLen) ? lut[t] : 0;
+          }
+          return _normal;
+        };
+      case 'planar8': // ["planar8", dst, doff, lo, hi, or, flip]
+        // Decode one 8-pixel row of 2-bit planar graphics (the universal
+        // NES/GB/SNES/C64 tile encoding): px = ((hi>>b)&1)<<1 | (lo>>b)&1 per
+        // bit b (MSB-first; flip!=0 reverses). Transparent px==0 stays 0,
+        // opaque pixels are OR-merged with [or] (palette/attribute bits).
+        final dst = _buf(node[1] as String);
+        final doffE = _compileExpr(node[2]);
+        final loE = _compileExpr(node[3]);
+        final hiE = _compileExpr(node[4]);
+        final orE = _compileExpr(node[5]);
+        final flipE = _compileExpr(node[6]);
+        return (c) {
+          final d = doffE(c);
+          if (d < 0 || d + 8 > dst.length) return _normal;
+          if ((c.budget -= 2) <= 0) throw ComputeBudgetExceeded(0);
+          final lo = loE(c);
+          final hi = hiE(c);
+          final or = orE(c);
+          if (flipE(c) == 0) {
+            for (var b = 0; b < 8; b++) {
+              final px = (((hi >> (7 - b)) & 1) << 1) | ((lo >> (7 - b)) & 1);
+              dst[d + b] = px == 0 ? 0 : (px | or);
+            }
+          } else {
+            for (var b = 0; b < 8; b++) {
+              final px = (((hi >> b) & 1) << 1) | ((lo >> b) & 1);
+              dst[d + b] = px == 0 ? 0 : (px | or);
+            }
+          }
+          return _normal;
+        };
       case 'if':
         final cond = _compileExpr(node[1]);
         final thenB = compileBlock((node[2] as List?) ?? const []);
