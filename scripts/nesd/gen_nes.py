@@ -34,7 +34,7 @@ import gen_apu as APU
  M5_CHR8, M5_CHR9, M5_CHR10, M5_CHR11,
  SPRCB0, SPRCB1, SPRCB2, SPRCB3, SPRCB4, SPRCB5, SPRCB6, SPRCB7,
  M5_SPLITEN, M5_SPLITSIDE, M5_SPLITTILE, M5_SPLITSCROLL, M5_SPLITBANK,
- M5_SPLITADDR, M5_SPLITACTIVE) = range(132)
+ M5_SPLITADDR, M5_SPLITACTIVE, SL_COUNT) = range(133)
 
 def p(i): return ["i32", "p", i]
 def setp(i, v): return ["seti32", "p", i, v]
@@ -327,60 +327,95 @@ def render_pixel():
         ["setu8", "fb", ADD(p(PIXBASE), ["-", p(CYC), 1]), AND(["u8", "pal", L("pi")], 0x3F)],
     ]
 
-def render_sprite_over():
-    # per-pixel sprite scan of OAM. 8x8 and 8x16 (PPUCTRL bit5). first-opaque wins
-    # (OAM order = priority). limits to 8 in-range sprites/scanline + sets overflow
-    # flag; sprite0 hit + front/back priority respected.
-    return [
+def spr_line_eval_fn():
+    # Per-SCANLINE sprite evaluation (runs once at dot 1 of each visible line):
+    # scan OAM in order, cache the first ≤8 in-range sprites' x/attr/pattern
+    # bytes/OAM-index into i32 'sline' (5 words each). Semantically equal to the
+    # old per-pixel 64-entry scan (OAM order = priority, 8-sprite limit, V flip
+    # and 8x16 tile split resolved per line); CHR is fetched once per sprite per
+    # line through the SAME mapper paths (ppu_read → A12/MMC3, spr_chr_addr →
+    # MMC5) instead of once per covered pixel — real HW also fetches sprite
+    # patterns once per line (cycles 257-320), so batching is the faithful shape.
+    # Verified bit-identical on an MMC3 SMB3 trace + the bg-only test ROM.
+    return {"params": [], "body": [
+        setp(SL_COUNT, 0),
         gif(["==", p(SHOWSP), 1], [
-            setL("sx", ["-", p(CYC), 1]),
-            setL("sy", p(SCAN)),
-            setL("big", AND(SHR(p(CTRL), 5), 1)),          # 8x16 sprites?
+            setL("big", AND(SHR(p(CTRL), 5), 1)),
             setL("h", ["?:", ["==", L("big"), 1], 16, 8]),
-            setL("si", 0),
-            setL("done", 0),
-            setL("nvis", 0),                               # in-range sprite count this scanline
-            gif(["or", [">=", L("sx"), 8], ["==", p(SHOWSPL), 1]], [   # left-edge sprite clip
-            ["while", ["and", ["<", L("si"), 64], ["==", L("done"), 0]], [
-                setL("oy", ["u8", "oam", SHL(L("si"), 2)]),
-                setL("ot", ["u8", "oam", ADD(SHL(L("si"), 2), 1)]),
-                setL("oa", ["u8", "oam", ADD(SHL(L("si"), 2), 2)]),
-                setL("ox", ["u8", "oam", ADD(SHL(L("si"), 2), 3)]),
-                setL("dy", ["-", ["-", L("sy"), L("oy")], 1]),   # sprites delayed 1 scanline (OAM Y = screen Y - 1)
-                setL("dx", ["-", L("sx"), L("ox")]),
+            setL("i", 0), setL("n", 0),
+            ["while", ["and", ["<", L("i"), 64], ["<", L("n"), 8]], [
+                setL("oy", ["u8", "oam", SHL(L("i"), 2)]),
+                setL("dy", ["-", ["-", p(SCAN), L("oy")], 1]),  # sprites delayed 1 scanline
                 gif(["and", [">=", L("dy"), 0], ["<", L("dy"), L("h")]], [
-                    setL("nvis", ADD(L("nvis"), 1)),
-                    gif([">", L("nvis"), 8],                # 9th in-range: not in secondary OAM (overflow set in eval pass)
-                        [setL("done", 1)],
-                    [gif(["and", [">=", L("dx"), 0], ["<", L("dx"), 8]], [
-                    # V flip (over full sprite height), then H flip
+                    setL("ot", ["u8", "oam", ADD(SHL(L("i"), 2), 1)]),
+                    setL("oa", ["u8", "oam", ADD(SHL(L("i"), 2), 2)]),
+                    # V flip over full sprite height (per line, not per pixel)
                     gif(["==", AND(SHR(L("oa"), 7), 1), 1], [setL("dy", ["-", ["-", L("h"), 1], L("dy")])]),
-                    gif(["==", AND(SHR(L("oa"), 6), 1), 1], [setL("dx", ["-", 7, L("dx")])]),
                     # pattern address (8x16 selects table via tile bit0, splits top/bottom tile)
                     gif(["==", L("big"), 1], [
                         setL("tl", AND(L("ot"), 0xFE)),
                         gif([">=", L("dy"), 8], [setL("tl", ADD(L("tl"), 1)), setL("dy", ["-", L("dy"), 8])]),
                         setL("pa", OR(OR(SHL(AND(L("ot"), 1), 12), SHL(L("tl"), 4)), L("dy")))],
                         [setL("pa", OR(OR(p(SPRBASE), SHL(L("ot"), 4)), L("dy")))]),
-                    setL("plo", AND(SHR(["?:", ["==", p(MAPPER), 5],
-                        ["u8", "chr", call("spr_chr_addr", [L("pa")])], call("ppu_read", [L("pa")])],
-                        ["-", 7, L("dx")]), 1)),
-                    setL("phi", AND(SHR(["?:", ["==", p(MAPPER), 5],
-                        ["u8", "chr", call("spr_chr_addr", [ADD(L("pa"), 8)])], call("ppu_read", [ADD(L("pa"), 8)])],
-                        ["-", 7, L("dx")]), 1)),
-                    setL("spx", OR(SHL(L("phi"), 1), L("plo"))),
-                    gif(["!=", L("spx"), 0], [
-                        # sprite0 hit (never at x=255)
-                        gif(["and", ["and", ["==", L("si"), 0], ["!=", L("bgc"), 0]], ["<", L("sx"), 255]],
-                            [setp(STATUS, OR(p(STATUS), 0x40))]),
-                        # priority: if front OR bg transparent, sprite wins
-                        gif(["or", ["==", AND(SHR(L("oa"), 5), 1), 0], ["==", L("bgc"), 0]],
-                            [setL("bgc", OR(0x10, OR(SHL(AND(L("oa"), 3), 2), L("spx"))))]),
-                        setL("done", 1)]),
-                    ])]),
+                    setL("b", ["*", L("n"), 5]),
+                    ["seti32", "sline", L("b"), ["u8", "oam", ADD(SHL(L("i"), 2), 3)]],  # x
+                    ["seti32", "sline", ADD(L("b"), 1), L("oa")],                        # attr
+                    # A12-NEUTRAL pattern fetch (chr_addr direct, not ppu_read): real
+                    # HW raises A12 once per line during the sprite-fetch phase, and
+                    # THAT edge is already modeled by the synthetic c==260 read in
+                    # ppu_step — going through ppu_read here would double-clock the
+                    # MMC3 IRQ counter. MMC2/MMC9 tile latches still honored below.
+                    gif(["==", p(MAPPER), 9], [call("m9_latch", [L("pa")]),
+                                               call("m9_latch", [ADD(L("pa"), 8)])]),
+                    ["seti32", "sline", ADD(L("b"), 2), ["?:", ["==", p(MAPPER), 5],
+                        ["u8", "chr", call("spr_chr_addr", [L("pa")])],
+                        ["u8", "chr", call("chr_addr", [L("pa")])]]],
+                    ["seti32", "sline", ADD(L("b"), 3), ["?:", ["==", p(MAPPER), 5],
+                        ["u8", "chr", call("spr_chr_addr", [ADD(L("pa"), 8)])],
+                        ["u8", "chr", call("chr_addr", [ADD(L("pa"), 8)])]]],
+                    ["seti32", "sline", ADD(L("b"), 4), L("i")],                         # OAM index (sprite0)
+                    setL("n", ADD(L("n"), 1)),
                 ]),
-                setL("si", ADD(L("si"), 1)),
-            ]]]),
+                setL("i", ADD(L("i"), 1)),
+            ]],
+            setp(SL_COUNT, L("n")),
+        ]),
+        ["ret", 0],
+    ]}
+
+def render_sprite_over():
+    # per-pixel sprite composite over the ≤8 line-cached sprites (see
+    # spr_line_eval_fn). first-opaque wins (OAM order = priority); sprite0 hit +
+    # front/back priority + left-edge clip semantics unchanged.
+    return [
+        gif(["and", ["==", p(SHOWSP), 1], [">", p(SL_COUNT), 0]], [
+            setL("sx", ["-", p(CYC), 1]),
+            gif(["or", [">=", L("sx"), 8], ["==", p(SHOWSPL), 1]], [   # left-edge sprite clip
+                setL("j", 0),
+                setL("done", 0),
+                ["while", ["and", ["<", L("j"), p(SL_COUNT)], ["==", L("done"), 0]], [
+                    setL("b", ["*", L("j"), 5]),
+                    setL("dx", ["-", L("sx"), ["i32", "sline", L("b")]]),
+                    gif(["and", [">=", L("dx"), 0], ["<", L("dx"), 8]], [
+                        setL("oa", ["i32", "sline", ADD(L("b"), 1)]),
+                        # H flip picks bit order (cached bytes are unflipped)
+                        setL("bit", ["?:", ["==", AND(SHR(L("oa"), 6), 1), 1], L("dx"), ["-", 7, L("dx")]]),
+                        setL("spx", OR(
+                            SHL(AND(SHR(["i32", "sline", ADD(L("b"), 3)], L("bit")), 1), 1),
+                            AND(SHR(["i32", "sline", ADD(L("b"), 2)], L("bit")), 1))),
+                        gif(["!=", L("spx"), 0], [
+                            # sprite0 hit (never at x=255)
+                            gif(["and", ["and", ["==", ["i32", "sline", ADD(L("b"), 4)], 0], ["!=", L("bgc"), 0]],
+                                        ["<", L("sx"), 255]],
+                                [setp(STATUS, OR(p(STATUS), 0x40))]),
+                            # priority: if front OR bg transparent, sprite wins
+                            gif(["or", ["==", AND(SHR(L("oa"), 5), 1), 0], ["==", L("bgc"), 0]],
+                                [setL("bgc", OR(0x10, OR(SHL(AND(L("oa"), 3), 2), L("spx"))))]),
+                            setL("done", 1)]),
+                    ]),
+                    setL("j", ADD(L("j"), 1)),
+                ]],
+            ]),
         ]),
     ]
 
@@ -409,6 +444,7 @@ def ppu_step_fn():
         # visible scanlines 0..239
         gif(["<", L("s"), 240], [
             gif(["==", L("active"), 1], [
+                gif(["==", L("c"), 1], [call("spr_line_eval")]),  # cache ≤8 line sprites
                 gif(["and", [">=", L("c"), 1], ["<=", L("c"), 256]],
                     render_pixel() + ppu_shift() + ppu_fetch_cycle()),
                 gif(["and", [">=", L("c"), 321], ["<=", L("c"), 336]],
@@ -1002,6 +1038,7 @@ def build():
     funcs["m3_clock_irq"] = m3_clock_irq_fn()
     funcs["a12_clock"] = a12_clock_fn()
     funcs["spr_overflow_eval"] = spr_overflow_eval_fn()
+    funcs["spr_line_eval"] = spr_line_eval_fn()
     funcs["n108_update"] = n108_update_fn()
     funcs["n108_write"] = n108_write_fn()
     funcs["m118_write"] = m118_write_fn()
@@ -1128,7 +1165,7 @@ def build():
     buffers.update(apu["buffers"])
     for name, tbl in apu["u8tables"].items():
         buffers[name] = len(tbl)
-    i32 = {"reg": 8, "p": 144}
+    i32 = {"reg": 8, "p": 144, "sline": 40}  # sline: 8 line sprites x [x,attr,plo,phi,idx]
     i32.update(apu["i32bufs"])
     init = {}
     init.update(apu["u8tables"])
