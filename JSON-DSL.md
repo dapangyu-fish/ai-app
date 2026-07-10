@@ -2193,6 +2193,27 @@ templates/                         # JSON DSL 示例配置
 entity 新增 `framebuffer`：`{"kind":"framebuffer","position":[x,y],"size":[w,h]}` —
 按 size 最近邻绘制 `@compute.present` 生成的当前帧图像（≤1 帧延迟，等价原生纹理流）。
 
+**worker 模式（后台 isolate 卸载，原生平台）**：compute 块可选声明
+
+```json
+"compute": { "program": { ... },
+             "worker": { "mirror": ["fb"], "coalesce": true } }
+```
+
+程序在**专用后台 isolate** 上运行，重计算（如 `@compute.call` 逐帧模拟）不再阻塞
+UI 线程（实测 UI 2.3→50 fps、p95 输入延迟 4.3s→20ms，模拟吞吐不降）。语义变化
+（编写 JSON 时必须知晓）：
+- `@compute.call` 变**异步**：立即返回该函数**上一次完成**的结果（首次为 0），不再
+  返回本次结果。依赖返回值做同步分支的程序不要开 worker。
+- `coalesce`（默认 `true`）：同名函数仍在 worker 上运行时，再次 `call` 会被**丢弃**
+  （实时循环按 UI tick 投递，排队只会无限漂移）。置 `false` 则严格排队。
+- `mirror`: 每次 call 完成后从 worker 拷回主线程影子缓冲的缓冲名列表——
+  `@compute.present` / `get_u8` 读到的就是这些镜像（滞后 ≤1 次 call）。未列出的
+  缓冲主线程读到的是本地影子（不含 worker 端写入）。
+- `set_input` / `set_u8` / `load_*` 正常转发（顺序保证）；`@compute.audio` 在 worker
+  端抽取、采样经消息送回播放。
+- **Web 无 isolate**：worker 声明被忽略，自动回退同步执行（行为同未声明）。
+
 音频输出跨平台：web 用 Web Audio(`package:web`) 无缝调度 AudioBuffer 流；原生平台
 (Android/iOS/macOS/Windows) 用 `flutter_pcm_sound`（低缓冲回调补静音防欠载）；
 插件不支持的平台(如 Linux desktop) setup 抛错→createPcmSink 返回 null，优雅静音回退。

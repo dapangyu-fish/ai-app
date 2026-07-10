@@ -15,6 +15,7 @@ import 'package:flutter/foundation.dart';
 
 import '../json_ui/asset_manager.dart';
 import '../json_ui/compute/compute_kernel.dart';
+import 'compute_worker.dart';
 import 'pcm_sink.dart';
 
 /// Holds a compiled [ComputeProgram] for a flame_game plus helpers to load
@@ -34,6 +35,103 @@ class GameCompute {
   bool _decoding = false;
 
   ui.Image? get framebufferImage => _frameImage;
+
+  // ---- worker mode (`"worker": {...}` in the compute spec) ----
+  // Heavy per-frame calls run on a dedicated isolate so the UI thread stays at
+  // 60Hz; the main-side [program] becomes a shadow copy whose buffers listed in
+  // `mirror` are refreshed after every completed call (present/getU8 read it).
+  // Native only — on the web ComputeWorker.supported is false and everything
+  // stays synchronous. Generic: any compute program can opt in from JSON.
+  ComputeWorker? _worker;
+  bool _workerStarting = false;
+  List<String> _mirror = const [];
+  bool _coalesce = true; // drop a call while the same fn is still running
+  final List<Map<String, Object?>> _workerQueue = [];
+  final Map<String, int> _inFlight = {};
+  final Map<String, int> _lastRet = {};
+  int _outstanding = 0;
+  int _msgId = 0;
+
+  /// True while ops are being forwarded to a (starting or live) worker.
+  bool get workerActive => _workerStarting || _worker != null;
+
+  void _startWorker(Map<String, dynamic> progSpec, dynamic cfg) {
+    _workerStarting = true;
+    if (cfg is Map) {
+      final m = cfg['mirror'];
+      if (m is List) _mirror = m.map((e) => e.toString()).toList();
+      final c = cfg['coalesce'];
+      if (c is bool) _coalesce = c;
+    }
+    ComputeWorker.spawn(programSpec: progSpec, onEvent: _onWorkerEvent)
+        .then((w) {
+      _workerStarting = false;
+      if (w == null) {
+        // Spawn failed → permanent sync fallback: replay queued calls locally
+        // (loads/pokes/inputs were already applied to the local program).
+        for (final op in _workerQueue) {
+          if (op['op'] == 'call') {
+            try {
+              program.call(op['fn'] as String,
+                  args: (op['args'] as List).cast<int>(),
+                  budget: op['budget'] as int);
+            } catch (e) {
+              debugPrint('[compute] ${op['fn']} failed: $e');
+            }
+            _outstanding--;
+          }
+        }
+        _workerQueue.clear();
+        _inFlight.clear();
+        return;
+      }
+      _worker = w;
+      for (final op in _workerQueue) {
+        w.post(op);
+      }
+      _workerQueue.clear();
+    });
+  }
+
+  void _post(Map<String, Object?> op) {
+    final w = _worker;
+    if (w != null) {
+      w.post(op);
+    } else if (_workerStarting) {
+      _workerQueue.add(op);
+    }
+  }
+
+  void _onWorkerEvent(Map<dynamic, dynamic> e) {
+    switch (e['ev']) {
+      case 'done':
+        final fn = e['fn'] as String;
+        _inFlight[fn] = (_inFlight[fn] ?? 1) - 1;
+        _lastRet[fn] = e['ret'] as int;
+        final mirrors = e['mirrors'];
+        if (mirrors is Map) {
+          mirrors.forEach((name, bytes) {
+            final dst = program.u8[name];
+            if (dst != null && bytes is Uint8List && bytes.length == dst.length) {
+              dst.setAll(0, bytes);
+            }
+          });
+        }
+        _outstanding--;
+      case 'samples':
+        final data = e['data'];
+        if (data is Int16List && data.isNotEmpty) _audioSink?.feed(data);
+        _outstanding--;
+    }
+  }
+
+  /// Test hook: completes once the worker is up and no forwarded op is pending.
+  @visibleForTesting
+  Future<void> workerSettle() async {
+    while (_workerStarting || _outstanding > 0) {
+      await Future<void>.delayed(const Duration(milliseconds: 2));
+    }
+  }
 
   static GameCompute? fromSpec(
     dynamic spec, {
@@ -55,6 +153,10 @@ class GameCompute {
       hosts: hosts,
     );
     gc = GameCompute._(program, assetManager);
+    final workerCfg = spec['worker'];
+    if (workerCfg != null && workerCfg != false && ComputeWorker.supported) {
+      gc._startWorker(progSpec.cast<String, dynamic>(), workerCfg);
+    }
     return gc;
   }
 
@@ -85,9 +187,27 @@ class GameCompute {
         buf[n + i] = bytes[i];
       }
     }
+    if (workerActive) {
+      _post({
+        'op': 'load', 'buf': buffer, 'bytes': bytes,
+        'offset': offset, 'mirror': mirror,
+      });
+    }
   }
 
   int call(String fn, List<int> args, {int budget = 400000000}) {
+    if (workerActive) {
+      // Coalesce: while `fn` is still running on the worker, drop this call
+      // (real-time loops post per UI tick; queueing them would drift forever).
+      if (_coalesce && (_inFlight[fn] ?? 0) > 0) return _lastRet[fn] ?? 0;
+      _inFlight[fn] = (_inFlight[fn] ?? 0) + 1;
+      _outstanding++;
+      _post({
+        'op': 'call', 'id': _msgId++, 'fn': fn,
+        'args': List<int>.of(args), 'budget': budget, 'mirror': _mirror,
+      });
+      return _lastRet[fn] ?? 0; // async contract: last completed result
+    }
     try {
       return program.call(fn, args: args, budget: budget);
     } catch (e) {
@@ -106,10 +226,14 @@ class GameCompute {
     final b = program.u8[buffer];
     if (b == null || addr < 0 || addr >= b.length) return;
     b[addr] = v & 0xFF;
+    if (workerActive) {
+      _post({'op': 'setu8', 'buf': buffer, 'addr': addr, 'v': v & 0xFF});
+    }
   }
 
   void setInput(int i, int v) {
     if (i >= 0 && i < inputs.length) inputs[i] = v;
+    if (workerActive) _post({'op': 'input', 'i': i, 'v': v});
   }
 
   /// Drain accumulated audio samples produced since the last drain. The compute
@@ -154,6 +278,15 @@ class GameCompute {
     }
     final sink = _audioSink;
     if (sink == null) return;
+    if (workerActive) {
+      // Drain where the state lives; samples come back via a 'samples' event.
+      _outstanding++;
+      _post({
+        'op': 'audio', 'id': _msgId++,
+        'drain': drainFn, 'buf': samplesBuffer,
+      });
+      return;
+    }
     final samples = drainAudio(drainFn: drainFn, samplesBuffer: samplesBuffer);
     if (samples.isNotEmpty) sink.feed(samples);
   }
@@ -189,6 +322,8 @@ class GameCompute {
   }
 
   void dispose() {
+    _worker?.dispose();
+    _worker = null;
     _frameImage?.dispose();
     _frameImage = null;
     _audioSink?.dispose();

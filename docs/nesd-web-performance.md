@@ -212,6 +212,29 @@
 - 提高帧率的杠杆仍然只有两个:**AOT/Release(2–4×)** 和 **减少每帧操作数**(逐扫描线
   PPU,见 §9.1 的风险门槛)。
 
+**追问:「图像并行渲染能不能提速?」—— 也不能(没肉可吃)。** 实测呈现路径:
+调色板→RGBA 转换(61,440 px)= **0.55 ms/帧**,`decodeImageFromPixels` = **0.49 ms/帧**,
+合计 ~1.04 ms,只占 250 ms 帧成本的 **0.4%** —— 即使完美并行化收益上限也是 0.4%。
+而模拟器**内部**的逐像素渲染(占 47%)不可跨线程切分:它与 v 寄存器演化、shift 寄存器、
+sprite-0、行中 VRAM 写逐点交织,是串行状态链的一部分。
+
+### 9.3 已落地:worker 模式(后台 isolate 卸载,通用、数据层可选)
+
+把 §9.2 的结论产品化(commit 于 perf/nesd-native):compute 块可声明
+`"worker": {"mirror": ["fb"], "coalesce": true}` → 程序跑在**专用后台 isolate**,
+`@compute.call` 变异步(返回上次完成结果)、同名函数在跑时新调用被合并丢弃(实时
+节拍不排队)、`mirror` 列表的缓冲每次 call 完成后拷回主线程影子(present/get_u8 读
+镜像,滞后 ≤1 call)、audio 在 worker 端抽取送回。**Web 无 isolate → 声明被忽略、
+自动回退同步**(web 行为不变)。框架侧完全通用(任意 ComputeProgram 可用),NES
+仍纯数据;demo_nes.json 已开启。
+
+验证(构建机,flutter test):
+- **正确性**:80 帧全走消息协议(load→power_on→80×run_frame→镜像拷回),fb 校验和
+  = **0xe9bc91c5,与同步模式逐位一致**;
+- **端到端**(demo 生产配置 coalesce=true,60Hz tick 循环 6 秒):**UI 循环 59Hz、
+  p95 间隙 18ms**,模拟吞吐不降(同步模式下同场景 UI 2.3fps、p95 间隙 4331ms);
+- `flutter analyze` 干净,全套 190 个测试通过。
+
 ## 8. 参考资料
 - Flutter Web 并发/渲染器/Wasm:docs.flutter.dev/perf/isolates、
   /platform-integration/web/{faq,renderers,wasm}
