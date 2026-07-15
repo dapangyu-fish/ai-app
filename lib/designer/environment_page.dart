@@ -267,7 +267,7 @@ class _EnvironmentPageState extends State<EnvironmentPage> {
                               : FontWeight.normal,
                         ),
                       ),
-                      if (env.isBuiltin) ...[
+                      if (env.id == EnvironmentService.productionId) ...[
                         const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -339,8 +339,8 @@ class _EnvironmentPageState extends State<EnvironmentPage> {
 
   String _summary(Environment env) {
     if (env.isBuiltin) {
-      // 直接显示当前实际生效地址
-      return 'backend: ${AppConfig.backendUrl}';
+      // 生产（URL 全空）→ 显示当前实际生效地址；预置 demo-de（有显式 URL）→ 显示它自己的
+      return 'backend: ${env.backendUrl ?? AppConfig.backendUrl}';
     }
     final parts = <String>[];
     if (env.backendUrl != null && env.backendUrl!.isNotEmpty) {

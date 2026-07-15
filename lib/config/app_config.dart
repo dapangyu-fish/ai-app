@@ -18,37 +18,37 @@ class AppConfig {
 
   static const String _defaultBackendUrl = String.fromEnvironment(
     'BACKEND_URL',
-    defaultValue: 'https://myapp-backend.dapangyu.work',
+    defaultValue: 'https://myapp-prod-cn-backend.dreamignite.top',
   );
 
   static const String _defaultSupabaseUrl = String.fromEnvironment(
     'SUPABASE_URL',
-    defaultValue: 'https://myapp-auth.dapangyu.work',
+    defaultValue: 'https://myapp-prod-cn-auth.dreamignite.top',
   );
 
   static const String _defaultMinioUrl = String.fromEnvironment(
     'MINIO_URL',
-    defaultValue: 'https://myapp-oss-endpoint.dapangyu.work',
+    defaultValue: 'https://myapp-prod-cn-oss-endpoint.dreamignite.top',
   );
 
   static const String _defaultRegistryUrl = String.fromEnvironment(
     'REGISTRY_URL',
-    defaultValue: 'https://myapp-registry.dapangyu.work',
+    defaultValue: 'https://myapp-prod-cn-registry.dreamignite.top',
   );
 
   static const String _defaultImApiUrl = String.fromEnvironment(
     'IM_API_URL',
-    defaultValue: 'https://myapp-im.dapangyu.work',
+    defaultValue: 'https://myapp-prod-cn-im.dreamignite.top',
   );
 
   static const String _defaultImWsUrl = String.fromEnvironment(
     'IM_WS_URL',
-    defaultValue: 'wss://myapp-im.dapangyu.work',
+    defaultValue: 'wss://myapp-prod-cn-im.dreamignite.top/ws',
   );
 
   static const String _defaultConfigCenterUrl = String.fromEnvironment(
     'CONFIG_CENTER_URL',
-    defaultValue: 'https://config.dapangyu.work',
+    defaultValue: 'https://myapp-prod-cn-config-center.dreamignite.top',
   );
 
   // ==================== Demo 模式 ====================

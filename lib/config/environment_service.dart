@@ -18,6 +18,7 @@ class EnvironmentService extends ChangeNotifier {
   static final EnvironmentService instance = EnvironmentService._();
 
   static const String productionId = 'production';
+  static const String demoDeId = 'demo-de';
   static const String _envsKey = 'environments_v1';
   static const String _activeKey = 'active_environment_id';
 
@@ -28,7 +29,23 @@ class EnvironmentService extends ChangeNotifier {
     createdAtMillis: 0,
   );
 
-  List<Environment> _envs = [_productionEnv];
+  /// 预置的 demo-de 集群环境（普通可选环境，与 demo 模式无关；内建 → 不可编辑/删除、
+  /// 不写入用户自定义列表）。默认 active 仍是生产，用户可在环境页手动切到这个。
+  static final Environment _demoDeEnv = Environment(
+    id: demoDeId,
+    name: 'MyApp myapp-demo-de.dapangyu.work',
+    backendUrl: 'https://myapp-demo-de-backend.dapangyu.work',
+    supabaseUrl: 'https://myapp-demo-de-auth.dapangyu.work',
+    minioUrl: 'https://myapp-demo-de-oss-endpoint.dapangyu.work',
+    registryUrl: 'https://myapp-demo-de-registry.dapangyu.work',
+    imApiUrl: 'https://myapp-demo-de-im.dapangyu.work',
+    imWsUrl: 'wss://myapp-demo-de-im.dapangyu.work/ws',
+    configCenterUrl: 'https://myapp-demo-de-config-center.dapangyu.work',
+    isBuiltin: true,
+    createdAtMillis: 0,
+  );
+
+  List<Environment> _envs = [_productionEnv, _demoDeEnv];
   String _activeId = productionId;
   bool _loaded = false;
 
@@ -58,7 +75,7 @@ class EnvironmentService extends ChangeNotifier {
               }
             }
           }
-          _envs = [_productionEnv, ...loaded];
+          _envs = [_productionEnv, _demoDeEnv, ...loaded];
         }
       }
       final savedActive = prefs.getString(_activeKey);
@@ -67,7 +84,7 @@ class EnvironmentService extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('[EnvironmentService] load 失败 (回退生产): $e');
-      _envs = [_productionEnv];
+      _envs = [_productionEnv, _demoDeEnv];
       _activeId = productionId;
     } finally {
       _loaded = true;
@@ -105,9 +122,9 @@ class EnvironmentService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// 删除自定义环境。若删的是当前 active，自动切回生产。
+  /// 删除自定义环境。若删的是当前 active，自动切回生产。内建环境（生产 / demo-de）不可删。
   Future<bool> delete(String id) async {
-    if (id == productionId) return false;
+    if (id == productionId || id == demoDeId) return false;
     final removed = _envs.where((e) => e.id != id).toList();
     if (removed.length == _envs.length) return false;
     _envs = removed;
