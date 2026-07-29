@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
+import 'expression_plan.dart';
 import 'state_schema.dart';
 import 'template_plan.dart';
 
@@ -47,6 +48,7 @@ final class MapValuePlan extends ValuePlan {
     required this.source,
     required this.values,
     required this.isJsonLogic,
+    required this.expressionPlan,
     required super.sourcePath,
   }) : super(
          globalDependencies: Set<String>.unmodifiable(
@@ -57,6 +59,7 @@ final class MapValuePlan extends ValuePlan {
   final Map<String, dynamic> source;
   final Map<String, ValuePlan> values;
   final bool isJsonLogic;
+  final JsonLogicExpressionPlan? expressionPlan;
 }
 
 enum ActionPlanKind { call, navigate, back, fallback }
@@ -124,6 +127,7 @@ final class AppExecutionPlanStats {
     required this.widgetCount,
     required this.screenCount,
     required this.stateSlotCount,
+    required this.expressionCount,
   });
 
   final int templateCount;
@@ -132,6 +136,7 @@ final class AppExecutionPlanStats {
   final int widgetCount;
   final int screenCount;
   final int stateSlotCount;
+  final int expressionCount;
 }
 
 /// Immutable load-time plan for one dynamic JSON App.
@@ -218,6 +223,7 @@ final class _AppExecutionPlanCompiler {
   final LinkedHashMap<String, ScreenPlan> _screens =
       LinkedHashMap<String, ScreenPlan>();
   final Set<Object> _visiting = HashSet<Object>.identity();
+  var _expressionCount = 0;
 
   AppExecutionPlan compile() {
     _registerDeclaredState(
@@ -251,6 +257,7 @@ final class _AppExecutionPlanCompiler {
         widgetCount: _widgetPlans.length,
         screenCount: _screens.length,
         stateSlotCount: schema.slots.length,
+        expressionCount: _expressionCount,
       ),
     );
   }
@@ -301,12 +308,17 @@ final class _AppExecutionPlanCompiler {
         );
       }
       _visiting.remove(value);
+      final isJsonLogic =
+          value.length == 1 &&
+          knownJsonLogicOperators.contains(value.keys.first);
+      final expressionPlan = isJsonLogic
+          ? _compileJsonLogic(value, sourcePath)
+          : null;
       final plan = MapValuePlan(
         source: value,
         values: Map<String, ValuePlan>.unmodifiable(values),
-        isJsonLogic:
-            value.length == 1 &&
-            knownJsonLogicOperators.contains(value.keys.first),
+        isJsonLogic: isJsonLogic,
+        expressionPlan: expressionPlan,
         sourcePath: sourcePath,
       );
       _valuePlans[value] = plan;
@@ -326,6 +338,24 @@ final class _AppExecutionPlanCompiler {
     }
     final exact = template.exactBinding?.variable;
     if (exact != null) _stateSchema.registerRead(exact);
+  }
+
+  JsonLogicExpressionPlan _compileJsonLogic(
+    Map<String, dynamic> rule,
+    String sourcePath,
+  ) {
+    _expressionCount++;
+    return JsonLogicPlanCompiler(
+      knownOperators: knownJsonLogicOperators,
+      templateFor: (source) {
+        final template = _templates.putIfAbsent(
+          source,
+          () => TemplatePlan.compile(source),
+        );
+        _registerTemplateReads(template);
+        return template;
+      },
+    ).compile(rule, sourcePath);
   }
 
   void _registerJsonLogicRead(Map<String, dynamic> value) {
