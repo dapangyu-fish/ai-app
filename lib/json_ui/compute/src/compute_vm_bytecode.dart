@@ -69,6 +69,7 @@ abstract final class _Op {
   static const int compareRegisterJumpZero = 51;
   static const int binaryImmediateDistinct = 52;
   static const int constantFoldedBinary = 53;
+  static const int planar8 = 54;
 }
 
 final class _VmModule {

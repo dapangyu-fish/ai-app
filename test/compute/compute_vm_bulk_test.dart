@@ -100,6 +100,55 @@ void main() {
     });
   });
 
+  group('planar8', () {
+    test(
+      'decodes MSB-first, preserves transparency, and ORs opaque pixels',
+      () {
+        final program = _program(<dynamic>[
+          <dynamic>['planar8', 'a', 4, 0x91, 0x50, 0x0c, 0],
+        ]);
+
+        program.call('run');
+
+        expect(program.buffer('a').sublist(4, 12), <int>[
+          1 | 12,
+          2 | 12,
+          0,
+          3 | 12,
+          0,
+          0,
+          0,
+          1 | 12,
+        ]);
+      },
+    );
+
+    test('flip reverses the decoded row', () {
+      final program = _program(<dynamic>[
+        <dynamic>['planar8', 'a', 0, 0x91, 0x50, 0, 0],
+        <dynamic>['planar8', 'b', 0, 0x91, 0x50, 0, 1],
+      ]);
+
+      program.call('run');
+
+      expect(
+        program.buffer('b').sublist(0, 8),
+        program.buffer('a').sublist(0, 8).reversed,
+      );
+    });
+
+    test('drops a row unless all eight output bytes are in bounds', () {
+      final program = _program(<dynamic>[
+        <dynamic>['planar8', 'a', 30, 0xff, 0xff, 0, 0],
+        <dynamic>['planar8', 'a', -1, 0xff, 0xff, 0, 0],
+      ]);
+
+      program.call('run');
+
+      expect(program.buffer('a').every((value) => value == 0), isTrue);
+    });
+  });
+
   group('bytecode and limits', () {
     test('each bulk operation occupies one fixed-width instruction', () {
       final memset = _program(<dynamic>[
@@ -108,12 +157,16 @@ void main() {
       final memlut = _program(<dynamic>[
         <dynamic>['memlut', 'b', 0, 'a', 0, 1, 'lut', 0],
       ]);
+      final planar8 = _program(<dynamic>[
+        <dynamic>['planar8', 'a', 0, 0, 0, 0, 0],
+      ]);
 
       // Literal expressions compile to one instruction each and every
       // function has one implicit return. The remaining single instruction is
       // the side-table-backed bulk dispatch.
       expect(memset.functionInfo('run')!.instructionCount, 5);
       expect(memlut.functionInfo('run')!.instructionCount, 6);
+      expect(planar8.functionInfo('run')!.instructionCount, 7);
     });
 
     test('caps the bulk side table independently', () {
@@ -169,5 +222,18 @@ void main() {
       expect(program.buffer('b').sublist(0, 8), <int>[1, 2, 3, 4, 5, 6, 7, 8]);
     });
 
+    test('planar8 reserves its row charge before mutation', () {
+      final program = _program(<dynamic>[
+        <dynamic>['planar8', 'a', 0, 0xff, 0, 0, 0],
+      ]);
+
+      expect(
+        () => program.call('run', budget: 6),
+        throwsA(isA<ComputeVmBudgetExceeded>()),
+      );
+      expect(program.buffer('a').every((value) => value == 0), isTrue);
+      expect(program.call('run', budget: 8), 0);
+      expect(program.buffer('a').sublist(0, 8), everyElement(1));
+    });
   });
 }

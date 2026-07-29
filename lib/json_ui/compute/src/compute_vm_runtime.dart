@@ -93,6 +93,8 @@ class _ComputeVmScalarRunner {
           _runMemset(module.bulkSites[a], registers, frame, instruction);
         case _Op.memlut:
           _runMemlut(module.bulkSites[a], registers, frame, instruction);
+        case _Op.planar8:
+          _runPlanar8(module.bulkSites[a], registers, frame, instruction);
         case _Op.add:
           registers[a] = registers[b] + registers[c];
         case _Op.subtract:
@@ -296,6 +298,35 @@ class _ComputeVmScalarRunner {
     }
   }
 
+  void _runPlanar8(
+    _VmBulkSite site,
+    Int32List registers,
+    _VmFrame frame,
+    int pc,
+  ) {
+    final arguments = site.argumentRegisters;
+    final destination = u8[site.destinationBufferId];
+    final destinationOffset = registers[arguments[0]];
+    if (destinationOffset < 0 || destinationOffset > destination.length - 8) {
+      return;
+    }
+
+    // A valid planar row always handles exactly eight pixels. Together with
+    // the dispatch unit, it costs two budget units.
+    _chargeBulkBudget(1, frame, pc);
+    final lowPlane = registers[arguments[1]];
+    final highPlane = registers[arguments[2]];
+    final opaqueOr = registers[arguments[3]];
+    final flipped = registers[arguments[4]] != 0;
+    for (var pixelIndex = 0; pixelIndex < 8; pixelIndex++) {
+      final bit = flipped ? pixelIndex : 7 - pixelIndex;
+      final pixel = (((highPlane >> bit) & 1) << 1) | ((lowPlane >> bit) & 1);
+      destination[destinationOffset + pixelIndex] = pixel == 0
+          ? 0
+          : (pixel | opaqueOr) & 0xFF;
+    }
+  }
+
   /// Reserve the length-dependent part of one bulk instruction before it
   /// mutates any buffer. A failed reservation leaves the destination intact.
   void _chargeBulkBudget(int additional, _VmFrame frame, int pc) {
@@ -457,6 +488,13 @@ final class _ComputeVmFusedRunner extends _ComputeVmScalarRunner {
           );
         case _Op.memlut:
           _runMemlut(
+            module.bulkSites[a],
+            registers,
+            frame,
+            frame.function.logicalSourceStarts[instruction],
+          );
+        case _Op.planar8:
+          _runPlanar8(
             module.bulkSites[a],
             registers,
             frame,

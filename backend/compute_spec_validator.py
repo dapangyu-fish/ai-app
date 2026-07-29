@@ -802,6 +802,17 @@ class _ProgramValidator:
                     locals_,
                     depth + 1,
                 )
+        elif op == "planar8":
+            if not self._length(node, 7, path):
+                return
+            self._buffer_reference(op, node[1], f"{path}[1]")
+            for index in range(2, 7):
+                self._validate_expression(
+                    node[index],
+                    f"{path}[{index}]",
+                    locals_,
+                    depth + 1,
+                )
         elif op == "if":
             if len(node) not in {3, 4}:
                 self.error(path, "if expects condition, then, and optional else")
@@ -1091,6 +1102,12 @@ class _ProgramValidator:
                 extra_instructions=1,
             )
             return self._with_bulk_site(usage)
+        if op == "planar8" and len(node) == 7:
+            usage = self._expression_sequence_usage(
+                [node[2], node[3], node[4], node[5], node[6]],
+                extra_instructions=1,
+            )
+            return self._with_bulk_site(usage)
         if op == "if" and len(node) in {3, 4}:
             condition = self._expression_resource_usage(node[1])
             when_true = self._block_resource_usage(node[2])
@@ -1346,7 +1363,7 @@ class _ProgramValidator:
             return
         buffers = (
             self.u8
-            if op in {"u8", "setu8", "memset", "memlut"}
+            if op in {"u8", "setu8", "memset", "memlut", "planar8"}
             else self.i32
         )
         if name not in buffers:

@@ -24,8 +24,8 @@
 /// ```
 ///
 /// Statements are `set`, `setu8`, `seti32`, `if`, `while`, `repeat`,
-/// `switch`, `call`, `host`, `memset`, `memlut`, `ret`, `break`, `continue`,
-/// `block`, and `nop`.
+/// `switch`, `call`, `host`, `memset`, `memlut`, `planar8`, `ret`, `break`,
+/// `continue`, `block`, and `nop`.
 /// Expressions are integer/boolean literals, `var`, `lit`, `u8`, `i32`,
 /// `call`, `host`, arithmetic (`+ - * / % min max`), bitwise
 /// (`& | ^ ~ << >>`), comparisons, `and`, `or`, `not`, and `?:`.

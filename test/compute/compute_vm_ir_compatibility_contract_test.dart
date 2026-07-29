@@ -360,6 +360,9 @@ Map<String, dynamic> _callAndBulkSpecification() {
         'params': <String>['value'],
         'body': <dynamic>[
           <dynamic>['setu8', 'bytes', 0, 11],
+          <dynamic>['setu8', 'bytes', 1, 12],
+          <dynamic>['setu8', 'bytes', 2, 13],
+          <dynamic>['setu8', 'bytes', 3, 14],
           <dynamic>[
             'host',
             'mark',
@@ -373,6 +376,7 @@ Map<String, dynamic> _callAndBulkSpecification() {
             <dynamic>['var', 'value'],
           ],
           <dynamic>['memlut', 'bytes', 16, 'source', 0, 8, 'lut', 0],
+          <dynamic>['planar8', 'bytes', 24, 0x91, 0x50, 0x0c, 0],
           <dynamic>['seti32', 'words', 0, 12345],
           <dynamic>[
             'ret',
@@ -622,6 +626,11 @@ void main() {
           reason: '$function must retain its logical instruction address space',
         );
       }
+      expect(
+        optimized.functionInfo('leaf')!.usesFusedBytecode,
+        isTrue,
+        reason: 'the contract must exercise the fused bulk dispatch',
+      );
 
       _expectBudgetParity(
         specification,
@@ -666,6 +675,22 @@ void main() {
         contains(
           isA<_ExecutionSnapshot>()
               .having(
+                (snapshot) => snapshot.u8['bytes']!.sublist(16, 24),
+                'completed memlut',
+                <int>[255, 254, 253, 252, 251, 250, 249, 248],
+              )
+              .having(
+                (snapshot) => snapshot.u8['bytes']!.sublist(24, 32),
+                'planar8 remains atomic until fully charged',
+                everyElement(0),
+              ),
+        ),
+      );
+      expect(
+        snapshots,
+        contains(
+          isA<_ExecutionSnapshot>()
+              .having(
                 (snapshot) => snapshot.u8['bytes']!.sublist(4, 12),
                 'completed memset',
                 everyElement(77),
@@ -697,6 +722,16 @@ void main() {
         250,
         249,
         248,
+      ]);
+      expect(completed.u8['bytes']!.sublist(24, 32), <int>[
+        1 | 12,
+        2 | 12,
+        0,
+        3 | 12,
+        0,
+        0,
+        0,
+        1 | 12,
       ]);
       expect(completed.i32['words']![0], 12345);
     });

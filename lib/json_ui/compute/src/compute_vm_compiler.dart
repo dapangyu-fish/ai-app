@@ -635,6 +635,8 @@ final class _VmFunctionCompiler {
         _compileMemset(statement, path);
       case 'memlut':
         _compileMemlut(statement, path);
+      case 'planar8':
+        _compilePlanar8(statement, path);
       case 'if':
         if (statement.length != 3 && statement.length != 4) {
           _fail('if expects condition, then, and optional else', path);
@@ -776,6 +778,37 @@ final class _VmFunctionCompiler {
     _releaseTemporary(lookupOffset);
     _releaseTemporary(length);
     _releaseTemporary(sourceOffset);
+    _releaseTemporary(destinationOffset);
+  }
+
+  void _compilePlanar8(List<dynamic> statement, String path) {
+    _length(statement, 7, path);
+    final destinationBufferId = _u8Id(statement[1], '$path[1]');
+    final destinationOffset = _compileExpression(statement[2], '$path[2]');
+    final lowPlane = _compileExpression(statement[3], '$path[3]');
+    final highPlane = _compileExpression(statement[4], '$path[4]');
+    final opaqueOr = _compileExpression(statement[5], '$path[5]');
+    final flip = _compileExpression(statement[6], '$path[6]');
+    final site = _addBulkSite(
+      _VmBulkSite(
+        destinationBufferId: destinationBufferId,
+        sourceBufferId: -1,
+        lookupBufferId: -1,
+        argumentRegisters: Int32List.fromList(<int>[
+          destinationOffset,
+          lowPlane,
+          highPlane,
+          opaqueOr,
+          flip,
+        ]),
+      ),
+      path,
+    );
+    _emit(_Op.planar8, site);
+    _releaseTemporary(flip);
+    _releaseTemporary(opaqueOr);
+    _releaseTemporary(highPlane);
+    _releaseTemporary(lowPlane);
     _releaseTemporary(destinationOffset);
   }
 

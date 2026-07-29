@@ -97,6 +97,7 @@ def test_valid_generic_bulk_statements_pass() -> None:
     program["functions"]["sum"]["body"] = [
         ["memset", "bytes", 0, ["var", "n"], 7],
         ["memlut", "bytes", 0, "source", 0, 8, "lookup", 0],
+        ["planar8", "bytes", 0, 0x91, 0x50, 12, 0],
         ["ret", 0],
     ]
 
@@ -110,11 +111,27 @@ def test_bulk_statements_reject_bad_shapes_and_non_u8_buffers() -> None:
     app["compute"]["program"]["functions"]["sum"]["body"] = [
         ["memset", "words", 0, 1, 2],
         ["memlut", "bytes", 0, "missing", 0, 1, "words", 0],
+        ["planar8", "bytes", 0, 0, 0, 0],
     ]
 
     messages = " | ".join(f.message for f in _errors(app))
     assert "unknown u8 buffer 'words'" in messages
     assert "unknown u8 buffer 'missing'" in messages
+    assert "expected 6 operands, got 5" in messages
+
+
+def test_planar8_requires_a_u8_destination_buffer() -> None:
+    app = _app()
+    app["steps"] = []
+    app["compute"]["program"]["functions"]["sum"]["body"] = [
+        ["planar8", "words", 0, 0, 0, 0, 0],
+    ]
+
+    assert any(
+        finding.path.endswith(".body[0][1]")
+        and finding.message == "unknown u8 buffer 'words'"
+        for finding in _errors(app)
+    )
 
 
 def test_compute_program_version_accepts_numeric_two_only() -> None:
@@ -529,7 +546,7 @@ def test_compute_program_enforces_side_table_limits() -> None:
                 1,
                 [
                     ["memset", "bytes", 0, 1, 1],
-                    ["memlut", "bytes", 0, "bytes", 0, 1, "bytes", 0],
+                    ["planar8", "bytes", 0, 0, 0, 0, 0],
                 ],
             ],
         ]
