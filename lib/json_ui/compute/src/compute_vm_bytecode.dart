@@ -2,6 +2,11 @@ part of '../compute_vm.dart';
 
 const int _instructionWidth = 4;
 
+// Retain fused bytecode only when it removes at least one in four static
+// dispatches. Lower-density functions showed AOT code-layout regressions and
+// are safer on the physically separate scalar runner.
+const int _minimumFusionSavingsDivisor = 4;
+
 abstract final class _Op {
   static const int constant = 0;
   static const int move = 1;
@@ -44,6 +49,23 @@ abstract final class _Op {
   static const int returnValue = 35;
   static const int memset = 36;
   static const int memlut = 37;
+
+  // Peephole superinstructions retain the scalar sequence's logical cost but
+  // avoid dispatching compiler-generated temporary constants and moves.
+  static const int constantMove = 38;
+  static const int moveMove = 39;
+  static const int loadU8Immediate = 40;
+  static const int loadI32Immediate = 41;
+  static const int loadU8ImmediateMove = 42;
+  static const int loadI32ImmediateMove = 43;
+  static const int binaryImmediateRight = 44;
+  static const int binaryRegisterRight = 45;
+  static const int returnImmediate = 46;
+  static const int storeU8ImmediateBoth = 47;
+  static const int storeI32ImmediateBoth = 48;
+  static const int compareImmediateJumpZero = 49;
+  static const int compareMovedRegisterJumpZero = 50;
+  static const int compareRegisterJumpZero = 51;
 }
 
 final class _VmModule {
@@ -56,6 +78,8 @@ final class _VmModule {
     required this.switchSites,
     required this.bulkSites,
     required this.hostNames,
+    required this.usesFusedBytecode,
+    required this.entryUsesFusedBytecode,
   });
 
   final List<_VmFunction> functions;
@@ -66,6 +90,12 @@ final class _VmModule {
   final List<_VmSwitchSite> switchSites;
   final List<_VmBulkSite> bulkSites;
   final List<String> hostNames;
+  final bool usesFusedBytecode;
+
+  /// Whether calling each function can reach fused bytecode through the
+  /// static call graph. This keeps scalar entry points on the compact runner
+  /// even when an unrelated cold helper in the same module is optimized.
+  final List<bool> entryUsesFusedBytecode;
 }
 
 final class _VmFunction {
@@ -76,6 +106,7 @@ final class _VmFunction {
     required this.registerCount,
     required this.code,
     required this.basicBlockStarts,
+    required this.staticDispatchSavings,
   });
 
   final String name;
@@ -84,8 +115,10 @@ final class _VmFunction {
   final int registerCount;
   final Int32List code;
   final Int32List basicBlockStarts;
+  final int staticDispatchSavings;
 
   int get instructionCount => code.length ~/ _instructionWidth;
+  bool get usesFusedBytecode => staticDispatchSavings > 0;
 }
 
 final class _VmCallSite {

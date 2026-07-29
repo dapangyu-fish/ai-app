@@ -5,11 +5,13 @@ final class _ComputeVmCompiler {
     this.specification, {
     required this.hosts,
     required this.limits,
+    required this.optimize,
   });
 
   final Map<String, dynamic> specification;
   final Map<String, ComputeVmHostFunction> hosts;
   final ComputeVmLimits limits;
+  final bool optimize;
 
   final List<int> _constants = <int>[];
   final Map<int, int> _constantIds = <int, int>{};
@@ -93,6 +95,7 @@ final class _ComputeVmCompiler {
         switchSites: _switchSites,
         bulkSites: _bulkSites,
         limits: limits,
+        optimize: optimize,
         instructionLimit: limits.maxInstructions - totalInstructions,
         switchTableEntryLimit:
             limits.maxSwitchTableEntries - totalSwitchTableEntries,
@@ -103,6 +106,7 @@ final class _ComputeVmCompiler {
       functions.add(function);
     }
 
+    final entryUsesFusedBytecode = _computeFusedReachability(functions);
     final module = _VmModule(
       functions: List<_VmFunction>.unmodifiable(functions),
       functionByName: Map<String, int>.unmodifiable(functionByName),
@@ -112,6 +116,10 @@ final class _ComputeVmCompiler {
       switchSites: List<_VmSwitchSite>.unmodifiable(_switchSites),
       bulkSites: List<_VmBulkSite>.unmodifiable(_bulkSites),
       hostNames: List<String>.unmodifiable(hostNames),
+      usesFusedBytecode: functions.any(
+        (function) => function.usesFusedBytecode,
+      ),
+      entryUsesFusedBytecode: entryUsesFusedBytecode,
     );
     return ComputeVmProgram._(
       u8: u8,
@@ -120,6 +128,40 @@ final class _ComputeVmCompiler {
       hosts: hosts,
       limits: limits,
     );
+  }
+
+  List<bool> _computeFusedReachability(List<_VmFunction> functions) {
+    final reachable = <bool>[
+      for (final function in functions) function.usesFusedBytecode,
+    ];
+    final callersByCallee = List<List<int>>.generate(
+      functions.length,
+      (_) => <int>[],
+    );
+    for (var callerId = 0; callerId < functions.length; callerId++) {
+      final function = functions[callerId];
+      for (var pc = 0; pc < function.instructionCount; pc++) {
+        final base = pc * _instructionWidth;
+        if (function.code[base] != _Op.call) continue;
+        final site = _callSites[function.code[base + 2]];
+        callersByCallee[site.functionId].add(callerId);
+      }
+    }
+
+    final queue = <int>[
+      for (var id = 0; id < reachable.length; id++)
+        if (reachable[id]) id,
+    ];
+    var cursor = 0;
+    while (cursor < queue.length) {
+      final calleeId = queue[cursor++];
+      for (final callerId in callersByCallee[calleeId]) {
+        if (reachable[callerId]) continue;
+        reachable[callerId] = true;
+        queue.add(callerId);
+      }
+    }
+    return List<bool>.unmodifiable(reachable);
   }
 
   void _validateLimits() {
@@ -387,6 +429,7 @@ final class _VmFunctionCompiler {
     required this.switchSites,
     required this.bulkSites,
     required this.limits,
+    required this.optimize,
     required this.instructionLimit,
     required this.switchTableEntryLimit,
   });
@@ -404,6 +447,7 @@ final class _VmFunctionCompiler {
   final List<_VmSwitchSite> switchSites;
   final List<_VmBulkSite> bulkSites;
   final ComputeVmLimits limits;
+  final bool optimize;
   final int instructionLimit;
   final int switchTableEntryLimit;
 
@@ -437,6 +481,21 @@ final class _VmFunctionCompiler {
     _maxRegisterCount = _localCount;
     _compileBlock(signature.body, _bodyPath);
     _emit(_Op.returnValue, -1);
+    var staticDispatchSavings = 0;
+    if (optimize) {
+      final scalarCode = List<int>.of(_code);
+      staticDispatchSavings = _optimizePeepholes();
+      // A separate scalar dispatch loop protects ordinary JSON apps from the
+      // larger fused switch. Only retain fused bytecode when the static
+      // dispatch reduction is material enough to pay for that larger loop.
+      if (staticDispatchSavings * _minimumFusionSavingsDivisor <
+          _instructionCount) {
+        _code
+          ..clear()
+          ..addAll(scalarCode);
+        staticDispatchSavings = 0;
+      }
+    }
 
     final words = Int32List.fromList(_code);
     return _VmFunction(
@@ -446,6 +505,7 @@ final class _VmFunctionCompiler {
       registerCount: _maxRegisterCount,
       code: words,
       basicBlockStarts: _findBasicBlockStarts(words),
+      staticDispatchSavings: staticDispatchSavings,
     );
   }
 
@@ -1049,6 +1109,272 @@ final class _VmFunctionCompiler {
     final index = _instructionCount;
     _code.addAll(<int>[opcode, a, b, c]);
     return index;
+  }
+
+  int _optimizePeepholes() {
+    final instructionCount = _instructionCount;
+    if (instructionCount < 2) return 0;
+
+    // Keep every original slot so all precomputed jump and switch targets
+    // remain valid. A sequence is never fused across a reachable target.
+    final targets = <int>{0};
+    for (var pc = 0; pc < instructionCount; pc++) {
+      final base = pc * _instructionWidth;
+      switch (_code[base]) {
+        case _Op.jump:
+          targets.add(_code[base + 1]);
+        case _Op.jumpZero || _Op.jumpNonZero || _Op.jumpLessEqualZero:
+          targets.add(_code[base + 2]);
+        case _Op.switchDispatch:
+          final site = switchSites[_code[base + 2]];
+          targets.add(site.defaultTarget);
+          targets.addAll(site.targets);
+      }
+    }
+
+    var savedDispatches = 0;
+    var pc = 0;
+    while (pc < instructionCount - 1) {
+      final base = pc * _instructionWidth;
+      final opcode = _code[base];
+      final nextBase = base + _instructionWidth;
+      final nextOpcode = _code[nextBase];
+
+      if (pc + 2 < instructionCount &&
+          !targets.contains(pc + 1) &&
+          !targets.contains(pc + 2)) {
+        final thirdBase = nextBase + _instructionWidth;
+        final thirdOpcode = _code[thirdBase];
+        if (_isComparisonOpcode(nextOpcode) &&
+            _code[nextBase + 1] >= _localCount &&
+            _code[nextBase + 1] == _code[nextBase + 2] &&
+            thirdOpcode == _Op.jumpZero &&
+            _code[thirdBase + 1] == _code[nextBase + 1]) {
+          final rightTemporary = _code[nextBase + 3];
+          if (opcode == _Op.constant && _code[base + 1] == rightTemporary) {
+            _rewrite(
+              base,
+              _Op.compareImmediateJumpZero,
+              nextOpcode,
+              _code[nextBase + 2],
+              constants[_code[base + 2]],
+            );
+            savedDispatches += 2;
+            pc += 3;
+            continue;
+          }
+          if (opcode == _Op.move &&
+              _code[base + 1] >= _localCount &&
+              _code[base + 1] == rightTemporary) {
+            _rewrite(
+              base,
+              _Op.compareMovedRegisterJumpZero,
+              nextOpcode,
+              _code[nextBase + 2],
+              _code[base + 2],
+            );
+            savedDispatches += 2;
+            pc += 3;
+            continue;
+          }
+        }
+        if (opcode == _Op.constant) {
+          final temporary = _code[base + 1];
+          final immediate = constants[_code[base + 2]];
+          if (nextOpcode == _Op.loadU8 &&
+              _code[nextBase + 1] == temporary &&
+              _code[nextBase + 3] == temporary &&
+              thirdOpcode == _Op.move &&
+              _code[thirdBase + 2] == temporary) {
+            _rewrite(
+              base,
+              _Op.loadU8ImmediateMove,
+              _code[thirdBase + 1],
+              _code[nextBase + 2],
+              immediate,
+            );
+            savedDispatches += 2;
+            pc += 3;
+            continue;
+          }
+          if (nextOpcode == _Op.loadI32 &&
+              _code[nextBase + 1] == temporary &&
+              _code[nextBase + 3] == temporary &&
+              thirdOpcode == _Op.move &&
+              _code[thirdBase + 2] == temporary) {
+            _rewrite(
+              base,
+              _Op.loadI32ImmediateMove,
+              _code[thirdBase + 1],
+              _code[nextBase + 2],
+              immediate,
+            );
+            savedDispatches += 2;
+            pc += 3;
+            continue;
+          }
+          if (nextOpcode == _Op.constant) {
+            final valueTemporary = _code[nextBase + 1];
+            final value = constants[_code[nextBase + 2]];
+            if (thirdOpcode == _Op.storeU8 &&
+                _code[thirdBase + 2] == temporary &&
+                _code[thirdBase + 3] == valueTemporary) {
+              _rewrite(
+                base,
+                _Op.storeU8ImmediateBoth,
+                _code[thirdBase + 1],
+                immediate,
+                value,
+              );
+              savedDispatches += 2;
+              pc += 3;
+              continue;
+            }
+            if (thirdOpcode == _Op.storeI32 &&
+                _code[thirdBase + 2] == temporary &&
+                _code[thirdBase + 3] == valueTemporary) {
+              _rewrite(
+                base,
+                _Op.storeI32ImmediateBoth,
+                _code[thirdBase + 1],
+                immediate,
+                value,
+              );
+              savedDispatches += 2;
+              pc += 3;
+              continue;
+            }
+          }
+        }
+      }
+
+      if (targets.contains(pc + 1)) {
+        pc++;
+        continue;
+      }
+
+      if (_isComparisonOpcode(opcode) &&
+          _code[base + 1] >= _localCount &&
+          _code[base + 1] == _code[base + 2] &&
+          nextOpcode == _Op.jumpZero &&
+          _code[nextBase + 1] == _code[base + 1]) {
+        _rewrite(
+          base,
+          _Op.compareRegisterJumpZero,
+          opcode,
+          _code[base + 2],
+          _code[base + 3],
+        );
+        savedDispatches++;
+        pc += 2;
+        continue;
+      }
+
+      if (opcode == _Op.constant) {
+        final temporary = _code[base + 1];
+        final immediate = constants[_code[base + 2]];
+        if (nextOpcode == _Op.move && _code[nextBase + 2] == temporary) {
+          _rewrite(base, _Op.constantMove, _code[nextBase + 1], immediate, 0);
+          savedDispatches++;
+          pc += 2;
+          continue;
+        }
+        if (nextOpcode == _Op.loadU8 &&
+            _code[nextBase + 1] == temporary &&
+            _code[nextBase + 3] == temporary) {
+          _rewrite(
+            base,
+            _Op.loadU8Immediate,
+            temporary,
+            _code[nextBase + 2],
+            immediate,
+          );
+          savedDispatches++;
+          pc += 2;
+          continue;
+        }
+        if (nextOpcode == _Op.loadI32 &&
+            _code[nextBase + 1] == temporary &&
+            _code[nextBase + 3] == temporary) {
+          _rewrite(
+            base,
+            _Op.loadI32Immediate,
+            temporary,
+            _code[nextBase + 2],
+            immediate,
+          );
+          savedDispatches++;
+          pc += 2;
+          continue;
+        }
+        if (_isBinaryOpcode(nextOpcode) &&
+            _code[nextBase + 3] == temporary &&
+            _code[nextBase + 1] == _code[nextBase + 2]) {
+          _rewrite(
+            base,
+            _Op.binaryImmediateRight,
+            nextOpcode,
+            _code[nextBase + 1],
+            immediate,
+          );
+          savedDispatches++;
+          pc += 2;
+          continue;
+        }
+        if (nextOpcode == _Op.returnValue && _code[nextBase + 1] == temporary) {
+          _rewrite(base, _Op.returnImmediate, immediate, 0, 0);
+          savedDispatches++;
+          pc += 2;
+          continue;
+        }
+      }
+
+      if (opcode == _Op.move && _code[base + 1] >= _localCount) {
+        final temporary = _code[base + 1];
+        final source = _code[base + 2];
+        if (nextOpcode == _Op.move && _code[nextBase + 2] == temporary) {
+          _rewrite(base, _Op.moveMove, _code[nextBase + 1], source, 0);
+          savedDispatches++;
+          pc += 2;
+          continue;
+        }
+        if (_isBinaryOpcode(nextOpcode) &&
+            _code[nextBase + 3] == temporary &&
+            _code[nextBase + 1] == _code[nextBase + 2]) {
+          _rewrite(
+            base,
+            _Op.binaryRegisterRight,
+            nextOpcode,
+            _code[nextBase + 1],
+            source,
+          );
+          savedDispatches++;
+          pc += 2;
+          continue;
+        }
+      }
+      pc++;
+    }
+    return savedDispatches;
+  }
+
+  void _rewrite(int base, int opcode, int a, int b, int c) {
+    _code[base] = opcode;
+    _code[base + 1] = a;
+    _code[base + 2] = b;
+    _code[base + 3] = c;
+  }
+
+  bool _isBinaryOpcode(int opcode) {
+    return opcode >= _Op.add &&
+        opcode <= _Op.maximum &&
+        opcode != _Op.negate &&
+        opcode != _Op.bitNot &&
+        opcode != _Op.logicalNot;
+  }
+
+  bool _isComparisonOpcode(int opcode) {
+    return opcode >= _Op.equal && opcode <= _Op.greaterEqual;
   }
 
   void _patch(int instruction, int operand, int value) {

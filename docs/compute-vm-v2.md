@@ -64,6 +64,23 @@ Dense switches, including a 256-opcode CPU dispatch, use a single dispatch
 instruction and jump table. Sparse switches use one dispatch instruction plus
 a binary-search side table.
 
+The compiler also performs target-safe peephole fusion over common temporary
+register sequences. It retains every original logical instruction slot, so
+jump/switch targets, instruction limits, budget accounting, and reported
+failure PCs remain compatible with scalar bytecode. A fused operation reserves
+the complete logical cost before a buffer write or return becomes visible.
+
+Fusion is adaptive rather than mandatory:
+
+- a function keeps scalar bytecode unless static dispatches fall by at least
+  25%;
+- `ComputeVmProgram.compile(..., optimize: false)` provides an explicit scalar
+  compatibility/reference mode;
+- scalar and fused bytecode use physically separate interpreter loops;
+- runner selection is per public entry point, including its statically
+  reachable callees, so an unrelated optimized helper cannot slow a scalar
+  hot path.
+
 All values use signed 32-bit two's-complement semantics. Byte buffers store the
 low eight bits. A non-empty power-of-two byte buffer wraps addresses; other
 buffers use checked access (out-of-range reads return zero and writes are
@@ -118,6 +135,8 @@ adding NES-specific actions to the framework.
 ## Compatibility and rollout
 
 - Existing JSON Apps that do not declare `compute` are unaffected.
+- Existing Compute VM bytecode semantics and budgets are unchanged by
+  superinstruction fusion; optimization can be disabled without changing JSON.
 - DSL 3.3 remains accepted for Apps without Compute; Compute Apps declare 4.0.
 - The public runtime exposes compute through an App-scoped session/action
   facade rather than through game-specific classes.
@@ -148,11 +167,18 @@ Dart executor and later add a Worker without changing JSON semantics.
 
 ## AOT baseline
 
-`tool/compute_vm_benchmark.dart` exercises a one-million-iteration loop with a
-uniform 256-way opcode-style switch. On the development macOS host, an AOT
-executable measured a median **17.3 million dispatch iterations/second**
-(`57.7 ns/iteration`). The compiled function contained 1,300 instructions and
-263 basic blocks; each runtime switch used one jump-table dispatch instruction.
+`tool/compute_vm_benchmark.dart` compares `optimize: false` with the adaptive
+compiler in the same AOT executable. It includes two generic workloads:
+
+- A uniform 256-way opcode-style switch contains 1,300 logical instructions
+  and 263 basic blocks. The optimizer rejects its low static payoff and
+  leaves the entry on the scalar loop. On the development macOS host, repeated
+  runs stayed within roughly 1% of the forced-scalar result at about **20
+  million iterations/second**.
+- A dense arithmetic/byte-buffer loop retains six static dispatch savings
+  across 20 logical instructions. It measured about **32.4 million
+  iterations/second**, versus **24.2 million** in forced-scalar mode: roughly a
+  **1.34x** speedup.
 
 This is a synthetic kernel measurement, not a claim that a complete NES already
 runs at 60 FPS. The NES program, framebuffer handoff, APU path, and mobile

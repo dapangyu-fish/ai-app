@@ -45,6 +45,12 @@
 /// to the clamped range they will touch. They reserve that dynamic charge
 /// before mutating a buffer, so budget failure cannot leave a partially
 /// completed bulk operation.
+///
+/// The compiler may combine adjacent scalar instructions into native-friendly
+/// superinstructions. Logical instruction counts, jump targets, and budget
+/// behavior remain scalar-compatible. Functions below the profitability
+/// threshold keep their scalar bytecode. Entry points that cannot reach fused
+/// bytecode use a physically separate scalar interpreter loop.
 library;
 
 import 'dart:typed_data';
@@ -166,6 +172,8 @@ final class ComputeVmFunctionInfo {
     required this.basicBlockCount,
     this.jumpTableSwitchCount = 0,
     this.binarySearchSwitchCount = 0,
+    this.staticDispatchSavings = 0,
+    this.requiresFusedRunner = false,
   });
 
   final String name;
@@ -176,6 +184,18 @@ final class ComputeVmFunctionInfo {
   final int basicBlockCount;
   final int jumpTableSwitchCount;
   final int binarySearchSwitchCount;
+
+  /// Number of interpreter dispatches removed from the static function body.
+  ///
+  /// This is a compiler diagnostic, not a dynamic execution count. Loops may
+  /// execute the optimized sequences more than once.
+  final int staticDispatchSavings;
+
+  bool get usesFusedBytecode => staticDispatchSavings > 0;
+
+  /// Whether this entry point or one of its statically reachable callees uses
+  /// fused bytecode.
+  final bool requiresFusedRunner;
 }
 
 /// A compiled Compute VM v2 module.
@@ -217,17 +237,26 @@ final class ComputeVmProgram {
   final ComputeVmLimits _limits;
 
   /// Compile and validate a JSON module.
+  ///
+  /// [optimize] enables adaptive superinstruction fusion. Set it to `false`
+  /// for a scalar reference execution with identical JSON and budget
+  /// semantics.
   static ComputeVmProgram compile(
     Map<String, dynamic> specification, {
     Map<String, ComputeVmHostFunction> hosts = const {},
     ComputeVmLimits limits = const ComputeVmLimits(),
+    bool optimize = true,
   }) {
     return _ComputeVmCompiler(
       specification,
       hosts: hosts,
       limits: limits,
+      optimize: optimize,
     ).compile();
   }
+
+  /// Whether at least one function passed the fusion profitability threshold.
+  bool get usesFusedBytecode => _module.usesFusedBytecode;
 
   /// Whether [name] identifies a callable function.
   bool hasFunction(String name) => _module.functionByName.containsKey(name);
@@ -258,6 +287,8 @@ final class ComputeVmProgram {
       basicBlockCount: function.basicBlockStarts.length,
       jumpTableSwitchCount: jumpTableSwitchCount,
       binarySearchSwitchCount: binarySearchSwitchCount,
+      staticDispatchSavings: function.staticDispatchSavings,
+      requiresFusedRunner: _module.entryUsesFusedBytecode[id],
     );
   }
 
@@ -314,15 +345,26 @@ final class ComputeVmProgram {
         );
       }
     }
-    return _ComputeVmRunner(
-      module: _module,
-      u8: _u8Buffers,
-      u8Masks: _u8Masks,
-      i32: _i32Buffers,
-      hosts: _hosts,
-      limits: _limits,
-      budget: effectiveBudget,
-    ).call(id, args);
+    final runner = _module.entryUsesFusedBytecode[id]
+        ? _ComputeVmFusedRunner(
+            module: _module,
+            u8: _u8Buffers,
+            u8Masks: _u8Masks,
+            i32: _i32Buffers,
+            hosts: _hosts,
+            limits: _limits,
+            budget: effectiveBudget,
+          )
+        : _ComputeVmScalarRunner(
+            module: _module,
+            u8: _u8Buffers,
+            u8Masks: _u8Masks,
+            i32: _i32Buffers,
+            hosts: _hosts,
+            limits: _limits,
+            budget: effectiveBudget,
+          );
+    return runner.call(id, args);
   }
 }
 
