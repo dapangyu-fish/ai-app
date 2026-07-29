@@ -42,6 +42,8 @@ abstract final class _Op {
   static const int call = 33;
   static const int host = 34;
   static const int returnValue = 35;
+  static const int memset = 36;
+  static const int memlut = 37;
 }
 
 final class _VmModule {
@@ -52,6 +54,7 @@ final class _VmModule {
     required this.callSites,
     required this.hostSites,
     required this.switchSites,
+    required this.bulkSites,
     required this.hostNames,
   });
 
@@ -61,6 +64,7 @@ final class _VmModule {
   final List<_VmCallSite> callSites;
   final List<_VmHostSite> hostSites;
   final List<_VmSwitchSite> switchSites;
+  final List<_VmBulkSite> bulkSites;
   final List<String> hostNames;
 }
 
@@ -98,6 +102,29 @@ final class _VmHostSite {
   const _VmHostSite({required this.hostId, required this.argumentRegisters});
 
   final int hostId;
+  final Int32List argumentRegisters;
+}
+
+/// Side-table data for a generic byte-buffer bulk instruction.
+///
+/// Keeping the buffer IDs and the variable-length register operands here lets
+/// every bytecode instruction retain the fixed four-word representation.
+final class _VmBulkSite {
+  const _VmBulkSite({
+    required this.destinationBufferId,
+    required this.sourceBufferId,
+    required this.lookupBufferId,
+    required this.argumentRegisters,
+  });
+
+  final int destinationBufferId;
+
+  /// `-1` when the operation has no source buffer.
+  final int sourceBufferId;
+
+  /// `-1` when the operation has no lookup buffer.
+  final int lookupBufferId;
+
   final Int32List argumentRegisters;
 }
 

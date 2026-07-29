@@ -83,6 +83,10 @@ final class _ComputeVmRunner {
           if (index >= 0 && index < i32[a].length) {
             i32[a][index] = registers[c];
           }
+        case _Op.memset:
+          _runMemset(module.bulkSites[a], registers, frame, pc);
+        case _Op.memlut:
+          _runMemlut(module.bulkSites[a], registers, frame, pc);
         case _Op.add:
           registers[a] = registers[b] + registers[c];
         case _Op.subtract:
@@ -204,6 +208,93 @@ final class _ComputeVmRunner {
       }
     }
     throw const ComputeVmRuntimeException('call stack ended without a result');
+  }
+
+  void _runMemset(
+    _VmBulkSite site,
+    Int32List registers,
+    _VmFrame frame,
+    int pc,
+  ) {
+    final arguments = site.argumentRegisters;
+    final destination = u8[site.destinationBufferId];
+    var destinationOffset = registers[arguments[0]];
+    var length = registers[arguments[1]];
+    if (destinationOffset < 0) {
+      length += destinationOffset;
+      destinationOffset = 0;
+    }
+    final available = destination.length - destinationOffset;
+    if (length > available) length = available;
+    if (length <= 0) return;
+
+    // The dispatch itself already consumed one instruction. Preserve the
+    // original bulk cost of 1 + floor(length / 8) by reserving only the
+    // length-dependent remainder here.
+    _chargeBulkBudget(length >> 3, frame, pc);
+    destination.fillRange(
+      destinationOffset,
+      destinationOffset + length,
+      registers[arguments[2]] & 0xFF,
+    );
+  }
+
+  void _runMemlut(
+    _VmBulkSite site,
+    Int32List registers,
+    _VmFrame frame,
+    int pc,
+  ) {
+    final arguments = site.argumentRegisters;
+    final destination = u8[site.destinationBufferId];
+    final source = u8[site.sourceBufferId];
+    final lookup = u8[site.lookupBufferId];
+    var destinationOffset = registers[arguments[0]];
+    var sourceOffset = registers[arguments[1]];
+    var length = registers[arguments[2]];
+    final lookupOffset = registers[arguments[3]];
+
+    if (destinationOffset < 0) {
+      length += destinationOffset;
+      sourceOffset -= destinationOffset;
+      destinationOffset = 0;
+    }
+    if (sourceOffset < 0) {
+      length += sourceOffset;
+      destinationOffset -= sourceOffset;
+      sourceOffset = 0;
+    }
+    final destinationAvailable = destination.length - destinationOffset;
+    if (length > destinationAvailable) length = destinationAvailable;
+    final sourceAvailable = source.length - sourceOffset;
+    if (length > sourceAvailable) length = sourceAvailable;
+    if (length <= 0) return;
+
+    // Table mapping does more work per element than a fill, so one additional
+    // budget unit covers each complete group of four mapped bytes.
+    _chargeBulkBudget(length >> 2, frame, pc);
+    for (var index = 0; index < length; index++) {
+      final lookupIndex = lookupOffset + source[sourceOffset + index];
+      destination[destinationOffset +
+          index] = lookupIndex >= 0 && lookupIndex < lookup.length
+          ? lookup[lookupIndex]
+          : 0;
+    }
+  }
+
+  /// Reserve the length-dependent part of one bulk instruction before it
+  /// mutates any buffer. A failed reservation leaves the destination intact.
+  void _chargeBulkBudget(int additional, _VmFrame frame, int pc) {
+    if (additional <= _remainingBudget) {
+      _remainingBudget -= additional;
+      return;
+    }
+    throw ComputeVmBudgetExceeded(
+      budget: _initialBudget,
+      executedInstructions: _initialBudget - _remainingBudget,
+      function: frame.function.name,
+      instruction: pc,
+    );
   }
 
   int _readByte(Uint8List buffer, int mask, int address) {

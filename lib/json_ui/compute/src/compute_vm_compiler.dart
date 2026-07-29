@@ -16,6 +16,7 @@ final class _ComputeVmCompiler {
   final List<_VmCallSite> _callSites = <_VmCallSite>[];
   final List<_VmHostSite> _hostSites = <_VmHostSite>[];
   final List<_VmSwitchSite> _switchSites = <_VmSwitchSite>[];
+  final List<_VmBulkSite> _bulkSites = <_VmBulkSite>[];
   var _astNodeCount = 0;
 
   ComputeVmProgram compile() {
@@ -90,6 +91,7 @@ final class _ComputeVmCompiler {
         callSites: _callSites,
         hostSites: _hostSites,
         switchSites: _switchSites,
+        bulkSites: _bulkSites,
         limits: limits,
         instructionLimit: limits.maxInstructions - totalInstructions,
         switchTableEntryLimit:
@@ -108,6 +110,7 @@ final class _ComputeVmCompiler {
       callSites: List<_VmCallSite>.unmodifiable(_callSites),
       hostSites: List<_VmHostSite>.unmodifiable(_hostSites),
       switchSites: List<_VmSwitchSite>.unmodifiable(_switchSites),
+      bulkSites: List<_VmBulkSite>.unmodifiable(_bulkSites),
       hostNames: List<String>.unmodifiable(hostNames),
     );
     return ComputeVmProgram._(
@@ -128,6 +131,7 @@ final class _ComputeVmCompiler {
       'maxCallSites': limits.maxCallSites,
       'maxHostSites': limits.maxHostSites,
       'maxSwitchSites': limits.maxSwitchSites,
+      'maxBulkSites': limits.maxBulkSites,
       'maxRegistersPerFunction': limits.maxRegistersPerFunction,
       'maxU8Bytes': limits.maxU8Bytes,
       'maxI32Words': limits.maxI32Words,
@@ -381,6 +385,7 @@ final class _VmFunctionCompiler {
     required this.callSites,
     required this.hostSites,
     required this.switchSites,
+    required this.bulkSites,
     required this.limits,
     required this.instructionLimit,
     required this.switchTableEntryLimit,
@@ -397,6 +402,7 @@ final class _VmFunctionCompiler {
   final List<_VmCallSite> callSites;
   final List<_VmHostSite> hostSites;
   final List<_VmSwitchSite> switchSites;
+  final List<_VmBulkSite> bulkSites;
   final ComputeVmLimits limits;
   final int instructionLimit;
   final int switchTableEntryLimit;
@@ -509,6 +515,10 @@ final class _VmFunctionCompiler {
         _emit(_Op.storeI32, bufferId, index, value);
         _releaseTemporary(value);
         _releaseTemporary(index);
+      case 'memset':
+        _compileMemset(statement, path);
+      case 'memlut':
+        _compileMemlut(statement, path);
       case 'if':
         if (statement.length != 3 && statement.length != 4) {
           _fail('if expects condition, then, and optional else', path);
@@ -600,6 +610,66 @@ final class _VmFunctionCompiler {
       default:
         _fail('unknown statement opcode "$op"', '$path[0]');
     }
+  }
+
+  void _compileMemset(List<dynamic> statement, String path) {
+    _length(statement, 5, path);
+    final destinationBufferId = _u8Id(statement[1], '$path[1]');
+    final offset = _compileExpression(statement[2], '$path[2]');
+    final length = _compileExpression(statement[3], '$path[3]');
+    final value = _compileExpression(statement[4], '$path[4]');
+    final site = _addBulkSite(
+      _VmBulkSite(
+        destinationBufferId: destinationBufferId,
+        sourceBufferId: -1,
+        lookupBufferId: -1,
+        argumentRegisters: Int32List.fromList(<int>[offset, length, value]),
+      ),
+      path,
+    );
+    _emit(_Op.memset, site);
+    _releaseTemporary(value);
+    _releaseTemporary(length);
+    _releaseTemporary(offset);
+  }
+
+  void _compileMemlut(List<dynamic> statement, String path) {
+    _length(statement, 8, path);
+    final destinationBufferId = _u8Id(statement[1], '$path[1]');
+    final destinationOffset = _compileExpression(statement[2], '$path[2]');
+    final sourceBufferId = _u8Id(statement[3], '$path[3]');
+    final sourceOffset = _compileExpression(statement[4], '$path[4]');
+    final length = _compileExpression(statement[5], '$path[5]');
+    final lookupBufferId = _u8Id(statement[6], '$path[6]');
+    final lookupOffset = _compileExpression(statement[7], '$path[7]');
+    final site = _addBulkSite(
+      _VmBulkSite(
+        destinationBufferId: destinationBufferId,
+        sourceBufferId: sourceBufferId,
+        lookupBufferId: lookupBufferId,
+        argumentRegisters: Int32List.fromList(<int>[
+          destinationOffset,
+          sourceOffset,
+          length,
+          lookupOffset,
+        ]),
+      ),
+      path,
+    );
+    _emit(_Op.memlut, site);
+    _releaseTemporary(lookupOffset);
+    _releaseTemporary(length);
+    _releaseTemporary(sourceOffset);
+    _releaseTemporary(destinationOffset);
+  }
+
+  int _addBulkSite(_VmBulkSite site, String path) {
+    if (bulkSites.length >= limits.maxBulkSites) {
+      _fail('module exceeds ${limits.maxBulkSites} bulk sites', path);
+    }
+    final id = bulkSites.length;
+    bulkSites.add(site);
+    return id;
   }
 
   void _compileSwitch(List<dynamic> statement, String path) {

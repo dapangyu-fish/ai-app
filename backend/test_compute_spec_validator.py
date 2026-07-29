@@ -89,6 +89,34 @@ def test_valid_compute_contract_passes() -> None:
     assert _errors(_app()) == []
 
 
+def test_valid_generic_bulk_statements_pass() -> None:
+    app = _app()
+    app["steps"] = []
+    program = app["compute"]["program"]
+    program["buffers"].update({"source": 8, "lookup": 256})
+    program["functions"]["sum"]["body"] = [
+        ["memset", "bytes", 0, ["var", "n"], 7],
+        ["memlut", "bytes", 0, "source", 0, 8, "lookup", 0],
+        ["ret", 0],
+    ]
+
+    assert _errors(app) == []
+    assert C.MAX_ACTION_BUDGET == 5_000_000
+
+
+def test_bulk_statements_reject_bad_shapes_and_non_u8_buffers() -> None:
+    app = _app()
+    app["steps"] = []
+    app["compute"]["program"]["functions"]["sum"]["body"] = [
+        ["memset", "words", 0, 1, 2],
+        ["memlut", "bytes", 0, "missing", 0, 1, "words", 0],
+    ]
+
+    messages = " | ".join(f.message for f in _errors(app))
+    assert "unknown u8 buffer 'words'" in messages
+    assert "unknown u8 buffer 'missing'" in messages
+
+
 def test_compute_program_version_accepts_numeric_two_only() -> None:
     app = _app()
     app["compute"]["program"]["version"] = 2.0
@@ -465,6 +493,7 @@ def test_compute_program_caps_json_initializer_elements() -> None:
 def test_compute_program_enforces_side_table_limits() -> None:
     original_calls = C.MAX_CALL_SITES
     original_switches = C.MAX_SWITCH_SITES
+    original_bulk = C.MAX_BULK_SITES
     original_constants = C.MAX_CONSTANTS
     try:
         C.MAX_CALL_SITES = 1
@@ -491,6 +520,23 @@ def test_compute_program_enforces_side_table_limits() -> None:
         assert "exceeds 1 switch sites" in messages
 
         C.MAX_SWITCH_SITES = original_switches
+        C.MAX_BULK_SITES = 1
+        app = _app()
+        app["steps"] = []
+        app["compute"]["program"]["functions"]["sum"]["body"] = [
+            [
+                "if",
+                1,
+                [
+                    ["memset", "bytes", 0, 1, 1],
+                    ["memlut", "bytes", 0, "bytes", 0, 1, "bytes", 0],
+                ],
+            ],
+        ]
+        messages = " | ".join(f.message for f in _errors(app))
+        assert "exceeds 1 bulk sites" in messages
+
+        C.MAX_BULK_SITES = original_bulk
         C.MAX_CONSTANTS = 1
         app = _app()
         app["steps"] = []
@@ -502,4 +548,5 @@ def test_compute_program_enforces_side_table_limits() -> None:
     finally:
         C.MAX_CALL_SITES = original_calls
         C.MAX_SWITCH_SITES = original_switches
+        C.MAX_BULK_SITES = original_bulk
         C.MAX_CONSTANTS = original_constants

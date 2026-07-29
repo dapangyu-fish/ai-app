@@ -32,6 +32,7 @@ MAX_REGISTERS_PER_FUNCTION = 8_192
 MAX_CONSTANTS = 65_536
 MAX_CALL_SITES = 65_536
 MAX_SWITCH_SITES = 8_192
+MAX_BULK_SITES = 8_192
 MAX_SWITCH_TABLE_ENTRIES = 65_536
 MAX_SAFE_INTEGER = 9_007_199_254_740_991
 MAX_ACTION_BUDGET = 5_000_000
@@ -68,6 +69,7 @@ class _ResourceUsage:
     temporaries: int
     call_sites: int = 0
     switch_sites: int = 0
+    bulk_sites: int = 0
 
 
 def validate_compute_config(root: dict[str, Any], error: ErrorCallback) -> None:
@@ -430,6 +432,8 @@ class _ProgramValidator:
         self.call_site_limit_reported = False
         self.switch_sites = 0
         self.switch_site_limit_reported = False
+        self.bulk_sites = 0
+        self.bulk_site_limit_reported = False
         self.switch_table_entries = 0
 
     def validate(self) -> None:
@@ -585,6 +589,16 @@ class _ProgramValidator:
                 self.error(
                     "$.compute.program.functions",
                     f"program exceeds {MAX_SWITCH_SITES} switch sites",
+                )
+            self.bulk_sites += usage.bulk_sites
+            if (
+                self.bulk_sites > MAX_BULK_SITES
+                and not self.bulk_site_limit_reported
+            ):
+                self.bulk_site_limit_reported = True
+                self.error(
+                    "$.compute.program.functions",
+                    f"program exceeds {MAX_BULK_SITES} bulk sites",
                 )
             if (
                 len(self.constants) > MAX_CONSTANTS
@@ -765,6 +779,29 @@ class _ProgramValidator:
             self._buffer_reference(op, node[1], f"{path}[1]")
             self._validate_expression(node[2], f"{path}[2]", locals_, depth + 1)
             self._validate_expression(node[3], f"{path}[3]", locals_, depth + 1)
+        elif op == "memset":
+            if not self._length(node, 5, path):
+                return
+            self._buffer_reference(op, node[1], f"{path}[1]")
+            for index in range(2, 5):
+                self._validate_expression(
+                    node[index],
+                    f"{path}[{index}]",
+                    locals_,
+                    depth + 1,
+                )
+        elif op == "memlut":
+            if not self._length(node, 8, path):
+                return
+            for index in (1, 3, 6):
+                self._buffer_reference(op, node[index], f"{path}[{index}]")
+            for index in (2, 4, 5, 7):
+                self._validate_expression(
+                    node[index],
+                    f"{path}[{index}]",
+                    locals_,
+                    depth + 1,
+                )
         elif op == "if":
             if len(node) not in {3, 4}:
                 self.error(path, "if expects condition, then, and optional else")
@@ -1012,6 +1049,7 @@ class _ProgramValidator:
         temporaries = 0
         call_sites = 0
         switch_sites = 0
+        bulk_sites = 0
         for statement in block:
             usage = self._statement_resource_usage(statement)
             if usage is None:
@@ -1020,11 +1058,13 @@ class _ProgramValidator:
             temporaries = max(temporaries, usage.temporaries)
             call_sites += usage.call_sites
             switch_sites += usage.switch_sites
+            bulk_sites += usage.bulk_sites
         return _ResourceUsage(
             instructions,
             temporaries,
             call_sites,
             switch_sites,
+            bulk_sites,
         )
 
     def _statement_resource_usage(self, node: Any) -> _ResourceUsage | None:
@@ -1039,6 +1079,18 @@ class _ProgramValidator:
                 [node[2], node[3]],
                 extra_instructions=1,
             )
+        if op == "memset" and len(node) == 5:
+            usage = self._expression_sequence_usage(
+                [node[2], node[3], node[4]],
+                extra_instructions=1,
+            )
+            return self._with_bulk_site(usage)
+        if op == "memlut" and len(node) == 8:
+            usage = self._expression_sequence_usage(
+                [node[2], node[4], node[5], node[7]],
+                extra_instructions=1,
+            )
+            return self._with_bulk_site(usage)
         if op == "if" and len(node) in {3, 4}:
             condition = self._expression_resource_usage(node[1])
             when_true = self._block_resource_usage(node[2])
@@ -1051,6 +1103,7 @@ class _ProgramValidator:
             )
             call_sites = condition.call_sites + when_true.call_sites
             switch_sites = condition.switch_sites + when_true.switch_sites
+            bulk_sites = condition.bulk_sites + when_true.bulk_sites
             if len(node) == 4 and node[3] is not None:
                 when_false = self._block_resource_usage(node[3])
                 if when_false is None:
@@ -1059,11 +1112,13 @@ class _ProgramValidator:
                 temporaries = max(temporaries, when_false.temporaries)
                 call_sites += when_false.call_sites
                 switch_sites += when_false.switch_sites
+                bulk_sites += when_false.bulk_sites
             return _ResourceUsage(
                 instructions,
                 temporaries,
                 call_sites,
                 switch_sites,
+                bulk_sites,
             )
         if op == "while" and len(node) == 3:
             condition = self._expression_resource_usage(node[1])
@@ -1075,6 +1130,7 @@ class _ProgramValidator:
                 max(condition.temporaries, body.temporaries),
                 condition.call_sites + body.call_sites,
                 condition.switch_sites + body.switch_sites,
+                condition.bulk_sites + body.bulk_sites,
             )
         if op == "repeat" and len(node) == 3:
             count = self._expression_resource_usage(node[1])
@@ -1086,6 +1142,7 @@ class _ProgramValidator:
                 max(count.temporaries, 1 + body.temporaries),
                 count.call_sites + body.call_sites,
                 count.switch_sites + body.switch_sites,
+                count.bulk_sites + body.bulk_sites,
             )
         if op == "switch" and len(node) in {3, 4}:
             selector = self._expression_resource_usage(node[1])
@@ -1096,6 +1153,7 @@ class _ProgramValidator:
             temporaries = selector.temporaries
             call_sites = selector.call_sites
             switch_sites = selector.switch_sites + 1
+            bulk_sites = selector.bulk_sites
             for entry in cases:
                 if not isinstance(entry, list) or len(entry) != 2:
                     return None
@@ -1106,6 +1164,7 @@ class _ProgramValidator:
                 temporaries = max(temporaries, 1 + body.temporaries)
                 call_sites += body.call_sites
                 switch_sites += body.switch_sites
+                bulk_sites += body.bulk_sites
             if len(node) == 4 and node[3] is not None:
                 default = self._block_resource_usage(node[3])
                 if default is None:
@@ -1114,11 +1173,13 @@ class _ProgramValidator:
                 temporaries = max(temporaries, 1 + default.temporaries)
                 call_sites += default.call_sites
                 switch_sites += default.switch_sites
+                bulk_sites += default.bulk_sites
             return _ResourceUsage(
                 instructions,
                 temporaries,
                 call_sites,
                 switch_sites,
+                bulk_sites,
             )
         if op in {"call", "host"}:
             return self._expression_resource_usage(node)
@@ -1166,6 +1227,7 @@ class _ProgramValidator:
                 max(usage.temporaries, 1),
                 usage.call_sites + (1 if op == "call" else 0),
                 usage.switch_sites,
+                usage.bulk_sites,
             )
         if op == "-":
             if len(node) == 2:
@@ -1213,6 +1275,9 @@ class _ProgramValidator:
                 condition.switch_sites
                 + when_true.switch_sites
                 + when_false.switch_sites,
+                condition.bulk_sites
+                + when_true.bulk_sites
+                + when_false.bulk_sites,
             )
         return None
 
@@ -1226,6 +1291,7 @@ class _ProgramValidator:
         temporaries = 0
         call_sites = 0
         switch_sites = 0
+        bulk_sites = 0
         live = 0
         for expression in expressions:
             usage = self._expression_resource_usage(expression)
@@ -1235,12 +1301,14 @@ class _ProgramValidator:
             temporaries = max(temporaries, live + usage.temporaries)
             call_sites += usage.call_sites
             switch_sites += usage.switch_sites
+            bulk_sites += usage.bulk_sites
             live += 1
         return _ResourceUsage(
             instructions,
             temporaries,
             call_sites,
             switch_sites,
+            bulk_sites,
         )
 
     @staticmethod
@@ -1255,13 +1323,32 @@ class _ProgramValidator:
             usage.temporaries,
             usage.call_sites,
             usage.switch_sites,
+            usage.bulk_sites,
+        )
+
+    @staticmethod
+    def _with_bulk_site(
+        usage: _ResourceUsage | None,
+    ) -> _ResourceUsage | None:
+        if usage is None:
+            return None
+        return _ResourceUsage(
+            usage.instructions,
+            usage.temporaries,
+            usage.call_sites,
+            usage.switch_sites,
+            usage.bulk_sites + 1,
         )
 
     def _buffer_reference(self, op: str, value: Any, path: str) -> None:
         name = self._name(value, path)
         if name is None:
             return
-        buffers = self.u8 if op in {"u8", "setu8"} else self.i32
+        buffers = (
+            self.u8
+            if op in {"u8", "setu8", "memset", "memlut"}
+            else self.i32
+        )
         if name not in buffers:
             self.error(path, f"unknown {'u8' if buffers is self.u8 else 'i32'} buffer {name!r}")
 

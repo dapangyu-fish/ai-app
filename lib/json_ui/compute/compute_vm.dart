@@ -24,7 +24,8 @@
 /// ```
 ///
 /// Statements are `set`, `setu8`, `seti32`, `if`, `while`, `repeat`,
-/// `switch`, `call`, `host`, `ret`, `break`, `continue`, `block`, and `nop`.
+/// `switch`, `call`, `host`, `memset`, `memlut`, `ret`, `break`, `continue`,
+/// `block`, and `nop`.
 /// Expressions are integer/boolean literals, `var`, `lit`, `u8`, `i32`,
 /// `call`, `host`, arithmetic (`+ - * / % min max`), bitwise
 /// (`& | ^ ~ << >>`), comparisons, `and`, `or`, `not`, and `?:`.
@@ -40,7 +41,10 @@
 ///
 /// Every executed bytecode instruction consumes one budget unit, including
 /// calls and host calls. A shared budget covers the complete recursive call
-/// tree.
+/// tree. Bulk byte-buffer instructions additionally charge work proportional
+/// to the clamped range they will touch. They reserve that dynamic charge
+/// before mutating a buffer, so budget failure cannot leave a partially
+/// completed bulk operation.
 library;
 
 import 'dart:typed_data';
@@ -68,6 +72,7 @@ final class ComputeVmLimits {
     this.maxCallSites = 64 * 1024,
     this.maxHostSites = 8 * 1024,
     this.maxSwitchSites = 8 * 1024,
+    this.maxBulkSites = 8 * 1024,
     this.maxRegistersPerFunction = 8192,
     this.maxU8Bytes = 16 * 1024 * 1024,
     this.maxI32Words = 4 * 1024 * 1024,
@@ -89,6 +94,7 @@ final class ComputeVmLimits {
   final int maxCallSites;
   final int maxHostSites;
   final int maxSwitchSites;
+  final int maxBulkSites;
   final int maxRegistersPerFunction;
   final int maxU8Bytes;
   final int maxI32Words;
