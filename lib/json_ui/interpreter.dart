@@ -20,6 +20,8 @@ import 'app_fs.dart';
 import 'http_client.dart';
 import 'dependency_loader.dart';
 import 'compute/compute_session.dart';
+import 'execution/app_execution_plan.dart';
+import 'execution/template_plan.dart';
 import 'path_plan.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
@@ -36,13 +38,6 @@ import '../i18n/locale_controller.dart' show LocaleController;
 import '../i18n/framework_strings.dart';
 
 class JsonInterpreter extends ChangeNotifier {
-  static final RegExp _templatePattern = RegExp(r'\{\{\s*(.+?)\s*\}\}');
-  static final RegExp _fullTemplatePattern = RegExp(
-    r'^\{\{\s*([^{}]+?)\s*\}\}$',
-  );
-  static final RegExp _i18nCallPattern = RegExp(
-    r'''^t\(\s*['"](.+?)['"]\s*\)$''',
-  );
   static final RegExp _localeSeparatorPattern = RegExp(r'[-_]');
 
   // ============ 配置 & 状态 ============
@@ -55,6 +50,10 @@ class JsonInterpreter extends ChangeNotifier {
   String _currentScreenId = '';
   String _appId = 'default';
   final PathPlanCache _pathPlans = PathPlanCache();
+  final RuntimeTemplatePlanCache _runtimeTemplatePlans =
+      RuntimeTemplatePlanCache();
+  AppExecutionPlan? _executionPlan;
+  bool _planSourceMayMutate = false;
 
   /// 敏感能力授权器：JSON-APP 调 @get_auth_token / @get_user_info 时按 appId 弹窗授权。
   final TokenAuthorizer _tokenAuthorizer = TokenAuthorizer();
@@ -194,6 +193,9 @@ class JsonInterpreter extends ChangeNotifier {
 
   /// 当前已加载 App 实例的不透明身份；每次成功 loadConfig 都会更换。
   Object get appScopeIdentity => _appScopeIdentity;
+
+  /// 当前动态 JSON 在本机加载时生成的不可变执行计划。
+  AppExecutionPlan? get executionPlan => _executionPlan;
 
   /// 当前 App 的嵌套深度，用于隔离仍挂在 Navigator 下层的父 App。
   int get appScopeDepth => _stateStack.length;
@@ -482,6 +484,11 @@ class JsonInterpreter extends ChangeNotifier {
       return value;
     }
 
+    final planned = _compiledValuePlanFor(value);
+    if (planned != null) {
+      return _evaluatePlannedExpression(planned);
+    }
+
     // Map → 区分 JsonLogic 表达式 vs 普通数据 Map：
     //   - 单 key + key 在已知 jsonlogic operator 集合里 → 走 jsonlogic 求值
     //   - 其它（多 key、单 key 但 key 不是 op、空 Map）→ 当数据 Map，
@@ -511,6 +518,54 @@ class JsonInterpreter extends ChangeNotifier {
     }
 
     return value;
+  }
+
+  ValuePlan? _compiledValuePlanFor(dynamic value) {
+    if (_planSourceMayMutate || value is! Object) return null;
+    return _executionPlan?.valuePlanFor(value);
+  }
+
+  dynamic _evaluatePlannedExpression(ValuePlan plan) {
+    if (plan is ConstantValuePlan) return plan.value;
+    if (plan is TemplateValuePlan) {
+      return resolveExpression(plan.template.source);
+    }
+    if (plan is ListValuePlan) {
+      return <dynamic>[
+        for (final item in plan.items) _evaluatePlannedExpression(item),
+      ];
+    }
+    if (plan is MapValuePlan) {
+      if (plan.isJsonLogic) {
+        return _jl.apply(_materializePlannedRule(plan), _buildDataContext());
+      }
+      return <String, dynamic>{
+        for (final entry in plan.values.entries)
+          entry.key: _evaluatePlannedExpression(entry.value),
+      };
+    }
+    return null;
+  }
+
+  dynamic _materializePlannedRule(ValuePlan plan) {
+    if (plan is ConstantValuePlan) return plan.value;
+    if (plan is TemplateValuePlan) {
+      // JSONLogic preprocessing historically uses resolveTemplate rather than
+      // resolveExpression, so even one full binding is stringified.
+      return resolveTemplate(plan.template.source);
+    }
+    if (plan is ListValuePlan) {
+      return <dynamic>[
+        for (final item in plan.items) _materializePlannedRule(item),
+      ];
+    }
+    if (plan is MapValuePlan) {
+      return <String, dynamic>{
+        for (final entry in plan.values.entries)
+          entry.key: _materializePlannedRule(entry.value),
+      };
+    }
+    return null;
   }
 
   /// 判断一个 Map 是否是 jsonlogic 表达式（而不是普通数据 Map）：
@@ -579,6 +634,8 @@ class JsonInterpreter extends ChangeNotifier {
     if (rule is String && rule.contains('{{') && rule.contains('}}')) {
       return resolveTemplate(rule);
     }
+    final planned = _compiledValuePlanFor(rule);
+    if (planned != null) return _materializePlannedRule(planned);
     if (rule is List) {
       return rule.map((e) => _resolveTemplatesInRule(e)).toList();
     }
@@ -623,9 +680,17 @@ class JsonInterpreter extends ChangeNotifier {
     // 先完整验证并编译新 App 的计算模块，再替换当前状态。这样编译失败
     // 不会留下一个只加载了一半的 compute session。
     final nextComputeSession = ComputeSession.fromAppConfig(config);
+    final nextExecutionPlan = AppExecutionPlan.compile(
+      config,
+      knownJsonLogicOperators: _knownJsonLogicOps,
+      knownWidgetTypes: JsonWidgetBuilder.registeredWidgetTypes,
+    );
     _pathPlans.clear();
+    _runtimeTemplatePlans.clear();
     _config = config;
     _computeSession = nextComputeSession;
+    _executionPlan = nextExecutionPlan;
+    _planSourceMayMutate = false;
     _appScopeIdentity = Object();
 
     // 提取 appid，用于 Drift 数据库隔离
@@ -712,6 +777,8 @@ class JsonInterpreter extends ChangeNotifier {
         eventContextStack: List<Map<String, dynamic>>.of(_eventContextStack),
         imInboxSub: savedIm,
         computeSession: _computeSession,
+        executionPlan: _executionPlan,
+        planSourceMayMutate: _planSourceMayMutate,
         appScopeIdentity: _appScopeIdentity,
       ),
     );
@@ -726,6 +793,8 @@ class JsonInterpreter extends ChangeNotifier {
     _paramsStack.clear();
     _eventContextStack.clear();
     _computeSession = null;
+    _executionPlan = null;
+    _planSourceMayMutate = false;
     _currentScreenId = '';
     _activeModalCount = 0;
   }
@@ -778,10 +847,13 @@ class JsonInterpreter extends ChangeNotifier {
     _currentScreenId = snapshot.currentScreenId;
     _appId = snapshot.appId;
     _computeSession = snapshot.computeSession;
+    _executionPlan = snapshot.executionPlan;
+    _planSourceMayMutate = snapshot.planSourceMayMutate;
     _appScopeIdentity = snapshot.appScopeIdentity;
     // Path plans never retain values, but keep the bounded cache app-scoped.
     // The restored parent app will repopulate its hot paths on demand.
     _pathPlans.clear();
+    _runtimeTemplatePlans.clear();
 
     _depLoader.restoreFromSnapshot(snapshot.depModules);
 
@@ -933,16 +1005,21 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ 模板解析 ============
 
   String resolveTemplate(String template) {
-    return template.replaceAllMapped(_templatePattern, (match) {
-      final expression = match.group(1)!;
-      // loop / event 作用域没建立时保留模板原文，跟 resolveExpression 一致
-      if ((expression.startsWith('loop.') && _loopContextStack.isEmpty) ||
-          (expression.startsWith('event.') && _eventContextStack.isEmpty)) {
-        return match.group(0)!;
+    if (!template.contains('{{') || !template.contains('}}')) return template;
+    final plan = _templatePlanFor(template);
+    final output = StringBuffer();
+    for (final part in plan.parts) {
+      if (part is TemplateLiteralPart) {
+        output.write(part.value);
+      } else if (part is TemplateBindingPart) {
+        if (_isDeferredTemplateBinding(part)) {
+          output.write(part.token);
+        } else {
+          output.write(_stringifyForTemplate(_evaluateTemplateBinding(part)));
+        }
       }
-      final value = _resolveTemplateExpression(expression);
-      return _stringifyForTemplate(value);
-    });
+    }
+    return output.toString();
   }
 
   /// 把任意值字符串化用于模板插值。
@@ -968,17 +1045,51 @@ class JsonInterpreter extends ChangeNotifier {
     return value.toString();
   }
 
-  /// 解析模板内表达式：
-  ///   - `t('key.path')` / `t("key.path")` → i18n 字典查找
-  ///   - 其他 → 走 getVariable
-  dynamic _resolveTemplateExpression(String expr) {
-    final trimmed = expr.trim();
-    // 形如 t('home.title') 或 t("home.title")
-    final tMatch = _i18nCallPattern.firstMatch(trimmed);
-    if (tMatch != null) {
-      return _i18nLookup(tMatch.group(1)!);
+  TemplatePlan _templatePlanFor(String source) {
+    return _executionPlan?.templateFor(source) ??
+        _runtimeTemplatePlans.planFor(source);
+  }
+
+  bool _isDeferredTemplateBinding(TemplateBindingPart binding) {
+    final variable = binding.variable;
+    if (variable == null) return false;
+    return (variable.requiresLoopScope && _loopContextStack.isEmpty) ||
+        (variable.requiresEventScope && _eventContextStack.isEmpty);
+  }
+
+  dynamic _evaluateTemplateBinding(TemplateBindingPart binding) {
+    final i18nKey = binding.i18nKey;
+    if (i18nKey != null) return _i18nLookup(i18nKey);
+    return _readVariablePlan(binding.variable!);
+  }
+
+  dynamic _readVariablePlan(VariableReadPlan plan) {
+    switch (plan.namespace) {
+      case VariableNamespace.app:
+        final lookup = plan.pathPlan.lookup(_appContext());
+        return lookup.found ? lookup.value : null;
+      case VariableNamespace.loop:
+        if (_loopContextStack.isEmpty) return null;
+        final lookup = plan.pathPlan.lookup(_loopContextStack.last);
+        return lookup.found ? lookup.value : null;
+      case VariableNamespace.params:
+        if (_paramsStack.isEmpty) return null;
+        final lookup = plan.pathPlan.lookup(_paramsStack.last);
+        return lookup.found ? lookup.value : null;
+      case VariableNamespace.event:
+        if (_eventContextStack.isEmpty) return null;
+        final lookup = plan.pathPlan.lookup(_eventContextStack.last);
+        return lookup.found ? lookup.value : null;
+      case VariableNamespace.global:
+        final lookup = plan.pathPlan.lookup(_variables);
+        if (lookup.found) return lookup.value;
+        final computedExpr = _findComputedExpr(plan.path);
+        return computedExpr == null ? null : _evaluateExpression(computedExpr);
+      case VariableNamespace.unqualified:
+        final lookup = plan.pathPlan.lookup(_variables);
+        if (lookup.found) return lookup.value;
+        return _getDependencyVariable(plan.path);
     }
-    return getVariable(trimmed);
   }
 
   /// i18n 嵌套模板解析最大深度。一个 t('A') 命中的字符串里再写 {{ t('B') }}
@@ -1034,27 +1145,22 @@ class JsonInterpreter extends ChangeNotifier {
   /// 解析表达式，返回原始值（{{ path }} 返回实际类型，非字符串化）
   dynamic resolveExpression(dynamic raw) {
     if (raw is String) {
-      // 单一表达式 {{ x }} → 返回原始类型。这里用 `[^{}]` 而非 `.+?`：否则
-      // "{{ a }}/x/{{ b }}" 这种「以 {{ 开头、以 }} 结尾」的混合模板会被整体
-      // 误匹配成一个变量路径 → getVariable(垃圾路径) → null。混合 / 多表达式
-      // 模板要交给下面的 resolveTemplate 逐个插值。
-      final match = _fullTemplatePattern.firstMatch(raw);
-      if (match != null) {
-        final path = match.group(1)!;
+      if (!raw.contains('{{') || !raw.contains('}}')) return raw;
+      final plan = _templatePlanFor(raw);
+      final exactBinding = plan.exactBinding;
+      if (exactBinding != null) {
         // 如果引用的是当前没建立的作用域（loop/event），保留模板原文，
         // 留到真正渲染时（list 给每项建好 loop 上下文 / 事件触发后）
         // 再解析。否则会被提前烤成 null，比如 widget JSON 通过函数参数
         // 传给 helper 时，里面的 {{ loop.item.x }} 在 _resolveArgs 阶段
         // 没 loop 上下文 → 直接变 null → 列表项渲染全空。
-        if ((path.startsWith('loop.') && _loopContextStack.isEmpty) ||
-            (path.startsWith('event.') && _eventContextStack.isEmpty)) {
+        if (_isDeferredTemplateBinding(exactBinding)) {
           return raw;
         }
         // 纯 {{ t('key') }} 也要能在函数参数位（@show_toast / @set / @list_add 等）
         // 解析 i18n——否则会被当成变量路径 getVariable("t('key')") → null，
-        // toast/dialog 等 UI 文本 i18n 会显示成原始 key。复用 _resolveTemplateExpression：
-        // t(...) → i18n 查表；其余 → getVariable（原始类型返回，行为与原来完全一致）。
-        return _resolveTemplateExpression(path);
+        // toast/dialog 等 UI 文本 i18n 会显示成原始 key。
+        return _evaluateTemplateBinding(exactBinding);
       }
       return resolveTemplate(raw);
     }
@@ -1110,13 +1216,24 @@ class JsonInterpreter extends ChangeNotifier {
     BuildContext context,
   ) async {
     try {
-      final type = action['type'] ?? 'call';
+      final actionPlan = _compiledActionPlanFor(action);
+      final type = switch (actionPlan?.kind) {
+        ActionPlanKind.call => 'call',
+        ActionPlanKind.navigate => 'navigate',
+        ActionPlanKind.back => 'back',
+        ActionPlanKind.fallback => action['type'] ?? 'call',
+        null => action['type'] ?? 'call',
+      };
 
       switch (type) {
         case 'call':
-          final callTarget = action['call'] as String?;
-          final args = action['args'] as Map<String, dynamic>?;
-          final assignVar = action['assign'] as String?;
+          final callTarget =
+              actionPlan?.callTarget ?? action['call'] as String?;
+          final args =
+              actionPlan?.arguments?.source ??
+              action['args'] as Map<String, dynamic>?;
+          final assignVar =
+              actionPlan?.assignPath ?? action['assign'] as String?;
           if (callTarget != null) {
             final result = await _executeCall(callTarget, args ?? {});
             if (assignVar != null && result != null) {
@@ -1125,7 +1242,7 @@ class JsonInterpreter extends ChangeNotifier {
           }
           break;
         case 'navigate':
-          final screenId = action['screen'] as String?;
+          final screenId = actionPlan?.screenId ?? action['screen'] as String?;
           if (screenId != null) {
             navigateTo(screenId);
           }
@@ -1173,11 +1290,20 @@ class JsonInterpreter extends ChangeNotifier {
   ) async {
     if (action is! Map<String, dynamic>) return null;
     try {
-      final type = action['type'] ?? 'call';
+      final actionPlan = _compiledActionPlanFor(action);
+      final type = switch (actionPlan?.kind) {
+        ActionPlanKind.call => 'call',
+        ActionPlanKind.navigate => 'navigate',
+        ActionPlanKind.back => 'back',
+        ActionPlanKind.fallback => action['type'] ?? 'call',
+        null => action['type'] ?? 'call',
+      };
       if (type == 'call') {
-        final callTarget = action['call'] as String?;
-        final args = action['args'] as Map<String, dynamic>?;
-        final assignVar = action['assign'] as String?;
+        final callTarget = actionPlan?.callTarget ?? action['call'] as String?;
+        final args =
+            actionPlan?.arguments?.source ??
+            action['args'] as Map<String, dynamic>?;
+        final assignVar = actionPlan?.assignPath ?? action['assign'] as String?;
         if (callTarget != null) {
           final result = await _executeCall(callTarget, args ?? {});
           if (assignVar != null && result != null) {
@@ -1186,7 +1312,7 @@ class JsonInterpreter extends ChangeNotifier {
           return result;
         }
       } else if (type == 'navigate') {
-        final screenId = action['screen'] as String?;
+        final screenId = actionPlan?.screenId ?? action['screen'] as String?;
         if (screenId != null) navigateTo(screenId);
       }
       return null;
@@ -1194,6 +1320,11 @@ class JsonInterpreter extends ChangeNotifier {
       onActionCrash?.call(e, st, appName);
       return null;
     }
+  }
+
+  ActionPlan? _compiledActionPlanFor(Map<String, dynamic> action) {
+    if (_planSourceMayMutate) return null;
+    return _executionPlan?.actionPlanFor(action);
   }
 
   void navigateTo(String screenId) {
@@ -2851,11 +2982,17 @@ class JsonInterpreter extends ChangeNotifier {
         }
 
       case '@get_app_config':
+        // JSON receives the live config object for backward compatibility and
+        // may mutate it through ordinary Map/List state actions. Identity-
+        // bound structural plans are no longer safe after this point; template
+        // plans remain safe because lookup is by immutable String value.
+        _planSourceMayMutate = true;
+        final exposedConfig = rawConfig;
         final bindPath = resolvedArgs['bind'] as String?;
         if (bindPath != null) {
-          setVariable(bindPath, rawConfig);
+          setVariable(bindPath, exposedConfig);
         }
-        return rawConfig;
+        return exposedConfig;
 
       case '@apply_app_config':
         final newConfig = resolvedArgs['config'] as Map<String, dynamic>?;
@@ -3747,7 +3884,10 @@ class JsonInterpreter extends ChangeNotifier {
         return resolveExpression(value);
       }
       return value;
-    } else if (value is List) {
+    }
+    final planned = _compiledValuePlanFor(value);
+    if (planned != null) return _resolvePlannedArgumentValue(planned);
+    if (value is List) {
       return value.map((e) => _resolveValue(e)).toList();
     } else if (value is Map<String, dynamic>) {
       final resolvedMap = <String, dynamic>{};
@@ -3757,6 +3897,25 @@ class JsonInterpreter extends ChangeNotifier {
       return resolvedMap;
     }
     return value;
+  }
+
+  dynamic _resolvePlannedArgumentValue(ValuePlan plan) {
+    if (plan is ConstantValuePlan) return plan.value;
+    if (plan is TemplateValuePlan) {
+      return resolveExpression(plan.template.source);
+    }
+    if (plan is ListValuePlan) {
+      return <dynamic>[
+        for (final item in plan.items) _resolvePlannedArgumentValue(item),
+      ];
+    }
+    if (plan is MapValuePlan) {
+      return <String, dynamic>{
+        for (final entry in plan.values.entries)
+          entry.key: _resolvePlannedArgumentValue(entry.value),
+      };
+    }
+    return null;
   }
 
   Map<String, dynamic> _resolveArgs(Map<String, dynamic> args) {
@@ -4111,6 +4270,8 @@ class _InterpreterStateSnapshot {
   final List<Map<String, dynamic>> eventContextStack;
   final StreamSubscription<Map<String, dynamic>>? imInboxSub;
   final ComputeSession? computeSession;
+  final AppExecutionPlan? executionPlan;
+  final bool planSourceMayMutate;
   final Object appScopeIdentity;
 
   _InterpreterStateSnapshot({
@@ -4128,6 +4289,8 @@ class _InterpreterStateSnapshot {
     required this.eventContextStack,
     required this.imInboxSub,
     required this.computeSession,
+    required this.executionPlan,
+    required this.planSourceMayMutate,
     required this.appScopeIdentity,
   });
 }
