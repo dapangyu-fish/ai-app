@@ -173,6 +173,11 @@ class JsonWidgetBuilder {
   /// （避免格式变动导致解析悄悄失效、与框架漂移）。
   static Set<String> get registeredWidgetTypes => _builders.keys.toSet();
 
+  /// Widget types whose v1 builders are safe to mount behind path-filtered
+  /// invalidation. AppExecutionPlan still applies a whole-screen safety gate,
+  /// so this opt-in alone never enables partial updates.
+  static Set<String> get pathScopedWidgetTypes => const <String>{'text'};
+
   /// 根据 JSON 配置构建对应的 Flutter Widget
   Widget build(
     BuildContext context,

@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
 import 'package:flutter_application_1/json_ui/execution/app_execution_plan.dart';
 import 'package:flutter_application_1/json_ui/execution/state_schema.dart';
 import 'package:flutter_application_1/json_ui/interpreter.dart';
@@ -330,6 +333,47 @@ void main() {
         <String, dynamic>{'value': 'Ada'},
       ]);
       expect(identical(value, variables), isFalse);
+    });
+
+    testWidgets('opaque roots retain action-argument semantics', (
+      tester,
+    ) async {
+      final variables = <String, dynamic>{
+        'name': 'Ada',
+        'label': '{{ global.name }}',
+        'ruleShapedData': <String, dynamic>{
+          '+': <dynamic>[1, 2],
+        },
+      };
+      final action = <String, dynamic>{
+        'call': '@json_encode',
+        'args': <String, dynamic>{'value': variables},
+      };
+      final config = _config(
+        name: 'opaque-action-args',
+        variables: variables,
+        children: <Map<String, dynamic>>[],
+      )..['_testAction'] = action;
+      interpreter.loadConfig(config);
+
+      late BuildContext context;
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Builder(
+            builder: (value) {
+              context = value;
+              return const SizedBox();
+            },
+          ),
+        ),
+      );
+      final encoded =
+          await interpreter.executeActionWithResult(action, context) as String;
+      final decoded = jsonDecode(encoded) as Map<String, dynamic>;
+
+      expect(decoded['label'], 'Ada');
+      expect(decoded['ruleShapedData'], 3.0);
     });
   });
 }

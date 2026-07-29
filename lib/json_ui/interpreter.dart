@@ -7,6 +7,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:jsonlogic/jsonlogic.dart';
@@ -21,10 +22,13 @@ import 'http_client.dart';
 import 'dependency_loader.dart';
 import 'compute/compute_session.dart';
 import 'execution/app_execution_plan.dart';
+import 'execution/compiled_json_logic_evaluator.dart';
 import 'execution/expression_plan.dart';
+import 'execution/state_path_invalidation_graph.dart';
 import 'execution/template_plan.dart';
 import 'path_plan.dart';
 import 'widget_builder.dart';
+import 'widgets/planned_widget_host.dart';
 import 'widgets/position_handler.dart';
 import 'builtins/launcher_bridges.dart';
 import 'security/token_authorizer.dart';
@@ -48,12 +52,15 @@ class JsonInterpreter extends ChangeNotifier {
   late Map<String, dynamic> _functions;
   ComputeSession? _computeSession;
   Object _appScopeIdentity = Object();
+  int _presentationRevision = 0;
   String _currentScreenId = '';
   String _appId = 'default';
   final PathPlanCache _pathPlans = PathPlanCache();
   final RuntimeTemplatePlanCache _runtimeTemplatePlans =
       RuntimeTemplatePlanCache();
   AppExecutionPlan? _executionPlan;
+  StatePathInvalidationGraph _stateInvalidationGraph =
+      StatePathInvalidationGraph();
   bool _planSourceMayMutate = false;
 
   /// 敏感能力授权器：JSON-APP 调 @get_auth_token / @get_user_info 时按 appId 弹窗授权。
@@ -146,6 +153,7 @@ class JsonInterpreter extends ChangeNotifier {
 
   /// jsonlogic 标准引擎 + 自定义操作符
   late Jsonlogic _jl;
+  late final CompiledJsonLogicEvaluator _compiledJsonLogic;
 
   final DslHttpClient _httpClient = DslHttpClient();
 
@@ -195,8 +203,28 @@ class JsonInterpreter extends ChangeNotifier {
   /// 当前已加载 App 实例的不透明身份；每次成功 loadConfig 都会更换。
   Object get appScopeIdentity => _appScopeIdentity;
 
+  /// Monotonic shell revision for structural restores which may otherwise
+  /// produce the same selected App/screen tuple (notably nested App pop).
+  int get presentationRevision => _presentationRevision;
+
   /// 当前动态 JSON 在本机加载时生成的不可变执行计划。
   AppExecutionPlan? get executionPlan => _executionPlan;
+
+  /// 当前 screen 壳层的失效信号。
+  ///
+  /// 编译器能完整证明依赖时只监听对应 global 路径；无法证明、运行时注入的
+  /// screen 或源码已暴露为可变对象时，安全降级为任意 global 写入都失效。
+  ValueListenable<int> screenRevision(String screenId) {
+    final screenPlan = _planSourceMayMutate
+        ? null
+        : _executionPlan?.screens[screenId];
+    final owner = screenPlan ?? _executionPlan ?? _appScopeIdentity;
+    return _stateInvalidationGraph.signalFor(
+      owner: owner,
+      paths: screenPlan?.fallbackGlobalDependencies ?? const <String>{},
+      anyGlobalWrite: screenPlan == null || screenPlan.fallbackOnAnyGlobalWrite,
+    );
+  }
 
   /// 当前 App 的嵌套深度，用于隔离仍挂在 Navigator 下层的父 App。
   int get appScopeDepth => _stateStack.length;
@@ -236,6 +264,12 @@ class JsonInterpreter extends ChangeNotifier {
     _variables = {};
     _functions = {};
     _jl = _createJsonLogic();
+    _compiledJsonLogic = CompiledJsonLogicEvaluator(
+      templateResolver: (template) => resolveTemplate(template.source),
+      fallbackPreprocessor: _resolveTemplatesInRule,
+      fallbackRuntime: _jl,
+      customOperatorEvaluator: _evaluateCompiledCustomJsonLogicOperator,
+    );
   }
 
   Jsonlogic _createJsonLogic() {
@@ -618,576 +652,22 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   dynamic _evaluateCompiledJsonLogic(JsonLogicExpressionPlan plan) {
-    // The legacy path resolves every template in the complete rule before it
-    // builds the JSONLogic data context or evaluates lazy control flow.
-    // Preserve that order while avoiding a reconstructed rule on the fast
-    // path: only template/fallback nodes need side-table values.
-    final prepared = Map<JsonLogicExpressionPlan, dynamic>.identity();
-    _prepareJsonLogicPlan(plan, prepared);
-    return _evaluatePreparedJsonLogicPlan(plan, _buildDataContext(), prepared);
-  }
-
-  void _prepareJsonLogicPlan(
-    JsonLogicExpressionPlan plan,
-    Map<JsonLogicExpressionPlan, dynamic> prepared,
-  ) {
-    if (plan is JsonLogicTemplatePlan) {
-      prepared[plan] = resolveTemplate(plan.template.source);
-      return;
-    }
-    if (plan is JsonLogicLiteralListPlan) {
-      for (final item in plan.items) {
-        _prepareJsonLogicPlan(item, prepared);
-      }
-      return;
-    }
-    if (plan is JsonLogicLiteralMapPlan) {
-      for (final value in plan.values.values) {
-        _prepareJsonLogicPlan(value, prepared);
-      }
-      return;
-    }
-    if (plan is JsonLogicVariablePlan) {
-      final defaultValue = plan.defaultValue;
-      if (defaultValue != null) {
-        _prepareJsonLogicPlan(defaultValue, prepared);
-      }
-      return;
-    }
-    if (plan is JsonLogicOperatorPlan) {
-      for (final parameter in plan.parameters) {
-        _prepareJsonLogicPlan(parameter, prepared);
-      }
-      return;
-    }
-    if (plan is JsonLogicMultiAndPlan) {
-      for (final entry in plan.entries) {
-        _prepareJsonLogicPlan(entry, prepared);
-      }
-      return;
-    }
-    if (plan is JsonLogicFallbackPlan) {
-      prepared[plan] = _resolveTemplatesInRule(plan.rawRule);
-    }
-  }
-
-  dynamic _evaluatePreparedJsonLogicPlan(
-    JsonLogicExpressionPlan plan,
-    dynamic data,
-    Map<JsonLogicExpressionPlan, dynamic> prepared,
-  ) {
-    if (plan is JsonLogicConstantPlan) return plan.value;
-    if (plan is JsonLogicTemplatePlan) return prepared[plan];
-    if (plan is JsonLogicLiteralListPlan) {
-      return <dynamic>[
-        for (final item in plan.items)
-          _materializePreparedJsonLogicPlan(item, prepared),
-      ];
-    }
-    if (plan is JsonLogicLiteralMapPlan) {
-      return <String, dynamic>{
-        for (final entry in plan.values.entries)
-          entry.key: _materializePreparedJsonLogicPlan(entry.value, prepared),
-      };
-    }
-    if (plan is JsonLogicVariablePlan) {
-      final found = _findJsonLogicVariable(
-        plan.key,
-        data,
-        segments: plan.segments,
-      );
-      if (!found.$2) return found.$1;
-      final defaultValue = plan.defaultValue;
-      return defaultValue == null
-          ? null
-          : _evaluatePreparedJsonLogicPlan(defaultValue, data, prepared);
-    }
-    if (plan is JsonLogicMultiAndPlan) {
-      for (final entry in plan.entries) {
-        final value = _evaluatePreparedJsonLogicPlan(entry, data, prepared);
-        if (!_jsonLogicTruth(value)) return false;
-      }
-      return true;
-    }
-    if (plan is JsonLogicFallbackPlan) {
-      return _jl.apply(prepared[plan], data);
-    }
-    if (plan is JsonLogicOperatorPlan) {
-      return _evaluateJsonLogicOperator(plan, data, prepared);
-    }
-    return null;
-  }
-
-  dynamic _materializePreparedJsonLogicPlan(
-    JsonLogicExpressionPlan plan,
-    Map<JsonLogicExpressionPlan, dynamic> prepared,
-  ) {
-    if (plan is JsonLogicConstantPlan) return plan.value;
-    if (plan is JsonLogicTemplatePlan) return prepared[plan];
-    if (plan is JsonLogicLiteralListPlan) {
-      return <dynamic>[
-        for (final item in plan.items)
-          _materializePreparedJsonLogicPlan(item, prepared),
-      ];
-    }
-    if (plan is JsonLogicLiteralMapPlan) {
-      return <String, dynamic>{
-        for (final entry in plan.values.entries)
-          entry.key: _materializePreparedJsonLogicPlan(entry.value, prepared),
-      };
-    }
-    if (plan is JsonLogicVariablePlan) {
-      final rawParameters = plan.rawRule['var'];
-      final materializedParameters = <dynamic>[
-        plan.key,
-        if (plan.defaultValue case final defaultValue?)
-          _materializePreparedJsonLogicPlan(defaultValue, prepared),
-      ];
-      return <String, dynamic>{
-        'var': rawParameters is List
-            ? materializedParameters
-            : materializedParameters.first,
-      };
-    }
-    if (plan is JsonLogicOperatorPlan) {
-      final materializedParameters = <dynamic>[
-        for (final parameter in plan.parameters)
-          _materializePreparedJsonLogicPlan(parameter, prepared),
-      ];
-      final rawParameters = plan.rawRule[plan.operatorName];
-      return <String, dynamic>{
-        plan.operatorName: rawParameters is List
-            ? materializedParameters
-            : materializedParameters.isEmpty
-            ? rawParameters
-            : materializedParameters.first,
-      };
-    }
-    if (plan is JsonLogicMultiAndPlan) {
-      final result = <String, dynamic>{};
-      for (final entry in plan.entries) {
-        final materialized = _materializePreparedJsonLogicPlan(entry, prepared);
-        if (materialized is Map<String, dynamic>) {
-          result.addAll(materialized);
-        }
-      }
-      return result;
-    }
-    if (plan is JsonLogicFallbackPlan) return prepared[plan];
-    return null;
-  }
-
-  dynamic _evaluateJsonLogicOperator(
-    JsonLogicOperatorPlan plan,
-    dynamic data,
-    Map<JsonLogicExpressionPlan, dynamic> prepared,
-  ) {
-    final parameters = plan.parameters;
-    dynamic evaluateAt(int index) =>
-        _evaluatePreparedJsonLogicPlan(parameters[index], data, prepared);
-
-    switch (plan.operatorName) {
-      case 'if':
-      case '?:':
-        var index = 0;
-        while (true) {
-          if (index >= parameters.length) return null;
-          if (index == parameters.length - 1) return evaluateAt(index);
-          if (_jsonLogicTruth(evaluateAt(index))) {
-            return evaluateAt(index + 1);
-          }
-          index += 2;
-        }
-      case 'and':
-        dynamic value;
-        for (var index = 0; index < parameters.length; index++) {
-          value = evaluateAt(index);
-          if (!_jsonLogicTruth(value)) return value;
-        }
-        return value;
-      case 'or':
-        dynamic value;
-        for (var index = 0; index < parameters.length; index++) {
-          value = evaluateAt(index);
-          if (_jsonLogicTruth(value)) return value;
-        }
-        return value;
-      case '!':
-        return parameters.isEmpty ? false : !_jsonLogicTruth(evaluateAt(0));
-      case '!!':
-        return parameters.isEmpty ? false : _jsonLogicTruth(evaluateAt(0));
-      case '==':
-        return _jsonLogicLooseEqual(parameters, evaluateAt);
-      case '!=':
-        return !_jsonLogicLooseEqual(parameters, evaluateAt);
-      case '===':
-        if (parameters.isEmpty) return false;
-        if (parameters.length == 1) return evaluateAt(0) == null;
-        return evaluateAt(0) == evaluateAt(1);
-      case '!==':
-        if (parameters.isEmpty) return false;
-        if (parameters.length == 1) return evaluateAt(0) != null;
-        return evaluateAt(0) != evaluateAt(1);
-      case '+':
-        return _reduceJsonLogicNumbers(
-          parameters,
-          evaluateAt,
-          0.0,
-          (left, right) => left + right,
-        );
-      case '*':
-        return _reduceJsonLogicNumbers(
-          parameters,
-          evaluateAt,
-          1.0,
-          (left, right) => left * right,
-        );
-      case '-':
-        if (parameters.length == 1) {
-          final value = _jsonLogicNumber(evaluateAt(0));
-          return value == null ? null : -value;
-        }
-        return _binaryJsonLogicNumber(parameters, evaluateAt, (a, b) => a - b);
-      case '/':
-        return _binaryJsonLogicNumber(parameters, evaluateAt, (a, b) => a / b);
-      case '%':
-        return _binaryJsonLogicNumber(parameters, evaluateAt, (a, b) => a % b);
-      case '>':
-        return _compareJsonLogicNumbers(
-          parameters,
-          evaluateAt,
-          double.infinity,
-          (left, right) => left > right,
-        );
-      case '>=':
-        return _compareJsonLogicNumbers(
-          parameters,
-          evaluateAt,
-          double.infinity,
-          (left, right) => left >= right,
-        );
-      case '<':
-        return _compareJsonLogicNumbers(
-          parameters,
-          evaluateAt,
-          -double.infinity,
-          (left, right) => left < right,
-        );
-      case '<=':
-        return _compareJsonLogicNumbers(
-          parameters,
-          evaluateAt,
-          -double.infinity,
-          (left, right) => left <= right,
-        );
-      case 'min':
-        return _reduceJsonLogicNumbers(
-          parameters,
-          evaluateAt,
-          double.infinity,
-          min,
-        );
-      case 'max':
-        return _reduceJsonLogicNumbers(
-          parameters,
-          evaluateAt,
-          -double.infinity,
-          max,
-        );
-      case 'var':
-        if (parameters.isEmpty) return data;
-        final key = evaluateAt(0);
-        final found = _findJsonLogicVariable(key, data);
-        if (!found.$2) return found.$1;
-        return parameters.length >= 2 ? evaluateAt(1) : null;
-      case 'missing':
-        return _evaluateJsonLogicMissing(parameters, data, prepared);
-      case 'missing_some':
-        return _evaluateJsonLogicMissingSome(parameters, data, prepared);
-      case 'cat':
-        return <String>[
-          for (var index = 0; index < parameters.length; index++)
-            _jsonLogicString(evaluateAt(index)),
-        ].join();
-      case 'substr':
-        return _evaluateJsonLogicSubstr(parameters, evaluateAt);
-      case 'in':
-        if (parameters.length != 2) return false;
-        final needle = evaluateAt(0);
-        final haystack = evaluateAt(1);
-        if (needle is String && haystack is String) {
-          return haystack.contains(needle);
-        }
-        if (needle is String && haystack is List) {
-          return haystack.contains(needle);
-        }
-        return false;
-      case 'merge':
-        final result = <dynamic>[];
-        for (var index = 0; index < parameters.length; index++) {
-          final value = evaluateAt(index);
-          if (value is List) {
-            result.addAll(value);
-          } else {
-            result.add(value);
-          }
-        }
-        return result;
-      case 'map':
-      case 'filter':
-      case 'reduce':
-      case 'all':
-      case 'some':
-      case 'none':
-      case 'method':
-      case 'log':
-        // These operators depend on raw callback-rule structure or observable
-        // package behavior. They still reuse the already prepared template
-        // values and fall back as one subtree.
-        return _jl.apply(
-          _materializePreparedJsonLogicPlan(plan, prepared),
-          data,
-        );
-      default:
-        return _evaluateCustomJsonLogicOperator(
-          plan.operatorName,
-          parameters,
-          data,
-          prepared,
-        );
-    }
-  }
-
-  bool _jsonLogicLooseEqual(
-    List<JsonLogicExpressionPlan> parameters,
-    dynamic Function(int index) evaluateAt,
-  ) {
-    if (parameters.isEmpty) return false;
-    if (parameters.length == 1) return evaluateAt(0) == null;
-    final left = evaluateAt(0);
-    final right = evaluateAt(1);
-    if (left is String || right is String) {
-      return _jsonLogicString(left) == _jsonLogicString(right);
-    }
-    if (left is bool || right is bool) {
-      return _jsonLogicTruth(left) == _jsonLogicTruth(right);
-    }
-    return left == right;
-  }
-
-  num? _binaryJsonLogicNumber(
-    List<JsonLogicExpressionPlan> parameters,
-    dynamic Function(int index) evaluateAt,
-    num Function(num left, num right) operation,
-  ) {
-    if (parameters.length <= 1) return null;
-    final left = _jsonLogicNumber(evaluateAt(0));
-    final right = _jsonLogicNumber(evaluateAt(1));
-    if (left == null || right == null) return null;
-    return operation(left, right);
-  }
-
-  num? _reduceJsonLogicNumbers(
-    List<JsonLogicExpressionPlan> parameters,
-    dynamic Function(int index) evaluateAt,
-    num initialValue,
-    num Function(num left, num right) operation,
-  ) {
-    var result = initialValue;
-    for (var index = 0; index < parameters.length; index++) {
-      final value = _jsonLogicNumber(evaluateAt(index));
-      if (value == null) return null;
-      result = operation(result, value);
-      if (result.isNaN) break;
-    }
-    return result;
-  }
-
-  bool _compareJsonLogicNumbers(
-    List<JsonLogicExpressionPlan> parameters,
-    dynamic Function(int index) evaluateAt,
-    num initialValue,
-    bool Function(num left, num right) compare,
-  ) {
-    var result = initialValue;
-    for (var index = 0; index < parameters.length; index++) {
-      final value = _jsonLogicNumber(evaluateAt(index));
-      if (value == null) return false;
-      result = compare(result, value) ? value : double.nan;
-      if (result.isNaN) break;
-    }
-    return !result.isNaN;
-  }
-
-  List<dynamic> _evaluateJsonLogicMissing(
-    List<JsonLogicExpressionPlan> parameters,
-    dynamic data,
-    Map<JsonLogicExpressionPlan, dynamic> prepared,
-  ) {
-    if (parameters.length == 1) {
-      final value = _evaluatePreparedJsonLogicPlan(
-        parameters.first,
-        data,
-        prepared,
-      );
-      if (value is! List) {
-        return _findJsonLogicVariable(value, data).$2
-            ? <dynamic>[value]
-            : <dynamic>[];
-      }
-      final missing = <dynamic>[];
-      for (final candidateRule in value) {
-        final key = _jl.apply(candidateRule, data);
-        if (_findJsonLogicVariable(key, data).$2) missing.add(key);
-      }
-      return missing;
-    }
-
-    final missing = <dynamic>[];
-    for (final parameter in parameters) {
-      final key = _evaluatePreparedJsonLogicPlan(parameter, data, prepared);
-      if (_findJsonLogicVariable(key, data).$2) missing.add(key);
-    }
-    return missing;
-  }
-
-  List<dynamic> _evaluateJsonLogicMissingSome(
-    List<JsonLogicExpressionPlan> parameters,
-    dynamic data,
-    Map<JsonLogicExpressionPlan, dynamic> prepared,
-  ) {
-    if (parameters.length != 2) return <dynamic>[];
-    final count = _evaluatePreparedJsonLogicPlan(parameters[0], data, prepared);
-    final candidates = _evaluatePreparedJsonLogicPlan(
-      parameters[1],
-      data,
+    // Legacy order is template prepass first, data-context build second.
+    final prepared = _compiledJsonLogic.prepare(plan);
+    return _compiledJsonLogic.evaluatePrepared(
+      plan,
+      _buildDataContext(),
       prepared,
     );
-    if (count is! num || candidates is! List) return <dynamic>[];
-    final minimumRequired = count.toInt();
-    if (minimumRequired < 1) return <dynamic>[];
-
-    final missing = <dynamic>[];
-    var foundCount = 0;
-    for (final candidateRule in candidates) {
-      final key = _jl.apply(candidateRule, data);
-      if (_findJsonLogicVariable(key, data).$2) {
-        missing.add(key);
-      } else {
-        foundCount++;
-        if (foundCount >= minimumRequired) return <dynamic>[];
-      }
-    }
-    return missing;
   }
 
-  dynamic _evaluateJsonLogicSubstr(
-    List<JsonLogicExpressionPlan> parameters,
+  ({bool handled, dynamic value}) _evaluateCompiledCustomJsonLogicOperator(
+    String operatorName,
+    int parameterCount,
     dynamic Function(int index) evaluateAt,
   ) {
-    if (parameters.isEmpty) return '';
-    final source = evaluateAt(0);
-    if (source is! String) return '';
-    var start = 0;
-    if (parameters.length > 1) {
-      final rawStart = evaluateAt(1);
-      if (rawStart is! int) return source;
-      start = rawStart;
-      if (start < 0) start += source.length;
-      if (start < 0 || start > source.length) return '';
-    }
-    if (parameters.length > 2) {
-      final rawLength = evaluateAt(2);
-      if (rawLength is int) {
-        var length = rawLength;
-        if (length < 0) length += source.length - start;
-        if (length < 0 || start + length > source.length) {
-          length = source.length - start;
-        }
-        return source.substring(start, start + length);
-      }
-      return null;
-    }
-    return source.substring(start);
-  }
-
-  (dynamic, bool) _findJsonLogicVariable(
-    dynamic key,
-    dynamic data, {
-    List<String>? segments,
-  }) {
-    var notFound = false;
-    List<String> keys;
-    if (segments != null) {
-      keys = segments;
-    } else if (key is String) {
-      if (key.isEmpty) return (data, false);
-      keys = key.split('.');
-    } else if (key is num) {
-      keys = <String>['$key'];
-    } else if (key == null) {
-      return (data, false);
-    } else {
-      keys = const <String>[];
-      notFound = true;
-    }
-
-    var current = data;
-    for (final segment in keys) {
-      if (notFound) break;
-      if (current is Map) {
-        final value = current[segment];
-        if (value == null) {
-          notFound = true;
-        } else {
-          current = value;
-        }
-      } else if (current is List) {
-        final index = int.tryParse(segment);
-        if (index == null || index < 0 || index >= current.length) {
-          notFound = true;
-        } else {
-          current = current[index];
-        }
-      } else {
-        notFound = true;
-      }
-    }
-    return (current, notFound);
-  }
-
-  static num? _jsonLogicNumber(dynamic value) {
-    if (value is num) return value;
-    if (value is String) return double.tryParse(value);
-    return null;
-  }
-
-  static bool _jsonLogicTruth(dynamic value) {
-    if (value == null) return false;
-    if (value is bool) return value;
-    if (value is num) return value != 0;
-    if (value is String) return value.isNotEmpty;
-    if (value is List || value is Map) return value.isNotEmpty;
-    return true;
-  }
-
-  static String _jsonLogicString(dynamic value) {
-    if (value == null) return '';
-    if (value is String) return value;
-    if (value is List || value is Map) return jsonEncode(value);
-    return '$value';
-  }
-
-  dynamic _evaluateCustomJsonLogicOperator(
-    String operatorName,
-    List<JsonLogicExpressionPlan> parameters,
-    dynamic data,
-    Map<JsonLogicExpressionPlan, dynamic> prepared,
-  ) {
-    dynamic evaluateAt(int index) =>
-        _evaluatePreparedJsonLogicPlan(parameters[index], data, prepared);
     double numberAt(int index, [double fallback = 0]) {
-      if (index >= parameters.length) return fallback;
+      if (index >= parameterCount) return fallback;
       final value = evaluateAt(index);
       if (value is num && value.isFinite) return value.toDouble();
       return double.tryParse(value?.toString() ?? '') ?? fallback;
@@ -1195,145 +675,189 @@ class JsonInterpreter extends ChangeNotifier {
 
     switch (operatorName) {
       case 'str_len':
-        return parameters.isEmpty ? 0 : evaluateAt(0)?.toString().length ?? 0;
+        return (
+          handled: true,
+          value: parameterCount == 0
+              ? 0
+              : evaluateAt(0)?.toString().length ?? 0,
+        );
       case 'str_upper':
-        return parameters.isEmpty
-            ? ''
-            : (evaluateAt(0)?.toString() ?? '').toUpperCase();
+        return (
+          handled: true,
+          value: parameterCount == 0
+              ? ''
+              : (evaluateAt(0)?.toString() ?? '').toUpperCase(),
+        );
       case 'str_lower':
-        return parameters.isEmpty
-            ? ''
-            : (evaluateAt(0)?.toString() ?? '').toLowerCase();
+        return (
+          handled: true,
+          value: parameterCount == 0
+              ? ''
+              : (evaluateAt(0)?.toString() ?? '').toLowerCase(),
+        );
       case 'str_trim':
-        return parameters.isEmpty
-            ? ''
-            : (evaluateAt(0)?.toString() ?? '').trim();
+        return (
+          handled: true,
+          value: parameterCount == 0
+              ? ''
+              : (evaluateAt(0)?.toString() ?? '').trim(),
+        );
       case 'str_contains':
-        if (parameters.length < 2) return false;
-        return (evaluateAt(0)?.toString() ?? '').contains(
-          evaluateAt(1)?.toString() ?? '',
+        if (parameterCount < 2) return (handled: true, value: false);
+        return (
+          handled: true,
+          value: (evaluateAt(0)?.toString() ?? '').contains(
+            evaluateAt(1)?.toString() ?? '',
+          ),
         );
       case 'str_replace':
-        if (parameters.length < 3) {
-          return evaluateAt(0)?.toString() ?? '';
+        if (parameterCount < 3) {
+          return (handled: true, value: evaluateAt(0)?.toString() ?? '');
         }
-        return (evaluateAt(0)?.toString() ?? '').replaceAll(
-          evaluateAt(1)?.toString() ?? '',
-          evaluateAt(2)?.toString() ?? '',
+        return (
+          handled: true,
+          value: (evaluateAt(0)?.toString() ?? '').replaceAll(
+            evaluateAt(1)?.toString() ?? '',
+            evaluateAt(2)?.toString() ?? '',
+          ),
         );
       case 'str_replace_first':
-        if (parameters.length < 3) {
-          return evaluateAt(0)?.toString() ?? '';
+        if (parameterCount < 3) {
+          return (handled: true, value: evaluateAt(0)?.toString() ?? '');
         }
-        return (evaluateAt(0)?.toString() ?? '').replaceFirst(
-          evaluateAt(1)?.toString() ?? '',
-          evaluateAt(2)?.toString() ?? '',
+        return (
+          handled: true,
+          value: (evaluateAt(0)?.toString() ?? '').replaceFirst(
+            evaluateAt(1)?.toString() ?? '',
+            evaluateAt(2)?.toString() ?? '',
+          ),
         );
       case 'str_split':
-        if (parameters.length < 2) {
-          return <String>[evaluateAt(0)?.toString() ?? ''];
+        if (parameterCount < 2) {
+          return (
+            handled: true,
+            value: <String>[evaluateAt(0)?.toString() ?? ''],
+          );
         }
-        return (evaluateAt(0)?.toString() ?? '').split(
-          evaluateAt(1)?.toString() ?? '',
+        return (
+          handled: true,
+          value: (evaluateAt(0)?.toString() ?? '').split(
+            evaluateAt(1)?.toString() ?? '',
+          ),
         );
       case 'str_join':
-        if (parameters.isEmpty) return '';
+        if (parameterCount == 0) return (handled: true, value: '');
         final value = evaluateAt(0);
-        final separator = parameters.length > 1
+        final separator = parameterCount > 1
             ? evaluateAt(1)?.toString() ?? ''
             : '';
-        if (value is List) {
-          return value.map((item) => item?.toString() ?? '').join(separator);
-        }
-        return value?.toString() ?? '';
+        return (
+          handled: true,
+          value: value is List
+              ? value.map((item) => item?.toString() ?? '').join(separator)
+              : value?.toString() ?? '',
+        );
       case 'length':
-        if (parameters.isEmpty) return 0;
+        if (parameterCount == 0) return (handled: true, value: 0);
         final value = evaluateAt(0);
-        if (value is List || value is String || value is Map) {
-          return value.length;
-        }
-        return 0;
+        return (
+          handled: true,
+          value: value is List || value is String || value is Map
+              ? value.length
+              : 0,
+        );
       case 'at':
-        if (parameters.length < 2) return null;
+        if (parameterCount < 2) return (handled: true, value: null);
         final source = evaluateAt(0);
         final index = _toInt(evaluateAt(1));
-        if (source is List && index >= 0 && index < source.length) {
-          return source[index];
-        }
-        return null;
+        return (
+          handled: true,
+          value: source is List && index >= 0 && index < source.length
+              ? source[index]
+              : null,
+        );
       case 'slice':
-        if (parameters.isEmpty) return <dynamic>[];
+        if (parameterCount == 0) {
+          return (handled: true, value: <dynamic>[]);
+        }
         final source = evaluateAt(0);
-        if (source is! List) return <dynamic>[];
-        final start = (parameters.length > 1 ? _toInt(evaluateAt(1)) : 0)
+        if (source is! List) return (handled: true, value: <dynamic>[]);
+        final start = (parameterCount > 1 ? _toInt(evaluateAt(1)) : 0)
             .clamp(0, source.length)
             .toInt();
-        final end =
-            (parameters.length > 2 ? _toInt(evaluateAt(2)) : source.length)
-                .clamp(start, source.length)
-                .toInt();
-        return source.sublist(start, end);
+        final end = (parameterCount > 2 ? _toInt(evaluateAt(2)) : source.length)
+            .clamp(start, source.length)
+            .toInt();
+        return (handled: true, value: source.sublist(start, end));
       case 'sort':
-        if (parameters.isEmpty) return <dynamic>[];
+        if (parameterCount == 0) {
+          return (handled: true, value: <dynamic>[]);
+        }
         final source = evaluateAt(0);
-        if (source is! List) return <dynamic>[];
+        if (source is! List) return (handled: true, value: <dynamic>[]);
         final copy = List<dynamic>.from(source);
         copy.sort((left, right) {
           if (left is num && right is num) return left.compareTo(right);
           return left.toString().compareTo(right.toString());
         });
-        return copy;
+        return (handled: true, value: copy);
       case 'reverse':
-        if (parameters.isEmpty) return <dynamic>[];
+        if (parameterCount == 0) {
+          return (handled: true, value: <dynamic>[]);
+        }
         final source = evaluateAt(0);
-        return source is List ? source.reversed.toList() : <dynamic>[];
+        return (
+          handled: true,
+          value: source is List ? source.reversed.toList() : <dynamic>[],
+        );
       case 'to_string':
-        return parameters.isEmpty ? '' : evaluateAt(0)?.toString() ?? '';
+        return (
+          handled: true,
+          value: parameterCount == 0 ? '' : evaluateAt(0)?.toString() ?? '',
+        );
       case 'to_int':
-        return parameters.isEmpty ? 0 : _toInt(evaluateAt(0));
+        return (
+          handled: true,
+          value: parameterCount == 0 ? 0 : _toInt(evaluateAt(0)),
+        );
       case 'to_double':
-        return parameters.isEmpty ? 0.0 : _toDouble(evaluateAt(0));
+        return (
+          handled: true,
+          value: parameterCount == 0 ? 0.0 : _toDouble(evaluateAt(0)),
+        );
       case 'abs':
-        if (parameters.isEmpty) return 0;
+        if (parameterCount == 0) return (handled: true, value: 0);
         final value = evaluateAt(0);
-        return value is num ? value.abs() : 0;
+        return (handled: true, value: value is num ? value.abs() : 0);
       case 'sin':
-        return sin(numberAt(0));
+        return (handled: true, value: sin(numberAt(0)));
       case 'cos':
-        return cos(numberAt(0));
+        return (handled: true, value: cos(numberAt(0)));
       case 'tan':
-        return tan(numberAt(0));
+        return (handled: true, value: tan(numberAt(0)));
       case 'atan2':
-        return atan2(numberAt(0), numberAt(1));
+        return (handled: true, value: atan2(numberAt(0), numberAt(1)));
       case 'sqrt':
-        return sqrt(max(0, numberAt(0)));
+        return (handled: true, value: sqrt(max(0, numberAt(0))));
       case 'pow':
-        return pow(numberAt(0), numberAt(1)).toDouble();
+        return (handled: true, value: pow(numberAt(0), numberAt(1)).toDouble());
       case 'clamp':
-        return numberAt(0).clamp(numberAt(1), numberAt(2)).toDouble();
+        return (
+          handled: true,
+          value: numberAt(0).clamp(numberAt(1), numberAt(2)).toDouble(),
+        );
       case 'lerp':
         final start = numberAt(0);
         final end = numberAt(1);
         final amount = numberAt(2);
-        return start + (end - start) * amount;
+        return (handled: true, value: start + (end - start) * amount);
       case 'seed':
         final raw = sin(numberAt(0) * 12.9898) * 43758.5453;
-        return raw - raw.floorToDouble();
+        return (handled: true, value: raw - raw.floorToDouble());
       case 'pi':
-        return pi;
+        return (handled: true, value: pi);
       default:
-        return _jl.apply(
-          _materializePreparedJsonLogicPlan(
-            JsonLogicOperatorPlan(
-              operatorName: operatorName,
-              parameters: parameters,
-              rawRule: <String, dynamic>{},
-              sourcePath: r'$runtime.fallback',
-            ),
-            prepared,
-          ),
-          data,
-        );
+        return (handled: false, value: null);
     }
   }
 
@@ -1360,6 +884,17 @@ class JsonInterpreter extends ChangeNotifier {
   ) {
     final data = _buildDataContext();
     data.addAll(locals);
+    final valuePlan = _compiledValuePlanFor(rule);
+    if (valuePlan is MapValuePlan && valuePlan.expressionPlan != null) {
+      final expressionPlan = valuePlan.expressionPlan!;
+      // This public helper historically builds data before preprocessing.
+      final prepared = _compiledJsonLogic.prepare(expressionPlan);
+      return _compiledJsonLogic.evaluatePrepared(
+        expressionPlan,
+        data,
+        prepared,
+      );
+    }
     final preprocessed = _resolveTemplatesInRule(rule);
     return _jl.apply(preprocessed, data);
   }
@@ -1453,13 +988,16 @@ class JsonInterpreter extends ChangeNotifier {
       config,
       knownJsonLogicOperators: _knownJsonLogicOps,
       knownWidgetTypes: JsonWidgetBuilder.registeredWidgetTypes,
+      pathScopedWidgetTypes: JsonWidgetBuilder.pathScopedWidgetTypes,
       sourceHashMode: AppSourceHashMode.runtimeIdentity,
     );
+    final nextInvalidationGraph = StatePathInvalidationGraph();
     _pathPlans.clear();
     _runtimeTemplatePlans.clear();
     _config = config;
     _computeSession = nextComputeSession;
     _executionPlan = nextExecutionPlan;
+    _stateInvalidationGraph = nextInvalidationGraph;
     _planSourceMayMutate = false;
     _appScopeIdentity = Object();
 
@@ -1548,6 +1086,7 @@ class JsonInterpreter extends ChangeNotifier {
         imInboxSub: savedIm,
         computeSession: _computeSession,
         executionPlan: _executionPlan,
+        stateInvalidationGraph: _stateInvalidationGraph,
         planSourceMayMutate: _planSourceMayMutate,
         appScopeIdentity: _appScopeIdentity,
       ),
@@ -1564,6 +1103,7 @@ class JsonInterpreter extends ChangeNotifier {
     _eventContextStack.clear();
     _computeSession = null;
     _executionPlan = null;
+    _stateInvalidationGraph = StatePathInvalidationGraph();
     _planSourceMayMutate = false;
     _currentScreenId = '';
     _activeModalCount = 0;
@@ -1618,8 +1158,10 @@ class JsonInterpreter extends ChangeNotifier {
     _appId = snapshot.appId;
     _computeSession = snapshot.computeSession;
     _executionPlan = snapshot.executionPlan;
+    _stateInvalidationGraph = snapshot.stateInvalidationGraph;
     _planSourceMayMutate = snapshot.planSourceMayMutate;
     _appScopeIdentity = snapshot.appScopeIdentity;
+    _presentationRevision++;
     // Path plans never retain values, but keep the bounded cache app-scoped.
     // The restored parent app will repopulate its hot paths on demand.
     _pathPlans.clear();
@@ -1751,12 +1293,25 @@ class JsonInterpreter extends ChangeNotifier {
     if (path.startsWith('global.')) {
       final subPath = path.substring(7);
       _setNestedValue(_variables, subPath, value);
+      _invalidateGlobalWrite('global.$subPath');
       notifyListeners();
     } else if (!path.startsWith('loop.') && !path.startsWith('params.')) {
       // 没有前缀的直接当 global 变量（与 getVariable 行为一致）
       _setNestedValue(_variables, path, value);
+      _invalidateGlobalWrite('global.$path');
       notifyListeners();
     }
+  }
+
+  void _invalidateGlobalWrite(String canonicalPath) {
+    if (_planSourceMayMutate) {
+      // Source identity plans are no longer trustworthy. Existing hosts are
+      // retained for the current frame, so wake every signal until the screen
+      // rebuild replaces them with the legacy path.
+      _stateInvalidationGraph.invalidateAll();
+      return;
+    }
+    _stateInvalidationGraph.didWrite(canonicalPath);
   }
 
   dynamic _getNestedValue(Map<String, dynamic> map, String dotPath) {
@@ -3756,7 +3311,13 @@ class JsonInterpreter extends ChangeNotifier {
         // may mutate it through ordinary Map/List state actions. Identity-
         // bound structural plans are no longer safe after this point; template
         // plans remain safe because lookup is by immutable String value.
-        _planSourceMayMutate = true;
+        if (!_planSourceMayMutate) {
+          _planSourceMayMutate = true;
+          // Even without a `bind`, replace compiled widget hosts immediately.
+          // Future state writes stay broad until a fresh loadConfig compiles
+          // the (possibly changed) source again.
+          _stateInvalidationGraph.invalidateAll();
+        }
         final exposedConfig = rawConfig;
         final bindPath = resolvedArgs['bind'] as String?;
         if (bindPath != null) {
@@ -4671,6 +4232,9 @@ class JsonInterpreter extends ChangeNotifier {
 
   dynamic _resolvePlannedArgumentValue(ValuePlan plan) {
     if (plan is ConstantValuePlan) return plan.value;
+    if (plan is OpaqueValuePlan) {
+      return _resolveOpaqueArgumentValue(plan.source);
+    }
     if (plan is TemplateValuePlan) {
       return resolveExpression(plan.template.source);
     }
@@ -4688,6 +4252,24 @@ class JsonInterpreter extends ChangeNotifier {
     return null;
   }
 
+  dynamic _resolveOpaqueArgumentValue(dynamic value) {
+    if (value is String) {
+      return value.contains('{{') && value.contains('}}')
+          ? resolveExpression(value)
+          : value;
+    }
+    if (value is List) {
+      return <dynamic>[for (final item in value) _resolveValue(item)];
+    }
+    if (value is Map<String, dynamic>) {
+      return <String, dynamic>{
+        for (final entry in value.entries)
+          entry.key: _resolveValue(entry.value),
+      };
+    }
+    return value;
+  }
+
   Map<String, dynamic> _resolveArgs(Map<String, dynamic> args) {
     final resolved = <String, dynamic>{};
     for (final entry in args.entries) {
@@ -4699,6 +4281,33 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ Widget 构建 ============
 
   Widget buildWidget(BuildContext context, Map<String, dynamic> json) {
+    final plan = _pathScopedWidgetPlanFor(json);
+    if (plan == null) return _buildWidgetNow(context, json);
+
+    return PlannedWidgetHost(
+      revision: _stateInvalidationGraph.signalFor(
+        owner: plan,
+        paths: plan.globalDependencies,
+        anyGlobalWrite: false,
+      ),
+      builder: (innerContext) => _buildWidgetNow(innerContext, json),
+    );
+  }
+
+  WidgetPlan? _pathScopedWidgetPlanFor(Map<String, dynamic> source) {
+    if (_planSourceMayMutate) return null;
+    final executionPlan = _executionPlan;
+    if (executionPlan == null) return null;
+    final widgetPlan = executionPlan.widgetPlanFor(source);
+    if (widgetPlan == null) return null;
+    final screenPlan = executionPlan.screens[_currentScreenId];
+    if (screenPlan == null) return null;
+    return identical(screenPlan.pathScopedWidgets[source], widgetPlan)
+        ? widgetPlan
+        : null;
+  }
+
+  Widget _buildWidgetNow(BuildContext context, Map<String, dynamic> json) {
     // 通用 visible 字段：
     //   - 布尔/模板/jsonlogic 都支持，求值为 false 时返回 SizedBox.shrink
     //   - 没写 visible 字段视为永远显示（默认行为）
@@ -5041,6 +4650,7 @@ class _InterpreterStateSnapshot {
   final StreamSubscription<Map<String, dynamic>>? imInboxSub;
   final ComputeSession? computeSession;
   final AppExecutionPlan? executionPlan;
+  final StatePathInvalidationGraph stateInvalidationGraph;
   final bool planSourceMayMutate;
   final Object appScopeIdentity;
 
@@ -5060,6 +4670,7 @@ class _InterpreterStateSnapshot {
     required this.imInboxSub,
     required this.computeSession,
     required this.executionPlan,
+    required this.stateInvalidationGraph,
     required this.planSourceMayMutate,
     required this.appScopeIdentity,
   });

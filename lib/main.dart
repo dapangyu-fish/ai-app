@@ -2823,9 +2823,31 @@ class JsonScreenView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final shell = ref.watch(
+      interpreterProvider.select(
+        (interpreter) => (
+          appScope: interpreter.appScopeIdentity,
+          presentationRevision: interpreter.presentationRevision,
+          screenId: interpreter.currentScreenId,
+          canNavigateBack: interpreter.canNavigateBack,
+        ),
+      ),
+    );
+    final interpreter = ref.read(interpreterProvider);
+    final revision = interpreter.screenRevision(shell.screenId);
+    return ValueListenableBuilder<int>(
+      valueListenable: revision,
+      builder: (context, _, __) => _guardedBuildContent(context, interpreter),
+    );
+  }
+
+  Widget _guardedBuildContent(
+    BuildContext context,
+    JsonInterpreter interpreter,
+  ) {
     // 沙盒 try-catch — 捕获 JSON-APP 运行时崩溃
     try {
-      return _buildContent(context, ref);
+      return _buildContent(context, interpreter);
     } catch (e, stack) {
       // 打印完整的错误堆栈到 debug 日志
       debugPrint('========================================');
@@ -2845,8 +2867,7 @@ class JsonScreenView extends ConsumerWidget {
     }
   }
 
-  Widget _buildContent(BuildContext context, WidgetRef ref) {
-    final interpreter = ref.watch(interpreterProvider);
+  Widget _buildContent(BuildContext context, JsonInterpreter interpreter) {
     final currentScreenId = interpreter.currentScreenId;
     CurrentPageState.instance.setJsonAppPage(
       screenId: currentScreenId,

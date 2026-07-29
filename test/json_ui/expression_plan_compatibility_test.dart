@@ -319,6 +319,30 @@ void main() {
         '{{ global.label }}',
       );
     });
+
+    test('source-owned rules preserve locals, defaults, and lazy or', () {
+      final rule = <String, dynamic>{
+        'or': <dynamic>[
+          <String, dynamic>{
+            'var': <dynamic>['props.missing', '{{ global.label }}'],
+          },
+          <String, dynamic>{'var': 'props.value'},
+        ],
+      };
+      _loadWithSourceOwnedRule(interpreter, rule);
+      final locals = <String, dynamic>{
+        'props': <String, dynamic>{'value': 'from locals'},
+      };
+
+      final planned = interpreter.evaluateJsonLogicWithLocals(rule, locals);
+      final legacy = interpreter.evaluateJsonLogicWithLocals(
+        _jsonCopy(rule),
+        locals,
+      );
+
+      expect(planned, legacy);
+      expect(planned, 'ready');
+    });
   });
 }
 

@@ -16,8 +16,13 @@
 // - 内置 @set / @if 等通用流程控制（少量复制 JsonInterpreter 的实现）
 // - 把 game-specific @action 委派给 GameActions（cell_path.* / scroll_list.* 等）
 
+import 'dart:collection';
+
 import 'package:jsonlogic/jsonlogic.dart';
 
+import '../json_ui/execution/compiled_json_logic_evaluator.dart';
+import '../json_ui/execution/expression_plan.dart';
+import '../json_ui/execution/template_plan.dart';
 import 'flame_game_engine.dart';
 import 'game_actions.dart';
 
@@ -31,7 +36,93 @@ class GameLogicEngine {
   /// {{ loop.entity }} / {{ loop.index }}）
   final List<Map<String, dynamic>> _loopStack = [];
 
-  GameLogicEngine(this.game);
+  /// 构造时属于 game.spec 的对象身份。运行时 action / entity 临时生成的 Map
+  /// 不在这里，继续走完全兼容的 legacy 路径。
+  final HashSet<Object> _ownedSpecNodes = HashSet<Object>.identity();
+  final HashMap<Object, JsonLogicExpressionPlan> _compiledExpressionPlans =
+      HashMap<Object, JsonLogicExpressionPlan>.identity();
+  final HashSet<Object> _inlineActionRoots = HashSet<Object>.identity();
+  final HashSet<Object> _uncompilableExpressionRoots =
+      HashSet<Object>.identity();
+  final Map<String, TemplatePlan> _templatePlans = <String, TemplatePlan>{};
+  final Expando<bool> _requiresEntityScopeCache = Expando<bool>(
+    'game-logic-requires-entity-scope',
+  );
+
+  late final JsonLogicPlanCompiler _expressionCompiler;
+  late final CompiledJsonLogicEvaluator _compiledEvaluator;
+
+  int _compiledExpressionEvaluationCount = 0;
+  int _legacyExpressionEvaluationCount = 0;
+  int _entityScopeSnapshotCount = 0;
+
+  GameLogicEngine(this.game) {
+    _indexOwnedSpecNodes(game.spec);
+    _expressionCompiler = JsonLogicPlanCompiler(
+      knownOperators: _jsonLogicOps,
+      templateFor: (source) => _templatePlans.putIfAbsent(
+        source,
+        () => TemplatePlan.compile(source),
+      ),
+    );
+    _compiledEvaluator = CompiledJsonLogicEvaluator(
+      // Game 模板的 exact binding 必须保留原始类型，不能改成字符串。
+      templateResolver: (template) => _resolveString(template.source),
+      fallbackPreprocessor: _resolveJsonLogicOperands,
+      fallbackRuntime: _jsonlogic,
+    );
+    _precompileOwnedExpressions(game.spec);
+  }
+
+  /// 以下计数器只暴露只读视图，便于回归测试与性能采样确认实际命中路径。
+  int get compiledExpressionPlanCount => _compiledExpressionPlans.length;
+  int get compiledExpressionEvaluationCount =>
+      _compiledExpressionEvaluationCount;
+  int get legacyExpressionEvaluationCount => _legacyExpressionEvaluationCount;
+  int get entityScopeSnapshotCount => _entityScopeSnapshotCount;
+
+  void _indexOwnedSpecNodes(dynamic node) {
+    if (node is Map) {
+      if (!_ownedSpecNodes.add(node)) return;
+      for (final value in node.values) {
+        _indexOwnedSpecNodes(value);
+      }
+      return;
+    }
+    if (node is List) {
+      if (!_ownedSpecNodes.add(node)) return;
+      for (final value in node) {
+        _indexOwnedSpecNodes(value);
+      }
+    }
+  }
+
+  void _precompileOwnedExpressions(dynamic root) {
+    final visited = HashSet<Object>.identity();
+
+    void visit(dynamic node) {
+      if (node is Map) {
+        if (!visited.add(node)) return;
+        if (node is Map<String, dynamic> &&
+            node.length == 1 &&
+            _looksLikeJsonLogic(node.keys.first)) {
+          _compiledPlanFor(node, node);
+        }
+        for (final value in node.values) {
+          visit(value);
+        }
+        return;
+      }
+      if (node is List) {
+        if (!visited.add(node)) return;
+        for (final value in node) {
+          visit(value);
+        }
+      }
+    }
+
+    visit(root);
+  }
 
   /// 跑一组 step（actions / 子规则）
   void runLogic(List<dynamic> steps, [Map<String, dynamic>? eventData]) {
@@ -218,7 +309,7 @@ class GameLogicEngine {
       }
       // 单 key 且 key 是 jsonlogic op → 求值
       if (m.length == 1 && _looksLikeJsonLogic(m.keys.first)) {
-        return _evalJsonLogic(m);
+        return _evalJsonLogic(m, raw);
       }
       // 否则当数据 Map，递归 resolve 每个 value
       return _resolveMap(m);
@@ -325,8 +416,20 @@ class GameLogicEngine {
 
   static final Jsonlogic _jsonlogic = Jsonlogic();
 
-  dynamic _evalJsonLogic(Map<String, dynamic> rule) {
+  dynamic _evalJsonLogic(Map<String, dynamic> rule, Object sourceIdentity) {
     try {
+      final plan = _compiledPlanFor(rule, sourceIdentity);
+      if (plan != null) {
+        _compiledExpressionEvaluationCount++;
+        // 保持旧执行顺序：先解析模板，再构造 entities 快照。这样模板内联
+        // action 对状态的修改仍能被随后创建的数据作用域观察到。
+        final prepared = _compiledEvaluator.prepare(plan);
+        final includeEntities = _requiresEntityScope(plan);
+        final data = _dataScope(includeEntities: includeEntities);
+        return _compiledEvaluator.evaluatePrepared(plan, data, prepared);
+      }
+
+      _legacyExpressionEvaluationCount++;
       // 先把规则里的字符串模板和 inline action 预处理掉：
       // - {"var": "vars.x.{{ idx }}"} 这种动态路径需要烤模板
       // - {"and": [{"call": "@xxx"}, ...]} 这种条件组合需要先执行表达式 action
@@ -336,6 +439,107 @@ class GameLogicEngine {
       // 表达式炸了不能让游戏崩，返回 null 让上游决定
       return null;
     }
+  }
+
+  JsonLogicExpressionPlan? _compiledPlanFor(
+    Map<String, dynamic> rule,
+    Object sourceIdentity,
+  ) {
+    if (!_ownedSpecNodes.contains(sourceIdentity)) return null;
+    if (_inlineActionRoots.contains(sourceIdentity)) return null;
+    if (_uncompilableExpressionRoots.contains(sourceIdentity)) return null;
+
+    final cached = _compiledExpressionPlans[sourceIdentity];
+    if (cached != null) return cached;
+
+    // inline action 的 legacy 预处理是 eager 的，连未选择的逻辑分支也会
+    // dispatch。只要整棵 root 任意位置含 call，就必须完整保留 legacy，
+    // 不能局部编译后因短路而漏掉副作用。
+    if (_containsInlineAction(rule)) {
+      _inlineActionRoots.add(sourceIdentity);
+      return null;
+    }
+
+    try {
+      final plan = _expressionCompiler.compile(rule, r'$.game.expression');
+      _compiledExpressionPlans[sourceIdentity] = plan;
+      return plan;
+    } catch (_) {
+      // Construction-time compilation must never make a formerly tolerated
+      // game spec unloadable. Leave malformed or cyclic roots on legacy.
+      _uncompilableExpressionRoots.add(sourceIdentity);
+      return null;
+    }
+  }
+
+  bool _containsInlineAction(dynamic node) {
+    if (node is Map) {
+      if (node.containsKey('call')) return true;
+      for (final value in node.values) {
+        if (_containsInlineAction(value)) return true;
+      }
+      return false;
+    }
+    if (node is List) {
+      for (final value in node) {
+        if (_containsInlineAction(value)) return true;
+      }
+    }
+    return false;
+  }
+
+  /// 只有静态证明表达式不可能读取 whole data / entities 时才裁掉快照。
+  /// 任何动态 var、missing、fallback 都保守地保留完整作用域。
+  bool _requiresEntityScope(JsonLogicExpressionPlan plan) {
+    final cached = _requiresEntityScopeCache[plan];
+    if (cached != null) return cached;
+    final result = _computeRequiresEntityScope(plan);
+    _requiresEntityScopeCache[plan] = result;
+    return result;
+  }
+
+  bool _computeRequiresEntityScope(JsonLogicExpressionPlan plan) {
+    if (plan is JsonLogicVariablePlan) {
+      final key = plan.key;
+      if (key == null || key == '') return true;
+      if (key is String && (key == 'entities' || key.startsWith('entities.'))) {
+        return true;
+      }
+      final defaultValue = plan.defaultValue;
+      return defaultValue != null && _requiresEntityScope(defaultValue);
+    }
+    if (plan is JsonLogicTemplatePlan) {
+      for (final part in plan.template.parts) {
+        if (part is TemplateBindingPart) {
+          final variable = part.variable;
+          if (variable != null &&
+              (variable.source == 'entities' ||
+                  variable.source.startsWith('entities.'))) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+    if (plan is JsonLogicLiteralListPlan) {
+      return plan.items.any(_requiresEntityScope);
+    }
+    if (plan is JsonLogicLiteralMapPlan) {
+      return plan.values.values.any(_requiresEntityScope);
+    }
+    if (plan is JsonLogicMultiAndPlan) {
+      return plan.entries.any(_requiresEntityScope);
+    }
+    if (plan is JsonLogicFallbackPlan) return true;
+    if (plan is JsonLogicOperatorPlan) {
+      if (plan.operatorName == 'var' ||
+          plan.operatorName == 'missing' ||
+          plan.operatorName == 'missing_some') {
+        return true;
+      }
+      return plan.parameters.any(_requiresEntityScope);
+    }
+    return false;
   }
 
   /// 递归预处理 jsonlogic 规则里的 `{{ x }}` 模板字符串。
@@ -358,12 +562,9 @@ class GameLogicEngine {
   }
 
   /// 给 jsonlogic / `{{ ... }}` 用的全局数据
-  Map<String, dynamic> _dataScope() {
-    final entitiesMap = <String, dynamic>{};
-    game.entities.forEach((id, e) => entitiesMap[id] = e.toMap());
-    return {
+  Map<String, dynamic> _dataScope({bool includeEntities = true}) {
+    final scope = <String, dynamic>{
       'vars': game.vars,
-      'entities': entitiesMap,
       'event': _eventStack.isNotEmpty ? _eventStack.last : <String, dynamic>{},
       'loop': _loopStack.isNotEmpty ? _loopStack.last : <String, dynamic>{},
       'world': {
@@ -378,6 +579,13 @@ class GameLogicEngine {
       'best': game.bestScore,
       'game_over': game.isGameOver,
     };
+    if (includeEntities) {
+      _entityScopeSnapshotCount++;
+      final entitiesMap = <String, dynamic>{};
+      game.entities.forEach((id, e) => entitiesMap[id] = e.toMap());
+      scope['entities'] = entitiesMap;
+    }
+    return scope;
   }
 
   /// 读变量（点路径）
