@@ -22,6 +22,7 @@ import 'platformer_physics_backend.dart';
 import 'game_world.dart';
 import '../i18n/framework_strings.dart';
 import '../json_ui/asset_manager.dart';
+import '../json_ui/compute/compute_session.dart';
 
 /// 事件回调签名（跟 A 模式一致，外层 widget 把事件桥到 JSON-DSL action）
 typedef GameEventCallback =
@@ -47,6 +48,7 @@ class JsonFlameGame extends FlameGame {
   /// 外部回调（emit 给 JSON-APP）
   final GameEventCallback? onEvent;
   final JsonAppAssetManager assetManager;
+  final ComputeSession? computeSession;
 
   // ---- 运行时状态 ----
   /// 我们的世界定义（命名 gameWorld 避免跟 FlameGame.world 冲突 —— 后者
@@ -109,6 +111,7 @@ class JsonFlameGame extends FlameGame {
   JsonFlameGame({
     required this.spec,
     required this.assetManager,
+    this.computeSession,
     this.onEvent,
   }) {
     // ⚠️ 必须在构造函数里同步完成所有 spec 解析。

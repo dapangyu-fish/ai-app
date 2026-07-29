@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 
 import '../../games/flame_game_engine.dart';
 import '../asset_manager.dart';
+import '../compute/compute_session.dart';
 import '../interpreter.dart';
 import 'base_widget.dart';
 
@@ -30,7 +31,11 @@ class JsonFlameGameWidget extends JsonBaseWidget {
 
     return _FlameGameMount(
       spec: bakedSpec,
+      sourceSpecIdentity: json,
       interpreter: interpreter,
+      appScopeIdentity: interpreter.appScopeIdentity,
+      appScopeDepth: interpreter.appScopeDepth,
+      computeSession: interpreter.computeSession,
       assetManager: JsonAppAssetManager.fromConfig(
         interpreter.rawConfig ?? const <String, dynamic>{},
       ),
@@ -114,13 +119,21 @@ class JsonFlameGameWidget extends JsonBaseWidget {
 
 class _FlameGameMount extends StatefulWidget {
   final Map<String, dynamic> spec;
+  final Object sourceSpecIdentity;
   final JsonInterpreter interpreter;
+  final Object appScopeIdentity;
+  final int appScopeDepth;
+  final ComputeSession? computeSession;
   final JsonAppAssetManager assetManager;
   final double? height;
 
   const _FlameGameMount({
     required this.spec,
+    required this.sourceSpecIdentity,
     required this.interpreter,
+    required this.appScopeIdentity,
+    required this.appScopeDepth,
+    required this.computeSession,
     required this.assetManager,
     this.height,
   });
@@ -130,7 +143,10 @@ class _FlameGameMount extends StatefulWidget {
 }
 
 class _FlameGameMountState extends State<_FlameGameMount> {
-  late final JsonFlameGame _game;
+  late JsonFlameGame _game;
+  late _FlameGameMount _boundWidget;
+  late JsonInterpreter _registeredInterpreter;
+  var _bindingGeneration = 1;
 
   // 一次手势内累积位移，松手时一次性发 swipe
   double _panDx = 0;
@@ -145,34 +161,103 @@ class _FlameGameMountState extends State<_FlameGameMount> {
   @override
   void initState() {
     super.initState();
-    _game = JsonFlameGame(
-      spec: widget.spec,
-      assetManager: widget.assetManager,
-      onEvent: _dispatchEvent,
-    );
-    // 注册到 interpreter，让 @flame_game_reset 这个 action 能找到我们
-    _resetter = () => _game.resetGame();
-    _inputHandler = (name, data) => _game.handleNamedInput(name, data);
-    widget.interpreter.registerFlameGameResetter(_resetter);
-    widget.interpreter.registerFlameGameInputHandler(_inputHandler);
+    _boundWidget = widget;
+    _registeredInterpreter = widget.interpreter;
+    _game = _createGame(widget, _bindingGeneration);
+    // 单 interpreter 的嵌套 App 会让父/子游戏同时留在 Navigator 栈中。
+    // 只有当前 app scope 的 game 才响应外层广播；普通 dialog / popup
+    // 不会改变 scope，结算弹窗里的“再来一局”仍需能重置当前游戏。
+    _resetter = () {
+      if (_isBoundScopeActive()) _game.resetGame();
+    };
+    _inputHandler = (name, data) {
+      if (_isBoundScopeActive()) _game.handleNamedInput(name, data);
+    };
+    _registerHandlers();
+  }
+
+  @override
+  void didUpdateWidget(covariant _FlameGameMount oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_matchesBoundIdentity(widget)) return;
+
+    // @launch_app 会先 load 子 App、执行 steps，之后才 push 新 route。
+    // 这段窗口里父 route 仍是 current；depth 闸阻止它误绑定子 App。
+    if (widget.appScopeDepth != _boundWidget.appScopeDepth) return;
+
+    final nextGeneration = _bindingGeneration + 1;
+    final nextGame = _createGame(widget, nextGeneration);
+    _unregisterHandlers();
+    final previousGame = _game;
+    _boundWidget = widget;
+    _bindingGeneration = nextGeneration;
+    _game = nextGame;
+    _registeredInterpreter = widget.interpreter;
+    _registerHandlers();
+    previousGame.disposeGame();
   }
 
   @override
   void dispose() {
-    widget.interpreter.unregisterFlameGameResetter(_resetter);
-    widget.interpreter.unregisterFlameGameInputHandler(_inputHandler);
+    _bindingGeneration++;
+    _unregisterHandlers();
     _game.disposeGame();
     super.dispose();
   }
 
+  JsonFlameGame _createGame(_FlameGameMount owner, int generation) {
+    return JsonFlameGame(
+      spec: owner.spec,
+      assetManager: owner.assetManager,
+      computeSession: owner.computeSession,
+      onEvent: (event, data) => _dispatchEvent(owner, generation, event, data),
+    );
+  }
+
+  bool _matchesBoundIdentity(_FlameGameMount candidate) {
+    return identical(
+          candidate.appScopeIdentity,
+          _boundWidget.appScopeIdentity,
+        ) &&
+        identical(
+          candidate.sourceSpecIdentity,
+          _boundWidget.sourceSpecIdentity,
+        ) &&
+        identical(candidate.computeSession, _boundWidget.computeSession);
+  }
+
+  bool _isBoundScopeActive() {
+    return mounted &&
+        _registeredInterpreter.appScopeDepth == _boundWidget.appScopeDepth &&
+        identical(
+          _registeredInterpreter.appScopeIdentity,
+          _boundWidget.appScopeIdentity,
+        );
+  }
+
+  void _registerHandlers() {
+    _registeredInterpreter.registerFlameGameResetter(_resetter);
+    _registeredInterpreter.registerFlameGameInputHandler(_inputHandler);
+  }
+
+  void _unregisterHandlers() {
+    _registeredInterpreter.unregisterFlameGameResetter(_resetter);
+    _registeredInterpreter.unregisterFlameGameInputHandler(_inputHandler);
+  }
+
   /// 游戏事件 → JSON-APP 的 on_xxx 回调
-  void _dispatchEvent(String event, Map<String, dynamic> data) {
-    if (!mounted) return;
-    final action = widget.spec['on_$event'];
+  void _dispatchEvent(
+    _FlameGameMount owner,
+    int generation,
+    String event,
+    Map<String, dynamic> data,
+  ) {
+    if (generation != _bindingGeneration || !_isBoundScopeActive()) return;
+    final action = owner.spec['on_$event'];
     if (action is! Map<String, dynamic>) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      widget.interpreter
+      if (generation != _bindingGeneration || !_isBoundScopeActive()) return;
+      owner.interpreter
           .executeActionWithEvent(action, context, data)
           .catchError((e, st) {
             debugPrint('[flame_game] on_$event 抛错: $e');
@@ -226,7 +311,7 @@ class _FlameGameMountState extends State<_FlameGameMount> {
       },
       child: GameWidget(game: _game),
     );
-    final h = widget.height;
+    final h = _boundWidget.height;
     if (h != null) {
       return SizedBox(height: h, child: core);
     }

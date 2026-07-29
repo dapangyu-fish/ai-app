@@ -106,6 +106,16 @@ class GameLogicEngine {
     final rawArgs = (action['args'] as Map?)?.cast<String, dynamic>() ?? {};
     final args = _resolveMap(rawArgs);
 
+    if (call.startsWith('@compute.')) {
+      final session = game.computeSession;
+      if (session == null) {
+        throw StateError('$call requires a top-level compute module');
+      }
+      final result = session.execute(call.substring('@compute.'.length), args);
+      _assignResult(action, result);
+      return result;
+    }
+
     switch (call) {
       case '@set':
         return _doSet(args);

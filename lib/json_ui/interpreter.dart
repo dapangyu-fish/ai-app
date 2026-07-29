@@ -1,4 +1,4 @@
-// JSON DSL v3.3 解释器 — jsonlogic 标准版
+// JSON DSL v4.0 解释器 — jsonlogic 标准版
 // ───────────────────────────────────────────────
 // 表达式引擎替换为 pub.dev/packages/jsonlogic (2.0.2)
 // 自定义扩展操作符通过 jl.add() 注册
@@ -19,6 +19,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app_fs.dart';
 import 'http_client.dart';
 import 'dependency_loader.dart';
+import 'compute/compute_session.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
 import 'builtins/launcher_bridges.dart';
@@ -39,6 +40,8 @@ class JsonInterpreter extends ChangeNotifier {
   late Map<String, dynamic> _config;
   late Map<String, dynamic> _variables;
   late Map<String, dynamic> _functions;
+  ComputeSession? _computeSession;
+  Object _appScopeIdentity = Object();
   String _currentScreenId = '';
   String _appId = 'default';
 
@@ -171,6 +174,18 @@ class JsonInterpreter extends ChangeNotifier {
 
   /// 是否处于嵌套 APP（@launch_app 已 pushState 但还没 popState）
   bool get isNested => _stateStack.isNotEmpty;
+
+  /// 当前 App 是否声明并成功编译了 Compute VM v2 模块。
+  bool get hasCompute => _computeSession != null;
+
+  /// 框架内部嵌入式运行时（例如 flame_game）共享的 App 级计算会话。
+  ComputeSession? get computeSession => _computeSession;
+
+  /// 当前已加载 App 实例的不透明身份；每次成功 loadConfig 都会更换。
+  Object get appScopeIdentity => _appScopeIdentity;
+
+  /// 当前 App 的嵌套深度，用于隔离仍挂在 Navigator 下层的父 App。
+  int get appScopeDepth => _stateStack.length;
 
   // ============ Getters ============
 
@@ -406,12 +421,12 @@ class JsonInterpreter extends ChangeNotifier {
   /// 地址。这样 JSON-APP 不必写死域名；"拼后端地址"这种平台业务可以留在 JSON 层
   /// （如 faas lib），通用 http builtin 只认完整 URL，不再替调用方猜后端。
   Map<String, dynamic> _appContext() => {
-        'backendUrl': AppConfig.backendUrl,
-        'supabaseUrl': AppConfig.supabaseUrl,
-        'registryUrl': AppConfig.registryUrl,
-        'minioUrl': AppConfig.minioUrl,
-        'imApiUrl': AppConfig.imApiUrl,
-      };
+    'backendUrl': AppConfig.backendUrl,
+    'supabaseUrl': AppConfig.supabaseUrl,
+    'registryUrl': AppConfig.registryUrl,
+    'minioUrl': AppConfig.minioUrl,
+    'imApiUrl': AppConfig.imApiUrl,
+  };
 
   Map<String, dynamic> _buildDataContext() {
     Map<String, dynamic> globalView = _variables;
@@ -565,12 +580,10 @@ class JsonInterpreter extends ChangeNotifier {
   // ============ 加载配置 ============
 
   void loadConfig(Map<String, dynamic> config) {
-    _config = config;
-
     // DSL 版本兼容闸（见 docs/planning/version-management.md §3.7）：
     // 客户端支持 DSL kSupportedDsl；App 声明的 dsl MAJOR 高于支持 → 需更新客户端，硬拒；
     // MAJOR 相同、MINOR 超前 → 仅告警（新增控件/内置在旧端按未知键忽略、优雅降级）。
-    const kSupportedDsl = '3.3';
+    const kSupportedDsl = '4.0';
     final declaredDsl = config['dsl']?.toString().trim() ?? '';
     if (declaredDsl.isNotEmpty) {
       final appParts = declaredDsl.split('.');
@@ -583,14 +596,25 @@ class JsonInterpreter extends ChangeNotifier {
         );
       }
       if (appMajor == supMajor) {
-        final appMinor = int.tryParse(appParts.length > 1 ? appParts[1] : '0') ?? 0;
-        final supMinor = int.tryParse(supParts.length > 1 ? supParts[1] : '0') ?? 0;
+        final appMinor =
+            int.tryParse(appParts.length > 1 ? appParts[1] : '0') ?? 0;
+        final supMinor =
+            int.tryParse(supParts.length > 1 ? supParts[1] : '0') ?? 0;
         if (appMinor > supMinor) {
           // ignore: avoid_print
-          print('[dsl] App dsl $declaredDsl 的 MINOR 高于客户端支持 $kSupportedDsl；尝试渲染（未知键将被忽略）');
+          print(
+            '[dsl] App dsl $declaredDsl 的 MINOR 高于客户端支持 $kSupportedDsl；尝试渲染（未知键将被忽略）',
+          );
         }
       }
     }
+
+    // 先完整验证并编译新 App 的计算模块，再替换当前状态。这样编译失败
+    // 不会留下一个只加载了一半的 compute session。
+    final nextComputeSession = ComputeSession.fromAppConfig(config);
+    _config = config;
+    _computeSession = nextComputeSession;
+    _appScopeIdentity = Object();
 
     // 提取 appid，用于 Drift 数据库隔离
     _appId =
@@ -675,6 +699,8 @@ class JsonInterpreter extends ChangeNotifier {
         paramsStack: List<Map<String, dynamic>>.of(_paramsStack),
         eventContextStack: List<Map<String, dynamic>>.of(_eventContextStack),
         imInboxSub: savedIm,
+        computeSession: _computeSession,
+        appScopeIdentity: _appScopeIdentity,
       ),
     );
 
@@ -687,6 +713,7 @@ class JsonInterpreter extends ChangeNotifier {
     _loopContextStack.clear();
     _paramsStack.clear();
     _eventContextStack.clear();
+    _computeSession = null;
     _currentScreenId = '';
     _activeModalCount = 0;
   }
@@ -738,6 +765,8 @@ class JsonInterpreter extends ChangeNotifier {
     _functions = snapshot.functions;
     _currentScreenId = snapshot.currentScreenId;
     _appId = snapshot.appId;
+    _computeSession = snapshot.computeSession;
+    _appScopeIdentity = snapshot.appScopeIdentity;
 
     _depLoader.restoreFromSnapshot(snapshot.depModules);
 
@@ -1318,6 +1347,25 @@ class JsonInterpreter extends ChangeNotifier {
     }
 
     final resolvedArgs = _resolveArgs(args);
+
+    // Compute 是框架内置的 dotted namespace，必须先于通用 dependency
+    // 路由处理；否则 @compute.call 会被误认为 dependency "compute"。
+    // `compute` was a legal dependency package name before DSL 4 introduced
+    // the built-in namespace. Keep DSL 3.x calls on the dependency path so an
+    // existing `dependencies.compute` module does not change meaning.
+    final declaredDslMajor = int.tryParse(
+      (_config['dsl']?.toString() ?? '').split('.').first,
+    );
+    if (callTarget.startsWith('@compute.') && declaredDslMajor == 4) {
+      final session = _computeSession;
+      if (session == null) {
+        throw StateError('$callTarget requires a top-level compute module');
+      }
+      return session.execute(
+        callTarget.substring('@compute.'.length),
+        resolvedArgs,
+      );
+    }
 
     if (_requiresLoggedIn(callTarget) && !AuthService.isLoggedIn) {
       _showLoginRequiredToast();
@@ -3969,6 +4017,7 @@ class JsonInterpreter extends ChangeNotifier {
       controller.dispose();
     }
     _textControllers.clear();
+    _computeSession = null;
     super.dispose();
   }
 
@@ -4110,6 +4159,8 @@ class _InterpreterStateSnapshot {
   final List<Map<String, dynamic>> paramsStack;
   final List<Map<String, dynamic>> eventContextStack;
   final StreamSubscription<Map<String, dynamic>>? imInboxSub;
+  final ComputeSession? computeSession;
+  final Object appScopeIdentity;
 
   _InterpreterStateSnapshot({
     required this.config,
@@ -4125,5 +4176,7 @@ class _InterpreterStateSnapshot {
     required this.paramsStack,
     required this.eventContextStack,
     required this.imInboxSub,
+    required this.computeSession,
+    required this.appScopeIdentity,
   });
 }
