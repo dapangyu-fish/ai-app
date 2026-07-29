@@ -37,10 +37,12 @@ final class _ComputeVmRunner {
     final stack = <_VmFrame>[
       _VmFrame(function: entry, registers: entryRegisters, returnRegister: -1),
     ];
+    var frame = stack.last;
+    var code = frame.function.code;
+    var registers = frame.registers;
+    var pc = 0;
 
     while (stack.isNotEmpty) {
-      final frame = stack.last;
-      final pc = frame.pc;
       if (_remainingBudget == 0) {
         throw ComputeVmBudgetExceeded(
           budget: _initialBudget,
@@ -55,14 +57,13 @@ final class _ComputeVmRunner {
         );
       }
       _remainingBudget--;
-      final code = frame.function.code;
       final base = pc * _instructionWidth;
       final opcode = code[base];
       final a = code[base + 1];
       final b = code[base + 2];
       final c = code[base + 3];
-      final registers = frame.registers;
-      frame.pc = pc + 1;
+      final instruction = pc;
+      pc++;
 
       switch (opcode) {
         case _Op.constant:
@@ -84,9 +85,9 @@ final class _ComputeVmRunner {
             i32[a][index] = registers[c];
           }
         case _Op.memset:
-          _runMemset(module.bulkSites[a], registers, frame, pc);
+          _runMemset(module.bulkSites[a], registers, frame, instruction);
         case _Op.memlut:
-          _runMemlut(module.bulkSites[a], registers, frame, pc);
+          _runMemlut(module.bulkSites[a], registers, frame, instruction);
         case _Op.add:
           registers[a] = registers[b] + registers[c];
         case _Op.subtract:
@@ -136,15 +137,15 @@ final class _ComputeVmRunner {
           final right = registers[c];
           registers[a] = left > right ? left : right;
         case _Op.jump:
-          frame.pc = a;
+          pc = a;
         case _Op.jumpZero:
-          if (registers[a] == 0) frame.pc = b;
+          if (registers[a] == 0) pc = b;
         case _Op.jumpNonZero:
-          if (registers[a] != 0) frame.pc = b;
+          if (registers[a] != 0) pc = b;
         case _Op.jumpLessEqualZero:
-          if (registers[a] <= 0) frame.pc = b;
+          if (registers[a] <= 0) pc = b;
         case _Op.switchDispatch:
-          frame.pc = _switchTarget(module.switchSites[b], registers[a]);
+          pc = _switchTarget(module.switchSites[b], registers[a]);
         case _Op.decrement:
           registers[a] = registers[a] - 1;
         case _Op.call:
@@ -166,14 +167,17 @@ final class _ComputeVmRunner {
           for (var i = 0; i < site.argumentRegisters.length; i++) {
             calleeRegisters[i] = registers[site.argumentRegisters[i]];
           }
-          stack.add(
-            _VmFrame(
-              function: callee,
-              registers: calleeRegisters,
-              returnRegister: a,
-            ),
+          frame.pc = pc;
+          frame = _VmFrame(
+            function: callee,
+            registers: calleeRegisters,
+            returnRegister: a,
           );
+          stack.add(frame);
           stackWords += callee.registerCount;
+          code = callee.code;
+          registers = calleeRegisters;
+          pc = 0;
         case _Op.host:
           final site = module.hostSites[b];
           final name = module.hostNames[site.hostId];
@@ -200,10 +204,15 @@ final class _ComputeVmRunner {
           final completed = stack.removeLast();
           stackWords -= completed.registers.length;
           if (stack.isEmpty) return result;
-          stack.last.registers[completed.returnRegister] = result;
+          frame = stack.last;
+          registers = frame.registers;
+          registers[completed.returnRegister] = result;
+          code = frame.function.code;
+          pc = frame.pc;
         default:
           throw ComputeVmRuntimeException(
-            'unknown bytecode opcode $opcode at ${frame.function.name}#$pc',
+            'unknown bytecode opcode $opcode at '
+            '${frame.function.name}#$instruction',
           );
       }
     }
