@@ -528,6 +528,9 @@ class JsonInterpreter extends ChangeNotifier {
 
   dynamic _evaluatePlannedExpression(ValuePlan plan) {
     if (plan is ConstantValuePlan) return plan.value;
+    if (plan is OpaqueValuePlan) {
+      return _evaluateOpaqueExpression(plan.source);
+    }
     if (plan is TemplateValuePlan) {
       return resolveExpression(plan.template.source);
     }
@@ -554,6 +557,9 @@ class JsonInterpreter extends ChangeNotifier {
 
   dynamic _materializePlannedRule(ValuePlan plan) {
     if (plan is ConstantValuePlan) return plan.value;
+    if (plan is OpaqueValuePlan) {
+      return _materializeOpaqueRule(plan.source);
+    }
     if (plan is TemplateValuePlan) {
       // JSONLogic preprocessing historically uses resolveTemplate rather than
       // resolveExpression, so even one full binding is stringified.
@@ -571,6 +577,44 @@ class JsonInterpreter extends ChangeNotifier {
       };
     }
     return null;
+  }
+
+  dynamic _evaluateOpaqueExpression(dynamic value) {
+    if (value == null || value is num || value is bool) return value;
+    if (value is String) {
+      return value.contains('{{') && value.contains('}}')
+          ? resolveExpression(value)
+          : value;
+    }
+    if (value is Map<String, dynamic>) {
+      if (_looksLikeJsonLogic(value)) {
+        return _jl.apply(_materializeOpaqueRule(value), _buildDataContext());
+      }
+      return <String, dynamic>{
+        for (final entry in value.entries)
+          entry.key: _evaluateExpression(entry.value),
+      };
+    }
+    if (value is List) {
+      return <dynamic>[for (final item in value) _evaluateExpression(item)];
+    }
+    return value;
+  }
+
+  dynamic _materializeOpaqueRule(dynamic value) {
+    if (value is String && value.contains('{{') && value.contains('}}')) {
+      return resolveTemplate(value);
+    }
+    if (value is List) {
+      return <dynamic>[for (final item in value) _resolveTemplatesInRule(item)];
+    }
+    if (value is Map<String, dynamic>) {
+      return <String, dynamic>{
+        for (final entry in value.entries)
+          entry.key: _resolveTemplatesInRule(entry.value),
+      };
+    }
+    return value;
   }
 
   dynamic _evaluateCompiledJsonLogic(JsonLogicExpressionPlan plan) {
@@ -1409,6 +1453,7 @@ class JsonInterpreter extends ChangeNotifier {
       config,
       knownJsonLogicOperators: _knownJsonLogicOps,
       knownWidgetTypes: JsonWidgetBuilder.registeredWidgetTypes,
+      sourceHashMode: AppSourceHashMode.runtimeIdentity,
     );
     _pathPlans.clear();
     _runtimeTemplatePlans.clear();

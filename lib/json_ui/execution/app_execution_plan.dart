@@ -28,6 +28,22 @@ final class TemplateValuePlan extends ValuePlan {
   final TemplatePlan template;
 }
 
+/// One sentinel for a subtree owned by another runtime or copied before use.
+///
+/// Descendants deliberately receive no identity plans. If this source object
+/// is ever evaluated through the generic interpreter, the runtime executes the
+/// legacy recursive semantics from this root.
+final class OpaqueValuePlan extends ValuePlan {
+  const OpaqueValuePlan({
+    required this.source,
+    required this.owner,
+    required super.sourcePath,
+  }) : super(globalDependencies: const <String>{});
+
+  final dynamic source;
+  final String owner;
+}
+
 final class ListValuePlan extends ValuePlan {
   ListValuePlan({
     required this.source,
@@ -128,6 +144,7 @@ final class AppExecutionPlanStats {
     required this.screenCount,
     required this.stateSlotCount,
     required this.expressionCount,
+    required this.opaqueValueCount,
   });
 
   final int templateCount;
@@ -137,6 +154,16 @@ final class AppExecutionPlanStats {
   final int screenCount;
   final int stateSlotCount;
   final int expressionCount;
+  final int opaqueValueCount;
+}
+
+enum AppSourceHashMode {
+  /// Canonicalize the decoded Map again and hash it.
+  canonicalJson,
+
+  /// Avoid a second whole-App serialization when no stable upstream hash is
+  /// available. The plan is still unique to this load and is not cacheable.
+  runtimeIdentity,
 }
 
 /// Immutable load-time plan for one dynamic JSON App.
@@ -167,11 +194,15 @@ final class AppExecutionPlan {
     Map<String, dynamic> config, {
     required Set<String> knownJsonLogicOperators,
     required Set<String> knownWidgetTypes,
+    String? precomputedSourceHash,
+    AppSourceHashMode sourceHashMode = AppSourceHashMode.canonicalJson,
   }) {
     return _AppExecutionPlanCompiler(
       config: config,
       knownJsonLogicOperators: knownJsonLogicOperators,
       knownWidgetTypes: knownWidgetTypes,
+      precomputedSourceHash: precomputedSourceHash,
+      sourceHashMode: sourceHashMode,
     ).compile();
   }
 
@@ -202,6 +233,8 @@ final class _AppExecutionPlanCompiler {
     required this.config,
     required this.knownJsonLogicOperators,
     required this.knownWidgetTypes,
+    required this.precomputedSourceHash,
+    required this.sourceHashMode,
   }) : _stateSchema = StateSchemaBuilder(
          (config['global'] as Map<String, dynamic>?)?['variables']
                  as Map<String, dynamic>? ??
@@ -211,6 +244,8 @@ final class _AppExecutionPlanCompiler {
   final Map<String, dynamic> config;
   final Set<String> knownJsonLogicOperators;
   final Set<String> knownWidgetTypes;
+  final String? precomputedSourceHash;
+  final AppSourceHashMode sourceHashMode;
   final StateSchemaBuilder _stateSchema;
   final LinkedHashMap<String, TemplatePlan> _templates =
       LinkedHashMap<String, TemplatePlan>();
@@ -224,6 +259,7 @@ final class _AppExecutionPlanCompiler {
       LinkedHashMap<String, ScreenPlan>();
   final Set<Object> _visiting = HashSet<Object>.identity();
   var _expressionCount = 0;
+  var _opaqueValueCount = 0;
 
   AppExecutionPlan compile() {
     _registerDeclaredState(
@@ -235,7 +271,7 @@ final class _AppExecutionPlanCompiler {
     _compileValue(config, r'$');
     _registerScreens();
     final schema = _stateSchema.build();
-    final (sourceHash, stableHash) = _hashConfig(config);
+    final (sourceHash, stableHash) = _sourceHash();
     return AppExecutionPlan._(
       abi: AppExecutionPlan.currentAbi,
       sourceHash: sourceHash,
@@ -258,11 +294,15 @@ final class _AppExecutionPlanCompiler {
         screenCount: _screens.length,
         stateSlotCount: schema.slots.length,
         expressionCount: _expressionCount,
+        opaqueValueCount: _opaqueValueCount,
       ),
     );
   }
 
   ValuePlan _compileValue(dynamic value, String sourcePath) {
+    if (_isOpaqueRootPath(sourcePath)) {
+      return _compileOpaqueValue(value, sourcePath, owner: sourcePath);
+    }
     if (value is String) {
       if (!value.contains('{{') || !value.contains('}}')) {
         _registerPossibleStaticPath(value);
@@ -297,6 +337,10 @@ final class _AppExecutionPlanCompiler {
     if (value is Map<String, dynamic>) {
       final cached = _valuePlans[value];
       if (cached != null) return cached;
+      if (value['type'] == 'flame_game' &&
+          knownWidgetTypes.contains('flame_game')) {
+        return _compileFlameGameWidget(value, sourcePath);
+      }
       if (!_visiting.add(value)) {
         return ConstantValuePlan(value: value, sourcePath: sourcePath);
       }
@@ -328,6 +372,60 @@ final class _AppExecutionPlanCompiler {
       return plan;
     }
     return ConstantValuePlan(value: value, sourcePath: sourcePath);
+  }
+
+  ValuePlan _compileOpaqueValue(
+    dynamic value,
+    String sourcePath, {
+    required String owner,
+  }) {
+    if (value is! Map<String, dynamic> && value is! List<dynamic>) {
+      return ConstantValuePlan(value: value, sourcePath: sourcePath);
+    }
+    final cached = _valuePlans[value];
+    if (cached != null) return cached;
+    final plan = OpaqueValuePlan(
+      source: value,
+      owner: owner,
+      sourcePath: sourcePath,
+    );
+    _valuePlans[value] = plan;
+    _opaqueValueCount++;
+    return plan;
+  }
+
+  ValuePlan _compileFlameGameWidget(
+    Map<String, dynamic> value,
+    String sourcePath,
+  ) {
+    if (!_visiting.add(value)) {
+      return ConstantValuePlan(value: value, sourcePath: sourcePath);
+    }
+    final values = <String, ValuePlan>{};
+    for (final entry in value.entries) {
+      final entryPath = '$sourcePath.${entry.key}';
+      values[entry.key] =
+          entry.key == 'type' ||
+              entry.key == 'visible' ||
+              entry.key == 'position'
+          ? _compileValue(entry.value, entryPath)
+          : _compileOpaqueValue(entry.value, entryPath, owner: 'flame_game');
+    }
+    _visiting.remove(value);
+    final plan = MapValuePlan(
+      source: value,
+      values: Map<String, ValuePlan>.unmodifiable(values),
+      isJsonLogic: false,
+      expressionPlan: null,
+      sourcePath: sourcePath,
+    );
+    _valuePlans[value] = plan;
+    _registerWidget(value, plan, sourcePath);
+    return plan;
+  }
+
+  static bool _isOpaqueRootPath(String sourcePath) {
+    return sourcePath == r'$.compute' || sourcePath == r'$.global.variables';
   }
 
   void _registerTemplateReads(TemplatePlan template) {
@@ -471,7 +569,15 @@ final class _AppExecutionPlanCompiler {
     }
   }
 
-  static (String, bool) _hashConfig(Map<String, dynamic> config) {
+  (String, bool) _sourceHash() {
+    final supplied = precomputedSourceHash?.trim();
+    if (supplied != null && supplied.isNotEmpty) return (supplied, true);
+    if (sourceHashMode == AppSourceHashMode.runtimeIdentity) {
+      return (
+        'runtime-${identityHashCode(config)}-abi${AppExecutionPlan.currentAbi}',
+        false,
+      );
+    }
     try {
       return (sha256.convert(utf8.encode(jsonEncode(config))).toString(), true);
     } catch (_) {

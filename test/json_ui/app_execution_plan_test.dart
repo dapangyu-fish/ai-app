@@ -73,6 +73,7 @@ void main() {
       expect(plan.stats.widgetCount, 2);
       expect(plan.stats.actionCount, 1);
       expect(plan.stats.templateCount, 3);
+      expect(plan.stats.opaqueValueCount, 1);
     });
 
     test('different JSON content receives a different plan hash', () {
@@ -105,6 +106,92 @@ void main() {
       expect(first.sourceHash, isNot(second.sourceHash));
       expect(first.templateFor('{{ global.value }}'), isNotNull);
       expect(second.templateFor('new {{ global.value }}'), isNotNull);
+    });
+
+    test('accepts upstream hashes and avoids production reserialization', () {
+      final config = _config(
+        name: 'hash-mode',
+        variables: <String, dynamic>{'value': 1},
+        children: <Map<String, dynamic>>[],
+      );
+      final supplied = AppExecutionPlan.compile(
+        config,
+        knownJsonLogicOperators: const <String>{},
+        knownWidgetTypes: const <String>{},
+        precomputedSourceHash: 'registry-sha256',
+        sourceHashMode: AppSourceHashMode.runtimeIdentity,
+      );
+      final runtime = AppExecutionPlan.compile(
+        config,
+        knownJsonLogicOperators: const <String>{},
+        knownWidgetTypes: const <String>{},
+        sourceHashMode: AppSourceHashMode.runtimeIdentity,
+      );
+
+      expect(supplied.sourceHash, 'registry-sha256');
+      expect(supplied.hasStableSourceHash, isTrue);
+      expect(runtime.sourceHash, startsWith('runtime-'));
+      expect(runtime.hasStableSourceHash, isFalse);
+    });
+
+    test('keeps copied or runtime-owned trees opaque', () {
+      final expression = <String, dynamic>{
+        '+': <dynamic>[1, 2],
+      };
+      final actionShapedData = <String, dynamic>{
+        'call': '@set',
+        'args': <String, dynamic>{'var': 'global.bad', 'value': 1},
+      };
+      final variables = <String, dynamic>{
+        'profile': <String, dynamic>{'name': 'Ada'},
+        'data': actionShapedData,
+      };
+      final compute = <String, dynamic>{
+        'program': <String, dynamic>{
+          'payload': <dynamic>[expression, 1, 2, 3],
+        },
+      };
+      final flameEntities = <String, dynamic>{
+        'player': <String, dynamic>{
+          'kind': 'rect',
+          'logicLikeData': expression,
+        },
+      };
+      final flame = <String, dynamic>{
+        'type': 'flame_game',
+        'visible': <String, dynamic>{'var': 'global.enabled'},
+        'entities': flameEntities,
+        'frame': <String, dynamic>{
+          'logic': <dynamic>[actionShapedData],
+        },
+      };
+      final config = _config(
+        name: 'opaque',
+        variables: variables,
+        children: <Map<String, dynamic>>[flame],
+      )..['compute'] = compute;
+
+      final plan = AppExecutionPlan.compile(
+        config,
+        knownJsonLogicOperators: const <String>{'var', '+'},
+        knownWidgetTypes: const <String>{'flame_game'},
+      );
+
+      expect(plan.valuePlanFor(variables), isA<OpaqueValuePlan>());
+      expect(plan.valuePlanFor(actionShapedData), isNull);
+      expect(plan.actionPlanFor(actionShapedData), isNull);
+      expect(plan.valuePlanFor(compute), isA<OpaqueValuePlan>());
+      expect(plan.valuePlanFor(expression), isNull);
+      expect(plan.stats.expressionCount, 1);
+
+      final flamePlan = plan.widgetPlanFor(flame);
+      expect(flamePlan, isNotNull);
+      expect(flamePlan!.visible, isNotNull);
+      expect(plan.valuePlanFor(flameEntities), isA<OpaqueValuePlan>());
+      expect(
+        plan.valuePlanFor(flameEntities['player'] as Map<String, dynamic>),
+        isNull,
+      );
     });
   });
 
@@ -208,6 +295,41 @@ void main() {
         interpreter.resolveTemplate('Parent {{ global.value }}'),
         'Parent parent',
       );
+    });
+
+    test('opaque roots retain legacy recursive expression semantics', () {
+      final variables = <String, dynamic>{
+        'name': 'Ada',
+        'label': '{{ global.name }}',
+        'calculation': <String, dynamic>{
+          '+': <dynamic>[1, 2],
+        },
+        'items': <dynamic>[
+          '{{ global.name }}',
+          <String, dynamic>{'value': '{{ global.name }}'},
+        ],
+      };
+      final config = _config(
+        name: 'opaque-runtime',
+        variables: variables,
+        children: <Map<String, dynamic>>[],
+      );
+      interpreter.loadConfig(config);
+
+      expect(
+        interpreter.executionPlan!.valuePlanFor(variables),
+        isA<OpaqueValuePlan>(),
+      );
+      final value =
+          interpreter.evaluateExpression(variables) as Map<String, dynamic>;
+      expect(value['name'], 'Ada');
+      expect(value['label'], 'Ada');
+      expect(value['calculation'], 3.0);
+      expect(value['items'], <dynamic>[
+        'Ada',
+        <String, dynamic>{'value': 'Ada'},
+      ]);
+      expect(identical(value, variables), isFalse);
     });
   });
 }
