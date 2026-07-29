@@ -35,6 +35,15 @@ abstract class GameEntity {
   Map<String, dynamic> toMap();
 
   bool get expired => false;
+
+  /// Releases resources owned by entities that keep decoded images or streams.
+  void dispose() {}
+}
+
+/// Entity hook for snapshots that must be captured after frame/tick logic has
+/// finished mutating shared state.
+abstract interface class PostLogicGameEntity {
+  void capturePostLogicFrame(GameWorld world);
 }
 
 abstract class ImageBackedEntity {

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kReleaseMode;
+
 import 'compute_vm.dart';
 
 /// App-scoped facade around [ComputeVmProgram].
@@ -20,10 +22,27 @@ final class ComputeSession {
        _initialI32 = _i32InitializerPrefixes(program, programSpecification);
 
   static const int _defaultInstructionBudget = 500 * 1000;
-  static const int _maximumInstructionBudget = 5 * 1000 * 1000;
+  static const int _productionMaximumInstructionBudget = 5 * 1000 * 1000;
+  static const int _localMaximumInstructionBudget = 16 * 1000 * 1000;
+  static const int _requestedLocalInstructionBudget = int.fromEnvironment(
+    'JSON_APP_LOCAL_COMPUTE_MAX_BUDGET',
+    defaultValue: _productionMaximumInstructionBudget,
+  );
   static const int _maximumTransferElements = 1024 * 1024;
   static const int _maximumBase64Characters =
       ((_maximumTransferElements + 2) ~/ 3) * 4;
+
+  static int get _maximumInstructionBudget {
+    if (kReleaseMode) return _productionMaximumInstructionBudget;
+    if (_requestedLocalInstructionBudget <
+        _productionMaximumInstructionBudget) {
+      return _productionMaximumInstructionBudget;
+    }
+    if (_requestedLocalInstructionBudget > _localMaximumInstructionBudget) {
+      return _localMaximumInstructionBudget;
+    }
+    return _requestedLocalInstructionBudget;
+  }
 
   final ComputeVmProgram _program;
   final Map<String, Uint8List> _initialU8;
@@ -35,6 +54,47 @@ final class ComputeSession {
   /// Hard ceiling for one synchronous `@compute.call`.
   final int maxBudget;
 
+  /// Returns the length of a VM byte buffer for host-side adapters.
+  int u8BufferLength(String name) {
+    final buffer = _program.u8[name];
+    if (buffer == null) {
+      throw ComputeVmRuntimeException('unknown u8 buffer: $name');
+    }
+    return buffer.length;
+  }
+
+  /// Copies a VM byte range into host-owned typed memory.
+  ///
+  /// This avoids allocating a boxed `List<int>` per frame while ensuring host
+  /// renderers cannot mutate persistent VM state through an aliased view.
+  int copyU8BufferInto(
+    String name,
+    Uint8List destination, {
+    int sourceOffset = 0,
+    int destinationOffset = 0,
+    required int length,
+  }) {
+    final buffer = _program.u8[name];
+    if (buffer == null) {
+      throw ComputeVmRuntimeException('unknown u8 buffer: $name');
+    }
+    _checkTransferSize(length);
+    _checkRange(sourceOffset, length, buffer.length, operation: 'copy');
+    _checkRange(
+      destinationOffset,
+      length,
+      destination.length,
+      operation: 'copy destination',
+    );
+    destination.setRange(
+      destinationOffset,
+      destinationOffset + length,
+      buffer,
+      sourceOffset,
+    );
+    return length;
+  }
+
   /// Builds a session from the top-level JSON App configuration.
   ///
   /// A compute-enabled App must declare DSL 4.x. That makes clients that only
@@ -42,7 +102,7 @@ final class ComputeSession {
   /// actions.
   static ComputeSession? fromAppConfig(
     Map<String, dynamic> config, {
-    ComputeVmLimits limits = const ComputeVmLimits(),
+    ComputeVmLimits? limits,
   }) {
     final rawCompute = config['compute'];
     if (rawCompute == null) return null;
@@ -77,23 +137,26 @@ final class ComputeSession {
       );
     }
 
+    final clientMaximumInstructionBudget = _maximumInstructionBudget;
+    final effectiveLimits =
+        limits ?? ComputeVmLimits(maxBudget: clientMaximumInstructionBudget);
     final defaultBudget = _positiveInteger(
       engine['defaultBudget'] ?? _defaultInstructionBudget,
       r'$.compute.engine.defaultBudget',
     );
     final maxBudget = _positiveInteger(
-      engine['maxBudget'] ?? _maximumInstructionBudget,
+      engine['maxBudget'] ?? clientMaximumInstructionBudget,
       r'$.compute.engine.maxBudget',
     );
-    if (maxBudget > _maximumInstructionBudget) {
+    if (maxBudget > clientMaximumInstructionBudget) {
       throw const ComputeVmCompileException(
         'maxBudget exceeds the client safety ceiling',
         path: r'$.compute.engine.maxBudget',
       );
     }
-    if (maxBudget > limits.maxBudget) {
+    if (maxBudget > effectiveLimits.maxBudget) {
       throw ComputeVmCompileException(
-        'maxBudget exceeds the runtime limit ${limits.maxBudget}',
+        'maxBudget exceeds the runtime limit ${effectiveLimits.maxBudget}',
         path: r'$.compute.engine.maxBudget',
       );
     }
@@ -110,7 +173,7 @@ final class ComputeSession {
     );
     final program = ComputeVmProgram.compile(
       programSpecification,
-      limits: limits,
+      limits: effectiveLimits,
     );
     return ComputeSession._(
       programSpecification: programSpecification,
@@ -295,9 +358,10 @@ final class ComputeSession {
   }
 
   static void _checkTransferSize(int length) {
-    if (length > _maximumTransferElements) {
+    if (length < 0 || length > _maximumTransferElements) {
       throw ComputeVmRuntimeException(
-        'compute transfer exceeds $_maximumTransferElements elements',
+        'compute transfer length must be between 0 and '
+        '$_maximumTransferElements elements',
       );
     }
   }
@@ -308,7 +372,10 @@ final class ComputeSession {
     int bufferLength, {
     required String operation,
   }) {
-    if (offset > bufferLength || length > bufferLength - offset) {
+    if (offset < 0 ||
+        length < 0 ||
+        offset > bufferLength ||
+        length > bufferLength - offset) {
       throw ComputeVmRuntimeException(
         'compute.$operation range [$offset, ${offset + length}) exceeds '
         'buffer length $bufferLength',

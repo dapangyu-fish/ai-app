@@ -3,7 +3,7 @@ import 'i18n/runtime_extra_i18n.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
+    show kIsWeb, kReleaseMode, defaultTargetPlatform, TargetPlatform;
 import 'package:firebase_core/firebase_core.dart';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -79,7 +79,20 @@ const List<String> _remoteJsonParamNames = [
 
 const List<String> _webAppIdParamNames = ['appid', 'app_id'];
 
+/// Compile-time local App entry used by macOS/desktop performance runs.
+///
+/// It is deliberately disabled in release builds. Production clients keep
+/// using Registry/AppStorage routes and cannot be redirected to an arbitrary
+/// local file by this switch.
+const String _localJsonDebugPath = String.fromEnvironment(
+  'JSON_APP_LOCAL_JSON_PATH',
+);
+
 String? _localJsonDebugSource() {
+  if (!kReleaseMode) {
+    final localPath = _localJsonDebugPath.trim();
+    if (localPath.isNotEmpty) return localPath;
+  }
   final params = Uri.base.queryParameters;
   for (final name in _localJsonDebugParamNames) {
     final value = params[name]?.trim();

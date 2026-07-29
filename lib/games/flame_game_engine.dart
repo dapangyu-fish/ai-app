@@ -15,6 +15,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import 'game_entity.dart';
+import 'framebuffer_v2_entity.dart';
 import 'game_logic.dart';
 import 'game_audio.dart';
 import 'tiled_map_entity.dart';
@@ -138,11 +139,13 @@ class JsonFlameGame extends FlameGame {
 
   @override
   void onRemove() {
+    _disposeEntities();
     audio.dispose();
     super.onRemove();
   }
 
   void disposeGame() {
+    _disposeEntities();
     audio.dispose();
   }
 
@@ -168,7 +171,11 @@ class JsonFlameGame extends FlameGame {
     for (final e in entities.values) {
       e.update(dt, gameWorld);
     }
-    entities.removeWhere((_, entity) => entity.expired);
+    entities.removeWhere((_, entity) {
+      if (!entity.expired) return false;
+      entity.dispose();
+      return true;
+    });
 
     // 2. frame logic
     if (_frameLogic != null) {
@@ -187,6 +194,13 @@ class JsonFlameGame extends FlameGame {
       while (t.accumulator >= iv && !isGameOver) {
         t.accumulator -= iv;
         logic.runLogic(t.logic);
+      }
+    }
+
+    // Snapshot compute-backed surfaces after all mutations for this frame.
+    for (final entity in entities.values) {
+      if (entity case final PostLogicGameEntity postLogicEntity) {
+        postLogicEntity.capturePostLogicFrame(gameWorld);
       }
     }
   }
@@ -393,7 +407,9 @@ class JsonFlameGame extends FlameGame {
         consumedTiledObjectKeys.add(key);
       }
     }
-    return entities.remove(id) != null;
+    final removed = entities.remove(id);
+    removed?.dispose();
+    return removed != null;
   }
 
   bool setSpriteAnimation(String id, String name) {
@@ -514,7 +530,7 @@ class JsonFlameGame extends FlameGame {
     }
 
     // entities
-    entities.clear();
+    _disposeEntities();
     final ents = (spec['entities'] as Map?)?.cast<String, dynamic>() ?? {};
     ents.forEach((id, raw) {
       final ent = _buildEntity(id, raw as Map<String, dynamic>);
@@ -818,8 +834,97 @@ class JsonFlameGame extends FlameGame {
             safeZoneBottom: safeBottom,
           );
         }
+      case 'framebuffer_v2':
+        {
+          const maximumFramebufferPixels = 1024 * 1024;
+          final session = computeSession;
+          if (session == null) {
+            throw StateError(
+              'framebuffer_v2 "$id" requires a top-level compute module',
+            );
+          }
+          final position = spec['position'];
+          final size = spec['size'];
+          final width = (spec['width'] as num?)?.toInt() ?? 0;
+          final height = (spec['height'] as num?)?.toInt() ?? 0;
+          if (width <= 0 || height <= 0) {
+            throw StateError(
+              'framebuffer_v2 "$id" requires positive width and height',
+            );
+          }
+          if (width > maximumFramebufferPixels ~/ height) {
+            throw StateError(
+              'framebuffer_v2 "$id" exceeds the '
+              '$maximumFramebufferPixels-pixel safety limit',
+            );
+          }
+          final x = position is List && position.isNotEmpty
+              ? _readDouble(position[0])
+              : 0.0;
+          final y = position is List && position.length > 1
+              ? _readDouble(position[1])
+              : 0.0;
+          final w = size is List && size.isNotEmpty
+              ? _readDouble(size[0], width.toDouble())
+              : width.toDouble();
+          final h = size is List && size.length > 1
+              ? _readDouble(size[1], height.toDouble())
+              : height.toDouble();
+          final palette = <int>[
+            if (spec['palette'] case final List<dynamic> values)
+              for (final value in values)
+                if (value is num) value.toInt(),
+          ];
+          final format = spec['format']?.toString() ?? 'indexed8';
+          if (format != 'indexed8') {
+            throw StateError(
+              'framebuffer_v2 "$id" does not support format "$format"',
+            );
+          }
+          if (palette.isEmpty) {
+            throw StateError(
+              'framebuffer_v2 "$id" requires a non-empty palette',
+            );
+          }
+          if (palette.length > 256) {
+            throw StateError(
+              'framebuffer_v2 "$id" palette cannot exceed 256 colors',
+            );
+          }
+          final bufferName = spec['buffer']?.toString() ?? '';
+          final requiredBytes = width * height;
+          final availableBytes = session.u8BufferLength(bufferName);
+          if (availableBytes < requiredBytes) {
+            throw StateError(
+              'framebuffer_v2 "$id" needs $requiredBytes bytes from '
+              '"$bufferName", but the buffer has $availableBytes',
+            );
+          }
+          return FramebufferV2Entity(
+            id: id,
+            renderConfig: render,
+            priority: priority,
+            computeSession: session,
+            bufferName: bufferName,
+            format: format,
+            pixelWidth: width,
+            pixelHeight: height,
+            x: x,
+            y: y,
+            w: w,
+            h: h,
+            palette: palette,
+          );
+        }
     }
     return null;
+  }
+
+  void _disposeEntities() {
+    for (final entity in entities.values) {
+      entity.dispose();
+    }
+    entities.clear();
   }
 
   ({
