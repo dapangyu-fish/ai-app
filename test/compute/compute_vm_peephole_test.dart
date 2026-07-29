@@ -286,6 +286,137 @@ Map<String, dynamic> _basicSuperinstructionSpecification() {
           <dynamic>['ret', 0],
         ],
       },
+      'u8RmwImmediate': <String, dynamic>{
+        'body': <dynamic>[
+          <dynamic>[
+            'setu8',
+            'bytes',
+            1,
+            <dynamic>[
+              '+',
+              <dynamic>['u8', 'bytes', 1],
+              250,
+            ],
+          ],
+          <dynamic>['ret', 0],
+        ],
+      },
+      'i32RmwImmediate': <String, dynamic>{
+        'body': <dynamic>[
+          <dynamic>[
+            'seti32',
+            'words',
+            1,
+            <dynamic>[
+              '+',
+              <dynamic>['i32', 'words', 1],
+              5,
+            ],
+          ],
+          <dynamic>['ret', 0],
+        ],
+      },
+      'loadU8ImmediateBinaryImmediate': <String, dynamic>{
+        'body': <dynamic>[
+          <dynamic>[
+            'ret',
+            <dynamic>[
+              '+',
+              <dynamic>['u8', 'bytes', 0],
+              5,
+            ],
+          ],
+        ],
+      },
+      'loadI32ImmediateBinaryImmediate': <String, dynamic>{
+        'body': <dynamic>[
+          <dynamic>[
+            'ret',
+            <dynamic>[
+              '+',
+              <dynamic>['i32', 'words', 0],
+              5,
+            ],
+          ],
+        ],
+      },
+      'loadI32ImmediateCompareJumpZero': <String, dynamic>{
+        'body': <dynamic>[
+          <dynamic>[
+            'if',
+            <dynamic>[
+              '<',
+              <dynamic>['i32', 'words', 0],
+              100,
+            ],
+            <dynamic>[
+              <dynamic>['ret', 1],
+            ],
+          ],
+          <dynamic>['ret', 0],
+        ],
+      },
+      'binaryImmediatePair': <String, dynamic>{
+        'params': <String>['value'],
+        'body': <dynamic>[
+          <dynamic>[
+            'ret',
+            <dynamic>[
+              '&',
+              <dynamic>[
+                '>>',
+                <dynamic>['var', 'value'],
+                1,
+              ],
+              7,
+            ],
+          ],
+        ],
+      },
+      'binaryImmediateDistinctPair': <String, dynamic>{
+        'params': <String>['value'],
+        'body': <dynamic>[
+          <dynamic>[
+            'ret',
+            <dynamic>[
+              '>>',
+              <dynamic>[
+                '&',
+                <dynamic>['var', 'value'],
+                0x3fff,
+              ],
+              12,
+            ],
+          ],
+        ],
+      },
+      'constantJumpZero': <String, dynamic>{
+        'body': <dynamic>[
+          <dynamic>[
+            'if',
+            0,
+            <dynamic>[
+              <dynamic>['ret', 1],
+            ],
+            <dynamic>[
+              <dynamic>['ret', 2],
+            ],
+          ],
+        ],
+      },
+      'normalizeAndJump': <String, dynamic>{
+        'params': <String>['value'],
+        'body': <dynamic>[
+          <dynamic>[
+            'ret',
+            <dynamic>[
+              'and',
+              1,
+              <dynamic>['var', 'value'],
+            ],
+          ],
+        ],
+      },
     },
   };
 }
@@ -433,6 +564,15 @@ void main() {
         'returnImmediate',
         'storeU8ImmediateBoth',
         'storeI32ImmediateBoth',
+        'u8RmwImmediate',
+        'i32RmwImmediate',
+        'loadU8ImmediateBinaryImmediate',
+        'loadI32ImmediateBinaryImmediate',
+        'loadI32ImmediateCompareJumpZero',
+        'binaryImmediatePair',
+        'binaryImmediateDistinctPair',
+        'constantJumpZero',
+        'normalizeAndJump',
       ];
       for (final name in names) {
         final info = optimized.functionInfo(name)!;
@@ -453,6 +593,31 @@ void main() {
         (name: 'returnImmediate', arguments: <int>[], expected: 42),
         (name: 'storeU8ImmediateBoth', arguments: <int>[], expected: 0),
         (name: 'storeI32ImmediateBoth', arguments: <int>[], expected: 0),
+        (name: 'u8RmwImmediate', arguments: <int>[], expected: 0),
+        (name: 'i32RmwImmediate', arguments: <int>[], expected: 0),
+        (
+          name: 'loadU8ImmediateBinaryImmediate',
+          arguments: <int>[],
+          expected: 15,
+        ),
+        (
+          name: 'loadI32ImmediateBinaryImmediate',
+          arguments: <int>[],
+          expected: 25,
+        ),
+        (
+          name: 'loadI32ImmediateCompareJumpZero',
+          arguments: <int>[],
+          expected: 1,
+        ),
+        (name: 'binaryImmediatePair', arguments: <int>[30], expected: 7),
+        (
+          name: 'binaryImmediateDistinctPair',
+          arguments: <int>[0x1234],
+          expected: 1,
+        ),
+        (name: 'constantJumpZero', arguments: <int>[], expected: 2),
+        (name: 'normalizeAndJump', arguments: <int>[7], expected: 1),
       ];
       for (final invocation in invocations) {
         expect(
@@ -470,6 +635,153 @@ void main() {
       expect(scalar.buffer('bytes')[3], 255);
       expect(optimized.words('words')[2], -1);
       expect(scalar.words('words')[2], -1);
+      expect(optimized.buffer('bytes')[1], 5);
+      expect(scalar.buffer('bytes')[1], 5);
+      expect(optimized.words('words')[1], 26);
+      expect(scalar.words('words')[1], 26);
+    });
+
+    test('read-modify-write macros preserve every budget boundary', () {
+      final specification = <String, dynamic>{
+        'version': 2,
+        'buffers': <String, dynamic>{'bytes': 1},
+        'i32': <String, dynamic>{'words': 4},
+        'init': <String, dynamic>{
+          'bytes': <int>[0],
+          'words': <int>[20, 21, 22, 23],
+        },
+        'functions': <String, dynamic>{
+          'run': <String, dynamic>{
+            'body': <dynamic>[
+              <dynamic>[
+                'seti32',
+                'words',
+                1,
+                <dynamic>[
+                  '+',
+                  <dynamic>['i32', 'words', 1],
+                  5,
+                ],
+              ],
+              <dynamic>['ret', 0],
+            ],
+          },
+        },
+      };
+      final probe = _compile(specification);
+      expect(probe.functionInfo('run')!.staticDispatchSavings, greaterThan(0));
+      for (var budget = 1; budget <= 10; budget++) {
+        final optimized = _compile(specification);
+        final scalar = _compile(specification, optimize: false);
+        _expectSameOutcome(
+          _execute(optimized, budget),
+          _execute(scalar, budget),
+          budget: budget,
+        );
+      }
+    });
+
+    test('post-fusion compaction remaps macro branch targets', () {
+      final specification = <String, dynamic>{
+        'version': 2,
+        'functions': <String, dynamic>{
+          'constantTarget': <String, dynamic>{
+            'params': <String>['value'],
+            'body': <dynamic>[
+              <dynamic>[
+                'if',
+                <dynamic>[
+                  '<',
+                  <dynamic>['var', 'value'],
+                  0,
+                ],
+                <dynamic>[
+                  <dynamic>['set', 'prefix', 10],
+                ],
+                <dynamic>[
+                  <dynamic>['set', 'prefix', 20],
+                ],
+              ],
+              <dynamic>[
+                'if',
+                0,
+                <dynamic>[
+                  <dynamic>['set', 'suffix', 100],
+                ],
+                <dynamic>[
+                  <dynamic>['set', 'suffix', 200],
+                ],
+              ],
+              <dynamic>[
+                'ret',
+                <dynamic>[
+                  '+',
+                  <dynamic>['var', 'prefix'],
+                  <dynamic>['var', 'suffix'],
+                ],
+              ],
+            ],
+          },
+          'normalizeTarget': <String, dynamic>{
+            'params': <String>['value'],
+            'body': <dynamic>[
+              <dynamic>[
+                'if',
+                <dynamic>[
+                  '<',
+                  <dynamic>['var', 'value'],
+                  0,
+                ],
+                <dynamic>[
+                  <dynamic>['set', 'prefix', 10],
+                ],
+                <dynamic>[
+                  <dynamic>['set', 'prefix', 20],
+                ],
+              ],
+              <dynamic>[
+                'set',
+                'normalized',
+                <dynamic>[
+                  'and',
+                  1,
+                  <dynamic>['var', 'value'],
+                ],
+              ],
+              <dynamic>[
+                'ret',
+                <dynamic>[
+                  '+',
+                  <dynamic>['var', 'prefix'],
+                  <dynamic>['var', 'normalized'],
+                ],
+              ],
+            ],
+          },
+        },
+      };
+      final optimized = _compile(specification);
+      final scalar = _compile(specification, optimize: false);
+
+      for (final name in const <String>['constantTarget', 'normalizeTarget']) {
+        expect(
+          optimized.functionInfo(name)!.usesFusedBytecode,
+          isTrue,
+          reason: name,
+        );
+      }
+      for (final value in const <int>[-1, 0, 7]) {
+        expect(
+          optimized.call('constantTarget', args: <int>[value]),
+          scalar.call('constantTarget', args: <int>[value]),
+          reason: 'constantTarget($value)',
+        );
+        expect(
+          optimized.call('normalizeTarget', args: <int>[value]),
+          scalar.call('normalizeTarget', args: <int>[value]),
+          reason: 'normalizeTarget($value)',
+        );
+      }
     });
 
     test('fused binary results match scalar int32 edge semantics', () {
@@ -674,6 +986,73 @@ void main() {
           optimizedResult,
           scalarResult,
           reason: '${binaryCase.name} optimized/scalar',
+        );
+      }
+    });
+
+    test('two-step arithmetic fusion normalizes its intermediate to int32', () {
+      final specification = <String, dynamic>{
+        'version': 2,
+        'functions': <String, dynamic>{
+          'inPlace': <String, dynamic>{
+            'params': <String>['value'],
+            'body': <dynamic>[
+              <dynamic>[
+                'ret',
+                <dynamic>[
+                  '<',
+                  <dynamic>[
+                    '+',
+                    <dynamic>['var', 'value'],
+                    1,
+                  ],
+                  0,
+                ],
+              ],
+            ],
+          },
+          'distinct': <String, dynamic>{
+            'params': <String>['value'],
+            'body': <dynamic>[
+              <dynamic>[
+                'set',
+                'intermediate',
+                <dynamic>[
+                  '+',
+                  <dynamic>['var', 'value'],
+                  1,
+                ],
+              ],
+              <dynamic>[
+                'ret',
+                <dynamic>[
+                  '<',
+                  <dynamic>['var', 'intermediate'],
+                  0,
+                ],
+              ],
+            ],
+          },
+        },
+      };
+      final optimized = _compile(specification);
+      final scalar = _compile(specification, optimize: false);
+
+      for (final name in const <String>['inPlace', 'distinct']) {
+        expect(
+          optimized.functionInfo(name)!.usesFusedBytecode,
+          isTrue,
+          reason: name,
+        );
+        expect(
+          optimized.call(name, args: const <int>[0x7fffffff]),
+          1,
+          reason: name,
+        );
+        expect(
+          optimized.call(name, args: const <int>[0x7fffffff]),
+          scalar.call(name, args: const <int>[0x7fffffff]),
+          reason: '$name optimized/scalar',
         );
       }
     });

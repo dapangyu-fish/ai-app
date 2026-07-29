@@ -503,6 +503,7 @@ final class _VmFunctionCompiler {
       _eliminateInputCopies();
       _eliminateRedundantCopies();
       _optimizePeepholes();
+      _eliminateFusedInputCopies();
       final physicalDispatches = _logicalCosts
           .where((logicalCost) => logicalCost > 0)
           .length;
@@ -1216,6 +1217,10 @@ final class _VmFunctionCompiler {
           targets.add(_code[base + 1]);
         case _Op.jumpZero || _Op.jumpNonZero || _Op.jumpLessEqualZero:
           targets.add(_code[base + 2]);
+        case _Op.constantJumpZero:
+          targets.add(_code[base + 2]);
+        case _Op.normalizeAndJump:
+          targets.add(_code[base + 3]);
         case _Op.switchDispatch:
           final site = switchSites[_code[base + 2]];
           targets.add(site.defaultTarget);
@@ -1231,11 +1236,237 @@ final class _VmFunctionCompiler {
       final nextBase = base + _instructionWidth;
       final nextOpcode = _code[nextBase];
 
+      // Collapse a compiler-generated read/modify/write with an immediate
+      // address and right operand. This is deliberately buffer-agnostic and
+      // applies to any JSON app. All six scalar budget slots remain mapped to
+      // the macro instruction, so a budget failure still happens before the
+      // store and reports the original scalar PC.
+      if (pc + 5 < instructionCount &&
+          !targets.contains(pc + 1) &&
+          !targets.contains(pc + 2) &&
+          !targets.contains(pc + 3) &&
+          !targets.contains(pc + 4) &&
+          !targets.contains(pc + 5) &&
+          opcode == _Op.constant &&
+          nextOpcode == _Op.constant) {
+        final loadBase = base + 2 * _instructionWidth;
+        final immediateBase = base + 3 * _instructionWidth;
+        final binaryBase = base + 4 * _instructionWidth;
+        final storeBase = base + 5 * _instructionWidth;
+        final loadOpcode = _code[loadBase];
+        final binaryOpcode = _code[binaryBase];
+        final storeOpcode = _code[storeBase];
+        final addressTemporary = _code[base + 1];
+        final loadTemporary = _code[nextBase + 1];
+        final immediateTemporary = _code[immediateBase + 1];
+        final bufferId = _code[loadBase + 2];
+        final matchingMemoryKind =
+            (loadOpcode == _Op.loadU8 && storeOpcode == _Op.storeU8) ||
+            (loadOpcode == _Op.loadI32 && storeOpcode == _Op.storeI32);
+        if (matchingMemoryKind &&
+            _code[loadBase + 1] == loadTemporary &&
+            _code[loadBase + 3] == loadTemporary &&
+            _code[immediateBase] == _Op.constant &&
+            _isBinaryOpcode(binaryOpcode) &&
+            _code[binaryBase + 1] == loadTemporary &&
+            _code[binaryBase + 2] == loadTemporary &&
+            _code[binaryBase + 3] == immediateTemporary &&
+            _code[storeBase + 1] == bufferId &&
+            _code[storeBase + 2] == addressTemporary &&
+            _code[storeBase + 3] == loadTemporary) {
+          final address = constants[_code[base + 2]];
+          final loadAddress = constants[_code[nextBase + 2]];
+          if (address == loadAddress) {
+            final packedBufferAndOpcode =
+                (bufferId << _packedBinaryOpcodeBits) | binaryOpcode;
+            _rewrite(
+              base,
+              loadOpcode == _Op.loadU8
+                  ? _Op.u8RmwImmediate
+                  : _Op.i32RmwImmediate,
+              packedBufferAndOpcode,
+              address,
+              constants[_code[immediateBase + 2]],
+            );
+            savedDispatches += 5;
+            pc += 6;
+            continue;
+          }
+        }
+      }
+
+      if (pc + 4 < instructionCount &&
+          !targets.contains(pc + 1) &&
+          !targets.contains(pc + 2) &&
+          !targets.contains(pc + 3) &&
+          !targets.contains(pc + 4) &&
+          opcode == _Op.constant) {
+        final loadBase = base + _instructionWidth;
+        final immediateBase = base + 2 * _instructionWidth;
+        final compareBase = base + 3 * _instructionWidth;
+        final jumpBase = base + 4 * _instructionWidth;
+        final loadOpcode = _code[loadBase];
+        final compareOpcode = _code[compareBase];
+        final indexTemporary = _code[base + 1];
+        final immediateTemporary = _code[immediateBase + 1];
+        if ((loadOpcode == _Op.loadU8 || loadOpcode == _Op.loadI32) &&
+            _code[loadBase + 1] == indexTemporary &&
+            _code[loadBase + 3] == indexTemporary &&
+            _code[immediateBase] == _Op.constant &&
+            _isComparisonOpcode(compareOpcode) &&
+            _code[compareBase + 1] == indexTemporary &&
+            _code[compareBase + 2] == indexTemporary &&
+            _code[compareBase + 3] == immediateTemporary &&
+            _code[jumpBase] == _Op.jumpZero &&
+            _code[jumpBase + 1] == indexTemporary) {
+          final bufferId = _code[loadBase + 2];
+          final packedBufferAndOpcode =
+              (bufferId << _packedBinaryOpcodeBits) | compareOpcode;
+          _rewrite(
+            base,
+            loadOpcode == _Op.loadU8
+                ? _Op.loadU8ImmediateCompareJumpZero
+                : _Op.loadI32ImmediateCompareJumpZero,
+            packedBufferAndOpcode,
+            constants[_code[base + 2]],
+            constants[_code[immediateBase + 2]],
+          );
+          savedDispatches += 4;
+          pc += 5;
+          continue;
+        }
+      }
+
+      if (pc + 3 < instructionCount &&
+          !targets.contains(pc + 1) &&
+          !targets.contains(pc + 2) &&
+          !targets.contains(pc + 3)) {
+        final secondBase = base + _instructionWidth;
+        final thirdBase = base + 2 * _instructionWidth;
+        final fourthBase = base + 3 * _instructionWidth;
+        final secondOpcode = _code[secondBase];
+        final thirdOpcode = _code[thirdBase];
+        final fourthOpcode = _code[fourthBase];
+
+        // Immediate memory read followed by an in-place immediate operation.
+        // The packed form is used only within the public default hard limits;
+        // custom wider limits transparently retain scalar bytecode.
+        if (opcode == _Op.constant &&
+            (secondOpcode == _Op.loadU8 || secondOpcode == _Op.loadI32) &&
+            thirdOpcode == _Op.constant &&
+            _isBinaryOpcode(fourthOpcode)) {
+          final destination = _code[base + 1];
+          final immediateTemporary = _code[thirdBase + 1];
+          final bufferId = _code[secondBase + 2];
+          if (destination <= _packedRegisterMask &&
+              bufferId <= _packedBufferIdMask &&
+              _code[secondBase + 1] == destination &&
+              _code[secondBase + 3] == destination &&
+              _code[fourthBase + 1] == destination &&
+              _code[fourthBase + 2] == destination &&
+              _code[fourthBase + 3] == immediateTemporary) {
+            final packedDestinationBufferAndOpcode =
+                (destination <<
+                    (_packedBufferIdBits + _packedBinaryOpcodeBits)) |
+                (bufferId << _packedBinaryOpcodeBits) |
+                fourthOpcode;
+            _rewrite(
+              base,
+              secondOpcode == _Op.loadU8
+                  ? _Op.loadU8ImmediateBinaryImmediate
+                  : _Op.loadI32ImmediateBinaryImmediate,
+              packedDestinationBufferAndOpcode,
+              constants[_code[base + 2]],
+              constants[_code[thirdBase + 2]],
+            );
+            savedDispatches += 3;
+            pc += 4;
+            continue;
+          }
+        }
+
+        // Two consecutive in-place operations with immediate right operands.
+        if (opcode == _Op.constant &&
+            _isBinaryOpcode(secondOpcode) &&
+            thirdOpcode == _Op.constant &&
+            _isBinaryOpcode(fourthOpcode)) {
+          final firstImmediateTemporary = _code[base + 1];
+          final destination = _code[secondBase + 1];
+          final secondImmediateTemporary = _code[thirdBase + 1];
+          if (destination <= _packedRegisterMask &&
+              _code[secondBase + 2] == destination &&
+              _code[secondBase + 3] == firstImmediateTemporary &&
+              _code[fourthBase + 1] == destination &&
+              _code[fourthBase + 2] == destination &&
+              _code[fourthBase + 3] == secondImmediateTemporary) {
+            final packedDestinationAndOpcodes =
+                (destination << (2 * _packedBinaryOpcodeBits)) |
+                (secondOpcode << _packedBinaryOpcodeBits) |
+                fourthOpcode;
+            _rewrite(
+              base,
+              _Op.binaryImmediatePair,
+              packedDestinationAndOpcodes,
+              constants[_code[base + 2]],
+              constants[_code[thirdBase + 2]],
+            );
+            savedDispatches += 3;
+            pc += 4;
+            continue;
+          }
+        }
+
+        // General two-step immediate dataflow chain. Unlike the compact
+        // in-place form above, each operation may write a distinct
+        // destination. The skipped scalar payload retains all register and
+        // opcode operands; only the first literal needs to be materialized in
+        // the macro header.
+        if (opcode == _Op.constant &&
+            _isBinaryOpcode(secondOpcode) &&
+            thirdOpcode == _Op.constant &&
+            _isBinaryOpcode(fourthOpcode)) {
+          final firstImmediateTemporary = _code[base + 1];
+          final firstDestination = _code[secondBase + 1];
+          final secondImmediateTemporary = _code[thirdBase + 1];
+          if (_code[secondBase + 3] == firstImmediateTemporary &&
+              _code[fourthBase + 2] == firstDestination &&
+              _code[fourthBase + 3] == secondImmediateTemporary) {
+            _rewrite(
+              base,
+              _Op.binaryImmediateDistinctPair,
+              constants[_code[base + 2]],
+              0,
+              0,
+            );
+            savedDispatches += 3;
+            pc += 4;
+            continue;
+          }
+        }
+      }
+
       if (pc + 2 < instructionCount &&
           !targets.contains(pc + 1) &&
           !targets.contains(pc + 2)) {
         final thirdBase = nextBase + _instructionWidth;
         final thirdOpcode = _code[thirdBase];
+        if (opcode == _Op.logicalNot &&
+            nextOpcode == _Op.logicalNot &&
+            thirdOpcode == _Op.jump &&
+            _code[base + 1] >= _localCount &&
+            _code[base + 1] == _code[base + 2] &&
+            _code[nextBase + 2] == _code[base + 1]) {
+          _rewrite(
+            base,
+            _Op.normalizeAndJump,
+            _code[nextBase + 1],
+            _code[base + 2],
+            _code[thirdBase + 1],
+          );
+          savedDispatches += 2;
+          pc += 3;
+          continue;
+        }
         if (opcode == _Op.constant &&
             nextOpcode == _Op.constant &&
             _isBinaryOpcode(thirdOpcode) &&
@@ -1259,7 +1490,6 @@ final class _VmFunctionCompiler {
         }
         if (_isComparisonOpcode(nextOpcode) &&
             _code[nextBase + 1] >= _localCount &&
-            _code[nextBase + 1] == _code[nextBase + 2] &&
             thirdOpcode == _Op.jumpZero &&
             _code[thirdBase + 1] == _code[nextBase + 1]) {
           final rightTemporary = _code[nextBase + 3];
@@ -1367,7 +1597,6 @@ final class _VmFunctionCompiler {
 
       if (_isComparisonOpcode(opcode) &&
           _code[base + 1] >= _localCount &&
-          _code[base + 1] == _code[base + 2] &&
           nextOpcode == _Op.jumpZero &&
           _code[nextBase + 1] == _code[base + 1]) {
         _rewrite(
@@ -1385,6 +1614,20 @@ final class _VmFunctionCompiler {
       if (opcode == _Op.constant) {
         final temporary = _code[base + 1];
         final immediate = constants[_code[base + 2]];
+        if (nextOpcode == _Op.jumpZero &&
+            temporary >= _localCount &&
+            _code[nextBase + 1] == temporary) {
+          _rewrite(
+            base,
+            _Op.constantJumpZero,
+            immediate,
+            _code[nextBase + 2],
+            0,
+          );
+          savedDispatches++;
+          pc += 2;
+          continue;
+        }
         if (nextOpcode == _Op.move && _code[nextBase + 2] == temporary) {
           _rewrite(base, _Op.constantMove, _code[nextBase + 1], immediate, 0);
           savedDispatches++;
@@ -1476,6 +1719,36 @@ final class _VmFunctionCompiler {
     return savedDispatches;
   }
 
+  void _eliminateFusedInputCopies() {
+    while (true) {
+      final instructionCount = _instructionCount;
+      if (instructionCount < 2) return;
+      final targets = _controlFlowTargets();
+      final remove = List<bool>.filled(instructionCount, false);
+      for (var pc = 0; pc + 1 < instructionCount; pc++) {
+        if (targets.contains(pc) || targets.contains(pc + 1)) continue;
+        final base = pc * _instructionWidth;
+        final consumerBase = base + _instructionWidth;
+        if (_code[base] != _Op.move) continue;
+        final temporary = _code[base + 1];
+        final source = _code[base + 2];
+        if (temporary < _localCount || temporary == source) continue;
+        final consumerOpcode = _code[consumerBase];
+        var rewritten = false;
+        if (consumerOpcode == _Op.compareImmediateJumpZero &&
+            _code[consumerBase + 2] == temporary) {
+          _code[consumerBase + 2] = source;
+          rewritten = true;
+        }
+        if (!rewritten) continue;
+        _prependLogicalSpan(pc, pc + 1);
+        remove[pc] = true;
+        pc++;
+      }
+      if (_compactRemovedInstructions(remove) == 0) return;
+    }
+  }
+
   /// Propagate compiler-created copies that feed the mutable left operand of
   /// a nearby arithmetic instruction.
   ///
@@ -1504,6 +1777,43 @@ final class _VmFunctionCompiler {
           }
           final consumerBase = consumerPc * _instructionWidth;
           final opcode = _code[consumerBase];
+          if (distance == 1) {
+            var consumedDirectly = false;
+            if ((opcode == _Op.loadU8 || opcode == _Op.loadI32) &&
+                _code[consumerBase + 1] == temporary &&
+                _code[consumerBase + 3] == temporary) {
+              // The load can read the original index register and keep using
+              // the temporary as its result destination.
+              _code[consumerBase + 3] = source;
+              consumedDirectly = true;
+            } else if ((opcode == _Op.storeU8 || opcode == _Op.storeI32) &&
+                (_code[consumerBase + 2] == temporary ||
+                    _code[consumerBase + 3] == temporary)) {
+              if (_code[consumerBase + 2] == temporary) {
+                _code[consumerBase + 2] = source;
+              }
+              if (_code[consumerBase + 3] == temporary) {
+                _code[consumerBase + 3] = source;
+              }
+              consumedDirectly = true;
+            } else if ((opcode == _Op.jumpZero ||
+                    opcode == _Op.jumpNonZero ||
+                    opcode == _Op.jumpLessEqualZero ||
+                    opcode == _Op.switchDispatch) &&
+                _code[consumerBase + 1] == temporary) {
+              _code[consumerBase + 1] = source;
+              consumedDirectly = true;
+            } else if (opcode == _Op.returnValue &&
+                _code[consumerBase + 1] == temporary) {
+              _code[consumerBase + 1] = source;
+              consumedDirectly = true;
+            }
+            if (consumedDirectly) {
+              _prependLogicalSpan(pc, consumerPc);
+              remove[pc] = true;
+              break;
+            }
+          }
           if (opcode >= _Op.add &&
               opcode <= _Op.maximum &&
               _code[consumerBase + 1] == temporary &&
@@ -1593,6 +1903,10 @@ final class _VmFunctionCompiler {
           targets.add(_code[base + 1]);
         case _Op.jumpZero || _Op.jumpNonZero || _Op.jumpLessEqualZero:
           targets.add(_code[base + 2]);
+        case _Op.constantJumpZero:
+          targets.add(_code[base + 2]);
+        case _Op.normalizeAndJump:
+          targets.add(_code[base + 3]);
         case _Op.switchDispatch:
           final site = switchSites[_code[base + 2]];
           targets.add(site.defaultTarget);
@@ -1648,6 +1962,10 @@ final class _VmFunctionCompiler {
           _code[base + 1] = oldToNew[_code[base + 1]];
         case _Op.jumpZero || _Op.jumpNonZero || _Op.jumpLessEqualZero:
           _code[base + 2] = oldToNew[_code[base + 2]];
+        case _Op.constantJumpZero:
+          _code[base + 2] = oldToNew[_code[base + 2]];
+        case _Op.normalizeAndJump:
+          _code[base + 3] = oldToNew[_code[base + 3]];
         case _Op.switchDispatch:
           switchSiteIds.add(_code[base + 2]);
       }
@@ -1748,7 +2066,15 @@ final class _VmFunctionCompiler {
       _Op.loadI32ImmediateMove ||
       _Op.storeU8ImmediateBoth ||
       _Op.storeI32ImmediateBoth ||
-      _Op.constantFoldedBinary => 3,
+      _Op.constantFoldedBinary ||
+      _Op.normalizeAndJump => 3,
+      _Op.u8RmwImmediate || _Op.i32RmwImmediate => 6,
+      _Op.loadU8ImmediateBinaryImmediate ||
+      _Op.loadI32ImmediateBinaryImmediate ||
+      _Op.binaryImmediatePair ||
+      _Op.binaryImmediateDistinctPair => 4,
+      _Op.loadU8ImmediateCompareJumpZero ||
+      _Op.loadI32ImmediateCompareJumpZero => 5,
       _ => 2,
     };
     _mergeLogicalSpans(instruction, spanLength);

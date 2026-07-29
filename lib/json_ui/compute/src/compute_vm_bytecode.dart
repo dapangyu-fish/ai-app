@@ -2,6 +2,11 @@ part of '../compute_vm.dart';
 
 const int _instructionWidth = 4;
 const int _packedBinaryOpcodeBits = 6;
+const int _packedBinaryOpcodeMask = (1 << _packedBinaryOpcodeBits) - 1;
+const int _packedBufferIdBits = 8;
+const int _packedBufferIdMask = (1 << _packedBufferIdBits) - 1;
+const int _packedRegisterBits = 13;
+const int _packedRegisterMask = (1 << _packedRegisterBits) - 1;
 
 // Retain fused bytecode only when it removes at least one in four static
 // dispatches. Lower-density functions showed AOT code-layout regressions and
@@ -70,6 +75,16 @@ abstract final class _Op {
   static const int binaryImmediateDistinct = 52;
   static const int constantFoldedBinary = 53;
   static const int planar8 = 54;
+  static const int u8RmwImmediate = 55;
+  static const int i32RmwImmediate = 56;
+  static const int loadU8ImmediateBinaryImmediate = 57;
+  static const int loadI32ImmediateBinaryImmediate = 58;
+  static const int loadU8ImmediateCompareJumpZero = 59;
+  static const int loadI32ImmediateCompareJumpZero = 60;
+  static const int binaryImmediatePair = 61;
+  static const int constantJumpZero = 62;
+  static const int normalizeAndJump = 63;
+  static const int binaryImmediateDistinctPair = 64;
 }
 
 final class _VmModule {
