@@ -161,9 +161,10 @@ pure Dart: Flutter compiles it AOT on iOS, Android, and desktop, while Web uses
 the Dart JavaScript backend. It does not depend on WASM and contains no
 platform-specific emulator code.
 
-A later C/C++ executor can consume the same verified bytecode on iOS, Android,
-and desktop through one FFI call per whole compute function. Web can retain the
-Dart executor and later add a Worker without changing JSON semantics.
+The current optimization path stays in the shared Dart executor; it does not
+require C/C++, Rust, FFI, WASM, or an emulator-specific backend. A different
+backend could implement the same verified ABI in the future, but that is not a
+dependency of this design or rollout.
 
 | Target | Current backend | ABI |
 | --- | --- | --- |
@@ -196,6 +197,15 @@ per process), median-of-medians frame time fell from **37.866 ms** to
 all u8/i32 buffer state matched. Load-time optimized compilation rose from
 about **9.0 ms** to **16.7 ms** once per App, paying back after roughly three
 emulated frames in this workload.
+
+The measurement host was an Apple M4 Pro MacBook Pro running macOS 26.5.2 and
+Dart 3.11.5 AOT. Per-process baseline medians were 37.866, 37.824, and 37.904
+ms; optimized medians were 35.333, 35.354, and 35.370 ms. The ROM SHA-256 was
+`24710e359c3bf74d3e0f9b5b847507183a73188393415d546aa610f87faaf36b`;
+the extracted JSON SHA-256 was
+`eda786b35d0b325c1abdfe8d9265c6d4da16bc36374cbdd75cb0d3032a3bdf9f`.
+The graphics helper was identical in both disposable benchmark copies and is
+not part of the production optimizer.
 
 These results are evidence for interpreter-layer improvement, not a claim that
 the complete App already reaches 60 FPS. Framebuffer handoff, audio, Flutter

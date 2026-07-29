@@ -20,6 +20,7 @@ import 'app_fs.dart';
 import 'http_client.dart';
 import 'dependency_loader.dart';
 import 'compute/compute_session.dart';
+import 'path_plan.dart';
 import 'widget_builder.dart';
 import 'widgets/position_handler.dart';
 import 'builtins/launcher_bridges.dart';
@@ -35,6 +36,15 @@ import '../i18n/locale_controller.dart' show LocaleController;
 import '../i18n/framework_strings.dart';
 
 class JsonInterpreter extends ChangeNotifier {
+  static final RegExp _templatePattern = RegExp(r'\{\{\s*(.+?)\s*\}\}');
+  static final RegExp _fullTemplatePattern = RegExp(
+    r'^\{\{\s*([^{}]+?)\s*\}\}$',
+  );
+  static final RegExp _i18nCallPattern = RegExp(
+    r'''^t\(\s*['"](.+?)['"]\s*\)$''',
+  );
+  static final RegExp _localeSeparatorPattern = RegExp(r'[-_]');
+
   // ============ 配置 & 状态 ============
 
   late Map<String, dynamic> _config;
@@ -44,6 +54,7 @@ class JsonInterpreter extends ChangeNotifier {
   Object _appScopeIdentity = Object();
   String _currentScreenId = '';
   String _appId = 'default';
+  final PathPlanCache _pathPlans = PathPlanCache();
 
   /// 敏感能力授权器：JSON-APP 调 @get_auth_token / @get_user_info 时按 appId 弹窗授权。
   final TokenAuthorizer _tokenAuthorizer = TokenAuthorizer();
@@ -612,6 +623,7 @@ class JsonInterpreter extends ChangeNotifier {
     // 先完整验证并编译新 App 的计算模块，再替换当前状态。这样编译失败
     // 不会留下一个只加载了一半的 compute session。
     final nextComputeSession = ComputeSession.fromAppConfig(config);
+    _pathPlans.clear();
     _config = config;
     _computeSession = nextComputeSession;
     _appScopeIdentity = Object();
@@ -767,6 +779,9 @@ class JsonInterpreter extends ChangeNotifier {
     _appId = snapshot.appId;
     _computeSession = snapshot.computeSession;
     _appScopeIdentity = snapshot.appScopeIdentity;
+    // Path plans never retain values, but keep the bounded cache app-scoped.
+    // The restored parent app will repopulate its hot paths on demand.
+    _pathPlans.clear();
 
     _depLoader.restoreFromSnapshot(snapshot.depModules);
 
@@ -777,7 +792,7 @@ class JsonInterpreter extends ChangeNotifier {
   /// JSON-APP 的 i18n 字典通常用 'zh' / 'en' 作 key，简化后命中率更高。
   /// 如果 JSON-APP 想精细到 zh-TW / zh-HK，自己用完整 tag 也支持（_i18nLookup 会精确匹配）。
   String _normalizeLocaleTag(String tag) {
-    final dash = tag.indexOf(RegExp(r'[-_]'));
+    final dash = tag.indexOf(_localeSeparatorPattern);
     if (dash < 0) return tag;
     return tag.substring(0, dash);
   }
@@ -846,19 +861,21 @@ class JsonInterpreter extends ChangeNotifier {
     if (path.startsWith('global.')) {
       final subPath = path.substring(7);
       // 优先返回普通变量；普通变量没有时再看是否为 computed 派生值
-      if (_hasNestedKey(_variables, subPath)) {
-        return _getNestedValue(_variables, subPath);
+      final lookup = _pathPlans.lookup(_variables, subPath);
+      if (lookup.found) {
+        return lookup.value;
       }
       final computedExpr = _findComputedExpr(subPath);
       if (computedExpr != null) {
         return _evaluateExpression(computedExpr);
       }
-      return _getNestedValue(_variables, subPath);
+      return null;
     }
 
     // 没有前缀：先查 global 变量，再查依赖模块变量
-    if (_hasNestedKey(_variables, path)) {
-      return _getNestedValue(_variables, path);
+    final lookup = _pathPlans.lookup(_variables, path);
+    if (lookup.found) {
+      return lookup.value;
     }
 
     // 尝试作为依赖变量: "depName.varPath"
@@ -901,41 +918,8 @@ class JsonInterpreter extends ChangeNotifier {
   }
 
   dynamic _getNestedValue(Map<String, dynamic> map, String dotPath) {
-    final keys = dotPath.split('.');
-    dynamic current = map;
-    for (final key in keys) {
-      if (current is Map<String, dynamic>) {
-        if (!current.containsKey(key)) return null;
-        current = current[key];
-      } else if (current is List) {
-        // List 段：key 必须能解析为合法 int 下标
-        // Map 分支放在前面，避免 Map 里恰好有一个 String 键名是数字时被误判成 List
-        final idx = int.tryParse(key);
-        if (idx == null || idx < 0 || idx >= current.length) return null;
-        current = current[idx];
-      } else {
-        return null;
-      }
-    }
-    return current;
-  }
-
-  bool _hasNestedKey(Map<String, dynamic> map, String dotPath) {
-    final keys = dotPath.split('.');
-    dynamic current = map;
-    for (final key in keys) {
-      if (current is Map<String, dynamic>) {
-        if (!current.containsKey(key)) return false;
-        current = current[key];
-      } else if (current is List) {
-        final idx = int.tryParse(key);
-        if (idx == null || idx < 0 || idx >= current.length) return false;
-        current = current[idx];
-      } else {
-        return false;
-      }
-    }
-    return true;
+    final lookup = _pathPlans.lookup(map, dotPath);
+    return lookup.found ? lookup.value : null;
   }
 
   void _setNestedValue(
@@ -943,43 +927,13 @@ class JsonInterpreter extends ChangeNotifier {
     String dotPath,
     dynamic value,
   ) {
-    final keys = dotPath.split('.');
-    if (keys.length == 1) {
-      map[keys[0]] = value;
-      return;
-    }
-    dynamic current = map;
-    for (var i = 0; i < keys.length - 1; i++) {
-      if (current is Map<String, dynamic>) {
-        current.putIfAbsent(keys[i], () => <String, dynamic>{});
-        current = current[keys[i]];
-      } else if (current is List) {
-        // 走到 List 中段：只能按现有下标穿过，越界不会自动扩展（List 不像 Map 能 putIfAbsent）
-        final idx = int.tryParse(keys[i]);
-        if (idx == null || idx < 0 || idx >= current.length) return;
-        current = current[idx];
-      } else {
-        return;
-      }
-    }
-    final lastKey = keys.last;
-    if (current is Map<String, dynamic>) {
-      current[lastKey] = value;
-    } else if (current is List) {
-      // 末段 List 下标：原地 mutate（跟 @list_add 的"创建新 List 替换"模式不同，
-      // 但 setVariable 上层的 notifyListeners 仍会触发整体重建，UI 能看到）
-      final idx = int.tryParse(lastKey);
-      if (idx != null && idx >= 0 && idx < current.length) {
-        current[idx] = value;
-      }
-    }
+    _pathPlans.write(map, dotPath, value);
   }
 
   // ============ 模板解析 ============
 
   String resolveTemplate(String template) {
-    final regex = RegExp(r'\{\{\s*(.+?)\s*\}\}');
-    return template.replaceAllMapped(regex, (match) {
+    return template.replaceAllMapped(_templatePattern, (match) {
       final expression = match.group(1)!;
       // loop / event 作用域没建立时保留模板原文，跟 resolveExpression 一致
       if ((expression.startsWith('loop.') && _loopContextStack.isEmpty) ||
@@ -1020,9 +974,7 @@ class JsonInterpreter extends ChangeNotifier {
   dynamic _resolveTemplateExpression(String expr) {
     final trimmed = expr.trim();
     // 形如 t('home.title') 或 t("home.title")
-    final tMatch = RegExp(
-      r'''^t\(\s*['"](.+?)['"]\s*\)$''',
-    ).firstMatch(trimmed);
+    final tMatch = _i18nCallPattern.firstMatch(trimmed);
     if (tMatch != null) {
       return _i18nLookup(tMatch.group(1)!);
     }
@@ -1053,7 +1005,7 @@ class JsonInterpreter extends ChangeNotifier {
     // 这样部分翻译的 i18n 字典会降级到真实语言，而不是把原始 key 显示给用户。
     var localeDict = dict[locale];
     if (localeDict is! Map) {
-      final lang = locale.split(RegExp(r'[-_]')).first;
+      final lang = locale.split(_localeSeparatorPattern).first;
       localeDict = dict[lang] ?? dict['en'] ?? dict['zh'];
       if (localeDict is! Map) {
         for (final v in dict.values) {
@@ -1086,8 +1038,7 @@ class JsonInterpreter extends ChangeNotifier {
       // "{{ a }}/x/{{ b }}" 这种「以 {{ 开头、以 }} 结尾」的混合模板会被整体
       // 误匹配成一个变量路径 → getVariable(垃圾路径) → null。混合 / 多表达式
       // 模板要交给下面的 resolveTemplate 逐个插值。
-      final regex = RegExp(r'^\{\{\s*([^{}]+?)\s*\}\}$');
-      final match = regex.firstMatch(raw);
+      final match = _fullTemplatePattern.firstMatch(raw);
       if (match != null) {
         final path = match.group(1)!;
         // 如果引用的是当前没建立的作用域（loop/event），保留模板原文，
