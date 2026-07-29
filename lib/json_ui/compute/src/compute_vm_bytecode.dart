@@ -1,6 +1,7 @@
 part of '../compute_vm.dart';
 
 const int _instructionWidth = 4;
+const int _packedBinaryOpcodeBits = 6;
 
 // Retain fused bytecode only when it removes at least one in four static
 // dispatches. Lower-density functions showed AOT code-layout regressions and
@@ -66,6 +67,8 @@ abstract final class _Op {
   static const int compareImmediateJumpZero = 49;
   static const int compareMovedRegisterJumpZero = 50;
   static const int compareRegisterJumpZero = 51;
+  static const int binaryImmediateDistinct = 52;
+  static const int constantFoldedBinary = 53;
 }
 
 final class _VmModule {
@@ -105,6 +108,9 @@ final class _VmFunction {
     required this.localCount,
     required this.registerCount,
     required this.code,
+    required this.logicalInstructionCount,
+    required this.logicalSourceStarts,
+    required this.logicalCosts,
     required this.basicBlockStarts,
     required this.staticDispatchSavings,
   });
@@ -114,10 +120,30 @@ final class _VmFunction {
   final int localCount;
   final int registerCount;
   final Int32List code;
+  final int logicalInstructionCount;
+
+  /// Original scalar instruction that begins each physical instruction span.
+  ///
+  /// Optimized instructions can cover several contiguous scalar slots. This
+  /// map keeps budget failures and diagnostics on the scalar ABI coordinates.
+  final Int32List logicalSourceStarts;
+
+  /// Number of original scalar budget slots represented by each physical
+  /// instruction. Skipped payload slots of a superinstruction have cost zero.
+  final Int32List logicalCosts;
+
   final Int32List basicBlockStarts;
   final int staticDispatchSavings;
 
-  int get instructionCount => code.length ~/ _instructionWidth;
+  /// Instruction count in the stable scalar ABI address space.
+  int get instructionCount => logicalInstructionCount;
+
+  /// Number of physical bytecode slots after copy elimination.
+  ///
+  /// Superinstruction payload slots are retained, so the number of actual
+  /// dispatches is [instructionCount] - [staticDispatchSavings].
+  int get physicalInstructionCount => code.length ~/ _instructionWidth;
+
   bool get usesFusedBytecode => staticDispatchSavings > 0;
 }
 

@@ -188,6 +188,7 @@ void main(List<String> arguments) {
   print('Compute VM v2 AOT benchmark');
   print('iterations: $iterations');
   print('bytecode instructions: ${info.instructionCount}');
+  print('physical instructions: ${info.physicalInstructionCount}');
   print('basic blocks: ${info.basicBlockCount}');
   print('static dispatch savings: ${info.staticDispatchSavings}');
   print('selected runner: ${info.requiresFusedRunner ? 'fused' : 'scalar'}');
@@ -249,6 +250,8 @@ void main(List<String> arguments) {
   print('');
   print('Dense arithmetic/buffer loop');
   print('bytecode instructions: ${denseInfo.instructionCount}');
+  print('physical instructions: ${denseInfo.physicalInstructionCount}');
+  print('basic blocks: ${denseInfo.basicBlockCount}');
   print('static dispatch savings: ${denseInfo.staticDispatchSavings}');
   print(
     'selected runner: ${denseInfo.requiresFusedRunner ? 'fused' : 'scalar'}',

@@ -56,7 +56,7 @@ class _ComputeVmScalarRunner {
           instruction: pc,
         );
       }
-      if (pc < 0 || pc >= frame.function.instructionCount) {
+      if (pc < 0 || pc >= frame.function.physicalInstructionCount) {
         throw ComputeVmRuntimeException(
           'invalid instruction pointer ${frame.function.name}#$pc',
         );
@@ -404,19 +404,23 @@ final class _ComputeVmFusedRunner extends _ComputeVmScalarRunner {
 
     while (stack.isNotEmpty) {
       if (_remainingBudget == 0) {
+        final sourceInstruction =
+            pc >= 0 && pc < frame.function.physicalInstructionCount
+            ? frame.function.logicalSourceStarts[pc]
+            : pc;
         throw ComputeVmBudgetExceeded(
           budget: _initialBudget,
           executedInstructions: _initialBudget,
           function: frame.function.name,
-          instruction: pc,
+          instruction: sourceInstruction,
         );
       }
-      if (pc < 0 || pc >= frame.function.instructionCount) {
+      if (pc < 0 || pc >= frame.function.physicalInstructionCount) {
         throw ComputeVmRuntimeException(
           'invalid instruction pointer ${frame.function.name}#$pc',
         );
       }
-      _remainingBudget--;
+      _chargeOptimizedSpan(frame, pc);
       final base = pc * _instructionWidth;
       final opcode = code[base];
       final a = code[base + 1];
@@ -445,43 +449,56 @@ final class _ComputeVmFusedRunner extends _ComputeVmScalarRunner {
             i32[a][index] = registers[c];
           }
         case _Op.memset:
-          _runMemset(module.bulkSites[a], registers, frame, instruction);
+          _runMemset(
+            module.bulkSites[a],
+            registers,
+            frame,
+            frame.function.logicalSourceStarts[instruction],
+          );
         case _Op.memlut:
-          _runMemlut(module.bulkSites[a], registers, frame, instruction);
+          _runMemlut(
+            module.bulkSites[a],
+            registers,
+            frame,
+            frame.function.logicalSourceStarts[instruction],
+          );
         case _Op.constantMove:
-          _chargeFusedInstructions(1, frame, instruction);
           registers[a] = b;
           pc++;
         case _Op.moveMove:
-          _chargeFusedInstructions(1, frame, instruction);
           registers[a] = registers[b];
           pc++;
         case _Op.loadU8Immediate:
-          _chargeFusedInstructions(1, frame, instruction);
           registers[a] = _readByte(u8[b], u8Masks[b], c);
           pc++;
         case _Op.loadI32Immediate:
-          _chargeFusedInstructions(1, frame, instruction);
           registers[a] = c >= 0 && c < i32[b].length ? i32[b][c] : 0;
           pc++;
         case _Op.loadU8ImmediateMove:
-          _chargeFusedInstructions(2, frame, instruction);
           registers[a] = _readByte(u8[b], u8Masks[b], c);
           pc += 2;
         case _Op.loadI32ImmediateMove:
-          _chargeFusedInstructions(2, frame, instruction);
           registers[a] = c >= 0 && c < i32[b].length ? i32[b][c] : 0;
           pc += 2;
         case _Op.binaryImmediateRight:
-          _chargeFusedInstructions(1, frame, instruction);
           registers[b] = _binaryResult(a, registers[b], c);
           pc++;
+        case _Op.binaryImmediateDistinct:
+          final opcodeMask = (1 << _packedBinaryOpcodeBits) - 1;
+          final destination = a >> _packedBinaryOpcodeBits;
+          registers[destination] = _binaryResult(
+            a & opcodeMask,
+            registers[b],
+            c,
+          );
+          pc++;
+        case _Op.constantFoldedBinary:
+          registers[a] = b;
+          pc += 2;
         case _Op.binaryRegisterRight:
-          _chargeFusedInstructions(1, frame, instruction);
           registers[b] = _binaryResult(a, registers[b], registers[c]);
           pc++;
         case _Op.returnImmediate:
-          _chargeFusedInstructions(1, frame, instruction);
           final completed = stack.removeLast();
           stackWords -= completed.registers.length;
           if (stack.isEmpty) return a;
@@ -491,15 +508,12 @@ final class _ComputeVmFusedRunner extends _ComputeVmScalarRunner {
           code = frame.function.code;
           pc = frame.pc;
         case _Op.storeU8ImmediateBoth:
-          _chargeFusedInstructions(2, frame, instruction);
           _writeByte(u8[a], u8Masks[a], b, c);
           pc += 2;
         case _Op.storeI32ImmediateBoth:
-          _chargeFusedInstructions(2, frame, instruction);
           if (b >= 0 && b < i32[a].length) i32[a][b] = c;
           pc += 2;
         case _Op.compareImmediateJumpZero:
-          _chargeFusedInstructions(2, frame, instruction);
           final jumpBase = (instruction + 2) * _instructionWidth;
           if (_comparisonResult(a, registers[b], c)) {
             pc += 2;
@@ -507,7 +521,6 @@ final class _ComputeVmFusedRunner extends _ComputeVmScalarRunner {
             pc = code[jumpBase + 2];
           }
         case _Op.compareMovedRegisterJumpZero:
-          _chargeFusedInstructions(2, frame, instruction);
           final jumpBase = (instruction + 2) * _instructionWidth;
           if (_comparisonResult(a, registers[b], registers[c])) {
             pc += 2;
@@ -515,7 +528,6 @@ final class _ComputeVmFusedRunner extends _ComputeVmScalarRunner {
             pc = code[jumpBase + 2];
           }
         case _Op.compareRegisterJumpZero:
-          _chargeFusedInstructions(1, frame, instruction);
           final jumpBase = (instruction + 1) * _instructionWidth;
           if (_comparisonResult(a, registers[b], registers[c])) {
             pc++;
@@ -646,26 +658,24 @@ final class _ComputeVmFusedRunner extends _ComputeVmScalarRunner {
         default:
           throw ComputeVmRuntimeException(
             'unknown bytecode opcode $opcode at '
-            '${frame.function.name}#$instruction',
+            '${frame.function.name}#'
+            '${frame.function.logicalSourceStarts[instruction]}',
           );
       }
     }
     throw const ComputeVmRuntimeException('call stack ended without a result');
   }
 
-  void _chargeFusedInstructions(
-    int additional,
-    _VmFrame frame,
-    int firstInstruction,
-  ) {
-    if (additional <= _remainingBudget) {
-      _remainingBudget -= additional;
+  @pragma('vm:prefer-inline')
+  void _chargeOptimizedSpan(_VmFrame frame, int physicalInstruction) {
+    final logicalCost = frame.function.logicalCosts[physicalInstruction];
+    if (logicalCost <= _remainingBudget) {
+      _remainingBudget -= logicalCost;
       return;
     }
-    // A scalar sequence would consume every still-available logical
-    // instruction and fail at the next one. Fused sequences reserve their
-    // complete logical cost before any externally visible side effect.
-    final failedInstruction = firstInstruction + 1 + _remainingBudget;
+    final failedInstruction =
+        frame.function.logicalSourceStarts[physicalInstruction] +
+        _remainingBudget;
     throw ComputeVmBudgetExceeded(
       budget: _initialBudget,
       executedInstructions: _initialBudget,

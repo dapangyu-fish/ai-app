@@ -1,5 +1,11 @@
 part of '../compute_vm.dart';
 
+const int _wideSwitchAlternativeThreshold = 16;
+// Wide switch arms are mutually exclusive at runtime. Require enough total
+// savings to amortize at least four removed dispatches per alternative rather
+// than treating every arm's static savings as one hot execution path.
+const int _minimumSavingsPerWideSwitchAlternative = 4;
+
 final class _ComputeVmCompiler {
   _ComputeVmCompiler(
     this.specification, {
@@ -140,7 +146,7 @@ final class _ComputeVmCompiler {
     );
     for (var callerId = 0; callerId < functions.length; callerId++) {
       final function = functions[callerId];
-      for (var pc = 0; pc < function.instructionCount; pc++) {
+      for (var pc = 0; pc < function.physicalInstructionCount; pc++) {
         final base = pc * _instructionWidth;
         if (function.code[base] != _Op.call) continue;
         final site = _callSites[function.code[base + 2]];
@@ -452,6 +458,8 @@ final class _VmFunctionCompiler {
   final int switchTableEntryLimit;
 
   final List<int> _code = <int>[];
+  final List<int> _logicalSourceStarts = <int>[];
+  final List<int> _logicalCosts = <int>[];
   final Map<String, int> _locals = <String, int>{};
   final List<List<int>> _breakPatchStack = <List<int>>[];
   final List<int> _continueTargetStack = <int>[];
@@ -481,18 +489,47 @@ final class _VmFunctionCompiler {
     _maxRegisterCount = _localCount;
     _compileBlock(signature.body, _bodyPath);
     _emit(_Op.returnValue, -1);
+    final logicalInstructionCount = _instructionCount;
+    final scalarCode = List<int>.of(_code);
+    final scalarLogicalSourceStarts = List<int>.of(_logicalSourceStarts);
+    final scalarLogicalCosts = List<int>.of(_logicalCosts);
+    final scalarSwitchSites = List<_VmSwitchSite>.of(switchSites);
+    final scalarBasicBlockStarts = _findBasicBlockStarts(
+      Int32List.fromList(_code),
+    );
+    final wideSwitchAlternatives = _wideSwitchAlternativeCount();
     var staticDispatchSavings = 0;
     if (optimize) {
-      final scalarCode = List<int>.of(_code);
-      staticDispatchSavings = _optimizePeepholes();
+      _eliminateInputCopies();
+      _eliminateRedundantCopies();
+      _optimizePeepholes();
+      final physicalDispatches = _logicalCosts
+          .where((logicalCost) => logicalCost > 0)
+          .length;
+      staticDispatchSavings = logicalInstructionCount - physicalDispatches;
       // A separate scalar dispatch loop protects ordinary JSON apps from the
-      // larger fused switch. Only retain fused bytecode when the static
-      // dispatch reduction is material enough to pay for that larger loop.
-      if (staticDispatchSavings * _minimumFusionSavingsDivisor <
-          _instructionCount) {
+      // mapped/fused switch. Count copy elimination and superinstructions
+      // together, and retain neither unless their total static reduction is
+      // material enough to pay for the larger loop.
+      final meetsDensityThreshold =
+          staticDispatchSavings * _minimumFusionSavingsDivisor >=
+          logicalInstructionCount;
+      final meetsWideSwitchThreshold =
+          staticDispatchSavings >=
+          wideSwitchAlternatives * _minimumSavingsPerWideSwitchAlternative;
+      if (!meetsDensityThreshold || !meetsWideSwitchThreshold) {
         _code
           ..clear()
           ..addAll(scalarCode);
+        _logicalSourceStarts
+          ..clear()
+          ..addAll(scalarLogicalSourceStarts);
+        _logicalCosts
+          ..clear()
+          ..addAll(scalarLogicalCosts);
+        switchSites
+          ..clear()
+          ..addAll(scalarSwitchSites);
         staticDispatchSavings = 0;
       }
     }
@@ -504,9 +541,28 @@ final class _VmFunctionCompiler {
       localCount: _localCount,
       registerCount: _maxRegisterCount,
       code: words,
-      basicBlockStarts: _findBasicBlockStarts(words),
+      logicalInstructionCount: logicalInstructionCount,
+      logicalSourceStarts: Int32List.fromList(_logicalSourceStarts),
+      logicalCosts: Int32List.fromList(_logicalCosts),
+      basicBlockStarts: scalarBasicBlockStarts,
       staticDispatchSavings: staticDispatchSavings,
     );
+  }
+
+  int _wideSwitchAlternativeCount() {
+    final seenSiteIds = <int>{};
+    var alternatives = 0;
+    for (var pc = 0; pc < _instructionCount; pc++) {
+      final base = pc * _instructionWidth;
+      if (_code[base] != _Op.switchDispatch) continue;
+      final siteId = _code[base + 2];
+      if (!seenSiteIds.add(siteId)) continue;
+      final targetCount = switchSites[siteId].targets.length;
+      if (targetCount >= _wideSwitchAlternativeThreshold) {
+        alternatives += targetCount;
+      }
+    }
+    return alternatives;
   }
 
   void _collectLocals(dynamic node) {
@@ -1108,6 +1164,8 @@ final class _VmFunctionCompiler {
     }
     final index = _instructionCount;
     _code.addAll(<int>[opcode, a, b, c]);
+    _logicalSourceStarts.add(index);
+    _logicalCosts.add(1);
     return index;
   }
 
@@ -1145,6 +1203,27 @@ final class _VmFunctionCompiler {
           !targets.contains(pc + 2)) {
         final thirdBase = nextBase + _instructionWidth;
         final thirdOpcode = _code[thirdBase];
+        if (opcode == _Op.constant &&
+            nextOpcode == _Op.constant &&
+            _isBinaryOpcode(thirdOpcode) &&
+            _code[thirdBase + 2] == _code[base + 1] &&
+            _code[thirdBase + 3] == _code[nextBase + 1]) {
+          final folded = _foldBinaryConstants(
+            thirdOpcode,
+            constants[_code[base + 2]],
+            constants[_code[nextBase + 2]],
+          );
+          _rewrite(
+            base,
+            _Op.constantFoldedBinary,
+            _code[thirdBase + 1],
+            folded,
+            0,
+          );
+          savedDispatches += 2;
+          pc += 3;
+          continue;
+        }
         if (_isComparisonOpcode(nextOpcode) &&
             _code[nextBase + 1] >= _localCount &&
             _code[nextBase + 1] == _code[nextBase + 2] &&
@@ -1279,13 +1358,11 @@ final class _VmFunctionCompiler {
           pc += 2;
           continue;
         }
-        if (nextOpcode == _Op.loadU8 &&
-            _code[nextBase + 1] == temporary &&
-            _code[nextBase + 3] == temporary) {
+        if (nextOpcode == _Op.loadU8 && _code[nextBase + 3] == temporary) {
           _rewrite(
             base,
             _Op.loadU8Immediate,
-            temporary,
+            _code[nextBase + 1],
             _code[nextBase + 2],
             immediate,
           );
@@ -1293,13 +1370,11 @@ final class _VmFunctionCompiler {
           pc += 2;
           continue;
         }
-        if (nextOpcode == _Op.loadI32 &&
-            _code[nextBase + 1] == temporary &&
-            _code[nextBase + 3] == temporary) {
+        if (nextOpcode == _Op.loadI32 && _code[nextBase + 3] == temporary) {
           _rewrite(
             base,
             _Op.loadI32Immediate,
-            temporary,
+            _code[nextBase + 1],
             _code[nextBase + 2],
             immediate,
           );
@@ -1307,16 +1382,26 @@ final class _VmFunctionCompiler {
           pc += 2;
           continue;
         }
-        if (_isBinaryOpcode(nextOpcode) &&
-            _code[nextBase + 3] == temporary &&
-            _code[nextBase + 1] == _code[nextBase + 2]) {
-          _rewrite(
-            base,
-            _Op.binaryImmediateRight,
-            nextOpcode,
-            _code[nextBase + 1],
-            immediate,
-          );
+        if (_isBinaryOpcode(nextOpcode) && _code[nextBase + 3] == temporary) {
+          if (_code[nextBase + 1] == _code[nextBase + 2]) {
+            _rewrite(
+              base,
+              _Op.binaryImmediateRight,
+              nextOpcode,
+              _code[nextBase + 1],
+              immediate,
+            );
+          } else {
+            final packedDestinationAndOpcode =
+                (_code[nextBase + 1] << _packedBinaryOpcodeBits) | nextOpcode;
+            _rewrite(
+              base,
+              _Op.binaryImmediateDistinct,
+              packedDestinationAndOpcode,
+              _code[nextBase + 2],
+              immediate,
+            );
+          }
           savedDispatches++;
           pc += 2;
           continue;
@@ -1358,11 +1443,302 @@ final class _VmFunctionCompiler {
     return savedDispatches;
   }
 
+  /// Propagate compiler-created copies that feed the mutable left operand of
+  /// a nearby arithmetic instruction.
+  ///
+  /// Only non-target temporary moves inside one basic block are removed. The
+  /// deleted scalar budget slot is prepended to the immediate successor's
+  /// logical span, preserving the original charge order and failure PC.
+  void _eliminateInputCopies() {
+    while (true) {
+      final instructionCount = _instructionCount;
+      if (instructionCount < 2) return;
+      final targets = _controlFlowTargets();
+      final remove = List<bool>.filled(instructionCount, false);
+
+      for (var pc = 0; pc < instructionCount - 1; pc++) {
+        if (targets.contains(pc)) continue;
+        final base = pc * _instructionWidth;
+        if (_code[base] != _Op.move) continue;
+        final temporary = _code[base + 1];
+        final source = _code[base + 2];
+        if (temporary < _localCount || temporary == source) continue;
+
+        for (var distance = 1; distance <= 2; distance++) {
+          final consumerPc = pc + distance;
+          if (consumerPc >= instructionCount || targets.contains(consumerPc)) {
+            break;
+          }
+          final consumerBase = consumerPc * _instructionWidth;
+          final opcode = _code[consumerBase];
+          if (opcode >= _Op.add &&
+              opcode <= _Op.maximum &&
+              _code[consumerBase + 1] == temporary &&
+              (_code[consumerBase + 2] == temporary ||
+                  _code[consumerBase + 3] == temporary)) {
+            if (_code[consumerBase + 2] == temporary) {
+              _code[consumerBase + 2] = source;
+            }
+            if (_code[consumerBase + 3] == temporary) {
+              _code[consumerBase + 3] = source;
+            }
+            _prependLogicalSpan(pc, pc + 1);
+            remove[pc] = true;
+            break;
+          }
+          final independentConstant =
+              opcode == _Op.constant &&
+              _code[consumerBase + 1] != temporary &&
+              _code[consumerBase + 1] != source;
+          final independentMove =
+              opcode == _Op.move &&
+              _code[consumerBase + 1] != temporary &&
+              _code[consumerBase + 1] != source &&
+              _code[consumerBase + 2] != temporary;
+          if (distance == 1 && (independentConstant || independentMove)) {
+            continue;
+          }
+          break;
+        }
+      }
+
+      if (_compactRemovedInstructions(remove) == 0) return;
+    }
+  }
+
+  /// Redirect pure producer results into their final destination and remove
+  /// the now-redundant copy.
+  ///
+  /// Calls, hosts, stores, and bulk operations are intentionally excluded so
+  /// charging a merged logical span before its physical operation cannot move
+  /// an externally visible side effect across a budget boundary.
+  void _eliminateRedundantCopies() {
+    while (_eliminateOneCopyRound() != 0) {}
+  }
+
+  int _eliminateOneCopyRound() {
+    final instructionCount = _instructionCount;
+    if (instructionCount < 2) return 0;
+    final targets = _controlFlowTargets();
+    final remove = List<bool>.filled(instructionCount, false);
+
+    for (var pc = 0; pc < instructionCount; pc++) {
+      final base = pc * _instructionWidth;
+      if (_code[base] == _Op.move &&
+          _code[base + 1] == _code[base + 2] &&
+          !targets.contains(pc) &&
+          pc + 1 < instructionCount &&
+          !targets.contains(pc + 1)) {
+        _prependLogicalSpan(pc, pc + 1);
+        remove[pc] = true;
+        continue;
+      }
+      if (pc + 1 >= instructionCount || targets.contains(pc + 1)) continue;
+      if (!_copyPropagatableDestination(_code[base])) continue;
+      final temporary = _code[base + 1];
+      if (temporary < _localCount) continue;
+
+      final nextBase = base + _instructionWidth;
+      if (_code[nextBase] != _Op.move || _code[nextBase + 2] != temporary) {
+        continue;
+      }
+      _code[base + 1] = _code[nextBase + 1];
+      _appendLogicalSpan(pc, pc + 1);
+      remove[pc + 1] = true;
+      pc++;
+    }
+
+    return _compactRemovedInstructions(remove);
+  }
+
+  Set<int> _controlFlowTargets() {
+    final targets = <int>{0};
+    for (var pc = 0; pc < _instructionCount; pc++) {
+      final base = pc * _instructionWidth;
+      switch (_code[base]) {
+        case _Op.jump:
+          targets.add(_code[base + 1]);
+        case _Op.jumpZero || _Op.jumpNonZero || _Op.jumpLessEqualZero:
+          targets.add(_code[base + 2]);
+        case _Op.switchDispatch:
+          final site = switchSites[_code[base + 2]];
+          targets.add(site.defaultTarget);
+          targets.addAll(site.targets);
+      }
+    }
+    return targets;
+  }
+
+  void _prependLogicalSpan(int from, int to) {
+    final fromStart = _logicalSourceStarts[from];
+    final fromCost = _logicalCosts[from];
+    if (_logicalSourceStarts[to] != fromStart + fromCost) {
+      throw StateError(
+        'non-contiguous logical copy span in ${signature.name} at $from',
+      );
+    }
+    _logicalSourceStarts[to] = fromStart;
+    _logicalCosts[to] += fromCost;
+    _logicalCosts[from] = 0;
+  }
+
+  void _appendLogicalSpan(int to, int from) {
+    final expectedStart = _logicalSourceStarts[to] + _logicalCosts[to];
+    if (_logicalSourceStarts[from] != expectedStart) {
+      throw StateError(
+        'non-contiguous logical copy span in ${signature.name} at $to',
+      );
+    }
+    _logicalCosts[to] += _logicalCosts[from];
+    _logicalCosts[from] = 0;
+  }
+
+  int _compactRemovedInstructions(List<bool> remove) {
+    final instructionCount = _instructionCount;
+    final eliminated = remove.where((value) => value).length;
+    if (eliminated == 0) return 0;
+
+    final oldToNew = List<int>.filled(instructionCount + 1, 0);
+    var nextPc = 0;
+    for (var pc = 0; pc < instructionCount; pc++) {
+      oldToNew[pc] = nextPc;
+      if (!remove[pc]) nextPc++;
+    }
+    oldToNew[instructionCount] = nextPc;
+
+    final switchSiteIds = <int>{};
+    for (var pc = 0; pc < instructionCount; pc++) {
+      if (remove[pc]) continue;
+      final base = pc * _instructionWidth;
+      switch (_code[base]) {
+        case _Op.jump:
+          _code[base + 1] = oldToNew[_code[base + 1]];
+        case _Op.jumpZero || _Op.jumpNonZero || _Op.jumpLessEqualZero:
+          _code[base + 2] = oldToNew[_code[base + 2]];
+        case _Op.switchDispatch:
+          switchSiteIds.add(_code[base + 2]);
+      }
+    }
+    for (final siteId in switchSiteIds) {
+      final site = switchSites[siteId];
+      final mappedTargets = Int32List.fromList(
+        site.targets.map((target) => oldToNew[target]).toList(growable: false),
+      );
+      switchSites[siteId] = switch (site.encoding) {
+        _VmSwitchEncoding.jumpTable => _VmSwitchSite.jumpTable(
+          defaultTarget: oldToNew[site.defaultTarget],
+          minimumKey: site.minimumKey,
+          targets: mappedTargets,
+        ),
+        _VmSwitchEncoding.binarySearch => _VmSwitchSite.binarySearch(
+          defaultTarget: oldToNew[site.defaultTarget],
+          keys: site.keys,
+          targets: mappedTargets,
+        ),
+        _ => throw StateError('cannot compact a pending switch site'),
+      };
+    }
+
+    final compactedCode = <int>[];
+    final compactedSourceStarts = <int>[];
+    final compactedLogicalCosts = <int>[];
+    for (var pc = 0; pc < instructionCount; pc++) {
+      if (remove[pc]) continue;
+      final base = pc * _instructionWidth;
+      compactedCode.addAll(_code.getRange(base, base + _instructionWidth));
+      compactedSourceStarts.add(_logicalSourceStarts[pc]);
+      compactedLogicalCosts.add(_logicalCosts[pc]);
+    }
+    _code
+      ..clear()
+      ..addAll(compactedCode);
+    _logicalSourceStarts
+      ..clear()
+      ..addAll(compactedSourceStarts);
+    _logicalCosts
+      ..clear()
+      ..addAll(compactedLogicalCosts);
+    return eliminated;
+  }
+
+  bool _copyPropagatableDestination(int opcode) {
+    return opcode == _Op.constant ||
+        opcode == _Op.move ||
+        opcode == _Op.loadU8 ||
+        opcode == _Op.loadI32 ||
+        (opcode >= _Op.add && opcode <= _Op.maximum);
+  }
+
+  int _foldBinaryConstants(int opcode, int left, int right) {
+    final result = switch (opcode) {
+      _Op.add => left + right,
+      _Op.subtract => left - right,
+      _Op.multiply => _multiplyConstants(left, right),
+      _Op.divide => right == 0 ? 0 : left ~/ right,
+      _Op.modulo => right == 0 ? 0 : left % right,
+      _Op.bitAnd => left & right,
+      _Op.bitOr => left | right,
+      _Op.bitXor => left ^ right,
+      _Op.shiftLeft => left << (right & 31),
+      _Op.shiftRight => (left & 0xFFFFFFFF) >> (right & 31),
+      _Op.equal => left == right ? 1 : 0,
+      _Op.notEqual => left != right ? 1 : 0,
+      _Op.less => left < right ? 1 : 0,
+      _Op.lessEqual => left <= right ? 1 : 0,
+      _Op.greater => left > right ? 1 : 0,
+      _Op.greaterEqual => left >= right ? 1 : 0,
+      _Op.minimum => left < right ? left : right,
+      _Op.maximum => left > right ? left : right,
+      _ => throw StateError('cannot fold binary opcode $opcode'),
+    };
+    return _int32(result);
+  }
+
+  // Match the runtime's 16-bit-limb multiplication so folding is identical
+  // on native and JavaScript Dart backends.
+  int _multiplyConstants(int left, int right) {
+    final leftLow = left & 0xFFFF;
+    final leftHigh = (left >> 16) & 0xFFFF;
+    final rightLow = right & 0xFFFF;
+    final rightHigh = (right >> 16) & 0xFFFF;
+    final low = leftLow * rightLow;
+    final cross = (leftHigh * rightLow + leftLow * rightHigh) & 0xFFFF;
+    return low + (cross << 16);
+  }
+
   void _rewrite(int base, int opcode, int a, int b, int c) {
+    final instruction = base ~/ _instructionWidth;
+    final spanLength = switch (opcode) {
+      _Op.compareImmediateJumpZero ||
+      _Op.compareMovedRegisterJumpZero ||
+      _Op.loadU8ImmediateMove ||
+      _Op.loadI32ImmediateMove ||
+      _Op.storeU8ImmediateBoth ||
+      _Op.storeI32ImmediateBoth ||
+      _Op.constantFoldedBinary => 3,
+      _ => 2,
+    };
+    _mergeLogicalSpans(instruction, spanLength);
     _code[base] = opcode;
     _code[base + 1] = a;
     _code[base + 2] = b;
     _code[base + 3] = c;
+  }
+
+  void _mergeLogicalSpans(int instruction, int spanLength) {
+    final sourceStart = _logicalSourceStarts[instruction];
+    var logicalCost = _logicalCosts[instruction];
+    for (var offset = 1; offset < spanLength; offset++) {
+      final next = instruction + offset;
+      if (_logicalSourceStarts[next] != sourceStart + logicalCost) {
+        throw StateError(
+          'non-contiguous logical span in ${signature.name} at $instruction',
+        );
+      }
+      logicalCost += _logicalCosts[next];
+      _logicalCosts[next] = 0;
+    }
+    _logicalCosts[instruction] = logicalCost;
   }
 
   bool _isBinaryOpcode(int opcode) {

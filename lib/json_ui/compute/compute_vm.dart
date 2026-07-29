@@ -170,17 +170,26 @@ final class ComputeVmFunctionInfo {
     required this.registerCount,
     required this.instructionCount,
     required this.basicBlockCount,
+    int? physicalInstructionCount,
     this.jumpTableSwitchCount = 0,
     this.binarySearchSwitchCount = 0,
     this.staticDispatchSavings = 0,
     this.requiresFusedRunner = false,
-  });
+  }) : physicalInstructionCount = physicalInstructionCount ?? instructionCount;
 
   final String name;
   final int parameterCount;
   final int localCount;
   final int registerCount;
+
+  /// Stable scalar instruction count used by limits, budgets, and diagnostics.
   final int instructionCount;
+
+  /// Stored bytecode slots after physical copy elimination.
+  ///
+  /// This can still include non-dispatched payload slots belonging to a
+  /// superinstruction; use [staticDispatchSavings] for dispatch reduction.
+  final int physicalInstructionCount;
   final int basicBlockCount;
   final int jumpTableSwitchCount;
   final int binarySearchSwitchCount;
@@ -268,7 +277,7 @@ final class ComputeVmProgram {
     final function = _module.functions[id];
     var jumpTableSwitchCount = 0;
     var binarySearchSwitchCount = 0;
-    for (var pc = 0; pc < function.instructionCount; pc++) {
+    for (var pc = 0; pc < function.physicalInstructionCount; pc++) {
       final base = pc * _instructionWidth;
       if (function.code[base] != _Op.switchDispatch) continue;
       final site = _module.switchSites[function.code[base + 2]];
@@ -284,6 +293,7 @@ final class ComputeVmProgram {
       localCount: function.localCount,
       registerCount: function.registerCount,
       instructionCount: function.instructionCount,
+      physicalInstructionCount: function.physicalInstructionCount,
       basicBlockCount: function.basicBlockStarts.length,
       jumpTableSwitchCount: jumpTableSwitchCount,
       binarySearchSwitchCount: binarySearchSwitchCount,

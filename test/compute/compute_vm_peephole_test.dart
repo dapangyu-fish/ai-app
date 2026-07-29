@@ -290,6 +290,40 @@ Map<String, dynamic> _basicSuperinstructionSpecification() {
   };
 }
 
+Map<String, dynamic> _wideSwitchSpecification({
+  required int assignmentsPerArm,
+}) {
+  final cases = <dynamic>[
+    for (var key = 0; key < 256; key++)
+      <dynamic>[
+        key,
+        <dynamic>[
+          for (var assignment = 0; assignment < assignmentsPerArm; assignment++)
+            <dynamic>['set', 'slot$assignment', key + assignment],
+          <dynamic>['ret', key],
+        ],
+      ],
+  ];
+  return <String, dynamic>{
+    'version': 2,
+    'functions': <String, dynamic>{
+      'run': <String, dynamic>{
+        'params': <String>['selector'],
+        'body': <dynamic>[
+          <dynamic>[
+            'switch',
+            <dynamic>['var', 'selector'],
+            cases,
+            <dynamic>[
+              <dynamic>['ret', -1],
+            ],
+          ],
+        ],
+      },
+    },
+  };
+}
+
 void main() {
   group('Compute VM peepholes', () {
     test(
@@ -319,6 +353,67 @@ void main() {
         }
       },
     );
+
+    test('applies generic copy, immediate, and constant IR rewrites', () {
+      final specification = <String, dynamic>{
+        'version': 2,
+        'buffers': <String, dynamic>{'bytes': 1},
+        'i32': <String, dynamic>{'words': 1},
+        'functions': <String, dynamic>{
+          'run': <String, dynamic>{
+            'params': <String>['value'],
+            'body': <dynamic>[
+              <dynamic>['set', 'seed', 0],
+              <dynamic>[
+                'ret',
+                <dynamic>[
+                  '+',
+                  <dynamic>['var', 'value'],
+                  7,
+                ],
+              ],
+            ],
+          },
+          'fold': <String, dynamic>{
+            'body': <dynamic>[
+              <dynamic>[
+                'ret',
+                <dynamic>['+', 0x7fffffff, 1],
+              ],
+            ],
+          },
+          'lowDensity': <String, dynamic>{
+            'params': <String>['value'],
+            'body': <dynamic>[
+              <dynamic>[
+                'ret',
+                <dynamic>['var', 'value'],
+              ],
+            ],
+          },
+        },
+      };
+      final optimized = _compile(specification);
+      final scalar = _compile(specification, optimize: false);
+
+      final optimizedRun = optimized.functionInfo('run')!;
+      final scalarRun = scalar.functionInfo('run')!;
+      expect(optimizedRun.usesFusedBytecode, isTrue);
+      expect(
+        optimizedRun.physicalInstructionCount,
+        lessThan(scalarRun.physicalInstructionCount),
+      );
+      expect(optimized.call('run', args: <int>[35]), 42);
+      expect(scalar.call('run', args: <int>[35]), 42);
+
+      expect(optimized.functionInfo('fold')!.usesFusedBytecode, isTrue);
+      expect(optimized.call('fold'), -0x80000000);
+      expect(scalar.call('fold'), -0x80000000);
+
+      final lowDensity = optimized.functionInfo('lowDensity')!;
+      expect(lowDensity.usesFusedBytecode, isFalse);
+      expect(lowDensity.physicalInstructionCount, lowDensity.instructionCount);
+    });
 
     test('covers every basic superinstruction with public VM behavior', () {
       final optimized = _compile(_basicSuperinstructionSpecification());
@@ -771,6 +866,33 @@ void main() {
       expect(program.usesFusedBytecode, isFalse);
       expect(program.call('run'), 42);
       expect(hostCalls, 4);
+    });
+
+    test('wide switches require savings proportional to alternative count', () {
+      final light = _compile(_wideSwitchSpecification(assignmentsPerArm: 0));
+      final lightInfo = light.functionInfo('run')!;
+      expect(lightInfo.staticDispatchSavings, 0);
+      expect(lightInfo.usesFusedBytecode, isFalse);
+      expect(lightInfo.physicalInstructionCount, lightInfo.instructionCount);
+      expect(light.call('run', args: const <int>[0]), 0);
+      expect(light.call('run', args: const <int>[255]), 255);
+      expect(light.call('run', args: const <int>[256]), -1);
+
+      final highSavings = _compile(
+        _wideSwitchSpecification(assignmentsPerArm: 18),
+      );
+      final highSavingsInfo = highSavings.functionInfo('run')!;
+      expect(highSavingsInfo.usesFusedBytecode, isTrue);
+      // 18 constant assignments plus the return produce 19 saved dispatches
+      // per arm, plus one in the default arm: the NES-step-sized 4,865 case.
+      expect(highSavingsInfo.staticDispatchSavings, greaterThanOrEqualTo(4865));
+      expect(
+        highSavingsInfo.physicalInstructionCount,
+        lessThan(highSavingsInfo.instructionCount),
+      );
+      expect(highSavings.call('run', args: const <int>[0]), 0);
+      expect(highSavings.call('run', args: const <int>[255]), 255);
+      expect(highSavings.call('run', args: const <int>[256]), -1);
     });
 
     test(

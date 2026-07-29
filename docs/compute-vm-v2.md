@@ -64,16 +64,23 @@ Dense switches, including a 256-opcode CPU dispatch, use a single dispatch
 instruction and jump table. Sparse switches use one dispatch instruction plus
 a binary-search side table.
 
-The compiler also performs target-safe peephole fusion over common temporary
-register sequences. It retains every original logical instruction slot, so
-jump/switch targets, instruction limits, budget accounting, and reported
-failure PCs remain compatible with scalar bytecode. A fused operation reserves
-the complete logical cost before a buffer write or return becomes visible.
+Before execution, the compiler builds a compact integer IR and applies only
+generic, side-effect-safe rewrites: input/output copy propagation,
+destination-aware immediate operations, constant folding, and target-safe
+superinstruction fusion. Redundant physical slots may be removed, while a
+logical source/cost map retains the original scalar instruction address space.
+Jump/switch behavior, instruction limits, budget accounting, and reported
+failure PCs therefore remain compatible with `optimize: false`. An optimized
+operation reserves its complete logical cost before a buffer write, host call,
+or return becomes visible.
 
 Fusion is adaptive rather than mandatory:
 
 - a function keeps scalar bytecode unless static dispatches fall by at least
   25%;
+- a switch with 16 or more alternatives must additionally save at least four
+  dispatches per mutually exclusive alternative, preventing a large set of
+  cold arms from overstating hot-path benefit;
 - `ComputeVmProgram.compile(..., optimize: false)` provides an explicit scalar
   compatibility/reference mode;
 - scalar and fused bytecode use physically separate interpreter loops;
@@ -175,14 +182,24 @@ compiler in the same AOT executable. It includes two generic workloads:
   leaves the entry on the scalar loop. On the development macOS host, repeated
   runs stayed within roughly 1% of the forced-scalar result at about **20
   million iterations/second**.
-- A dense arithmetic/byte-buffer loop retains six static dispatch savings
-  across 20 logical instructions. It measured about **32.4 million
-  iterations/second**, versus **24.2 million** in forced-scalar mode: roughly a
-  **1.34x** speedup.
+- A dense arithmetic/byte-buffer loop reduces eight dispatches across 20
+  logical instructions. It measured about **40.9 million iterations/second**,
+  versus about **24.0 million** in forced-scalar mode: roughly a **1.70x**
+  speedup. The preceding optimizer measured about 32.3 million
+  iterations/second on the same host.
 
-This is a synthetic kernel measurement, not a claim that a complete NES already
-runs at 60 FPS. The NES program, framebuffer handoff, APU path, and mobile
-device profiling remain separate follow-up work.
+An additional compatibility benchmark used the same extracted NES JSON
+program, ROM, warm-up, and benchmark-only graphics helper on both revisions.
+Across three separate AOT processes (70 warm-up frames and 240 measured frames
+per process), median-of-medians frame time fell from **37.866 ms** to
+**35.354 ms** (**6.63%**). CPU results, frame count, framebuffer checksum, and
+all u8/i32 buffer state matched. Load-time optimized compilation rose from
+about **9.0 ms** to **16.7 ms** once per App, paying back after roughly three
+emulated frames in this workload.
+
+These results are evidence for interpreter-layer improvement, not a claim that
+the complete App already reaches 60 FPS. Framebuffer handoff, audio, Flutter
+frame scheduling, and physical iOS/Android profiling remain separate work.
 
 ## Validation
 
