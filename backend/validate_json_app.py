@@ -22,6 +22,10 @@ from asset_manifest_metadata import (
     read_png_size_from_url,
     sprite_frame_size,
 )
+from compute_spec_validator import (
+    validate_compute_action,
+    validate_compute_config,
+)
 
 
 FORBIDDEN_UI_KEYS = {
@@ -184,6 +188,11 @@ DEFAULT_BUILTIN_CALLS = {
     "@cell_path.head_collides_self",
     "@collide.rect",
     "@collision.first",
+    "@compute.call",
+    "@compute.load",
+    "@compute.read",
+    "@compute.reset",
+    "@compute.write",
     "@entity.add",
     "@entity.exists",
     "@entity.flip_by_velocity",
@@ -475,6 +484,8 @@ class Validator:
             if not screens:
                 self.error("$.ui.screens", "app JSON must define ui.screens")
 
+        validate_compute_config(self.root, self.error)
+
     def _walk(self, node: Any, path: str, *, in_game_logic: bool) -> None:
         if isinstance(node, dict):
             self._validate_dict(node, path, in_game_logic=in_game_logic)
@@ -490,6 +501,10 @@ class Validator:
                 return
 
             for key, value in node.items():
+                if path == "$" and key == "compute":
+                    # Compute has its own schema. Walking its AST as UI/actions
+                    # creates false dependency and widget diagnostics.
+                    continue
                 self._walk(value, self._path(path, key), in_game_logic=in_game_logic)
             return
 
@@ -640,7 +655,20 @@ class Validator:
         *,
         in_game_logic: bool,
     ) -> None:
-        if "." in call[1:] and call not in self.builtin_calls:
+        compute_builtin_namespace = (
+            call.startswith("@compute.") and self.root.get("dsl") == "4.0"
+        )
+        if compute_builtin_namespace:
+            validate_compute_action(self.root, call, args, path, self.error)
+
+        if (
+            "." in call[1:]
+            and (
+                call not in self.builtin_calls
+                or (call.startswith("@compute.") and not compute_builtin_namespace)
+            )
+            and not compute_builtin_namespace
+        ):
             dependency = call[1:].split(".", 1)[0]
             if (
                 dependency != "global"
@@ -739,7 +767,10 @@ class Validator:
         return re.fullmatch(r"\$\.ui\.screens\[\d+\](?:\.tabs\[\d+\])?", path) is not None
 
     def _validate_scroll_contract(self) -> None:
-        for path, node in self._iter_dicts(self.root):
+        for path, node in self._iter_dicts(
+            self.root,
+            skip_top_level_compute=True,
+        ):
             if not self._is_ui_path(path):
                 continue
             if self._is_non_shrink_scroll_widget(node):
@@ -925,7 +956,10 @@ class Validator:
 
     def _validate_sprite_sheet_usage(self) -> None:
         render_box_offenders: list[dict[str, str]] = []
-        for path, node in self._iter_dicts(self.root):
+        for path, node in self._iter_dicts(
+            self.root,
+            skip_top_level_compute=True,
+        ):
             kind = node.get("kind")
             if kind is not None and not isinstance(kind, str):
                 continue
@@ -1177,7 +1211,10 @@ class Validator:
         )
 
     def _validate_presentation_text_slots(self) -> None:
-        for path, node in self._iter_dicts(self.root):
+        for path, node in self._iter_dicts(
+            self.root,
+            skip_top_level_compute=True,
+        ):
             for key, value in node.items():
                 if not self._is_presentation_slot(node, key):
                     continue
@@ -1259,7 +1296,10 @@ class Validator:
                         handlers.setdefault(key, value)
         if not handlers:
             return
-        for path, node in self._iter_dicts(self.root):
+        for path, node in self._iter_dicts(
+            self.root,
+            skip_top_level_compute=True,
+        ):
             move_input = node.get("moveInput")
             move_end = node.get("moveEndInput")
             if not isinstance(move_input, str) or not isinstance(move_end, str):
@@ -1500,7 +1540,12 @@ class Validator:
         # Profile detection should be driven by semantic app text, not by hosted
         # asset URLs. Otherwise merely using a run-n-gun asset pack preview in a
         # non-game app would force game-specific validation.
-        text = re.sub(r"https?://\S+", " ", self._flatten_text(self.root)).lower()
+        text_root = (
+            {key: value for key, value in self.root.items() if key != "compute"}
+            if isinstance(self.root, dict)
+            else self.root
+        )
+        text = re.sub(r"https?://\S+", " ", self._flatten_text(text_root)).lower()
         keywords = (
             "run-and-gun",
             "run and gun",
@@ -2047,14 +2092,34 @@ class Validator:
         return " ".join(chunks)
 
     @classmethod
-    def _iter_dicts(cls, node: Any, path: str = "$"):
+    def _iter_dicts(
+        cls,
+        node: Any,
+        path: str = "$",
+        *,
+        skip_top_level_compute: bool = False,
+    ):
         if isinstance(node, dict):
             yield path, node
             for key, value in node.items():
-                yield from cls._iter_dicts(value, cls._path(path, key))
+                if (
+                    skip_top_level_compute
+                    and path == "$"
+                    and key == "compute"
+                ):
+                    continue
+                yield from cls._iter_dicts(
+                    value,
+                    cls._path(path, key),
+                    skip_top_level_compute=skip_top_level_compute,
+                )
         elif isinstance(node, list):
             for index, value in enumerate(node):
-                yield from cls._iter_dicts(value, f"{path}[{index}]")
+                yield from cls._iter_dicts(
+                    value,
+                    f"{path}[{index}]",
+                    skip_top_level_compute=skip_top_level_compute,
+                )
 
     @staticmethod
     def _num_at(value: Any, index: int) -> float | None:

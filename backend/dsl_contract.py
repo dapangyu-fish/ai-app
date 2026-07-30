@@ -9,7 +9,7 @@ bump DSL 时易漏改导致三处漂移。统一收敛到这里：发布期 gate
 
 # 当前支持的 DSL 版本窗口：框架新增向后兼容能力 → 加新 MINOR 进窗口；
 # 破坏性变更 → bump MAJOR 并收窗口（旧 App 在客户端载入期被 kSupportedDsl 硬拒）。
-SUPPORTED_DSL_VERSIONS = frozenset({"3.3"})
+SUPPORTED_DSL_VERSIONS = frozenset({"3.3", "4.0"})
 
 # 主（最高）支持版本，/version 端点对外自报、文档/客户端对标用。
 PRIMARY_DSL_VERSION = max(SUPPORTED_DSL_VERSIONS, key=lambda v: tuple(int(x) for x in v.split(".")))
