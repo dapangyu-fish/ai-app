@@ -85,6 +85,8 @@ abstract final class _Op {
   static const int constantJumpZero = 62;
   static const int normalizeAndJump = 63;
   static const int binaryImmediateDistinctPair = 64;
+  static const int moveCompareImmediateJumpZero = 65;
+  static const int moveBinaryImmediateDistinctPair = 66;
 }
 
 final class _VmModule {

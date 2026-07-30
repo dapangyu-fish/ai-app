@@ -98,11 +98,16 @@ final class _ExecutionOutcome {
   final List<int> words;
 }
 
-_ExecutionOutcome _execute(ComputeVmProgram program, int budget) {
+_ExecutionOutcome _execute(
+  ComputeVmProgram program,
+  int budget, {
+  String function = 'run',
+  List<int> args = const <int>[],
+}) {
   int? result;
   ComputeVmBudgetExceeded? error;
   try {
-    result = program.call('run', budget: budget);
+    result = program.call(function, args: args, budget: budget);
   } on ComputeVmBudgetExceeded catch (caught) {
     error = caught;
   }
@@ -680,6 +685,103 @@ void main() {
         );
       }
     });
+
+    test(
+      'required-move pair macros preserve branches, int32, and every budget',
+      () {
+        final specification = <String, dynamic>{
+          'version': 2,
+          'buffers': <String, dynamic>{'bytes': 1},
+          'i32': <String, dynamic>{'words': 1},
+          'functions': <String, dynamic>{
+            'moveCompare': <String, dynamic>{
+              'params': <String>['input'],
+              'body': <dynamic>[
+                <dynamic>[
+                  'set',
+                  'copied',
+                  <dynamic>['var', 'input'],
+                ],
+                <dynamic>[
+                  'if',
+                  <dynamic>[
+                    '<',
+                    <dynamic>['var', 'copied'],
+                    7,
+                  ],
+                  <dynamic>[
+                    <dynamic>['ret', 11],
+                  ],
+                  <dynamic>[
+                    <dynamic>['ret', 22],
+                  ],
+                ],
+              ],
+            },
+            'movePair': <String, dynamic>{
+              'params': <String>['input'],
+              'body': <dynamic>[
+                <dynamic>[
+                  'set',
+                  'copied',
+                  <dynamic>['var', 'input'],
+                ],
+                <dynamic>[
+                  'ret',
+                  <dynamic>[
+                    '/',
+                    <dynamic>[
+                      '+',
+                      <dynamic>['var', 'copied'],
+                      0x7fffffff,
+                    ],
+                    2,
+                  ],
+                ],
+              ],
+            },
+          },
+        };
+
+        final probe = _compile(specification);
+        expect(probe.functionInfo('moveCompare')!.staticDispatchSavings, 7);
+        expect(probe.functionInfo('movePair')!.staticDispatchSavings, 6);
+        expect(probe.call('moveCompare', args: const <int>[6]), 11);
+        expect(probe.call('moveCompare', args: const <int>[7]), 22);
+        // The addition must narrow to -0x80000000 before division.
+        expect(probe.call('movePair', args: const <int>[1]), -0x40000000);
+
+        const invocations = <({String function, List<int> args})>[
+          (function: 'moveCompare', args: <int>[6]),
+          (function: 'moveCompare', args: <int>[7]),
+          (function: 'movePair', args: <int>[1]),
+        ];
+        for (final invocation in invocations) {
+          final instructionCount = probe
+              .functionInfo(invocation.function)!
+              .instructionCount;
+          for (var budget = 1; budget <= instructionCount + 2; budget++) {
+            final optimized = _compile(specification);
+            final scalar = _compile(specification, optimize: false);
+            _expectSameOutcome(
+              _execute(
+                optimized,
+                budget,
+                function: invocation.function,
+                args: invocation.args,
+              ),
+              _execute(
+                scalar,
+                budget,
+                function: invocation.function,
+                args: invocation.args,
+              ),
+              budget: budget,
+            );
+          }
+        }
+      },
+    );
 
     test('post-fusion compaction remaps macro branch targets', () {
       final specification = <String, dynamic>{

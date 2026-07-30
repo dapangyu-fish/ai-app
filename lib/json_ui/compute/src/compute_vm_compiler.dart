@@ -504,6 +504,7 @@ final class _VmFunctionCompiler {
       _eliminateRedundantCopies();
       _optimizePeepholes();
       _eliminateFusedInputCopies();
+      _fusePhysicalPairs();
       final physicalDispatches = _logicalCosts
           .where((logicalCost) => logicalCost > 0)
           .length;
@@ -1746,6 +1747,48 @@ final class _VmFunctionCompiler {
         pc++;
       }
       if (_compactRemovedInstructions(remove) == 0) return;
+    }
+  }
+
+  /// Combine a required register copy with the immediately following
+  /// optimized instruction. Unlike copy propagation, this preserves the
+  /// destination write and only removes the second interpreter dispatch.
+  void _fusePhysicalPairs() {
+    final instructionCount = _instructionCount;
+    if (instructionCount < 4) return;
+    final targets = _controlFlowTargets();
+    for (var pc = 0; pc + 1 < instructionCount; pc++) {
+      final base = pc * _instructionWidth;
+      final nextBase = base + _instructionWidth;
+      if (_logicalCosts[pc] <= 0 || _logicalCosts[pc + 1] <= 0) {
+        continue;
+      }
+      final expectedStart = _logicalSourceStarts[pc] + _logicalCosts[pc];
+      if (_logicalSourceStarts[pc + 1] != expectedStart) continue;
+      if (pc + 3 < instructionCount &&
+          _code[base] == _Op.move &&
+          _code[nextBase] == _Op.compareImmediateJumpZero &&
+          !targets.contains(pc + 1) &&
+          !targets.contains(pc + 2) &&
+          !targets.contains(pc + 3)) {
+        _code[base] = _Op.moveCompareImmediateJumpZero;
+        _logicalCosts[pc] += _logicalCosts[pc + 1];
+        _logicalCosts[pc + 1] = 0;
+        pc += 3;
+        continue;
+      }
+      if (pc + 4 < instructionCount &&
+          _code[base] == _Op.move &&
+          _code[nextBase] == _Op.binaryImmediateDistinctPair &&
+          !targets.contains(pc + 1) &&
+          !targets.contains(pc + 2) &&
+          !targets.contains(pc + 3) &&
+          !targets.contains(pc + 4)) {
+        _code[base] = _Op.moveBinaryImmediateDistinctPair;
+        _logicalCosts[pc] += _logicalCosts[pc + 1];
+        _logicalCosts[pc + 1] = 0;
+        pc += 4;
+      }
     }
   }
 

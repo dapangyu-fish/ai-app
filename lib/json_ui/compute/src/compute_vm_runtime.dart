@@ -663,6 +663,38 @@ final class _ComputeVmFusedRunner extends _ComputeVmScalarRunner {
           } else {
             pc = code[jumpBase + 2];
           }
+        case _Op.moveCompareImmediateJumpZero:
+          registers[a] = registers[b];
+          final compareBase = (instruction + 1) * _instructionWidth;
+          final jumpBase = (instruction + 3) * _instructionWidth;
+          if (_comparisonResult(
+            code[compareBase + 1],
+            registers[code[compareBase + 2]],
+            code[compareBase + 3],
+          )) {
+            pc += 3;
+          } else {
+            pc = code[jumpBase + 2];
+          }
+        case _Op.moveBinaryImmediateDistinctPair:
+          registers[a] = registers[b];
+          final pairBase = (instruction + 1) * _instructionWidth;
+          final firstBase = (instruction + 2) * _instructionWidth;
+          final secondConstantBase = (instruction + 3) * _instructionWidth;
+          final secondBase = (instruction + 4) * _instructionWidth;
+          final firstDestination = code[firstBase + 1];
+          final firstResult = _binaryResult(
+            code[firstBase],
+            registers[code[firstBase + 2]],
+            code[pairBase + 1],
+          ).toSigned(32);
+          registers[firstDestination] = firstResult;
+          registers[code[secondBase + 1]] = _binaryResult(
+            code[secondBase],
+            firstResult,
+            module.constants[code[secondConstantBase + 2]],
+          );
+          pc += 4;
         case _Op.compareMovedRegisterJumpZero:
           final jumpBase = (instruction + 2) * _instructionWidth;
           if (_comparisonResult(a, registers[b], registers[c])) {
