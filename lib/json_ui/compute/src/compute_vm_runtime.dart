@@ -426,31 +426,32 @@ final class _ComputeVmFusedRunner extends _ComputeVmScalarRunner {
     }
     final stack = <_VmContinuation>[];
     var function = entry;
-    var code = function.code;
+    var code = function.dispatchCode!;
     var registers = entryRegisters;
     var pc = 0;
 
     while (true) {
-      if (_remainingBudget == 0) {
-        final sourceInstruction =
-            pc >= 0 && pc < function.physicalInstructionCount
-            ? function.logicalSourceStarts[pc]
-            : pc;
-        throw ComputeVmBudgetExceeded(
-          budget: _initialBudget,
-          executedInstructions: _initialBudget,
-          function: function.name,
-          instruction: sourceInstruction,
-        );
-      }
       if (pc < 0 || pc >= function.physicalInstructionCount) {
+        if (_remainingBudget == 0) {
+          throw ComputeVmBudgetExceeded(
+            budget: _initialBudget,
+            executedInstructions: _initialBudget,
+            function: function.name,
+            instruction: pc,
+          );
+        }
         throw ComputeVmRuntimeException(
           'invalid instruction pointer ${function.name}#$pc',
         );
       }
-      _chargeOptimizedSpan(function, pc);
       final base = pc * _instructionWidth;
-      final opcode = code[base];
+      final dispatchHeader = code[base];
+      _chargeOptimizedSpan(
+        function,
+        pc,
+        dispatchHeader >> _packedDispatchOpcodeBits,
+      );
+      final opcode = dispatchHeader & _packedDispatchOpcodeMask;
       final a = code[base + 1];
       final b = code[base + 2];
       final c = code[base + 3];
@@ -540,7 +541,7 @@ final class _ComputeVmFusedRunner extends _ComputeVmScalarRunner {
           function = continuation.callerFunction;
           registers = continuation.callerRegisters;
           registers[continuation.returnRegister] = a;
-          code = function.code;
+          code = function.dispatchCode!;
           pc = continuation.callerPc;
         case _Op.storeU8ImmediateBoth:
           _writeByte(u8[a], u8Masks[a], b, c);
@@ -798,7 +799,7 @@ final class _ComputeVmFusedRunner extends _ComputeVmScalarRunner {
           );
           stackWords += callee.registerCount;
           function = callee;
-          code = callee.code;
+          code = callee.dispatchCode!;
           registers = calleeRegisters;
           pc = 0;
         case _Op.host:
@@ -830,7 +831,7 @@ final class _ComputeVmFusedRunner extends _ComputeVmScalarRunner {
           function = continuation.callerFunction;
           registers = continuation.callerRegisters;
           registers[continuation.returnRegister] = result;
-          code = function.code;
+          code = function.dispatchCode!;
           pc = continuation.callerPc;
         default:
           throw ComputeVmRuntimeException(
@@ -843,8 +844,11 @@ final class _ComputeVmFusedRunner extends _ComputeVmScalarRunner {
   }
 
   @pragma('vm:prefer-inline')
-  void _chargeOptimizedSpan(_VmFunction function, int physicalInstruction) {
-    final logicalCost = function.logicalCosts[physicalInstruction];
+  void _chargeOptimizedSpan(
+    _VmFunction function,
+    int physicalInstruction,
+    int logicalCost,
+  ) {
     if (logicalCost <= _remainingBudget) {
       _remainingBudget -= logicalCost;
       return;

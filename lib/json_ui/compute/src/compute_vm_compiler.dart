@@ -112,6 +112,10 @@ final class _ComputeVmCompiler {
       functions.add(function);
     }
 
+    final usesFusedBytecode = functions.any(
+      (function) => function.usesFusedBytecode,
+    );
+    if (usesFusedBytecode) _prepareFusedDispatchCode(functions);
     final entryUsesFusedBytecode = _computeFusedReachability(functions);
     final module = _VmModule(
       functions: List<_VmFunction>.unmodifiable(functions),
@@ -122,9 +126,7 @@ final class _ComputeVmCompiler {
       switchSites: List<_VmSwitchSite>.unmodifiable(_switchSites),
       bulkSites: List<_VmBulkSite>.unmodifiable(_bulkSites),
       hostNames: List<String>.unmodifiable(hostNames),
-      usesFusedBytecode: functions.any(
-        (function) => function.usesFusedBytecode,
-      ),
+      usesFusedBytecode: usesFusedBytecode,
       entryUsesFusedBytecode: entryUsesFusedBytecode,
     );
     return ComputeVmProgram._(
@@ -134,6 +136,18 @@ final class _ComputeVmCompiler {
       hosts: hosts,
       limits: limits,
     );
+  }
+
+  void _prepareFusedDispatchCode(List<_VmFunction> functions) {
+    for (final function in functions) {
+      final dispatchCode = Int32List.fromList(function.code);
+      for (var pc = 0; pc < function.physicalInstructionCount; pc++) {
+        final base = pc * _instructionWidth;
+        dispatchCode[base] |=
+            function.logicalCosts[pc] << _packedDispatchOpcodeBits;
+      }
+      function.dispatchCode = dispatchCode;
+    }
   }
 
   List<bool> _computeFusedReachability(List<_VmFunction> functions) {

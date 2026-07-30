@@ -1,6 +1,8 @@
 part of '../compute_vm.dart';
 
 const int _instructionWidth = 4;
+const int _packedDispatchOpcodeBits = 7;
+const int _packedDispatchOpcodeMask = (1 << _packedDispatchOpcodeBits) - 1;
 const int _packedBinaryOpcodeBits = 6;
 const int _packedBinaryOpcodeMask = (1 << _packedBinaryOpcodeBits) - 1;
 const int _packedBufferIdBits = 8;
@@ -120,7 +122,7 @@ final class _VmModule {
 }
 
 final class _VmFunction {
-  const _VmFunction({
+  _VmFunction({
     required this.name,
     required this.parameterCount,
     required this.localCount,
@@ -138,6 +140,17 @@ final class _VmFunction {
   final int localCount;
   final int registerCount;
   final Int32List code;
+
+  /// Predecoded bytecode for the fused runner.
+  ///
+  /// Each instruction header's low bits contain the opcode and the remaining
+  /// bits contain the scalar budget cost. Keeping operands in the same list
+  /// preserves spatial locality while [code] remains unchanged for compiler
+  /// scans, diagnostics, tracing, and the compact scalar runner.
+  ///
+  /// This stays `null` for modules that use only the scalar runner, avoiding
+  /// an unused full bytecode copy for ordinary JSON apps.
+  Int32List? dispatchCode;
   final int logicalInstructionCount;
 
   /// Original scalar instruction that begins each physical instruction span.
