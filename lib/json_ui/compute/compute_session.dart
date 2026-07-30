@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kReleaseMode;
-
 import 'compute_vm.dart';
 
 /// App-scoped facade around [ComputeVmProgram].
@@ -23,7 +21,9 @@ final class ComputeSession {
 
   static const int _defaultInstructionBudget = 500 * 1000;
   static const int _productionMaximumInstructionBudget = 5 * 1000 * 1000;
-  static const int _localMaximumInstructionBudget = 16 * 1000 * 1000;
+  static const int _localMaximumInstructionBudget = 25 * 1000 * 1000;
+  // Release builds retain the production ceiling unless the packager
+  // explicitly opts into a larger local-test budget with --dart-define.
   static const int _requestedLocalInstructionBudget = int.fromEnvironment(
     'JSON_APP_LOCAL_COMPUTE_MAX_BUDGET',
     defaultValue: _productionMaximumInstructionBudget,
@@ -33,7 +33,6 @@ final class ComputeSession {
       ((_maximumTransferElements + 2) ~/ 3) * 4;
 
   static int get _maximumInstructionBudget {
-    if (kReleaseMode) return _productionMaximumInstructionBudget;
     if (_requestedLocalInstructionBudget <
         _productionMaximumInstructionBudget) {
       return _productionMaximumInstructionBudget;
